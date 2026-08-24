@@ -123,4 +123,6 @@ class ControllerManager(layout: FrameLayout, context: Context) {
             advanceSettingView.setVisibility(View.VISIBLE)
         }
     }
+
+    fun isVisible(): Boolean = advanceSettingView?.visibility == View.VISIBLE
 }

@@ -178,6 +178,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private var startHoldWheelView: ComposeView? = null
     private val startHoldWheelVisible = mutableStateOf(false)
     private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
+    private val pipInteractiveOverlayState = PipInteractiveOverlayState()
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -1113,7 +1114,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
         }
-        if (::floatBallHandler.isInitialized) {
+        if (::floatBallHandler.isInitialized &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
+        ) {
             floatBallHandler.show()
         }
     }
@@ -1150,25 +1153,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         controllerManager?.refreshLayout()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (isInPictureInPictureMode) {
-                virtualController?.hide()
-                performanceOverlayManager?.hideOverlayImmediate()
-                jitterMonitorManager?.hideImmediate()
-                notificationOverlayManager.setHiding(true)
-                microphoneManager?.setEnableMic(false)
-                controllerHandler.disableSensors()
-                UiHelper.notifyStreamEnteringPiP(this)
-            } else {
-                virtualController?.show()
-                performanceOverlayManager?.applyRequestedVisibility()
-                jitterMonitorManager?.applyVisibility()
-                notificationOverlayManager.setHiding(false)
-                notificationOverlayManager.applyVisibility()
-                microphoneManager?.setEnableMic(prefConfig.enableMic)
-                controllerHandler.enableSensors()
-                controllerHandler.onSensorsReenabled()
-                UiHelper.notifyStreamExitingPiP(this)
-            }
+            applyPictureInPictureUiState(isInPictureInPictureMode)
         }
 
         performanceOverlayManager?.onConfigurationChanged()
@@ -1177,6 +1162,61 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             jitterMonitorManager?.applyVisibility()
         }
         refreshDisplayPosition()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        applyPictureInPictureUiState(isInPictureInPictureMode)
+    }
+
+    private fun applyPictureInPictureUiState(inPictureInPicture: Boolean) {
+        if (inPictureInPicture) {
+            val entered = pipInteractiveOverlayState.enter(
+                PipInteractiveOverlaySnapshot(
+                    virtualControllerVisible = isVirtualControllerVisible(),
+                    crownControllerVisible = controllerManager?.isVisible() == true,
+                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE
+                )
+            )
+            if (!entered) return
+            virtualController?.hide()
+            controllerManager?.hide()
+            micButton?.visibility = View.GONE
+            if (::floatBallHandler.isInitialized) floatBallHandler.hide()
+            hideStartHoldWheel()
+            performanceOverlayManager?.hideOverlayImmediate()
+            jitterMonitorManager?.hideImmediate()
+            notificationOverlayManager.setHiding(true)
+            microphoneManager?.setEnableMic(false)
+            controllerHandler.disableSensors()
+            UiHelper.notifyStreamEnteringPiP(this)
+            return
+        }
+
+        val snapshot = pipInteractiveOverlayState.exit() ?: return
+        if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
+            virtualController?.show()
+        } else {
+            virtualController?.hide()
+        }
+        if (snapshot.crownControllerVisible && prefConfig.enableCrownFeatures) {
+            controllerManager?.show()
+        } else {
+            controllerManager?.hide()
+        }
+        micButton?.visibility = if (snapshot.microphoneButtonVisible) View.VISIBLE else View.GONE
+        performanceOverlayManager?.applyRequestedVisibility()
+        jitterMonitorManager?.applyVisibility()
+        notificationOverlayManager.setHiding(false)
+        notificationOverlayManager.applyVisibility()
+        microphoneManager?.setEnableMic(prefConfig.enableMic)
+        controllerHandler.enableSensors()
+        controllerHandler.onSensorsReenabled()
+        UiHelper.notifyStreamExitingPiP(this)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
