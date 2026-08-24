@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.binding.audio.MicrophoneButtonPreferences
+import com.limelight.ui.FloatBallPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -35,6 +36,15 @@ class ConfigurationSyncSchemaTest {
         ).forEach { key ->
             assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }
+    }
+
+    @Test
+    fun floatBallPresetIsPortable() {
+        assertTrue(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                FloatBallPreferences.KEY_PRESET_POSITION
+            )
+        )
     }
 
     @Test

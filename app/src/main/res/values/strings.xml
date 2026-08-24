@@ -531,6 +531,8 @@
     <string name="category_float_ball_settings">Float Ball Settings</string>
     <string name="title_checkbox_enable_float_ball">Enable Float Ball</string>
     <string name="summary_checkbox_enable_float_ball">Show an interactive floating ball for quick actions</string>
+    <string name="title_list_float_ball_position">Quick float ball position</string>
+    <string name="summary_list_float_ball_position">Place the float ball at a screen edge. Dragging overrides this preset until you choose a preset again.</string>
     <string name="title_seekbar_float_ball_auto_hide_delay">Auto-hide Delay</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">Time before the float ball automatically hides to the screen edge</string>
     <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>

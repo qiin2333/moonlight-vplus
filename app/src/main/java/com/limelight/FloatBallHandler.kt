@@ -2,6 +2,7 @@ package com.limelight
 
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.FloatBallManager
+import com.limelight.ui.FloatBallPreferences
 
 /**
  * 悬浮球初始化和手势动作分发。
@@ -29,7 +30,8 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
             50,   // 固定大小50dp
             100,  // 固定透明度100%
             prefConfig.floatBallAutoHideDelay.toLong(),
-            enableEdgeSnap
+            enableEdgeSnap,
+            FloatBallPreferences(game).presetPosition()
         )
 
         mgr.setOnFloatBallInteractListener(object : FloatBallManager.OnFloatBallInteractListener {
