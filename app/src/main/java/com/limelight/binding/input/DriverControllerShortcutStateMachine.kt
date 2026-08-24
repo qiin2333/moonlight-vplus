@@ -2,8 +2,14 @@ package com.limelight.binding.input
 
 import com.limelight.nvstream.input.ControllerPacket
 
-/** USB snapshot adapter for [StartGestureReducer] and its local-input ownership boundary. */
-internal class UsbControllerShortcutStateMachine(
+/**
+ * Tracks local shortcuts for controllers handled by an application-managed driver.
+ *
+ * A controller driver reports complete button snapshots instead of Android KeyEvents, so shortcut
+ * handling must also own button-release gating. This keeps the B press used to open the menu and
+ * all menu navigation input away from the streamed host until every local button is released.
+ */
+internal class DriverControllerShortcutStateMachine(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong()
 ) {
     enum class Action {
@@ -56,7 +62,7 @@ internal class UsbControllerShortcutStateMachine(
         }
 
         if (!reducer.isLocalInputCaptureActive() && buttonFlags == EXIT_COMBO_FLAGS) {
-            val resetUpdate = reducer.reset().toUsbUpdate()
+            val resetUpdate = reducer.reset().toDriverUpdate()
             exitPending = true
             pendingMenuPressedFlags = 0
             return Update(
@@ -88,7 +94,7 @@ internal class UsbControllerShortcutStateMachine(
                     lastRightStickY
                 )
             }
-            return reducerUpdate.toUsbUpdate()
+            return reducerUpdate.toDriverUpdate()
         }
         if (reducerState == StartGestureReducer.State.MENU_PENDING ||
             reducerState == StartGestureReducer.State.MENU_ACTIVE ||
@@ -109,7 +115,7 @@ internal class UsbControllerShortcutStateMachine(
             } else {
                 emptyList()
             }
-            return reducerUpdate.toUsbUpdate(menuChanges)
+            return reducerUpdate.toDriverUpdate(menuChanges)
         }
 
         val reducerUpdate = when {
@@ -119,7 +125,7 @@ internal class UsbControllerShortcutStateMachine(
                 reducer.onStartUp(eventTimeMs, buttonFlags = buttonFlags)
             else -> reducer.onInputSnapshot(buttonFlags)
         }
-        return reducerUpdate.toUsbUpdate()
+        return reducerUpdate.toDriverUpdate()
     }
 
     @Synchronized
@@ -150,7 +156,7 @@ internal class UsbControllerShortcutStateMachine(
                 rightStickY
             )
         }
-        return update.toUsbUpdate()
+        return update.toDriverUpdate()
     }
 
     @Synchronized
@@ -177,7 +183,7 @@ internal class UsbControllerShortcutStateMachine(
         return reducer.onLongPressTimeout(
             eventTimeMs,
             startActionEnabled
-        ).toUsbUpdate()
+        ).toDriverUpdate()
     }
 
     @Synchronized
@@ -192,21 +198,21 @@ internal class UsbControllerShortcutStateMachine(
             emptyList()
         }
         pendingMenuPressedFlags = 0
-        return update.toUsbUpdate(replayChanges)
+        return update.toDriverUpdate(replayChanges)
     }
 
     @Synchronized
     fun onGameMenuOpenedExternally(): Update {
         val update = reducer.onGameMenuOpenedExternally()
         val heldMenuButtons = lastButtonFlags and MENU_BUTTON_MASK
-        return update.toUsbUpdate(buildInitialMenuButtonChanges(heldMenuButtons))
+        return update.toDriverUpdate(buildInitialMenuButtonChanges(heldMenuButtons))
     }
 
     @Synchronized
     fun onGameMenuUnavailable(): Update {
         val update = reducer.onGameMenuUnavailable()
         pendingMenuPressedFlags = 0
-        return update.toUsbUpdate()
+        return update.toDriverUpdate()
     }
 
     @Synchronized
@@ -238,7 +244,7 @@ internal class UsbControllerShortcutStateMachine(
         lastLeftStickY = 0f
         lastRightStickX = 0f
         lastRightStickY = 0f
-        return update.toUsbUpdate()
+        return update.toDriverUpdate()
     }
 
     private fun markHostNeutralStateRequired(): Boolean {
@@ -276,7 +282,7 @@ internal class UsbControllerShortcutStateMachine(
     private fun canonicalMenuDirection(buttonFlags: Int): Int =
         MENU_DIRECTION_FLAGS.firstOrNull { buttonFlags and it != 0 } ?: 0
 
-    private fun StartGestureReducer.Update.toUsbUpdate(
+    private fun StartGestureReducer.Update.toDriverUpdate(
         menuButtonChanges: List<ButtonChange> = emptyList()
     ): Update {
         val mappedActions = actions.mapNotNull { action ->

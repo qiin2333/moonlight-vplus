@@ -17,7 +17,7 @@ import android.os.VibratorManager
 
 import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
-import com.limelight.binding.input.driver.DualSenseOutputReport
+import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 
@@ -372,39 +372,18 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 deviceContext.lowFreqMotor = lowFreqMotor
                 deviceContext.highFreqMotor = highFreqMotor
 
-                // Prefer the documented Android 12 rumble API which can handle dual vibrators on PS/Xbox controllers
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
-                    if (deviceContext.quadVibrators) {
-                        rumbleQuadVibrators(
-                            deviceContext.vibratorManager!!,
-                            deviceContext.lowFreqMotor, deviceContext.highFreqMotor,
-                            deviceContext.leftTriggerMotor, deviceContext.rightTriggerMotor
-                        )
-                    } else {
-                        rumbleDualVibrators(
-                            deviceContext.vibratorManager!!,
-                            deviceContext.lowFreqMotor, deviceContext.highFreqMotor
-                        )
-                    }
+                if (deviceContext.directDualSenseBluetoothOutput?.updateRumble(
+                        lowFreqMotor,
+                        highFreqMotor
+                    ) == true
+                ) {
+                    continue
                 }
-                // On Shield devices, prefer the special API. Otherwise, fall back to Vibrator.
-                else if (!handler.sceManager.rumble(
-                        deviceContext.inputDevice,
-                        deviceContext.lowFreqMotor.toInt(),
-                        deviceContext.highFreqMotor.toInt()
-                    )) {
-                    deviceContext.vibrator?.let { vibrator ->
-                        rumbleSingleVibrator(
-                            vibrator,
-                            deviceContext.lowFreqMotor,
-                            deviceContext.highFreqMotor
-                        )
-                    }
-                }
+                rumbleWithAndroidApis(deviceContext)
             }
         }
 
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -416,6 +395,45 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 if (capabilities and MoonBridge.LI_CCAP_RUMBLE.toInt() != 0) {
                     usbRumbleOutput(device).submitBase(BaseRumble(lowFreqMotor, highFreqMotor))
                 }
+            }
+        }
+    }
+
+    internal fun handleDirectBluetoothSendFailure(deviceContext: InputDeviceContext) {
+        if (handler.stopped || deviceContext.lowFreqMotor.toInt() == 0 &&
+            deviceContext.highFreqMotor.toInt() == 0
+        ) {
+            return
+        }
+        rumbleWithAndroidApis(deviceContext)
+    }
+
+    private fun rumbleWithAndroidApis(deviceContext: InputDeviceContext) {
+        // Prefer the documented Android 12 API which can address both controller motors.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
+            if (deviceContext.quadVibrators) {
+                rumbleQuadVibrators(
+                    deviceContext.vibratorManager!!,
+                    deviceContext.lowFreqMotor, deviceContext.highFreqMotor,
+                    deviceContext.leftTriggerMotor, deviceContext.rightTriggerMotor
+                )
+            } else {
+                rumbleDualVibrators(
+                    deviceContext.vibratorManager!!,
+                    deviceContext.lowFreqMotor, deviceContext.highFreqMotor
+                )
+            }
+        } else if (!handler.sceManager.rumble(
+                deviceContext.inputDevice,
+                deviceContext.lowFreqMotor.toInt(),
+                deviceContext.highFreqMotor.toInt()
+            )) {
+            deviceContext.vibrator?.let { vibrator ->
+                rumbleSingleVibrator(
+                    vibrator,
+                    deviceContext.lowFreqMotor,
+                    deviceContext.highFreqMotor
+                )
             }
         }
     }
@@ -437,6 +455,14 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                     deviceContext.leftTriggerMotor = leftTrigger
                     deviceContext.rightTriggerMotor = rightTrigger
 
+                    if (deviceContext.directDualSenseBluetoothOutput?.updateTriggerRumble(
+                            leftTrigger,
+                            rightTrigger
+                        ) == true
+                    ) {
+                        continue
+                    }
+
                     if (deviceContext.quadVibrators) {
                         rumbleQuadVibrators(
                             deviceContext.vibratorManager!!,
@@ -448,7 +474,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
         }
 
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -475,8 +501,8 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         right: ByteArray
     ) {
         if (handler.stopped ||
-            left.size != DualSenseOutputReport.EFFECT_PAYLOAD_SIZE ||
-            right.size != DualSenseOutputReport.EFFECT_PAYLOAD_SIZE
+            left.size != DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE ||
+            right.size != DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE
         ) {
             return
         }
@@ -484,7 +510,28 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         // Callers hand off exclusive payload snapshots, so queue them as-is for the
         // USB output worker, which only reads them.
         val triggers = AdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (i in 0 until handler.inputDeviceContexts.size()) {
+            val deviceContext = handler.inputDeviceContexts.valueAt(i)
+            if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
+                continue
+            }
+            if (deviceContext.controllerNumber == controllerNumber) {
+                if (eventFlags.toInt() and DualSenseAdaptiveTriggerEffect.PLAYER_LED_FLAG != 0 &&
+                    left.isNotEmpty()
+                ) {
+                    deviceContext.directDualSenseBluetoothOutput
+                        ?.updatePlayerLeds(left[0].toInt() and 0x1F)
+                }
+                deviceContext.directDualSenseBluetoothOutput?.updateAdaptiveTriggers(
+                    eventFlags,
+                    typeLeft,
+                    typeRight,
+                    left,
+                    right
+                )
+            }
+        }
+        for (deviceContext in handler.driverControllerContexts.values) {
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }
@@ -500,11 +547,11 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     fun clearAdaptiveTriggers(controllerNumber: Short) {
         handleAdaptiveTriggers(
             controllerNumber,
-            DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
-            DualSenseOutputReport.EFFECT_TYPE_OFF,
-            DualSenseOutputReport.EFFECT_TYPE_OFF,
-            ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE),
-            ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE)
+            DualSenseAdaptiveTriggerEffect.BOTH_FLAGS.toByte(),
+            DualSenseAdaptiveTriggerEffect.TYPE_OFF,
+            DualSenseAdaptiveTriggerEffect.TYPE_OFF,
+            ByteArray(DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE),
+            ByteArray(DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE)
         )
     }
 
@@ -513,7 +560,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             return
         }
 
-        for (deviceContext in handler.usbDeviceContexts.values) {
+        for (deviceContext in handler.driverControllerContexts.values) {
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }
@@ -531,6 +578,12 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             for (i in 0 until handler.inputDeviceContexts.size()) {
                 val deviceContext = handler.inputDeviceContexts.valueAt(i)
+
+                if (deviceContext.controllerNumber == controllerNumber &&
+                    deviceContext.directDualSenseBluetoothOutput?.updateLightbar(r, g, b) == true
+                ) {
+                    continue
+                }
 
                 // Ignore input devices without an RGB LED
                 if (deviceContext.controllerNumber == controllerNumber && deviceContext.hasRgbLed) {

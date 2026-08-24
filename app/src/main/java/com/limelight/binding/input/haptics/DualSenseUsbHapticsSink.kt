@@ -38,13 +38,13 @@ import java.util.concurrent.TimeoutException
  * UsbRequest on isochronous endpoints is not reliable on every ROM. A failed
  * initialize/queue parks the pump and logs; teardown still restores alt 0.
  */
-internal class Ds5HapticsPump(
+internal class DualSenseUsbHapticsSink(
     private val connection: UsbDeviceConnection,
     private val streamingInterface: UsbInterface,
     private val isoEndpoint: UsbEndpoint
-) {
+) : DualSenseNativeHapticsSink {
     companion object {
-        private const val TAG = "Ds5HapticsPump"
+        private const val TAG = "DualSenseUsbHaptics"
 
         private const val SAMPLE_RATE = 48000
         private const val SPEAKER_CHANNELS = 2
@@ -91,13 +91,13 @@ internal class Ds5HapticsPump(
     private var lastSequence = 0
     private var hasSequence = false
 
-    fun start() {
-        if (!active.compareAndSet(false, true)) return
+    override fun start(): Boolean {
+        if (!active.compareAndSet(false, true)) return active.get()
 
         if (isoEndpoint.type != UsbConstants.USB_ENDPOINT_XFER_ISOC) {
             Log.w(TAG, "Endpoint is not isochronous; pump disabled")
             active.set(false)
-            return
+            return false
         }
 
         // Select alt 1 with the iso endpoint. The passed UsbInterface comes
@@ -105,7 +105,7 @@ internal class Ds5HapticsPump(
         if (!connection.setInterface(streamingInterface)) {
             Log.w(TAG, "setInterface(alt 1) failed; pump disabled")
             active.set(false)
-            return
+            return false
         }
 
         configureUac()
@@ -116,7 +116,7 @@ internal class Ds5HapticsPump(
                 Log.w(TAG, "UsbRequest.initialize failed (iso unsupported on this ROM?)")
                 active.set(false)
                 shutdownUnstarted()
-                return
+                return false
             }
         }
 
@@ -131,6 +131,7 @@ internal class Ds5HapticsPump(
             priority = Thread.MAX_PRIORITY - 1
             start()
         }
+        return true
     }
 
     /**
@@ -138,7 +139,7 @@ internal class Ds5HapticsPump(
      * (main) thread: closing the requests cancels in-flight transfers and wakes
      * the sender, which parks the interface on alt 0 as it exits.
      */
-    fun stop() {
+    override fun stop() {
         active.set(false)
         closeRequests()
         val thread = sendThread
@@ -180,7 +181,7 @@ internal class Ds5HapticsPump(
     }
 
     /** Enqueues an authored PCM frame. Called on the control receive thread. */
-    fun submit(frame: Ds5HapticsPcmFrame) {
+    override fun submit(frame: Ds5HapticsPcmFrame) {
         if (!active.get()) return
         if (frame.sampleRate != SAMPLE_RATE ||
             frame.channelCount.toInt() != HAPTIC_CHANNELS ||

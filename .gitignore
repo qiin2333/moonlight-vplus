@@ -49,7 +49,8 @@ app/src/main/jni/moonlight-core/build-openssl.sh
 app/google-services.json
 
 # AI analysis docs & dev notes
-docs/
+docs/*
+!docs/DUALSENSE_WIRELESS_BRIDGE_IMPLEMENTATION.md
 
 # Kotlin build cache
 .kotlin/

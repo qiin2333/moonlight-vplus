@@ -6,10 +6,10 @@ import android.view.MotionEvent
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
-import com.limelight.binding.input.UsbDeviceContext
+import com.limelight.binding.input.DriverControllerContext
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.jni.MoonBridge
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Owns controller-haptics runtime policy for the Android client.
@@ -39,16 +39,17 @@ internal class ControllerHapticsCoordinator(
         var lastDispatchMs: Long? = null
     }
 
+    private data class NativeHapticsBinding(
+        val controllerNumber: Short,
+        val sink: DualSenseNativeHapticsSink
+    )
+
     private val mixer = ControllerHapticsMixer()
     private val deviceMixer = ControllerHapticsMixer()
-    @Volatile
-    private var ds5HapticsPump: Ds5HapticsPump? = null
-    @Volatile
-    private var ds5HapticsPumpOwner = -1
-    private var ds5HapticsControllerNumber: Short = NO_CONTROLLER.toShort()
+    private val ds5HapticsBindings = ConcurrentHashMap<Int, NativeHapticsBinding>()
     private val ds5LifecycleLock = Any()
     private var ds5LifecycleGeneration = 0L
-    private var ds5RequestedOwner = -1
+    private val ds5RequestedGenerations = mutableMapOf<Int, Long>()
     private val outputSlots = mutableMapOf<Short, OutputSlot>()
     private val hostStates = mutableMapOf<Short, ControllerRumbleState>()
     private val deviceOutputSlot = DeviceOutputSlot()
@@ -121,10 +122,11 @@ internal class ControllerHapticsCoordinator(
         }
         return context.vibratorManager != null ||
             context.vibrator != null ||
+            context.directDualSenseBluetoothOutput != null ||
             handler.sceManager.isRecognizedDevice(inputDevice)
     }
 
-    fun hasRumbleCapability(context: UsbDeviceContext): Boolean {
+    fun hasRumbleCapability(context: DriverControllerContext): Boolean {
         if (handler.prefConfig.multiController && !context.assignedControllerNumber) return false
         val capabilities = context.device?.capabilities?.toInt() ?: return false
         return capabilities and MoonBridge.LI_CCAP_RUMBLE.toInt() != 0
@@ -135,7 +137,7 @@ internal class ControllerHapticsCoordinator(
             is InputDeviceContext -> if (hasRumbleCapability(context)) {
                 updatePrimaryController(context.controllerNumber)
             }
-            is UsbDeviceContext -> if (hasRumbleCapability(context)) {
+            is DriverControllerContext -> if (hasRumbleCapability(context)) {
                 updatePrimaryController(context.controllerNumber)
             }
         }
@@ -169,7 +171,7 @@ internal class ControllerHapticsCoordinator(
             if (candidate == NO_CONTROLLER) candidate = number
         }
 
-        for (context in handler.usbDeviceContexts.values) {
+        for (context in handler.driverControllerContexts.values) {
             if (!hasRumbleCapability(context)) continue
             val number = if (context.assignedControllerNumber) {
                 context.controllerNumber.toInt()
@@ -397,92 +399,98 @@ internal class ControllerHapticsCoordinator(
     }
 
     fun submitDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
-        if (frame.controllerNumber != ds5HapticsControllerNumber) return
-        ds5HapticsPump?.submit(frame)
+        var target: DualSenseNativeHapticsSink? = null
+        for (binding in ds5HapticsBindings.values) {
+            if (binding.controllerNumber == frame.controllerNumber) {
+                target = binding.sink
+                break
+            }
+        }
+        target?.submit(frame)
     }
 
-    fun attachDs5HapticsPump(controllerId: Int, controllerNumber: Short, pump: Ds5HapticsPump) {
-        var generation = 0L
+    fun attachDs5HapticsSink(
+        controllerId: Int,
+        controllerNumber: Short,
+        sink: DualSenseNativeHapticsSink
+    ) {
+        val generation: Long
         synchronized(ds5LifecycleLock) {
             generation = ++ds5LifecycleGeneration
-            ds5RequestedOwner = controllerId
+            ds5RequestedGenerations[controllerId] = generation
         }
-        // The attach path arrives from the USB broadcast receiver (main thread);
-        // pump startup issues interface and control transfers that must never
-        // block it, so run it on the background thread.
+        // A sink may arrive on the main thread. Its startup can perform transport I/O, so keep it
+        // on the existing background worker.
         handler.backgroundThreadHandler.post {
             synchronized(ds5LifecycleLock) {
-                if (generation != ds5LifecycleGeneration || ds5RequestedOwner != controllerId) {
-                    pump.stop()
+                if (ds5RequestedGenerations[controllerId] != generation) {
+                    sink.stop()
                     return@post
                 }
             }
             if (isStoppingOrStopped()) {
-                pump.stop()
+                sink.stop()
                 return@post
             }
-            // Replace any pump owned by another controller before the new one
-            // claims the audio interface.
-            ds5HapticsPump?.stop()
-            ds5HapticsPump = pump
-            ds5HapticsPumpOwner = controllerId
-            ds5HapticsControllerNumber = controllerNumber
-            pump.start()
-        }
-    }
 
-    fun detachDs5HapticsPump(controllerId: Int) {
-        var shouldWait = false
-        synchronized(ds5LifecycleLock) {
-            shouldWait = ds5RequestedOwner == controllerId || ds5HapticsPumpOwner == controllerId
-            if (ds5RequestedOwner == controllerId) {
-                ds5RequestedOwner = -1
-                ds5LifecycleGeneration++
+            if (!sink.start()) {
+                synchronized(ds5LifecycleLock) {
+                    if (ds5RequestedGenerations[controllerId] == generation) {
+                        ds5RequestedGenerations.remove(controllerId)
+                    }
+                }
+                sink.stop()
+                return@post
             }
-        }
-        if (!shouldWait) return
 
-        // Serialize removal with attach and wait for alt 0 restoration before
-        // the controller closes its UsbDeviceConnection.
-        runOnUsbWorkerAndWait {
-            // Only the owning controller may stop the active pump; a stale
-            // removal callback from a replaced controller must not kill the
-            // new stream.
-            if (ds5HapticsPumpOwner != controllerId) return@runOnUsbWorkerAndWait
-            ds5HapticsPump?.stop()
-            ds5HapticsPump = null
-            ds5HapticsPumpOwner = -1
-            ds5HapticsControllerNumber = NO_CONTROLLER.toShort()
-        }
-    }
-
-    private fun runOnUsbWorkerAndWait(action: () -> Unit) {
-        if (Looper.myLooper() == handler.backgroundThreadHandler.looper) {
-            action()
-            return
-        }
-        val completed = CountDownLatch(1)
-        if (!handler.backgroundThreadHandler.post {
-                try {
-                    action()
-                } finally {
-                    completed.countDown()
+            val replaced = ArrayList<NativeHapticsBinding>()
+            val accepted = synchronized(ds5LifecycleLock) {
+                if (ds5RequestedGenerations[controllerId] != generation || isStoppingOrStopped()) {
+                    false
+                } else {
+                    ds5RequestedGenerations.remove(controllerId)
+                    ds5HapticsBindings.remove(controllerId)?.let(replaced::add)
+                    // In single-controller mode several devices may share player 0. Preserve the
+                    // historical latest-attached-wins policy without dropping the working sink
+                    // until its replacement has started successfully.
+                    ds5HapticsBindings.entries.toList().forEach { (existingId, binding) ->
+                        if (binding.controllerNumber == controllerNumber &&
+                            ds5HapticsBindings.remove(existingId, binding)
+                        ) {
+                            replaced.add(binding)
+                        }
+                    }
+                    ds5HapticsBindings[controllerId] =
+                        NativeHapticsBinding(controllerNumber, sink)
+                    true
                 }
             }
-        ) {
-            action()
-            return
-        }
-        var interrupted = false
-        while (true) {
-            try {
-                completed.await()
-                break
-            } catch (_: InterruptedException) {
-                interrupted = true
+            if (!accepted) {
+                sink.stop()
+                return@post
             }
+            replaced.forEach { it.sink.stop() }
         }
-        if (interrupted) Thread.currentThread().interrupt()
+    }
+
+    fun detachDs5HapticsSink(controllerId: Int) {
+        val binding: NativeHapticsBinding?
+        synchronized(ds5LifecycleLock) {
+            ds5RequestedGenerations.remove(controllerId)
+            ds5LifecycleGeneration++
+            binding = ds5HapticsBindings.remove(controllerId)
+        }
+        binding?.let { stopSinksAsync(listOf(it)) }
+    }
+
+    private fun stopSinksAsync(bindings: List<NativeHapticsBinding>) {
+        if (bindings.isEmpty()) return
+        val cleanup = Runnable { bindings.forEach { it.sink.stop() } }
+        if (Looper.myLooper() == handler.backgroundThreadHandler.looper) {
+            cleanup.run()
+        } else if (!handler.backgroundThreadHandler.post(cleanup)) {
+            Thread(cleanup, "DualSenseHapticsCleanup").apply { isDaemon = true }.start()
+        }
     }
 
     fun clearControllerIfUnavailable(controllerNumber: Short) {
@@ -519,23 +527,20 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    /** Stops all owned output synchronously. ControllerHandler lifecycle runs on the UI thread. */
+    /** Stops logical output immediately and releases transport sinks asynchronously. */
     fun stop() {
         if (stopped || stopping) return
         stopping = true
         stopAllNow()
-        val pump = ds5HapticsPump
-        ds5HapticsPump = null
-        ds5HapticsPumpOwner = -1
-        ds5HapticsControllerNumber = NO_CONTROLLER.toShort()
-        synchronized(ds5LifecycleLock) {
-            ds5RequestedOwner = -1
+        val bindings = synchronized(ds5LifecycleLock) {
+            ds5RequestedGenerations.clear()
             ds5LifecycleGeneration++
+            ds5HapticsBindings.values.toList().also { ds5HapticsBindings.clear() }
         }
-        runOnUsbWorkerAndWait { pump?.stop() }
         primaryControllerNumber = NO_CONTROLLER
         stopped = true
         stopping = false
+        stopSinksAsync(bindings)
     }
 
     private fun switchAudioTarget(
@@ -615,7 +620,7 @@ internal class ControllerHapticsCoordinator(
                 return true
             }
         }
-        for (context in handler.usbDeviceContexts.values) {
+        for (context in handler.driverControllerContexts.values) {
             if (context.controllerNumber == controllerNumber && hasRumbleCapability(context)) {
                 return true
             }

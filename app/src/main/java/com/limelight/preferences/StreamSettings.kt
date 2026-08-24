@@ -1,6 +1,7 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.preferences
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
@@ -772,6 +773,26 @@ class StreamSettings : AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val settingsFragment = supportFragmentManager
+                .findFragmentById(R.id.preference_container) as? SettingsFragment
+        val shouldRestoreExpandedPreferenceFocus =
+            event.action == KeyEvent.ACTION_UP &&
+                event.keyCode in arrayOf(
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    KeyEvent.KEYCODE_BUTTON_A
+                ) &&
+                settingsFragment?.prepareExpandButtonFocusRestore(currentFocus) == true
+
+        val handled = super.dispatchKeyEvent(event)
+        if (shouldRestoreExpandedPreferenceFocus) {
+            settingsFragment?.restoreFocusAfterExpandButton()
+        }
+        return handled
+    }
+
     /**
      * 处理控制器按键事件（抽屉导航）
      *
@@ -918,6 +939,9 @@ class StreamSettings : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         private companion object {
             private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
+            private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
+            private const val ANDROIDX_EXPAND_BUTTON_CLASS = "androidx.preference.ExpandButton"
+            private const val EXPAND_FOCUS_RESTORE_ATTEMPTS = 3
         }
 
         private var nativeResolutionStartIndex = Int.MAX_VALUE
@@ -951,6 +975,19 @@ class StreamSettings : AppCompatActivity() {
         private var categoryPositions: IntArray = IntArray(0)
         private var categoryPositionsValid = false
         private var adapterDataObserver: RecyclerView.AdapterDataObserver? = null
+        private data class ExpandFocusRequest(
+            val generation: Long,
+            val position: Int,
+            val recyclerView: RecyclerView,
+            val adapter: RecyclerView.Adapter<*>
+        )
+        private data class ExpandFocusCallback(
+            val recyclerView: RecyclerView,
+            val runnable: Runnable
+        )
+        private var expandFocusGeneration = 0L
+        private var pendingExpandFocusRequest: ExpandFocusRequest? = null
+        private val expandFocusCallbacks = ArrayList<ExpandFocusCallback>()
         @Volatile
         private var developerUnlockVerificationRunning = false
         @Volatile
@@ -2830,6 +2867,7 @@ class StreamSettings : AppCompatActivity() {
         }
 
         override fun onDestroyView() {
+            cancelExpandFocusRestore()
             unregisterConfigSyncPreferenceListener()
             configSyncSnapshotHandler.removeCallbacks(configSyncSnapshotRunnable)
             // 注销 adapter observer，避免泄漏
@@ -2847,6 +2885,16 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onResume() {
             super.onResume()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                findPreference<CheckBoxPreference>(
+                    PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
+                )?.isChecked = false
+            }
             registerConfigSyncPreferenceListener()
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
@@ -2944,6 +2992,149 @@ class StreamSettings : AppCompatActivity() {
             return (dp * density).roundToInt()
         }
 
+        /**
+         * AndroidX removes its synthetic "Advanced" row as soon as it is activated. In a
+         * two-pane layout, RecyclerView's fallback focus search can then pick the category list
+         * on the left. Remember the row's adapter position so the first newly revealed setting
+         * at that same position can receive focus after the adapter has settled.
+         */
+        @SuppressLint("RestrictedApi")
+        fun prepareExpandButtonFocusRestore(focusedView: View?): Boolean {
+            val recyclerView = listView ?: return false
+            val itemView = focusedView?.let(recyclerView::findContainingItemView) ?: return false
+            val position = recyclerView.getChildAdapterPosition(itemView)
+            if (position == RecyclerView.NO_POSITION) return false
+
+            val adapter = recyclerView.adapter as? PreferenceGroupAdapter ?: return false
+            val preference = adapter.getItem(position) ?: return false
+            if (preference.javaClass.name != ANDROIDX_EXPAND_BUTTON_CLASS) return false
+
+            cancelExpandFocusRestore()
+            pendingExpandFocusRequest = ExpandFocusRequest(
+                generation = expandFocusGeneration,
+                position = position,
+                recyclerView = recyclerView,
+                adapter = adapter
+            )
+            return true
+        }
+
+        fun restoreFocusAfterExpandButton() {
+            val request = pendingExpandFocusRequest ?: return
+
+            // PreferenceGroupAdapter posts its hierarchy sync from the click handler. Posting
+            // here puts focus restoration after that sync; the animation callback then waits for
+            // RecyclerView to lay out the newly inserted preference rows.
+            postExpandFocusCallback(request, onAnimation = false) {
+                restoreExpandedPreferenceFocus(request, EXPAND_FOCUS_RESTORE_ATTEMPTS)
+            }
+        }
+
+        @SuppressLint("RestrictedApi")
+        private fun restoreExpandedPreferenceFocus(
+            request: ExpandFocusRequest,
+            attemptsLeft: Int
+        ) {
+            if (!isExpandFocusRequestActive(request)) return
+            val recyclerView = request.recyclerView
+            val adapter = request.adapter as? PreferenceGroupAdapter ?: return
+            val itemCount = adapter.itemCount
+            if (itemCount == 0) {
+                completeExpandFocusRestore(request)
+                return
+            }
+
+            val oldPosition = request.position.coerceAtMost(itemCount - 1)
+            if (adapter.getItem(oldPosition)?.javaClass?.name == ANDROIDX_EXPAND_BUTTON_CLASS) {
+                if (attemptsLeft > 0) {
+                    postExpandFocusCallback(request, onAnimation = true) {
+                        restoreExpandedPreferenceFocus(request, attemptsLeft - 1)
+                    }
+                } else {
+                    completeExpandFocusRestore(request)
+                }
+                return
+            }
+
+            // The first revealed row can itself be disabled by a dependency. In that case,
+            // continue within the right-hand preference list to the nearest selectable row.
+            val targetPosition = (oldPosition until itemCount).firstOrNull { position ->
+                adapter.getItem(position)?.let { it.isEnabled && it.isSelectable } == true
+            } ?: (oldPosition - 1 downTo 0).firstOrNull { position ->
+                adapter.getItem(position)?.let { it.isEnabled && it.isSelectable } == true
+            } ?: RecyclerView.NO_POSITION
+
+            if (targetPosition == RecyclerView.NO_POSITION) {
+                recyclerView.requestFocus()
+                completeExpandFocusRestore(request)
+                return
+            }
+
+            recyclerView.scrollToPosition(targetPosition)
+            postExpandFocusCallback(request, onAnimation = true) {
+                val target = recyclerView.findViewHolderForAdapterPosition(targetPosition)?.itemView
+                if (target != null && target.isShown && target.isFocusable && target.requestFocus()) {
+                    completeExpandFocusRestore(request)
+                } else if (attemptsLeft > 0) {
+                    restoreExpandedPreferenceFocus(request, attemptsLeft - 1)
+                } else {
+                    // Keep the fallback inside the right pane even if the first revealed
+                    // preference is temporarily disabled or not laid out yet.
+                    recyclerView.requestFocus()
+                    completeExpandFocusRestore(request)
+                }
+            }
+        }
+
+        private fun postExpandFocusCallback(
+            request: ExpandFocusRequest,
+            onAnimation: Boolean,
+            action: () -> Unit
+        ) {
+            if (!isExpandFocusRequestActive(request)) return
+            lateinit var callback: ExpandFocusCallback
+            val runnable = Runnable {
+                expandFocusCallbacks.remove(callback)
+                if (isExpandFocusRequestActive(request)) action()
+            }
+            callback = ExpandFocusCallback(request.recyclerView, runnable)
+            expandFocusCallbacks.add(callback)
+            val posted = if (onAnimation) {
+                request.recyclerView.postOnAnimation(runnable)
+                true
+            } else {
+                request.recyclerView.post(runnable)
+            }
+            if (!posted) {
+                expandFocusCallbacks.remove(callback)
+                completeExpandFocusRestore(request)
+            }
+        }
+
+        private fun isExpandFocusRequestActive(request: ExpandFocusRequest): Boolean {
+            return pendingExpandFocusRequest === request &&
+                request.generation == expandFocusGeneration &&
+                view != null &&
+                listView === request.recyclerView &&
+                request.recyclerView.isAttachedToWindow &&
+                request.recyclerView.adapter === request.adapter
+        }
+
+        private fun completeExpandFocusRestore(request: ExpandFocusRequest) {
+            if (pendingExpandFocusRequest === request) {
+                pendingExpandFocusRequest = null
+            }
+        }
+
+        private fun cancelExpandFocusRestore() {
+            expandFocusGeneration++
+            pendingExpandFocusRequest = null
+            expandFocusCallbacks.forEach { callback ->
+                callback.recyclerView.removeCallbacks(callback.runnable)
+            }
+            expandFocusCallbacks.clear()
+        }
+
         @SuppressLint("RestrictedApi")
         private fun findAdapterPositionForPreference(target: Preference?): Int {
             val recyclerView = listView ?: return -1
@@ -3023,6 +3214,33 @@ class StreamSettings : AppCompatActivity() {
                 category.removePreference(findPreference("checkbox_gamepad_motion_sensors")!!)
             }
 
+            val directBluetooth = findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
+            )!!
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
+            ) {
+                findPreference<PreferenceCategory>("category_gamepad_settings")!!
+                    .removePreference(directBluetooth)
+            } else {
+                directBluetooth.onPreferenceChangeListener =
+                    Preference.OnPreferenceChangeListener { _, newValue ->
+                        if (newValue != true || ContextCompat.checkSelfPermission(
+                                requireContext(),
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            true
+                        } else {
+                            requestPermissions(
+                                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                                BLUETOOTH_CONNECT_PERMISSION_REQUEST
+                            )
+                            false
+                        }
+                    }
+            }
+
             // Hide gamepad motion sensor fallback option if the device has no gyro or accelerometer
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER) &&
                     !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_GYROSCOPE)) {
@@ -3035,6 +3253,7 @@ class StreamSettings : AppCompatActivity() {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!
                 category.removePreference(findPreference("checkbox_usb_bind_all")!!)
                 category.removePreference(findPreference("checkbox_usb_driver")!!)
+                category.removePreference(findPreference("checkbox_dualsense_wireless_bridge")!!)
             }
 
             // Remove PiP mode on devices pre-Oreo, where the feature is not available (some low RAM devices),
@@ -3553,6 +3772,26 @@ class StreamSettings : AppCompatActivity() {
                         Toast.LENGTH_SHORT).show()
 
                 true
+            }
+        }
+
+        override fun onRequestPermissionsResult(
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
+        ) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            if (requestCode != BLUETOOTH_CONNECT_PERMISSION_REQUEST) return
+            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+            findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
+            )?.isChecked = granted
+            if (!granted) {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.toast_dualsense_bluetooth_permission_denied,
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 

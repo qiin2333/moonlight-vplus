@@ -2,7 +2,7 @@ package com.limelight.binding.input.driver
 
 abstract class AbstractController(
     protected val deviceId: Int,
-    protected val listener: UsbDriverListener,
+    protected val listener: ControllerDriverListener,
     private val vendorId: Int,
     private val productId: Int
 ) {
@@ -76,7 +76,7 @@ abstract class AbstractController(
         listener.reportControllerBattery(deviceId, batteryState, batteryPercentage)
     }
 
-    protected fun isControllerReady(): Boolean = listener.isUsbControllerReady(deviceId)
+    protected fun isControllerReady(): Boolean = listener.isControllerReady(deviceId)
 
     protected fun notifyControllerTouch(eventType: Byte, pointerId: Int, x: Float, y: Float) {
         listener.reportControllerTouch(deviceId, eventType, pointerId, x, y)
