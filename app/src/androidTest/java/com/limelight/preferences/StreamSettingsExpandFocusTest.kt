@@ -14,9 +14,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.Collections
 
 @RunWith(AndroidJUnit4::class)
 class StreamSettingsExpandFocusTest {
+
+    // The target and instrumentation APKs share the desugared j$ namespace. Keep the
+    // synchronizedMap facade in the test APK so it cannot shadow the target with a partial class.
+    @Suppress("unused")
+    private val desugarCollectionsCompatibility =
+        Collections.synchronizedMap(mutableMapOf<Any, Any>())
 
     @get:Rule
     val activityRule = ActivityScenarioRule(StreamSettings::class.java)
@@ -42,10 +49,10 @@ class StreamSettingsExpandFocusTest {
                 .findViewHolderForAdapterPosition(expandPosition)
                 ?.itemView
             assertNotNull(expandRow)
-            assertTrue(expandRow!!.requestFocus())
+            assertTrue(expandRow!!.requestFocusFromTouch())
 
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_A))
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A))
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
@@ -81,7 +88,7 @@ class StreamSettingsExpandFocusTest {
             val expandRow = requireNotNull(
                 oldRecyclerView.findViewHolderForAdapterPosition(expandPosition)?.itemView
             )
-            assertTrue(expandRow.requestFocus())
+            assertTrue(expandRow.requestFocusFromTouch())
             assertTrue(fragment.prepareExpandButtonFocusRestore(expandRow))
             fragment.restoreFocusAfterExpandButton()
         }
@@ -118,14 +125,14 @@ class StreamSettingsExpandFocusTest {
             val expandRow = requireNotNull(
                 recyclerView.findViewHolderForAdapterPosition(expandPosition)?.itemView
             )
-            assertTrue(expandRow.requestFocus())
+            assertTrue(expandRow.requestFocusFromTouch())
 
             repeat(3) {
                 assertTrue(fragment.prepareExpandButtonFocusRestore(expandRow))
                 fragment.restoreFocusAfterExpandButton()
             }
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_A))
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A))
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
