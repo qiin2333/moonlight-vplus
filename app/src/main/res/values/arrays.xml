@@ -366,6 +366,26 @@
         <item>show_button</item>
         <item>toggle_microphone</item>
     </string-array>
+    <string-array name="mic_button_position_entries">
+        <item>@string/mic_button_position_top_left</item>
+        <item>@string/mic_button_position_top_center</item>
+        <item>@string/mic_button_position_top_right</item>
+        <item>@string/mic_button_position_center_left</item>
+        <item>@string/mic_button_position_center_right</item>
+        <item>@string/mic_button_position_bottom_left</item>
+        <item>@string/mic_button_position_bottom_center</item>
+        <item>@string/mic_button_position_bottom_right</item>
+    </string-array>
+    <string-array name="mic_button_position_values" translatable="false">
+        <item>top_left</item>
+        <item>top_center</item>
+        <item>top_right</item>
+        <item>center_left</item>
+        <item>center_right</item>
+        <item>bottom_left</item>
+        <item>bottom_center</item>
+        <item>bottom_right</item>
+    </string-array>
     <string-array name="mic_icon_color_entries">
         <item>Gradient Blue</item>
         <item>Gradient Purple</item>

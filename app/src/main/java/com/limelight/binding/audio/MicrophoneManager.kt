@@ -10,7 +10,6 @@ import android.widget.Toast
 
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
@@ -23,6 +22,7 @@ class MicrophoneManager(
 ) {
     private var microphoneStream: MicrophoneStream? = null
     private var micButton: ImageButton? = null
+    private val buttonPreferences = MicrophoneButtonPreferences(context)
 
     interface MicrophoneStateListener {
         fun onMicrophoneStateChanged(isActive: Boolean)
@@ -201,9 +201,7 @@ class MicrophoneManager(
     private fun setupMicrophoneButton() {
         val button = micButton ?: return
 
-        val prefConfig = PreferenceConfiguration.readPreferences(context)
-        val showButton = enableMic &&
-            prefConfig.micMenuActionMode == PreferenceConfiguration.MIC_MENU_ACTION_SHOW_BUTTON
+        val showButton = enableMic && buttonPreferences.isButtonShownByDefault()
 
         button.visibility = if (showButton) View.VISIBLE else View.GONE
         if (showButton) {

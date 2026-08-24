@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.binding.audio.MicrophoneButtonPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -24,6 +25,16 @@ class ConfigurationSyncSchemaTest {
                 PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING
             )
         )
+    }
+
+    @Test
+    fun microphoneButtonSettingsArePortable() {
+        listOf(
+            MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
+            MicrophoneButtonPreferences.KEY_PRESET_POSITION
+        ).forEach { key ->
+            assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
+        }
     }
 
     @Test

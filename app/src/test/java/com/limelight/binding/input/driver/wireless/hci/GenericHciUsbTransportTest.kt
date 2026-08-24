@@ -87,7 +87,7 @@ class GenericHciUsbTransportTest {
         assertEquals(HciTransportState.FAILED, transport.state)
         assertEquals(HciTransportErrorCode.MALFORMED_EVENT, failures.single().code)
         assertTrue(io.closed)
-        assertTrue(io.finished)
+        assertTrue(io.awaitFinished())
 
         transport.close()
         assertEquals(HciTransportState.CLOSED, transport.state)
@@ -154,6 +154,7 @@ class GenericHciUsbTransportTest {
         private val openResult: Boolean = true
     ) : HciUsbIo {
         private val reads = LinkedBlockingQueue<HciUsbReadResult>()
+        private val closeFinished = CountDownLatch(1)
         val commandWrites = Collections.synchronizedList(ArrayList<ByteArray>())
         val aclWrites = Collections.synchronizedList(ArrayList<ByteArray>())
 
@@ -200,7 +201,10 @@ class GenericHciUsbTransportTest {
         override fun finishClose() {
             finishedWhileReading = reading
             finished = true
+            closeFinished.countDown()
         }
+
+        fun awaitFinished(): Boolean = closeFinished.await(2, TimeUnit.SECONDS)
 
         fun emit(channel: HciUsbInputChannel, bytes: ByteArray) {
             reads.put(HciUsbReadResult.Packet(channel, bytes))

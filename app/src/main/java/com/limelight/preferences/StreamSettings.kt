@@ -76,6 +76,8 @@ import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.audio.MicrophoneButtonPreferences
+import com.limelight.binding.audio.MicrophoneButtonPositionStore
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
@@ -157,6 +159,7 @@ class StreamSettings : AppCompatActivity() {
                 "category_screen_position" -> R.drawable.phc_video_camera
                 "category_display_behavior" -> R.drawable.phc_perf_resolution
                 "category_audio_settings" -> R.drawable.phc_audio
+                "category_microphone_settings" -> R.drawable.ic_mic_gm
                 "category_gamepad_settings" -> R.drawable.phc_gamepad
                 "category_input_settings" -> R.drawable.phc_keyboard
                 "category_enhanced_touch" -> R.drawable.phc_touch
@@ -3155,12 +3158,14 @@ class StreamSettings : AppCompatActivity() {
             // 添加阴影主题
             requireActivity().theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
 
+            MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
 
             setupFramegenPreferences()
             setupConfigSyncPreferences()
             setupMicVolumeProcessingPreferences()
+            setupMicrophoneButtonPositionPreference()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
@@ -4180,6 +4185,18 @@ class StreamSettings : AppCompatActivity() {
                 }
                 true
             }
+        }
+
+        private fun setupMicrophoneButtonPositionPreference() {
+            val positionPreference = findPreference<ListPreference>(
+                MicrophoneButtonPreferences.KEY_PRESET_POSITION
+            ) ?: return
+            val positionStore = MicrophoneButtonPositionStore(requireContext())
+            positionPreference.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, _ ->
+                    positionStore.clearCustomPosition()
+                    true
+                }
         }
 
         private fun refreshDeveloperFeatureGateState() {

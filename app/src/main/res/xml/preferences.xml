@@ -492,7 +492,11 @@
             android:entries="@array/audio_vibration_scene_names"
             android:entryValues="@array/audio_vibration_scene_values"
             android:defaultValue="0" />
-        <!-- 以下为原“麦克风”分类合并进来的项目 -->
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_microphone_settings"
+        android:key="category_microphone_settings"
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="4">
         <CheckBoxPreference
             android:key="checkbox_enable_mic"
             android:title="@string/title_checkbox_enable_mic"
@@ -506,6 +510,20 @@
             android:entries="@array/mic_menu_action_mode_entries"
             android:entryValues="@array/mic_menu_action_mode_values"
             android:defaultValue="show_button" />
+        <CheckBoxPreference
+            android:key="checkbox_show_mic_button"
+            android:dependency="checkbox_enable_mic"
+            android:title="@string/title_checkbox_show_mic_button"
+            android:summary="@string/summary_checkbox_show_mic_button"
+            android:defaultValue="true" />
+        <ListPreference
+            android:key="list_mic_button_position"
+            android:dependency="checkbox_show_mic_button"
+            android:title="@string/title_list_mic_button_position"
+            android:summary="@string/summary_list_mic_button_position"
+            android:entries="@array/mic_button_position_entries"
+            android:entryValues="@array/mic_button_position_values"
+            android:defaultValue="center_right" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_mic_bitrate_kbps"
             android:dependency="checkbox_enable_mic"

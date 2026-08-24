@@ -285,6 +285,7 @@
     <string name="resolution_added_successfully">Resolution added successfully</string>
 
     <string name="category_audio_settings">Audio Settings</string>
+    <string name="category_microphone_settings">Microphone Settings</string>
     <string name="title_audio_config_list">Surround sound configurationItem</string>
     <string name="summary_audio_config_list">Enable 5.1, 7.1, or 7.1.4 surround sound for home-theater systems. 7.1.4 requires Android 12+</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
@@ -304,6 +305,18 @@
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
     <string name="title_list_mic_icon_color">Microphone icon color</string>
     <string name="summary_list_mic_icon_color">Choose the color scheme for the microphone button icon</string>
+    <string name="title_checkbox_show_mic_button">Show microphone floating button</string>
+    <string name="summary_checkbox_show_mic_button">Show the microphone button when streaming. You can drag it and its position will be remembered.</string>
+    <string name="title_list_mic_button_position">Quick button position</string>
+    <string name="summary_list_mic_button_position">Place the microphone button at a screen edge. A dragged position overrides this preset until you choose a preset again.</string>
+    <string name="mic_button_position_top_left">Top left</string>
+    <string name="mic_button_position_top_center">Top center</string>
+    <string name="mic_button_position_top_right">Top right</string>
+    <string name="mic_button_position_center_left">Center left</string>
+    <string name="mic_button_position_center_right">Center right</string>
+    <string name="mic_button_position_bottom_left">Bottom left</string>
+    <string name="mic_button_position_bottom_center">Bottom center</string>
+    <string name="mic_button_position_bottom_right">Bottom right</string>
     <string name="title_checkbox_mic_volume_processing">Microphone volume processing</string>
     <string name="summary_checkbox_mic_volume_processing">Adjust microphone volume before it is sent to the host. Fixed gain and volume balance are mutually exclusive.</string>
     <string name="title_checkbox_mic_gain">Volume gain</string>

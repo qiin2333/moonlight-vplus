@@ -220,6 +220,7 @@
     <string name="title_checkbox_enable_pip">启用画中画观察模式</string>
     <string name="summary_checkbox_enable_pip">允许多任务时观看串流画面，但是不能操作。</string>
     <string name="category_audio_settings">音频设置</string>
+    <string name="category_microphone_settings">麦克风设置</string>
     <string name="title_audio_config_list"> 环绕声设置 </string>
     <string name="summary_audio_config_list">为家庭影院系统启用5.1、7.1或7.1.4环绕声，7.1.4需要Android 12+。</string>
     <string name="title_checkbox_enable_audio_passthrough">启用音频直通</string>
@@ -667,6 +668,18 @@
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量，更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="title_list_mic_icon_color">麦克风图标颜色</string>
     <string name="summary_list_mic_icon_color">选择麦克风按钮图标的颜色。</string>
+    <string name="title_checkbox_show_mic_button">显示麦克风悬浮按钮</string>
+    <string name="summary_checkbox_show_mic_button">串流时显示麦克风按钮。可直接拖动，位置会自动记忆。</string>
+    <string name="title_list_mic_button_position">快速设置按钮位置</string>
+    <string name="summary_list_mic_button_position">将麦克风按钮放到屏幕边缘。拖动位置会暂时覆盖预设，再次选择预设即可清除。</string>
+    <string name="mic_button_position_top_left">左上</string>
+    <string name="mic_button_position_top_center">中上</string>
+    <string name="mic_button_position_top_right">右上</string>
+    <string name="mic_button_position_center_left">左中</string>
+    <string name="mic_button_position_center_right">右中</string>
+    <string name="mic_button_position_bottom_left">左下</string>
+    <string name="mic_button_position_bottom_center">中下</string>
+    <string name="mic_button_position_bottom_right">右下</string>
     <string name="title_checkbox_mic_volume_processing">麦克风音量处理</string>
     <string name="summary_checkbox_mic_volume_processing">在发送到主机前调整麦克风音量。固定增益与音量平衡只能选择一种。</string>
     <string name="title_checkbox_mic_gain">音量增益</string>
