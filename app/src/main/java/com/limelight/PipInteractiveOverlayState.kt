@@ -3,8 +3,7 @@ package com.limelight
 internal data class PipInteractiveOverlaySnapshot(
     val virtualControllerVisible: Boolean,
     val crownControllerVisible: Boolean,
-    val microphoneButtonVisible: Boolean,
-    val microphoneActive: Boolean
+    val microphoneButtonVisible: Boolean
 )
 
 internal class PipInteractiveOverlayState {
