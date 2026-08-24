@@ -30,6 +30,19 @@ class ControllerButtonChordStateTest {
         assertTrue(state.updateButton(X, true))
     }
 
+    @Test
+    fun resetClearsPressedFlagsAndLatch() {
+        val state = ControllerButtonChordState(COMBO_FLAGS)
+        assertTrue(state.updateSnapshot(COMBO_FLAGS))
+
+        state.reset()
+
+        assertFalse(state.updateButton(X, true))
+        assertFalse(state.updateButton(SELECT, true))
+        assertFalse(state.updateButton(LB, true))
+        assertTrue(state.updateButton(RB, true))
+    }
+
     companion object {
         private const val SELECT = ControllerPacket.BACK_FLAG
         private const val LB = ControllerPacket.LB_FLAG

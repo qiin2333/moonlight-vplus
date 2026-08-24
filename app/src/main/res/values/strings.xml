@@ -347,7 +347,7 @@
     <string name="title_checkbox_mouse_emulation">Mouse emulation via gamepad</string>
     <string name="summary_checkbox_mouse_emulation">Long pressing the Start button will switch the gamepad into mouse mode</string>
     <string name="title_checkbox_enable_start_key_menu">Long-press Start key actions</string>
-    <string name="summary_checkbox_enable_start_key_menu">Hold Start for the menu on system controllers, or menu/mouse shortcuts with USB takeover.</string>
+    <string name="summary_checkbox_enable_start_key_menu">Hold Start to open the action wheel for menu, mouse, keyboard, or performance actions.</string>
     <string name="title_controller_diagnostic">Controller shortcut test</string>
     <string name="summary_controller_diagnostic">Learn and test controller shortcuts</string>
     <string name="controller_diag_title">Controller shortcut test</string>
@@ -367,7 +367,12 @@
     <string name="controller_diag_path_system">Android system input</string>
     <string name="controller_diag_path_usb_takeover">V+ USB takeover</string>
     <string name="controller_diag_path_unavailable">Unavailable</string>
-    <string name="usb_shortcut_hold_hint">Press B to open the game menu, or release Start to toggle mouse emulation</string>
+    <string name="usb_shortcut_hold_hint">Release a D-pad direction to run it now, or move a stick and release Start</string>
+    <string name="start_hold_wheel_menu">Stream menu</string>
+    <string name="start_hold_wheel_mouse">Mouse mode</string>
+    <string name="start_hold_wheel_keyboard">On-screen keyboard</string>
+    <string name="start_hold_wheel_performance">Performance</string>
+    <string name="start_hold_wheel_continue">Continue game</string>
     <string name="controller_diag_simulator_title">Shortcut test</string>
     <string name="controller_diag_simulator_summary">Hold Start, or press Start + Select + LB + RB.</string>
     <string name="controller_diag_test_label">Test</string>
@@ -388,11 +393,11 @@
     <string name="controller_diag_no_buttons_pressed">No buttons pressed</string>
     <string name="controller_diag_available_shortcuts">Available shortcuts</string>
     <string name="controller_diag_shortcut_menu_title">Game menu</string>
-    <string name="controller_diag_shortcut_menu_system">Hold Start for 750 ms, then release.</string>
-    <string name="controller_diag_shortcut_menu_usb">Hold Start. When the hint appears, press B.</string>
+    <string name="controller_diag_shortcut_menu_system">Hold Start. When the wheel appears, tap D-pad Up.</string>
+    <string name="controller_diag_shortcut_menu_usb">Hold Start. When the wheel appears, tap D-pad Up.</string>
     <string name="controller_diag_shortcut_menu_pending">Start the test to identify the input path and test this shortcut.</string>
     <string name="controller_diag_shortcut_mouse_title">Mouse mode</string>
-    <string name="controller_diag_shortcut_mouse_usb">Hold Start. When the hint appears, release Start.</string>
+    <string name="controller_diag_shortcut_mouse_usb">Hold Start. When the wheel appears, tap D-pad Right.</string>
     <string name="controller_diag_shortcut_exit_title">Exit stream</string>
     <string name="controller_diag_shortcut_exit_summary">Press Start, Select, LB, and RB together.</string>
     <string name="controller_diag_shortcut_performance_title">Toggle performance display</string>

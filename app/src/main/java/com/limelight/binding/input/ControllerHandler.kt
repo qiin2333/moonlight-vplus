@@ -19,6 +19,7 @@ import android.view.InputDevice
 import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.HapticFeedbackConstants
 
 import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
@@ -340,7 +341,7 @@ class ControllerHandler(
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
-    private var driverShortcutHintOwner: DriverControllerContext? = null
+    private val startWheelOwnerGate = StartWheelOwnerGate()
 
     internal data class ControllerArrivalMetadata(
         val type: Byte,
@@ -576,6 +577,10 @@ class ControllerHandler(
         }
         driverContextsToDestroy.forEach(DriverControllerContext::destroy)
 
+        if (startWheelOwnerGate.clear()) {
+            mainThreadHandler.post { gestures.hideStartHoldWheel() }
+        }
+
         // 清理 defaultContext 上可能注册的手机陀螺仪传感器
         gyroManager.registerDeviceGyroForDefaultContext(false)
         defaultContext.destroy()
@@ -592,22 +597,137 @@ class ControllerHandler(
     }
 
     internal fun onDriverShortcutLongPress(context: DriverControllerContext) {
-        if (stopped || driverShortcutHintOwner?.let { it !== context } == true) {
-            return
-        }
-        handleDriverShortcutUpdate(
-            context,
-            context.shortcutState.onLongPressTimeout(
-                android.os.SystemClock.uptimeMillis(),
-                prefConfig.enableStartKeyMenu
-            )
+        if (stopped || !startWheelOwnerGate.tryClaim(context)) return
+        val update = context.shortcutState.onLongPressTimeout(
+            android.os.SystemClock.uptimeMillis(),
+            prefConfig.enableStartKeyMenu
         )
+        if (!update.actions.contains(DriverControllerShortcutStateMachine.Action.SHOW_WHEEL)) {
+            startWheelOwnerGate.release(context)
+        }
+        handleDriverShortcutUpdate(context, update)
+        if (update.sendNeutralState) {
+            sendNeutralControllerState(context)
+        }
+    }
+
+    internal fun onSystemStartLongPress(context: InputDeviceContext) {
+        if (stopped || !startWheelOwnerGate.tryClaim(context)) return
+        val update = context.startGesture.onLongPressTimeout(
+            SystemClock.uptimeMillis(),
+            prefConfig.enableStartKeyMenu
+        )
+        if (!update.actions.contains(StartGestureReducer.EventAction.SHOW_WHEEL)) {
+            startWheelOwnerGate.release(context)
+        }
+        handleSystemStartGestureUpdate(context, update)
+    }
+
+    internal fun resetSystemStartGesture(context: InputDeviceContext) {
+        mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+        handleSystemStartGestureUpdate(context, context.startGesture.reset())
+        if (startWheelOwnerGate.release(context)) {
+            gestures.hideStartHoldWheel()
+        }
+    }
+
+    private fun handleSystemStartGestureUpdate(
+        context: InputDeviceContext,
+        update: StartGestureReducer.Update
+    ) {
+        for (action in update.actions) {
+            when (action) {
+                StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS -> {
+                    mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+                    mainThreadHandler.postDelayed(
+                        context.startLongPressRunnable,
+                        START_DOWN_TIME_MOUSE_MODE_MS.toLong()
+                    )
+                }
+                StartGestureReducer.EventAction.CANCEL_LONG_PRESS ->
+                    mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
+                StartGestureReducer.EventAction.SHOW_WHEEL -> {
+                    if (startWheelOwnerGate.isOwner(context)) {
+                        gestures.showStartHoldWheel()
+                        performStartWheelHaptic()
+                    }
+                }
+                StartGestureReducer.EventAction.HIDE_WHEEL -> {
+                    if (startWheelOwnerGate.release(context)) {
+                        gestures.hideStartHoldWheel()
+                    }
+                }
+                StartGestureReducer.EventAction.SELECTION_CHANGED ->
+                    run {
+                        if (startWheelOwnerGate.isOwner(context)) {
+                            gestures.updateStartHoldWheelSelection(update.selectedAction)
+                            performStartWheelHaptic()
+                        }
+                    }
+                StartGestureReducer.EventAction.COMMIT_ACTION -> when (update.committedAction) {
+                    StartWheelAction.MOUSE -> context.toggleMouseEmulation()
+                    StartWheelAction.KEYBOARD -> gestures.toggleKeyboard()
+                    StartWheelAction.PERFORMANCE -> onTogglePerformanceOverlay()
+                    StartWheelAction.MENU -> Unit
+                    StartWheelAction.CONTINUE, null -> Unit
+                }.also { performStartWheelHaptic() }
+                StartGestureReducer.EventAction.OPEN_GAME_MENU -> {
+                    val opened = gestures.showGameMenu(context)
+                    update.menuOpenRequestId?.let { requestId ->
+                        handleSystemStartGestureUpdate(
+                            context,
+                            context.startGesture.onGameMenuOpenResult(requestId, opened)
+                        )
+                    }
+                }
+                StartGestureReducer.EventAction.EXIT_STREAM -> onExitStream()
+            }
+        }
+        if (update.wheelVisible && startWheelOwnerGate.isOwner(context)) {
+            gestures.updateStartHoldWheelSelection(update.selectedAction)
+        }
+        if (update.sendNeutralState) {
+            sendNeutralControllerState(context)
+        }
+    }
+
+    private fun updateSystemStartReleaseState(context: InputDeviceContext) {
+        if (context.startGesture.state() == StartGestureReducer.State.WAIT_FOR_RELEASE) {
+            val buttonFlags = context.inputMap or if (context.startGesture.isStartPressed()) {
+                ControllerPacket.PLAY_FLAG
+            } else {
+                0
+            }
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onInputSnapshot(
+                    buttonFlags,
+                    leftStickX = context.leftStickX.toFloat() / 32766f,
+                    leftStickY = hostStickYToWheelAxis(context.leftStickY),
+                    rightStickX = context.rightStickX.toFloat() / 32766f,
+                    rightStickY = hostStickYToWheelAxis(context.rightStickY)
+                )
+            )
+        }
+    }
+
+    private fun performStartWheelHaptic() {
+        mainThreadHandler.post {
+            if (!stopped) {
+                activityContext.window.decorView.performHapticFeedback(
+                    HapticFeedbackConstants.KEYBOARD_TAP
+                )
+            }
+        }
     }
 
     internal fun releaseDriverShortcutState(context: DriverControllerContext) {
         mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
         val update = context.shortcutState.reset()
         handleDriverShortcutUpdate(context, update)
+        if (startWheelOwnerGate.release(context)) {
+            mainThreadHandler.post { gestures.hideStartHoldWheel() }
+        }
     }
 
     fun disableSensors() {
@@ -1422,12 +1542,28 @@ class ControllerHandler(
     }
 
     internal fun sendControllerInputPacket(originalContext: GenericControllerContext) {
+        if (isControllerLocallyCaptured(originalContext.controllerNumber)) return
         synchronized(arrivalMetadataLock) {
             sendControllerInputPacketLocked(originalContext)
         }
     }
 
-    private fun sendControllerInputPacketLocked(originalContext: GenericControllerContext) {
+    internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean {
+        for (i in 0 until inputDeviceContexts.size()) {
+            val context = inputDeviceContexts.valueAt(i)
+            if (context.controllerNumber == controllerNumber && context.isLocalInputCaptureActive()) {
+                return true
+            }
+        }
+        return driverControllerContexts.values.any {
+            it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
+        }
+    }
+
+    private fun sendControllerInputPacketLocked(
+        originalContext: GenericControllerContext,
+        forceNeutral: Boolean = false
+    ) {
         val newlyAssigned = assignControllerNumberIfNeeded(originalContext)
         if (!originalContext.controllerArrival.isReported) {
             // assignControllerNumberIfNeeded() already made the first attempt. If
@@ -1452,46 +1588,48 @@ class ControllerHandler(
         // In order to properly handle controllers that are split into multiple devices,
         // we must aggregate all controllers with the same controller number into a single
         // device before we send it.
-        for (i in 0 until inputDeviceContexts.size()) {
-            val context: GenericControllerContext = inputDeviceContexts.valueAt(i)
-            if (context.assignedControllerNumber &&
-                context.controllerNumber == controllerNumber &&
-                context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.inputMap
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+        if (!forceNeutral) {
+            for (i in 0 until inputDeviceContexts.size()) {
+                val context: GenericControllerContext = inputDeviceContexts.valueAt(i)
+                if (context.assignedControllerNumber &&
+                    context.controllerNumber == controllerNumber &&
+                    context.mouseEmulationActive == originalContext.mouseEmulationActive
+                ) {
+                    inputMap = inputMap or context.inputMap
+                    leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                    rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
+                    leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                    leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                    rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                    rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+                }
             }
-        }
-        for (context: GenericControllerContext in driverControllerContexts.values) {
-            if (context.assignedControllerNumber &&
-                context.controllerNumber == controllerNumber &&
-                context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.inputMap
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+            for (context: GenericControllerContext in driverControllerContexts.values) {
+                if (context.assignedControllerNumber &&
+                    context.controllerNumber == controllerNumber &&
+                    context.mouseEmulationActive == originalContext.mouseEmulationActive
+                ) {
+                    inputMap = inputMap or context.inputMap
+                    leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                    rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
+                    leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                    leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                    rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                    rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
+                }
             }
-        }
-        if (defaultContext.controllerNumber == controllerNumber) {
-            inputMap = inputMap or defaultContext.inputMap
-            leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
-            rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
-            leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
-            leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
-            rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
-            rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
-        }
-        if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
-            inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
+            if (defaultContext.controllerNumber == controllerNumber) {
+                inputMap = inputMap or defaultContext.inputMap
+                leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
+                rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
+                leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
+                leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
+                rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
+                rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
+            }
+            if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
+                inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
+            }
         }
 
         if (originalContext.mouseEmulationActive) {
@@ -1835,9 +1973,6 @@ class ControllerHandler(
         val wasHold = context.gyroHoldActive
         if (prefConfig.gyroToRightStick || prefConfig.gyroToMouse) {
             context.gyroHoldActive = gyroManager.computeAnalogActivation(lt, rt)
-            if (wasHold && !context.gyroHoldActive) {
-                gyroManager.onGyroHoldDeactivatedInput(context)
-            }
         }
 
         // Apply gyro fusion to right stick if needed
@@ -1872,7 +2007,30 @@ class ControllerHandler(
             }
         }
 
+        if (context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE) {
+            handleSystemStartWheelAxes(context)
+        }
+        if (wasHold && !context.gyroHoldActive) {
+            gyroManager.onGyroHoldDeactivatedInput(context)
+        }
+        if (context.isLocalInputCaptureActive()) {
+            updateSystemStartReleaseState(context)
+            return
+        }
         sendControllerInputPacket(context)
+    }
+
+    private fun handleSystemStartWheelAxes(context: InputDeviceContext) {
+        handleSystemStartGestureUpdate(
+            context,
+            context.startGesture.onSelection(
+                leftStickX = context.leftStickX.toFloat() / 32766f,
+                leftStickY = hostStickYToWheelAxis(context.leftStickY),
+                rightStickX = context.rightStickX.toFloat() / 32766f,
+                rightStickY = hostStickYToWheelAxis(context.rightStickY),
+                dpadFlags = context.inputMap
+            )
+        )
     }
 
     // Normalize the given raw float value into a 0.0-1.0f range
@@ -1930,6 +2088,7 @@ class ControllerHandler(
             }
         }
         context ?: return false
+        if (context.isLocalInputCaptureActive()) return true
         if (isTouchpad && eventDevice != null) {
             context.touchpadXRange = context.touchpadXRange ?: eventDevice.getMotionRange(
                 MotionEvent.AXIS_X,
@@ -2119,7 +2278,10 @@ class ControllerHandler(
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
-        updatePerformanceShortcut(context, event.keyCode, pressed = false)
+        val captureAtEntry = context.isLocalInputCaptureActive()
+        if (!captureAtEntry) {
+            updatePerformanceShortcut(context, event.keyCode, pressed = false)
+        }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
@@ -2128,6 +2290,8 @@ class ControllerHandler(
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
+
+        val isStartKey = keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU
 
         // If the button hasn't been down long enough, sleep for a bit before sending the up event
         // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
@@ -2155,12 +2319,6 @@ class ControllerHandler(
                 // Sometimes we'll get a spurious key up event on controller disconnect.
                 // Make sure it's real by checking that the key is actually down before taking
                 // any action.
-                if ((context.inputMap and ControllerPacket.PLAY_FLAG) != 0 &&
-                    event.eventTime - context.startDownTime > START_DOWN_TIME_MOUSE_MODE_MS &&
-                    prefConfig.enableStartKeyMenu
-                ) {
-                    gestures.showGameMenu(context)
-                }
                 context.inputMap = context.inputMap and ControllerPacket.PLAY_FLAG.inv()
             }
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_BUTTON_SELECT ->
@@ -2249,6 +2407,31 @@ class ControllerHandler(
             else -> return false
         }
 
+        if (!isStartKey && isWheelDpadKey(keyCode) &&
+            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        ) {
+            handleSystemStartWheelAxes(context)
+        }
+
+        if (isStartKey) {
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onStartUp(
+                    event.eventTime,
+                    buttonFlags = context.inputMap,
+                    rightStickX = context.rightStickX.toFloat() / 32766f,
+                    rightStickY = hostStickYToWheelAxis(context.rightStickY),
+                    leftStickX = context.leftStickX.toFloat() / 32766f,
+                    leftStickY = hostStickYToWheelAxis(context.leftStickY)
+                )
+            )
+        }
+
+        if (captureAtEntry || context.isLocalInputCaptureActive()) {
+            updateSystemStartReleaseState(context)
+            return true
+        }
+
         // Check if we're emulating the select button
         if ((context.emulatingButtonFlags and EMULATING_SELECT) != 0) {
             // If either start or LB is up, select comes up too
@@ -2285,6 +2468,8 @@ class ControllerHandler(
 
         sendControllerInputPacket(context)
 
+        updateSystemStartReleaseState(context)
+
         if (context.pendingExit && context.inputMap == 0) {
             // All buttons from the quit combo are lifted. Finish the activity now.
             activityContext.finish()
@@ -2296,7 +2481,10 @@ class ControllerHandler(
     fun handleButtonDown(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
-        updatePerformanceShortcut(context, event.keyCode, pressed = true)
+        val captureAtEntry = context.isLocalInputCaptureActive()
+        if (!captureAtEntry) {
+            updatePerformanceShortcut(context, event.keyCode, pressed = true)
+        }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
@@ -2305,6 +2493,8 @@ class ControllerHandler(
         if (prefConfig.flipFaceButtons) {
             keyCode = handleFlipFaceButtons(keyCode)
         }
+
+        val isStartKey = keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU
 
         when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_MODE -> {
@@ -2401,6 +2591,17 @@ class ControllerHandler(
             else -> return false
         }
 
+        if (!isStartKey && isWheelDpadKey(keyCode) &&
+            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        ) {
+            handleSystemStartWheelAxes(context)
+        }
+
+        if (captureAtEntry || context.isLocalInputCaptureActive()) {
+            updateSystemStartReleaseState(context)
+            return true
+        }
+
         // Start+Back+LB+RB is the quit combo
         if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
                     ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
@@ -2460,6 +2661,12 @@ class ControllerHandler(
         // sends us events that claim to be repeats but they're from different
         // devices, so we just send them all and deal with some duplicates.
         sendControllerInputPacket(context)
+        if (isStartKey && event.repeatCount == 0) {
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onStartDown(event.eventTime, prefConfig.enableStartKeyMenu)
+            )
+        }
         return true
     }
 
@@ -2527,27 +2734,46 @@ class ControllerHandler(
                 }
                 DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
-                DriverControllerShortcutStateMachine.Action.SHOW_HINT -> {
+                DriverControllerShortcutStateMachine.Action.SHOW_WHEEL -> {
                     mainThreadHandler.post {
-                        if (!stopped &&
-                            (driverShortcutHintOwner == null || driverShortcutHintOwner === context)
-                        ) {
-                            driverShortcutHintOwner = context
-                            gestures.showUsbControllerShortcutHint()
+                        if (!stopped && startWheelOwnerGate.isOwner(context)) {
+                            gestures.showStartHoldWheel()
+                            performStartWheelHaptic()
                         }
                     }
                 }
-                DriverControllerShortcutStateMachine.Action.HIDE_HINT -> {
-                    mainThreadHandler.post {
-                        if (driverShortcutHintOwner === context) {
-                            driverShortcutHintOwner = null
-                            gestures.hideUsbControllerShortcutHint()
-                        }
+                DriverControllerShortcutStateMachine.Action.HIDE_WHEEL -> {
+                    if (startWheelOwnerGate.release(context)) {
+                        mainThreadHandler.post { gestures.hideStartHoldWheel() }
                     }
                 }
                 DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
                     mainThreadHandler.post {
-                        if (!stopped) context.toggleMouseEmulation()
+                        if (!stopped) {
+                            context.toggleMouseEmulation()
+                            performStartWheelHaptic()
+                        }
+                    }
+                DriverControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
+                    mainThreadHandler.post {
+                        if (!stopped) {
+                            gestures.toggleKeyboard()
+                            performStartWheelHaptic()
+                        }
+                    }
+                DriverControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
+                    mainThreadHandler.post {
+                        if (!stopped) {
+                            onTogglePerformanceOverlay()
+                            performStartWheelHaptic()
+                        }
+                    }
+                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION ->
+                    mainThreadHandler.post {
+                        if (!stopped && startWheelOwnerGate.isOwner(context)) {
+                            gestures.updateStartHoldWheelSelection(update.selectedAction)
+                            performStartWheelHaptic()
+                        }
                     }
                 DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
                     mainThreadHandler.post openMenu@{
@@ -2563,10 +2789,11 @@ class ControllerHandler(
                             context.menuAxisSnapshotState.reset()
                             activateDriverMenuCapture(excludedContext = context)
                         }
-                        handleDriverShortcutUpdate(
-                            context,
-                            context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
-                        )
+                        val resultUpdate = context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
+                        handleDriverShortcutUpdate(context, resultUpdate)
+                        if (resultUpdate.sendNeutralState) {
+                            sendNeutralControllerState(context)
+                        }
                     }
                 DriverControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     mainThreadHandler.post {
@@ -2622,7 +2849,7 @@ class ControllerHandler(
                 val update = context.shortcutState.onGameMenuOpenedExternally()
                 handleDriverShortcutUpdate(context, update)
                 if (update.sendNeutralState) {
-                    sendNeutralDriverControllerState(context)
+                    sendNeutralControllerState(context)
                 }
             }
         }
@@ -2630,12 +2857,22 @@ class ControllerHandler(
 
     fun onExternalGameMenuOpened() {
         activateDriverMenuCapture()
+        for (i in 0 until inputDeviceContexts.size()) {
+            val context = inputDeviceContexts.valueAt(i)
+            handleSystemStartGestureUpdate(
+                context,
+                context.startGesture.onGameMenuOpenedExternally()
+            )
+        }
     }
 
     fun onExternalGameMenuDismissed() {
         synchronized(driverControllerContextsLifecycleLock) {
             if (stopped) return
             driverControllerContexts.values.forEach(DriverControllerContext::onGameMenuDismissed)
+        }
+        for (i in 0 until inputDeviceContexts.size()) {
+            inputDeviceContexts.valueAt(i).startGesture.onGameMenuUnavailable()
         }
     }
 
@@ -2651,21 +2888,28 @@ class ControllerHandler(
         }
     }
 
-    private fun sendNeutralDriverControllerState(context: DriverControllerContext) {
-        context.inputMap = 0
-        context.leftStickX = 0
-        context.leftStickY = 0
-        context.rightStickX = 0
-        context.rightStickY = 0
-        context.physRightStickX = 0
-        context.physRightStickY = 0
-        context.leftTrigger = 0
-        context.rightTrigger = 0
+    private fun isWheelDpadKey(keyCode: Int): Boolean =
+        ((ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and USB_MENU_DIRECTION_MASK) != 0
+
+    private fun sendNeutralControllerState(context: GenericControllerContext) {
+        context.performanceOverlayShortcutState.reset()
         if (context.gyroHoldActive) {
             context.gyroHoldActive = false
             gyroManager.onGyroHoldDeactivated(context)
         }
-        sendControllerInputPacket(context)
+        if (context is InputDeviceContext) {
+            conn.sendControllerTouchEvent(
+                context.controllerNumber.toByte(),
+                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+                0,
+                0f,
+                0f,
+                0f
+            )
+        }
+        synchronized(arrivalMetadataLock) {
+            sendControllerInputPacketLocked(context, forceNeutral = true)
+        }
     }
 
     override fun reportControllerState(
@@ -2680,14 +2924,25 @@ class ControllerHandler(
         var rightTrigger = rightTrigger
 
         val context = driverControllerContexts[controllerId] ?: return
-        updatePerformanceShortcut(context, buttonFlags)
         val shortcutUpdate = context.shortcutState.onButtonSnapshot(
             buttonFlags,
             android.os.SystemClock.uptimeMillis(),
             prefConfig.enableStartKeyMenu
         )
+        val localAxisUpdate = if (context.shortcutState.needsAxisUpdates()) {
+            context.shortcutState.onSelectionAxes(
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY
+            )
+        } else {
+            null
+        }
         handleDriverShortcutUpdate(context, shortcutUpdate)
-        if (shortcutUpdate.consumeAllInput) {
+        localAxisUpdate?.let { handleDriverShortcutUpdate(context, it) }
+
+        if (shortcutUpdate.consumeAllInput || localAxisUpdate?.consumeAllInput == true) {
             if (context.shortcutState.isMenuActive()) {
                 val digitalDirectionPressed = buttonFlags and USB_MENU_DIRECTION_MASK != 0
                 val menuLeftX = if (digitalDirectionPressed) 0f else leftStickX
@@ -2712,10 +2967,15 @@ class ControllerHandler(
                 }
             }
             if (shortcutUpdate.sendNeutralState) {
-                sendNeutralDriverControllerState(context)
+                sendNeutralControllerState(context)
+            }
+            if (localAxisUpdate?.sendNeutralState == true) {
+                sendNeutralControllerState(context)
             }
             return
         }
+
+        updatePerformanceShortcut(context, buttonFlags)
 
         // Gyro hold activation via analog LT/RT thresholds when mapped to L2/R2
         val wasHold = context.gyroHoldActive
@@ -2771,6 +3031,7 @@ class ControllerHandler(
         context.inputMap = buttonFlags
 
         sendControllerInputPacket(context)
+
     }
 
     private fun updatePerformanceShortcut(

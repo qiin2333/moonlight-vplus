@@ -475,6 +475,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             private val lastValues = FloatArray(3)
 
             override fun onSensorChanged(sensorEvent: SensorEvent) {
+                if (handler.isControllerLocallyCaptured(controllerNumber)) return
+
                 // Android will invoke our callback any time we get a new reading,
                 // even if the values are the same as last time. Don't report a
                 // duplicate set of values to save bandwidth.
