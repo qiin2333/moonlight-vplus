@@ -619,6 +619,16 @@
             android:title="@string/title_checkbox_usb_bind_all"
             android:summary="@string/summary_checkbox_usb_bind_all"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_dualsense_direct_bluetooth"
+            android:title="@string/title_dualsense_direct_bluetooth"
+            android:summary="@string/summary_dualsense_direct_bluetooth"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_dualsense_wireless_bridge"
+            android:title="@string/title_dualsense_wireless_bridge"
+            android:summary="@string/summary_dualsense_wireless_bridge"
+            android:defaultValue="false" />
         <ListPreference
             android:key="analog_scrolling"
             android:dependency="checkbox_mouse_emulation"

@@ -14,7 +14,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-abstract class AbstractDualSenseController(
+abstract class AbstractPlayStationUsbController(
     protected val device: UsbDevice,
     protected val connection: UsbDeviceConnection,
     deviceId: Int,
@@ -22,6 +22,7 @@ abstract class AbstractDualSenseController(
 ) : AbstractController(deviceId, listener, device.vendorId, device.productId) {
 
     private var inputThread: Thread? = null
+    @Volatile
     private var stopped = false
 
     // Serializes output reports with the teardown sequence so no queued effect can
@@ -33,10 +34,6 @@ abstract class AbstractDualSenseController(
 
     protected var inEndpt: UsbEndpoint? = null
     protected var outEndpt: UsbEndpoint? = null
-
-    // The UAC audioStreamingOut alt setting and its iso OUT endpoint, when the
-    // controller exposes the DualSense audio topology. Null on non-DS5 pads.
-    private var audioInterface: Pair<UsbInterface, UsbEndpoint>? = null
 
     // IMU data fields
     protected var gyroX = 0f
@@ -79,7 +76,7 @@ abstract class AbstractDualSenseController(
 
                     val lastMillis = SystemClock.uptimeMillis()
                     if (inEndpt == null) {
-                        Log.w("DualSenseController", "Connection or endpoint is null")
+                        Log.w(TAG, "Connection or endpoint is null")
                         res = -1
                         break
                     }
@@ -90,8 +87,8 @@ abstract class AbstractDualSenseController(
                     }
 
                     if (res == -1 && SystemClock.uptimeMillis() - lastMillis < 1000) {
-                        Log.d("DualSenseController", "Detected device I/O error")
-                        this@AbstractDualSenseController.stop()
+                        Log.d(TAG, "Detected device I/O error")
+                        this@AbstractPlayStationUsbController.stop()
                         break
                     }
                 } while (res == -1 && !Thread.currentThread().isInterrupted && !stopped)
@@ -102,6 +99,7 @@ abstract class AbstractDualSenseController(
 
                 if (res > 0 && handleRead(ByteBuffer.wrap(buffer, 0, res).order(ByteOrder.LITTLE_ENDIAN))) {
                     reportInput()
+                    onInputReportPublished()
                     reportMotion()
                 }
             }
@@ -111,87 +109,72 @@ abstract class AbstractDualSenseController(
     private val ifaces = mutableListOf<UsbInterface>()
 
     override fun start(): Boolean {
+        outEndpt = null
+        inEndpt = null
         ifaces.clear()
-        Log.d("DualSenseController", "start")
+        Log.d(TAG, "start")
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
             if (!connection.claimInterface(iface, true)) {
-                Log.d("DualSenseController", "Failed to claim interface: $i")
-                return false
+                Log.d(TAG, "Failed to claim interface: $i")
+                return failStart()
             } else {
                 ifaces.add(iface)
             }
         }
-        Log.d("DualSenseController", "getInterfaceCount:" + device.interfaceCount)
+        Log.d(TAG, "getInterfaceCount:" + device.interfaceCount)
 
         val iface = findInterface(device) ?: run {
-            Log.e("DualSenseController", "Failed to find interface")
-            return false
+            Log.e(TAG, "Failed to find interface")
+            return failStart()
         }
 
         for (i in 0 until iface.endpointCount) {
             val endpt = iface.getEndpoint(i)
             if (endpt.direction == UsbConstants.USB_DIR_OUT) {
                 if (outEndpt != null) {
-                    Log.d("DualSenseController", "Found duplicate OUT endpoint")
-                    return false
+                    Log.d(TAG, "Found duplicate OUT endpoint")
+                    return failStart()
                 }
                 outEndpt = endpt
             } else if (endpt.direction == UsbConstants.USB_DIR_IN) {
                 if (inEndpt != null) {
-                    Log.d("DualSenseController", "Found duplicate IN endpoint")
-                    return false
+                    Log.d(TAG, "Found duplicate IN endpoint")
+                    return failStart()
                 }
                 inEndpt = endpt
             }
         }
-        Log.d("DualSenseController", "inEndpt: $inEndpt")
-        Log.d("DualSenseController", "outEndpt: $outEndpt")
+        Log.d(TAG, "inEndpt: $inEndpt")
+        Log.d(TAG, "outEndpt: $outEndpt")
 
         if (inEndpt == null || outEndpt == null) {
-            Log.d("DualSenseController", "Missing required endpoint")
-            return false
+            Log.d(TAG, "Missing required endpoint")
+            return failStart()
         }
 
         if (!doInit()) {
-            return false
+            return failStart()
         }
 
-        discoverAudioInterface()
+        onUsbInterfacesReady()
 
         inputThread = createInputThread()
         inputThread!!.start()
         return true
     }
 
-    /**
-     * Discovers the UAC audio streaming OUT interface (the alt setting that
-     * carries the isochronous OUT endpoint) and notifies the listener so the
-     * haptics coordinator can create a PCM pump. The pump owns the alternate
-     * setting lifecycle; the interface itself was already claimed above.
-     */
-    private fun discoverAudioInterface() {
-        for (i in 0 until device.interfaceCount) {
-            val iface = device.getInterface(i)
-            if (iface.interfaceClass != UsbConstants.USB_CLASS_AUDIO ||
-                iface.interfaceSubclass != 0x02 // Audio Streaming
-            ) {
-                continue
+    private fun failStart(): Boolean {
+        synchronized(ifaces) {
+            for (iface in ifaces.asReversed()) {
+                runCatching { connection.releaseInterface(iface) }
+                    .onFailure { Log.w(TAG, "Failed to release interface after start failure", it) }
             }
-            // Alt 0 carries no endpoints; the alt 1 entry exposes the iso OUT
-            // endpoint (Android surfaces each alternate setting separately).
-            for (j in 0 until iface.endpointCount) {
-                val ep = iface.getEndpoint(j)
-                if (ep.direction == UsbConstants.USB_DIR_OUT &&
-                    ep.type == UsbConstants.USB_ENDPOINT_XFER_ISOC
-                ) {
-                    Log.i("DualSenseController", "UAC streaming OUT iface=${iface.id} ep=0x${Integer.toHexString(ep.address)}")
-                    audioInterface = iface to ep
-                    listener.onDs5AudioInterfaceAvailable(deviceId, connection, iface, ep)
-                    return
-                }
-            }
+            ifaces.clear()
         }
+        inEndpt = null
+        outEndpt = null
+        return false
     }
 
     override fun stop() {
@@ -200,27 +183,16 @@ abstract class AbstractDualSenseController(
             stopped = true
         }
 
-        // Tear down the haptics pump first: it needs a live connection to
-        // restore the audio interface to alt 0 and release iso bandwidth.
-        if (audioInterface != null) {
-            audioInterface = null
-            listener.onDs5AudioInterfaceGone(deviceId)
-        }
+        onBeforeUsbTransportClose()
 
         // Hold the output lock across the final clear so a report already queued by
         // the rumble worker cannot re-engage an effect after this point.
         synchronized(outputLock) {
             try {
                 rumble(0, 0)
-                setAdaptiveTriggers(
-                    DualSenseOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
-                    DualSenseOutputReport.EFFECT_TYPE_OFF,
-                    DualSenseOutputReport.EFFECT_TYPE_OFF,
-                    ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE),
-                    ByteArray(DualSenseOutputReport.EFFECT_PAYLOAD_SIZE)
-                )
+                clearControllerSpecificOutput()
             } catch (e: Exception) {
-                Log.d("DualSenseController", "Failed to clear controller output during stop", e)
+                Log.d(TAG, "Failed to clear controller output during stop", e)
             } finally {
                 outputClosed = true
             }
@@ -242,7 +214,7 @@ abstract class AbstractDualSenseController(
                     try {
                         connection.releaseInterface(iface)
                     } catch (e: Exception) {
-                        Log.w("DualSenseController", "Failed to release interface", e)
+                        Log.w(TAG, "Failed to release interface", e)
                     }
                 }
                 ifaces.clear()
@@ -253,7 +225,7 @@ abstract class AbstractDualSenseController(
             try {
                 connection.close()
             } catch (e: Exception) {
-                Log.w("DualSenseController", "Failed to close connection", e)
+                Log.w(TAG, "Failed to close connection", e)
             }
         }
 
@@ -267,16 +239,30 @@ abstract class AbstractDualSenseController(
 
     protected abstract fun handleRead(buffer: ByteBuffer): Boolean
 
+    /** Called after all USB interfaces are claimed and the controller is initialized. */
+    protected open fun onUsbInterfacesReady() = Unit
+
+    /** Called after reportInput() has assigned the controller number and published arrival. */
+    protected open fun onInputReportPublished() = Unit
+
+    /** Called before output is cleared and USB interfaces are released. */
+    protected open fun onBeforeUsbTransportClose() = Unit
+
+    /** Clears output features that aren't represented by the common rumble API. */
+    protected open fun clearControllerSpecificOutput() = Unit
+
     protected abstract fun doInit(): Boolean
 
     protected abstract fun sendCommand(data: ByteArray)
 
     companion object {
+        private const val TAG = "PlayStationUsbCtrl"
+
         private fun findInterface(device: UsbDevice): UsbInterface? {
             for (i in 0 until device.interfaceCount) {
                 val intf = device.getInterface(i)
                 if (intf.interfaceClass == UsbConstants.USB_CLASS_HID && intf.endpointCount >= 2) {
-                    Log.d("DualSenseController", "Found HID interface: $i")
+                    Log.d(TAG, "Found HID interface: $i")
                     return intf
                 }
             }

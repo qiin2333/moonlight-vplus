@@ -6,9 +6,6 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.input.InputManager
-import android.hardware.usb.UsbDeviceConnection
-import android.hardware.usb.UsbEndpoint
-import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Handler
@@ -28,8 +25,10 @@ import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
+import com.limelight.binding.input.driver.wireless.dualsense.AndroidBluetoothHidHostTransport
+import com.limelight.binding.input.driver.wireless.dualsense.DirectDualSenseBluetoothOutput
 import com.limelight.binding.input.haptics.ControllerHapticsCoordinator
-import com.limelight.binding.input.haptics.Ds5HapticsPump
+import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.ControllerPacket
@@ -326,8 +325,8 @@ class ControllerHandler(
     private val inputVector = Vector2d()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
-    internal val usbDeviceContexts = ConcurrentSkipListMap<Int, UsbDeviceContext>()
-    private val usbDeviceContextsLifecycleLock = Any()
+    internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
+    private val driverControllerContextsLifecycleLock = Any()
 
     internal val deviceVibrator: Vibrator
     private val deviceVibratorManager: VibratorManager?
@@ -364,6 +363,7 @@ class ControllerHandler(
     internal val gyroManager = ControllerGyroManager(this)
     internal val rumbleManager = ControllerRumbleManager(this)
     private val hapticsCoordinator = ControllerHapticsCoordinator(this)
+    private var directDualSenseBluetoothTransport: AndroidBluetoothHidHostTransport? = null
 
     @Volatile
     private var screenDs5TouchpadPressed = false
@@ -384,6 +384,28 @@ class ControllerHandler(
         backgroundHandlerThread = HandlerThread("ControllerHandler")
         backgroundHandlerThread.start()
         backgroundThreadHandler = Handler(backgroundHandlerThread.looper)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            prefConfig.dualSenseDirectBluetooth &&
+            AndroidBluetoothHidHostTransport.isAvailable(activityContext)
+        ) {
+            directDualSenseBluetoothTransport = AndroidBluetoothHidHostTransport(
+                activityContext.applicationContext
+            ) {
+                mainThreadHandler.post {
+                    for (index in 0 until inputDeviceContexts.size()) {
+                        inputDeviceContexts.valueAt(index)
+                            .directDualSenseBluetoothOutput?.onTransportReady()
+                    }
+                }
+            }.also { it.start() }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            prefConfig.dualSenseDirectBluetooth
+        ) {
+            LimeLog.warning(
+                "Direct DualSense Bluetooth output is unavailable without Bluetooth permission"
+            )
+        }
 
         deviceVibratorManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             activityContext.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -547,10 +569,13 @@ class ControllerHandler(
             inputDeviceContexts.valueAt(i).destroy()
         }
 
-        val usbContextsToDestroy = synchronized(usbDeviceContextsLifecycleLock) {
-            usbDeviceContexts.values.toList().also { usbDeviceContexts.clear() }
+        directDualSenseBluetoothTransport?.close()
+        directDualSenseBluetoothTransport = null
+
+        val driverContextsToDestroy = synchronized(driverControllerContextsLifecycleLock) {
+            driverControllerContexts.values.toList().also { driverControllerContexts.clear() }
         }
-        usbContextsToDestroy.forEach(UsbDeviceContext::destroy)
+        driverContextsToDestroy.forEach(DriverControllerContext::destroy)
 
         if (startWheelOwnerGate.clear()) {
             mainThreadHandler.post { gestures.hideStartHoldWheel() }
@@ -571,16 +596,16 @@ class ControllerHandler(
         backgroundHandlerThread.quitSafely()
     }
 
-    internal fun onUsbShortcutLongPress(context: UsbDeviceContext) {
+    internal fun onDriverShortcutLongPress(context: DriverControllerContext) {
         if (stopped || !startWheelOwnerGate.tryClaim(context)) return
         val update = context.shortcutState.onLongPressTimeout(
             android.os.SystemClock.uptimeMillis(),
             prefConfig.enableStartKeyMenu
         )
-        if (!update.actions.contains(UsbControllerShortcutStateMachine.Action.SHOW_WHEEL)) {
+        if (!update.actions.contains(DriverControllerShortcutStateMachine.Action.SHOW_WHEEL)) {
             startWheelOwnerGate.release(context)
         }
-        handleUsbShortcutUpdate(context, update)
+        handleDriverShortcutUpdate(context, update)
         if (update.sendNeutralState) {
             sendNeutralControllerState(context)
         }
@@ -696,10 +721,10 @@ class ControllerHandler(
         }
     }
 
-    internal fun releaseUsbShortcutState(context: UsbDeviceContext) {
+    internal fun releaseDriverShortcutState(context: DriverControllerContext) {
         mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
         val update = context.shortcutState.reset()
-        handleUsbShortcutUpdate(context, update)
+        handleDriverShortcutUpdate(context, update)
         if (startWheelOwnerGate.release(context)) {
             mainThreadHandler.post { gestures.hideStartHoldWheel() }
         }
@@ -911,6 +936,11 @@ class ControllerHandler(
 
             for (i in 0 until inputDeviceContexts.size()) {
                 val context = inputDeviceContexts.valueAt(i)
+                if (!context.assignedControllerNumber &&
+                    context.directDualSenseBluetoothOutput != null
+                ) {
+                    assignControllerNumberIfNeeded(context)
+                }
                 if (context.assignedControllerNumber &&
                     !context.controllerArrival.isReported &&
                     reportControllerArrival(context)
@@ -919,17 +949,17 @@ class ControllerHandler(
                 }
             }
 
-            // USB contexts are owned by their driver threads and continuously
+            // Driver contexts are owned by their transport threads and continuously
             // report state, so they retry through sendControllerInputPacket().
-            // Don't iterate their SparseArray from the main thread here.
+            // Don't force a redundant retry sweep from the main thread here.
             afterRetry?.invoke()
         }
     }
 
     // ========== Device Context Creation ==========
 
-    private fun createUsbDeviceContextForDevice(device: AbstractController): UsbDeviceContext {
-        val context = UsbDeviceContext(this)
+    private fun createDriverControllerContextForDevice(device: AbstractController): DriverControllerContext {
+        val context = DriverControllerContext(this)
 
         context.id = device.getControllerId()
         context.device = device
@@ -1019,6 +1049,20 @@ class ControllerHandler(
 
         context.vendorId = dev.vendorId
         context.productId = dev.productId
+
+        directDualSenseBluetoothTransport?.let { transport ->
+            if (DirectDualSenseBluetoothOutput.supports(dev)) {
+                context.directDualSenseBluetoothOutput =
+                    DirectDualSenseBluetoothOutput(dev, transport) {
+                        mainThreadHandler.post {
+                            if (!stopped && inputDeviceContexts.get(context.id) === context) {
+                                rumbleManager.handleDirectBluetoothSendFailure(context)
+                            }
+                        }
+                    }
+                LimeLog.info("Enabled direct Bluetooth output for $devName")
+            }
+        }
 
         // These aren't always present in the Android key layout files, so they won't show up
         // in our normal InputDevice.hasKeys() probing.
@@ -1517,7 +1561,7 @@ class ControllerHandler(
                 return true
             }
         }
-        return usbDeviceContexts.values.any {
+        return driverControllerContexts.values.any {
             it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
         }
     }
@@ -1566,7 +1610,7 @@ class ControllerHandler(
                     rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
                 }
             }
-            for (context: GenericControllerContext in usbDeviceContexts.values) {
+            for (context: GenericControllerContext in driverControllerContexts.values) {
                 if (context.assignedControllerNumber &&
                     context.controllerNumber == controllerNumber &&
                     context.mouseEmulationActive == originalContext.mouseEmulationActive
@@ -2024,22 +2068,61 @@ class ControllerHandler(
     }
 
     fun tryHandleTouchpadEvent(event: MotionEvent): Boolean {
-        // Bail if this is not a touchpad or mouse event
-        if (event.source != InputDevice.SOURCE_TOUCHPAD &&
-            event.source != InputDevice.SOURCE_MOUSE
-        ) {
+        val eventDevice = event.device
+        val remappedDualSenseTouchpad = eventDevice != null &&
+            DirectDualSenseBluetoothOutput.isDualSenseProduct(
+                eventDevice.vendorId,
+                eventDevice.productId
+            ) &&
+            eventDevice.sources and InputDevice.SOURCE_TOUCHPAD == InputDevice.SOURCE_TOUCHPAD
+        val isTouchpad = event.source and InputDevice.SOURCE_TOUCHPAD ==
+            InputDevice.SOURCE_TOUCHPAD || remappedDualSenseTouchpad
+        val isMouse = event.source and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE
+        if (!isTouchpad && !isMouse) {
             return false
         }
 
         // Only get a context if one already exists. We want to ensure we don't report non-gamepads.
-        val context = inputDeviceContexts.get(event.deviceId) ?: return false
+        var context = inputDeviceContexts.get(event.deviceId)
+        if (context == null && isTouchpad && eventDevice?.vendorId == 0x054C) {
+            val directCandidates = ArrayList<InputDeviceContext>()
+            for (index in 0 until inputDeviceContexts.size()) {
+                val candidate = inputDeviceContexts.valueAt(index)
+                if (candidate.directDualSenseBluetoothOutput != null) {
+                    directCandidates.add(candidate)
+                }
+            }
+            context = directCandidates.firstOrNull {
+                it.inputDevice?.descriptor == eventDevice.descriptor
+            } ?: directCandidates.singleOrNull()
+        }
+        context ?: return false
         if (context.isLocalInputCaptureActive()) return true
+        if (isTouchpad && eventDevice != null) {
+            context.touchpadXRange = context.touchpadXRange ?: eventDevice.getMotionRange(
+                MotionEvent.AXIS_X,
+                InputDevice.SOURCE_TOUCHPAD
+            )
+            context.touchpadYRange = context.touchpadYRange ?: eventDevice.getMotionRange(
+                MotionEvent.AXIS_Y,
+                InputDevice.SOURCE_TOUCHPAD
+            )
+            context.touchpadPressureRange = context.touchpadPressureRange ?: eventDevice.getMotionRange(
+                MotionEvent.AXIS_PRESSURE,
+                InputDevice.SOURCE_TOUCHPAD
+            )
+        }
+        if (!context.assignedControllerNumber) {
+            assignControllerNumberIfNeeded(context)
+        }
+        val nativeDirectDualSense = isTouchpad &&
+            context.directDualSenseBluetoothOutput != null
 
         // When we're working with a mouse source instead of a touchpad, we're quite limited in
         // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
         // screen coordinates rather than touchpad coordinates. For now, we will just support
         // the clickpad button and nothing else.
-        if (event.source == InputDevice.SOURCE_MOUSE) {
+        if (isMouse && !isTouchpad) {
             // Unlike the touchpad where down and up refer to individual touches on the touchpad,
             // down and up on a mouse indicates the state of the left mouse button.
             when (event.actionMasked) {
@@ -2104,7 +2187,7 @@ class ControllerHandler(
         // NB: We do this after processing ACTION_BUTTON_PRESS and ACTION_BUTTON_RELEASE
         // because we want to still send the touchpad button via the gamepad even when
         // configured to use the touchpad for mouse control.
-        if (prefConfig.gamepadTouchpadAsMouse) {
+        if (prefConfig.gamepadTouchpadAsMouse && !nativeDirectDualSense) {
             return false
         }
 
@@ -2638,29 +2721,29 @@ class ControllerHandler(
 
     // ========== USB Driver Callbacks ==========
 
-    private fun handleUsbShortcutUpdate(
-        context: UsbDeviceContext,
-        update: UsbControllerShortcutStateMachine.Update
+    private fun handleDriverShortcutUpdate(
+        context: DriverControllerContext,
+        update: DriverControllerShortcutStateMachine.Update
     ) {
         val captureStarted = update.consumeAllInput && !context.touchCaptureActive
         val captureEnded = !update.consumeAllInput && context.touchCaptureActive
         context.touchCaptureActive = update.consumeAllInput
         if (captureStarted || captureEnded) {
-            cancelForwardedUsbTouches(context)
+            cancelForwardedDriverTouches(context)
             context.device?.resetTouchState()
         }
         for (action in update.actions) {
             when (action) {
-                UsbControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
+                DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
                     mainThreadHandler.postDelayed(
                         context.shortcutLongPressRunnable,
                         START_DOWN_TIME_MOUSE_MODE_MS.toLong()
                     )
                 }
-                UsbControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
+                DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS ->
                     mainThreadHandler.removeCallbacks(context.shortcutLongPressRunnable)
-                UsbControllerShortcutStateMachine.Action.SHOW_WHEEL -> {
+                DriverControllerShortcutStateMachine.Action.SHOW_WHEEL -> {
                     mainThreadHandler.post {
                         if (!stopped && startWheelOwnerGate.isOwner(context)) {
                             gestures.showStartHoldWheel()
@@ -2668,40 +2751,40 @@ class ControllerHandler(
                         }
                     }
                 }
-                UsbControllerShortcutStateMachine.Action.HIDE_WHEEL -> {
+                DriverControllerShortcutStateMachine.Action.HIDE_WHEEL -> {
                     if (startWheelOwnerGate.release(context)) {
                         mainThreadHandler.post { gestures.hideStartHoldWheel() }
                     }
                 }
-                UsbControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
+                DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
                     mainThreadHandler.post {
                         if (!stopped) {
                             context.toggleMouseEmulation()
                             performStartWheelHaptic()
                         }
                     }
-                UsbControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
+                DriverControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
                     mainThreadHandler.post {
                         if (!stopped) {
                             gestures.toggleKeyboard()
                             performStartWheelHaptic()
                         }
                     }
-                UsbControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
+                DriverControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
                     mainThreadHandler.post {
                         if (!stopped) {
                             onTogglePerformanceOverlay()
                             performStartWheelHaptic()
                         }
                     }
-                UsbControllerShortcutStateMachine.Action.UPDATE_SELECTION ->
+                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION ->
                     mainThreadHandler.post {
                         if (!stopped && startWheelOwnerGate.isOwner(context)) {
                             gestures.updateStartHoldWheelSelection(update.selectedAction)
                             performStartWheelHaptic()
                         }
                     }
-                UsbControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
+                DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
                     mainThreadHandler.post openMenu@{
                         val requestId = update.menuOpenRequestId ?: return@openMenu
                         if (stopped ||
@@ -2713,15 +2796,15 @@ class ControllerHandler(
                         val menuOpened = gestures.showGameMenuFromUsb(context)
                         if (menuOpened) {
                             context.menuAxisSnapshotState.reset()
-                            activateUsbMenuCapture(excludedContext = context)
+                            activateDriverMenuCapture(excludedContext = context)
                         }
                         val resultUpdate = context.shortcutState.onGameMenuOpenResult(requestId, menuOpened)
-                        handleUsbShortcutUpdate(context, resultUpdate)
+                        handleDriverShortcutUpdate(context, resultUpdate)
                         if (resultUpdate.sendNeutralState) {
                             sendNeutralControllerState(context)
                         }
                     }
-                UsbControllerShortcutStateMachine.Action.EXIT_STREAM ->
+                DriverControllerShortcutStateMachine.Action.EXIT_STREAM ->
                     mainThreadHandler.post {
                         if (!activityContext.isFinishing) onExitStream()
                     }
@@ -2758,22 +2841,22 @@ class ControllerHandler(
         }
     }
 
-    internal fun onUsbLocalCaptureEnded(context: UsbDeviceContext) {
+    internal fun onDriverLocalCaptureEnded(context: DriverControllerContext) {
         if (!context.touchCaptureActive) return
         context.touchCaptureActive = false
-        cancelForwardedUsbTouches(context)
+        cancelForwardedDriverTouches(context)
         context.device?.resetTouchState()
     }
 
-    private fun activateUsbMenuCapture(excludedContext: UsbDeviceContext? = null) {
-        synchronized(usbDeviceContextsLifecycleLock) {
+    private fun activateDriverMenuCapture(excludedContext: DriverControllerContext? = null) {
+        synchronized(driverControllerContextsLifecycleLock) {
             if (stopped) return
-            for (context in usbDeviceContexts.values) {
+            for (context in driverControllerContexts.values) {
                 if (context === excludedContext) continue
 
                 context.menuAxisSnapshotState.reset()
                 val update = context.shortcutState.onGameMenuOpenedExternally()
-                handleUsbShortcutUpdate(context, update)
+                handleDriverShortcutUpdate(context, update)
                 if (update.sendNeutralState) {
                     sendNeutralControllerState(context)
                 }
@@ -2782,7 +2865,7 @@ class ControllerHandler(
     }
 
     fun onExternalGameMenuOpened() {
-        activateUsbMenuCapture()
+        activateDriverMenuCapture()
         for (i in 0 until inputDeviceContexts.size()) {
             val context = inputDeviceContexts.valueAt(i)
             handleSystemStartGestureUpdate(
@@ -2793,9 +2876,9 @@ class ControllerHandler(
     }
 
     fun onExternalGameMenuDismissed() {
-        synchronized(usbDeviceContextsLifecycleLock) {
+        synchronized(driverControllerContextsLifecycleLock) {
             if (stopped) return
-            usbDeviceContexts.values.forEach(UsbDeviceContext::onGameMenuDismissed)
+            driverControllerContexts.values.forEach(DriverControllerContext::onGameMenuDismissed)
         }
         for (i in 0 until inputDeviceContexts.size()) {
             inputDeviceContexts.valueAt(i).startGesture.onGameMenuUnavailable()
@@ -2849,7 +2932,7 @@ class ControllerHandler(
         @Suppress("NAME_SHADOWING")
         var rightTrigger = rightTrigger
 
-        val context = usbDeviceContexts[controllerId] ?: return
+        val context = driverControllerContexts[controllerId] ?: return
         val shortcutUpdate = context.shortcutState.onButtonSnapshot(
             buttonFlags,
             android.os.SystemClock.uptimeMillis(),
@@ -2865,8 +2948,8 @@ class ControllerHandler(
         } else {
             null
         }
-        handleUsbShortcutUpdate(context, shortcutUpdate)
-        localAxisUpdate?.let { handleUsbShortcutUpdate(context, it) }
+        handleDriverShortcutUpdate(context, shortcutUpdate)
+        localAxisUpdate?.let { handleDriverShortcutUpdate(context, it) }
 
         if (shortcutUpdate.consumeAllInput || localAxisUpdate?.consumeAllInput == true) {
             if (context.shortcutState.isMenuActive()) {
@@ -2993,8 +3076,8 @@ class ControllerHandler(
     }
 
     override fun deviceRemoved(controller: AbstractController) {
-        val context = synchronized(usbDeviceContextsLifecycleLock) {
-            usbDeviceContexts.remove(controller.getControllerId())
+        val context = synchronized(driverControllerContextsLifecycleLock) {
+            driverControllerContexts.remove(controller.getControllerId())
         }
         if (context != null) {
             LimeLog.info("Removed controller: " + controller.getControllerId())
@@ -3016,20 +3099,20 @@ class ControllerHandler(
             return
         }
 
-        val context = createUsbDeviceContextForDevice(controller)
-        synchronized(usbDeviceContextsLifecycleLock) {
+        val context = createDriverControllerContextForDevice(controller)
+        synchronized(driverControllerContextsLifecycleLock) {
             if (stopped) {
                 context.destroy()
                 return
             }
-            usbDeviceContexts[controller.getControllerId()] = context
+            driverControllerContexts[controller.getControllerId()] = context
         }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
     }
 
     override fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float) {
-        val context = usbDeviceContexts[controllerId] ?: return
+        val context = driverControllerContexts[controllerId] ?: return
         if (context.shortcutState.isLocalInputCaptureActive()) return
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
@@ -3052,7 +3135,7 @@ class ControllerHandler(
     }
 
     override fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {
-        val context = usbDeviceContexts[controllerId] ?: return
+        val context = driverControllerContexts[controllerId] ?: return
 
         // In multi-controller mode, wait until the controller number is assigned;
         // dedup only after that so the assigned controller gets its initial state.
@@ -3080,10 +3163,10 @@ class ControllerHandler(
         x: Float,
         y: Float
     ) {
-        val context = usbDeviceContexts[controllerId] ?: return
+        val context = driverControllerContexts[controllerId] ?: return
         if (prefConfig.multiController && !context.assignedControllerNumber) return
         if (context.shortcutState.isLocalInputCaptureActive()) {
-            cancelForwardedUsbTouches(context)
+            cancelForwardedDriverTouches(context)
             return
         }
 
@@ -3106,7 +3189,7 @@ class ControllerHandler(
         }
     }
 
-    private fun cancelForwardedUsbTouches(context: UsbDeviceContext) {
+    private fun cancelForwardedDriverTouches(context: DriverControllerContext) {
         if (context.forwardedTouchPointerIds.isNotEmpty()) {
             context.forwardedTouchPointerIds.keys.toList().forEach { pointerId ->
                 conn.sendControllerTouchEvent(
@@ -3119,25 +3202,25 @@ class ControllerHandler(
         context.device?.resetTouchState()
     }
 
-    override fun isUsbControllerReady(controllerId: Int): Boolean {
-        val context = usbDeviceContexts[controllerId] ?: return false
+    override fun isControllerReady(controllerId: Int): Boolean {
+        val context = driverControllerContexts[controllerId] ?: return false
         if (prefConfig.multiController && !context.assignedControllerNumber) return false
         return context.controllerArrival.isReported
     }
 
-    override fun onDs5AudioInterfaceAvailable(
+    override fun onDualSenseNativeHapticsSinkAvailable(
         controllerId: Int,
-        connection: UsbDeviceConnection,
-        streamingInterface: UsbInterface,
-        isoEndpoint: UsbEndpoint
+        sink: DualSenseNativeHapticsSink
     ) {
-        val context = usbDeviceContexts[controllerId] ?: return
-        val pump = Ds5HapticsPump(connection, streamingInterface, isoEndpoint)
-        hapticsCoordinator.attachDs5HapticsPump(controllerId, context.controllerNumber, pump)
+        val context = driverControllerContexts[controllerId] ?: run {
+            sink.stop()
+            return
+        }
+        hapticsCoordinator.attachDs5HapticsSink(controllerId, context.controllerNumber, sink)
     }
 
-    override fun onDs5AudioInterfaceGone(controllerId: Int) {
-        hapticsCoordinator.detachDs5HapticsPump(controllerId)
+    override fun onDualSenseNativeHapticsSinkGone(controllerId: Int) {
+        hapticsCoordinator.detachDs5HapticsSink(controllerId)
     }
 
     // ========== Sensor Management ==========

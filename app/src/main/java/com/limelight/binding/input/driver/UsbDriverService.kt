@@ -21,6 +21,20 @@ import kotlin.concurrent.withLock
 
 import com.limelight.LimeLog
 import com.limelight.R
+import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
+import com.limelight.binding.input.driver.wireless.dualsense.DualSenseWirelessBridgeFailure
+import com.limelight.binding.input.driver.wireless.dualsense.HciDualSenseWirelessBridgeHost
+import com.limelight.binding.input.driver.wireless.dualsense.DualSenseWirelessBridgeListener
+import com.limelight.binding.input.driver.wireless.dualsense.DualSenseWirelessBridgeManager
+import com.limelight.binding.input.driver.wireless.dualsense.DualSenseWirelessBridgeState
+import com.limelight.binding.input.driver.wireless.hci.AndroidKeystoreHciLinkKeyStore
+import com.limelight.binding.input.driver.wireless.hci.EphemeralHciLinkKeyStore
+import com.limelight.binding.input.driver.wireless.hci.HciAdapterBootstrap
+import com.limelight.binding.input.driver.wireless.hci.HciAdapterCapabilities
+import com.limelight.binding.input.driver.wireless.hci.HciDiscoveredDevice
+import com.limelight.binding.input.driver.wireless.hci.HciLinkKeyStore
+import com.limelight.binding.input.driver.wireless.hci.HciUsbDeviceProbe
+import com.limelight.binding.input.driver.wireless.hci.HciUsbTransportFactory
 import com.limelight.preferences.PreferenceConfiguration
 
 class UsbDriverService : Service(), UsbDriverListener {
@@ -30,6 +44,10 @@ class UsbDriverService : Service(), UsbDriverListener {
     @Volatile private var started = false
     private var receiverRegistered = false
     @Volatile private var claimAllAvailableOverride: Boolean? = null
+    @Volatile private var wirelessBridge: DualSenseWirelessBridgeManager? = null
+    @Volatile private var wirelessBridgeDeviceId: Int? = null
+    @Volatile private var wirelessDiscoveryStarted = false
+    @Volatile private var wirelessConnectAttempted = false
 
     private val receiver = UsbEventReceiver()
     private val binder = UsbDriverBinder()
@@ -39,9 +57,8 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val sessionLock = ReentrantLock()
     private val sessionOwner = UsbDriverSessionOwner()
 
-    @Volatile private var listener: UsbDriverListener? = null
+    @Volatile private var listener: ControllerDriverListener? = null
     @Volatile private var stateListener: UsbDriverStateListener? = null
-    private var nextDeviceId = 0
 
     override fun reportControllerState(
         controllerId: Int, buttonFlags: Int,
@@ -58,6 +75,38 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     override fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float) {
         listener?.reportControllerMotion(controllerId, motionType, x, y, z)
+    }
+
+    override fun reportControllerBattery(
+        controllerId: Int,
+        batteryState: Byte,
+        batteryPercentage: Byte
+    ) {
+        listener?.reportControllerBattery(controllerId, batteryState, batteryPercentage)
+    }
+
+    override fun reportControllerTouch(
+        controllerId: Int,
+        eventType: Byte,
+        pointerId: Int,
+        x: Float,
+        y: Float
+    ) {
+        listener?.reportControllerTouch(controllerId, eventType, pointerId, x, y)
+    }
+
+    override fun isControllerReady(controllerId: Int): Boolean =
+        listener?.isControllerReady(controllerId) ?: false
+
+    override fun onDualSenseNativeHapticsSinkAvailable(
+        controllerId: Int,
+        sink: DualSenseNativeHapticsSink
+    ) {
+        listener?.onDualSenseNativeHapticsSinkAvailable(controllerId, sink)
+    }
+
+    override fun onDualSenseNativeHapticsSinkGone(controllerId: Int) {
+        listener?.onDualSenseNativeHapticsSinkGone(controllerId)
     }
 
     override fun deviceRemoved(controller: AbstractController) {
@@ -83,6 +132,14 @@ class UsbDriverService : Service(), UsbDriverListener {
                     Handler(Looper.getMainLooper()).postDelayed({
                         device?.let { handleUsbDeviceStateSafely(it) }
                     }, 1000)
+                } else if (action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
+                    @Suppress("DEPRECATION")
+                    val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                    sessionLock.withLock {
+                        if (device?.deviceId == wirelessBridgeDeviceId) {
+                            stopWirelessBridgeLocked(adapterPresent = false)
+                        }
+                    }
                 } else if (action == ACTION_USB_PERMISSION) {
                     try {
                         @Suppress("DEPRECATION")
@@ -182,7 +239,21 @@ class UsbDriverService : Service(), UsbDriverListener {
 
         /** Returns whether a claimed controller is still active or initializing. */
         fun hasActiveControllers(): Boolean {
-            return synchronized(controllersLock) { controllers.isNotEmpty() }
+            return synchronized(controllersLock) { controllers.isNotEmpty() } ||
+                wirelessBridge?.state == DualSenseWirelessBridgeState.ACTIVE
+        }
+
+        fun dualSenseWirelessBridgeState(): String =
+            wirelessBridge?.state?.name ?: DualSenseWirelessBridgeState.DETACHED.name
+
+        fun retryDualSenseWirelessDiscovery(): Boolean {
+            return sessionLock.withLock {
+                val bridge = wirelessBridge ?: return@withLock false
+                if (bridge.state != DualSenseWirelessBridgeState.READY) return@withLock false
+                wirelessDiscoveryStarted = true
+                wirelessConnectAttempted = false
+                bridge.startDiscovery()
+            }
         }
 
         fun stop() {
@@ -212,6 +283,14 @@ class UsbDriverService : Service(), UsbDriverListener {
     private fun handleUsbDeviceState(device: UsbDevice) {
         val mgr = usbManager ?: return
         val config = prefConfig ?: return
+
+        if (config.dualSenseWirelessBridge && handleWirelessBridgeAdapter(mgr, device)) {
+            return
+        }
+
+        // The service is also bound when only the wireless bridge is enabled. Do not claim
+        // ordinary gamepads unless the existing USB driver preference is independently enabled.
+        if (!config.usbDriver) return
 
         if (shouldClaimDevice(device, claimAllAvailableOverride ?: config.bindAllUsb)) {
             if (!mgr.hasPermission(device)) {
@@ -255,17 +334,17 @@ class UsbDriverService : Service(), UsbDriverListener {
             val controller = runCatching {
                 when {
                     XboxOneController.canClaimDevice(device) ->
-                        XboxOneController(device, connection, nextDeviceId++, this)
+                        XboxOneController(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     Xbox360Controller.canClaimDevice(device) ->
-                        Xbox360Controller(device, connection, nextDeviceId++, this)
+                        Xbox360Controller(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     Xbox360WirelessDongle.canClaimDevice(device) ->
-                        Xbox360WirelessDongle(device, connection, nextDeviceId++, this)
+                        Xbox360WirelessDongle(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     SwitchProController.canClaimDevice(device) ->
-                        SwitchProController(device, connection, nextDeviceId++, this)
-                    DualSenseController.canClaimDevice(device) ->
-                        DualSenseController(device, connection, nextDeviceId++, this)
+                        SwitchProController(device, connection, ControllerDriverIdAllocator.allocate(), this)
+                    DualSenseUsbController.canClaimDevice(device) ->
+                        DualSenseUsbController(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     Dualshock4Controller.canClaimDevice(device) ->
-                        Dualshock4Controller(device, connection, nextDeviceId++, this)
+                        Dualshock4Controller(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     else -> null
                 }
             }.onFailure {
@@ -290,6 +369,153 @@ class UsbDriverService : Service(), UsbDriverListener {
                     LimeLog.warning("Unable to stop stale USB controller: ${it.message}")
                 }
             }
+        }
+    }
+
+    private fun handleWirelessBridgeAdapter(mgr: UsbManager, device: UsbDevice): Boolean {
+        val descriptor = HciUsbDeviceProbe.probe(device) ?: return false
+        val currentDeviceId = wirelessBridgeDeviceId
+        if (currentDeviceId != null) {
+            if (currentDeviceId != device.deviceId) {
+                LimeLog.warning("Ignoring additional USB HCI adapter while DualSense bridge is active")
+            }
+            return true
+        }
+
+        if (!mgr.hasPermission(device)) {
+            requestUsbPermission(mgr, device, "DualSense wireless bridge")
+            return true
+        }
+
+        val connection = runCatching { mgr.openDevice(device) }
+            .onFailure {
+                LimeLog.warning("Unable to open DualSense bridge adapter: ${it.message}")
+            }
+            .getOrNull() ?: return true
+
+        val keyStore: HciLinkKeyStore = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            AndroidKeystoreHciLinkKeyStore(this)
+        } else {
+            EphemeralHciLinkKeyStore()
+        }
+        val manager = DualSenseWirelessBridgeManager(
+            controllerListener = this,
+            linkKeyStore = keyStore,
+            hostFactory = { bootstrapListener ->
+                HciDualSenseWirelessBridgeHost(
+                    HciAdapterBootstrap(
+                        HciUsbTransportFactory.create(connection, descriptor),
+                        bootstrapListener
+                    )
+                )
+            },
+            listener = wirelessBridgeListener
+        )
+        wirelessBridgeDeviceId = device.deviceId
+        wirelessBridge = manager
+        wirelessDiscoveryStarted = false
+        wirelessConnectAttempted = false
+        LimeLog.info(
+            "DualSense bridge adapter claimed: " +
+                "%04X:%04X profile=%s".format(
+                    descriptor.vendorId,
+                    descriptor.productId,
+                    descriptor.profile
+                )
+        )
+        if (!manager.start()) {
+            stopWirelessBridge(adapterPresent = true)
+        }
+        return true
+    }
+
+    private fun requestUsbPermission(mgr: UsbManager, device: UsbDevice, purpose: String) {
+        try {
+            notifyPermissionPromptStarting()
+            var intentFlags = 0
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                intentFlags = intentFlags or PendingIntent.FLAG_MUTABLE
+            }
+            val intent = Intent(ACTION_USB_PERMISSION).apply { setPackage(packageName) }
+            mgr.requestPermission(
+                device,
+                PendingIntent.getBroadcast(this, device.deviceId, intent, intentFlags)
+            )
+        } catch (e: RuntimeException) {
+            LimeLog.warning("Unable to request USB permission for $purpose: ${e.message}")
+            notifyPermissionPromptCompleted()
+        }
+    }
+
+    private val wirelessBridgeListener = object : DualSenseWirelessBridgeListener {
+        override fun onAdapterReady(capabilities: HciAdapterCapabilities) {
+            val version = capabilities.localVersion
+            LimeLog.info(
+                "DualSense bridge adapter ready: acl_mtu=${capabilities.aclDataPacketLength} " +
+                    "acl_slots=${capabilities.aclPacketCredits} " +
+                    "page_scan=${capabilities.pageScanEnabled} " +
+                    "manufacturer=${version?.manufacturerId ?: "unknown"} " +
+                    "hci_revision=${version?.hciRevision ?: "unknown"}"
+            )
+        }
+
+        override fun onStateChanged(state: DualSenseWirelessBridgeState) {
+            LimeLog.info("DualSense wireless bridge state: $state")
+            runCatching { stateListener?.onDualSenseWirelessBridgeStateChanged(state.name) }
+            if (state == DualSenseWirelessBridgeState.READY) {
+                Handler(Looper.getMainLooper()).post(::driveWirelessBridge)
+            }
+        }
+
+        override fun onDeviceFound(device: HciDiscoveredDevice) {
+            LimeLog.info(
+                "DualSense wireless candidate: ${device.name ?: "unnamed"} " +
+                    "address=**:**:**:${device.address.toString().takeLast(8)}"
+            )
+        }
+
+        override fun onFailure(failure: DualSenseWirelessBridgeFailure) {
+            LimeLog.warning("DualSense wireless bridge ${failure.stage} failure: $failure")
+        }
+    }
+
+    private fun driveWirelessBridge() {
+        sessionLock.withLock {
+            if (!started || prefConfig?.dualSenseWirelessBridge != true) return
+            val bridge = wirelessBridge ?: return
+            if (bridge.state != DualSenseWirelessBridgeState.READY) return
+            val candidates = bridge.discoveredDevices()
+            if (candidates.isEmpty()) {
+                if (!wirelessDiscoveryStarted) {
+                    wirelessDiscoveryStarted = true
+                    bridge.startDiscovery()
+                }
+                return
+            }
+            if (!wirelessConnectAttempted) {
+                wirelessConnectAttempted = true
+                bridge.connect(candidates.first().address.value)
+            }
+        }
+    }
+
+    private fun stopWirelessBridge(adapterPresent: Boolean) {
+        sessionLock.withLock { stopWirelessBridgeLocked(adapterPresent) }
+    }
+
+    private fun stopWirelessBridgeLocked(adapterPresent: Boolean) {
+        val bridge = wirelessBridge
+        wirelessBridge = null
+        wirelessBridgeDeviceId = null
+        wirelessDiscoveryStarted = false
+        wirelessConnectAttempted = false
+        runCatching { bridge?.close(adapterPresent) }.onFailure {
+            LimeLog.warning("Unable to stop DualSense wireless bridge: ${it.message}")
+        }
+        runCatching {
+            stateListener?.onDualSenseWirelessBridgeStateChanged(
+                DualSenseWirelessBridgeState.DETACHED.name
+            )
         }
     }
 
@@ -344,6 +570,7 @@ class UsbDriverService : Service(), UsbDriverListener {
 
         val filter = IntentFilter()
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
         filter.addAction(ACTION_USB_PERMISSION)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -360,11 +587,11 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         val mgr = usbManager!!
-        val config = prefConfig!!
         for (dev in mgr.deviceList.values) {
-            if (shouldClaimDevice(dev, claimAllAvailableOverride ?: config.bindAllUsb)) {
-                handleUsbDeviceStateSafely(dev)
-            }
+            // Inspect every device here. handleUsbDeviceState() performs the HCI probe before
+            // applying the ordinary gamepad claim policy, so an adapter that was already attached
+            // when streaming started must not be filtered out by shouldClaimDevice().
+            handleUsbDeviceStateSafely(dev)
         }
     }
 
@@ -381,6 +608,8 @@ class UsbDriverService : Service(), UsbDriverListener {
             }
             receiverRegistered = false
         }
+
+        stopWirelessBridge(adapterPresent = true)
 
         val controllersToStop = synchronized(controllersLock) {
             controllers.toList().also { controllers.clear() }
@@ -414,6 +643,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     interface UsbDriverStateListener {
         fun onUsbPermissionPromptStarting()
         fun onUsbPermissionPromptCompleted()
+        fun onDualSenseWirelessBridgeStateChanged(state: String) = Unit
     }
 
     companion object {
@@ -466,7 +696,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && Xbox360Controller.canClaimDevice(device)) ||
                     ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device)) ||
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && SwitchProController.canClaimDevice(device)) ||
-                    ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseController.canClaimDevice(device)) ||
+                    ((!isRecognizedInputDevice(device) || claimAllAvailable) && DualSenseUsbController.canClaimDevice(device)) ||
                     ((!isRecognizedInputDevice(device) || claimAllAvailable) && Dualshock4Controller.canClaimDevice(device))
         }
     }

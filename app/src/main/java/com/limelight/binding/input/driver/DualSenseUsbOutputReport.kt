@@ -1,12 +1,12 @@
 package com.limelight.binding.input.driver
 
-internal object DualSenseOutputReport {
-    const val EFFECT_PAYLOAD_SIZE = 10
+internal object DualSenseUsbOutputReport {
+    const val EFFECT_PAYLOAD_SIZE = DualSenseAdaptiveTriggerEffect.PAYLOAD_SIZE
     // Per the DualSense protocol, 0x05 is the "effect off" opcode; 0x00 is not a
     // recognized mode and leaves a previously set effect engaged.
-    const val EFFECT_TYPE_OFF: Byte = 0x05
-    const val RIGHT_TRIGGER_FLAG = 0x04
-    const val LEFT_TRIGGER_FLAG = 0x08
+    const val EFFECT_TYPE_OFF: Byte = DualSenseAdaptiveTriggerEffect.TYPE_OFF
+    const val RIGHT_TRIGGER_FLAG = DualSenseAdaptiveTriggerEffect.RIGHT_FLAG
+    const val LEFT_TRIGGER_FLAG = DualSenseAdaptiveTriggerEffect.LEFT_FLAG
     const val BOTH_TRIGGER_FLAGS = RIGHT_TRIGGER_FLAG or LEFT_TRIGGER_FLAG
 
     private const val REPORT_SIZE = 48
