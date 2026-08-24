@@ -95,7 +95,6 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
-import android.view.ViewGroup
 import android.view.View.OnGenericMotionListener
 import android.view.View.OnSystemUiVisibilityChangeListener
 import android.view.View.OnTouchListener
@@ -400,10 +399,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         controllerShortcutHintView = findViewById(R.id.controllerShortcutHint)
 
         micButton = findViewById(R.id.micButton)
-        micButton?.let { button ->
-            (button.parent as? ViewGroup)?.let { parent ->
-                micButtonPositionController = MicrophoneButtonPositionController(this, button, parent)
-            }
+        micButtonPositionController = micButton?.let {
+            MicrophoneButtonPositionController.attach(this, it)
         }
 
         performanceOverlayManager = PerformanceOverlayManager(this, prefConfig) { enabled ->
@@ -1163,12 +1160,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         virtualController?.refreshLayout()
         controllerManager?.refreshLayout()
+        performanceOverlayManager?.onConfigurationChanged()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applyPictureInPictureUiState(isInPictureInPictureMode)
         }
 
-        performanceOverlayManager?.onConfigurationChanged()
         // PiP 下不重显浮层：进入 PiP 分支已 hideImmediate()，此处仅在非 PiP 时按偏好显隐
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
             jitterMonitorManager?.applyVisibility()
@@ -1187,25 +1184,17 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     private fun applyPictureInPictureUiState(inPictureInPicture: Boolean) {
         if (inPictureInPicture) {
-            val entered = pipInteractiveOverlayState.enter(
+            val isFirstEntry = pipInteractiveOverlayState.enter(
                 PipInteractiveOverlaySnapshot(
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
                     microphoneButtonVisible = micButton?.visibility == View.VISIBLE
                 )
             )
-            if (!entered) return
-            virtualController?.hide()
-            controllerManager?.hide()
-            micButton?.visibility = View.GONE
-            if (::floatBallHandler.isInitialized) floatBallHandler.hide()
-            hideStartHoldWheel()
-            performanceOverlayManager?.hideOverlayImmediate()
-            jitterMonitorManager?.hideImmediate()
-            notificationOverlayManager.setHiding(true)
-            microphoneManager?.setEnableMic(false)
-            controllerHandler.disableSensors()
-            UiHelper.notifyStreamEnteringPiP(this)
+            enforcePictureInPictureUiState()
+            if (isFirstEntry) {
+                UiHelper.notifyStreamEnteringPiP(this)
+            }
             return
         }
 
@@ -1229,6 +1218,19 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.enableSensors()
         controllerHandler.onSensorsReenabled()
         UiHelper.notifyStreamExitingPiP(this)
+    }
+
+    private fun enforcePictureInPictureUiState() {
+        virtualController?.hide()
+        controllerManager?.hide()
+        micButton?.visibility = View.GONE
+        if (::floatBallHandler.isInitialized) floatBallHandler.hide()
+        hideStartHoldWheel()
+        performanceOverlayManager?.hideOverlayImmediate()
+        jitterMonitorManager?.hideImmediate()
+        notificationOverlayManager.setHiding(true)
+        microphoneManager?.setEnableMic(false)
+        controllerHandler.disableSensors()
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
