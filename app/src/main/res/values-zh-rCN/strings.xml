@@ -666,7 +666,7 @@
     <string name="title_checkbox_show_mic_button">显示麦克风悬浮按钮</string>
     <string name="summary_checkbox_show_mic_button">串流时显示麦克风按钮。可直接拖动，位置会自动记忆。</string>
     <string name="title_list_mic_button_position">快速设置按钮位置</string>
-    <string name="summary_list_mic_button_position">将麦克风按钮放到屏幕边缘；手动拖动后会切换为自定义位置。</string>
+    <string name="summary_list_mic_button_position">将麦克风按钮放到屏幕边缘。拖动位置会暂时覆盖预设，再次选择预设即可清除。</string>
     <string name="mic_button_position_top_left">左上</string>
     <string name="mic_button_position_top_center">中上</string>
     <string name="mic_button_position_top_right">右上</string>
@@ -675,7 +675,6 @@
     <string name="mic_button_position_bottom_left">左下</string>
     <string name="mic_button_position_bottom_center">中下</string>
     <string name="mic_button_position_bottom_right">右下</string>
-    <string name="mic_button_position_custom">自定义（已拖动）</string>
     <string name="title_checkbox_mic_volume_processing">麦克风音量处理</string>
     <string name="summary_checkbox_mic_volume_processing">在发送到主机前调整麦克风音量。固定增益与音量平衡只能选择一种。</string>
     <string name="title_checkbox_mic_gain">音量增益</string>

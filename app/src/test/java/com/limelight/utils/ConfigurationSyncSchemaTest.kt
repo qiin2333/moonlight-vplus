@@ -27,10 +27,10 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
-    fun microphoneButtonVisibilityIsPortable() {
-        assertTrue(
-            ConfigurationSyncManager.isPortableDefaultPreferenceKey("checkbox_show_mic_button")
-        )
+    fun microphoneButtonSettingsArePortable() {
+        listOf("checkbox_show_mic_button", "list_mic_button_position").forEach { key ->
+            assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
+        }
     }
 
     @Test

@@ -3167,6 +3167,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "list_game_rumble_mode",
             "list_hdr_mode",
             "list_languages",
+            "list_mic_button_position",
             "list_mic_icon_color",
             "list_native_mouse_mode_preset",
             "list_perf_overlay_orientation",

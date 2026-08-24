@@ -519,7 +519,6 @@
         <ListPreference
             android:key="list_mic_button_position"
             android:dependency="checkbox_show_mic_button"
-            android:persistent="false"
             android:title="@string/title_list_mic_button_position"
             android:summary="@string/summary_list_mic_button_position"
             android:entries="@array/mic_button_position_entries"

@@ -308,7 +308,7 @@
     <string name="title_checkbox_show_mic_button">Show microphone floating button</string>
     <string name="summary_checkbox_show_mic_button">Show the microphone button when streaming. You can drag it and its position will be remembered.</string>
     <string name="title_list_mic_button_position">Quick button position</string>
-    <string name="summary_list_mic_button_position">Place the microphone button at a screen edge. Dragging the button switches this to Custom.</string>
+    <string name="summary_list_mic_button_position">Place the microphone button at a screen edge. A dragged position overrides this preset until you choose a preset again.</string>
     <string name="mic_button_position_top_left">Top left</string>
     <string name="mic_button_position_top_center">Top center</string>
     <string name="mic_button_position_top_right">Top right</string>
@@ -317,7 +317,6 @@
     <string name="mic_button_position_bottom_left">Bottom left</string>
     <string name="mic_button_position_bottom_center">Bottom center</string>
     <string name="mic_button_position_bottom_right">Bottom right</string>
-    <string name="mic_button_position_custom">Custom (dragged)</string>
     <string name="title_checkbox_mic_volume_processing">Microphone volume processing</string>
     <string name="summary_checkbox_mic_volume_processing">Adjust microphone volume before it is sent to the host. Fixed gain and volume balance are mutually exclusive.</string>
     <string name="title_checkbox_mic_gain">Volume gain</string>

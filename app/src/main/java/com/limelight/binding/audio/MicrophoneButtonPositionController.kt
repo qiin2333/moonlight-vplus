@@ -5,6 +5,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import androidx.preference.PreferenceManager
 import kotlin.math.abs
 
 internal class MicrophoneButtonPositionController(
@@ -13,6 +14,7 @@ internal class MicrophoneButtonPositionController(
     private val container: ViewGroup
 ) : View.OnTouchListener, View.OnLayoutChangeListener {
     private val positionStore = MicrophoneButtonPositionStore(context)
+    private val defaultPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private val edgeInset = (EDGE_INSET_DP * context.resources.displayMetrics.density).toInt()
 
@@ -105,8 +107,14 @@ internal class MicrophoneButtonPositionController(
         if (dragging || container.width <= 0 || container.height <= 0 || button.width <= 0 || button.height <= 0) {
             return
         }
+        val hasCustomPosition = positionStore.hasCustomPosition()
         val coordinates = MicrophoneButtonPlacement.resolve(
-            position = positionStore.position(),
+            position = if (hasCustomPosition) {
+                MicrophoneButtonPlacement.POSITION_CUSTOM
+            } else {
+                defaultPreferences.getString(KEY_POSITION, MicrophoneButtonPlacement.DEFAULT_POSITION)
+                    ?: MicrophoneButtonPlacement.DEFAULT_POSITION
+            },
             normalizedX = positionStore.customX(),
             normalizedY = positionStore.customY(),
             containerWidth = container.width,
@@ -142,6 +150,7 @@ internal class MicrophoneButtonPositionController(
 
     companion object {
         const val KEY_SHOW_BUTTON = "checkbox_show_mic_button"
+        const val KEY_POSITION = MicrophoneButtonPositionStore.PREFERENCE_KEY
         private const val EDGE_INSET_DP = 10
     }
 }
