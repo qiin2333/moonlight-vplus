@@ -54,6 +54,15 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
+    fun gameMenuOpacityIsPortable() {
+        assertTrue(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                PreferenceConfiguration.GAME_MENU_OPACITY_PREF_STRING
+            )
+        )
+    }
+
+    @Test
     fun schemaV1FixtureHasExpectedSectionsAndTypedValues() {
         validateSchemaFixture(
             readFixture("config-sync/schema-v1.example.json").asJsonObject,

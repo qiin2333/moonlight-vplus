@@ -1,5 +1,6 @@
 package com.limelight.gamemenu
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,6 +51,24 @@ class GameMenuRenderingProfileTest {
                 memoryClassMb = 512,
                 glRenderer = "Mali-G715"
             )
+        )
+    }
+
+    @Test
+    fun modernDeviceUsesConfiguredWindowOpacity() {
+        val profile = GameMenuRenderingProfile(isLowEnd = false)
+
+        assertEquals(0.9f, profile.windowAlpha(90), 0.0001f)
+        assertEquals(0.4f, profile.windowAlpha(0), 0.0001f)
+        assertEquals(1.0f, profile.windowAlpha(150), 0.0001f)
+    }
+
+    @Test
+    fun lowEndDeviceKeepsOpaqueWindow() {
+        assertEquals(
+            1.0f,
+            GameMenuRenderingProfile(isLowEnd = true).windowAlpha(40),
+            0.0001f
         )
     }
 }

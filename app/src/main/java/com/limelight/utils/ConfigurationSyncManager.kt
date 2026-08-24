@@ -18,6 +18,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.preferences.BackgroundSource
+import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.nvstream.http.ComputerDetails
 import org.json.JSONArray
 import org.json.JSONException
@@ -3190,6 +3191,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "seekbar_float_ball_auto_hide_delay",
             "seekbar_framegen_internal_width",
             "seekbar_framegen_slow_threshold_ms",
+            PreferenceConfiguration.GAME_MENU_OPACITY_PREF_STRING,
             "seekbar_hdr_peak_brightness_nits",
             "seekbar_keyboard_toggle_fingers_native_touch",
             "seekbar_mic_balance_target",
