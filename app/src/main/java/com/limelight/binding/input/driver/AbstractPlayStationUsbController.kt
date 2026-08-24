@@ -109,13 +109,15 @@ abstract class AbstractPlayStationUsbController(
     private val ifaces = mutableListOf<UsbInterface>()
 
     override fun start(): Boolean {
+        outEndpt = null
+        inEndpt = null
         ifaces.clear()
         Log.d(TAG, "start")
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
             if (!connection.claimInterface(iface, true)) {
                 Log.d(TAG, "Failed to claim interface: $i")
-                return false
+                return failStart()
             } else {
                 ifaces.add(iface)
             }
@@ -124,7 +126,7 @@ abstract class AbstractPlayStationUsbController(
 
         val iface = findInterface(device) ?: run {
             Log.e(TAG, "Failed to find interface")
-            return false
+            return failStart()
         }
 
         for (i in 0 until iface.endpointCount) {
@@ -132,13 +134,13 @@ abstract class AbstractPlayStationUsbController(
             if (endpt.direction == UsbConstants.USB_DIR_OUT) {
                 if (outEndpt != null) {
                     Log.d(TAG, "Found duplicate OUT endpoint")
-                    return false
+                    return failStart()
                 }
                 outEndpt = endpt
             } else if (endpt.direction == UsbConstants.USB_DIR_IN) {
                 if (inEndpt != null) {
                     Log.d(TAG, "Found duplicate IN endpoint")
-                    return false
+                    return failStart()
                 }
                 inEndpt = endpt
             }
@@ -148,11 +150,11 @@ abstract class AbstractPlayStationUsbController(
 
         if (inEndpt == null || outEndpt == null) {
             Log.d(TAG, "Missing required endpoint")
-            return false
+            return failStart()
         }
 
         if (!doInit()) {
-            return false
+            return failStart()
         }
 
         onUsbInterfacesReady()
@@ -160,6 +162,19 @@ abstract class AbstractPlayStationUsbController(
         inputThread = createInputThread()
         inputThread!!.start()
         return true
+    }
+
+    private fun failStart(): Boolean {
+        synchronized(ifaces) {
+            for (iface in ifaces.asReversed()) {
+                runCatching { connection.releaseInterface(iface) }
+                    .onFailure { Log.w(TAG, "Failed to release interface after start failure", it) }
+            }
+            ifaces.clear()
+        }
+        inEndpt = null
+        outEndpt = null
+        return false
     }
 
     override fun stop() {

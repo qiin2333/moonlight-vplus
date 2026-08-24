@@ -128,9 +128,7 @@ class DualSenseBluetoothOutputTest {
                 attempts++
                 if (attempts == 1) false else true.also { retrySent.countDown() }
             },
-            onOutputEvent = {
-                if (it == DualSenseBluetoothOutputEvent.FAILED) firstFailure.countDown()
-            }
+            onSendFailure = { firstFailure.countDown() }
         )
 
         assertTrue(writer.updateRumble(0x5500, 0x3300))

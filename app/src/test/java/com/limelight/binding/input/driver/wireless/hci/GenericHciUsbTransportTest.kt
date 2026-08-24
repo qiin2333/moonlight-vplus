@@ -60,6 +60,8 @@ class GenericHciUsbTransportTest {
         transport.close()
         assertEquals(HciTransportState.CLOSED, transport.state)
         assertTrue(io.closed)
+        assertTrue(io.finished)
+        assertFalse(io.finishedWhileReading)
     }
 
     @Test
@@ -85,6 +87,7 @@ class GenericHciUsbTransportTest {
         assertEquals(HciTransportState.FAILED, transport.state)
         assertEquals(HciTransportErrorCode.MALFORMED_EVENT, failures.single().code)
         assertTrue(io.closed)
+        assertTrue(io.finished)
 
         transport.close()
         assertEquals(HciTransportState.CLOSED, transport.state)
@@ -157,11 +160,24 @@ class GenericHciUsbTransportTest {
         @Volatile
         var closed = false
             private set
+        @Volatile
+        var finished = false
+            private set
+        @Volatile
+        var finishedWhileReading = false
+            private set
+        @Volatile
+        private var reading = false
 
         override fun open(): Boolean = openResult
 
         override fun read(): HciUsbReadResult {
-            return reads.poll(2, TimeUnit.SECONDS) ?: HciUsbReadResult.Timeout
+            reading = true
+            return try {
+                reads.poll(2, TimeUnit.SECONDS) ?: HciUsbReadResult.Timeout
+            } finally {
+                reading = false
+            }
         }
 
         override fun sendCommand(encodedCommand: ByteArray): Boolean {
@@ -179,6 +195,11 @@ class GenericHciUsbTransportTest {
         override fun close() {
             closed = true
             reads.offer(HciUsbReadResult.Closed)
+        }
+
+        override fun finishClose() {
+            finishedWhileReading = reading
+            finished = true
         }
 
         fun emit(channel: HciUsbInputChannel, bytes: ByteArray) {

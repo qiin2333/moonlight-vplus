@@ -173,6 +173,30 @@ class L2capHidSessionTest {
         assertEquals(L2capHidState.CLOSED, remote.session.state)
     }
 
+    @Test
+    fun closesCleanlyWhileConnectionIsStillOpening() {
+        val noChannel = Harness()
+        assertTrue(noChannel.session.start())
+        assertTrue(noChannel.session.close())
+        assertEquals(L2capHidState.CLOSED, noChannel.session.state)
+        assertTrue(noChannel.closed)
+
+        val controlConnected = Harness()
+        assertTrue(controlConnected.session.start())
+        controlConnected.receiveSignal(
+            command(0x03, 1, le16(0x0070) + le16(0x0040) + le16(0) + le16(0))
+        )
+        assertEquals(L2capHidState.CONFIGURING_CONTROL, controlConnected.session.state)
+        assertTrue(controlConnected.session.close())
+        assertEquals(L2capHidState.CLOSING, controlConnected.session.state)
+        assertSignal(
+            controlConnected.sent.last(),
+            0x06,
+            3,
+            le16(0x0070) + le16(0x0040)
+        )
+    }
+
     private class Harness(
         monotonicTimeMs: () -> Long = { 0L },
         signalingTimeoutMs: Long = 10_000L,

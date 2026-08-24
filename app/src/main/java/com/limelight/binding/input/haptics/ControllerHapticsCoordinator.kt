@@ -10,7 +10,6 @@ import com.limelight.binding.input.DriverControllerContext
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.jni.MoonBridge
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
 
 /**
  * Owns controller-haptics runtime policy for the Android client.
@@ -434,16 +433,6 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
 
-            ds5HapticsBindings.remove(controllerId)?.sink?.stop()
-            // In single-controller mode several devices may share player 0. Preserve the
-            // historical latest-attached-wins policy and avoid running idle UAC/BT writers.
-            ds5HapticsBindings.entries.toList().forEach { (existingId, binding) ->
-                if (binding.controllerNumber == controllerNumber &&
-                    ds5HapticsBindings.remove(existingId, binding)
-                ) {
-                    binding.sink.stop()
-                }
-            }
             if (!sink.start()) {
                 synchronized(ds5LifecycleLock) {
                     if (ds5RequestedGenerations[controllerId] == generation) {
@@ -454,11 +443,23 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
 
+            val replaced = ArrayList<NativeHapticsBinding>()
             val accepted = synchronized(ds5LifecycleLock) {
                 if (ds5RequestedGenerations[controllerId] != generation || isStoppingOrStopped()) {
                     false
                 } else {
                     ds5RequestedGenerations.remove(controllerId)
+                    ds5HapticsBindings.remove(controllerId)?.let(replaced::add)
+                    // In single-controller mode several devices may share player 0. Preserve the
+                    // historical latest-attached-wins policy without dropping the working sink
+                    // until its replacement has started successfully.
+                    ds5HapticsBindings.entries.toList().forEach { (existingId, binding) ->
+                        if (binding.controllerNumber == controllerNumber &&
+                            ds5HapticsBindings.remove(existingId, binding)
+                        ) {
+                            replaced.add(binding)
+                        }
+                    }
                     ds5HapticsBindings[controllerId] =
                         NativeHapticsBinding(controllerNumber, sink)
                     true
@@ -468,51 +469,28 @@ internal class ControllerHapticsCoordinator(
                 sink.stop()
                 return@post
             }
+            replaced.forEach { it.sink.stop() }
         }
     }
 
     fun detachDs5HapticsSink(controllerId: Int) {
-        val shouldWait: Boolean
+        val binding: NativeHapticsBinding?
         synchronized(ds5LifecycleLock) {
-            shouldWait = ds5RequestedGenerations.remove(controllerId) != null ||
-                ds5HapticsBindings.containsKey(controllerId)
+            ds5RequestedGenerations.remove(controllerId)
             ds5LifecycleGeneration++
+            binding = ds5HapticsBindings.remove(controllerId)
         }
-        if (!shouldWait) return
-
-        // Serialize removal with attach and wait for transport cleanup before the controller closes.
-        runOnSinkWorkerAndWait {
-            ds5HapticsBindings.remove(controllerId)?.sink?.stop()
-        }
+        binding?.let { stopSinksAsync(listOf(it)) }
     }
 
-    private fun runOnSinkWorkerAndWait(action: () -> Unit) {
+    private fun stopSinksAsync(bindings: List<NativeHapticsBinding>) {
+        if (bindings.isEmpty()) return
+        val cleanup = Runnable { bindings.forEach { it.sink.stop() } }
         if (Looper.myLooper() == handler.backgroundThreadHandler.looper) {
-            action()
-            return
+            cleanup.run()
+        } else if (!handler.backgroundThreadHandler.post(cleanup)) {
+            Thread(cleanup, "DualSenseHapticsCleanup").apply { isDaemon = true }.start()
         }
-        val completed = CountDownLatch(1)
-        if (!handler.backgroundThreadHandler.post {
-                try {
-                    action()
-                } finally {
-                    completed.countDown()
-                }
-            }
-        ) {
-            action()
-            return
-        }
-        var interrupted = false
-        while (true) {
-            try {
-                completed.await()
-                break
-            } catch (_: InterruptedException) {
-                interrupted = true
-            }
-        }
-        if (interrupted) Thread.currentThread().interrupt()
     }
 
     fun clearControllerIfUnavailable(controllerNumber: Short) {
@@ -549,23 +527,20 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    /** Stops all owned output synchronously. ControllerHandler lifecycle runs on the UI thread. */
+    /** Stops logical output immediately and releases transport sinks asynchronously. */
     fun stop() {
         if (stopped || stopping) return
         stopping = true
         stopAllNow()
-        synchronized(ds5LifecycleLock) {
+        val bindings = synchronized(ds5LifecycleLock) {
             ds5RequestedGenerations.clear()
             ds5LifecycleGeneration++
-        }
-        runOnSinkWorkerAndWait {
-            val bindings = ds5HapticsBindings.values.toList()
-            ds5HapticsBindings.clear()
-            bindings.forEach { it.sink.stop() }
+            ds5HapticsBindings.values.toList().also { ds5HapticsBindings.clear() }
         }
         primaryControllerNumber = NO_CONTROLLER
         stopped = true
         stopping = false
+        stopSinksAsync(bindings)
     }
 
     private fun switchAudioTarget(

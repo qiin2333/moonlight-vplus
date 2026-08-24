@@ -26,6 +26,7 @@ internal class AndroidHciUsbIo(
 
     private val opened = AtomicBoolean(false)
     private val closed = AtomicBoolean(false)
+    private val requestsClosed = AtomicBoolean(false)
     private val eventSlot = InputSlot(
         HciUsbInputChannel.EVENT,
         endpoints.eventIn,
@@ -175,11 +176,16 @@ internal class AndroidHciUsbIo(
             return
         }
 
-        inputSlots.forEach { it.request.close() }
+        inputSlots.forEach { runCatching { it.request.cancel() } }
         if (opened.get()) {
             runCatching { connection.releaseInterface(endpoints.usbInterface) }
         }
         runCatching { connection.close() }
+    }
+
+    override fun finishClose() {
+        if (!requestsClosed.compareAndSet(false, true)) return
+        inputSlots.forEach { runCatching { it.request.close() } }
     }
 
     private fun initializeAndQueue(slot: InputSlot): Boolean {

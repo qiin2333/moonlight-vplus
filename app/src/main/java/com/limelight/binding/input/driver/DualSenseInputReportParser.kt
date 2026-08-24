@@ -144,8 +144,8 @@ internal object DualSenseInputReportParser {
             0 -> DualSenseBattery(DualSenseBatteryStatus.DISCHARGING, percentage)
             1 -> DualSenseBattery(DualSenseBatteryStatus.CHARGING, percentage)
             2 -> DualSenseBattery(DualSenseBatteryStatus.FULL, 100)
-            // These values describe charging state only; the capacity nibble remains valid.
-            0x0A, 0x0B -> DualSenseBattery(DualSenseBatteryStatus.NOT_CHARGING, percentage)
+            // Match hid-playstation: charging error states report an unknown/empty capacity.
+            0x0A, 0x0B -> DualSenseBattery(DualSenseBatteryStatus.NOT_CHARGING, 0)
             else -> DualSenseBattery(DualSenseBatteryStatus.UNKNOWN, null)
         }
     }

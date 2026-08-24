@@ -7,11 +7,13 @@ import java.io.Closeable
 /** Per-InputDevice DualSense output state backed by Android's system Bluetooth connection. */
 internal class DirectDualSenseBluetoothOutput(
     inputDevice: InputDevice,
-    private val transport: AndroidBluetoothHidHostTransport
+    private val transport: AndroidBluetoothHidHostTransport,
+    onSendFailure: () -> Unit = {}
 ) : Closeable {
     private val bluetoothAddress = extractBluetoothAddress(inputDevice)
     private val writer = DualSenseBluetoothOutputWriter(
-        sendReport = { transport.send(bluetoothAddress, it) }
+        sendReport = { transport.send(bluetoothAddress, it) },
+        onSendFailure = onSendFailure
     )
 
     init {

@@ -44,10 +44,10 @@ class UsbDriverService : Service(), UsbDriverListener {
     @Volatile private var started = false
     private var receiverRegistered = false
     @Volatile private var claimAllAvailableOverride: Boolean? = null
-    private var wirelessBridge: DualSenseWirelessBridgeManager? = null
-    private var wirelessBridgeDeviceId: Int? = null
-    private var wirelessDiscoveryStarted = false
-    private var wirelessConnectAttempted = false
+    @Volatile private var wirelessBridge: DualSenseWirelessBridgeManager? = null
+    @Volatile private var wirelessBridgeDeviceId: Int? = null
+    @Volatile private var wirelessDiscoveryStarted = false
+    @Volatile private var wirelessConnectAttempted = false
 
     private val receiver = UsbEventReceiver()
     private val binder = UsbDriverBinder()
@@ -135,8 +135,10 @@ class UsbDriverService : Service(), UsbDriverListener {
                 } else if (action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
                     @Suppress("DEPRECATION")
                     val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-                    if (device?.deviceId == wirelessBridgeDeviceId) {
-                        stopWirelessBridge(adapterPresent = false)
+                    sessionLock.withLock {
+                        if (device?.deviceId == wirelessBridgeDeviceId) {
+                            stopWirelessBridgeLocked(adapterPresent = false)
+                        }
                     }
                 } else if (action == ACTION_USB_PERMISSION) {
                     try {
@@ -245,11 +247,13 @@ class UsbDriverService : Service(), UsbDriverListener {
             wirelessBridge?.state?.name ?: DualSenseWirelessBridgeState.DETACHED.name
 
         fun retryDualSenseWirelessDiscovery(): Boolean {
-            val bridge = wirelessBridge ?: return false
-            if (bridge.state != DualSenseWirelessBridgeState.READY) return false
-            wirelessDiscoveryStarted = true
-            wirelessConnectAttempted = false
-            return bridge.startDiscovery()
+            return sessionLock.withLock {
+                val bridge = wirelessBridge ?: return@withLock false
+                if (bridge.state != DualSenseWirelessBridgeState.READY) return@withLock false
+                wirelessDiscoveryStarted = true
+                wirelessConnectAttempted = false
+                bridge.startDiscovery()
+            }
         }
 
         fun stop() {
@@ -476,24 +480,30 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     private fun driveWirelessBridge() {
-        if (!started || prefConfig?.dualSenseWirelessBridge != true) return
-        val bridge = wirelessBridge ?: return
-        if (bridge.state != DualSenseWirelessBridgeState.READY) return
-        val candidates = bridge.discoveredDevices()
-        if (candidates.isEmpty()) {
-            if (!wirelessDiscoveryStarted) {
-                wirelessDiscoveryStarted = true
-                bridge.startDiscovery()
+        sessionLock.withLock {
+            if (!started || prefConfig?.dualSenseWirelessBridge != true) return
+            val bridge = wirelessBridge ?: return
+            if (bridge.state != DualSenseWirelessBridgeState.READY) return
+            val candidates = bridge.discoveredDevices()
+            if (candidates.isEmpty()) {
+                if (!wirelessDiscoveryStarted) {
+                    wirelessDiscoveryStarted = true
+                    bridge.startDiscovery()
+                }
+                return
             }
-            return
-        }
-        if (!wirelessConnectAttempted) {
-            wirelessConnectAttempted = true
-            bridge.connect(candidates.first().address.value)
+            if (!wirelessConnectAttempted) {
+                wirelessConnectAttempted = true
+                bridge.connect(candidates.first().address.value)
+            }
         }
     }
 
     private fun stopWirelessBridge(adapterPresent: Boolean) {
+        sessionLock.withLock { stopWirelessBridgeLocked(adapterPresent) }
+    }
+
+    private fun stopWirelessBridgeLocked(adapterPresent: Boolean) {
         val bridge = wirelessBridge
         wirelessBridge = null
         wirelessBridgeDeviceId = null

@@ -21,7 +21,7 @@ import com.limelight.binding.input.driver.wireless.hci.HciSecurityFailure
 import com.limelight.binding.input.driver.wireless.hci.HciSecurityListener
 import java.io.Closeable
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 internal interface DualSenseWirelessBridgeHost : Closeable {
@@ -39,6 +39,10 @@ internal interface DualSenseWirelessBridgeHost : Closeable {
     fun closeDualSenseHidp(): Boolean
     fun sendDualSenseOutputReport(report: ByteArray): Boolean
     fun flushAcl(timeoutMs: Long): Boolean
+}
+
+internal fun interface PendingHidOpen {
+    fun cancel()
 }
 
 /** Keeps the production HCI implementation behind the bridge state machine's test seam. */
@@ -116,13 +120,12 @@ internal class DualSenseWirelessBridgeManager(
     private val linkKeyStore: HciLinkKeyStore,
     private val hostFactory: (HciAdapterBootstrapListener) -> DualSenseWirelessBridgeHost,
     private val listener: DualSenseWirelessBridgeListener,
-    private val hidOpenDelayMs: Long = DEFAULT_HID_OPEN_DELAY_MS
+    private val hidOpenDelayMs: Long = DEFAULT_HID_OPEN_DELAY_MS,
+    private val hidOpenScheduler: ((Long, () -> Unit) -> PendingHidOpen)? = null
 ) : Closeable {
     private val lock = Any()
     private val discoveredDevices = LinkedHashMap<Long, HciDiscoveredDevice>()
-    private val hidOpenExecutor = Executors.newSingleThreadScheduledExecutor { runnable ->
-        Thread(runnable, "DualSenseHidOpen").apply { isDaemon = true }
-    }
+    private var hidOpenExecutor: ScheduledExecutorService = newHidOpenExecutor()
 
     @Volatile
     var state = DualSenseWirelessBridgeState.DETACHED
@@ -136,7 +139,7 @@ internal class DualSenseWirelessBridgeManager(
     private var controller: DualSenseWirelessController? = null
     private var selectedDevice: HciDiscoveredDevice? = null
     private var pendingIncomingRequest: HciConnectionRequest? = null
-    private var pendingHidOpen: ScheduledFuture<*>? = null
+    private var pendingHidOpen: PendingHidOpen? = null
 
     init {
         require(hidOpenDelayMs >= 0)
@@ -147,6 +150,9 @@ internal class DualSenseWirelessBridgeManager(
             if (state != DualSenseWirelessBridgeState.DETACHED) {
                 return state != DualSenseWirelessBridgeState.FAILED &&
                     state != DualSenseWirelessBridgeState.STOPPING
+            }
+            if (hidOpenExecutor.isShutdown) {
+                hidOpenExecutor = newHidOpenExecutor()
             }
             failure = null
             setStateLocked(DualSenseWirelessBridgeState.STARTING_ADAPTER)
@@ -434,11 +440,14 @@ internal class DualSenseWirelessBridgeManager(
                 openController()
                 return
             }
-            pendingHidOpen = hidOpenExecutor.schedule(
-                ::openController,
-                hidOpenDelayMs,
-                TimeUnit.MILLISECONDS
-            )
+            pendingHidOpen = hidOpenScheduler?.invoke(hidOpenDelayMs, ::openController) ?: run {
+                val future = hidOpenExecutor.schedule(
+                    ::openController,
+                    hidOpenDelayMs,
+                    TimeUnit.MILLISECONDS
+                )
+                PendingHidOpen { future.cancel(false) }
+            }
         }
     }
 
@@ -579,7 +588,7 @@ internal class DualSenseWirelessBridgeManager(
     }
 
     private fun cancelPendingHidOpenLocked() {
-        pendingHidOpen?.cancel(false)
+        pendingHidOpen?.cancel()
         pendingHidOpen = null
     }
 
@@ -588,6 +597,11 @@ internal class DualSenseWirelessBridgeManager(
         state = value
         runCatching { listener.onStateChanged(value) }
     }
+
+    private fun newHidOpenExecutor(): ScheduledExecutorService =
+        Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "DualSenseHidOpen").apply { isDaemon = true }
+        }
 
     private companion object {
         const val DUALSENSE_EDGE_NAME = "DualSense Edge Wireless Controller"

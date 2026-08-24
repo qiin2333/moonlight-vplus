@@ -53,6 +53,25 @@ class HciCommandExecutorTest {
     }
 
     @Test
+    fun sendRunsOutsideExecutorMonitor() {
+        lateinit var executor: HciCommandExecutor
+        var monitorWasAvailable = false
+        executor = HciCommandExecutor(
+            sendCommand = {
+                val probe = Thread {
+                    monitorWasAvailable = executor.hasPendingCommand()
+                }
+                probe.start()
+                probe.join(1_000)
+                !probe.isAlive
+            }
+        )
+
+        assertTrue(executor.submit(HciCommandPacket(0x1001)) {})
+        assertTrue(monitorWasAvailable)
+    }
+
+    @Test
     fun timeoutFailsPendingCommandAndReleasesGate() {
         var nowMs = 10L
         val results = ArrayList<HciCommandResult>()

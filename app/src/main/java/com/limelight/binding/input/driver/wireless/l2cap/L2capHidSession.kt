@@ -138,10 +138,13 @@ internal class L2capHidSession(
     @Synchronized
     fun close(): Boolean {
         if (state == L2capHidState.CLOSED) return true
-        if (state != L2capHidState.OPEN || pending != null) return false
+        if (state == L2capHidState.FAILED) return false
+        pending = null
+        passiveDeadlineMs = 0L
+        closeQueue.clear()
         state = L2capHidState.CLOSING
-        closeQueue.addLast(interrupt)
-        closeQueue.addLast(control)
+        if (interrupt.remoteCid != 0) closeQueue.addLast(interrupt)
+        if (control.remoteCid != 0) closeQueue.addLast(control)
         return sendNextDisconnection()
     }
 

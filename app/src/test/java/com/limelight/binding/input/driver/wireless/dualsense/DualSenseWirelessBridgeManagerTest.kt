@@ -125,12 +125,17 @@ class DualSenseWirelessBridgeManagerTest {
     fun defersHidOpenWithoutBlockingTheEncryptedLinkCallback() {
         val host = FakeHost()
         lateinit var adapterListener: HciAdapterBootstrapListener
+        var scheduledOpen: (() -> Unit)? = null
         val manager = DualSenseWirelessBridgeManager(
             RecordingControllerListener(),
             EphemeralHciLinkKeyStore(),
             hostFactory = { listener -> adapterListener = listener; host },
             listener = RecordingBridgeListener(),
-            hidOpenDelayMs = 25
+            hidOpenDelayMs = 25,
+            hidOpenScheduler = { _, callback ->
+                scheduledOpen = callback
+                PendingHidOpen { scheduledOpen = null }
+            }
         )
         val dualSense = device(2, "DualSense Wireless Controller")
 
@@ -144,8 +149,41 @@ class DualSenseWirelessBridgeManagerTest {
         )
 
         assertEquals(DualSenseWirelessBridgeState.CONNECTING, manager.state)
+        assertEquals(1L, host.hidOpened.count)
+        scheduledOpen!!()
         assertTrue(host.hidOpened.await(1, TimeUnit.SECONDS))
         assertEquals(DualSenseWirelessBridgeState.OPENING_HID, manager.state)
+        manager.close(adapterPresent = true)
+    }
+
+    @Test
+    fun canRestartAfterCloseAndScheduleHidOpenAgain() {
+        val hosts = ArrayList<FakeHost>()
+        val adapterListeners = ArrayList<HciAdapterBootstrapListener>()
+        val manager = DualSenseWirelessBridgeManager(
+            RecordingControllerListener(),
+            EphemeralHciLinkKeyStore(),
+            hostFactory = { listener ->
+                adapterListeners += listener
+                FakeHost().also(hosts::add)
+            },
+            listener = RecordingBridgeListener(),
+            hidOpenDelayMs = 10
+        )
+
+        assertTrue(manager.start())
+        manager.close(adapterPresent = true)
+        assertTrue(manager.start())
+        adapterListeners.last().onAdapterReady(capabilities())
+        assertTrue(manager.startDiscovery())
+        val controller = device(2, "DualSense Wireless Controller")
+        hosts.last().discoveryListener!!.onDiscoveryComplete(listOf(controller))
+        assertTrue(manager.connect(controller.address.value))
+        hosts.last().connectionListener!!.onConnected(
+            HciAclLink(controller.address, connectionHandle = 0x42, encrypted = true)
+        )
+
+        assertTrue(hosts.last().hidOpened.await(1, TimeUnit.SECONDS))
         manager.close(adapterPresent = true)
     }
 

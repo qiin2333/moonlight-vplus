@@ -379,36 +379,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 ) {
                     continue
                 }
-
-                // Prefer the documented Android 12 rumble API which can handle dual vibrators on PS/Xbox controllers
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
-                    if (deviceContext.quadVibrators) {
-                        rumbleQuadVibrators(
-                            deviceContext.vibratorManager!!,
-                            deviceContext.lowFreqMotor, deviceContext.highFreqMotor,
-                            deviceContext.leftTriggerMotor, deviceContext.rightTriggerMotor
-                        )
-                    } else {
-                        rumbleDualVibrators(
-                            deviceContext.vibratorManager!!,
-                            deviceContext.lowFreqMotor, deviceContext.highFreqMotor
-                        )
-                    }
-                }
-                // On Shield devices, prefer the special API. Otherwise, fall back to Vibrator.
-                else if (!handler.sceManager.rumble(
-                        deviceContext.inputDevice,
-                        deviceContext.lowFreqMotor.toInt(),
-                        deviceContext.highFreqMotor.toInt()
-                    )) {
-                    deviceContext.vibrator?.let { vibrator ->
-                        rumbleSingleVibrator(
-                            vibrator,
-                            deviceContext.lowFreqMotor,
-                            deviceContext.highFreqMotor
-                        )
-                    }
-                }
+                rumbleWithAndroidApis(deviceContext)
             }
         }
 
@@ -424,6 +395,45 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                 if (capabilities and MoonBridge.LI_CCAP_RUMBLE.toInt() != 0) {
                     usbRumbleOutput(device).submitBase(BaseRumble(lowFreqMotor, highFreqMotor))
                 }
+            }
+        }
+    }
+
+    internal fun handleDirectBluetoothSendFailure(deviceContext: InputDeviceContext) {
+        if (handler.stopped || deviceContext.lowFreqMotor.toInt() == 0 &&
+            deviceContext.highFreqMotor.toInt() == 0
+        ) {
+            return
+        }
+        rumbleWithAndroidApis(deviceContext)
+    }
+
+    private fun rumbleWithAndroidApis(deviceContext: InputDeviceContext) {
+        // Prefer the documented Android 12 API which can address both controller motors.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
+            if (deviceContext.quadVibrators) {
+                rumbleQuadVibrators(
+                    deviceContext.vibratorManager!!,
+                    deviceContext.lowFreqMotor, deviceContext.highFreqMotor,
+                    deviceContext.leftTriggerMotor, deviceContext.rightTriggerMotor
+                )
+            } else {
+                rumbleDualVibrators(
+                    deviceContext.vibratorManager!!,
+                    deviceContext.lowFreqMotor, deviceContext.highFreqMotor
+                )
+            }
+        } else if (!handler.sceManager.rumble(
+                deviceContext.inputDevice,
+                deviceContext.lowFreqMotor.toInt(),
+                deviceContext.highFreqMotor.toInt()
+            )) {
+            deviceContext.vibrator?.let { vibrator ->
+                rumbleSingleVibrator(
+                    vibrator,
+                    deviceContext.lowFreqMotor,
+                    deviceContext.highFreqMotor
+                )
             }
         }
     }

@@ -48,20 +48,29 @@ internal class HciCommandExecutor(
     }
 
     fun submit(packet: HciCommandPacket, callback: (HciCommandResult) -> Unit): Boolean {
+        val registered: PendingCommand
         synchronized(this) {
             if (closed || pending != null) {
                 return false
             }
-            pending = PendingCommand(
+            registered = PendingCommand(
                 opcode = packet.opcode,
                 deadlineMs = monotonicTimeMs() + commandTimeoutMs,
                 callback = callback
             )
-            if (runCatching { sendCommand(packet) }.getOrDefault(false)) {
-                return true
+            pending = registered
+        }
+
+        if (runCatching { sendCommand(packet) }.getOrDefault(false)) {
+            return true
+        }
+        synchronized(this) {
+            if (pending === registered) {
+                pending = null
+                return false
             }
-            pending = null
-            return false
+            // A synchronous transport may deliver completion before sendCommand returns.
+            return true
         }
     }
 

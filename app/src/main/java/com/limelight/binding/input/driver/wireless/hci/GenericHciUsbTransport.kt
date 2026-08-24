@@ -51,12 +51,14 @@ internal class GenericHciUsbTransport(
                     "Unable to open the USB HCI interface"
                 )
             )
+            runCatching { io.finishClose() }
             return false
         }
 
         synchronized(lifecycleLock) {
             if (stopRequested) {
                 io.close()
+                io.finishClose()
                 state = HciTransportState.CLOSED
                 return false
             }
@@ -143,6 +145,9 @@ internal class GenericHciUsbTransport(
                 Thread.currentThread().interrupt()
             }
         }
+        if (thread == null || !thread.isAlive) {
+            runCatching { io.finishClose() }
+        }
 
         synchronized(lifecycleLock) {
             readerThread = null
@@ -172,28 +177,32 @@ internal class GenericHciUsbTransport(
     }
 
     private fun readLoop() {
-        while (!stopRequested) {
-            when (val result = runCatching { io.read() }.getOrElse {
-                HciUsbReadResult.Failure(
-                    HciTransportFailure(
-                        HciTransportErrorCode.EVENT_TRANSFER_FAILED,
-                        "USB HCI read failed",
-                        it
+        try {
+            while (!stopRequested) {
+                when (val result = runCatching { io.read() }.getOrElse {
+                    HciUsbReadResult.Failure(
+                        HciTransportFailure(
+                            HciTransportErrorCode.EVENT_TRANSFER_FAILED,
+                            "USB HCI read failed",
+                            it
+                        )
                     )
-                )
-            }) {
-                HciUsbReadResult.Timeout -> continue
-                HciUsbReadResult.Closed -> return
-                is HciUsbReadResult.Failure -> {
-                    reportFailure(result.failure)
-                    return
-                }
-                is HciUsbReadResult.Packet -> {
-                    if (!dispatch(result)) {
+                }) {
+                    HciUsbReadResult.Timeout -> continue
+                    HciUsbReadResult.Closed -> return
+                    is HciUsbReadResult.Failure -> {
+                        reportFailure(result.failure)
                         return
+                    }
+                    is HciUsbReadResult.Packet -> {
+                        if (!dispatch(result)) {
+                            return
+                        }
                     }
                 }
             }
+        } finally {
+            runCatching { io.finishClose() }
         }
     }
 
@@ -313,6 +322,9 @@ internal class GenericHciUsbTransport(
 
         synchronized(outputLock) {
             runCatching { io.close() }
+        }
+        if (readerThread == null) {
+            runCatching { io.finishClose() }
         }
         synchronized(callbackLock) {
             runCatching { listener?.onTransportFailure(failure) }

@@ -16,7 +16,7 @@
 产品上保留两条互不替代的路径：
 
 1. **Android 系统蓝牙**：零配置，保留系统能够提供的按键、摇杆、基础振动和可用传感器。
-2. **DualSense 无线桥接**：需要外置 USB 蓝牙适配器，提供原始 DS5 输入、触摸板、IMU、自适应扳机、灯光和原生 HD Haptics。
+2. **DualSense 无线桥接**：需要外置 USB 蓝牙适配器，当前提供原始 DS5 输入、触摸板、IMU、自适应扳机、灯光和传统振动；原生 HD Haptics 尚未完成。
 
 首个正式里程碑只实现“一只 DualSense + 一个已验证 USB 蓝牙适配器”的完整控制和触觉闭环。扬声器、耳机孔和麦克风不进入首版。
 
@@ -28,7 +28,7 @@
 - Inquiry、名称解析、单 DualSense 选择、ACL 连接、SSP、加密 Link Key；API 23+ 使用 Android Keystore，API 22 仅进程内保存。SSP 仍是主路径，但认证中的匹配手柄若请求 Legacy PIN，会按已验证兼容路径回复 `0000`。初始化会开启 Page Scan，并且只接受已有 Link Key 地址的 controller-initiated ACL 回连；回连请求会优先取消正在执行的 Inquiry。
 - L2CAP Basic Mode 重组、HID Control/Interrupt、HIDP Report Protocol；协议握手后主动读取
   Feature Report `0x05`，确保手柄从精简 `0x01` 切换为包含触摸、IMU 和电池的完整 `0x31` 输入。
-- 蓝牙 `0x31` 输入长度、CRC、sequence/gap/重复/乱序校验，以及共享的按键、触摸、IMU、电池解析；未充电状态保留真实容量。
+- 蓝牙 `0x31` 输入长度、CRC、sequence/gap/重复/乱序校验，以及共享的按键、触摸、IMU、电池解析；充电错误状态按 `hid-playstation` 语义报告 0%/未充电。
 - 传统振动、灯条和自适应扳机的 `0x31` 输出，包含 sequence、`0xA2` CRC、单 writer 合并和退出中性包；首个有效输入后会先发送独立的一次性灯条 startup-release 报告，再允许常规 RGB 更新。
 - 首个有效 HID 输入后才执行非致命链路调优：禁用 Hold/Sniff/Park、把监督超时设为 12.8 秒；若适配器随后报告进入低功耗模式，再限频请求 Exit Sniff。调优不会参与配对、加密或 L2CAP 成功判定。
 - USB/HCI 读线程只负责有序完成 ACL 重组、L2CAP/HIDP 校验与状态解析；完整 DS5 快照交给独立高优先级输入线程。消费端短暂停顿时仅保留最新快照，避免网络发送阻塞 USB 接收，也避免过期按键状态排队后造成粘键或菜单迟滞滚动。
@@ -74,7 +74,7 @@ Android 公共 `BluetoothHidDevice` API 用于让 Android 应用将本机注册�
 因此：
 
 - Android 系统蓝牙路径可以继续作为基础手柄路径。
-- 不使用 root、隐藏 API、反射或修改系统蓝牙服务。
+- 外置 USB HCI 无线桥本身不使用 root、隐藏 API、反射或修改系统蓝牙服务；可选的 Android 系统蓝牙直出路径独立使用隐藏 API，不属于无线桥链路。
 - 完整 DS5 原始输入和输出必须使用应用独占的外置 USB 蓝牙控制器。
 - 外置适配器由 Android 识别成普通 USB HCI 设备，但不能同时再交给 Android 系统蓝牙栈使用。
 
@@ -96,7 +96,7 @@ Android 公共 `BluetoothHidDevice` API 用于让 Android 应用将本机注册�
 - HID Control PSM `0x0011` 与 HID Interrupt PSM `0x0013`。
 - 完整蓝牙输入报告：按键、摇杆、模拟扳机、两个触点、IMU、电池和耳机插入状态。
 - 传统振动、自适应扳机、灯条、玩家灯和麦克风灯状态。
-- Sunshine 原生 DS5 PCM 到实体蓝牙 DualSense HD Haptics 的转换。
+- 为后续 Sunshine 原生 DS5 PCM 到实体蓝牙 DualSense HD Haptics 的转换预留独立 sink；当前首版不声明该能力。
 - 串流开始、结束、网络中断、USB 拔出和 Activity 重建时的正确生命周期。
 - 可操作的连接状态、错误提示、功能测试和诊断信息。
 
@@ -135,7 +135,7 @@ Android 公共 `BluetoothHidDevice` API 用于让 Android 应用将本机注册�
 | 传统振动 | 依系统 | 是 | 是 |
 | 自适应扳机 | 否 | 是 | 是 |
 | 灯条/玩家灯 | 依系统 | 是 | 是 |
-| 原生 HD Haptics | 否 | 是 | 是 |
+| 原生 HD Haptics | 否 | 是 | 后续 |
 | 扬声器/耳机 | 否 | 暂未使用 | 后续 |
 | 麦克风 | 否 | 暂未使用 | 后续 |
 

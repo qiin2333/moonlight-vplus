@@ -26,4 +26,7 @@ internal interface HciUsbIo : Closeable {
     fun sendCommand(encodedCommand: ByteArray): Boolean
     fun sendAcl(encodedPacket: ByteArray): Boolean
     override fun close()
+
+    /** Releases request objects after the transport reader can no longer be using them. */
+    fun finishClose() = Unit
 }

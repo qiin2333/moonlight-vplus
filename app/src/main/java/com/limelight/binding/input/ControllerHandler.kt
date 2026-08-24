@@ -392,7 +392,7 @@ class ControllerHandler(
             directDualSenseBluetoothTransport = AndroidBluetoothHidHostTransport(
                 activityContext.applicationContext
             ) {
-                backgroundThreadHandler.post {
+                mainThreadHandler.post {
                     for (index in 0 until inputDeviceContexts.size()) {
                         inputDeviceContexts.valueAt(index)
                             .directDualSenseBluetoothOutput?.onTransportReady()
@@ -1053,7 +1053,13 @@ class ControllerHandler(
         directDualSenseBluetoothTransport?.let { transport ->
             if (DirectDualSenseBluetoothOutput.supports(dev)) {
                 context.directDualSenseBluetoothOutput =
-                    DirectDualSenseBluetoothOutput(dev, transport)
+                    DirectDualSenseBluetoothOutput(dev, transport) {
+                        mainThreadHandler.post {
+                            if (!stopped && inputDeviceContexts.get(context.id) === context) {
+                                rumbleManager.handleDirectBluetoothSendFailure(context)
+                            }
+                        }
+                    }
                 LimeLog.info("Enabled direct Bluetooth output for $devName")
             }
         }
@@ -2079,13 +2085,16 @@ class ControllerHandler(
         // Only get a context if one already exists. We want to ensure we don't report non-gamepads.
         var context = inputDeviceContexts.get(event.deviceId)
         if (context == null && isTouchpad && eventDevice?.vendorId == 0x054C) {
+            val directCandidates = ArrayList<InputDeviceContext>()
             for (index in 0 until inputDeviceContexts.size()) {
                 val candidate = inputDeviceContexts.valueAt(index)
                 if (candidate.directDualSenseBluetoothOutput != null) {
-                    context = candidate
-                    break
+                    directCandidates.add(candidate)
                 }
             }
+            context = directCandidates.firstOrNull {
+                it.inputDevice?.descriptor == eventDevice.descriptor
+            } ?: directCandidates.singleOrNull()
         }
         context ?: return false
         if (context.isLocalInputCaptureActive()) return true

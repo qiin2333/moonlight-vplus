@@ -72,6 +72,23 @@ class HciSecurityControllerTest {
     }
 
     @Test
+    fun acceptsSecureConnectionsAesCcmEncryptionMode() {
+        val harness = Harness()
+        assertTrue(harness.controller.start())
+        harness.completeCommandStatus(HciOpcodes.AUTHENTICATION_REQUESTED)
+        assertTrue(harness.controller.onEvent(statusAndHandleEvent(0x06, 0x00)))
+        harness.completeCommandStatus(HciOpcodes.SET_CONNECTION_ENCRYPTION)
+
+        assertTrue(harness.controller.onEvent(HciEventPacket(
+            0x08,
+            byteArrayOf(0x00, 0x42, 0x00, 0x02)
+        )))
+
+        assertEquals(HciSecurityState.ENCRYPTED, harness.controller.state)
+        assertTrue(harness.encrypted!!.encrypted)
+    }
+
+    @Test
     fun repliesWithTheDualSenseLegacyFallbackPinWhenRequested() {
         val harness = Harness()
         harness.controller.start()

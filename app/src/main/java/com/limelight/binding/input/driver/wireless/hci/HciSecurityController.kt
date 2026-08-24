@@ -360,7 +360,7 @@ internal class HciSecurityController(
         if (handle != link.connectionHandle) return false
         val status = parameters[0].toInt() and 0xff
         val enabled = parameters[3].toInt() and 0xff
-        if (status != SUCCESS_STATUS || enabled != ENCRYPTION_ENABLED.toInt()) {
+        if (status != SUCCESS_STATUS || enabled !in VALID_ENCRYPTION_MODES) {
             fail(HciSecurityErrorCode.ENCRYPTION_FAILED, controllerStatus = status)
             return true
         }
@@ -468,6 +468,7 @@ internal class HciSecurityController(
     companion object {
         private const val SUCCESS_STATUS = 0x00
         private const val ENCRYPTION_ENABLED: Byte = 0x01
+        private val VALID_ENCRYPTION_MODES = setOf(0x01, 0x02)
         private const val IO_CAPABILITY_NO_INPUT_NO_OUTPUT: Byte = 0x03
         private const val OOB_DATA_NOT_PRESENT: Byte = 0x00
         private const val GENERAL_BONDING_NO_MITM: Byte = 0x04

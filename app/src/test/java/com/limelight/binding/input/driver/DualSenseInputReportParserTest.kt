@@ -69,14 +69,14 @@ class DualSenseInputReportParserTest {
     }
 
     @Test
-    fun preservesCapacityWhenControllerReportsNotCharging() {
+    fun reportsZeroCapacityForChargingErrorStates() {
         val report = populatedUsbReport()
         report[53] = 0xA6.toByte()
 
         val state = DualSenseInputReportParser.parseUsbReport(ByteBuffer.wrap(report))!!
 
         assertEquals(DualSenseBatteryStatus.NOT_CHARGING, state.battery.status)
-        assertEquals(65, state.battery.percentage)
+        assertEquals(0, state.battery.percentage)
     }
 
     private fun populatedUsbReport(): ByteArray = ByteArray(64).apply {
