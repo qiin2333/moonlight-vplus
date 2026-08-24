@@ -76,6 +76,7 @@ import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.audio.MicrophoneButtonPositionStore
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
@@ -3157,6 +3158,7 @@ class StreamSettings : AppCompatActivity() {
             // 添加阴影主题
             requireActivity().theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
 
+            MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
 
@@ -4187,7 +4189,7 @@ class StreamSettings : AppCompatActivity() {
 
         private fun setupMicrophoneButtonPositionPreference() {
             val positionPreference = findPreference<ListPreference>(
-                MicrophoneButtonPositionStore.PREFERENCE_KEY
+                MicrophoneButtonPreferences.KEY_PRESET_POSITION
             ) ?: return
             val positionStore = MicrophoneButtonPositionStore(requireContext())
             positionPreference.onPreferenceChangeListener =

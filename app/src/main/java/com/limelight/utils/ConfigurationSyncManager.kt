@@ -12,6 +12,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.preference.PreferenceManager
+import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.computers.ComputerDatabaseManager
@@ -3130,7 +3131,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_show_bitrate_card",
             "checkbox_show_guide_button",
             "checkbox_show_gyro_card",
-            "checkbox_show_mic_button",
+            MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
             "checkbox_show_onscreen_controls",
             "checkbox_show_onscreen_keyboard",
             "checkbox_small_icon_mode",
@@ -3167,7 +3168,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "list_game_rumble_mode",
             "list_hdr_mode",
             "list_languages",
-            "list_mic_button_position",
+            MicrophoneButtonPreferences.KEY_PRESET_POSITION,
             "list_mic_icon_color",
             "list_native_mouse_mode_preset",
             "list_perf_overlay_orientation",

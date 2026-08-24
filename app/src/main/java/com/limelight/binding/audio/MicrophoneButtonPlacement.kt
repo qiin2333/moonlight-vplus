@@ -12,6 +12,14 @@ internal data class MicrophoneButtonNormalizedPosition(
     val y: Float
 )
 
+internal data class MicrophoneButtonViewport(
+    val containerWidth: Int,
+    val containerHeight: Int,
+    val buttonWidth: Int,
+    val buttonHeight: Int,
+    val edgeInset: Int
+)
+
 internal object MicrophoneButtonPlacement {
     const val POSITION_TOP_LEFT = "top_left"
     const val POSITION_TOP_CENTER = "top_center"
@@ -24,18 +32,27 @@ internal object MicrophoneButtonPlacement {
     const val POSITION_CUSTOM = "custom"
     const val DEFAULT_POSITION = POSITION_CENTER_RIGHT
 
+    private val presetPositions = setOf(
+        POSITION_TOP_LEFT,
+        POSITION_TOP_CENTER,
+        POSITION_TOP_RIGHT,
+        POSITION_CENTER_LEFT,
+        POSITION_CENTER_RIGHT,
+        POSITION_BOTTOM_LEFT,
+        POSITION_BOTTOM_CENTER,
+        POSITION_BOTTOM_RIGHT
+    )
+
+    fun normalizePreset(position: String?): String =
+        position?.takeIf { it in presetPositions } ?: DEFAULT_POSITION
+
     fun resolve(
         position: String,
-        normalizedX: Float,
-        normalizedY: Float,
-        containerWidth: Int,
-        containerHeight: Int,
-        buttonWidth: Int,
-        buttonHeight: Int,
-        edgeInset: Int
+        customPosition: MicrophoneButtonNormalizedPosition,
+        viewport: MicrophoneButtonViewport
     ): MicrophoneButtonCoordinates {
-        val horizontal = axisBounds(containerWidth, buttonWidth, edgeInset)
-        val vertical = axisBounds(containerHeight, buttonHeight, edgeInset)
+        val horizontal = axisBounds(viewport.containerWidth, viewport.buttonWidth, viewport.edgeInset)
+        val vertical = axisBounds(viewport.containerHeight, viewport.buttonHeight, viewport.edgeInset)
         val centerX = (horizontal.first + horizontal.last) / 2
         val centerY = (vertical.first + vertical.last) / 2
 
@@ -44,12 +61,13 @@ internal object MicrophoneButtonPlacement {
             POSITION_TOP_CENTER -> MicrophoneButtonCoordinates(centerX, vertical.first)
             POSITION_TOP_RIGHT -> MicrophoneButtonCoordinates(horizontal.last, vertical.first)
             POSITION_CENTER_LEFT -> MicrophoneButtonCoordinates(horizontal.first, centerY)
+            POSITION_CENTER_RIGHT -> MicrophoneButtonCoordinates(horizontal.last, centerY)
             POSITION_BOTTOM_LEFT -> MicrophoneButtonCoordinates(horizontal.first, vertical.last)
             POSITION_BOTTOM_CENTER -> MicrophoneButtonCoordinates(centerX, vertical.last)
             POSITION_BOTTOM_RIGHT -> MicrophoneButtonCoordinates(horizontal.last, vertical.last)
             POSITION_CUSTOM -> MicrophoneButtonCoordinates(
-                interpolate(horizontal, normalizedX),
-                interpolate(vertical, normalizedY)
+                interpolate(horizontal, customPosition.x),
+                interpolate(vertical, customPosition.y)
             )
             else -> MicrophoneButtonCoordinates(horizontal.last, centerY)
         }
@@ -58,14 +76,10 @@ internal object MicrophoneButtonPlacement {
     fun clampCustom(
         x: Float,
         y: Float,
-        containerWidth: Int,
-        containerHeight: Int,
-        buttonWidth: Int,
-        buttonHeight: Int,
-        edgeInset: Int
+        viewport: MicrophoneButtonViewport
     ): MicrophoneButtonCoordinates {
-        val horizontal = axisBounds(containerWidth, buttonWidth, edgeInset)
-        val vertical = axisBounds(containerHeight, buttonHeight, edgeInset)
+        val horizontal = axisBounds(viewport.containerWidth, viewport.buttonWidth, viewport.edgeInset)
+        val vertical = axisBounds(viewport.containerHeight, viewport.buttonHeight, viewport.edgeInset)
         return MicrophoneButtonCoordinates(
             x.roundToInt().coerceIn(horizontal.first, horizontal.last),
             y.roundToInt().coerceIn(vertical.first, vertical.last)
@@ -74,14 +88,10 @@ internal object MicrophoneButtonPlacement {
 
     fun normalize(
         coordinates: MicrophoneButtonCoordinates,
-        containerWidth: Int,
-        containerHeight: Int,
-        buttonWidth: Int,
-        buttonHeight: Int,
-        edgeInset: Int
+        viewport: MicrophoneButtonViewport
     ): MicrophoneButtonNormalizedPosition {
-        val horizontal = axisBounds(containerWidth, buttonWidth, edgeInset)
-        val vertical = axisBounds(containerHeight, buttonHeight, edgeInset)
+        val horizontal = axisBounds(viewport.containerWidth, viewport.buttonWidth, viewport.edgeInset)
+        val vertical = axisBounds(viewport.containerHeight, viewport.buttonHeight, viewport.edgeInset)
         return MicrophoneButtonNormalizedPosition(
             normalizeAxis(coordinates.x, horizontal),
             normalizeAxis(coordinates.y, vertical)

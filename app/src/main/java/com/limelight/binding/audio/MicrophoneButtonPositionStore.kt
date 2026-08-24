@@ -6,12 +6,13 @@ import androidx.core.content.edit
 internal class MicrophoneButtonPositionStore(context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    fun hasCustomPosition(): Boolean =
-        preferences.contains(KEY_CUSTOM_X) && preferences.contains(KEY_CUSTOM_Y)
-
-    fun customX(): Float = preferences.getFloat(KEY_CUSTOM_X, DEFAULT_CUSTOM_X)
-
-    fun customY(): Float = preferences.getFloat(KEY_CUSTOM_Y, DEFAULT_CUSTOM_Y)
+    fun customPosition(): MicrophoneButtonNormalizedPosition? {
+        val values = preferences.all
+        val x = values[KEY_CUSTOM_X] as? Float ?: return null
+        val y = values[KEY_CUSTOM_Y] as? Float ?: return null
+        if (!x.isFinite() || !y.isFinite()) return null
+        return MicrophoneButtonNormalizedPosition(x.coerceIn(0f, 1f), y.coerceIn(0f, 1f))
+    }
 
     fun saveCustom(position: MicrophoneButtonNormalizedPosition) {
         preferences.edit {
@@ -26,12 +27,9 @@ internal class MicrophoneButtonPositionStore(context: Context) {
     }
 
     companion object {
-        const val PREFERENCE_KEY = "list_mic_button_position"
         private const val PREFERENCES_NAME = "microphone_button_position"
         private const val LEGACY_KEY_POSITION = "position"
         private const val KEY_CUSTOM_X = "custom_x"
         private const val KEY_CUSTOM_Y = "custom_y"
-        private const val DEFAULT_CUSTOM_X = 1f
-        private const val DEFAULT_CUSTOM_Y = 0.5f
     }
 }

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.binding.audio.MicrophoneButtonPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -28,7 +29,10 @@ class ConfigurationSyncSchemaTest {
 
     @Test
     fun microphoneButtonSettingsArePortable() {
-        listOf("checkbox_show_mic_button", "list_mic_button_position").forEach { key ->
+        listOf(
+            MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
+            MicrophoneButtonPreferences.KEY_PRESET_POSITION
+        ).forEach { key ->
             assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }
     }

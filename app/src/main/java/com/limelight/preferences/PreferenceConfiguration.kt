@@ -569,7 +569,7 @@ class PreferenceConfiguration {
         private const val ENABLE_MIC_PREF_STRING = "checkbox_enable_mic"
         private const val MIC_BITRATE_PREF_STRING = "seekbar_mic_bitrate_kbps"
         private const val MIC_ICON_COLOR_PREF_STRING = "list_mic_icon_color"
-        private const val MIC_MENU_ACTION_MODE_PREF_STRING = "list_mic_menu_action_mode"
+        const val MIC_MENU_ACTION_MODE_PREF_STRING = "list_mic_menu_action_mode"
 
         // 麦克风音量增益及其平衡设置
         private const val MIC_VOLUME_PROCESSING_PREF_STRING = "checkbox_mic_volume_processing"
