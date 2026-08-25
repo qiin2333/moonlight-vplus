@@ -1374,7 +1374,7 @@ class GameMenu(
         )
     }
 
-    private fun showOpacityDialog() {
+    private fun showOpacityDialog(anchor: GameMenuOpacityAnchor) {
         val currentOpacity = game.prefConfig.gameMenuOpacity.coerceIn(
             PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
             PreferenceConfiguration.MAX_GAME_MENU_OPACITY
@@ -1385,6 +1385,7 @@ class GameMenu(
         registerChildDialog(
             GameMenuOpacityEditor.show(
                 context = game,
+                anchor = anchor,
                 initialOpacity = currentOpacity,
                 onOpacityChange = { opacity ->
                     pendingOpacity = opacity

@@ -81,6 +81,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -1176,6 +1177,7 @@ private fun GameMenuHeader(
                 Spacer(Modifier.width(GameMenuDimens.tight))
             }
             val opacityShape = CircleShape
+            var opacityAnchor by remember { mutableStateOf(GameMenuOpacityAnchor(0, 0)) }
             Icon(
                 painter = painterResource(R.drawable.ic_opacity),
                 contentDescription = stringResource(
@@ -1185,6 +1187,13 @@ private fun GameMenuHeader(
                 tint = colorResource(R.color.game_menu_text_primary),
                 modifier = Modifier
                     .testTag("gameMenuOpacity")
+                    .onGloballyPositioned { coordinates ->
+                        val position = coordinates.positionInWindow()
+                        opacityAnchor = GameMenuOpacityAnchor(
+                            centerX = (position.x + coordinates.size.width / 2f).toInt(),
+                            bottomY = (position.y + coordinates.size.height).toInt()
+                        )
+                    }
                     .size(36.dp)
                     .clip(opacityShape)
                     .background(colorResource(R.color.game_menu_card_background))
@@ -1194,7 +1203,7 @@ private fun GameMenuHeader(
                         opacityShape
                     )
                     .gamepadFocusOutline(opacityShape)
-                    .clickable(onClick = callbacks.onEditOpacity)
+                    .clickable { callbacks.onEditOpacity(opacityAnchor) }
                     .padding(8.dp)
             )
             Spacer(Modifier.width(GameMenuDimens.tight))

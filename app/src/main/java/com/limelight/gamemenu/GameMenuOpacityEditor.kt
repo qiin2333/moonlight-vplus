@@ -1,222 +1,144 @@
 package com.limelight.gamemenu
 
+import android.app.Activity
 import android.content.Context
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.SeekBar
+import android.widget.TextView
 import androidx.activity.ComponentDialog
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.utils.AppActionSheet
-import kotlin.math.roundToInt
+import com.limelight.ui.UiDismissKeyHandler
 
 internal object GameMenuOpacityEditor {
     private const val OPACITY_STEP = 5
-    private const val SLIDER_STEPS =
-        (PreferenceConfiguration.MAX_GAME_MENU_OPACITY -
-            PreferenceConfiguration.MIN_GAME_MENU_OPACITY) / OPACITY_STEP - 1
+    private const val POPUP_WIDTH_DP = 72
+    private const val POPUP_HEIGHT_DP = 220
+    private const val POPUP_MARGIN_DP = 6
 
+    @Suppress("DEPRECATION")
     fun show(
         context: Context,
+        anchor: GameMenuOpacityAnchor,
         initialOpacity: Int,
         onOpacityChange: (Int) -> Unit,
         onOpacityChangeFinished: (Int) -> Unit
     ): ComponentDialog {
-        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
-        val composeView = ComposeView(context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-            setContent {
-                AppActionSheet.AppActionSheetTheme {
-                    var opacity by remember {
-                        mutableIntStateOf(initialOpacity.coerceIn(
-                            PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
-                            PreferenceConfiguration.MAX_GAME_MENU_OPACITY
-                        ))
-                    }
-                    OpacityEditorContent(
-                        opacity = opacity,
-                        onOpacityChange = { updatedOpacity ->
-                            if (updatedOpacity != opacity) {
-                                opacity = updatedOpacity
-                                onOpacityChange(updatedOpacity)
-                            }
-                        },
-                        onOpacityChangeFinished = {
-                            onOpacityChangeFinished(opacity)
-                        },
-                        onDone = {
-                            onOpacityChangeFinished(opacity)
-                            dialog.dismiss()
-                        }
-                    )
+        val content = LayoutInflater.from(context).inflate(
+            R.layout.dialog_game_menu_opacity,
+            FrameLayout(context),
+            false
+        )
+        val valueText = content.findViewById<TextView>(R.id.game_menu_opacity_value)
+        val minimumText = content.findViewById<TextView>(R.id.game_menu_opacity_minimum)
+        val maximumText = content.findViewById<TextView>(R.id.game_menu_opacity_maximum)
+        val seekBar = content.findViewById<SeekBar>(R.id.game_menu_opacity_seekbar)
+        val minimum = PreferenceConfiguration.MIN_GAME_MENU_OPACITY
+        val maximum = PreferenceConfiguration.MAX_GAME_MENU_OPACITY
+
+        fun currentOpacity(): Int = seekBar.progress + minimum
+        fun updateValueText() {
+            valueText.text = context.getString(
+                R.string.game_menu_opacity_value,
+                currentOpacity()
+            )
+        }
+
+        seekBar.max = maximum - minimum
+        seekBar.progress = initialOpacity.coerceIn(minimum, maximum) - minimum
+        seekBar.keyProgressIncrement = OPACITY_STEP
+        minimumText.text = context.getString(R.string.game_menu_opacity_value, minimum)
+        maximumText.text = context.getString(R.string.game_menu_opacity_value, maximum)
+        updateValueText()
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                val snappedProgress = ((progress + OPACITY_STEP / 2) / OPACITY_STEP) * OPACITY_STEP
+                if (snappedProgress != progress) {
+                    seekBar.progress = snappedProgress
+                    return
                 }
+                updateValueText()
+                onOpacityChange(currentOpacity())
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+                onOpacityChangeFinished(currentOpacity())
+            }
+        })
+        seekBar.setOnKeyListener { _, keyCode, event ->
+            val delta = when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_RIGHT -> OPACITY_STEP
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT -> -OPACITY_STEP
+                else -> return@setOnKeyListener false
+            }
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    seekBar.progress = (seekBar.progress + delta).coerceIn(0, seekBar.max)
+                    true
+                }
+                KeyEvent.ACTION_UP -> {
+                    onOpacityChangeFinished(currentOpacity())
+                    true
+                }
+                else -> false
             }
         }
-        AppActionSheet.prepareDialog(dialog, composeView)
+
+        val dialog = ComponentDialog(context, R.style.GameMenuOpacityPopupStyle)
+        dialog.setContentView(content)
+        dialog.setCanceledOnTouchOutside(true)
+        dialog.setOnKeyListener { _, keyCode, event ->
+            UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)
+        }
+
+        val window = requireNotNull(dialog.window)
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        (context as? Activity)?.window?.let { hostWindow ->
+            window.decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
+            if (hostWindow.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
+        }
+        dialog.show()
+        positionPopup(context, window, anchor)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        seekBar.post { seekBar.requestFocus() }
         return dialog
     }
 
-    @Composable
-    private fun OpacityEditorContent(
-        opacity: Int,
-        onOpacityChange: (Int) -> Unit,
-        onOpacityChangeFinished: () -> Unit,
-        onDone: () -> Unit
+    private fun positionPopup(
+        context: Context,
+        window: android.view.Window,
+        anchor: GameMenuOpacityAnchor
     ) {
-        val sliderFocusRequester = remember { FocusRequester() }
-        val doneFocusRequester = remember { FocusRequester() }
-        val inputModeManager = LocalInputModeManager.current
-        var sliderLaidOut by remember { mutableStateOf(false) }
-
-        LaunchedEffect(sliderLaidOut) {
-            if (sliderLaidOut) {
-                inputModeManager.requestInputMode(InputMode.Keyboard)
-                sliderFocusRequester.requestFocus()
-            }
-        }
-
-        AppActionSheet.ActionSheetContainer {
-            AppActionSheet.ActionSheetHeader(
-                title = stringResource(R.string.title_game_menu_opacity),
-                subtitle = stringResource(R.string.summary_game_menu_opacity),
-                activeStatus = false
+        val density = context.resources.displayMetrics.density
+        val screenWidth = context.resources.displayMetrics.widthPixels
+        val screenHeight = context.resources.displayMetrics.heightPixels
+        val popupWidth = (POPUP_WIDTH_DP * density + 0.5f).toInt()
+        val popupHeight = (POPUP_HEIGHT_DP * density + 0.5f).toInt()
+        val popupMargin = (POPUP_MARGIN_DP * density + 0.5f).toInt()
+        window.attributes = window.attributes.apply {
+            width = popupWidth
+            height = ViewGroup.LayoutParams.WRAP_CONTENT
+            gravity = Gravity.TOP or Gravity.START
+            x = (anchor.centerX - popupWidth / 2).coerceIn(
+                0,
+                (screenWidth - popupWidth).coerceAtLeast(0)
             )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.game_menu_opacity_value, opacity),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-                Slider(
-                    value = opacity.toFloat(),
-                    onValueChange = { rawOpacity ->
-                        onOpacityChange(
-                            ((rawOpacity / OPACITY_STEP).roundToInt() * OPACITY_STEP)
-                                .coerceIn(
-                                    PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
-                                    PreferenceConfiguration.MAX_GAME_MENU_OPACITY
-                                )
-                        )
-                    },
-                    onValueChangeFinished = onOpacityChangeFinished,
-                    valueRange = PreferenceConfiguration.MIN_GAME_MENU_OPACITY.toFloat()..
-                        PreferenceConfiguration.MAX_GAME_MENU_OPACITY.toFloat(),
-                    steps = SLIDER_STEPS,
-                    modifier = Modifier
-                        .testTag("gameMenuOpacitySlider")
-                        .fillMaxWidth()
-                        .focusRequester(sliderFocusRequester)
-                        .focusProperties { down = doneFocusRequester }
-                        .onGloballyPositioned { sliderLaidOut = true }
-                        .gamepadFocusOutline(GameMenuControlShape)
-                        .handleOpacityDpad(
-                            opacity = opacity,
-                            onOpacityChange = onOpacityChange,
-                            onOpacityChangeFinished = onOpacityChangeFinished
-                        )
-                )
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(
-                            R.string.game_menu_opacity_value,
-                            PreferenceConfiguration.MIN_GAME_MENU_OPACITY
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = stringResource(
-                            R.string.game_menu_opacity_value,
-                            PreferenceConfiguration.MAX_GAME_MENU_OPACITY
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    AppActionSheet.ActionSheetFooterAction(
-                        label = stringResource(R.string.game_menu_ok).trim(),
-                        onClick = onDone,
-                        modifier = Modifier
-                            .testTag("gameMenuOpacityDone")
-                            .focusRequester(doneFocusRequester)
-                            .focusProperties { up = sliderFocusRequester },
-                        primary = true
-                    )
-                }
-            }
-        }
-    }
-
-    private fun Modifier.handleOpacityDpad(
-        opacity: Int,
-        onOpacityChange: (Int) -> Unit,
-        onOpacityChangeFinished: () -> Unit
-    ): Modifier = onPreviewKeyEvent { event ->
-        val direction = when (event.key) {
-            Key.DirectionLeft -> -OPACITY_STEP
-            Key.DirectionRight -> OPACITY_STEP
-            else -> return@onPreviewKeyEvent false
-        }
-        when (event.type) {
-            KeyEventType.KeyDown -> {
-                onOpacityChange(
-                    (opacity + direction).coerceIn(
-                        PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
-                        PreferenceConfiguration.MAX_GAME_MENU_OPACITY
-                    )
-                )
-                true
-            }
-            KeyEventType.KeyUp -> {
-                onOpacityChangeFinished()
-                true
-            }
-            else -> false
+            y = (anchor.bottomY + popupMargin).coerceIn(
+                0,
+                (screenHeight - popupHeight).coerceAtLeast(0)
+            )
+            dimAmount = 0f
         }
     }
 }

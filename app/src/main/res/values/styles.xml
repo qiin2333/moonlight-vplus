@@ -364,6 +364,10 @@
         <item name="android:windowAnimationStyle">@style/AppDialogAnimation</item>
     </style>
 
+    <style name="GameMenuOpacityPopupStyle" parent="AppTranslucentDialogStyle">
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <!-- 通用弹窗动画 -->
     <style name="AppDialogAnimation">
         <item name="android:windowEnterAnimation">@anim/game_menu_dialog_enter</item>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="72dp"
+    android:layout_height="220dp"
+    android:background="@drawable/game_menu_opacity_popup_bg"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingLeft="8dp"
+    android:paddingRight="8dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="1"
+        android:text="@string/game_menu_opacity_label"
+        android:textColor="@color/game_menu_text_secondary"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/game_menu_opacity_value"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:textColor="@color/game_menu_accent"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/game_menu_opacity_maximum"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:gravity="center"
+        android:textColor="@color/game_menu_text_secondary"
+        android:textSize="11sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <SeekBar
+            android:id="@+id/game_menu_opacity_seekbar"
+            android:layout_width="150dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/title_game_menu_opacity"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:max="80"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:progress="70"
+            android:progressTint="@color/game_menu_accent"
+            android:rotation="270"
+            android:splitTrack="false"
+            android:thumbOffset="0dp"
+            android:thumbTint="@color/game_menu_accent" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/game_menu_opacity_minimum"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/game_menu_text_secondary"
+        android:textSize="11sp" />
+
+</LinearLayout>

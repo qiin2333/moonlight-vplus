@@ -1,67 +1,73 @@
 package com.limelight.gamemenu
 
 import android.app.Dialog
+import android.view.Gravity
 import android.view.KeyEvent
+import android.widget.SeekBar
+import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
+import com.limelight.R
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Rule
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalTestApi::class)
 class GameMenuOpacityEditorTest {
-    @get:Rule
-    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
-
+    private var scenario: ActivityScenario<ComponentActivity>? = null
     private var dialog: Dialog? = null
 
     @After
-    fun dismissDialog() {
-        composeTestRule.runOnUiThread { dialog?.dismiss() }
+    fun tearDown() {
+        scenario?.onActivity { dialog?.dismiss() }
+        scenario?.close()
     }
 
     @Test
-    fun sliderReceivesInitialFocusAndSupportsControllerAdjustment() {
+    fun verticalSeekBarReceivesFocusAndSupportsControllerAdjustment() {
         var previewOpacity = 90
         var persistedOpacity: Int? = null
-        composeTestRule.runOnUiThread {
+        scenario = ActivityScenario.launch(ComponentActivity::class.java)
+        scenario?.onActivity { activity ->
             dialog = GameMenuOpacityEditor.show(
-                context = composeTestRule.activity,
+                context = activity,
+                anchor = GameMenuOpacityAnchor(centerX = 200, bottomY = 80),
                 initialOpacity = 90,
                 onOpacityChange = { previewOpacity = it },
                 onOpacityChangeFinished = { persistedOpacity = it }
             )
         }
 
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == true }
-        composeTestRule.onNodeWithTag("gameMenuOpacitySlider").assertIsFocused()
-        composeTestRule.onNodeWithTag("gameMenuOpacitySlider").performKeyInput {
-            pressKey(Key.DirectionLeft)
+        waitFor { dialog?.isShowing == true }
+        lateinit var seekBar: SeekBar
+        lateinit var valueText: TextView
+        scenario?.onActivity {
+            seekBar = requireNotNull(dialog?.findViewById(R.id.game_menu_opacity_seekbar))
+            valueText = requireNotNull(dialog?.findViewById(R.id.game_menu_opacity_value))
         }
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { previewOpacity == 85 }
-        composeTestRule.onNodeWithText("85%").assertIsDisplayed()
+        waitFor { seekBar.hasFocus() }
 
-        composeTestRule.onNodeWithTag("gameMenuOpacitySlider").performKeyInput {
-            pressKey(Key.DirectionDown)
+        scenario?.onActivity {
+            seekBar.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
+            seekBar.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
         }
-        composeTestRule.onNodeWithTag("gameMenuOpacityDone").assertIsFocused()
-        InstrumentationRegistry.getInstrumentation()
-            .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+        waitFor { previewOpacity == 85 && persistedOpacity == 85 }
 
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == false }
-        assertEquals(85, persistedOpacity)
+        scenario?.onActivity {
+            assertEquals("85%", valueText.text.toString())
+            assertEquals(65, seekBar.progress)
+            assertTrue(dialog?.window?.attributes?.gravity?.and(Gravity.TOP) != 0)
+        }
+    }
+
+    private fun waitFor(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!condition() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(25)
+        }
+        assertTrue(condition())
     }
 }
