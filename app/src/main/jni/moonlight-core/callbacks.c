@@ -704,6 +704,27 @@ hasFastAes() {
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getNegotiatedDynamicHdrFormat(JNIEnv *env, jclass clazz) {
+    return LiGetNegotiatedDynamicHdrFormat();
+}
+
+// Sunshine dynamic HDR negotiation state, staged by setDynamicHdrNegotiation()
+// before the connection starts. Zero defaults are the legacy client.
+static int s_dynamicHdrCaps;
+static int s_dynamicHdrDirectSurface;
+static int s_dynamicHdrPreference;
+
+JNIEXPORT void JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setDynamicHdrNegotiation(JNIEnv *env, jclass clazz,
+                                                                    jint caps,
+                                                                    jint dolbyVisionDirectSurface,
+                                                                    jint dynamicHdrPreference) {
+    s_dynamicHdrCaps = caps;
+    s_dynamicHdrDirectSurface = dolbyVisionDirectSurface;
+    s_dynamicHdrPreference = dynamicHdrPreference;
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass clazz,
                                                            jstring address, jstring appVersion, jstring gfeVersion,
                                                            jstring rtspSessionUrl, jint serverCodecModeSupport,
@@ -740,8 +761,18 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .enableMic = enableMic,
             .controlOnly = controlOnly,
             .audioCodec = audioCodec,
-            .audioBitrate = audioBitrate
+            .audioBitrate = audioBitrate,
+            .dynamicHdrCaps = s_dynamicHdrCaps,
+            .dolbyVisionDirectSurface = s_dynamicHdrDirectSurface,
+            .dynamicHdrPreference = s_dynamicHdrPreference
     };
+
+    // Consume the staged negotiation state so it never leaks into a later
+    // connection that skipped the setter (per-connection semantics, no
+    // reliance on caller discipline).
+    s_dynamicHdrCaps = 0;
+    s_dynamicHdrDirectSurface = 0;
+    s_dynamicHdrPreference = 0;
 
     jbyte* riAesKeyBuf = (*env)->GetByteArrayElements(env, riAesKey, NULL);
     memcpy(streamConfig.remoteInputAesKey, riAesKeyBuf, sizeof(streamConfig.remoteInputAesKey));

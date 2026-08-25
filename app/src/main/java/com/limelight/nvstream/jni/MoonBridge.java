@@ -54,6 +54,26 @@ public class MoonBridge {
     public static final int HDR_MODE_HDR10 = 1;    // HDR10/PQ (SMPTE ST 2084)
     public static final int HDR_MODE_HLG = 2;      // HLG (Hybrid Log-Gamma, ARIB STD-B67)
     public static final int HDR_MODE_HDR10_PLUS = 3; // HDR10/PQ with ST 2094-40 dynamic metadata
+    public static final int HDR_MODE_DOLBY_VISION = 4; // HDR10/PQ base with Dolby Vision Profile 8.1 RPU (client-only selection)
+
+    // Dynamic HDR capability bits for setDynamicHdrNegotiation() and the
+    // x-ss-video[0].dynamicHdrCaps SDP attribute (Sunshine extension).
+    public static final int DYNAMIC_HDR_CAPS_NONE = 0;
+    public static final int DYNAMIC_HDR_CAPS_HDR10_PLUS = 1 << 0;
+    public static final int DYNAMIC_HDR_CAPS_VIVID_PQ = 1 << 1;
+    public static final int DYNAMIC_HDR_CAPS_VIVID_HLG = 1 << 2;
+    public static final int DYNAMIC_HDR_CAPS_DOLBY_VISION_81 = 1 << 3;
+
+    // dynamicHdrPreference values (0 automatic / 1 Dolby Vision / 2 HDR10+ / 3 HDR10 only)
+    public static final int DYNAMIC_HDR_PREFERENCE_AUTOMATIC = 0;
+    public static final int DYNAMIC_HDR_PREFERENCE_DOLBY_VISION = 1;
+    public static final int DYNAMIC_HDR_PREFERENCE_HDR10_PLUS = 2;
+    public static final int DYNAMIC_HDR_PREFERENCE_HDR10_ONLY = 3;
+
+    // LiGetNegotiatedDynamicHdrFormat() results (X-SS-Dynamic-HDR values)
+    public static final int NEGOTIATED_DYNAMIC_HDR_NONE = 0;
+    public static final int NEGOTIATED_DYNAMIC_HDR_HDR10_PLUS = 1;
+    public static final int NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81 = 4;
 
     public static final int CAPABILITY_DIRECT_SUBMIT = 1;
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_AVC = 2;
@@ -513,6 +533,17 @@ public class MoonBridge {
                                               int colorSpace, int colorRange, int hdrMode,
                                               boolean enableMic, boolean controlOnly,
                                               int audioCodec, int audioBitrate);
+
+    // Sunshine dynamic HDR negotiation result. Valid after the connection
+    // callback reports the session is established (RTSP handshake complete).
+    public static native int getNegotiatedDynamicHdrFormat();
+
+    // Sunshine dynamic HDR negotiation: opt this connection in BEFORE
+    // startConnection(). Zero values (the default) are a legacy client that
+    // sends no negotiation attributes. Kept as a separate setter rather than
+    // more startConnection parameters — that signature is already unwieldy.
+    public static native void setDynamicHdrNegotiation(
+        int caps, int dolbyVisionDirectSurface, int dynamicHdrPreference);
 
     public static native void stopConnection();
 
