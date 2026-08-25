@@ -196,27 +196,9 @@ jobs:
           PREV_TAG=$(git tag --list 'v*' --sort=-creatordate | grep -Fxv "$CUR_TAG" | head -n 1 || true)
           echo "Previous release tag: ${PREV_TAG:-<none>}"
           APK_SHA256=$(sha256sum "$REL_APK" | awk '{print $1}')
-          CUSTOM_NOTES="RELEASE_NOTES_V${V}_ZH.md"
 
-          # Prefer a curated release note when one is checked in for this tag.
-          if [ -f "$CUSTOM_NOTES" ]; then
-            cp "$CUSTOM_NOTES" release_notes.md
-            {
-              echo ""
-              echo "## 下载"
-              echo "- APK 文件：\`Moonlight.V+.${V}.apk\`"
-              echo ""
-              echo "## SHA256"
-              echo ""
-              echo '```text'
-              echo "${APK_SHA256}  Moonlight.V+.${V}.apk"
-              echo '```'
-              echo ""
-              echo "*发布于 ${DATE}*"
-            } >> release_notes.md
-            exit 0
-          fi
-
+          # 定制发布说明一律在 GitHub Release 页面发布后直接编辑，
+          # 不再从仓库根目录读取 RELEASE_NOTES_V*.md 文件。
           if [ -n "$PREV_TAG" ]; then
             LOG=$(git log --pretty=format:'%s' "${PREV_TAG}..${CUR_TAG}" --no-merges || true)
           else
