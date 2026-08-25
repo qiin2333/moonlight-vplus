@@ -3542,6 +3542,7 @@ class StreamSettings : AppCompatActivity() {
                 val foundHdr10 = hdrTypeSupport.hasHdr10
                 val foundHdr10Plus = hdrTypeSupport.hasHdr10Plus
                 val foundHlg = hdrTypeSupport.hasHlg
+                val foundDolbyVision = hdrTypeSupport.hasDolbyVision
 
                 val category = findPreference<PreferenceCategory>("category_screen_position")!!
                 val hdrPref = findPreference<CheckBoxPreference>("checkbox_enable_hdr")
@@ -3608,6 +3609,10 @@ class StreamSettings : AppCompatActivity() {
                         if (foundHlg) {
                             entries += getString(R.string.hdr_mode_hlg)
                             entryValues += "2"
+                        }
+                        if (foundDolbyVision) {
+                            entries += getString(R.string.hdr_mode_dolby_vision)
+                            entryValues += "4"
                         }
 
                         hdrModePref.entries = entries.toTypedArray()
