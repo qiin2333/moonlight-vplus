@@ -25,6 +25,10 @@ abstract class AbstractPlayStationUsbController(
     private var inputThread: Thread? = null
     @Volatile
     private var stopped = false
+    private val stopLifecycleLock = Any()
+    private var stopStarted = false
+    private var stopCompleted = false
+    private val stopCallbacks = mutableListOf<() -> Unit>()
 
     // Serializes output reports with the teardown sequence so no queued effect can
     // be sent after the final clear or alongside connection.close().
@@ -181,11 +185,38 @@ abstract class AbstractPlayStationUsbController(
     }
 
     override fun stop() {
-        synchronized(this) {
-            if (stopped) return
-            stopped = true
+        stopAndThen {}
+    }
+
+    override fun stopAndThen(onStopped: () -> Unit) {
+        var runImmediately = false
+        val shouldStart = synchronized(stopLifecycleLock) {
+            if (stopCompleted) {
+                runImmediately = true
+                false
+            } else {
+                stopCallbacks += onStopped
+                if (stopStarted) {
+                    false
+                } else {
+                    stopStarted = true
+                    stopped = true
+                    true
+                }
+            }
         }
 
+        if (runImmediately) {
+            onStopped()
+        } else if (shouldStart) {
+            runCatching(::performStop).onFailure {
+                Log.w(TAG, "Controller stop failed; closing USB transport", it)
+                closeUsbTransport()
+            }
+        }
+    }
+
+    private fun performStop() {
         // Hold the output lock across the final clear so a report already queued by
         // the rumble worker cannot re-engage an effect after this point.
         synchronized(outputLock) {
@@ -236,7 +267,24 @@ abstract class AbstractPlayStationUsbController(
             }
         }
 
-        notifyDeviceRemoved()
+        try {
+            notifyDeviceRemoved()
+        } finally {
+            completeStop()
+        }
+    }
+
+    private fun completeStop() {
+        val callbacks = synchronized(stopLifecycleLock) {
+            if (stopCompleted) return
+            stopCompleted = true
+            stopCallbacks.toList().also { stopCallbacks.clear() }
+        }
+        callbacks.forEach { callback ->
+            runCatching(callback).onFailure {
+                Log.w(TAG, "Controller stop callback failed", it)
+            }
+        }
     }
 
     protected fun reportMotion() {

@@ -44,6 +44,12 @@ abstract class AbstractController(
     abstract fun start(): Boolean
     abstract fun stop()
 
+    /** Runs [onStopped] after this controller has released all transport resources. */
+    open fun stopAndThen(onStopped: () -> Unit) {
+        stop()
+        onStopped()
+    }
+
     abstract fun rumble(lowFreqMotor: Short, highFreqMotor: Short)
 
     abstract fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short)
