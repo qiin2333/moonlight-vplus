@@ -47,6 +47,7 @@ internal object GameMenuOpacityEditor {
             initialOpacity.coerceIn(minimum, maximum)
         ) - minimum
         seekBar.keyProgressIncrement = OPACITY_STEP
+        onOpacityChange(currentOpacity())
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 val snappedProgress = nearestOpacity(progress + minimum) - minimum
