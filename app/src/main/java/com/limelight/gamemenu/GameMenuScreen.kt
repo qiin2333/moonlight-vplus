@@ -1151,7 +1151,7 @@ private fun GameMenuHeader(
         if (!state.isSubmenu) {
             val settingsShape = CircleShape
             Icon(
-                painter = painterResource(R.drawable.ic_ui_settings),
+                painter = painterResource(R.drawable.phc_action_edit),
                 contentDescription = stringResource(R.string.game_menu_card_config_title),
                 tint = colorResource(R.color.game_menu_text_primary),
                 modifier = Modifier
