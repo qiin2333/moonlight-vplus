@@ -1018,54 +1018,66 @@ class MediaCodecDecoderRenderer(
         // The stream is HEVC; RPU semantics match the HEVC invalidation model.
         refFrameInvalidationActive = refFrameInvalidationHevc
 
-        val mediaFormat = createBaseMediaFormat(mimeType)
-        mediaFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
         hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
-        // Plan §5.3 approach 2: some DV decoders only engage the RPU display
-        // path when the Dolby Vision configuration record is present in CSD;
-        // without it they decode the compatibility BL as plain HDR10. The
-        // record describes exactly what our RPU carries: profile 8, level 30,
-        // rpu_present=1, el_present=0, bl_present=1, compatibility id 1.
+        // Signaling ladder for engaging the native DV display path. Each entry
+        // is tried (with the low-latency option sweep) before falling back:
+        //  1. dvcC record + OPPO color-mode vendor key — the OPPO/Qualcomm
+        //     c2.qti.dv.decoder declares <Feature name="oplus-dolby-vision-
+        //     color-mode"/> in media_codecs_dolby_vision.xml, so the non-secure
+        //     path can switch the DV mapping on; it reports the mode in the
+        //     output format as feature-oplus-dolby-vision-color-mode.
+        //  2. color-mode vendor key alone (output-key spelling).
+        //  3. feature-name spelling of the same key.
+        //  4. Plain Annex-B (approach 1): decodes, but devices that need the
+        //     signaling above present the compatibility BL as HDR10.
+        // The dvcC payload describes exactly what our RPU carries: profile 8,
+        // level 30, rpu_present=1, el_present=0, bl_present=1, compat id 1.
         val dvcC = ByteBuffer.wrap(
             byteArrayOf(0x01, 0x00, 0x10, 0xF5.toByte(), 0x10))
-        mediaFormat.setByteBuffer("csd-0", dvcC)
+        val colorModeKeyOutputForm = "feature-oplus-dolby-vision-color-mode"
+        val colorModeKeyFeatureForm = "oplus-dolby-vision-color-mode"
+        val attempts: List<Pair<String, (MediaFormat) -> Unit>> = listOf(
+            "dvcC+colorMode" to { f ->
+                f.setByteBuffer("csd-0", dvcC)
+                f.setInteger(colorModeKeyOutputForm, 1)
+            },
+            "colorMode" to { f -> f.setInteger(colorModeKeyOutputForm, 1) },
+            "colorMode(feature-form)" to { f -> f.setInteger(colorModeKeyFeatureForm, 1) },
+            "plain" to { },
+        )
 
-        var tryNumber = 0
-        var dvcCTried = false
-        while (true) {
-            val label = if (dvcCTried) "profile=DvheSt options=$tryNumber" else "profile=DvheSt+dvcC options=$tryNumber"
-            LimeLog.info("Decoder configuration try: $label")
+        for ((label, applyExtras) in attempts) {
+            var tryNumber = 0
+            while (true) {
+                LimeLog.info("Decoder configuration try: profile=DvheSt+$label options=$tryNumber")
 
-            val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
-                mediaFormat,
-                dvDecoder,
-                tryNumber,
-                prefs.forceMtkMaxOperatingRate,
-                hdr10PlusModeSelected = false,
-            )
+                val attemptFormat = createBaseMediaFormat(mimeType)
+                attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
+                applyExtras(attemptFormat)
 
-            val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
-            if (tryConfigureDecoder(dvDecoder, mediaFormat, false)) {
-                LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name} (dvcC=$dvcCTried)")
-                return 0
+                val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+                    attemptFormat,
+                    dvDecoder,
+                    tryNumber,
+                    prefs.forceMtkMaxOperatingRate,
+                    hdr10PlusModeSelected = false,
+                )
+
+                val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
+                if (tryConfigureDecoder(dvDecoder, attemptFormat, false)) {
+                    LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name} (signaling=$label)")
+                    return 0
+                }
+
+                if (isLastTry) {
+                    break
+                }
+                tryNumber++
             }
-
-            // A decoder that rejects the configuration record may still accept
-            // plain Annex-B input (approach 1); retry once without it before
-            // giving up on the DV path entirely.
-            if (!dvcCTried) {
-                mediaFormat.setByteBuffer("csd-0", null)
-                dvcCTried = true
-                tryNumber = 0
-                continue
-            }
-
-            if (isLastTry) {
-                return -5
-            }
-            tryNumber++
+            LimeLog.warning("Dolby Vision signaling '$label' rejected by decoder; trying next")
         }
+        return -5
     }
 
     fun initializeDecoder(throwOnCodecError: Boolean): Int {
