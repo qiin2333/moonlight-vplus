@@ -1115,6 +1115,7 @@ class GameMenu(
                 superOptions = superOptions.toList(),
                 appName = getAppNameDisplay(),
                 crownToggleText = getCrownToggleText(),
+                gameMenuOpacity = game.prefConfig.gameMenuOpacity,
                 deviceQuickOptions = device?.getGameMenuQuickOptions().orEmpty(),
                 quickActions = buildComposeQuickActions(),
                 visibleCards = readVisibleCards(),
@@ -1145,6 +1146,7 @@ class GameMenu(
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
             onCrownToggle = ::toggleCrownFeature,
+            onEditOpacity = ::showOpacityDialog,
             onOptionClick = { handleComposeOptionClick(it, dialog) },
             onInlineToggle = ::handleInlineToggle,
             onSegmentClick = ::handleInlineSegmentClick,
@@ -1370,6 +1372,51 @@ class GameMenu(
                 }
             }
         )
+    }
+
+    private fun showOpacityDialog() {
+        val currentOpacity = game.prefConfig.gameMenuOpacity.coerceIn(
+            PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
+            PreferenceConfiguration.MAX_GAME_MENU_OPACITY
+        )
+        val actions = (PreferenceConfiguration.MIN_GAME_MENU_OPACITY..
+            PreferenceConfiguration.MAX_GAME_MENU_OPACITY step GAME_MENU_OPACITY_STEP)
+            .map { opacity ->
+                AppActionSheet.Action(
+                    id = opacity,
+                    title = game.getString(R.string.game_menu_opacity_value, opacity),
+                    checked = opacity == currentOpacity
+                )
+            }
+
+        registerChildDialog(
+            AppActionSheet.show(
+                context = game,
+                title = getString(R.string.title_game_menu_opacity),
+                subtitle = getString(R.string.summary_game_menu_opacity),
+                actions = actions,
+                onAction = { action -> updateGameMenuOpacity(action.id) },
+                forceInitialFocus = true,
+                initialActionId = currentOpacity
+            )
+        )
+    }
+
+    private fun updateGameMenuOpacity(opacity: Int) {
+        val boundedOpacity = opacity.coerceIn(
+            PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
+            PreferenceConfiguration.MAX_GAME_MENU_OPACITY
+        )
+        game.prefConfig.gameMenuOpacity = boundedOpacity
+        game.prefConfig.writePreferences(game)
+        composeUiState?.let { state ->
+            state.value = state.value.copy(gameMenuOpacity = boundedOpacity)
+        }
+        activeDialog?.window?.let { window ->
+            val layoutParams = window.attributes
+            layoutParams.alpha = renderingProfile.windowAlpha(boundedOpacity)
+            window.attributes = layoutParams
+        }
     }
 
     private fun registerChildDialog(dialog: Dialog) {
@@ -2198,6 +2245,7 @@ class GameMenu(
     }
 
     companion object {
+        private const val GAME_MENU_OPACITY_STEP = 5
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
         private const val AXIS_REPEAT_INITIAL_DELAY_MS = 350L
         private const val AXIS_REPEAT_INTERVAL_MS = 90L

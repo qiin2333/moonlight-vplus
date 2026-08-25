@@ -15,6 +15,8 @@ import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,5 +63,39 @@ class AppActionSheetControllerFocusTest {
             .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithText("✓").assertCountEquals(1)
+    }
+
+    @Test
+    fun forcedControllerModeFocusesRequestedSingleSelectAction() {
+        var selectedActionId: Int? = null
+        composeTestRule.runOnUiThread {
+            dialog = AppActionSheet.show(
+                context = composeTestRule.activity,
+                title = "Game menu opacity",
+                actions = (40..100 step 5).map { opacity ->
+                    AppActionSheet.Action(
+                        id = opacity,
+                        title = "$opacity%",
+                        checked = opacity == 90
+                    )
+                },
+                onAction = { selectedActionId = it.id },
+                forceInitialFocus = true,
+                initialActionId = 90
+            )
+        }
+
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == true }
+        composeTestRule.onNodeWithText("90%").assertIsFocused()
+        composeTestRule.onNodeWithText("90%").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithText("95%").assertIsFocused()
+
+        InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == false }
+        assertEquals(95, selectedActionId)
+        assertFalse(dialog?.isShowing == true)
     }
 }

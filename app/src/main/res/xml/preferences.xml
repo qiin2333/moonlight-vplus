@@ -345,18 +345,6 @@
             android:key="game_menu_cards"
             android:title="@string/title_game_menu_cards"
             android:summary="@string/summary_game_menu_cards" />
-        <com.limelight.preferences.SeekBarPreference
-            android:key="seekbar_game_menu_opacity"
-            android:title="@string/title_game_menu_opacity"
-            android:summary="@string/summary_game_menu_opacity"
-            android:dialogMessage="@string/summary_game_menu_opacity"
-            android:defaultValue="90"
-            android:max="100"
-            seekbar:min="40"
-            seekbar:step="5"
-            seekbar:keyStep="10"
-            seekbar:divisor="1"
-            android:text="@string/suffix_osc_opacity" />
         <ListPreference
             android:key="background_source"
             android:title="@string/title_background_source"

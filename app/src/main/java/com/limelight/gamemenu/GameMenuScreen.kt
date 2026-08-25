@@ -1175,6 +1175,29 @@ private fun GameMenuHeader(
                 )
                 Spacer(Modifier.width(GameMenuDimens.tight))
             }
+            val opacityShape = CircleShape
+            Icon(
+                painter = painterResource(R.drawable.ic_opacity),
+                contentDescription = stringResource(
+                    R.string.game_menu_opacity_button,
+                    state.gameMenuOpacity
+                ),
+                tint = colorResource(R.color.game_menu_text_primary),
+                modifier = Modifier
+                    .testTag("gameMenuOpacity")
+                    .size(36.dp)
+                    .clip(opacityShape)
+                    .background(colorResource(R.color.game_menu_card_background))
+                    .border(
+                        GameMenuDimens.surfaceStroke,
+                        colorResource(R.color.game_menu_button_border),
+                        opacityShape
+                    )
+                    .gamepadFocusOutline(opacityShape)
+                    .clickable(onClick = callbacks.onEditOpacity)
+                    .padding(8.dp)
+            )
+            Spacer(Modifier.width(GameMenuDimens.tight))
             val crownShape = CircleShape
             Icon(
                 painter = painterResource(R.drawable.ic_super_crown),
