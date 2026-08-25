@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.edit
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
+import androidx.preference.PreferenceManager
 import com.google.gson.JsonArray
 import com.limelight.CustomKeyData
 import com.limelight.CustomKeyRepository
@@ -54,6 +55,7 @@ import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.KeyCodeMapper
@@ -758,6 +760,7 @@ class GameMenu(
                     game.setTouchMode(false)
                     updateEnhancedTouchSetting(true)
                     updateTouchModeSetting(false)
+                    persistTouchModeSelection(TouchModePreset.ENHANCED)
                 },
                 subtitle = getString(R.string.game_menu_touch_mode_enhanced_summary)
             ),
@@ -772,6 +775,7 @@ class GameMenu(
                     game.setTouchMode(false)
                     updateEnhancedTouchSetting(false)
                     updateTouchModeSetting(false)
+                    persistTouchModeSelection(TouchModePreset.CLASSIC)
                 },
                 subtitle = getString(R.string.game_menu_touch_mode_classic_summary)
             ),
@@ -784,6 +788,7 @@ class GameMenu(
                     game.enableNativeMousePointer(false)
                     game.setTouchMode(true)
                     updateTouchModeSetting(true)
+                    persistTouchModeSelection(TouchModePreset.TRACKPAD)
                 },
                 subtitle = getString(R.string.game_menu_touch_mode_trackpad_summary)
             ),
@@ -798,6 +803,7 @@ class GameMenu(
                     game.enableNativeMousePointer(true)
                     updateEnhancedTouchSetting(false)
                     updateTouchModeSetting(false)
+                    persistTouchModeSelection(TouchModePreset.NATIVE)
                 },
                 subtitle = getString(R.string.game_menu_touch_mode_native_mouse_summary)
             )
@@ -850,6 +856,16 @@ class GameMenu(
 
         contentValues.put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, isEnabled.toString())
         controllerManager.superConfigDatabaseHelper?.updateConfig(currentConfigId, contentValues)
+    }
+
+    private fun persistTouchModeSelection(preset: TouchModePreset) {
+        game.prefConfig.writePreferences(game)
+        PreferenceManager.getDefaultSharedPreferences(game).edit {
+            putString(
+                PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING,
+                preset.preferenceValue
+            )
+        }
     }
 
     /**

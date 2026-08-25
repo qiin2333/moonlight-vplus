@@ -3161,6 +3161,7 @@ class StreamSettings : AppCompatActivity() {
             requireActivity().theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
 
             MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
+            initializeTouchModeDefaultsIfNeeded()
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
 
@@ -3731,25 +3732,7 @@ class StreamSettings : AppCompatActivity() {
                         true
                     }
 
-            // 对于没有触摸屏的设备，只提供本地鼠标指针选项
             val mouseModePresetPref = findPreference<ListPreference>(PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING)!!
-            if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
-                // 只显示本地鼠标指针选项
-                mouseModePresetPref.entries = arrayOf<CharSequence>(getString(R.string.native_mouse_mode_preset_native))
-                mouseModePresetPref.entryValues = arrayOf<CharSequence>("native")
-                mouseModePresetPref.value = "native"
-
-                // 强制设置为本地鼠标指针模式
-                val prefs = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireActivity())
-                prefs.edit {
-                    putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, false)
-                    putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, false)
-                    putBoolean(
-                        PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
-                        true
-                    )
-                }
-            }
 
             // 添加本地鼠标模式预设选择监听器
             // 每种预设对应 (enhancedTouch, trackpad, nativePointer) 三元组
@@ -3767,6 +3750,7 @@ class StreamSettings : AppCompatActivity() {
                     putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, flags.first)
                     putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, flags.second)
                     putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, flags.third)
+                    putBoolean(PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING, false)
                 }
 
                 // 显示提示信息
@@ -3782,6 +3766,34 @@ class StreamSettings : AppCompatActivity() {
                         Toast.LENGTH_SHORT).show()
 
                 true
+            }
+        }
+
+        private fun initializeTouchModeDefaultsIfNeeded() {
+            val context = requireContext()
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val touchModeKeys = arrayOf(
+                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
+                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
+                PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
+                PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING
+            )
+            if (touchModeKeys.any(prefs::contains)) return
+
+            val state = TouchModePreferencePolicy.resolve(
+                hasTouchscreen = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
+                enhancedTouch = null,
+                touchscreenTrackpad = null,
+                nativeMousePointer = null,
+                screenDs5Touchpad = null
+            )
+            val preset = TouchModePreferencePolicy.presetFor(state)
+            prefs.edit {
+                putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, state.enhancedTouch)
+                putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, state.touchscreenTrackpad)
+                putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, state.nativeMousePointer)
+                putBoolean(PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING, state.screenDs5Touchpad)
+                putString(PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING, preset.preferenceValue)
             }
         }
 

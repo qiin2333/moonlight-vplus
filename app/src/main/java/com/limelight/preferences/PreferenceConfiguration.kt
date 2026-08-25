@@ -2,6 +2,7 @@
 package com.limelight.preferences
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Point
 import android.media.AudioFormat
@@ -17,6 +18,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+
+private fun SharedPreferences.getBooleanOrNull(key: String): Boolean? =
+    if (contains(key)) getBoolean(key, false) else null
 
 class PreferenceConfiguration {
 
@@ -329,7 +333,10 @@ class PreferenceConfiguration {
                 .putString(ESC_MENU_KEY_PREF_STRING, escMenuKey.toString())
                 .putBoolean(ENABLE_START_KEY_MENU_PREF_STRING, enableStartKeyMenu)
                 .putBoolean(CONTROL_ONLY_PREF_STRING, controlOnly)
+                .putBoolean(ENABLE_ENHANCED_TOUCH_PREF_STRING, enableEnhancedTouch)
+                .putBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, touchscreenTrackpad)
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
+                .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
                 .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
                 .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
@@ -734,7 +741,6 @@ class PreferenceConfiguration {
         private const val DEFAULT_MOUSE_EMULATION = true
         private const val DEFAULT_ANALOG_STICK_FOR_SCROLLING = "right"
         private const val DEFAULT_MOUSE_NAV_BUTTONS = false
-        private const val DEFAULT_NATIVE_MOUSE_MODE_PRESET = "trackpad"
         private const val DEFAULT_UNLOCK_FPS = false
         private const val DEFAULT_VIBRATE_OSC = true
         private const val DEFAULT_DEVICE_RUMBLE_STRENGTH = 100
@@ -745,15 +751,12 @@ class PreferenceConfiguration {
         const val DEFAULT_AUDIO_VIBRATION_MODE = "auto"
         const val DEFAULT_AUDIO_VIBRATION_SCENE = 0 // Game/Movie
         private const val DEFAULT_FLIP_FACE_BUTTONS = false
-        private const val DEFAULT_TOUCHSCREEN_TRACKPAD = true
-        private const val DEFAULT_SCREEN_DS5_TOUCHPAD = false
         private const val DEFAULT_AUDIO_CONFIG = "2" // Stereo
         private const val DEFAULT_LATENCY_TOAST = false
         private const val DEFAULT_ENABLE_STUN = false
         private const val DEFAULT_SCREEN_COMBINATION_MODE = "-1"
         const val DEFAULT_FRAME_PACING = "precise-sync"
         private const val DEFAULT_ABSOLUTE_MOUSE_MODE = false
-        private const val DEFAULT_ENABLE_NATIVE_MOUSE_POINTER = false
         private const val DEFAULT_ENABLE_AUDIO_FX = false
         private const val DEFAULT_ENABLE_SPATIALIZER = false
         private const val DEFAULT_REDUCE_REFRESH_RATE = false
@@ -1247,7 +1250,6 @@ class PreferenceConfiguration {
             }
 
             // Enhance touch settings
-            config.enableEnhancedTouch = prefs.getBoolean(ENABLE_ENHANCED_TOUCH_PREF_STRING, false)
             config.enhancedTouchOnWhichSide = prefs.getBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, true) // by default, enhanced touch zone is on the right side.
             config.enhanceTouchZoneDivider = prefs.getInt(ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING, 50) // decides where to divide native touch zone & enhance touch zone
             config.pointerVelocityFactor = prefs.getInt(POINTER_VELOCITY_FACTOR_PREF_STRING, 100).toFloat() // set pointer velocity faster or slower
@@ -1393,8 +1395,18 @@ class PreferenceConfiguration {
             config.audioVibrationMode = prefs.getString(AUDIO_VIBRATION_MODE_PREF_STRING, DEFAULT_AUDIO_VIBRATION_MODE) ?: DEFAULT_AUDIO_VIBRATION_MODE
             config.audioVibrationScene = (prefs.getString(AUDIO_VIBRATION_SCENE_PREF_STRING, DEFAULT_AUDIO_VIBRATION_SCENE.toString()) ?: DEFAULT_AUDIO_VIBRATION_SCENE.toString()).toInt()
             config.flipFaceButtons = prefs.getBoolean(FLIP_FACE_BUTTONS_PREF_STRING, DEFAULT_FLIP_FACE_BUTTONS)
-            config.touchscreenTrackpad = prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD)
-            config.screenDs5Touchpad = prefs.getBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, DEFAULT_SCREEN_DS5_TOUCHPAD)
+            val hasTouchscreen = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+            val touchModeState = TouchModePreferencePolicy.resolve(
+                hasTouchscreen = hasTouchscreen,
+                enhancedTouch = prefs.getBooleanOrNull(ENABLE_ENHANCED_TOUCH_PREF_STRING),
+                touchscreenTrackpad = prefs.getBooleanOrNull(TOUCHSCREEN_TRACKPAD_PREF_STRING),
+                nativeMousePointer = prefs.getBooleanOrNull(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING),
+                screenDs5Touchpad = prefs.getBooleanOrNull(SCREEN_DS5_TOUCHPAD_PREF_STRING)
+            )
+            config.enableEnhancedTouch = touchModeState.enhancedTouch
+            config.touchscreenTrackpad = touchModeState.touchscreenTrackpad
+            config.enableNativeMousePointer = touchModeState.nativeMousePointer
+            config.screenDs5Touchpad = touchModeState.screenDs5Touchpad
             config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.enableStun = prefs.getBoolean(ENABLE_STUN_PREF_STRING, DEFAULT_ENABLE_STUN)
 
@@ -1409,18 +1421,6 @@ class PreferenceConfiguration {
             config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST)
             config.absoluteMouseMode = prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE)
 
-            // 对于没有触摸屏的设备，默认启用本地鼠标指针
-            val hasTouchscreen = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
-            val defaultNativeMouse = if (hasTouchscreen) DEFAULT_ENABLE_NATIVE_MOUSE_POINTER else true
-            config.enableNativeMousePointer = prefs.getBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, defaultNativeMouse)
-
-            // 如果没有触摸屏，强制设置为本地鼠标指针模式
-            if (!hasTouchscreen) {
-                config.enableNativeMousePointer = true
-                config.enableEnhancedTouch = false
-                config.touchscreenTrackpad = false
-                config.screenDs5Touchpad = false
-            }
             config.enableAudioFx = prefs.getBoolean(ENABLE_AUDIO_FX_PREF_STRING, DEFAULT_ENABLE_AUDIO_FX)
             config.enableSpatializer = prefs.getBoolean(ENABLE_SPATIALIZER_PREF_STRING, DEFAULT_ENABLE_SPATIALIZER)
             config.enableAudioPassthrough = enableAudioPassthrough
