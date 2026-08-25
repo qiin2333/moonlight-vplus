@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.view.KeyEvent
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.background
@@ -197,6 +198,8 @@ class EasyTierController(
 
         val dialog = ComponentDialog(activity, R.style.AppDialogStyle).apply {
             setContentView(composeView)
+            // Keep this floating window's viewport stable while Compose scrolls the focused field.
+            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
             setOnShowListener {
                 composeView.doOnLayout {
                     if (isShowing) {
