@@ -1022,9 +1022,20 @@ class MediaCodecDecoderRenderer(
         mediaFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
         hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
+        // Plan §5.3 approach 2: some DV decoders only engage the RPU display
+        // path when the Dolby Vision configuration record is present in CSD;
+        // without it they decode the compatibility BL as plain HDR10. The
+        // record describes exactly what our RPU carries: profile 8, level 30,
+        // rpu_present=1, el_present=0, bl_present=1, compatibility id 1.
+        val dvcC = ByteBuffer.wrap(
+            byteArrayOf(0x01, 0x00, 0x10, 0xF5.toByte(), 0x10))
+        mediaFormat.setByteBuffer("csd-0", dvcC)
+
         var tryNumber = 0
+        var dvcCTried = false
         while (true) {
-            LimeLog.info("Decoder configuration try: profile=DvheSt options=$tryNumber")
+            val label = if (dvcCTried) "profile=DvheSt options=$tryNumber" else "profile=DvheSt+dvcC options=$tryNumber"
+            LimeLog.info("Decoder configuration try: $label")
 
             val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
                 mediaFormat,
@@ -1036,8 +1047,18 @@ class MediaCodecDecoderRenderer(
 
             val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
             if (tryConfigureDecoder(dvDecoder, mediaFormat, false)) {
-                LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name}")
+                LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name} (dvcC=$dvcCTried)")
                 return 0
+            }
+
+            // A decoder that rejects the configuration record may still accept
+            // plain Annex-B input (approach 1); retry once without it before
+            // giving up on the DV path entirely.
+            if (!dvcCTried) {
+                mediaFormat.setByteBuffer("csd-0", null)
+                dvcCTried = true
+                tryNumber = 0
+                continue
             }
 
             if (isLastTry) {
