@@ -1379,36 +1379,37 @@ class GameMenu(
             PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
             PreferenceConfiguration.MAX_GAME_MENU_OPACITY
         )
-        val actions = (PreferenceConfiguration.MIN_GAME_MENU_OPACITY..
-            PreferenceConfiguration.MAX_GAME_MENU_OPACITY step GAME_MENU_OPACITY_STEP)
-            .map { opacity ->
-                AppActionSheet.Action(
-                    id = opacity,
-                    title = game.getString(R.string.game_menu_opacity_value, opacity),
-                    checked = opacity == currentOpacity
-                )
-            }
+        var pendingOpacity = currentOpacity
+        var persistedOpacity = currentOpacity
 
         registerChildDialog(
-            AppActionSheet.show(
+            GameMenuOpacityEditor.show(
                 context = game,
-                title = getString(R.string.title_game_menu_opacity),
-                subtitle = getString(R.string.summary_game_menu_opacity),
-                actions = actions,
-                onAction = { action -> updateGameMenuOpacity(action.id) },
-                forceInitialFocus = true,
-                initialActionId = currentOpacity
-            )
+                initialOpacity = currentOpacity,
+                onOpacityChange = { opacity ->
+                    pendingOpacity = opacity
+                    previewGameMenuOpacity(opacity)
+                },
+                onOpacityChangeFinished = { opacity ->
+                    pendingOpacity = opacity
+                    persistGameMenuOpacity(opacity)
+                    persistedOpacity = opacity
+                }
+            ),
+            onDismiss = {
+                if (pendingOpacity != persistedOpacity) {
+                    persistGameMenuOpacity(pendingOpacity)
+                }
+            }
         )
     }
 
-    private fun updateGameMenuOpacity(opacity: Int) {
+    private fun previewGameMenuOpacity(opacity: Int) {
         val boundedOpacity = opacity.coerceIn(
             PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
             PreferenceConfiguration.MAX_GAME_MENU_OPACITY
         )
         game.prefConfig.gameMenuOpacity = boundedOpacity
-        game.prefConfig.writePreferences(game)
         composeUiState?.let { state ->
             state.value = state.value.copy(gameMenuOpacity = boundedOpacity)
         }
@@ -1419,7 +1420,12 @@ class GameMenu(
         }
     }
 
-    private fun registerChildDialog(dialog: Dialog) {
+    private fun persistGameMenuOpacity(opacity: Int) {
+        previewGameMenuOpacity(opacity)
+        game.prefConfig.writePreferences(game)
+    }
+
+    private fun registerChildDialog(dialog: Dialog, onDismiss: () -> Unit = {}) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
         prepareForInputOwnerChange()
         activeChildDialog = dialog
@@ -1450,6 +1456,7 @@ class GameMenu(
             if (activeChildDialog !== dialog) return@setOnDismissListener
             prepareForInputOwnerChange()
             activeChildDialog = null
+            onDismiss()
             decorView?.setOnKeyListener(null)
             decorView?.setOnGenericMotionListener(null)
             val parentDialog = activeDialog
@@ -2245,7 +2252,6 @@ class GameMenu(
     }
 
     companion object {
-        private const val GAME_MENU_OPACITY_STEP = 5
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
         private const val AXIS_REPEAT_INITIAL_DELAY_MS = 350L
         private const val AXIS_REPEAT_INTERVAL_MS = 90L

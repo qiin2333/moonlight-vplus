@@ -1,27 +1,28 @@
-package com.limelight.utils
+package com.limelight.gamemenu
 
 import android.app.Dialog
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class)
-class AppActionSheetControllerFocusTest {
+class GameMenuOpacityEditorTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -33,34 +34,34 @@ class AppActionSheetControllerFocusTest {
     }
 
     @Test
-    fun forcedControllerModeFocusesFirstMultiSelectAction() {
+    fun sliderReceivesInitialFocusAndSupportsControllerAdjustment() {
+        var previewOpacity = 90
+        var persistedOpacity: Int? = null
         composeTestRule.runOnUiThread {
-            dialog = AppActionSheet.showMultiSelect(
+            dialog = GameMenuOpacityEditor.show(
                 context = composeTestRule.activity,
-                title = "Delete custom keys",
-                actions = listOf(
-                    AppActionSheet.Action(0, "First key", checked = false),
-                    AppActionSheet.Action(1, "Second key", checked = false)
-                ),
-                confirmLabel = "Delete",
-                cancelLabel = "Cancel",
-                minimumSelectionCount = 1,
-                onConfirm = {},
-                forceInitialFocus = true
+                initialOpacity = 90,
+                onOpacityChange = { previewOpacity = it },
+                onOpacityChangeFinished = { persistedOpacity = it }
             )
         }
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == true }
-        composeTestRule.onNodeWithText("First key").assertIsFocused()
-        composeTestRule.onNodeWithText("First key").performKeyInput {
+        composeTestRule.onNodeWithTag("gameMenuOpacitySlider").assertIsFocused()
+        composeTestRule.onNodeWithTag("gameMenuOpacitySlider").performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { previewOpacity == 85 }
+        composeTestRule.onNodeWithText("85%").assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("gameMenuOpacitySlider").performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        composeTestRule.onNodeWithText("Second key").assertIsFocused()
-
+        composeTestRule.onNodeWithTag("gameMenuOpacityDone").assertIsFocused()
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
-        composeTestRule.waitForIdle()
-        composeTestRule.onAllNodesWithText("✓").assertCountEquals(1)
-    }
 
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == false }
+        assertEquals(85, persistedOpacity)
+    }
 }

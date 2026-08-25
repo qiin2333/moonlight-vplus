@@ -726,7 +726,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_PERF_OVERLAY_LOCKED = false
         private const val DEFAULT_PERF_OVERLAY_BG_OPACITY = 40
         const val DEFAULT_GAME_MENU_OPACITY = 90
-        const val MIN_GAME_MENU_OPACITY = 40
+        const val MIN_GAME_MENU_OPACITY = 20
         const val MAX_GAME_MENU_OPACITY = 100
         private const val DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal"
         private const val DEFAULT_PERF_OVERLAY_POSITION = "top"

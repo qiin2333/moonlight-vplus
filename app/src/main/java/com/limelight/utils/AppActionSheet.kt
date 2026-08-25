@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
@@ -85,9 +84,7 @@ object AppActionSheet {
         activeStatus: Boolean = false,
         actions: List<Action>,
         onAction: (Action) -> Unit,
-        onDismiss: ((Action?) -> Unit)? = null,
-        forceInitialFocus: Boolean = false,
-        initialActionId: Int? = null
+        onDismiss: ((Action?) -> Unit)? = null
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
         var selectedAction: Action? = null
@@ -102,8 +99,6 @@ object AppActionSheet {
                         activeStatus = activeStatus,
                         actions = actions,
                         focusRequestToken = focusRequestToken.intValue,
-                        forceInitialFocus = forceInitialFocus,
-                        initialActionId = initialActionId,
                         onAction = { action ->
                             selectedAction = action
                             dialog.dismiss()
@@ -243,18 +238,12 @@ object AppActionSheet {
         activeStatus: Boolean,
         actions: List<Action>,
         focusRequestToken: Int,
-        forceInitialFocus: Boolean,
-        initialActionId: Int?,
         onAction: (Action) -> Unit
     ) {
         val initialFocusRequester = remember { FocusRequester() }
-        val shouldRequestFocus = forceInitialFocus || isControllerFocusMode()
+        val shouldRequestFocus = isControllerFocusMode()
         val inputModeManager = LocalInputModeManager.current
         val initialFocusPlaced = remember { mutableStateOf(false) }
-        val initialFocusIndex = actions.indexOfFirst { it.id == initialActionId }
-            .takeIf { it >= 0 }
-            ?: 0
-        val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialFocusIndex)
         LaunchedEffect(
             actions,
             shouldRequestFocus,
@@ -270,7 +259,6 @@ object AppActionSheet {
             ActionSheetHeader(title, subtitle, activeStatus)
             val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.62f).dp
             LazyColumn(
-                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = maxListHeight),
@@ -281,7 +269,7 @@ object AppActionSheet {
                     ActionSheetRow(
                         action,
                         onAction,
-                        if (index == initialFocusIndex) {
+                        if (index == 0) {
                             Modifier
                                 .focusRequester(initialFocusRequester)
                                 .onGloballyPositioned { initialFocusPlaced.value = true }
