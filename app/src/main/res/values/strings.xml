@@ -383,9 +383,9 @@
     <string name="usb_shortcut_hold_hint">Release a D-pad direction to run it now, or move a stick and release Start</string>
     <string name="start_hold_wheel_menu">Stream menu</string>
     <string name="start_hold_wheel_mouse">Mouse mode</string>
-    <string name="start_hold_wheel_keyboard">On-screen keyboard</string>
+    <string name="start_hold_wheel_keyboard">Keyboard</string>
     <string name="start_hold_wheel_performance">Performance</string>
-    <string name="start_hold_wheel_continue">Continue game</string>
+    <string name="start_hold_wheel_continue">Resume</string>
     <string name="controller_diag_simulator_title">Shortcut test</string>
     <string name="controller_diag_simulator_summary">Hold Start, or press Start + Select + LB + RB.</string>
     <string name="controller_diag_test_label">Test</string>
