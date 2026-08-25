@@ -13,6 +13,7 @@ import com.limelight.nvstream.jni.MoonBridge
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class AbstractPlayStationUsbController(
     protected val device: UsbDevice,
@@ -31,6 +32,8 @@ abstract class AbstractPlayStationUsbController(
 
     @Volatile
     protected var outputClosed = false
+
+    private val transportClosed = AtomicBoolean(false)
 
     protected var inEndpt: UsbEndpoint? = null
     protected var outEndpt: UsbEndpoint? = null
@@ -183,8 +186,6 @@ abstract class AbstractPlayStationUsbController(
             stopped = true
         }
 
-        onBeforeUsbTransportClose()
-
         // Hold the output lock across the final clear so a report already queued by
         // the rumble worker cannot re-engage an effect after this point.
         synchronized(outputLock) {
@@ -207,6 +208,12 @@ abstract class AbstractPlayStationUsbController(
             }
             inputThread = null
         }
+
+        closeUsbTransportWhenReady(::closeUsbTransport)
+    }
+
+    private fun closeUsbTransport() {
+        if (!transportClosed.compareAndSet(false, true)) return
 
         if (ifaces.isNotEmpty()) {
             synchronized(ifaces) {
@@ -245,8 +252,8 @@ abstract class AbstractPlayStationUsbController(
     /** Called after reportInput() has assigned the controller number and published arrival. */
     protected open fun onInputReportPublished() = Unit
 
-    /** Called before output is cleared and USB interfaces are released. */
-    protected open fun onBeforeUsbTransportClose() = Unit
+    /** Defers final interface and connection release until transport-specific output has stopped. */
+    protected open fun closeUsbTransportWhenReady(closeTransport: () -> Unit) = closeTransport()
 
     /** Clears output features that aren't represented by the common rumble API. */
     protected open fun clearControllerSpecificOutput() = Unit

@@ -16,4 +16,10 @@ interface DualSenseNativeHapticsSink {
     fun submit(frame: Ds5HapticsPcmFrame)
 
     fun stop()
+
+    /** Runs [onStopped] after the sink no longer accesses its transport. */
+    fun stopAndThen(onStopped: () -> Unit) {
+        stop()
+        onStopped()
+    }
 }

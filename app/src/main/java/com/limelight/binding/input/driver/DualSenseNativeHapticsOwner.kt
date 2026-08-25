@@ -38,7 +38,7 @@ internal class DualSenseNativeHapticsOwner(
         }
     }
 
-    fun close() {
+    fun close(onStopped: () -> Unit = {}) {
         val closeState = synchronized(lock) {
             if (closed) return
             closed = true
@@ -50,9 +50,12 @@ internal class DualSenseNativeHapticsOwner(
         try {
             if (closeState.wasAnnounced) onGone()
         } finally {
-            // This is intentionally bounded by the sink implementation. It must finish before the
-            // owning USB transport releases interfaces and closes the shared UsbDeviceConnection.
-            closeState.sink?.stop()
+            val current = closeState.sink
+            if (current != null) {
+                current.stopAndThen(onStopped)
+            } else {
+                onStopped()
+            }
         }
     }
 

@@ -101,8 +101,8 @@ class DualSenseUsbController(
         nativeHapticsOwner.announce()
     }
 
-    override fun onBeforeUsbTransportClose() {
-        runCatching { nativeHapticsOwner.close() }.onFailure {
+    override fun closeUsbTransportWhenReady(closeTransport: () -> Unit) {
+        runCatching { nativeHapticsOwner.close(closeTransport) }.onFailure {
             Log.w(TAG, "Failed to close native haptics before USB transport", it)
         }
     }

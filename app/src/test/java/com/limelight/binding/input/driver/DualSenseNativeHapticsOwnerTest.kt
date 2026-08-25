@@ -18,9 +18,9 @@ class DualSenseNativeHapticsOwnerTest {
 
         owner.install(sink)
         owner.announce()
-        owner.close()
+        owner.close { events += "transport" }
 
-        assertEquals(listOf("available", "gone", "stop"), events)
+        assertEquals(listOf("available", "gone", "stop", "transport"), events)
     }
 
     @Test
@@ -73,6 +73,24 @@ class DualSenseNativeHapticsOwnerTest {
         assertEquals(listOf("available", "gone", "stop"), events)
     }
 
+    @Test
+    fun transportCloseWaitsForDeferredSinkCompletion() {
+        val events = mutableListOf<String>()
+        val sink = DeferredSink(events)
+        val owner = DualSenseNativeHapticsOwner(
+            onAvailable = { events += "available" },
+            onGone = { events += "gone" }
+        )
+
+        owner.install(sink)
+        owner.announce()
+        owner.close { events += "transport" }
+
+        assertEquals(listOf("available", "gone", "stop-requested"), events)
+        sink.complete()
+        assertEquals(listOf("available", "gone", "stop-requested", "transport"), events)
+    }
+
     private class RecordingSink(
         private val events: MutableList<String>,
         private val stopEvent: String = "stop"
@@ -83,6 +101,28 @@ class DualSenseNativeHapticsOwnerTest {
 
         override fun stop() {
             events += stopEvent
+        }
+    }
+
+    private class DeferredSink(
+        private val events: MutableList<String>
+    ) : DualSenseNativeHapticsSink {
+        private var completion: (() -> Unit)? = null
+
+        override fun start(): Boolean = true
+
+        override fun submit(frame: Ds5HapticsPcmFrame) = Unit
+
+        override fun stop() = Unit
+
+        override fun stopAndThen(onStopped: () -> Unit) {
+            events += "stop-requested"
+            completion = onStopped
+        }
+
+        fun complete() {
+            completion?.invoke()
+            completion = null
         }
     }
 }
