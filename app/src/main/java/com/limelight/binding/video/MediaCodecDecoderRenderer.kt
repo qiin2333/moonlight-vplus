@@ -1027,23 +1027,20 @@ class MediaCodecDecoderRenderer(
         //     color-mode"/> in media_codecs_dolby_vision.xml, so the non-secure
         //     path can switch the DV mapping on; it reports the mode in the
         //     output format as feature-oplus-dolby-vision-color-mode.
-        //  2. color-mode vendor key alone (output-key spelling).
-        //  3. feature-name spelling of the same key.
-        //  4. Plain Annex-B (approach 1): decodes, but devices that need the
+        //  2. color-mode vendor key alone.
+        //  3. Plain Annex-B (approach 1): decodes, but devices that need the
         //     signaling above present the compatibility BL as HDR10.
         // The dvcC payload describes exactly what our RPU carries: profile 8,
         // level 30, rpu_present=1, el_present=0, bl_present=1, compat id 1.
         val dvcC = ByteBuffer.wrap(
             byteArrayOf(0x01, 0x00, 0x10, 0xF5.toByte(), 0x10))
-        val colorModeKeyOutputForm = "feature-oplus-dolby-vision-color-mode"
-        val colorModeKeyFeatureForm = "oplus-dolby-vision-color-mode"
+        val colorModeKey = "feature-oplus-dolby-vision-color-mode"
         val attempts: List<Pair<String, (MediaFormat) -> Unit>> = listOf(
             "dvcC+colorMode" to { f ->
                 f.setByteBuffer("csd-0", dvcC)
-                f.setInteger(colorModeKeyOutputForm, 1)
+                f.setInteger(colorModeKey, 1)
             },
-            "colorMode" to { f -> f.setInteger(colorModeKeyOutputForm, 1) },
-            "colorMode(feature-form)" to { f -> f.setInteger(colorModeKeyFeatureForm, 1) },
+            "colorMode" to { f -> f.setInteger(colorModeKey, 1) },
             "plain" to { },
         )
 
