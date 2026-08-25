@@ -197,16 +197,18 @@
         <item>lowLatency</item>
     </string-array>
 
-    <!-- HDR Mode options: 1=HDR10/PQ, 2=HLG, 3=HDR10+ -->
+    <!-- HDR Mode options: 1=HDR10/PQ, 2=HLG, 3=HDR10+, 4=Dolby Vision 8.1 (client-only selection) -->
     <string-array name="hdr_mode_entries">
         <item>@string/hdr_mode_hdr10</item>
         <item>@string/hdr_mode_hdr10_plus</item>
         <item>@string/hdr_mode_hlg</item>
+        <item>@string/hdr_mode_dolby_vision</item>
     </string-array>
     <string-array name="hdr_mode_values" translatable="false">
         <item>1</item>
         <item>3</item>
         <item>2</item>
+        <item>4</item>
     </string-array>
 
     <string-array name="video_frame_pacing_names">
