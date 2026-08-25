@@ -721,7 +721,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
                                                            jint colorSpace, jint colorRange, jint hdrMode,
                                                            jboolean enableMic, jboolean controlOnly,
                                                            jint audioCodec, jint audioBitrate,
-                                                           jint dynamicHdrCaps, jint dolbyVisionMaxLevel,
+                                                           jint dynamicHdrCaps,
                                                            jint dolbyVisionDirectSurface, jint dynamicHdrPreference) {
     SERVER_INFORMATION serverInfo = {
             .address = (*env)->GetStringUTFChars(env, address, 0),
@@ -749,7 +749,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .audioCodec = audioCodec,
             .audioBitrate = audioBitrate,
             .dynamicHdrCaps = dynamicHdrCaps,
-            .dolbyVisionMaxLevel = dolbyVisionMaxLevel,
             .dolbyVisionDirectSurface = dolbyVisionDirectSurface,
             .dynamicHdrPreference = dynamicHdrPreference
     };

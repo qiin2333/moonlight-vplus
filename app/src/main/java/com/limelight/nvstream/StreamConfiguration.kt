@@ -56,7 +56,6 @@ class StreamConfiguration private constructor() {
 
     /** Sunshine dynamic HDR negotiation (client opt-in). All zero = legacy client. */
     var dynamicHdrCaps: Int = MoonBridge.DYNAMIC_HDR_CAPS_NONE
-    var dolbyVisionMaxLevel: Int = 0
     var dolbyVisionDirectSurface: Boolean = false
     var dynamicHdrPreference: Int = MoonBridge.DYNAMIC_HDR_PREFERENCE_AUTOMATIC
         private set
@@ -129,12 +128,10 @@ class StreamConfiguration private constructor() {
          */
         fun setDynamicHdrNegotiation(
             caps: Int,
-            dolbyVisionMaxLevel: Int,
             dolbyVisionDirectSurface: Boolean,
             preference: Int,
         ): Builder = apply {
             config.dynamicHdrCaps = caps
-            config.dolbyVisionMaxLevel = dolbyVisionMaxLevel
             config.dolbyVisionDirectSurface = dolbyVisionDirectSurface
             config.dynamicHdrPreference = preference
         }

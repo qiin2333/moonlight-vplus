@@ -482,7 +482,6 @@ open class NvConnection(
                         context.streamConfig.audioCodec,
                         context.streamConfig.audioBitrate,
                         context.streamConfig.dynamicHdrCaps,
-                        context.streamConfig.dolbyVisionMaxLevel,
                         if (context.streamConfig.dolbyVisionDirectSurface) 1 else 0,
                         context.streamConfig.dynamicHdrPreference
                     )

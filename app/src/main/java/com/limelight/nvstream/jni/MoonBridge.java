@@ -533,7 +533,7 @@ public class MoonBridge {
                                               int colorSpace, int colorRange, int hdrMode,
                                               boolean enableMic, boolean controlOnly,
                                               int audioCodec, int audioBitrate,
-                                              int dynamicHdrCaps, int dolbyVisionMaxLevel,
+                                              int dynamicHdrCaps,
                                               int dolbyVisionDirectSurface, int dynamicHdrPreference);
 
     // Sunshine dynamic HDR negotiation result. Valid after the connection

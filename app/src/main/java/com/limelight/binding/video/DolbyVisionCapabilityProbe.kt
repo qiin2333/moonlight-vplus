@@ -26,7 +26,6 @@ internal class DolbyVisionCapabilityProbe(
     class Result {
         var decoderAvailable = false
         var decoderName: String? = null
-        var maxLevel = 0
     }
 
     companion object {
@@ -58,17 +57,7 @@ internal class DolbyVisionCapabilityProbe(
                 continue
             }
 
-            var level = 0
-            var hasDvheSt = false
-            for (profileLevel in capabilities.profileLevels) {
-                if (profileLevel.profile == DV_PROFILE_DVHE_ST) {
-                    hasDvheSt = true
-                    if (profileLevel.level > level) {
-                        level = profileLevel.level
-                    }
-                }
-            }
-            if (!hasDvheSt) {
+            if (capabilities.profileLevels.none { it.profile == DV_PROFILE_DVHE_ST }) {
                 continue
             }
 
@@ -89,9 +78,8 @@ internal class DolbyVisionCapabilityProbe(
             if (supported) {
                 result.decoderAvailable = true
                 result.decoderName = decoderInfo.name
-                result.maxLevel = level
                 LimeLog.info(
-                    "${decoderInfo.name} supports Dolby Vision DvheSt (level $level) " +
+                    "${decoderInfo.name} supports Dolby Vision DvheSt " +
                         "at ${width}x${height}@${frameRate}"
                 )
                 break

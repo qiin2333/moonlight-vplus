@@ -1052,14 +1052,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 if (dolbyVisionRequested) {
                     setDynamicHdrNegotiation(
                         MoonBridge.DYNAMIC_HDR_CAPS_DOLBY_VISION_81,
-                        dolbyVisionProbe.maxLevel,
                         dolbyVisionDirectSurface = true,
                         preference = MoonBridge.DYNAMIC_HDR_PREFERENCE_DOLBY_VISION,
                     )
                 } else if (hdr10PlusRequested) {
                     setDynamicHdrNegotiation(
                         MoonBridge.DYNAMIC_HDR_CAPS_HDR10_PLUS,
-                        0,
                         dolbyVisionDirectSurface = false,
                         preference = MoonBridge.DYNAMIC_HDR_PREFERENCE_HDR10_PLUS,
                     )
