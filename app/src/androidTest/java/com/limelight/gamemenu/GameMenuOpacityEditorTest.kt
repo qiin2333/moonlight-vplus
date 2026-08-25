@@ -26,15 +26,15 @@ class GameMenuOpacityEditorTest {
     }
 
     @Test
-    fun verticalSeekBarReceivesFocusAndSupportsControllerAdjustment() {
-        var previewOpacity = 90
+    fun verticalSeekBarNormalizesInitialValueAndSupportsControllerAdjustment() {
+        var previewOpacity = 92
         var persistedOpacity: Int? = null
         scenario = ActivityScenario.launch(ComponentActivity::class.java)
         scenario?.onActivity { activity ->
             dialog = GameMenuOpacityEditor.show(
                 context = activity,
                 anchor = GameMenuOpacityAnchor(centerX = 200, bottomY = 80),
-                initialOpacity = 90,
+                initialOpacity = 92,
                 onOpacityChange = { previewOpacity = it },
                 onOpacityChangeFinished = { persistedOpacity = it }
             )
@@ -46,6 +46,9 @@ class GameMenuOpacityEditorTest {
             seekBar = requireNotNull(dialog?.findViewById(R.id.game_menu_opacity_seekbar))
         }
         waitFor { seekBar.hasFocus() }
+        scenario?.onActivity {
+            assertEquals(70, seekBar.progress)
+        }
 
         scenario?.onActivity {
             seekBar.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))

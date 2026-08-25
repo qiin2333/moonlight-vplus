@@ -37,12 +37,17 @@ internal object GameMenuOpacityEditor {
         val maximum = PreferenceConfiguration.MAX_GAME_MENU_OPACITY
 
         fun currentOpacity(): Int = seekBar.progress + minimum
+        fun snapProgress(progress: Int): Int =
+            ((progress + OPACITY_STEP / 2) / OPACITY_STEP) * OPACITY_STEP
+
         seekBar.max = maximum - minimum
-        seekBar.progress = initialOpacity.coerceIn(minimum, maximum) - minimum
+        seekBar.progress = snapProgress(
+            initialOpacity.coerceIn(minimum, maximum) - minimum
+        ).coerceIn(0, seekBar.max)
         seekBar.keyProgressIncrement = OPACITY_STEP
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                val snappedProgress = ((progress + OPACITY_STEP / 2) / OPACITY_STEP) * OPACITY_STEP
+                val snappedProgress = snapProgress(progress)
                 if (snappedProgress != progress) {
                     seekBar.progress = snappedProgress
                     return
