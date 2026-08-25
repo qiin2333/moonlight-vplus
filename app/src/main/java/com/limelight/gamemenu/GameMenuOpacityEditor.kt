@@ -14,7 +14,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.UiDismissKeyHandler
 
 internal object GameMenuOpacityEditor {
-    private const val OPACITY_STEP = 5
+    private const val OPACITY_STEP = 3
     private const val POPUP_WIDTH_DP = 48
     private const val POPUP_HEIGHT_DP = 148
     private const val POPUP_MARGIN_DP = 2
@@ -35,19 +35,21 @@ internal object GameMenuOpacityEditor {
         val seekBar = content.findViewById<SeekBar>(R.id.game_menu_opacity_seekbar)
         val minimum = PreferenceConfiguration.MIN_GAME_MENU_OPACITY
         val maximum = PreferenceConfiguration.MAX_GAME_MENU_OPACITY
+        val opacityStops = buildOpacityStops(minimum, maximum)
 
         fun currentOpacity(): Int = seekBar.progress + minimum
-        fun snapProgress(progress: Int): Int =
-            ((progress + OPACITY_STEP / 2) / OPACITY_STEP) * OPACITY_STEP
+        fun nearestOpacity(opacity: Int): Int = opacityStops.minBy { stop ->
+            kotlin.math.abs(stop - opacity)
+        }
 
         seekBar.max = maximum - minimum
-        seekBar.progress = snapProgress(
-            initialOpacity.coerceIn(minimum, maximum) - minimum
-        ).coerceIn(0, seekBar.max)
+        seekBar.progress = nearestOpacity(
+            initialOpacity.coerceIn(minimum, maximum)
+        ) - minimum
         seekBar.keyProgressIncrement = OPACITY_STEP
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                val snappedProgress = snapProgress(progress)
+                val snappedProgress = nearestOpacity(progress + minimum) - minimum
                 if (snappedProgress != progress) {
                     seekBar.progress = snappedProgress
                     return
@@ -62,16 +64,18 @@ internal object GameMenuOpacityEditor {
             }
         })
         seekBar.setOnKeyListener { _, keyCode, event ->
-            val delta = when (keyCode) {
+            val direction = when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP,
-                KeyEvent.KEYCODE_DPAD_RIGHT -> OPACITY_STEP
+                KeyEvent.KEYCODE_DPAD_RIGHT -> 1
                 KeyEvent.KEYCODE_DPAD_DOWN,
-                KeyEvent.KEYCODE_DPAD_LEFT -> -OPACITY_STEP
+                KeyEvent.KEYCODE_DPAD_LEFT -> -1
                 else -> return@setOnKeyListener false
             }
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
-                    seekBar.progress = (seekBar.progress + delta).coerceIn(0, seekBar.max)
+                    val currentIndex = opacityStops.indexOf(currentOpacity()).coerceAtLeast(0)
+                    val nextIndex = (currentIndex + direction).coerceIn(opacityStops.indices)
+                    seekBar.progress = opacityStops[nextIndex] - minimum
                     true
                 }
                 KeyEvent.ACTION_UP -> {
@@ -103,6 +107,21 @@ internal object GameMenuOpacityEditor {
         seekBar.post { seekBar.requestFocus() }
         return dialog
     }
+
+    private fun buildOpacityStops(minimum: Int, maximum: Int): List<Int> = buildSet {
+        add(minimum)
+        add(maximum)
+        var opacity = PreferenceConfiguration.DEFAULT_GAME_MENU_OPACITY
+        while (opacity >= minimum) {
+            add(opacity)
+            opacity -= OPACITY_STEP
+        }
+        opacity = PreferenceConfiguration.DEFAULT_GAME_MENU_OPACITY + OPACITY_STEP
+        while (opacity <= maximum) {
+            add(opacity)
+            opacity += OPACITY_STEP
+        }
+    }.sorted()
 
     private fun positionPopup(
         context: Context,

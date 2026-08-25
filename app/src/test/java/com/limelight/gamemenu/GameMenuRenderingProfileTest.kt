@@ -59,7 +59,7 @@ class GameMenuRenderingProfileTest {
         val profile = GameMenuRenderingProfile(isLowEnd = false)
 
         assertEquals(0.9f, profile.windowAlpha(90), 0.0001f)
-        assertEquals(0.2f, profile.windowAlpha(0), 0.0001f)
+        assertEquals(0.4f, profile.windowAlpha(0), 0.0001f)
         assertEquals(1.0f, profile.windowAlpha(150), 0.0001f)
     }
 
@@ -67,7 +67,7 @@ class GameMenuRenderingProfileTest {
     fun lowEndDeviceKeepsOpaqueWindow() {
         assertEquals(
             1.0f,
-            GameMenuRenderingProfile(isLowEnd = true).windowAlpha(20),
+            GameMenuRenderingProfile(isLowEnd = true).windowAlpha(40),
             0.0001f
         )
     }

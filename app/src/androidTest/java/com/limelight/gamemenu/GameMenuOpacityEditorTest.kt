@@ -47,17 +47,17 @@ class GameMenuOpacityEditorTest {
         }
         waitFor { seekBar.hasFocus() }
         scenario?.onActivity {
-            assertEquals(70, seekBar.progress)
+            assertEquals(53, seekBar.progress)
         }
 
         scenario?.onActivity {
             seekBar.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
             seekBar.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
         }
-        waitFor { previewOpacity == 85 && persistedOpacity == 85 }
+        waitFor { previewOpacity == 90 && persistedOpacity == 90 }
 
         scenario?.onActivity {
-            assertEquals(65, seekBar.progress)
+            assertEquals(50, seekBar.progress)
             assertTrue(dialog?.window?.attributes?.gravity?.and(Gravity.TOP) != 0)
         }
     }
