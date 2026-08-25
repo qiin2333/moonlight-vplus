@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="72dp"
-    android:layout_height="220dp"
+    android:layout_height="184dp"
     android:background="@drawable/game_menu_opacity_popup_bg"
     android:gravity="center_horizontal"
     android:orientation="vertical"
@@ -16,25 +16,6 @@
         android:gravity="center"
         android:maxLines="1"
         android:text="@string/game_menu_opacity_label"
-        android:textColor="@color/game_menu_text_secondary"
-        android:textSize="11sp" />
-
-    <TextView
-        android:id="@+id/game_menu_opacity_value"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:gravity="center"
-        android:textColor="@color/game_menu_accent"
-        android:textSize="13sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/game_menu_opacity_maximum"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
-        android:gravity="center"
         android:textColor="@color/game_menu_text_secondary"
         android:textSize="11sp" />
 
@@ -62,13 +43,5 @@
             android:thumbTint="@color/game_menu_accent" />
 
     </FrameLayout>
-
-    <TextView
-        android:id="@+id/game_menu_opacity_minimum"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="@color/game_menu_text_secondary"
-        android:textSize="11sp" />
 
 </LinearLayout>

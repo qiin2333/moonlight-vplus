@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.SeekBar
-import android.widget.TextView
 import androidx.activity.ComponentDialog
 import com.limelight.R
 import com.limelight.preferences.PreferenceConfiguration
@@ -18,7 +17,7 @@ import com.limelight.ui.UiDismissKeyHandler
 internal object GameMenuOpacityEditor {
     private const val OPACITY_STEP = 5
     private const val POPUP_WIDTH_DP = 72
-    private const val POPUP_HEIGHT_DP = 220
+    private const val POPUP_HEIGHT_DP = 184
     private const val POPUP_MARGIN_DP = 6
 
     @Suppress("DEPRECATION")
@@ -34,27 +33,14 @@ internal object GameMenuOpacityEditor {
             FrameLayout(context),
             false
         )
-        val valueText = content.findViewById<TextView>(R.id.game_menu_opacity_value)
-        val minimumText = content.findViewById<TextView>(R.id.game_menu_opacity_minimum)
-        val maximumText = content.findViewById<TextView>(R.id.game_menu_opacity_maximum)
         val seekBar = content.findViewById<SeekBar>(R.id.game_menu_opacity_seekbar)
         val minimum = PreferenceConfiguration.MIN_GAME_MENU_OPACITY
         val maximum = PreferenceConfiguration.MAX_GAME_MENU_OPACITY
 
         fun currentOpacity(): Int = seekBar.progress + minimum
-        fun updateValueText() {
-            valueText.text = context.getString(
-                R.string.game_menu_opacity_value,
-                currentOpacity()
-            )
-        }
-
         seekBar.max = maximum - minimum
         seekBar.progress = initialOpacity.coerceIn(minimum, maximum) - minimum
         seekBar.keyProgressIncrement = OPACITY_STEP
-        minimumText.text = context.getString(R.string.game_menu_opacity_value, minimum)
-        maximumText.text = context.getString(R.string.game_menu_opacity_value, maximum)
-        updateValueText()
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 val snappedProgress = ((progress + OPACITY_STEP / 2) / OPACITY_STEP) * OPACITY_STEP
@@ -62,7 +48,6 @@ internal object GameMenuOpacityEditor {
                     seekBar.progress = snappedProgress
                     return
                 }
-                updateValueText()
                 onOpacityChange(currentOpacity())
             }
 

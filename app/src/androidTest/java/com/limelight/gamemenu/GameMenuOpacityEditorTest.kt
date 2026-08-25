@@ -4,7 +4,6 @@ import android.app.Dialog
 import android.view.Gravity
 import android.view.KeyEvent
 import android.widget.SeekBar
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -43,10 +42,8 @@ class GameMenuOpacityEditorTest {
 
         waitFor { dialog?.isShowing == true }
         lateinit var seekBar: SeekBar
-        lateinit var valueText: TextView
         scenario?.onActivity {
             seekBar = requireNotNull(dialog?.findViewById(R.id.game_menu_opacity_seekbar))
-            valueText = requireNotNull(dialog?.findViewById(R.id.game_menu_opacity_value))
         }
         waitFor { seekBar.hasFocus() }
 
@@ -57,7 +54,6 @@ class GameMenuOpacityEditorTest {
         waitFor { previewOpacity == 85 && persistedOpacity == 85 }
 
         scenario?.onActivity {
-            assertEquals("85%", valueText.text.toString())
             assertEquals(65, seekBar.progress)
             assertTrue(dialog?.window?.attributes?.gravity?.and(Gravity.TOP) != 0)
         }
