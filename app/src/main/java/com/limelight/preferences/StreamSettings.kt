@@ -1375,8 +1375,12 @@ class StreamSettings : AppCompatActivity() {
                 for (j in 0 until category.preferenceCount) {
                     val child = category.getPreference(j)
                     val childEligible = originalVisibility[child] ?: child.isVisible
-                    val childMatches = childEligible &&
-                        (categoryMatches || preferenceMatches(child, q))
+                    val childMatches = SettingsSearchPolicy.shouldShowChild(
+                        categoryEligible = categoryEligible,
+                        childEligible = childEligible,
+                        categoryMatches = categoryMatches,
+                        childMatches = preferenceMatches(child, q),
+                    )
                     child.isVisible = childMatches
                     if (childMatches) anyChildMatches = true
                 }
