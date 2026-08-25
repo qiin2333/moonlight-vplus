@@ -245,15 +245,15 @@
     <string name="addpc_action_connecting">Connecting...</string>
 
     <!-- Preferences -->
-    <string name="category_basic_settings">Basic Settings</string>
-    <string name="category_advanced_features">Performance &amp; smoothness</string>
-    <string name="title_resolution_list">Video resolution</string>
+    <string name="category_basic_settings">Stream quality</string>
+    <string name="category_advanced_features">Performance &amp; compatibility</string>
+    <string name="title_resolution_list">Stream resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
     <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You will probably need to configure a matching custom display mode for the host PC manually.\n\nIf you choose to create a custom resolution in NVIDIA Control Panel to match your screen settings, please ensure you have read and understood NVIDIA\'s warning regarding possible monitor damage, PC instability, and other potential problems.\n\nWe are not responsible for any problems resulting from creating a custom resolution on your PC.\n\nIt may be that your monitor does not support a necessary display configurationItem. If so, you may try to set up a virtual monitor. Finally, if your device or host PC does not support streaming at a specific resolution or refresh rate, you\'re out of luck unfortunately.</string>
-    <string name="title_fps_list">Video frame rate</string>
+    <string name="title_fps_list">Stream frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
-    <string name="title_seekbar_bitrate">Video bitrate</string>
+    <string name="title_seekbar_bitrate">Stream bitrate</string>
     <string name="summary_seekbar_bitrate">Increase for better image quality. Decrease to improve performance on slower connections.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Adaptive bitrate</string>
@@ -273,7 +273,7 @@
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Native FPS Warning</string>
     <string name="title_custom_resolutions">Custom resolutions</string>
-    <string name="summary_custom_resolutions">Create your own custom resolutions</string>
+    <string name="summary_custom_resolutions">Add or remove resolutions offered by the stream resolution list</string>
     <string name="custom_resolution_input_title">Enter Custom Resolution</string>
     <string name="width_label">Width:</string>
     <string name="height_label">Height:</string>
@@ -288,10 +288,10 @@
     <string name="category_microphone_settings">Microphone Settings</string>
     <string name="title_audio_config_list">Surround sound configurationItem</string>
     <string name="summary_audio_config_list">Enable 5.1, 7.1, or 7.1.4 surround sound for home-theater systems. 7.1.4 requires Android 12+</string>
-    <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
-    <string name="summary_checkbox_enable_audiofx">Allow audio effects to work during streaming, may increase audio latency</string>
+    <string name="title_checkbox_enable_audiofx">Use system audio effects</string>
+    <string name="summary_checkbox_enable_audiofx">Allow equalizers and other system effects for audio decoded by Moonlight. Passthrough audio bypasses these effects and this option may add latency.</string>
     <string name="title_checkbox_enable_spatializer">Enable spatial audio (Android 13+)</string>
-    <string name="summary_checkbox_enable_spatializer">Enable immersive 3D audio experience using Android Spatializer. Requires Android 13+ and compatible audio output device. Best experience with 5.1 or 7.1 surround sound configuration</string>
+    <string name="summary_checkbox_enable_spatializer">Use Android Spatializer for audio decoded by Moonlight. Requires Android 13 and compatible output; passthrough audio bypasses it.</string>
     <string name="title_checkbox_control_only">Control-only mode</string>
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
     <string name="title_checkbox_enable_mic">Enable microphone redirection</string>
@@ -335,14 +335,14 @@
     <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
 
     <string name="category_gamepad_settings">Gamepad Settings</string>
-    <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>
-    <string name="summary_checkbox_multi_controller">Unchecking this option forces a gamepad to always be present</string>
+    <string name="title_checkbox_multi_controller">Separate controllers and players</string>
+    <string name="summary_checkbox_multi_controller">Expose each connected controller as a separate controller on the host. Turn off to combine them as one.</string>
     <string name="title_list_game_rumble_mode">Game vibration output</string>
     <string name="summary_list_game_rumble_mode">Choose how game vibration is shared between your controller and device</string>
     <string name="game_rumble_mode_coordinated">Coordinated vibration</string>
     <string name="game_rumble_mode_device">Device vibration</string>
     <string name="game_rumble_mode_controller">Controller vibration</string>
-    <string name="title_seekbar_vibrate_fallback_strength">Adjust emulated rumble intensity</string>
+    <string name="title_seekbar_vibrate_fallback_strength">Device rumble strength</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Amplify or reduce the vibration intensity on your device</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_seekbar_deadzone">Adjust analog stick deadzone</string>
@@ -454,21 +454,21 @@
     <string name="controller_diag_note_system_wireless">Uses Android controller input when streaming.</string>
     <string name="controller_diag_note_system_builtin">Uses Android controller input.</string>
     <string name="controller_diag_note_unavailable">Not available with current settings.</string>
-    <string name="title_checkbox_flip_face_buttons">Flip face buttons</string>
-    <string name="summary_checkbox_flip_face_buttons">Switches the face buttons A/B and X/Y for gamepads and the on-screen controls</string>
+    <string name="title_checkbox_flip_face_buttons">Swap A/B and X/Y buttons</string>
+    <string name="summary_checkbox_flip_face_buttons">Swap these button pairs for physical controllers and on-screen controls</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Always control mouse with touchpad</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">Forces gamepad touchpad input to control the host mouse, even when emulating a gamepad with a touchpad.</string>
     <string name="title_checkbox_gamepad_motion_sensors">Allow use of gamepad motion sensors</string>
     <string name="summary_checkbox_gamepad_motion_sensors">Enables supported hosts to request motion sensor data when emulating a gamepad with motion sensors. Disabling may slightly reduce power and network usage if motion sensors are not being used in game.</string>
-    <string name="title_checkbox_gamepad_motion_fallback">Emulate gamepad motion sensor support</string>
-    <string name="summary_checkbox_gamepad_motion_fallback">Uses your device\'s built-in motion sensors if gamepad sensors are not supported by your connected gamepad or your Android version.\nNote: Enabling this option may cause your gamepad to appear as a PlayStation controller on the host.</string>
+    <string name="title_checkbox_gamepad_motion_fallback">Use device sensors for controller motion</string>
+    <string name="summary_checkbox_gamepad_motion_fallback">Emulate controller motion with this Android device’s sensors when the controller cannot provide it. The host may identify the controller as a PlayStation controller.</string>
 
     <string name="category_input_settings">Input Settings</string>
     <string name="title_checkbox_touchscreen_trackpad">Use the touchscreen as a trackpad</string>
     <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, multi-point touch will be enabled.</string>
 
-    <string name="title_checkbox_sync_touch_event_with_display">Synchronize touch event with display refresh </string>
-    <string name="summary_checkbox_sync_touch_event_with_display">If enabled, touch event will be synchronized with display refresh rate, like 60Hz.</string>
+    <string name="title_checkbox_sync_touch_event_with_display">Align touch delivery with display refresh</string>
+    <string name="summary_checkbox_sync_touch_event_with_display">Batch touch updates to the local display refresh cadence. This may improve consistency but can add input delay.</string>
 
     <string name="title_seekbar_long_press_flat_region">Flat region for long press jitter elimination in multi-point touch mode</string>
     <string name="summary_seekbar_long_press_flat_region">Works for the whole screen. Increase for larger long-press flat region, within which the app sends initial contact coordinates to server.</string>
@@ -491,7 +491,7 @@
     <string name="title_checkbox_mouse_nav_buttons">Enable back and forward mouse buttons</string>
     <string name="summary_checkbox_mouse_nav_buttons">Enabling this option may break right clicking on some buggy devices</string>
 
-    <string name="category_enhanced_touch_settings">Enhanced Multi-Point Touch</string>
+    <string name="category_enhanced_touch_settings">Direct touch tuning</string>
     <string name="title_checkbox_enable_enhanced_touch">Enable enhanced touch</string>
     <string name="summary_checkbox_enable_enhanced_touch">\t</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">Reverse enhanced touch zone</string>
@@ -563,7 +563,7 @@
 
     <string name="category_ui_settings">UI Settings</string>
     <string name="category_backup_restore">Backups</string>
-    <string name="category_display_behavior">Display</string>
+    <string name="category_display_behavior">Display &amp; layout</string>
     <string name="title_checkbox_enable_pip">Enable Picture-in-Picture observer mode</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>
     <string name="title_checkbox_enable_background_audio">Background Audio Mode</string>
@@ -582,17 +582,17 @@
     <string name="summary_config_sync_snapshot_never">No safety copy has been saved yet</string>
     <string name="summary_config_sync_snapshot_latest">Last safety copy: %1$s (%2$d KB)</string>
     <string name="title_config_sync_select_directory">Backup folder</string>
-    <string name="summary_config_sync_select_directory_none">Choose a folder for automatic backups; cloud folders work too</string>
+    <string name="summary_config_sync_select_directory_none">Choose a folder for two-way settings sync; cloud folders work too</string>
     <string name="summary_config_sync_select_directory_selected">Using folder: %1$s</string>
     <string name="title_config_sync_backup_password">Backup password</string>
     <string name="summary_config_sync_backup_password_missing">Set a password before saving backups to the chosen folder</string>
     <string name="summary_config_sync_backup_password_set">A password is saved for backups in the chosen folder</string>
     <string name="title_config_sync_external_snapshot">Save copies to chosen folder</string>
     <string name="summary_config_sync_external_snapshot">Keep an encrypted backup in the folder you selected, including cloud folders</string>
-    <string name="title_config_sync_background_sync">Automatic backups</string>
-    <string name="summary_config_sync_background_sync">Keep the chosen folder updated and restore the newest backup for this device when needed</string>
-    <string name="title_config_sync_status">Automatic backup status</string>
-    <string name="summary_config_sync_status_disabled">Automatic backup is off</string>
+    <string name="title_config_sync_background_sync">Automatic settings sync</string>
+    <string name="summary_config_sync_background_sync">Merge changes both ways with the selected folder. Newer external settings for this device may be applied automatically.</string>
+    <string name="title_config_sync_status">Automatic sync status</string>
+    <string name="summary_config_sync_status_disabled">Automatic settings sync is off</string>
     <string name="summary_config_sync_status_never">Automatic backup has not run yet</string>
     <string name="summary_config_sync_status_success">Last check: %1$s. Found backup: %2$s. Restored anything: %3$s. Saved latest copy: %4$s.</string>
     <string name="summary_config_sync_status_failed">Last check failed: %1$s. %2$s</string>
@@ -636,8 +636,8 @@
     <string name="summary_checkbox_clipboard_sync_text">Forward text copied on this device to the PC and vice versa. Warning: anything you copy (including passwords and 2FA codes) will leave this device.</string>
     <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
     <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
-    <string name="title_screen_combination_mode">Display Combination Settings</string>
-    <string name="summary_screen_combination_mode">Sunshine Foundation display control</string>
+    <string name="title_screen_combination_mode">Host display arrangement</string>
+    <string name="summary_screen_combination_mode">Choose how Sunshine Base arranges or combines host displays. Requires a compatible Sunshine Base host.</string>
     <string name="screen_combination_mode_dialog_subtitle">Applies to Sunshine Foundation display control</string>
     <string name="screen_mode_host_default">Follow host</string>
     <string name="screen_mode_no_operation">No operation mode</string>
@@ -655,13 +655,13 @@
     <string name="screen_combination_mode_selected">Selected</string>
 
     <string name="category_advanced_settings">Advanced Settings</string>
-    <string name="title_unlock_fps">Unlock all possible frame rates</string>
+    <string name="title_unlock_fps">Show high frame-rate options</string>
     <string name="summary_unlock_fps">Streaming at 90 or 120 FPS may reduce latency on high-end devices but can cause lag or instability on devices that can\'t support it</string>
-    <string name="title_checkbox_disable_warnings">Disable warning messages</string>
-    <string name="summary_checkbox_disable_warnings">Disable on-screen connection warning messages while streaming</string>
+    <string name="title_checkbox_disable_warnings">Hide stream connection warnings</string>
+    <string name="summary_checkbox_disable_warnings">Hide connection-quality warning overlays during a stream</string>
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
-    <string name="title_video_format">Change codec settings</string>
+    <string name="title_video_format">Video codec</string>
     <string name="summary_video_format">Newer codecs can lower video bandwidth requirements if your device supports them. Codec selections may be ignored if not supported by the host software or GPU.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
@@ -678,8 +678,8 @@
     <string name="hdr_mode_hdr10_plus">HDR10+ (requires Dynamic Metadata Analysis)</string>
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (Experimental)</string>
-    <string name="title_full_range">Force full range video (Experimental)</string>
-    <string name="summary_full_range">This will cause loss of detail in light and dark areas if your device doesn\'t properly display full range video content.</string>
+    <string name="title_full_range">Force full color range (Experimental)</string>
+    <string name="summary_full_range">Requests full-range video from the host and decodes it as full range. Leave this off unless limited/full range mismatch makes the picture look washed out or crushes shadow and highlight detail. This is separate from HDR.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
     <string name="summary_enable_perf_overlay">Display real-time stream performance information while streaming</string>
     <string name="title_enable_jitter_monitor">Show jitter monitor chart</string>
@@ -700,17 +700,17 @@
     <string name="summary_perf_overlay_bg_opacity">Adjust the background opacity of the performance overlay</string>
     <string name="title_enable_post_stream_toast">Show latency message after streaming</string>
     <string name="summary_enable_post_stream_toast">Display a latency information message after the stream ends</string>
-    <string name="title_checkbox_lock_screen_after_disconnect">Lock screen when disconnecting and exiting the stream</string>
-    <string name="summary_checkbox_lock_screen_after_disconnect">Automatically lock the device screen after disconnecting and exiting the stream (you need to manually turn on the on-screen keyboard, which is the host keyboard in the menu)</string>
-    <string name="title_checkbox_swap_quit_and_disconnect">Toggle “Quit” Button Function</string>
-    <string name="summary_checkbox_swap_quit_and_disconnect">When enabled, the “Quit” button will disconnect without closing the app</string>
+    <string name="title_checkbox_lock_screen_after_disconnect">Lock the host after ending a stream</string>
+    <string name="summary_checkbox_lock_screen_after_disconnect">Send Win+L to the host after disconnecting or quitting the stream. This does not lock the Android device.</string>
+    <string name="title_checkbox_swap_quit_and_disconnect">Make Quit disconnect only</string>
+    <string name="summary_checkbox_swap_quit_and_disconnect">The Quit action disconnects Moonlight without asking the host to stop the streamed game or app.</string>
     <string name="mic_stats_continuity">Audio continuity: %1$.1f%% (Captured:%2$d Encoded:%3$d Sent:%4$d Dropped:%5$d)</string>
 
     <string name="category_help">Help</string>
     <string name="title_checkbox_enable_audio_passthrough">Enable audio passthrough</string>
     <string name="summary_checkbox_enable_audio_passthrough">Forward PCM/AC3/E-AC3 audio bit-perfect to the AVR when supported. Disable to always decode locally.</string>
-    <string name="title_list_audio_codec">Passthrough codec</string>
-    <string name="summary_list_audio_codec">Codec sent to the host. Auto uses PCM for stereo and AC3 for surround. Unsupported 7.1+ output is downgraded step-by-step.</string>
+    <string name="title_list_audio_codec">Received audio codec</string>
+    <string name="summary_list_audio_codec">Choose the codec requested from the host. Auto uses PCM for stereo and AC3 for surround. Opus is decoded locally; AC3/E-AC3/PCM may use passthrough when enabled.</string>
     <string name="audio_codec_auto">Auto</string>
     <string name="audio_codec_opus">Opus (no passthrough)</string>
     <string name="audio_codec_ac3">AC3</string>
@@ -803,13 +803,13 @@
     <string name="videoformat_hevcalways">Prefer HEVC</string>
     <string name="videoformat_h264always">Prefer H.264</string>
 
-    <string name="title_frame_pacing">Video frame pacing</string>
+    <string name="title_frame_pacing">Stream frame pacing</string>
     <string name="summary_frame_pacing">Specify how to balance video latency and smoothness</string>
     <string name="pacing_latency">Prefer lowest latency</string>
     <string name="pacing_balanced">Balanced</string>
     <string name="pacing_balanced_alt">Balanced with FPS limit</string>
     <string name="pacing_smoothness">Prefer smoothest video (may significantly increase latency)</string>
-    <string name="pacing_experimental_low_latency">Experimental: Ultra-low latency (advanced)</string>
+    <string name="pacing_experimental_low_latency">Experimental ultra-low latency</string>
     <string name="pacing_precise_sync">Precise Sync (Recommended)</string>
 
     <string name="title_analog_scrolling">Use an analog stick to scroll</string>
@@ -824,7 +824,7 @@
     <string name="mic_permission_required">Microphone permission required</string>
     
     <!-- Screen position settings -->
-    <string name="category_screen_position_settings">Video Settings</string>
+    <string name="category_screen_position_settings">Encoding &amp; HDR</string>
     <string name="title_screen_position">Screen Position</string>
     <string name="summary_screen_position">Choose the position of the screen when using non-fullscreen resolution</string>
     <string name="title_screen_offset_x">Horizontal Offset</string>
@@ -842,8 +842,8 @@
     <string name="summary_import_super_config">Import custom button and streaming settings configuration file</string>
     <string name="title_merge_super_config">Merge Configuration</string>
     <string name="summary_merge_super_config">Merge new configuration buttons into existing configuration</string>
-    <string name="title_crown_config_management">Crown Configuration Management</string>
-    <string name="summary_crown_config_management">Import, export, or merge Crown profiles</string>
+    <string name="title_crown_config_management">On-screen control profiles (Crown)</string>
+    <string name="summary_crown_config_management">Manage, import, export, or merge saved on-screen control and touch profiles</string>
     <string name="crown_config_action_import">Import Configuration</string>
     <string name="crown_config_action_export">Export Configuration</string>
     <string name="crown_config_action_import_legacy">Import Legacy .mdat</string>
@@ -1292,8 +1292,8 @@
     <string name="title_seekbar_output_buffer_queue_limit">Output Buffer Queue Limit</string>
     <string name="summary_seekbar_output_buffer_queue_limit">Controls the maximum number of decoded frames that can be queued before rendering. Lower values reduce latency but may cause frame drops. Higher values improve smoothness but increase latency. ⚠️ Setting to 1 may cause crashes on some devices. Default: 2</string>
     <string name="suffix_seekbar_output_buffer_queue_limit">frames</string>
-    <string name="title_force_mtk_max_operating_rate">Force MTK max operating rate (Experimental)</string>
-    <string name="summary_force_mtk_max_operating_rate">Enables the MediaTek decoder override `KEY_OPERATING_RATE = Short.MAX_VALUE`. This can improve latency on some newer Dimensity / MTK SoCs, but may cause major regressions on others. For example, issue #299 reports Hisense U7Q (`c2.mtk.hevc.decoder`) building up 3-5 seconds of display latency with this enabled. Off by default. Only affects MTK decoders.</string>
+    <string name="title_force_mtk_max_operating_rate">Force MediaTek decoder maximum rate (Experimental)</string>
+    <string name="summary_force_mtk_max_operating_rate">Compatibility override for MediaTek decoders only. It may reduce latency on some devices, but can cause severe delay on others. Leave off unless testing a known MediaTek decoder issue.</string>
 
     <!-- Frame Generation -->
     <string name="title_developer_unlock">Unlock developer features</string>
@@ -2087,4 +2087,15 @@ Tap again to replace it.</string>
     <string name="network_quality_warning_values">Current %1$d Mbps → Recommended %2$d Mbps</string>
     <string name="network_quality_start_anyway">Start anyway</string>
     <string name="network_quality_start_recommended">Use recommended</string>
+    <string name="category_framegen_settings">Frame generation</string>
+    <string name="title_mic_volume_processing_mode">Microphone volume processing</string>
+    <string name="summary_mic_volume_processing_mode">Choose one processing mode before microphone audio is sent to the host</string>
+    <string name="mic_volume_processing_mode_off">Off</string>
+    <string name="mic_volume_processing_mode_gain">Fixed gain</string>
+    <string name="mic_volume_processing_mode_balance">Volume balancing</string>
+    <string name="mic_volume_processing_mode_legacy">Processing only (restored legacy settings)</string>
+    <string name="native_mouse_mode_preset_custom">Custom (restored legacy settings)</string>
+    <string name="title_enable_external_config_sync">Enable automatic settings sync?</string>
+    <string name="message_enable_external_config_sync">Moonlight will merge settings in both directions with this folder. Newer settings from this device are saved there, and newer external settings for the same device may be applied automatically.</string>
+    <string name="config_sync_action_enable">Enable sync</string>
 </resources>

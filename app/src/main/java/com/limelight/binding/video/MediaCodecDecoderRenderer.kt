@@ -18,6 +18,7 @@ import android.view.SurfaceHolder
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.nvstream.HdrModePolicy
+import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
@@ -659,11 +660,7 @@ class MediaCodecDecoderRenderer(
     }
 
     fun getPreferredColorRange(): Int {
-        return if (prefs.fullRange) {
-            MoonBridge.COLOR_RANGE_FULL
-        } else {
-            MoonBridge.COLOR_RANGE_LIMITED
-        }
+        return ColorRangePolicy.fromPreference(prefs.fullRange)
     }
 
     fun notifyVideoForeground() {
@@ -751,16 +748,9 @@ class MediaCodecDecoderRenderer(
 
         // Android 7.0 adds color options to the MediaFormat
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // HLG content from Sunshine uses FULL range. Using LIMITED causes dark images
-            // because the HLG OETF/EOTF is applied to the wrong value range on most decoders.
-            val useFullRange: Boolean
-            if ((getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
-                prefs.hdrMode == MoonBridge.HDR_MODE_HLG
-            ) {
-                useFullRange = true
-            } else {
-                useFullRange = (getPreferredColorRange() == MoonBridge.COLOR_RANGE_FULL)
-            }
+            // Match the range requested from the host. HLG and PQ describe transfer
+            // functions, not quantization ranges, so neither overrides this preference.
+            val useFullRange = ColorRangePolicy.isFullRange(getPreferredColorRange())
             videoFormat.setInteger(
                 MediaFormat.KEY_COLOR_RANGE,
                 if (useFullRange) MediaFormat.COLOR_RANGE_FULL else MediaFormat.COLOR_RANGE_LIMITED
@@ -802,8 +792,7 @@ class MediaCodecDecoderRenderer(
         val activeHdr10PlusEligible = if (mimeType == HdrDecoderProfileSelector.MIME_HEVC ||
             mimeType == HdrDecoderProfileSelector.MIME_AV1
         ) {
-            val activeFullRange = prefs.hdrMode == MoonBridge.HDR_MODE_HLG ||
-                getPreferredColorRange() == MoonBridge.COLOR_RANGE_FULL
+            val activeFullRange = ColorRangePolicy.isFullRange(getPreferredColorRange())
             val activeSelector = hdrProfileSelector.forStreamParameters(
                 width = initialWidth,
                 height = initialHeight,
@@ -913,20 +902,10 @@ class MediaCodecDecoderRenderer(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
             (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0
         ) {
-            // HLG always uses FULL range (its OETF/EOTF requires it)
-            val isFullRange = (prefs.hdrMode == MoonBridge.HDR_MODE_HLG) ||
-                (getPreferredColorRange() == MoonBridge.COLOR_RANGE_FULL)
-            if (prefs.hdrMode == MoonBridge.HDR_MODE_HLG) {
-                hdrDataSpace = if (isFullRange)
-                    MoonBridge.DATASPACE_BT2020_HLG_FULL
-                else
-                    MoonBridge.DATASPACE_BT2020_HLG_LIMITED
-            } else {
-                hdrDataSpace = if (isFullRange)
-                    MoonBridge.DATASPACE_BT2020_PQ_FULL
-                else
-                    MoonBridge.DATASPACE_BT2020_PQ_LIMITED
-            }
+            hdrDataSpace = ColorRangePolicy.hdrDataSpace(
+                prefs.hdrMode,
+                getPreferredColorRange(),
+            )
             applyHdrDataSpace(renderTarget!!.surface, "decoder output")
         }
 

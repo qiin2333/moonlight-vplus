@@ -109,18 +109,18 @@
     <string name="addpc_enter_ip">請輸入一個 IP 位址</string>
     <string name="addpc_wrong_sitelocal">該位址似乎不正確。 您必須使用路由器的公共 IP 位址透過乙太網路進行串流。</string>
     <!-- Preferences -->
-    <string name="category_basic_settings">基本設定</string>
-    <string name="title_resolution_list">視訊解析度</string>
+    <string name="category_basic_settings">串流品質</string>
+    <string name="title_resolution_list">串流解析度</string>
     <string name="summary_resolution_list">高解析度提升圖像清晰度。低解析度提升在低效能裝置和較慢網路中的串流體驗。</string>
-    <string name="title_fps_list">視訊影格速率</string>
+    <string name="title_fps_list">串流影格率</string>
     <string name="summary_fps_list">提高影格速率以取得更順暢的視訊串流，降低可在低效能裝置上取得更好的串流體驗。</string>
-    <string name="title_seekbar_bitrate">視訊位元速率</string>
+    <string name="title_seekbar_bitrate">串流位元率</string>
     <string name="summary_seekbar_bitrate">提高位元速率以提升圖像品質，降低可在較慢的網路中取得更好的串流體驗。</string>
-    <string name="title_unlock_fps">解鎖所有可用影格速率</string>
+    <string name="title_unlock_fps">顯示高影格率選項</string>
     <string name="summary_unlock_fps">以 90 或 120 畫面更新率串流可能會減少在高效能裝置上的網路延時，但在不支援的裝置上會卡頓或不穩定的狀況</string>
     <string name="title_checkbox_stretch_video">將畫面延展至全螢幕</string>
-    <string name="title_checkbox_disable_warnings">停用錯誤訊息</string>
-    <string name="summary_checkbox_disable_warnings">停用串流中連線錯誤訊息</string>
+    <string name="title_checkbox_disable_warnings">隱藏串流連線警告</string>
+    <string name="summary_checkbox_disable_warnings">串流期間隱藏連線品質警告浮層。</string>
     <string name="title_checkbox_enable_pip">啟用子母畫面觀察模式</string>
     <string name="summary_checkbox_enable_pip">允許多工時檢視串流畫面 (但無法控制)</string>
     <string name="category_audio_settings">音訊設定</string>
@@ -142,8 +142,8 @@
     <string name="category_input_settings">輸入設定</string>
     <string name="title_checkbox_touchscreen_trackpad">將觸控式螢幕作為觸控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果啟用，則將觸控式螢幕作為觸控板使用。 如果停用，則觸控式螢幕直接控制滑鼠游標。</string>
-    <string name="title_checkbox_multi_controller">自動偵測手把</string>
-    <string name="summary_checkbox_multi_controller">取消此項所有手把將視為一個手把</string>
+    <string name="title_checkbox_multi_controller">將手把識別為獨立玩家</string>
+    <string name="summary_checkbox_multi_controller">讓主機分別識別每個已連線手把；關閉後會將它們合併為一個手把。</string>
     <string name="title_list_game_rumble_mode">遊戲振動輸出</string>
     <string name="summary_list_game_rumble_mode">選擇遊戲振動在手把與裝置之間的輸出方式</string>
     <string name="game_rumble_mode_coordinated">協同振動</string>
@@ -253,8 +253,8 @@
     <string name="summary_checkbox_mouse_emulation">長按開始鍵將手把切換為滑鼠模式</string>
     <string name="title_checkbox_mouse_nav_buttons"> 啟用前進後退滑鼠鍵 </string>
     <string name="summary_checkbox_mouse_nav_buttons">在一些支援不佳的裝置上啟用此項可能會使其右鍵失效</string>
-    <string name="title_checkbox_flip_face_buttons">反轉技能鍵</string>
-    <string name="summary_checkbox_flip_face_buttons">為手把和螢幕控制按鈕交換 A/B 和 X/Y 技能按鍵</string>
+    <string name="title_checkbox_flip_face_buttons">交換 A/B 與 X/Y 按鍵</string>
+    <string name="summary_checkbox_flip_face_buttons">同時交換實體手把和螢幕控制上的這兩組按鍵。</string>
     <string name="category_on_screen_controls_settings">螢幕控制按鈕設定</string>
     <string name="title_checkbox_show_onscreen_controls">顯示螢幕控制按鈕</string>
     <string name="summary_checkbox_show_onscreen_controls">在觸控式螢幕上顯示一層虛擬控制器</string>
@@ -282,7 +282,7 @@
     <string name="category_advanced_settings">進階設定</string>
     <string name="title_disable_frame_drop">永不丟失影格</string>
     <string name="summary_disable_frame_drop">可能會減少在一些裝置上的卡頓，但會增加延時</string>
-    <string name="title_video_format">變更轉碼器設定</string>
+    <string name="title_video_format">視訊編解碼器</string>
     <string name="summary_video_format">較新的轉碼器可以降低視訊頻寬需求 (若您的裝置支援)。如果主機軟體或 GPU 不支援，轉碼器選取項目可能會被忽略。</string>
     <string name="title_enable_hdr">啟用 HDR (實驗性)</string>
     <string name="summary_enable_hdr">在遊戲和 GPU 支援時以 HDR 模式串流，HDR 模式需要支援 HEVC Main 10 編碼的 GPU。</string>
@@ -349,7 +349,7 @@
     <string name="resolution_480p">480P</string>
     <string name="resolution_1080p">1080P</string>
     <string name="resolution_1440p">1440P</string>
-    <string name="title_frame_pacing">視訊影格調步</string>
+    <string name="title_frame_pacing">串流影格節奏</string>
     <string name="summary_frame_pacing">指定如何平衡視訊延遲和平滑度</string>
     <string name="pacing_balanced">平衡</string>
     <string name="pacing_smoothness">偏好平滑視訊 (可能顯著提高延遲)</string>
@@ -365,8 +365,8 @@
     <string name="summary_seekbar_deadzone">注意：有些遊戲可以強制執行一個比 Moonlight 設定大的死區。</string>
     <string name="title_checkbox_absolute_mouse_mode">遠端桌面滑鼠模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">這可以讓滑鼠在遠端桌面使用中的加速表現更加自然，但與很多遊戲不相容。</string>
-    <string name="title_checkbox_enable_audiofx">啟用系統等化器支援</string>
-    <string name="summary_checkbox_enable_audiofx">允許音訊效果在串流中發揮作用，但可能會增加音訊延遲</string>
+    <string name="title_checkbox_enable_audiofx">使用系統音訊效果</string>
+    <string name="summary_checkbox_enable_audiofx">允許等化器等系統效果處理 Moonlight 本機解碼的音訊；直通音訊會略過這些效果，此選項也可能增加延遲。</string>
     <string name="resolution_prefix_native_landscape">(橫向)</string>
     <string name="resolution_prefix_native_portrait">(直向)</string>
     <string name="title_checkbox_reduce_refresh_rate">允許減小重新整理率</string>
@@ -374,8 +374,8 @@
     <string name="frame_conversion_error">主機電腦回報了一個嚴重的視訊編碼錯誤。
 \n
 \n嘗試停用 HDR 模式，變更串流解析度，或變更您的主機電腦的顯示器解析度。</string>
-    <string name="title_full_range">強制全範圍視訊 (實驗性)</string>
-    <string name="summary_full_range">若您的裝置無法正確地顯示全範圍視訊內容，將會導致淺色區域和深色區域的細節遺失。</string>
+    <string name="title_full_range">強制全範圍色彩（實驗性）</string>
+    <string name="summary_full_range">要求主機傳送全範圍視訊，並以全範圍解碼。僅在有限/全範圍不相符造成畫面泛灰、暗部壓死或亮部細節遺失時嘗試；此設定與 HDR 無關。</string>
     <string name="pair_pairing_help">若您的主機電腦正在執行 Sunshine，請導覽至 Sunshine 網頁 UI 並輸入 PIN 碼。</string>
     <string name="pcview_menu_eol">NVIDIA GameStream 終止服務</string>
     <string name="fps_suffix_fps">FPS</string>
@@ -389,9 +389,8 @@
     <string name="title_checkbox_gamepad_motion_sensors">一律使用手把動態感測器</string>
     <string name="videoformat_av1always">偏好 AV1 (實驗性)</string>
     <string name="toast_controller_type_changed">手把類型可能會因動態感測器模擬而變更</string>
-    <string name="summary_checkbox_gamepad_motion_fallback">如果您連線的手把或 Android 版本不支援手把感測器，請使用裝置內建的動態感測器。
-\n注意：啟用此選項可能會導致您的手把在主機被辨識為 PlayStation 控制器。</string>
-    <string name="title_checkbox_gamepad_motion_fallback">模擬手把動態感測器支援</string>
+    <string name="summary_checkbox_gamepad_motion_fallback">當手把無法提供動態資料時，用目前 Android 裝置的感測器模擬手把動態；主機可能會將手把識別為 PlayStation 手把。</string>
+    <string name="title_checkbox_gamepad_motion_fallback">使用裝置感測器模擬手把動態</string>
 
     <!-- 音訊振動設定 -->
     <string name="title_checkbox_audio_vibration">啟用音訊驅動振動</string>
@@ -490,8 +489,8 @@
     <string name="summary_framegen_slow_threshold_ms">僅自訂模式顯示。插幀變慢時會自動回退直通渲染，預設：18 ms。</string>
     <string name="title_framegen_present_real_first">運動節奏修正</string>
     <string name="summary_framegen_present_real_first">僅在畫面節奏不穩時嘗試，預設關閉。</string>
-    <string name="title_screen_combination_mode">螢幕組合設定</string>
-    <string name="summary_screen_combination_mode">Sunshine 基地適用</string>
+    <string name="title_screen_combination_mode">主機顯示器排列</string>
+    <string name="summary_screen_combination_mode">選擇 Sunshine Base 如何排列或組合主機顯示器，需要相容的 Sunshine Base 主機。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地適用</string>
     <string name="screen_mode_host_default">跟隨主機</string>
     <string name="screen_mode_no_operation">無操作模式</string>
@@ -571,4 +570,44 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">人聲增強</string>
     <string name="summary_checkbox_mic_voice_enhancement">減少低頻雜訊並提升語音清晰度，可用於固定增益和音量平衡模式。</string>
+    <string name="summary_custom_resolutions">新增或刪除「串流解析度」清單中的自訂解析度。</string>
+    <string name="category_advanced_features">效能與相容性</string>
+    <string name="category_framegen_settings">影格生成</string>
+    <string name="category_enhanced_touch_settings">直接觸控調校</string>
+    <string name="category_display_behavior">顯示與版面配置</string>
+    <string name="category_screen_position_settings">編碼與 HDR</string>
+    <string name="title_checkbox_lock_screen_after_disconnect">串流結束後鎖定主機</string>
+    <string name="summary_checkbox_lock_screen_after_disconnect">斷線或結束串流後向主機傳送 Win+L，不會鎖定目前 Android 裝置。</string>
+    <string name="title_checkbox_swap_quit_and_disconnect">讓「結束」僅中斷連線</string>
+    <string name="summary_checkbox_swap_quit_and_disconnect">「結束」操作只中斷 Moonlight 連線，不再要求主機停止正在串流的遊戲或應用程式。</string>
+    <string name="title_analog_scrolling">使用搖桿捲動</string>
+    <string name="summary_analog_scrolling">選擇滑鼠模擬模式下用於捲動的搖桿；另一個搖桿仍用於移動游標。</string>
+    <string name="title_list_audio_codec">接收的音訊編解碼器</string>
+    <string name="summary_list_audio_codec">選擇向主機要求的音訊格式。自動模式對立體聲使用 PCM、對環繞聲使用 AC3；Opus 在本機解碼，啟用直通後 AC3/E-AC3/PCM 可由音訊裝置處理。</string>
+    <string name="title_list_native_mouse_mode_preset">主機游標操作模式</string>
+    <string name="summary_list_native_mouse_mode_preset">選擇螢幕觸控或外接滑鼠如何控制主機游標。</string>
+    <string name="native_mouse_mode_preset_custom">自訂（從舊版設定還原）</string>
+    <string name="title_crown_config_management">螢幕控制設定（皇冠）</string>
+    <string name="summary_crown_config_management">管理、匯入、匯出或合併已儲存的螢幕控制與觸控設定。</string>
+    <string name="summary_config_sync_select_directory_none">選擇用於雙向設定同步的資料夾，也可以選擇雲端資料夾。</string>
+    <string name="title_config_sync_background_sync">自動同步設定</string>
+    <string name="summary_config_sync_background_sync">與所選資料夾雙向合併變更；屬於這台裝置的較新外部設定可能會被自動套用。</string>
+    <string name="title_config_sync_status">自動同步狀態</string>
+    <string name="summary_config_sync_status_disabled">自動設定同步未開啟。</string>
+    <string name="pacing_experimental_low_latency">實驗性超低延遲</string>
+    <string name="title_checkbox_sync_touch_event_with_display">按顯示更新節奏提交觸控事件</string>
+    <string name="summary_checkbox_sync_touch_event_with_display">將觸控更新按本機螢幕更新節奏批次提交，可能使輸入更穩定，也可能增加輸入延遲。</string>
+    <string name="title_force_mtk_max_operating_rate">強制聯發科解碼器最高運作速率（實驗性）</string>
+    <string name="summary_force_mtk_max_operating_rate">僅用於聯發科解碼器的相容性選項。在部分裝置上可能降低延遲，也可能在其他裝置上造成嚴重延遲；除非正在排查已知聯發科解碼問題，否則請保持關閉。</string>
+    <string name="summary_checkbox_enable_spatializer">對 Moonlight 本機解碼的音訊使用 Android 空間化處理，需要 Android 13 和相容的輸出裝置；直通音訊會略過此處理。</string>
+    <string name="title_seekbar_vibrate_fallback_strength">裝置遊戲振動強度</string>
+    <string name="title_mic_volume_processing_mode">麥克風音量處理</string>
+    <string name="summary_mic_volume_processing_mode">選擇麥克風音訊傳送到主機前使用的一種處理方式。</string>
+    <string name="mic_volume_processing_mode_off">關閉</string>
+    <string name="mic_volume_processing_mode_gain">固定增益</string>
+    <string name="mic_volume_processing_mode_balance">音量平衡</string>
+    <string name="mic_volume_processing_mode_legacy">僅啟用處理（從舊版設定還原）</string>
+    <string name="title_enable_external_config_sync">啟用自動設定同步？</string>
+    <string name="message_enable_external_config_sync">Moonlight 會與這個資料夾雙向合併設定：目前裝置上的較新設定會儲存到資料夾，資料夾中屬於同一裝置的較新設定也可能被自動套用。</string>
+    <string name="config_sync_action_enable">啟用同步</string>
 </resources>

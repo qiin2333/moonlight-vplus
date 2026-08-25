@@ -40,6 +40,7 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.HdrModePolicy
+import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.nvstream.NvConnectionListener
@@ -1045,9 +1046,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             .setAudioBitrate(prefConfig.audioCodecBitrate)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
-                if (willStreamHdr && prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG)
-                    MoonBridge.COLOR_RANGE_FULL
-                else decoderRenderer?.getPreferredColorRange() ?: 0
+                decoderRenderer?.getPreferredColorRange()
+                    ?: ColorRangePolicy.fromPreference(prefConfig.fullRange)
             )
             .setHdrMode(
                 if (willStreamHdr) {
@@ -2127,16 +2127,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         (framegenCapture != null || shouldUseFramegen()) && !framegenInputHdrEnabled
 
     private fun shouldUseFullRangeHdr(hdrMode: Int): Boolean {
-        if (hdrMode == MoonBridge.HDR_MODE_SDR) {
-            return false
-        }
-        if (hdrMode == MoonBridge.HDR_MODE_HLG) {
-            return true
-        }
-
         val preferredRange = decoderRenderer?.getPreferredColorRange()
-            ?: if (prefConfig.fullRange) MoonBridge.COLOR_RANGE_FULL else MoonBridge.COLOR_RANGE_LIMITED
-        return preferredRange == MoonBridge.COLOR_RANGE_FULL
+            ?: ColorRangePolicy.fromPreference(prefConfig.fullRange)
+        return ColorRangePolicy.isFullRangeHdr(hdrMode, preferredRange)
     }
 
     override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {

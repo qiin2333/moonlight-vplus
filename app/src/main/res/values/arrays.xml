@@ -419,6 +419,17 @@
         <item>native</item>
     </string-array>
 
+    <string-array name="mic_volume_processing_mode_names">
+        <item>@string/mic_volume_processing_mode_off</item>
+        <item>@string/mic_volume_processing_mode_gain</item>
+        <item>@string/mic_volume_processing_mode_balance</item>
+    </string-array>
+    <string-array name="mic_volume_processing_mode_values" translatable="false">
+        <item>off</item>
+        <item>gain</item>
+        <item>balance</item>
+    </string-array>
+
     <string-array name="esc_menu_key_names">
         <item>ESC</item>
         <item>F1</item>

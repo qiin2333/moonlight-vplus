@@ -52,7 +52,8 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_features"
         android:key="category_advanced_features"
-        android:layout="@layout/preference_category_material">
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="7">
         <CheckBoxPreference
             android:key="checkbox_adaptive_bitrate"
             android:title="@string/title_adaptive_bitrate"
@@ -73,6 +74,11 @@
             android:entryValues="@array/video_frame_pacing_values"
             android:summary="@string/summary_frame_pacing"
             android:defaultValue="precise-sync" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_host_cadence_precise_sync"
+            android:title="@string/title_enable_host_cadence_precise_sync"
+            android:summary="@string/summary_enable_host_cadence_precise_sync"
+            android:defaultValue="true" />
         <CheckBoxPreference
             android:key="checkbox_unlock_fps"
             android:title="@string/title_unlock_fps"
@@ -100,8 +106,17 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_full_range"
+            android:title="@string/title_full_range"
+            android:summary="@string/summary_full_range"
+            android:defaultValue="false" />
 
-        <!-- Frame generation settings. Runtime gating is enforced again in Game before capture starts. -->
+    </PreferenceCategory>
+    <!-- Runtime gating is enforced again in Game before capture starts. -->
+    <PreferenceCategory android:title="@string/category_framegen_settings"
+        android:key="category_framegen_settings"
+        android:layout="@layout/preference_category_material">
         <Preference
             android:key="pref_framegen_pick_lossless_dll"
             android:title="@string/title_framegen_pick_lossless_dll"
@@ -253,11 +268,6 @@
             android:entries="@array/hdr_mode_entries"
             android:entryValues="@array/hdr_mode_values"
             android:defaultValue="1" />
-        <CheckBoxPreference
-            android:key="checkbox_full_range"
-            android:title="@string/title_full_range"
-            android:summary="@string/summary_full_range"
-            android:defaultValue="false" />
         <Preference
             android:key="capability_diagnostic"
             android:title="@string/title_capability_diagnostic"
@@ -557,7 +567,15 @@
             android:entries="@array/mic_icon_color_entries"
             android:entryValues="@array/mic_icon_color_values"
             android:defaultValue="solid_white" />
-        <!-- 麦克风音量处理 -->
+        <ListPreference
+            android:key="list_mic_volume_processing_mode"
+            android:dependency="checkbox_enable_mic"
+            android:title="@string/title_mic_volume_processing_mode"
+            android:summary="@string/summary_mic_volume_processing_mode"
+            android:entries="@array/mic_volume_processing_mode_names"
+            android:entryValues="@array/mic_volume_processing_mode_values"
+            android:defaultValue="off" />
+        <!-- Legacy storage flags. Kept for old backups and hidden by StreamSettings. -->
         <CheckBoxPreference
             android:key="checkbox_mic_volume_processing"
             android:dependency="checkbox_enable_mic"
@@ -572,7 +590,7 @@
             android:defaultValue="false" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_mic_gain_db"
-            android:dependency="checkbox_mic_gain"
+            android:dependency="checkbox_enable_mic"
             android:dialogMessage="@string/summary_seekbar_mic_gain"
             seekbar:min="-20"
             android:max="20"
@@ -590,7 +608,7 @@
             android:defaultValue="false" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_mic_balance_target"
-            android:dependency="checkbox_mic_balance"
+            android:dependency="checkbox_enable_mic"
             android:dialogMessage="@string/summary_seekbar_mic_balance"
             seekbar:min="1"
             android:max="100"
@@ -603,7 +621,7 @@
         <!-- 人声增强：独立开关，音量增益/音量平衡模式下均可生效 -->
         <CheckBoxPreference
             android:key="checkbox_mic_voice_enhancement"
-            android:dependency="checkbox_mic_volume_processing"
+            android:dependency="checkbox_enable_mic"
             android:title="@string/title_checkbox_mic_voice_enhancement"
             android:summary="@string/summary_checkbox_mic_voice_enhancement"
             android:defaultValue="true" />
@@ -706,6 +724,14 @@
         android:key="category_input_settings"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="4">
+        <ListPreference
+            android:key="list_native_mouse_mode_preset"
+            android:title="@string/title_list_native_mouse_mode_preset"
+            android:summary="@string/summary_list_native_mouse_mode_preset"
+            android:entries="@array/native_mouse_mode_preset_names"
+            android:entryValues="@array/native_mouse_mode_preset_values"
+            android:defaultValue="trackpad" />
+        <!-- Legacy storage flag. Kept for old backups and hidden by StreamSettings. -->
         <CheckBoxPreference
             android:key="checkbox_touchscreen_trackpad"
             android:title="@string/title_checkbox_touchscreen_trackpad"
@@ -772,13 +798,6 @@
             android:title="@string/title_checkbox_mouse_nav_buttons"
             android:summary="@string/summary_checkbox_mouse_nav_buttons"
             android:defaultValue="false" />
-        <ListPreference
-            android:key="list_native_mouse_mode_preset"
-            android:title="@string/title_list_native_mouse_mode_preset"
-            android:summary="@string/summary_list_native_mouse_mode_preset"
-            android:entries="@array/native_mouse_mode_preset_names"
-            android:entryValues="@array/native_mouse_mode_preset_values"
-            android:defaultValue="trackpad" />
         <CheckBoxPreference
             android:key="checkbox_absolute_mouse_mode"
             android:title="@string/title_checkbox_absolute_mouse_mode"
@@ -811,12 +830,6 @@
             android:key="checkbox_show_onscreen_controls"
             android:summary="@string/summary_checkbox_show_onscreen_controls"
             android:title="@string/title_checkbox_show_onscreen_controls" />
-        <CheckBoxPreference
-            android:key="checkbox_vibrate_osc"
-            android:dependency="checkbox_show_onscreen_controls"
-            android:title="@string/title_checkbox_vibrate_osc"
-            android:summary="@string/summary_checkbox_vibrate_osc"
-            android:defaultValue="true" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:dependency="checkbox_show_onscreen_controls"

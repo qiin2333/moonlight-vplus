@@ -77,4 +77,8 @@ internal object TouchModePreferencePolicy {
         state.enhancedTouch -> TouchModePreset.ENHANCED
         else -> TouchModePreset.CLASSIC
     }
+
+    /** Returns null when restored legacy flags do not describe one exact preset. */
+    fun exactPresetFor(state: TouchModePreferenceState): TouchModePreset? =
+        TouchModePreset.entries.firstOrNull { it.toState() == state }
 }

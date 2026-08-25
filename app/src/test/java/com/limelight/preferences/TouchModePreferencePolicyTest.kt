@@ -1,6 +1,7 @@
 package com.limelight.preferences
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class TouchModePreferencePolicyTest {
@@ -53,6 +54,20 @@ class TouchModePreferencePolicyTest {
         TouchModePreset.entries.forEach { preset ->
             assertEquals(preset, TouchModePreferencePolicy.presetFor(preset.toState()))
         }
+    }
+
+    @Test
+    fun `exact preset inference reports mixed restored flags as custom`() {
+        assertNull(
+            TouchModePreferencePolicy.exactPresetFor(
+                TouchModePreferenceState(
+                    enhancedTouch = true,
+                    touchscreenTrackpad = true,
+                    nativeMousePointer = false,
+                    screenDs5Touchpad = false
+                )
+            )
+        )
     }
 
     private fun resolveWithoutSavedMode(hasTouchscreen: Boolean) =
