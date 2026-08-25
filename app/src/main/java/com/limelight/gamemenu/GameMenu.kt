@@ -1609,7 +1609,7 @@ class GameMenu(
                 window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             }
             val layoutParams = window.attributes
-            layoutParams.alpha = renderingProfile.windowAlpha
+            layoutParams.alpha = renderingProfile.windowAlpha(game.prefConfig.gameMenuOpacity)
             layoutParams.dimAmount = DIALOG_DIM_AMOUNT
             layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
             layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT

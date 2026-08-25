@@ -133,6 +133,7 @@ class PreferenceConfiguration {
     var enableJitterMonitor = false
     var perfOverlayLocked = false
     var perfOverlayBgOpacity = 0
+    var gameMenuOpacity = DEFAULT_GAME_MENU_OPACITY
     var perfOverlayOrientation: PerfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL
     var perfOverlayPosition: PerfOverlayPosition = PerfOverlayPosition.TOP
     var enableSimplifyPerfOverlay = false
@@ -299,6 +300,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_JITTER_MONITOR_STRING, enableJitterMonitor)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
+                .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                 .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
@@ -383,6 +385,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_JITTER_MONITOR_STRING, enableJitterMonitor)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
+                .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putString(PERF_OVERLAY_ORIENTATION_STRING, getPerfOverlayOrientationPreferenceString(perfOverlayOrientation))
                 .putString(PERF_OVERLAY_POSITION_STRING, getPerfOverlayPositionPreferenceString(perfOverlayPosition))
                 .apply()
@@ -420,6 +423,7 @@ class PreferenceConfiguration {
         copy.enableJitterMonitor = this.enableJitterMonitor
         copy.perfOverlayLocked = this.perfOverlayLocked
         copy.perfOverlayBgOpacity = this.perfOverlayBgOpacity
+        copy.gameMenuOpacity = this.gameMenuOpacity
         copy.perfOverlayOrientation = this.perfOverlayOrientation
         copy.perfOverlayPosition = this.perfOverlayPosition
         copy.reverseResolution = this.reverseResolution
@@ -511,6 +515,7 @@ class PreferenceConfiguration {
         private const val ENABLE_JITTER_MONITOR_STRING = "checkbox_enable_jitter_monitor"
         private const val PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked"
         private const val PERF_OVERLAY_BG_OPACITY_STRING = "seekbar_perf_overlay_bg_opacity"
+        const val GAME_MENU_OPACITY_PREF_STRING = "seekbar_game_menu_opacity"
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"
@@ -720,6 +725,9 @@ class PreferenceConfiguration {
         private const val DEFAULT_ENABLE_JITTER_MONITOR = false
         private const val DEFAULT_PERF_OVERLAY_LOCKED = false
         private const val DEFAULT_PERF_OVERLAY_BG_OPACITY = 40
+        const val DEFAULT_GAME_MENU_OPACITY = 90
+        const val MIN_GAME_MENU_OPACITY = 40
+        const val MAX_GAME_MENU_OPACITY = 100
         private const val DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal"
         private const val DEFAULT_PERF_OVERLAY_POSITION = "top"
         private const val DEFAULT_BIND_ALL_USB = false
@@ -1343,6 +1351,10 @@ class PreferenceConfiguration {
             config.enableJitterMonitor = prefs.getBoolean(ENABLE_JITTER_MONITOR_STRING, DEFAULT_ENABLE_JITTER_MONITOR)
             config.perfOverlayLocked = prefs.getBoolean(PERF_OVERLAY_LOCKED_STRING, DEFAULT_PERF_OVERLAY_LOCKED)
             config.perfOverlayBgOpacity = prefs.getInt(PERF_OVERLAY_BG_OPACITY_STRING, DEFAULT_PERF_OVERLAY_BG_OPACITY).coerceIn(0, 100)
+            config.gameMenuOpacity = prefs.getInt(
+                GAME_MENU_OPACITY_PREF_STRING,
+                DEFAULT_GAME_MENU_OPACITY
+            ).coerceIn(MIN_GAME_MENU_OPACITY, MAX_GAME_MENU_OPACITY)
 
             // 读取性能覆盖层方向和位置设置
             val perfOverlayOrientationStr = prefs.getString(PERF_OVERLAY_ORIENTATION_STRING, DEFAULT_PERF_OVERLAY_ORIENTATION)

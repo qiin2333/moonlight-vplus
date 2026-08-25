@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import com.limelight.R
 import com.limelight.preferences.GlPreferences
+import com.limelight.preferences.PreferenceConfiguration
 
 /**
  * Rendering choices for the in-stream menu overlay.
@@ -18,15 +19,19 @@ internal data class GameMenuRenderingProfile(val isLowEnd: Boolean) {
     val useFabricTexture: Boolean
         get() = !isLowEnd
 
-    val windowAlpha: Float
-        get() = if (isLowEnd) 1.0f else DEFAULT_WINDOW_ALPHA
+    fun windowAlpha(configuredOpacityPercent: Int): Float {
+        if (isLowEnd) return 1.0f
+        return configuredOpacityPercent.coerceIn(
+            PreferenceConfiguration.MIN_GAME_MENU_OPACITY,
+            PreferenceConfiguration.MAX_GAME_MENU_OPACITY
+        ) / 100f
+    }
 
     val dialogAnimationStyle: Int
         get() = if (isLowEnd) R.style.GameMenuDialogAnimationLowEnd
         else R.style.GameMenuDialogAnimation
 
     companion object {
-        private const val DEFAULT_WINDOW_ALPHA = 0.9f
         private const val LOW_MEMORY_CLASS_MB = 128
 
         private val lowEndRendererMarkers = listOf(

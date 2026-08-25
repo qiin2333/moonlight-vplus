@@ -268,6 +268,8 @@
     <string name="dialog_text_reset_osc">你確定要刪除已儲存的螢幕按鈕版面配置嗎？</string>
     <string name="toast_reset_osc_success">螢幕控制按鈕已重設為預設值</string>
     <string name="category_ui_settings">使用者介面設定</string>
+    <string name="title_game_menu_opacity">返回選單透明度</string>
+    <string name="summary_game_menu_opacity">調整串流返回選單的透明度。低效能渲染模式會保持不透明。</string>
     <string name="title_language_list"> 語言 </string>
     <string name="summary_language_list">選擇 Moonlight 顯示的語言</string>
     <string name="title_checkbox_small_icon_mode"> 使用小圖示 </string>

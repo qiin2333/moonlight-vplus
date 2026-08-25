@@ -2,11 +2,15 @@ package com.limelight.preferences
 
 import android.annotation.SuppressLint
 import android.view.KeyEvent
+import android.widget.SeekBar
 import androidx.preference.PreferenceGroupAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.limelight.R
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
@@ -143,6 +147,80 @@ class StreamSettingsExpandFocusTest {
             assertNotNull(focusedRow)
             assertTrue(recyclerView.getChildAdapterPosition(focusedRow!!) >= expandPosition)
         }
+    }
+
+    @Test
+    @SuppressLint("RestrictedApi")
+    fun gameMenuOpacityCanBeAdjustedWithoutTouch() {
+        lateinit var recyclerView: RecyclerView
+        var preferencePosition = RecyclerView.NO_POSITION
+
+        activityRule.scenario.onActivity { activity ->
+            recyclerView = activity.findViewById(androidx.preference.R.id.recycler_view)
+            val adapter = recyclerView.adapter as PreferenceGroupAdapter
+            preferencePosition = (0 until adapter.itemCount).first { position ->
+                adapter.getItem(position)?.key ==
+                    PreferenceConfiguration.GAME_MENU_OPACITY_PREF_STRING
+            }
+            recyclerView.scrollToPosition(preferencePosition)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            val preferenceRow = requireNotNull(
+                recyclerView.findViewHolderForAdapterPosition(preferencePosition)?.itemView
+            )
+            assertTrue(preferenceRow.requestFocusFromTouch())
+        }
+
+        // Leave touch mode before confirming, as a controller user does while navigating here.
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        activityRule.scenario.onActivity {
+            assertNotNull(it.currentFocus)
+        }
+
+        press(KeyEvent.KEYCODE_BUTTON_A)
+        lateinit var dialogFragment: SeekBarPreferenceDialogFragment
+        var initialProgress = 0
+        var adjustmentKey = KeyEvent.KEYCODE_DPAD_RIGHT
+        var expectedProgress = 0
+        activityRule.scenario.onActivity { activity ->
+            dialogFragment = activity.supportFragmentManager
+                .findFragmentByTag("SeekBarPreference") as SeekBarPreferenceDialogFragment
+            val seekBar = requireNotNull(
+                dialogFragment.dialog?.findViewById<SeekBar>(R.id.pref_seekbar)
+            )
+            assertTrue(seekBar.hasFocus())
+            initialProgress = seekBar.progress
+            adjustmentKey = if (initialProgress < seekBar.max) {
+                KeyEvent.KEYCODE_DPAD_RIGHT
+            } else {
+                KeyEvent.KEYCODE_DPAD_LEFT
+            }
+            expectedProgress = if (adjustmentKey == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                (initialProgress + seekBar.keyProgressIncrement).coerceAtMost(seekBar.max)
+            } else {
+                (initialProgress - seekBar.keyProgressIncrement).coerceAtLeast(0)
+            }
+        }
+
+        press(adjustmentKey)
+        activityRule.scenario.onActivity {
+            val seekBar = requireNotNull(
+                dialogFragment.dialog?.findViewById<SeekBar>(R.id.pref_seekbar)
+            )
+            assertEquals(expectedProgress, seekBar.progress)
+        }
+
+        press(KeyEvent.KEYCODE_BUTTON_B)
+        activityRule.scenario.onActivity {
+            assertFalse(dialogFragment.dialog?.isShowing == true)
+        }
+    }
+
+    private fun press(keyCode: Int) {
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(keyCode)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 
     private fun settingsFragment(activity: StreamSettings): StreamSettings.SettingsFragment {
