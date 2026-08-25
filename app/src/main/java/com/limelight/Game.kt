@@ -802,6 +802,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                     intArrayOf(Display.HdrCapabilities.HDR_TYPE_HLG)
                 MoonBridge.HDR_MODE_HDR10_PLUS ->
                     intArrayOf(Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS)
+                MoonBridge.HDR_MODE_DOLBY_VISION ->
+                    intArrayOf(Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION)
                 MoonBridge.HDR_MODE_HDR10 -> intArrayOf(
                     // A mode advertising HDR10+ can also present the static HDR10 base layer.
                     Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS,
@@ -824,6 +826,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 willStreamHdr = when (prefConfig.hdrMode) {
                     MoonBridge.HDR_MODE_HLG -> hdrTypeSupport.hasHlg
                     MoonBridge.HDR_MODE_HDR10_PLUS -> hdrTypeSupport.hasHdr10Plus
+                    MoonBridge.HDR_MODE_DOLBY_VISION -> hdrTypeSupport.hasDolbyVision
                     MoonBridge.HDR_MODE_HDR10 -> hdrTypeSupport.hasHdr10 || hdrTypeSupport.hasHdr10Plus
                     else -> false
                 }
@@ -831,6 +834,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                     val requiredType = when (prefConfig.hdrMode) {
                         MoonBridge.HDR_MODE_HLG -> "HLG"
                         MoonBridge.HDR_MODE_HDR10_PLUS -> "HDR10+"
+                        MoonBridge.HDR_MODE_DOLBY_VISION -> "Dolby Vision"
                         MoonBridge.HDR_MODE_HDR10 -> "HDR10"
                         else -> "HDR"
                     }
