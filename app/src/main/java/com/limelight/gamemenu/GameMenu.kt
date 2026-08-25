@@ -784,9 +784,11 @@ class GameMenu(
                 selected = isTrackpad && !isNativePointer && !isScreenDs5Touchpad,
                 runnable = Runnable {
                     game.setScreenDs5TouchpadEnabled(false)
+                    game.prefConfig.enableEnhancedTouch = false
                     game.prefConfig.enableNativeMousePointer = false
                     game.enableNativeMousePointer(false)
                     game.setTouchMode(true)
+                    updateEnhancedTouchSetting(false)
                     updateTouchModeSetting(true)
                     persistTouchModeSelection(TouchModePreset.TRACKPAD)
                 },
