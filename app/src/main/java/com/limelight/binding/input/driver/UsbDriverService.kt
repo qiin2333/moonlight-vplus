@@ -39,6 +39,8 @@ import com.limelight.preferences.PreferenceConfiguration
 
 class UsbDriverService : Service(), UsbDriverListener {
 
+    private data class StartRequest(val claimAllAvailableOverride: Boolean?)
+
     private var usbManager: UsbManager? = null
     private var prefConfig: PreferenceConfiguration? = null
     @Volatile private var started = false
@@ -56,6 +58,9 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val controllersLock = Any()
     private val sessionLock = ReentrantLock()
     private val sessionOwner = UsbDriverSessionOwner()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val sessionHandoff = UsbDriverSessionHandoff<StartRequest>()
+    private val stopCallbacks = mutableListOf<() -> Unit>()
 
     @Volatile private var listener: ControllerDriverListener? = null
     @Volatile private var stateListener: UsbDriverStateListener? = null
@@ -110,10 +115,13 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun deviceRemoved(controller: AbstractController) {
-        synchronized(controllersLock) {
-            controllers.remove(controller)
+        val suppressCallback = sessionLock.withLock {
+            synchronized(controllersLock) {
+                controllers.remove(controller)
+            }
+            sessionHandoff.isStoppingController(controller.getControllerId())
         }
-        listener?.deviceRemoved(controller)
+        if (!suppressCallback) listener?.deviceRemoved(controller)
     }
 
     override fun deviceAdded(controller: AbstractController) {
@@ -213,12 +221,16 @@ class UsbDriverService : Service(), UsbDriverListener {
             }
         }
 
-        fun releaseSession(token: Long) {
+        fun releaseSession(token: Long, onReleased: () -> Unit = {}) {
             sessionLock.withLock {
-                if (!sessionOwner.release(token)) return
+                if (!sessionOwner.release(token)) {
+                    mainHandler.post { onReleased() }
+                    return
+                }
                 setListenerLocked(null)
                 stateListener = null
-                this@UsbDriverService.stop()
+                sessionHandoff.cancelPendingStart()
+                this@UsbDriverService.stop(onReleased)
             }
         }
 
@@ -233,14 +245,22 @@ class UsbDriverService : Service(), UsbDriverListener {
                     return@withLock false
                 }
                 this@UsbDriverService.start(claimAllAvailableOverride = true)
-                synchronized(controllersLock) { controllers.isNotEmpty() }
+                synchronized(controllersLock) { controllers.isNotEmpty() } ||
+                    (sessionHandoff.isStopping && sessionHandoff.pendingStartMatches {
+                        it.claimAllAvailableOverride == true
+                    })
             }
         }
 
         /** Returns whether a claimed controller is still active or initializing. */
         fun hasActiveControllers(): Boolean {
-            return synchronized(controllersLock) { controllers.isNotEmpty() } ||
-                wirelessBridge?.state == DualSenseWirelessBridgeState.ACTIVE
+            return sessionLock.withLock {
+                synchronized(controllersLock) { controllers.isNotEmpty() } ||
+                    wirelessBridge?.state == DualSenseWirelessBridgeState.ACTIVE ||
+                    (sessionHandoff.isStopping && sessionHandoff.pendingStartMatches {
+                        it.claimAllAvailableOverride == true
+                    })
+            }
         }
 
         fun dualSenseWirelessBridgeState(): String =
@@ -256,13 +276,15 @@ class UsbDriverService : Service(), UsbDriverListener {
             }
         }
 
-        fun stop() {
+        fun stop(onStopped: () -> Unit = {}) {
             sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
                     LimeLog.warning("Ignoring legacy USB stop while a stream session owns the driver")
+                    mainHandler.post { onStopped() }
                     return
                 }
-                this@UsbDriverService.stop()
+                sessionHandoff.cancelPendingStart()
+                this@UsbDriverService.stop(onStopped)
             }
         }
     }
@@ -552,20 +574,39 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun notifyDriverStartCompleted() {
+        runCatching { stateListener?.onUsbDriverStartCompleted() }.onFailure {
+            LimeLog.warning("Unable to notify USB driver start completion: ${it.message}")
+        }
+    }
+
     private fun start(claimAllAvailableOverride: Boolean?) {
         if (usbManager == null) {
+            notifyDriverStartCompleted()
+            return
+        }
+
+        val request = StartRequest(claimAllAvailableOverride)
+        if (sessionHandoff.queueStart(request)) {
             return
         }
 
         if (started) {
             if (this.claimAllAvailableOverride == claimAllAvailableOverride) {
+                notifyDriverStartCompleted()
                 return
             }
+            sessionHandoff.setPendingStart(request)
             stop()
+            return
         }
 
-        this.claimAllAvailableOverride = claimAllAvailableOverride
+        startNow(request)
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun startNow(request: StartRequest) {
+        this.claimAllAvailableOverride = request.claimAllAvailableOverride
         started = true
 
         val filter = IntentFilter()
@@ -583,6 +624,7 @@ class UsbDriverService : Service(), UsbDriverListener {
             LimeLog.warning("Unable to register USB controller receiver: ${e.message}")
             started = false
             this.claimAllAvailableOverride = null
+            notifyDriverStartCompleted()
             return
         }
 
@@ -593,12 +635,21 @@ class UsbDriverService : Service(), UsbDriverListener {
             // when streaming started must not be filtered out by shouldClaimDevice().
             handleUsbDeviceStateSafely(dev)
         }
+        notifyDriverStartCompleted()
     }
 
-    private fun stop() {
-        if (!started) {
+    private fun stop(onStopped: () -> Unit = {}) {
+        if (sessionHandoff.isStopping) {
+            stopCallbacks += onStopped
             return
         }
+
+        if (!started) {
+            mainHandler.post { onStopped() }
+            return
+        }
+
+        stopCallbacks += onStopped
 
         started = false
 
@@ -614,12 +665,46 @@ class UsbDriverService : Service(), UsbDriverListener {
         val controllersToStop = synchronized(controllersLock) {
             controllers.toList().also { controllers.clear() }
         }
+        claimAllAvailableOverride = null
+
+        if (controllersToStop.isEmpty()) {
+            finishStopLocked(sessionHandoff.takePendingStart())
+            return
+        }
+
+        val generation = sessionHandoff.beginStop(
+            controllersToStop.map(AbstractController::getControllerId)
+        )
         for (controller in controllersToStop) {
-            runCatching { controller.stop() }.onFailure {
+            runCatching {
+                controller.stopAndThen {
+                    onControllerStopCompleted(generation, controller.getControllerId())
+                }
+            }.onFailure {
                 LimeLog.warning("Unable to stop USB controller: ${it.message}")
             }
         }
-        claimAllAvailableOverride = null
+    }
+
+    private fun onControllerStopCompleted(generation: Long, controllerId: Int) {
+        sessionLock.withLock {
+            val completion = sessionHandoff.completeController(generation, controllerId)
+            if (completion.finished) finishStopLocked(completion.pendingStart)
+        }
+    }
+
+    private fun finishStopLocked(restart: StartRequest?) {
+        if (restart != null) startNow(restart)
+
+        val callbacks = stopCallbacks.toList()
+        stopCallbacks.clear()
+        callbacks.forEach { callback ->
+            mainHandler.post {
+                runCatching(callback).onFailure {
+                    LimeLog.warning("USB driver stop callback failed: ${it.message}")
+                }
+            }
+        }
     }
 
     override fun onCreate() {
@@ -630,9 +715,10 @@ class UsbDriverService : Service(), UsbDriverListener {
     override fun onDestroy() {
         sessionLock.withLock {
             sessionOwner.reset()
-            stop()
+            sessionHandoff.cancelPendingStart()
             listener = null
             stateListener = null
+            stop()
         }
     }
 
@@ -644,6 +730,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         fun onUsbPermissionPromptStarting()
         fun onUsbPermissionPromptCompleted()
         fun onDualSenseWirelessBridgeStateChanged(state: String) = Unit
+        fun onUsbDriverStartCompleted() = Unit
     }
 
     companion object {

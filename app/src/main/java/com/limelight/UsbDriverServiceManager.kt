@@ -25,9 +25,11 @@ internal object UsbDriverExitCoordinator {
  * 管理 USB 驱动服务的绑定和生命周期。
  */
 class UsbDriverServiceManager(
-    private val context: Context,
-    private val stateListener: UsbDriverService.UsbDriverStateListener,
+    context: Context,
+    stateListener: UsbDriverService.UsbDriverStateListener,
 ) {
+    private val context = context.applicationContext
+    private var stateListener: UsbDriverService.UsbDriverStateListener? = stateListener
     var controllerHandler: ControllerHandler? = null
 
     private var connected = false
@@ -44,8 +46,9 @@ class UsbDriverServiceManager(
                 // service may already be owned by a newer stream, so it must not be mutated.
                 return
             }
+            val currentStateListener = stateListener ?: return
             binder = usbBinder
-            sessionToken = usbBinder.attachSession(controllerHandler, stateListener)
+            sessionToken = usbBinder.attachSession(controllerHandler, currentStateListener)
             connected = true
         }
 
@@ -67,19 +70,29 @@ class UsbDriverServiceManager(
     }
 
     fun stopAndUnbind() {
+        if (stopRequested) return
         stopRequested = true
         val currentBinder = binder
         val currentSessionToken = sessionToken
+        connected = false
+        binder = null
+        sessionToken = null
+        controllerHandler = null
+        stateListener = null
         if (currentBinder != null && currentSessionToken != null) {
-            runCatching { currentBinder.releaseSession(currentSessionToken) }
+            val releaseDelegated = runCatching {
+                currentBinder.releaseSession(currentSessionToken, ::completeUnbind)
+            }.isSuccess
+            if (releaseDelegated) return
         }
+        completeUnbind()
+    }
+
+    private fun completeUnbind() {
         if (bound) {
             try { context.unbindService(serviceConnection) } catch (_: Exception) {}
         }
         bound = false
-        connected = false
-        binder = null
-        sessionToken = null
     }
 
     /**

@@ -672,9 +672,17 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
         } else {
             val taskSubmitted = runCatching {
                 usbDriverExecutor.execute {
-                    runCatching { binder.stop() }
-                    simulatorHandler.post {
-                        completeShortcutTestStop(refreshAfterStop)
+                    val stopDelegated = runCatching {
+                        binder.stop {
+                            simulatorHandler.post {
+                                completeShortcutTestStop(refreshAfterStop)
+                            }
+                        }
+                    }.isSuccess
+                    if (!stopDelegated) {
+                        simulatorHandler.post {
+                            completeShortcutTestStop(refreshAfterStop)
+                        }
                     }
                 }
             }.isSuccess
@@ -1143,6 +1151,12 @@ class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
 
     override fun onUsbPermissionPromptCompleted() {
         usbPermissionPromptCount.updateAndGet { count -> (count - 1).coerceAtLeast(0) }
+        simulatorHandler.post {
+            maybeMarkShortcutTestReady()
+        }
+    }
+
+    override fun onUsbDriverStartCompleted() {
         simulatorHandler.post {
             maybeMarkShortcutTestReady()
         }
