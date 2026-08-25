@@ -661,13 +661,14 @@ class StreamSettings : AppCompatActivity() {
      * 通知 Activity 分类已加载
      */
     fun onCategoriesLoaded(loadedCategories: List<CategoryItem>) {
+        val selectedKey = categories.getOrNull(selectedCategoryIndex)?.key
         categories.clear()
         categories.addAll(loadedCategories)
 
-        // 验证并校正 selectedCategoryIndex（屏幕旋转后恢复时可能越界）
-        if (selectedCategoryIndex >= categories.size) {
-            selectedCategoryIndex = 0.coerceAtLeast(categories.size - 1)
-        }
+        selectedCategoryIndex = selectedKey
+            ?.let { key -> categories.indexOfFirst { it.key == key } }
+            ?.takeIf { it >= 0 }
+            ?: selectedCategoryIndex.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
 
         categoryAdapter?.notifyDataSetChanged()
     }
@@ -962,11 +963,14 @@ class StreamSettings : AppCompatActivity() {
         }
         private val configSyncPreferenceChangeListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                handleConfigSyncPreferenceChanged(key)
+                if (!suppressConfigSyncPreferenceChanges) {
+                    handleConfigSyncPreferenceChanged(key)
+                }
             }
         private var configSyncSnapshotDirty = false
         private var configSyncSnapshotInProgress = false
         private var configSyncPreferenceListenerRegistered = false
+        private var suppressConfigSyncPreferenceChanges = false
 
         // 分类列表（用于抽屉菜单同步）
         private val categoryList: MutableList<PreferenceCategory> = ArrayList()
@@ -1267,27 +1271,7 @@ class StreamSettings : AppCompatActivity() {
             if (activity == null || activity !is StreamSettings) return
 
             val settingsActivity = activity
-            val screen = preferenceScreen ?: return
-
-            // 收集所有分类
-            categoryList.clear()
-            val items: MutableList<CategoryItem> = ArrayList()
-            for (i in 0 until screen.preferenceCount) {
-                val pref = screen.getPreference(i)
-                if (pref !is PreferenceCategory) continue
-
-                if (pref.title == null) continue
-
-                val title = pref.title.toString()
-                val key = pref.key ?: "category_$i"
-                val iconRes = getIconForCategory(key)
-
-                categoryList.add(pref)
-                items.add(CategoryItem(key, title, iconRes))
-            }
-
-            // 通知 Activity 分类已加载
-            settingsActivity.onCategoriesLoaded(items)
+            rebuildCategoryList()
 
             // 添加滚动监听
             Handler(Looper.getMainLooper()).post {
@@ -1320,6 +1304,24 @@ class StreamSettings : AppCompatActivity() {
         private val originalVisibility = IdentityHashMap<Preference, Boolean>()
         private var activeSearchQuery = ""
 
+        private fun rebuildCategoryList() {
+            val settingsActivity = activity as? StreamSettings ?: return
+            val screen = preferenceScreen ?: return
+            categoryList.clear()
+            val items = ArrayList<CategoryItem>()
+            for (i in 0 until screen.preferenceCount) {
+                val category = screen.getPreference(i) as? PreferenceCategory ?: continue
+                val eligible = originalVisibility[category] ?: category.isVisible
+                val title = category.title?.toString() ?: continue
+                if (!eligible) continue
+                val key = category.key ?: "category_$i"
+                categoryList.add(category)
+                items.add(CategoryItem(key, title, getIconForCategory(key)))
+            }
+            categoryPositionsValid = false
+            settingsActivity.onCategoriesLoaded(items)
+        }
+
         private fun updateRuntimeVisibility(preference: Preference?, visible: Boolean) {
             preference ?: return
             if (originalVisibility.containsKey(preference)) {
@@ -1328,6 +1330,7 @@ class StreamSettings : AppCompatActivity() {
             } else {
                 preference.isVisible = visible
             }
+            if (preference is PreferenceCategory) rebuildCategoryList()
         }
 
         /**
@@ -3784,12 +3787,17 @@ class StreamSettings : AppCompatActivity() {
                 .setTitle(R.string.title_enable_external_config_sync)
                 .setMessage(R.string.message_enable_external_config_sync)
                 .setPositiveButton(R.string.config_sync_action_enable) { _, _ ->
-                    PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-                        putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, true)
-                        putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, true)
-                        putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, true)
+                    suppressConfigSyncPreferenceChanges = true
+                    try {
+                        PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                            putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, true)
+                            putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, true)
+                            putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, true)
+                        }
+                    } finally {
+                        suppressConfigSyncPreferenceChanges = false
                     }
-                    writeConfigSyncLocalSnapshot(showToast = true, requireAutoEnabled = false)
+                    writeConfigSyncLocalSnapshot(showToast = true, requireAutoEnabled = true)
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .showStyled()
