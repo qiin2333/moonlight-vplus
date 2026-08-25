@@ -1,33 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="72dp"
-    android:layout_height="184dp"
+    android:layout_width="48dp"
+    android:layout_height="148dp"
     android:background="@drawable/game_menu_opacity_popup_bg"
-    android:gravity="center_horizontal"
+    android:gravity="center"
     android:orientation="vertical"
-    android:paddingLeft="8dp"
-    android:paddingRight="8dp"
-    android:paddingTop="10dp"
+    android:paddingTop="8dp"
     android:paddingBottom="8dp">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:maxLines="1"
-        android:text="@string/game_menu_opacity_label"
-        android:textColor="@color/game_menu_text_secondary"
-        android:textSize="11sp" />
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent">
 
         <SeekBar
             android:id="@+id/game_menu_opacity_seekbar"
-            android:layout_width="150dp"
-            android:layout_height="48dp"
+            android:layout_width="112dp"
+            android:layout_height="40dp"
             android:layout_gravity="center"
             android:contentDescription="@string/title_game_menu_opacity"
             android:focusable="true"

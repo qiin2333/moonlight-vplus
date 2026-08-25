@@ -269,7 +269,6 @@
     <string name="toast_reset_osc_success">螢幕控制按鈕已重設為預設值</string>
     <string name="category_ui_settings">使用者介面設定</string>
     <string name="title_game_menu_opacity">返回選單透明度</string>
-    <string name="game_menu_opacity_label">透明度</string>
     <string name="summary_game_menu_opacity">調整串流返回選單的透明度。低效能渲染模式會保持不透明。</string>
     <string name="game_menu_opacity_button">調整返回選單透明度，目前 %1$d%%</string>
     <string name="title_language_list"> 語言 </string>

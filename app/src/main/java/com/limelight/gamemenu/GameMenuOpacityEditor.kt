@@ -5,7 +5,6 @@ import android.content.Context
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.SeekBar
@@ -16,9 +15,9 @@ import com.limelight.ui.UiDismissKeyHandler
 
 internal object GameMenuOpacityEditor {
     private const val OPACITY_STEP = 5
-    private const val POPUP_WIDTH_DP = 72
-    private const val POPUP_HEIGHT_DP = 184
-    private const val POPUP_MARGIN_DP = 6
+    private const val POPUP_WIDTH_DP = 48
+    private const val POPUP_HEIGHT_DP = 148
+    private const val POPUP_MARGIN_DP = 2
 
     @Suppress("DEPRECATION")
     fun show(
@@ -113,7 +112,7 @@ internal object GameMenuOpacityEditor {
         val popupMargin = (POPUP_MARGIN_DP * density + 0.5f).toInt()
         window.attributes = window.attributes.apply {
             width = popupWidth
-            height = ViewGroup.LayoutParams.WRAP_CONTENT
+            height = popupHeight
             gravity = Gravity.TOP or Gravity.START
             x = (anchor.centerX - popupWidth / 2).coerceIn(
                 0,

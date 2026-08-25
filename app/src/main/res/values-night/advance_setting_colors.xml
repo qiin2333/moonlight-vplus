@@ -41,6 +41,7 @@
     <color name="game_menu_list_item_border">#0CFFFFFF</color>
     <color name="game_menu_list_item_border_pressed">@color/game_menu_accent</color>
     <color name="game_menu_dialog_background">#FF1C1E24</color>
+    <color name="game_menu_opacity_popup_background">#ED23242B</color>
     <color name="game_menu_dialog_border">#12FFFFFF</color>
     <color name="game_menu_list_item_normal">#FF26282F</color>
     <color name="game_menu_danger_text">#FFFF8A8A</color>
