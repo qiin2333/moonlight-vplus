@@ -786,10 +786,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_MIC_MENU_ACTION_MODE = MIC_MENU_ACTION_SHOW_BUTTON
 
         // 麦克风音量增益及其平衡默认值
-        private const val DEFAULT_MIC_VOLUME_PROCESSING = false
-        private const val DEFAULT_MIC_GAIN_ENABLED = false
         private const val DEFAULT_MIC_GAIN_DB = 0
-        private const val DEFAULT_MIC_BALANCE_ENABLED = false
         private const val DEFAULT_MIC_BALANCE_TARGET_PERCENT = 50
         private const val DEFAULT_MIC_VOICE_ENHANCEMENT = true
         private const val DEFAULT_ENABLE_ESC_MENU = true // 默认启用ESC菜单
@@ -1465,10 +1462,11 @@ class PreferenceConfiguration {
 
             // Legacy flags remain authoritative so importing an old backup can override a
             // previously stored mode value. The settings UI keeps both representations synced.
-            val micProcessingMode = MicVolumeProcessingPolicy.modeFor(
-                prefs.getBoolean(MIC_VOLUME_PROCESSING_PREF_STRING, DEFAULT_MIC_VOLUME_PROCESSING),
-                prefs.getBoolean(MIC_GAIN_ENABLED_PREF_STRING, DEFAULT_MIC_GAIN_ENABLED),
-                prefs.getBoolean(MIC_BALANCE_ENABLED_PREF_STRING, DEFAULT_MIC_BALANCE_ENABLED),
+            val micProcessingMode = MicVolumeProcessingPolicy.resolveMode(
+                storedMode = prefs.getString(MIC_VOLUME_PROCESSING_MODE_PREF_STRING, null),
+                processing = prefs.getBooleanOrNull(MIC_VOLUME_PROCESSING_PREF_STRING),
+                gain = prefs.getBooleanOrNull(MIC_GAIN_ENABLED_PREF_STRING),
+                balance = prefs.getBooleanOrNull(MIC_BALANCE_ENABLED_PREF_STRING),
             )
             val micProcessingFlags = MicVolumeProcessingPolicy.flagsFor(micProcessingMode)
             config.micVolumeProcessingEnabled = micProcessingFlags.processing

@@ -31,4 +31,19 @@ internal object MicVolumeProcessingPolicy {
         processing -> LEGACY_PROCESSING_ONLY
         else -> OFF
     }
+
+    fun resolveMode(
+        storedMode: String?,
+        processing: Boolean?,
+        gain: Boolean?,
+        balance: Boolean?,
+    ): String = if (processing != null || gain != null || balance != null) {
+        modeFor(
+            processing = processing ?: false,
+            gain = gain ?: false,
+            balance = balance ?: false,
+        )
+    } else {
+        normalize(storedMode)
+    }
 }

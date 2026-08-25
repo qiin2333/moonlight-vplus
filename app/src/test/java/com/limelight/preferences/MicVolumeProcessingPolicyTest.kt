@@ -39,4 +39,35 @@ class MicVolumeProcessingPolicyTest {
             MicVolumeProcessingPolicy.modeFor(processing = true, gain = false, balance = false),
         )
     }
+
+    @Test
+    fun storedModeIsUsedOnlyWhenLegacyFlagsAreAbsent() {
+        assertEquals(
+            MicVolumeProcessingPolicy.GAIN,
+            MicVolumeProcessingPolicy.resolveMode(
+                storedMode = MicVolumeProcessingPolicy.GAIN,
+                processing = null,
+                gain = null,
+                balance = null,
+            ),
+        )
+        assertEquals(
+            MicVolumeProcessingPolicy.OFF,
+            MicVolumeProcessingPolicy.resolveMode(
+                storedMode = MicVolumeProcessingPolicy.GAIN,
+                processing = false,
+                gain = null,
+                balance = null,
+            ),
+        )
+        assertEquals(
+            MicVolumeProcessingPolicy.LEGACY_PROCESSING_ONLY,
+            MicVolumeProcessingPolicy.resolveMode(
+                storedMode = MicVolumeProcessingPolicy.GAIN,
+                processing = true,
+                gain = null,
+                balance = null,
+            ),
+        )
+    }
 }

@@ -1240,7 +1240,7 @@ class StreamSettings : AppCompatActivity() {
                     PreferenceConfiguration.DEFAULT_FRAME_PACING
                 )
 
-            hostCadencePref.isVisible = selectedFramePacing == "precise-sync"
+            updateRuntimeVisibility(hostCadencePref, selectedFramePacing == "precise-sync")
         }
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -1318,6 +1318,16 @@ class StreamSettings : AppCompatActivity() {
          */
         private val originalCollapseCounts = mutableMapOf<String, Int>()
         private val originalVisibility = IdentityHashMap<Preference, Boolean>()
+
+        private fun updateRuntimeVisibility(preference: Preference?, visible: Boolean) {
+            preference ?: return
+            if (originalVisibility.containsKey(preference)) {
+                originalVisibility[preference] = visible
+                if (!visible) preference.isVisible = false
+            } else {
+                preference.isVisible = visible
+            }
+        }
 
         /**
          * 应用搜索过滤。空查询恢复全部可见性 + 原始折叠状态；
@@ -4190,12 +4200,18 @@ class StreamSettings : AppCompatActivity() {
 
         private fun updateBackgroundPreferenceVisibility(sourceValue: String?) {
             val source = BackgroundSource.fromPrefValue(sourceValue)
-            findPreference<Preference>(BackgroundSource.KEY_API_URL)?.isVisible =
-                source is BackgroundSource.Api
-            findPreference<Preference>("local_image_picker")?.isVisible =
-                source is BackgroundSource.Local
-            findPreference<Preference>("reset_background_image")?.isVisible =
-                source !is BackgroundSource.Auto
+            updateRuntimeVisibility(
+                findPreference(BackgroundSource.KEY_API_URL),
+                source is BackgroundSource.Api,
+            )
+            updateRuntimeVisibility(
+                findPreference("local_image_picker"),
+                source is BackgroundSource.Local,
+            )
+            updateRuntimeVisibility(
+                findPreference("reset_background_image"),
+                source !is BackgroundSource.Auto,
+            )
         }
 
         private fun setupInputModePresetPreference() {
@@ -4215,8 +4231,10 @@ class StreamSettings : AppCompatActivity() {
             )?.isVisible = false
 
             fun updateEnhancedTuningVisibility(enhanced: Boolean) {
-                findPreference<PreferenceCategory>("category_enhanced_touch")?.isVisible =
-                    hasTouchscreen && enhanced
+                updateRuntimeVisibility(
+                    findPreference<PreferenceCategory>("category_enhanced_touch"),
+                    hasTouchscreen && enhanced,
+                )
             }
 
             fun persistPreset(preset: TouchModePreset) {
@@ -4324,10 +4342,18 @@ class StreamSettings : AppCompatActivity() {
                 legacyProcessing?.isChecked = flags.processing
                 legacyGain?.isChecked = flags.gain
                 legacyBalance?.isChecked = flags.balance
-                findPreference<Preference>("seekbar_mic_gain_db")?.isVisible = flags.gain
-                findPreference<Preference>("seekbar_mic_balance_target")?.isVisible = flags.balance
-                findPreference<Preference>("checkbox_mic_voice_enhancement")?.isVisible =
-                    flags.processing
+                updateRuntimeVisibility(
+                    findPreference("seekbar_mic_gain_db"),
+                    flags.gain,
+                )
+                updateRuntimeVisibility(
+                    findPreference("seekbar_mic_balance_target"),
+                    flags.balance,
+                )
+                updateRuntimeVisibility(
+                    findPreference("checkbox_mic_voice_enhancement"),
+                    flags.processing,
+                )
                 if (persist) {
                     prefs.edit {
                         putString(PreferenceConfiguration.MIC_VOLUME_PROCESSING_MODE_PREF_STRING, mode)
@@ -4344,12 +4370,22 @@ class StreamSettings : AppCompatActivity() {
                 }
             }
 
-            // Always derive from legacy flags. Old backups do not contain the list key, and
-            // imports merge values rather than clearing keys that are absent from the package.
-            val mode = MicVolumeProcessingPolicy.modeFor(
-                legacyProcessing?.isChecked == true,
-                legacyGain?.isChecked == true,
-                legacyBalance?.isChecked == true,
+            // Old backups rely on legacy flags, while a mode-only package must also restore
+            // correctly when no legacy representation is present.
+            val mode = MicVolumeProcessingPolicy.resolveMode(
+                storedMode = prefs.getString(
+                    PreferenceConfiguration.MIC_VOLUME_PROCESSING_MODE_PREF_STRING,
+                    null,
+                ),
+                processing = if (prefs.contains(
+                        PreferenceConfiguration.MIC_VOLUME_PROCESSING_PREF_STRING
+                    )) legacyProcessing?.isChecked == true else null,
+                gain = if (prefs.contains(
+                        PreferenceConfiguration.MIC_GAIN_ENABLED_PREF_STRING
+                    )) legacyGain?.isChecked == true else null,
+                balance = if (prefs.contains(
+                        PreferenceConfiguration.MIC_BALANCE_ENABLED_PREF_STRING
+                    )) legacyBalance?.isChecked == true else null,
             )
             if (mode == MicVolumeProcessingPolicy.LEGACY_PROCESSING_ONLY) {
                 modePref.entries = modePref.entries +
@@ -4428,16 +4464,16 @@ class StreamSettings : AppCompatActivity() {
         ) {
             val showAdaptive = unlocked && dllReady
             findPreference<CheckBoxPreference>(FramegenSettings.PREF_ADAPTIVE_ENABLED)?.let { pref ->
-                pref.isVisible = showAdaptive
+                updateRuntimeVisibility(pref, showAdaptive)
                 pref.isEnabled = showAdaptive
             }
         }
 
         private fun updateFramegenQualityVisibility(selectedPreset: String?) {
             val showCustomWidth = selectedPreset == FramegenSettings.QUALITY_CUSTOM
-            findPreference<Preference>(FramegenSettings.PREF_INTERNAL_WIDTH)?.isVisible = showCustomWidth
-            findPreference<Preference>(FramegenSettings.PREF_SLOW_THRESHOLD_MS)?.isVisible = showCustomWidth
-            findPreference<Preference>(FramegenSettings.PREF_PRESENT_REAL_FIRST)?.isVisible = showCustomWidth
+            updateRuntimeVisibility(findPreference(FramegenSettings.PREF_INTERNAL_WIDTH), showCustomWidth)
+            updateRuntimeVisibility(findPreference(FramegenSettings.PREF_SLOW_THRESHOLD_MS), showCustomWidth)
+            updateRuntimeVisibility(findPreference(FramegenSettings.PREF_PRESENT_REAL_FIRST), showCustomWidth)
         }
 
         private fun showDeveloperUnlockDialog() {
