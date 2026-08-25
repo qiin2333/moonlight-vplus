@@ -975,6 +975,19 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             }
         }
 
+        if (dolbyVisionRequested && decoderRenderer?.isHevcSupported() == true) {
+            // Dolby Vision 8.1 rides an HEVC Main10 base layer only. Offering
+            // AV1/H.264 alongside lets the host pick a codec the RPU cannot
+            // follow, which would downgrade DV to plain HDR10 at negotiation.
+            supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H265 or MoonBridge.VIDEO_FORMAT_H265_MAIN10
+            if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 ||
+                prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_H264
+            ) {
+                Toast.makeText(this, "Dolby Vision requires HEVC; ignoring codec preference", Toast.LENGTH_LONG).show()
+            }
+            LimeLog.info("Dolby Vision requested: restricting codec mask to HEVC")
+        }
+
         var gamepadMask = ControllerHandler.getAttachedControllerMask(this).toInt()
         if (!prefConfig.multiController) {
             gamepadMask = 1

@@ -6,6 +6,7 @@ enum class StreamHdrFormat(val displayName: String) {
     HDR10("HDR10"),
     HDR10_PLUS("HDR10+"),
     HLG("HLG"),
+    DOLBY_VISION("DV 8.1"),
     ;
 
     val isHdr: Boolean
@@ -13,10 +14,10 @@ enum class StreamHdrFormat(val displayName: String) {
 
     /** Clarifies the observable boundary used by detailed diagnostics. */
     val diagnosticName: String
-        get() = if (this == HDR10_PLUS) {
-            "HDR10+ (metadata observed)"
-        } else {
-            displayName
+        get() = when (this) {
+            HDR10_PLUS -> "HDR10+ (metadata observed)"
+            DOLBY_VISION -> "Dolby Vision 8.1 (negotiated)"
+            else -> displayName
         }
 }
 
@@ -30,6 +31,7 @@ internal object StreamHdrFormatPolicy {
         isHlg: Boolean,
         hdr10PlusConfigured: Boolean,
         hdr10PlusMetadataObserved: Boolean,
+        dolbyVisionNegotiated: Boolean = false,
     ): StreamHdrFormat {
         val observedHdr10Plus = isTenBitStream &&
             isPqHdr &&
@@ -48,6 +50,13 @@ internal object StreamHdrFormatPolicy {
         }
         if (!isPqHdr) {
             return StreamHdrFormat.SDR
+        }
+        if (dolbyVisionNegotiated) {
+            // Negotiation-level evidence (X-SS-Dynamic-HDR), distinct from the
+            // decoder-observed evidence behind HDR10+. The stream still carries
+            // the HDR10+ SEI alongside the RPU (dual carry); DV is what the
+            // host actually selected for this session.
+            return StreamHdrFormat.DOLBY_VISION
         }
         return if (observedHdr10Plus) {
             StreamHdrFormat.HDR10_PLUS

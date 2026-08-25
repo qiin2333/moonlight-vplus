@@ -2037,6 +2037,8 @@ class MediaCodecDecoderRenderer(
                 isHlg = prefs.hdrMode == MoonBridge.HDR_MODE_HLG,
                 hdr10PlusConfigured = hdr10PlusRuntime.configured,
                 hdr10PlusMetadataObserved = hdr10PlusRuntime.metadataObserved,
+                dolbyVisionNegotiated = MoonBridge.getNegotiatedDynamicHdrFormat() ==
+                    MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81,
             )
             performanceInfo.minHostProcessingLatency = minHostProcessingLatency
             performanceInfo.maxHostProcessingLatency = maxHostProcessingLatency
