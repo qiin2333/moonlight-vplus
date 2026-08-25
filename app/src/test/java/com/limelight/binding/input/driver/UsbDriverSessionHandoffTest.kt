@@ -57,4 +57,18 @@ class UsbDriverSessionHandoffTest {
 
         assertNull(handoff.completeController(generation, 1).pendingStart)
     }
+
+    @Test
+    fun duplicateCompletionCannotFinishAnotherStopGeneration() {
+        val handoff = UsbDriverSessionHandoff<String>()
+        val firstGeneration = handoff.beginStop(listOf(1))
+
+        assertTrue(handoff.completeController(firstGeneration, 1).finished)
+        assertFalse(handoff.completeController(firstGeneration, 1).finished)
+
+        val secondGeneration = handoff.beginStop(listOf(1))
+        assertFalse(handoff.completeController(firstGeneration, 1).finished)
+        assertTrue(handoff.isStoppingController(1))
+        assertTrue(handoff.completeController(secondGeneration, 1).finished)
+    }
 }

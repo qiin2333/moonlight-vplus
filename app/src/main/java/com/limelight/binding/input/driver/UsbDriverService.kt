@@ -676,12 +676,14 @@ class UsbDriverService : Service(), UsbDriverListener {
             controllersToStop.map(AbstractController::getControllerId)
         )
         for (controller in controllersToStop) {
+            val controllerId = controller.getControllerId()
             runCatching {
                 controller.stopAndThen {
-                    onControllerStopCompleted(generation, controller.getControllerId())
+                    onControllerStopCompleted(generation, controllerId)
                 }
             }.onFailure {
                 LimeLog.warning("Unable to stop USB controller: ${it.message}")
+                onControllerStopCompleted(generation, controllerId)
             }
         }
     }

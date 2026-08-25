@@ -209,7 +209,10 @@ abstract class AbstractPlayStationUsbController(
         if (runImmediately) {
             onStopped()
         } else if (shouldStart) {
-            performStop()
+            runCatching(::performStop).onFailure {
+                Log.w(TAG, "Controller stop failed; closing USB transport", it)
+                closeUsbTransport()
+            }
         }
     }
 
