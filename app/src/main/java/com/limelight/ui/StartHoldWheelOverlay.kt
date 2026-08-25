@@ -62,7 +62,7 @@ internal fun StartHoldWheelOverlay(
             SatelliteOption(
                 action = StartWheelAction.MENU,
                 selectedAction = selectedAction,
-                icon = R.drawable.ic_menu_stylish,
+                icon = R.drawable.ic_start_wheel_menu,
                 label = stringResource(R.string.start_hold_wheel_menu),
                 size = satelliteSize,
                 compact = compact,
@@ -71,7 +71,7 @@ internal fun StartHoldWheelOverlay(
             SatelliteOption(
                 action = StartWheelAction.MOUSE,
                 selectedAction = selectedAction,
-                icon = R.drawable.ic_mouse_cute,
+                icon = R.drawable.ic_start_wheel_mouse,
                 label = stringResource(R.string.start_hold_wheel_mouse),
                 size = satelliteSize,
                 compact = compact,
@@ -80,7 +80,7 @@ internal fun StartHoldWheelOverlay(
             SatelliteOption(
                 action = StartWheelAction.KEYBOARD,
                 selectedAction = selectedAction,
-                icon = R.drawable.ic_keyboard_cute,
+                icon = R.drawable.ic_start_wheel_keyboard,
                 label = stringResource(R.string.start_hold_wheel_keyboard),
                 size = satelliteSize,
                 compact = compact,
@@ -89,7 +89,7 @@ internal fun StartHoldWheelOverlay(
             SatelliteOption(
                 action = StartWheelAction.PERFORMANCE,
                 selectedAction = selectedAction,
-                icon = R.drawable.ic_performance_cute,
+                icon = R.drawable.ic_start_wheel_performance,
                 label = stringResource(R.string.start_hold_wheel_performance),
                 size = satelliteSize,
                 compact = compact,
@@ -140,7 +140,7 @@ private fun SatelliteOption(
                 }
             ),
             contentDescription = null,
-            alpha = if (selected) 0.92f else 0.56f,
+            alpha = if (selected) 0.92f else 0.38f,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -203,7 +203,7 @@ private fun CenterOption(
             verticalArrangement = Arrangement.spacedBy(if (compact) 1.dp else 3.dp)
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_controller_cute),
+                painter = painterResource(R.drawable.ic_start_wheel_continue),
                 contentDescription = label,
                 tint = CenterIcon,
                 modifier = Modifier.size(if (compact) 31.dp else 40.dp)
