@@ -52,6 +52,12 @@ class MediaCodecDecoderRenderer(
         private const val CR_RECOVERY_TYPE_RESTART = 2
         private const val CR_RECOVERY_TYPE_RESET = 3
         private const val MAX_DECODER_CONFIGURATION_TRIES = 8
+
+        // Dolby Vision Profile 8 (DvheSt). Deliberately NOT DvheDtb, which is
+        // Profile 7.
+        @SuppressLint("InlinedApi")
+        private const val DV_PROFILE_DVHE_ST =
+            MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheSt
         // Each thread that touches the MediaCodec object or any associated buffers must have a flag
         // here and must call doCodecRecoveryIfRequired() on a regular basis.
         private const val CR_FLAG_INPUT_THREAD = 0x1
@@ -74,6 +80,7 @@ class MediaCodecDecoderRenderer(
 
     private val avcDecoder: MediaCodecInfo?
     private val hevcDecoder: MediaCodecInfo?
+    private val dolbyVisionDecoder: MediaCodecInfo?
     private val av1Decoder: MediaCodecInfo?
 
     private val vpsBuffers = ArrayList<ByteArray>()
@@ -515,6 +522,16 @@ class MediaCodecDecoderRenderer(
             LimeLog.info("Selected HEVC decoder: " + hevcDecoder.name)
         } else {
             LimeLog.info("No HEVC decoder found")
+        }
+
+        // Presence-only probe; the strict resolution/fps validation happened in
+        // Game.kt before the DV capability bit was ever reported to the host.
+        dolbyVisionDecoder = MediaCodecHelper.findProbableSafeDecoder(
+            "video/dolby-vision", DV_PROFILE_DVHE_ST)
+        if (dolbyVisionDecoder != null) {
+            LimeLog.info("Selected Dolby Vision decoder: " + dolbyVisionDecoder.name)
+        } else {
+            LimeLog.info("No Dolby Vision decoder found")
         }
 
         av1Decoder = findAv1Decoder(prefs)
@@ -975,6 +992,91 @@ class MediaCodecDecoderRenderer(
         return configured
     }
 
+    /**
+     * Whether this session should ride the HEVC base layer through the native
+     * video/dolby-vision decoder: the host negotiated Dolby Vision Profile
+     * 8.1, a DvheSt decoder was found, and the stream is 10-bit (the RPU only
+     * pairs with Main10). Direct-surface output is implicit: frame generation
+     * is already incompatible with HDR input, and DV requests were gated on
+     * framegen being off at connection time.
+     */
+    private fun isDolbyVisionRoutingActive(mimeType: String): Boolean =
+        mimeType == "video/dolby-vision"
+
+    private fun isDolbyVisionRoutingEligible(): Boolean =
+        dolbyVisionDecoder != null &&
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
+            MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81
+
+    private fun initializeDolbyVisionDecoder(): Int {
+        val dvDecoder = dolbyVisionDecoder ?: return -1
+        val mimeType = "video/dolby-vision"
+
+        adaptivePlayback = MediaCodecHelper.decoderSupportsAdaptivePlayback(dvDecoder, mimeType)
+        fusedIdrFrame = MediaCodecHelper.decoderSupportsFusedIdrFrame(dvDecoder, mimeType)
+
+        // The stream is HEVC; RPU semantics match the HEVC invalidation model.
+        refFrameInvalidationActive = refFrameInvalidationHevc
+
+        hdr10PlusOutputObserver.beginCodecConfiguration(false)
+
+        // Signaling ladder for engaging the native DV display path. Each entry
+        // is tried (with the low-latency option sweep) before falling back:
+        //  1. dvcC record + OPPO color-mode vendor key — the OPPO/Qualcomm
+        //     c2.qti.dv.decoder declares <Feature name="oplus-dolby-vision-
+        //     color-mode"/> in media_codecs_dolby_vision.xml, so the non-secure
+        //     path can switch the DV mapping on; it reports the mode in the
+        //     output format as feature-oplus-dolby-vision-color-mode.
+        //  2. color-mode vendor key alone.
+        //  3. Plain Annex-B (approach 1): decodes, but devices that need the
+        //     signaling above present the compatibility BL as HDR10.
+        // The dvcC payload describes exactly what our RPU carries: profile 8,
+        // level 30, rpu_present=1, el_present=0, bl_present=1, compat id 1.
+        val dvcC = ByteBuffer.wrap(
+            byteArrayOf(0x01, 0x00, 0x10, 0xF5.toByte(), 0x10))
+        val colorModeKey = "feature-oplus-dolby-vision-color-mode"
+        val attempts: List<Pair<String, (MediaFormat) -> Unit>> = listOf(
+            "dvcC+colorMode" to { f ->
+                f.setByteBuffer("csd-0", dvcC)
+                f.setInteger(colorModeKey, 1)
+            },
+            "colorMode" to { f -> f.setInteger(colorModeKey, 1) },
+            "plain" to { },
+        )
+
+        for ((label, applyExtras) in attempts) {
+            var tryNumber = 0
+            while (true) {
+                LimeLog.info("Decoder configuration try: profile=DvheSt+$label options=$tryNumber")
+
+                val attemptFormat = createBaseMediaFormat(mimeType)
+                attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
+                applyExtras(attemptFormat)
+
+                val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+                    attemptFormat,
+                    dvDecoder,
+                    tryNumber,
+                    prefs.forceMtkMaxOperatingRate,
+                    hdr10PlusModeSelected = false,
+                )
+
+                val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
+                if (tryConfigureDecoder(dvDecoder, attemptFormat, false)) {
+                    LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name} (signaling=$label)")
+                    return 0
+                }
+
+                if (isLastTry) {
+                    break
+                }
+                tryNumber++
+            }
+            LimeLog.warning("Dolby Vision signaling '$label' rejected by decoder; trying next")
+        }
+        return -5
+    }
+
     fun initializeDecoder(throwOnCodecError: Boolean): Int {
         val mimeType: String
         val selectedDecoderInfo: MediaCodecInfo
@@ -1016,13 +1118,32 @@ class MediaCodecDecoderRenderer(
                 isExynos4, hevcDecoder != null, av1Decoder != null
             )
         } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-            mimeType = "video/hevc"
-            selectedDecoderInfo = hevcDecoder ?: run {
-                LimeLog.severe("No available HEVC decoder!")
-                return -2
+            // Dolby Vision Profile 8.1 routing: the wire stream is HEVC either
+            // way, but configuring the device's video/dolby-vision decoder lets
+            // the terminal Dolby engine consume the RPU and perform the tone
+            // mapping. Falls back to the plain HEVC decoder on any configure
+            // failure — the base layer remains decodable.
+            var dolbyVisionRoutingActive = false
+            if (isDolbyVisionRoutingEligible()) {
+                if (initializeDolbyVisionDecoder() == 0) {
+                    dolbyVisionRoutingActive = true
+                } else {
+                    LimeLog.warning("Dolby Vision decoder configuration failed; falling back to HEVC")
+                }
             }
 
-            refFrameInvalidationActive = refFrameInvalidationHevc
+            if (dolbyVisionRoutingActive) {
+                mimeType = "video/dolby-vision"
+                selectedDecoderInfo = dolbyVisionDecoder!!
+            } else {
+                mimeType = "video/hevc"
+                selectedDecoderInfo = hevcDecoder ?: run {
+                    LimeLog.severe("No available HEVC decoder!")
+                    return -2
+                }
+
+                refFrameInvalidationActive = refFrameInvalidationHevc
+            }
         } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
             mimeType = "video/av01"
             selectedDecoderInfo = av1Decoder ?: run {
@@ -1040,58 +1161,64 @@ class MediaCodecDecoderRenderer(
         adaptivePlayback = MediaCodecHelper.decoderSupportsAdaptivePlayback(selectedDecoderInfo, mimeType)
         fusedIdrFrame = MediaCodecHelper.decoderSupportsFusedIdrFrame(selectedDecoderInfo, mimeType)
 
-        val profileCandidates = getDecoderProfileCandidates(mimeType, selectedDecoderInfo)
         var decoderConfigured = false
-        hdr10PlusOutputObserver.beginCodecConfiguration(false)
+        if (isDolbyVisionRoutingActive(mimeType)) {
+            // initializeDolbyVisionDecoder() already configured the codec; the
+            // shared tail below still owns post-configure setup.
+            decoderConfigured = true
+        } else {
+            val profileCandidates = getDecoderProfileCandidates(mimeType, selectedDecoderInfo)
+            hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
-        profileLoop@ for ((profileIndex, profile) in profileCandidates.withIndex()) {
-            var tryNumber = 0
-            while (true) {
-                LimeLog.info(
-                    "Decoder configuration try: profile=${hdrProfileSelector.profileName(mimeType, profile)} " +
-                        "options=$tryNumber"
-                )
-
-                val mediaFormat = createBaseMediaFormat(mimeType)
-                if (profile != null) {
-                    mediaFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
-                }
-                val configuringHdr10Plus = hdrProfileSelector.isHdr10PlusProfile(mimeType, profile)
-                hdr10PlusOutputObserver.beginCodecConfiguration(configuringHdr10Plus)
-
-                // Try low latency options while omitting Qualcomm output fences for HDR10+.
-                val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
-                    mediaFormat,
-                    selectedDecoderInfo,
-                    tryNumber,
-                    prefs.forceMtkMaxOperatingRate,
-                    hdr10PlusModeSelected = HdrModePolicy.isHdr10PlusMode(prefs.hdrMode),
-                )
-
-                val isLastProfile = profileIndex == profileCandidates.lastIndex
-                if (tryConfigureDecoder(
-                        selectedDecoderInfo,
-                        mediaFormat,
-                        !newFormat && isLastProfile && throwOnCodecError,
+            profileLoop@ for ((profileIndex, profile) in profileCandidates.withIndex()) {
+                var tryNumber = 0
+                while (true) {
+                    LimeLog.info(
+                        "Decoder configuration try: profile=${hdrProfileSelector.profileName(mimeType, profile)} " +
+                            "options=$tryNumber"
                     )
-                ) {
-                    decoderConfigured = true
-                    break@profileLoop
+
+                    val mediaFormat = createBaseMediaFormat(mimeType)
+                    if (profile != null) {
+                        mediaFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
+                    }
+                    val configuringHdr10Plus = hdrProfileSelector.isHdr10PlusProfile(mimeType, profile)
+                    hdr10PlusOutputObserver.beginCodecConfiguration(configuringHdr10Plus)
+
+                    // Try low latency options while omitting Qualcomm output fences for HDR10+.
+                    val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+                        mediaFormat,
+                        selectedDecoderInfo,
+                        tryNumber,
+                        prefs.forceMtkMaxOperatingRate,
+                        hdr10PlusModeSelected = HdrModePolicy.isHdr10PlusMode(prefs.hdrMode),
+                    )
+
+                    val isLastProfile = profileIndex == profileCandidates.lastIndex
+                    if (tryConfigureDecoder(
+                            selectedDecoderInfo,
+                            mediaFormat,
+                            !newFormat && isLastProfile && throwOnCodecError,
+                        )
+                    ) {
+                        decoderConfigured = true
+                        break@profileLoop
+                    }
+
+                    hdr10PlusOutputObserver.beginCodecConfiguration(false)
+
+                    if (!newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1) {
+                        break
+                    }
+                    tryNumber++
                 }
 
-                hdr10PlusOutputObserver.beginCodecConfiguration(false)
-
-                if (!newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1) {
-                    break
+                if (profileIndex < profileCandidates.lastIndex) {
+                    LimeLog.warning(
+                        "Decoder rejected ${hdrProfileSelector.profileName(mimeType, profile)} profile; trying " +
+                            hdrProfileSelector.profileName(mimeType, profileCandidates[profileIndex + 1])
+                    )
                 }
-                tryNumber++
-            }
-
-            if (profileIndex < profileCandidates.lastIndex) {
-                LimeLog.warning(
-                    "Decoder rejected ${hdrProfileSelector.profileName(mimeType, profile)} profile; trying " +
-                        hdrProfileSelector.profileName(mimeType, profileCandidates[profileIndex + 1])
-                )
             }
         }
 

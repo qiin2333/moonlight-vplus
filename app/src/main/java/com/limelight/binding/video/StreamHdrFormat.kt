@@ -6,7 +6,7 @@ enum class StreamHdrFormat(val displayName: String) {
     HDR10("HDR10"),
     HDR10_PLUS("HDR10+"),
     HLG("HLG"),
-    DOLBY_VISION("DV 8.1"),
+    DOLBY_VISION("DV"),
     ;
 
     val isHdr: Boolean
@@ -16,7 +16,7 @@ enum class StreamHdrFormat(val displayName: String) {
     val diagnosticName: String
         get() = when (this) {
             HDR10_PLUS -> "HDR10+ (metadata observed)"
-            DOLBY_VISION -> "Dolby Vision 8.1 (negotiated)"
+            DOLBY_VISION -> "Dolby Vision (negotiated)"
             else -> displayName
         }
 }
