@@ -31,9 +31,6 @@ import com.limelight.binding.input.StartWheelAction
 
 private val OverlayScrim = Color.Black.copy(alpha = 0.38f)
 private val PrimaryText = Color(0xFFFFF7EC)
-private val SatelliteIcon = Color(0xFFE5E9E8)
-private val SelectedIcon = Color(0xFFFFD3B4)
-private val CenterIcon = Color(0xFF9CE7D7)
 
 @Composable
 internal fun StartHoldWheelOverlay(
@@ -152,8 +149,8 @@ private fun SatelliteOption(
             Icon(
                 painter = painterResource(icon),
                 contentDescription = label,
-                tint = if (selected) SelectedIcon else SatelliteIcon,
-                modifier = Modifier.size(if (compact) 24.dp else 31.dp)
+                tint = Color.Unspecified,
+                modifier = Modifier.size(if (compact) 30.dp else 42.dp)
             )
             Text(
                 text = label,
@@ -205,8 +202,8 @@ private fun CenterOption(
             Icon(
                 painter = painterResource(R.drawable.ic_start_wheel_continue),
                 contentDescription = label,
-                tint = CenterIcon,
-                modifier = Modifier.size(if (compact) 31.dp else 40.dp)
+                tint = Color.Unspecified,
+                modifier = Modifier.size(if (compact) 35.dp else 46.dp)
             )
             Text(
                 text = label,
