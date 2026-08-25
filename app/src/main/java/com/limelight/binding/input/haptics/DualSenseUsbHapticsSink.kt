@@ -56,6 +56,7 @@ internal class DualSenseUsbHapticsSink(
         private const val IO_SLOTS = 4
         private const val PREBUFFER_FRAMES = SAMPLE_RATE / 100 // 10 ms
         private const val RING_FRAMES = SAMPLE_RATE / 10 // 100 ms
+        private const val STOP_JOIN_TIMEOUT_MS = 1_000L
 
         // UAC 1.0 control requests
         private const val UAC_REQTYPE_INTERFACE_SET = 0x21
@@ -83,21 +84,32 @@ internal class DualSenseUsbHapticsSink(
     private var prebuffered = false
 
     private val ringLock = Any()
+    private val lifecycleLock = Any()
     private val slots = Array(IO_SLOTS) { IoSlot() }
     private val active = AtomicBoolean(false)
     private val requestsClosed = AtomicBoolean(false)
+    private var startAttempted = false
+    private var stopStarted = false
+    private var stopCompleted = false
+    private var stopWaiterStarted = false
+    private val stopCallbacks = mutableListOf<() -> Unit>()
     private var sendThread: Thread? = null
     private var formatWarned = false
     private var lastSequence = 0
     private var hasSequence = false
 
-    override fun start(): Boolean {
-        if (!active.compareAndSet(false, true)) return active.get()
+    override fun start(): Boolean = synchronized(lifecycleLock) {
+        if (stopStarted || stopCompleted) return@synchronized false
+        if (startAttempted) return@synchronized active.get()
+        startAttempted = true
+        active.set(true)
 
         if (isoEndpoint.type != UsbConstants.USB_ENDPOINT_XFER_ISOC) {
             Log.w(TAG, "Endpoint is not isochronous; pump disabled")
             active.set(false)
-            return false
+            stopStarted = true
+            stopCompleted = true
+            return@synchronized false
         }
 
         // Select alt 1 with the iso endpoint. The passed UsbInterface comes
@@ -105,7 +117,9 @@ internal class DualSenseUsbHapticsSink(
         if (!connection.setInterface(streamingInterface)) {
             Log.w(TAG, "setInterface(alt 1) failed; pump disabled")
             active.set(false)
-            return false
+            stopStarted = true
+            stopCompleted = true
+            return@synchronized false
         }
 
         configureUac()
@@ -116,7 +130,9 @@ internal class DualSenseUsbHapticsSink(
                 Log.w(TAG, "UsbRequest.initialize failed (iso unsupported on this ROM?)")
                 active.set(false)
                 shutdownUnstarted()
-                return false
+                stopStarted = true
+                stopCompleted = true
+                return@synchronized false
             }
         }
 
@@ -126,12 +142,13 @@ internal class DualSenseUsbHapticsSink(
                 sendLoop()
             } finally {
                 Log.i(TAG, "Iso sender stopped")
+                completeStop()
             }
         }, "ds5-haptics-iso").apply {
             priority = Thread.MAX_PRIORITY - 1
             start()
         }
-        return true
+        true
     }
 
     /**
@@ -140,28 +157,109 @@ internal class DualSenseUsbHapticsSink(
      * the sender, which parks the interface on alt 0 as it exits.
      */
     override fun stop() {
-        active.set(false)
-        closeRequests()
-        val thread = sendThread
-        if (thread != null && thread !== Thread.currentThread()) {
-            try {
-                thread.join(1000)
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
+        stopAndThen {}
+    }
+
+    override fun stopAndThen(onStopped: () -> Unit) {
+        var runImmediately = false
+        val thread = synchronized(lifecycleLock) {
+            if (stopCompleted) {
+                runImmediately = true
+                null
+            } else {
+                stopCallbacks += onStopped
+                if (!stopStarted) {
+                    stopStarted = true
+                    active.set(false)
+                    closeRequests()
+                }
+                sendThread
             }
         }
-        sendThread = null
-        synchronized(ringLock) {
-            readIndex = 0
-            writeIndex = 0
-            prebuffered = false
+
+        if (runImmediately) {
+            onStopped()
+            return
         }
-        hasSequence = false
+        if (thread == null) {
+            completeStop()
+            return
+        }
+        if (thread === Thread.currentThread()) return
+
+        var interrupted = false
+        try {
+            thread.join(STOP_JOIN_TIMEOUT_MS)
+        } catch (_: InterruptedException) {
+            interrupted = true
+        }
+        if (thread.isAlive) {
+            startStopWaiter(thread)
+        } else {
+            completeStop()
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+    }
+
+    private fun startStopWaiter(thread: Thread) {
+        val shouldStart = synchronized(lifecycleLock) {
+            if (stopCompleted || stopWaiterStarted) {
+                false
+            } else {
+                stopWaiterStarted = true
+                true
+            }
+        }
+        if (!shouldStart) return
+
+        Log.w(TAG, "Sender stop timed out; deferring USB transport close")
+        Thread({
+            var interrupted = false
+            while (thread.isAlive) {
+                try {
+                    thread.join()
+                } catch (_: InterruptedException) {
+                    interrupted = true
+                }
+            }
+            completeStop()
+            if (interrupted) Thread.currentThread().interrupt()
+        }, "ds5-haptics-stop").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun completeStop() {
+        active.set(false)
+        closeRequests()
+        val callbacks = synchronized(lifecycleLock) {
+            if (stopCompleted) return
+            stopStarted = true
+            stopCompleted = true
+            sendThread = null
+            synchronized(ringLock) {
+                readIndex = 0
+                writeIndex = 0
+                prebuffered = false
+            }
+            hasSequence = false
+            stopCallbacks.toList().also { stopCallbacks.clear() }
+        }
+        callbacks.forEach { callback ->
+            runCatching(callback).onFailure {
+                Log.w(TAG, "Haptics stop callback failed", it)
+            }
+        }
     }
 
     private fun closeRequests() {
         if (!requestsClosed.compareAndSet(false, true)) return
-        slots.forEach { it.request.close() }
+        slots.forEach { slot ->
+            runCatching { slot.request.close() }.onFailure {
+                Log.w(TAG, "Failed to close haptics USB request", it)
+            }
+        }
     }
 
     /** Cleanup for the start() failure paths, where the sender never ran. */

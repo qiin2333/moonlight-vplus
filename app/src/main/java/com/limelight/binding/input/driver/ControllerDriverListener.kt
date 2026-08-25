@@ -57,6 +57,6 @@ interface ControllerDriverListener {
         sink: DualSenseNativeHapticsSink
     ) = Unit
 
-    /** The listener must stop and detach the sink before returning. */
+    /** Detaches routing; the transport owner stops the sink before closing its connection. */
     fun onDualSenseNativeHapticsSinkGone(controllerId: Int) = Unit
 }
