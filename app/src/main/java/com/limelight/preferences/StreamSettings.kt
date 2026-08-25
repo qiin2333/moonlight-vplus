@@ -1318,12 +1318,13 @@ class StreamSettings : AppCompatActivity() {
          */
         private val originalCollapseCounts = mutableMapOf<String, Int>()
         private val originalVisibility = IdentityHashMap<Preference, Boolean>()
+        private var activeSearchQuery = ""
 
         private fun updateRuntimeVisibility(preference: Preference?, visible: Boolean) {
             preference ?: return
             if (originalVisibility.containsKey(preference)) {
                 originalVisibility[preference] = visible
-                if (!visible) preference.isVisible = false
+                applySearchFilter(activeSearchQuery)
             } else {
                 preference.isVisible = visible
             }
@@ -1335,6 +1336,7 @@ class StreamSettings : AppCompatActivity() {
          */
         fun applySearchFilter(query: String) {
             val screen = preferenceScreen ?: return
+            activeSearchQuery = query
             val q = query.trim().lowercase(Locale.getDefault())
             val isSearching = q.isNotEmpty()
 
