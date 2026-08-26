@@ -1,6 +1,7 @@
 package com.limelight.gamemenu
 
 import androidx.compose.ui.unit.dp
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -35,24 +36,50 @@ class GameMenuLayoutFocusGraphTest {
     }
 
     @Test
-    fun segmentedGridUsesThreeColumnsAndFallsBackToLastTailItem() {
-        val topRight = segmentedFocusTargets(itemCount = 5, index = 2, columnCount = 3)
-        assertEquals(1, topRight.left)
-        assertNull(topRight.right)
-        assertNull(topRight.up)
-        assertEquals(4, topRight.down)
+    fun fiveSegmentControlKeepsOneHorizontalFocusRow() {
+        val middle = segmentedFocusTargets(itemCount = 5, index = 2, columnCount = 5)
+        assertEquals(1, middle.left)
+        assertEquals(3, middle.right)
+        assertNull(middle.up)
+        assertNull(middle.down)
 
         assertEquals(
-            SegmentedFocusTargets(left = 3, right = null, up = 1, down = null),
-            segmentedFocusTargets(itemCount = 5, index = 4, columnCount = 3)
+            SegmentedFocusTargets(left = 3, right = null, up = null, down = null),
+            segmentedFocusTargets(itemCount = 5, index = 4, columnCount = 5)
         )
     }
 
     @Test
-    fun segmentedControlHeightUsesTheActualRowCount() {
-        assertEquals(1, segmentedControlRowCount(1))
-        assertEquals(1, segmentedControlRowCount(3))
-        assertEquals(2, segmentedControlRowCount(4))
-        assertEquals(3, segmentedControlRowCount(7))
+    fun localizedTouchModeShortLabelsFitTheFiveSegmentBudget() {
+        val resourceRoot = listOf(File("src/main/res"), File("app/src/main/res"))
+            .firstOrNull(File::isDirectory)
+            ?: error("Unable to locate app/src/main/res")
+        val requiredShortLabelNames = setOf(
+            "enhanced",
+            "classic",
+            "trackpad",
+            "native_mouse",
+            "ds5"
+        )
+        val shortLabelPattern = Regex(
+            """<string name="game_menu_touch_mode_(enhanced|classic|trackpad|native_mouse|ds5)_short">([^<]+)</string>"""
+        )
+
+        listOf("values", "values-es", "values-pt", "values-zh-rCN").forEach { directory ->
+            val stringsFile = File(resourceRoot, "$directory/strings.xml")
+            val labelsByName = shortLabelPattern.findAll(stringsFile.readText())
+                .associate { match -> match.groupValues[1] to match.groupValues[2].trim() }
+            assertEquals(
+                "$directory must define exactly the required touch-mode short labels",
+                requiredShortLabelNames,
+                labelsByName.keys
+            )
+            labelsByName.forEach { (name, label) ->
+                assertTrue(
+                    "$directory label '$name' ('$label') exceeds the five-code-point single-row budget",
+                    label.codePointCount(0, label.length) <= 5
+                )
+            }
+        }
     }
 }

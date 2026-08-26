@@ -3137,6 +3137,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_show_guide_button",
             "checkbox_show_gyro_card",
             MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
+            PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
             "checkbox_show_onscreen_controls",
             "checkbox_show_onscreen_keyboard",
             "checkbox_small_icon_mode",

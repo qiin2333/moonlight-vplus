@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,12 +40,14 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -242,7 +246,7 @@ private fun MenuOptionRow(
                     onSegmentClick = onSegmentClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(36.dp * segmentedControlRowCount(inlineControl.segments.size))
+                        .height(36.dp)
                 )
             }
             null -> if (option.showChevron) MenuChevron()
@@ -258,9 +262,6 @@ private fun MenuOptionRow(
         }
     }
 }
-
-internal fun segmentedControlRowCount(itemCount: Int): Int =
-    ((itemCount + 2) / 3).coerceAtLeast(1)
 
 @Composable
 private fun MenuChevron(size: Dp = 13.dp) {
@@ -328,77 +329,82 @@ internal fun InlineToggle(
 }
 
 @Composable
-private fun InlineSegmentedControl(
+internal fun InlineSegmentedControl(
     segments: List<GameMenu.SegmentOption>,
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val accent = colorResource(R.color.game_menu_accent)
-    val columnCount = if (segments.size > 3) 3 else segments.size.coerceAtLeast(1)
     val focusRequesters = remember(segments.size) { List(segments.size) { FocusRequester() } }
-    Column(
+    val usesDenseLabels = segments.size >= 5
+    val labelHorizontalPadding = if (usesDenseLabels) 0.dp else 2.dp
+    val labelAutoSize = remember(usesDenseLabels) {
+        if (usesDenseLabels) {
+            TextAutoSize.StepBased(
+                minFontSize = 7.5.sp,
+                maxFontSize = 10.sp,
+                stepSize = 0.5.sp
+            )
+        } else {
+            null
+        }
+    }
+    Row(
         modifier = modifier
             .padding(horizontal = 1.dp)
             .selectableGroup(),
-        verticalArrangement = Arrangement.spacedBy(1.dp)
+        horizontalArrangement = Arrangement.spacedBy(1.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        segments.chunked(columnCount).forEachIndexed { rowIndex, rowSegments ->
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(1.dp),
-                verticalAlignment = Alignment.CenterVertically
+        segments.forEachIndexed { index, segment ->
+            val targets = segmentedFocusTargets(segments.size, index, segments.size)
+            val segmentShape = AppShapes.small
+            val background = if (segment.selected) {
+                accent.copy(alpha = 0.12f)
+            } else {
+                Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .focusRequester(focusRequesters[index])
+                    .segmentedFocusNavigation(targets, focusRequesters)
+                    .clip(segmentShape)
+                    .background(background)
+                    .gamepadFocusOutline(segmentShape)
+                    .selectable(
+                        selected = segment.selected,
+                        role = Role.RadioButton,
+                        onClick = {
+                            hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            onSegmentClick(segment)
+                        }
+                    )
+                    .padding(horizontal = labelHorizontalPadding),
+                contentAlignment = Alignment.Center
             ) {
-                rowSegments.forEachIndexed { columnIndex, segment ->
-                    val index = rowIndex * columnCount + columnIndex
-                    val targets = segmentedFocusTargets(segments.size, index, columnCount)
-                    val segmentShape = AppShapes.small
-                    val background = if (segment.selected) {
-                        accent.copy(alpha = 0.12f)
-                    } else {
-                        Color.Transparent
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .focusRequester(focusRequesters[index])
-                            .segmentedFocusNavigation(targets, focusRequesters)
-                            .clip(segmentShape)
-                            .background(background)
-                            .gamepadFocusOutline(segmentShape)
-                            .selectable(
-                                selected = segment.selected,
-                                role = Role.RadioButton,
-                                onClick = {
-                                    hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                                    onSegmentClick(segment)
-                                }
-                            )
-                            .padding(horizontal = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = compactSegmentLabel(segment.label),
-                            color = if (segment.selected) {
-                                accent
-                            } else {
-                                colorResource(R.color.game_menu_text_secondary)
-                            },
-                            fontSize = 10.sp,
-                            fontWeight = if (segment.selected) {
-                                FontWeight.Medium
-                            } else {
-                                FontWeight.Normal
-                            },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                repeat(columnCount - rowSegments.size) {
-                    Spacer(Modifier.weight(1f))
-                }
+                BasicText(
+                    text = compactSegmentLabel(segment.label),
+                    style = TextStyle(
+                        color = if (segment.selected) {
+                            accent
+                        } else {
+                            colorResource(R.color.game_menu_text_secondary)
+                        },
+                        fontSize = 10.sp,
+                        fontWeight = if (segment.selected) {
+                            FontWeight.Medium
+                        } else {
+                            FontWeight.Normal
+                        }
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    autoSize = labelAutoSize,
+                    modifier = Modifier.testTag("inlineSegmentLabel$index")
+                )
             }
         }
     }

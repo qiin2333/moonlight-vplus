@@ -369,7 +369,8 @@
     <string name="game_menu_touch_mode_enhanced_short">Toque</string>
     <string name="game_menu_touch_mode_classic_short">Ratón</string>
     <string name="game_menu_touch_mode_trackpad_short">Panel</string>
-    <string name="game_menu_touch_mode_native_mouse_short">Externo</string>
+    <string name="game_menu_touch_mode_native_mouse_short">Ext.</string>
+    <string name="game_menu_touch_mode_ds5_short">DS5</string>
     <string name="game_menu_local_cursor_rendering">Cursor local de baja latencia</string>
     <string name="game_menu_touch_mode_enhanced_summary">Toca directamente la pantalla del host; admite multitoque</string>
     <string name="game_menu_touch_mode_classic_summary">La posición tocada controla directamente el ratón</string>

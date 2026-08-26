@@ -3,14 +3,19 @@ package com.limelight.gamemenu
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,9 +24,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -111,7 +119,7 @@ class GameMenuControllerLayoutFocusTest {
     }
 
     @Test
-    fun fiveSegmentControlUsesExplicitTwoRowDirections() {
+    fun fiveSegmentControlUsesOneHorizontalFocusRow() {
         composeTestRule.setContent {
             val focusRequesters = remember { List(5) { FocusRequester() } }
             Column {
@@ -124,7 +132,7 @@ class GameMenuControllerLayoutFocusTest {
                                 targets = segmentedFocusTargets(
                                     itemCount = 5,
                                     index = index,
-                                    columnCount = 3
+                                    columnCount = 5
                                 ),
                                 focusRequesters = focusRequesters
                             )
@@ -137,21 +145,47 @@ class GameMenuControllerLayoutFocusTest {
 
         composeTestRule.onNodeWithTag("segment2").requestFocus()
         composeTestRule.onNodeWithTag("segment2").performKeyInput {
-            pressKey(Key.DirectionDown)
+            pressKey(Key.DirectionRight)
         }
-        composeTestRule.onNodeWithTag("segment4").assertIsFocused()
-        composeTestRule.onNodeWithTag("segment4").performKeyInput {
-            pressKey(Key.DirectionUp)
-        }
-        composeTestRule.onNodeWithTag("segment1").assertIsFocused()
-        composeTestRule.onNodeWithTag("segment1").performKeyInput {
-            pressKey(Key.DirectionDown)
+        composeTestRule.onNodeWithTag("segment3").assertIsFocused()
+        composeTestRule.onNodeWithTag("segment3").performKeyInput {
+            pressKey(Key.DirectionRight)
         }
         composeTestRule.onNodeWithTag("segment4").assertIsFocused()
         composeTestRule.onNodeWithTag("segment4").performKeyInput {
             pressKey(Key.DirectionLeft)
         }
         composeTestRule.onNodeWithTag("segment3").assertIsFocused()
+    }
+
+    @Test
+    fun fiveEnglishSegmentLabelsFitOneRowAtCompactWidth() {
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density, fontScale = 1.3f)
+            ) {
+                InlineSegmentedControl(
+                    segments = listOf("Touch", "Mouse", "Pad", "Ext.", "DS5").mapIndexed { index, label ->
+                        GameMenu.SegmentOption(label, index == 0, Runnable {})
+                    },
+                    onSegmentClick = {},
+                    modifier = Modifier.width(164.dp).height(36.dp)
+                )
+            }
+        }
+
+        repeat(5) { index ->
+            val layoutResults = mutableListOf<TextLayoutResult>()
+            val action = composeTestRule.onNodeWithTag(
+                "inlineSegmentLabel$index",
+                useUnmergedTree = true
+            )
+                .fetchSemanticsNode()
+                .config[SemanticsActions.GetTextLayoutResult]
+            assertTrue(action.action?.invoke(layoutResults) == true)
+            assertFalse("Segment $index overflows at compact width", layoutResults.single().hasVisualOverflow)
+        }
     }
 
     @Test

@@ -655,6 +655,7 @@ class PreferenceConfiguration {
         const val AUDIO_PASSTHROUGH_BUFFER_PREF_STRING = "list_audio_passthrough_buffer"
         const val DEFAULT_AUDIO_PASSTHROUGH_BUFFER = "normal"
         const val UNLOCK_FPS_STRING = "checkbox_unlock_fps"
+        const val SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING = "checkbox_show_low_resolution_presets"
         const val CROWN_CONFIG_MANAGEMENT_STRING = "crown_config_management"
 
         // ---- Default values (package-private promoted to public) ----
@@ -846,6 +847,13 @@ class PreferenceConfiguration {
         val RESOLUTIONS = arrayOf(
             "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
         )
+
+        fun isLowResolutionPreset(resolution: String?): Boolean {
+            return when (resolution) {
+                RES_360P, RES_480P, "360x640", "480x854" -> true
+                else -> false
+            }
+        }
 
         // ---- Public static methods ----
 

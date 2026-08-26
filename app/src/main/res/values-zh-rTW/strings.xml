@@ -350,6 +350,8 @@
     <string name="resolution_480p">480P</string>
     <string name="resolution_1080p">1080P</string>
     <string name="resolution_1440p">1440P</string>
+    <string name="title_show_low_resolution_presets">顯示低頻寬解析度</string>
+    <string name="summary_show_low_resolution_presets">在解析度清單中加入 360p 和 480p，供極慢網路或低效能裝置相容使用。</string>
     <string name="title_frame_pacing">串流影格節奏</string>
     <string name="summary_frame_pacing">指定如何平衡視訊延遲和平滑度</string>
     <string name="pacing_balanced">平衡</string>

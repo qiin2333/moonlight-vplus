@@ -214,6 +214,8 @@
     <string name="summary_seekbar_scale" formatted="false">按比例缩放所选串流分辨率后再向主机请求。高于 100% 可增加源画面细节但会提高主机 GPU 负载；低于 100% 可减轻负载。主机必须支持缩放后的分辨率。</string>
     <string name="title_unlock_fps">显示高帧率选项</string>
     <string name="summary_unlock_fps">以90或120帧串流可能会减少在高端设备上的网络延迟，但会在不支持的设备上造成卡顿或崩溃。</string>
+    <string name="title_show_low_resolution_presets">显示低带宽分辨率</string>
+    <string name="summary_show_low_resolution_presets">在分辨率列表中添加 360p 和 480p，供极慢网络或低性能设备兼容使用。</string>
     <string name="title_checkbox_stretch_video">将画面拉伸至全屏</string>
     <string name="summary_checkbox_stretch_video">改变串流画面宽高比以铺满屏幕，可能造成画面变形。</string>
     <string name="title_checkbox_disable_warnings">隐藏串流连接警告</string>

@@ -787,6 +787,8 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
+    <string name="title_show_low_resolution_presets">Show low-bandwidth resolutions</string>
+    <string name="summary_show_low_resolution_presets">Add 360p and 480p compatibility options for very slow networks and lower-end devices.</string>
 
     <string name="fps_30">30 FPS</string>
     <string name="fps_60">60 FPS</string>
@@ -1081,7 +1083,7 @@
     <string name="game_menu_touch_mode_enhanced_short">Touch</string>
     <string name="game_menu_touch_mode_classic_short">Mouse</string>
     <string name="game_menu_touch_mode_trackpad_short">Pad</string>
-    <string name="game_menu_touch_mode_native_mouse_short">External</string>
+    <string name="game_menu_touch_mode_native_mouse_short">Ext.</string>
     <string name="game_menu_local_cursor_rendering">Low-latency local cursor</string>
     <string name="game_menu_touch_mode_native_mouse">External mouse</string>
     <string name="game_menu_touch_mode_enhanced_summary">Touch the host screen directly; supports multi-touch</string>

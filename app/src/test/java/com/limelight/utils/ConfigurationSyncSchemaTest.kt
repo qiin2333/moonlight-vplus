@@ -34,6 +34,7 @@ class ConfigurationSyncSchemaTest {
             PreferenceConfiguration.MIC_GAIN_ENABLED_PREF_STRING,
             PreferenceConfiguration.MIC_BALANCE_ENABLED_PREF_STRING,
             PreferenceConfiguration.ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING,
+            PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
             "checkbox_resume_stream",
             "checkbox_extreme_resume",
             "checkbox_background_audio",

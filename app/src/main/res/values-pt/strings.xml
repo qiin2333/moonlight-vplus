@@ -542,8 +542,9 @@
     <string name="game_menu_touch_mode_trackpad">Touchpad</string>
     <string name="game_menu_touch_mode_enhanced_short">Toque</string>
     <string name="game_menu_touch_mode_classic_short">Rato</string>
-    <string name="game_menu_touch_mode_trackpad_short">Touchpad</string>
-    <string name="game_menu_touch_mode_native_mouse_short">Externo</string>
+    <string name="game_menu_touch_mode_trackpad_short">Pad</string>
+    <string name="game_menu_touch_mode_native_mouse_short">Ext.</string>
+    <string name="game_menu_touch_mode_ds5_short">DS5</string>
     <string name="game_menu_local_cursor_rendering">Cursor local de baixa latência</string>
     <string name="game_menu_touch_mode_native_mouse">Rato externo</string>
     <string name="game_menu_touch_mode_enhanced_summary">Toque diretamente no ecrã do anfitrião; suporta multitoque</string>
