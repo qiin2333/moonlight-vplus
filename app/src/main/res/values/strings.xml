@@ -246,7 +246,7 @@
 
     <!-- Preferences -->
     <string name="category_basic_settings">Stream quality</string>
-    <string name="category_advanced_features">Performance &amp; compatibility</string>
+    <string name="category_advanced_features">Performance</string>
     <string name="title_resolution_list">Stream resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
@@ -465,7 +465,7 @@
     <string name="title_checkbox_gamepad_motion_fallback">Use device sensors for controller motion</string>
     <string name="summary_checkbox_gamepad_motion_fallback">Emulate controller motion with this Android device’s sensors when the controller cannot provide it. The host may identify the controller as a PlayStation controller.</string>
 
-    <string name="category_input_settings">Touch, mouse &amp; keyboard</string>
+    <string name="category_input_settings">Input</string>
     <string name="title_checkbox_touchscreen_trackpad">Use the touchscreen as a trackpad</string>
     <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, multi-point touch will be enabled.</string>
 
@@ -511,7 +511,7 @@
     <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
     <string name="suffix_fixed_x_velocity">pixels</string>
 
-    <string name="category_on_screen_controls_settings">On-screen Controls Settings</string>
+    <string name="category_on_screen_controls_settings">On-screen controls</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>

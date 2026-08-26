@@ -161,15 +161,11 @@ class StreamSettings : AppCompatActivity() {
                 "category_screen_position" -> R.drawable.phc_video_camera
                 "category_display_behavior" -> R.drawable.phc_perf_resolution
                 "category_audio_settings" -> R.drawable.phc_audio
-                "category_microphone_settings" -> R.drawable.ic_mic_gm
                 "category_gamepad_settings" -> R.drawable.phc_gamepad
                 "category_input_settings" -> R.drawable.phc_keyboard
-                "category_enhanced_touch" -> R.drawable.phc_touch
                 "category_onscreen_controls" -> R.drawable.phc_game_controller
-                "category_float_ball" -> R.drawable.phc_eye
                 "category_crown_features" -> R.drawable.phc_crown
                 "category_host_settings" -> R.drawable.phc_host
-                "category_connection_settings" -> R.drawable.phc_plug
                 "category_ui_settings" -> R.drawable.phc_lightbulb
                 "category_advanced_settings" -> R.drawable.phc_settings    // legacy
                 "category_advanced_features" -> R.drawable.phc_lightning   // 性能与流畅度
@@ -4244,11 +4240,17 @@ class StreamSettings : AppCompatActivity() {
                 PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING
             )?.isVisible = false
 
+            val enhancedTuningPreferences = listOf(
+                "seekbar_flat_region_pixels",
+                "checkbox_enhanced_touch_on_which_side",
+                "enhanced_touch_zone_divider",
+                "pointer_velocity_factor",
+            ).mapNotNull { key -> findPreference<Preference>(key) }
+
             fun updateEnhancedTuningVisibility(enhanced: Boolean) {
-                updateRuntimeVisibility(
-                    findPreference<PreferenceCategory>("category_enhanced_touch"),
-                    hasTouchscreen && enhanced,
-                )
+                enhancedTuningPreferences.forEach { preference ->
+                    updateRuntimeVisibility(preference, hasTouchscreen && enhanced)
+                }
             }
 
             fun persistPreset(preset: TouchModePreset) {

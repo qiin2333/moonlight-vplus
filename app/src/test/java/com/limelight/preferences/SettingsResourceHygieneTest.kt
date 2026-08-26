@@ -114,6 +114,78 @@ class SettingsResourceHygieneTest {
         }
     }
 
+    @Test
+    fun consolidatedCategoriesKeepEveryPreferenceKey() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val categories = preferences.documentElement
+            .getElementsByTagName("PreferenceCategory")
+            .asElementSequence()
+            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+
+        setOf(
+            "category_microphone_settings",
+            "category_enhanced_touch",
+            "category_float_ball",
+            "category_connection_settings",
+        ).forEach { retiredKey ->
+            assertFalse("Retired category is still present: $retiredKey", retiredKey in categories)
+        }
+
+        val expectedKeysByCategory = mapOf(
+            "category_host_settings" to setOf(
+                "checkbox_resume_stream",
+                "checkbox_extreme_resume",
+                "checkbox_background_audio",
+                "checkbox_enable_stun",
+            ),
+            "category_ui_settings" to setOf(
+                "checkbox_enable_float_ball",
+                "list_float_ball_position",
+                "seekbar_float_ball_auto_hide_delay",
+                "list_float_ball_single_click_action",
+                "list_float_ball_double_click_action",
+                "list_float_ball_long_click_action",
+            ),
+            "category_audio_settings" to setOf(
+                "checkbox_enable_mic",
+                "list_mic_menu_action_mode",
+                "checkbox_show_mic_button",
+                "list_mic_button_position",
+                "seekbar_mic_bitrate_kbps",
+                "list_mic_icon_color",
+                "list_mic_volume_processing_mode",
+                "checkbox_mic_volume_processing",
+                "checkbox_mic_gain",
+                "seekbar_mic_gain_db",
+                "checkbox_mic_balance",
+                "seekbar_mic_balance_target",
+                "checkbox_mic_voice_enhancement",
+            ),
+            "category_input_settings" to setOf(
+                "checkbox_enable_enhanced_touch",
+                "seekbar_flat_region_pixels",
+                "checkbox_enhanced_touch_on_which_side",
+                "enhanced_touch_zone_divider",
+                "pointer_velocity_factor",
+            ),
+        )
+
+        expectedKeysByCategory.forEach { (categoryKey, expectedKeys) ->
+            val category = categories[categoryKey]
+            assertNotNull("Missing target category: $categoryKey", category)
+            val actualKeys = category!!.childNodes.asElementSequence()
+                .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+                .filter(String::isNotEmpty)
+                .toSet()
+            expectedKeys.forEach { preferenceKey ->
+                assertTrue(
+                    "$preferenceKey was not moved under $categoryKey",
+                    preferenceKey in actualKeys,
+                )
+            }
+        }
+    }
+
     private fun stringValues(directory: String): Map<String, String> =
         parse(File(resourceDir, "$directory/strings.xml"))
             .documentElement.childNodes.asElementSequence()
