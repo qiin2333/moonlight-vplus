@@ -243,8 +243,8 @@
     </style>
 
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
-        <item name="android:textSize">18sp</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/settings_preference_title_text</item>
     </style>
 

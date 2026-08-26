@@ -13,6 +13,11 @@ internal enum class TouchModePreset(val preferenceValue: String) {
     TRACKPAD("trackpad"),
     NATIVE("native");
 
+    companion object {
+        fun fromPreferenceValue(value: String?): TouchModePreset? =
+            entries.firstOrNull { it.preferenceValue == value }
+    }
+
     fun toState(): TouchModePreferenceState = when (this) {
         ENHANCED -> TouchModePreferenceState(
             enhancedTouch = true,

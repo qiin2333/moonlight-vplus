@@ -647,7 +647,8 @@
             android:summary="@string/summary_mic_volume_processing_mode"
             android:entries="@array/mic_volume_processing_mode_names"
             android:entryValues="@array/mic_volume_processing_mode_values"
-            android:defaultValue="off" />
+            android:defaultValue="off"
+            android:persistent="false" />
         <!-- Legacy storage flags. Kept for old backups and hidden by StreamSettings. -->
         <CheckBoxPreference
             android:key="checkbox_mic_volume_processing"
@@ -805,7 +806,8 @@
             android:summary="@string/summary_list_native_mouse_mode_preset"
             android:entries="@array/native_mouse_mode_preset_names"
             android:entryValues="@array/native_mouse_mode_preset_values"
-            android:defaultValue="trackpad" />
+            android:defaultValue="trackpad"
+            android:persistent="false" />
         <!-- Legacy storage flag. Kept for old backups and hidden by StreamSettings. -->
         <CheckBoxPreference
             android:key="checkbox_touchscreen_trackpad"

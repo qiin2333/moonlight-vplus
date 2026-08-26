@@ -208,11 +208,13 @@ class SettingsResourceHygieneTest {
             "list_background_stream_behavior",
             "list_quit_behavior",
             "list_dualsense_output_mode",
+            "list_native_mouse_mode_preset",
+            "list_mic_volume_processing_mode",
         ).forEach { key ->
             val preference = preferencesByKey[key]
             assertNotNull("Missing synthetic mode selector: $key", preference)
             assertTrue(
-                "$key must remain non-persistent so old backup keys stay authoritative",
+                "$key must remain non-persistent so compatibility storage is explicit",
                 preference!!.getAttributeNS(ANDROID_NAMESPACE, "persistent") == "false",
             )
         }

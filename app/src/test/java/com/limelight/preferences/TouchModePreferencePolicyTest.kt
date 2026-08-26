@@ -53,7 +53,14 @@ class TouchModePreferencePolicyTest {
     fun `preset inference follows the active primary mode`() {
         TouchModePreset.entries.forEach { preset ->
             assertEquals(preset, TouchModePreferencePolicy.presetFor(preset.toState()))
+            assertEquals(preset, TouchModePreset.fromPreferenceValue(preset.preferenceValue))
         }
+    }
+
+    @Test
+    fun `unknown stored preset is rejected`() {
+        assertNull(TouchModePreset.fromPreferenceValue("custom"))
+        assertNull(TouchModePreset.fromPreferenceValue(null))
     }
 
     @Test
