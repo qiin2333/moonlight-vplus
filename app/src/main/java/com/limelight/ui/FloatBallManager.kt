@@ -28,6 +28,27 @@ import java.lang.ref.WeakReference
 import kotlin.math.abs
 import kotlin.math.sqrt
 
+internal fun floatBallViewport(
+    screenWidth: Int,
+    screenHeight: Int,
+    ballSize: Int,
+    enableEdgeSnap: Boolean,
+    safeInsetLeft: Int,
+    safeInsetTop: Int,
+    safeInsetRight: Int,
+    safeInsetBottom: Int
+) = FloatingButtonViewport(
+    containerWidth = screenWidth,
+    containerHeight = screenHeight,
+    buttonWidth = ballSize,
+    buttonHeight = ballSize,
+    edgeInset = 0,
+    leftInset = if (enableEdgeSnap) 0 else safeInsetLeft,
+    topInset = if (enableEdgeSnap) 0 else safeInsetTop,
+    rightInset = if (enableEdgeSnap) 0 else safeInsetRight,
+    bottomInset = if (enableEdgeSnap) 0 else safeInsetBottom
+)
+
 /** Manages the in-stream float ball view, gestures, and device-local position. */
 class FloatBallManager constructor(
     context: Context,
@@ -171,16 +192,15 @@ class FloatBallManager constructor(
         )
     }
 
-    private fun currentViewport() = FloatingButtonViewport(
-        containerWidth = screenWidth,
-        containerHeight = screenHeight,
-        buttonWidth = ballSize,
-        buttonHeight = ballSize,
-        edgeInset = 0,
-        leftInset = safeInsetLeft,
-        topInset = safeInsetTop,
-        rightInset = safeInsetRight,
-        bottomInset = safeInsetBottom
+    private fun currentViewport() = floatBallViewport(
+        screenWidth = screenWidth,
+        screenHeight = screenHeight,
+        ballSize = ballSize,
+        enableEdgeSnap = enableEdgeSnap,
+        safeInsetLeft = safeInsetLeft,
+        safeInsetTop = safeInsetTop,
+        safeInsetRight = safeInsetRight,
+        safeInsetBottom = safeInsetBottom
     )
 
     private fun applyAnchorPosition(updateView: Boolean = true) {

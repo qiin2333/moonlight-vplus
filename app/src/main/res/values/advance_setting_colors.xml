@@ -30,6 +30,7 @@
     <color name="game_menu_list_item_border">#0D1D1B20</color>
     <color name="game_menu_list_item_border_pressed">@color/game_menu_accent</color>
     <color name="game_menu_dialog_background">#FFFFF8F8</color>
+    <color name="game_menu_opacity_popup_background">#E6F7F4F7</color>
     <color name="game_menu_dialog_border">#12FFFFFF</color>
     <color name="game_menu_list_item_normal">#FFFFFFFF</color>
     <color name="game_menu_danger_text">#D13B3B</color>

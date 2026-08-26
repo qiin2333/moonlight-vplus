@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="48dp"
+    android:layout_height="148dp"
+    android:background="@drawable/game_menu_opacity_popup_bg"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <SeekBar
+            android:id="@+id/game_menu_opacity_seekbar"
+            android:layout_width="112dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/title_game_menu_opacity"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:max="60"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:progress="50"
+            android:progressTint="@color/game_menu_accent"
+            android:rotation="270"
+            android:splitTrack="false"
+            android:thumbOffset="0dp"
+            android:thumbTint="@color/game_menu_accent" />
+
+    </FrameLayout>
+
+</LinearLayout>

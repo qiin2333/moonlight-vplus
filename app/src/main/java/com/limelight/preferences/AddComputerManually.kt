@@ -58,6 +58,7 @@ internal class AddComputerWorkerGenerationGate {
 class AddComputerManually : Activity() {
     companion object {
         const val EXTRA_ADDED_COMPUTER_UUID = "com.limelight.extra.ADDED_COMPUTER_UUID"
+        private const val CONNECTING_BUTTON_ALPHA = 0.55f
     }
 
     private lateinit var hostText: EditText
@@ -71,6 +72,7 @@ class AddComputerManually : Activity() {
     private var restartAddThreadWhenStopped = false
     @Volatile private var shuttingDown = false
     private var serviceBindingRequested = false
+    private var addingComputer = false
 
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
@@ -303,10 +305,7 @@ class AddComputerManually : Activity() {
     private fun showAddFailure(generation: Long, message: String) {
         runOnUiThread {
             if (!isAddWorkerCurrent(generation) || isDestroyed) return@runOnUiThread
-            if (::addPcButton.isInitialized) {
-                addPcButton.isEnabled = true
-                addPcButton.text = getString(R.string.addpc_action_connect)
-            }
+            setAddingState(false)
             Dialog.displayDialog(
                 this,
                 resources.getString(R.string.conn_error_title),
@@ -433,7 +432,7 @@ class AddComputerManually : Activity() {
         }
 
         addPcButton.setOnClickListener {
-            handleDoneEvent()
+            if (!addingComputer) handleDoneEvent()
         }
 
         hostText.post {
@@ -485,6 +484,8 @@ class AddComputerManually : Activity() {
     }
 
     private fun handleDoneEvent(): Boolean {
+        if (addingComputer) return true
+
         val hostAddress = hostText.text.toString().trim()
         val portTextValue = portText.text.toString().trim()
 
@@ -511,13 +512,20 @@ class AddComputerManually : Activity() {
         return false
     }
 
-    private fun setAddingState(adding: Boolean) {
+    internal fun setAddingState(adding: Boolean) {
         runOnUiThread {
             if (shuttingDown || isDestroyed || !::addPcButton.isInitialized) return@runOnUiThread
-            addPcButton.isEnabled = !adding
+            addingComputer = adding
+            // Explicit nextFocus targets still point here while a connection is pending.
+            // Keep the view focusable and reject duplicate activation in the click handler.
+            addPcButton.isEnabled = true
+            addPcButton.isFocusable = true
+            addPcButton.isFocusableInTouchMode = true
+            addPcButton.alpha = if (adding) CONNECTING_BUTTON_ALPHA else 1f
             addPcButton.text = getString(
                 if (adding) R.string.addpc_action_connecting else R.string.addpc_action_connect
             )
         }
     }
+
 }

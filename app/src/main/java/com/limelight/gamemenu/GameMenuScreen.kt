@@ -81,6 +81,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -1150,7 +1151,7 @@ private fun GameMenuHeader(
         if (!state.isSubmenu) {
             val settingsShape = CircleShape
             Icon(
-                painter = painterResource(R.drawable.ic_ui_settings),
+                painter = painterResource(R.drawable.phc_action_edit),
                 contentDescription = stringResource(R.string.game_menu_card_config_title),
                 tint = colorResource(R.color.game_menu_text_primary),
                 modifier = Modifier
@@ -1175,6 +1176,37 @@ private fun GameMenuHeader(
                 )
                 Spacer(Modifier.width(GameMenuDimens.tight))
             }
+            val opacityShape = CircleShape
+            var opacityAnchor by remember { mutableStateOf(GameMenuOpacityAnchor(0, 0)) }
+            Icon(
+                painter = painterResource(R.drawable.ic_opacity),
+                contentDescription = stringResource(
+                    R.string.game_menu_opacity_button,
+                    state.gameMenuOpacity
+                ),
+                tint = colorResource(R.color.game_menu_text_primary),
+                modifier = Modifier
+                    .testTag("gameMenuOpacity")
+                    .onGloballyPositioned { coordinates ->
+                        val position = coordinates.positionInWindow()
+                        opacityAnchor = GameMenuOpacityAnchor(
+                            centerX = (position.x + coordinates.size.width / 2f).toInt(),
+                            bottomY = (position.y + coordinates.size.height).toInt()
+                        )
+                    }
+                    .size(36.dp)
+                    .clip(opacityShape)
+                    .background(colorResource(R.color.game_menu_card_background))
+                    .border(
+                        GameMenuDimens.surfaceStroke,
+                        colorResource(R.color.game_menu_button_border),
+                        opacityShape
+                    )
+                    .gamepadFocusOutline(opacityShape)
+                    .clickable { callbacks.onEditOpacity(opacityAnchor) }
+                    .padding(8.dp)
+            )
+            Spacer(Modifier.width(GameMenuDimens.tight))
             val crownShape = CircleShape
             Icon(
                 painter = painterResource(R.drawable.ic_super_crown),
