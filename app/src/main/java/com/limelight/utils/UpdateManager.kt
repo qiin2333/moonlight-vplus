@@ -21,6 +21,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
@@ -284,16 +285,7 @@ object UpdateManager {
                     finally { isChecking.set(false) }
                 }
 
-                if (context is Activity) {
-                    if (context.isFinishing || context.isDestroyed) {
-                        // 页面已销毁，不能跳 UI；仅走 SP 写入逻辑并释放锁
-                        runner.run()
-                    } else {
-                        context.runOnUiThread(runner)
-                    }
-                } else {
-                    runner.run()
-                }
+                Handler(Looper.getMainLooper()).post(runner)
                 releaseHandled = true
             } finally {
                 // 其他异常路径兑底，保证 isChecking 不会被永久占据
@@ -353,7 +345,7 @@ object UpdateManager {
             return
         }
 
-        context.runOnUiThread {
+        runOnUsableActivityWindow(context) {
             val builder = AlertDialog.Builder(context, R.style.AppDialogStyle)
             builder.setTitle(context.getString(R.string.update_already_latest_title))
 
@@ -393,7 +385,7 @@ object UpdateManager {
             return
         }
 
-        context.runOnUiThread {
+        runOnUsableActivityWindow(context) {
             val view = LayoutInflater.from(context).inflate(R.layout.dialog_update, null)
 
             val curVer = getCurrentVersion(context)
@@ -1178,6 +1170,47 @@ object UpdateManager {
     // ------------------------------------------------------------------
     // 工具方法
     // ------------------------------------------------------------------
+
+    private fun runOnUsableActivityWindow(activity: Activity, action: () -> Unit) {
+        activity.runOnUiThread {
+            val decorView = activity.window?.decorView
+            if (!isUpdateDialogWindowUsable(
+                    isFinishing = activity.isFinishing,
+                    isDestroyed = activity.isDestroyed,
+                    isChangingConfigurations = activity.isChangingConfigurations,
+                    isAttachedToWindow = decorView?.isAttachedToWindow == true,
+                    hasWindowToken = decorView?.windowToken != null,
+                    isWindowVisible = decorView?.windowVisibility == View.VISIBLE,
+                    hasWindowFocus = activity.hasWindowFocus()
+                )) {
+                Log.d(TAG, "Skipping update dialog because its Activity window is no longer usable")
+                return@runOnUiThread
+            }
+
+            try {
+                action()
+            } catch (e: WindowManager.BadTokenException) {
+                // The Activity can stop between the token check and WindowManager.addView().
+                Log.w(TAG, "Skipping update dialog after its Activity window became invalid", e)
+            }
+        }
+    }
+
+    internal fun isUpdateDialogWindowUsable(
+        isFinishing: Boolean,
+        isDestroyed: Boolean,
+        isChangingConfigurations: Boolean,
+        isAttachedToWindow: Boolean,
+        hasWindowToken: Boolean,
+        isWindowVisible: Boolean,
+        hasWindowFocus: Boolean
+    ): Boolean = !isFinishing &&
+            !isDestroyed &&
+            !isChangingConfigurations &&
+            isAttachedToWindow &&
+            hasWindowToken &&
+            isWindowVisible &&
+            hasWindowFocus
 
     private fun dpToPx(context: Context, dp: Int): Int {
         return (dp * context.resources.displayMetrics.density).toInt()
