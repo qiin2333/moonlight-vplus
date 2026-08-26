@@ -1213,6 +1213,71 @@ class StreamSettings : AppCompatActivity() {
             pref.entryValues = entryValues
         }
 
+        private fun setupLowResolutionPresetVisibility() {
+            val context = requireActivity()
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val selectedResolution = prefs.getString(
+                PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                PreferenceConfiguration.DEFAULT_RESOLUTION
+            )
+
+            // Preserve existing low-resolution selections after upgrading. The user can
+            // explicitly turn the compatibility presets off to move back to 720p.
+            if (PreferenceConfiguration.isLowResolutionPreset(selectedResolution) &&
+                !prefs.getBoolean(
+                    PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
+                    false
+                )
+            ) {
+                prefs.edit {
+                    putBoolean(
+                        PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
+                        true
+                    )
+                }
+            }
+
+            val showLowResolutionPresets = prefs.getBoolean(
+                PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
+                false
+            )
+            if (!showLowResolutionPresets) {
+                removeValue(
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                    PreferenceConfiguration.RES_360P,
+                    Runnable {}
+                )
+                removeValue(
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                    PreferenceConfiguration.RES_480P,
+                    Runnable {}
+                )
+            }
+
+            findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING
+            )?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                val enabled = newValue as Boolean
+                val currentResolution = prefs.getString(
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                    PreferenceConfiguration.DEFAULT_RESOLUTION
+                )
+                if (!enabled && PreferenceConfiguration.isLowResolutionPreset(currentResolution)) {
+                    setValue(
+                        PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                        PreferenceConfiguration.RES_720P
+                    )
+                    resetBitrateToDefault(prefs, PreferenceConfiguration.RES_720P, null)
+                }
+
+                // Rebuild dynamic native/custom entries from a clean resource list.
+                Handler(Looper.getMainLooper()).post {
+                    (activity as? StreamSettings)?.recreate()
+                }
+                true
+            }
+        }
+
         private fun resetBitrateToDefault(prefs: SharedPreferences, res: String?, fps: String?) {
             var resValue = res
             var fpsValue = fps
@@ -3164,6 +3229,8 @@ class StreamSettings : AppCompatActivity() {
             initializeTouchModeDefaultsIfNeeded()
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
+
+            setupLowResolutionPresetVisibility()
 
             setupFramegenPreferences()
             setupConfigSyncPreferences()

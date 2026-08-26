@@ -1053,9 +1053,17 @@ class GameMenu(
     private fun showResolutionMenu() {
         val options = mutableListOf<MenuOption>()
         val currentResStr = "${game.prefConfig.width}x${game.prefConfig.height}"
+        val prefs = PreferenceManager.getDefaultSharedPreferences(game)
+        val showLowResolutionPresets = prefs.getBoolean(
+            PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
+            false
+        ) || PreferenceConfiguration.isLowResolutionPreset(currentResStr)
 
         // 预设分辨率
         for (res in PreferenceConfiguration.RESOLUTIONS) {
+            if (!showLowResolutionPresets && PreferenceConfiguration.isLowResolutionPreset(res)) {
+                continue
+            }
             val label = if (res == currentResStr) {
                 game.getString(R.string.game_menu_resolution_current, res)
             } else {

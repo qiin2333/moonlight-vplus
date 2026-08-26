@@ -53,7 +53,7 @@
     <PreferenceCategory android:title="@string/category_advanced_features"
         android:key="category_advanced_features"
         android:layout="@layout/preference_category_material"
-        app:initialExpandedChildrenCount="5">
+        app:initialExpandedChildrenCount="6">
         <CheckBoxPreference
             android:key="checkbox_adaptive_bitrate"
             android:title="@string/title_adaptive_bitrate"
@@ -83,6 +83,11 @@
             android:key="checkbox_unlock_fps"
             android:title="@string/title_unlock_fps"
             android:summary="@string/summary_unlock_fps"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_show_low_resolution_presets"
+            android:title="@string/title_show_low_resolution_presets"
+            android:summary="@string/summary_show_low_resolution_presets"
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_reduce_refresh_rate"
