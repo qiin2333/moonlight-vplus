@@ -67,6 +67,9 @@ class SettingsResourceHygieneTest {
             "audio_config_names",
             "audio_passthrough_buffer_names",
             "background_source_names",
+            "background_stream_behavior_names",
+            "quit_behavior_names",
+            "dualsense_output_mode_names",
             "float_ball_action_names",
             "hdr_mode_entries",
             "mic_menu_action_mode_entries",
@@ -133,6 +136,8 @@ class SettingsResourceHygieneTest {
 
         val expectedKeysByCategory = mapOf(
             "category_host_settings" to setOf(
+                "list_background_stream_behavior",
+                "list_quit_behavior",
                 "checkbox_resume_stream",
                 "checkbox_extreme_resume",
                 "checkbox_background_audio",
@@ -168,6 +173,11 @@ class SettingsResourceHygieneTest {
                 "enhanced_touch_zone_divider",
                 "pointer_velocity_factor",
             ),
+            "category_gamepad_settings" to setOf(
+                "list_dualsense_output_mode",
+                "checkbox_dualsense_direct_bluetooth",
+                "checkbox_dualsense_wireless_bridge",
+            ),
         )
 
         expectedKeysByCategory.forEach { (categoryKey, expectedKeys) ->
@@ -183,6 +193,28 @@ class SettingsResourceHygieneTest {
                     preferenceKey in actualKeys,
                 )
             }
+        }
+    }
+
+    @Test
+    fun legacyBackedModeSelectorsDoNotPersistSyntheticKeys() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val preferencesByKey = preferences.documentElement
+            .getElementsByTagName("*")
+            .asElementSequence()
+            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+
+        listOf(
+            "list_background_stream_behavior",
+            "list_quit_behavior",
+            "list_dualsense_output_mode",
+        ).forEach { key ->
+            val preference = preferencesByKey[key]
+            assertNotNull("Missing synthetic mode selector: $key", preference)
+            assertTrue(
+                "$key must remain non-persistent so old backup keys stay authoritative",
+                preference!!.getAttributeNS(ANDROID_NAMESPACE, "persistent") == "false",
+            )
         }
     }
 

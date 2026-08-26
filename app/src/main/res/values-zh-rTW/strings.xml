@@ -122,11 +122,11 @@
     <string name="summary_checkbox_stretch_video">改變串流畫面長寬比以填滿螢幕，可能造成畫面變形。</string>
     <string name="title_checkbox_disable_warnings">隱藏串流連線警告</string>
     <string name="summary_checkbox_disable_warnings">串流期間隱藏連線品質警告浮層。</string>
-    <string name="title_checkbox_enable_pip">啟用子母畫面觀察模式</string>
+    <string name="title_checkbox_enable_pip">子母畫面（僅觀看）</string>
     <string name="summary_checkbox_enable_pip">允許多工時檢視串流畫面 (但無法控制)</string>
     <string name="category_audio_settings">音訊</string>
     <string name="category_microphone_settings">麥克風</string>
-    <string name="title_checkbox_show_mic_button">顯示麥克風懸浮按鈕</string>
+    <string name="title_checkbox_show_mic_button">串流開始時顯示麥克風懸浮按鈕</string>
     <string name="summary_checkbox_show_mic_button">串流時顯示麥克風按鈕。可直接拖曳，位置會自動記憶。</string>
     <string name="title_list_mic_button_position">快速設定按鈕位置</string>
     <string name="summary_list_mic_button_position">將麥克風按鈕放到螢幕邊緣。拖曳位置會暫時覆蓋預設，再次選擇預設即可清除。</string>
@@ -145,8 +145,8 @@
     <string name="summary_checkbox_touchscreen_trackpad">如果啟用，則將觸控式螢幕作為觸控板使用。 如果停用，則觸控式螢幕直接控制滑鼠游標。</string>
     <string name="title_checkbox_multi_controller">將手把識別為獨立玩家</string>
     <string name="summary_checkbox_multi_controller">讓主機分別識別每個已連線手把；關閉後會將它們合併為一個手把。</string>
-    <string name="title_list_game_rumble_mode">遊戲振動輸出</string>
-    <string name="summary_list_game_rumble_mode">選擇遊戲振動在手把與裝置之間的輸出方式</string>
+    <string name="title_list_game_rumble_mode">主機遊戲振動輸出</string>
+    <string name="summary_list_game_rumble_mode">選擇遊戲傳送的原生振動輸出到哪裡；它與根據音訊產生的模擬振動不同。</string>
     <string name="game_rumble_mode_coordinated">協同振動</string>
     <string name="game_rumble_mode_device">裝置振動</string>
     <string name="game_rumble_mode_controller">手把振動</string>
@@ -276,8 +276,8 @@
     <string name="title_checkbox_small_icon_mode">使用小封面</string>
     <string name="summary_checkbox_small_icon_mode">使用小圖示以在螢幕上顯示更多應用程式</string>
     <string name="category_host_settings">主機</string>
-    <string name="title_checkbox_enable_sops">允許主機最佳化遊戲設定</string>
-    <string name="summary_checkbox_enable_sops">允許相容的主機軟體依照所請求的串流解析度與品質調整支援的遊戲。</string>
+    <string name="title_checkbox_enable_sops">讓遊戲設定符合串流規格</string>
+    <string name="summary_checkbox_enable_sops">允許相容的主機軟體依照所請求的串流解析度與品質調整支援的遊戲；變更發生在主機上。</string>
     <string name="title_checkbox_host_audio">在電腦上播放音訊</string>
     <string name="summary_checkbox_host_audio">在電腦和本裝置同時輸出音訊</string>
     <string name="category_advanced_settings">進階設定</string>
@@ -292,7 +292,7 @@
     <string name="title_enable_post_stream_toast">串流後顯示延時資訊</string>
     <string name="summary_enable_post_stream_toast">串流結束後顯示延時資訊</string>
     <string name="title_osc_opacity">變更螢幕控制按鈕透明度</string>
-    <string name="dialog_title_osc_opacity">變更不透明度</string>
+    <string name="dialog_title_osc_opacity">螢幕控制按鈕不透明度</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="summary_osc_opacity">使螢幕控制按钮變得更透明/更不透明</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
@@ -370,8 +370,8 @@
     <string name="summary_checkbox_enable_audiofx">允許等化器等系統效果處理 Moonlight 本機解碼的音訊；直通音訊會略過這些效果，此選項也可能增加延遲。</string>
     <string name="resolution_prefix_native_landscape">(橫向)</string>
     <string name="resolution_prefix_native_portrait">(直向)</string>
-    <string name="title_checkbox_reduce_refresh_rate">允許減小重新整理率</string>
-    <string name="summary_checkbox_reduce_refresh_rate">更低的顯示器重新整理速率可在犧牲一些額外視訊延遲的狀況下節省電力</string>
+    <string name="title_checkbox_reduce_refresh_rate">允許使用較低的螢幕更新率</string>
+    <string name="summary_checkbox_reduce_refresh_rate">僅用於「平衡」影格節奏。符合串流的較低更新率可以省電，但可能增加視訊延遲。</string>
     <string name="frame_conversion_error">主機電腦回報了一個嚴重的視訊編碼錯誤。
 \n
 \n嘗試停用 HDR 模式，變更串流解析度，或變更您的主機電腦的顯示器解析度。</string>
@@ -394,13 +394,13 @@
     <string name="title_checkbox_gamepad_motion_fallback">使用裝置感測器模擬手把動態</string>
 
     <!-- 音訊振動設定 -->
-    <string name="title_checkbox_audio_vibration">啟用音訊驅動振動</string>
-    <string name="summary_checkbox_audio_vibration">根據遊戲內低音和音訊事件振動裝置</string>
+    <string name="title_checkbox_audio_vibration">音訊模擬振動</string>
+    <string name="summary_checkbox_audio_vibration">根據低音和其他音訊事件產生振動；它與遊戲傳送的原生振動不同。</string>
     <string name="title_seekbar_audio_vibration_strength">振動強度</string>
     <string name="summary_seekbar_audio_vibration_strength">調整音訊驅動振動的強度</string>
     <string name="suffix_seekbar_audio_vibration_strength">%</string>
-    <string name="title_list_audio_vibration_mode">振動路由</string>
-    <string name="summary_list_audio_vibration_mode">選擇振動的傳遞方式</string>
+    <string name="title_list_audio_vibration_mode">音訊模擬振動輸出</string>
+    <string name="summary_list_audio_vibration_mode">選擇根據音訊產生的振動輸出到哪裡。</string>
     <string name="title_list_audio_vibration_scene">場景模式</string>
     <string name="summary_list_audio_vibration_scene">根據內容類型最佳化振動模式</string>
 
@@ -586,7 +586,7 @@
     <string name="title_list_audio_codec">接收的音訊編解碼器</string>
     <string name="summary_list_audio_codec">選擇向主機要求的音訊格式。自動模式對立體聲使用 PCM、對環繞聲使用 AC3；Opus 在本機解碼，啟用直通後 AC3/E-AC3/PCM 可由音訊裝置處理。</string>
     <string name="title_list_native_mouse_mode_preset">主機游標操作模式</string>
-    <string name="summary_list_native_mouse_mode_preset">選擇螢幕觸控或外接滑鼠如何控制主機游標。</string>
+    <string name="summary_list_native_mouse_mode_preset">選擇分區觸控與游標、觸點直接定位、觸控板相對移動或擷取外接滑鼠。</string>
     <string name="native_mouse_mode_preset_custom">自訂（從舊版設定還原）</string>
     <string name="title_crown_config_management">管理 Crown 設定檔</string>
     <string name="summary_crown_config_management">建立、選擇、匯入、匯出或合併螢幕控制與觸控設定檔。</string>
@@ -613,7 +613,7 @@
     <string name="config_sync_action_enable">啟用同步</string>
     <string name="title_seekbar_scale">主機渲染解析度比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例縮放所選串流解析度後再向主機請求。高於 100% 可增加來源畫面細節但會提高主機 GPU 負載；低於 100% 可減輕負載。主機必須支援縮放後的解析度。</string>
-    <string name="title_checkbox_enable_mic">啟用麥克風重新導向</string>
+    <string name="title_checkbox_enable_mic">將本機麥克風傳送到主機（實驗性）</string>
     <string name="summary_checkbox_enable_mic">把本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20250720 或更新版本。</string>
     <string name="title_seekbar_long_press_flat_region">長按防抖半徑</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半徑內時持續傳送初始位置，以減少全螢幕長按抖動；設為 0 則關閉。</string>
@@ -637,7 +637,7 @@
     <string name="dialog_title_pointer_velocity_factor">縮放指標區位移；100% 保持原始速度。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用螢幕最高亮度</string>
     <string name="summary_enable_hdr_high_brightness">HDR 串流期間把本機螢幕設為最高亮度，這會增加耗電與發熱。</string>
-    <string name="title_hdr_mode">HDR 傳遞格式</string>
+    <string name="title_hdr_mode">HDR 格式</string>
     <string name="summary_hdr_mode">選擇 HDR10（PQ）、HDR10+、HLG 或 Dolby Vision 8.1（實驗性）。使用 HDR10+ 前需在 Sunshine 開啟動態中繼資料分析。</string>
     <string name="title_perf_overlay_orientation">效能統計版面</string>
     <string name="summary_perf_overlay_orientation">選擇橫向單列或縱向單欄。</string>
@@ -718,7 +718,7 @@
     <string name="audio_vibration_scene_music">音樂</string>
     <string name="audio_vibration_scene_auto">自動</string>
     <!-- Complete coverage for every label referenced by the settings screen. -->
-    <string name="category_backup_restore">備份</string>
+    <string name="category_backup_restore">備份與同步</string>
     <string name="title_custom_resolutions">自訂解析度</string>
     <string name="title_adaptive_bitrate">自適應位元率</string>
     <string name="summary_adaptive_bitrate">依照封包遺失與延遲自動調整位元率；主機不支援伺服器端控制時，改用本機控制器。</string>
@@ -748,7 +748,7 @@
     <string name="title_checkbox_enable_spatializer">啟用空間音訊（Android 13+）</string>
     <string name="title_list_audio_passthrough_buffer">直通緩衝區大小</string>
     <string name="summary_list_audio_passthrough_buffer">較大緩衝區可容忍抖動，但會增加延遲；一般（約 160 ms）適合大多數設備。</string>
-    <string name="title_list_mic_menu_action_mode">串流選單麥克風動作</string>
+    <string name="title_list_mic_menu_action_mode">串流選單中的麥克風操作</string>
     <string name="summary_list_mic_menu_action_mode">選擇串流選單中的麥克風按鈕要執行什麼動作。</string>
     <string name="title_seekbar_mic_bitrate">麥克風位元率</string>
     <string name="summary_seekbar_mic_bitrate">較高位元率可提升麥克風音質，但會使用更多頻寬。</string>
@@ -760,14 +760,14 @@
     <string name="title_seekbar_double_tap_time_threshold">雙擊間隔</string>
     <string name="summary_seekbar_double_tap_time_threshold">調整兩次輕觸仍會被辨識為雙擊的最長間隔。</string>
     <string name="dialog_seekbar_double_tap_time_threshold">數值越大，雙擊越容易觸發。</string>
-    <string name="title_special_key_map">特殊按鍵對應</string>
+    <string name="title_special_key_map">Moonlight 鍵盤快速鍵</string>
     <string name="summary_special_key_map">把 Home 對應為 Esc、Esc 加數字/符號對應為 F1–F12、Esc+Q 對應為串流選單，並對應 Android 截圖與媒體鍵。</string>
     <string name="title_fix_mouse_middle">修正滑鼠中鍵</string>
     <string name="summary_fix_mouse_middle">部分裝置會把滑鼠中鍵辨識為返回鍵；遇到此問題時啟用。</string>
     <string name="title_fix_mouse_wheel">修正本機滑鼠滾輪</string>
     <string name="summary_fix_mouse_wheel">部分裝置會把本機滑鼠滾輪轉成觸控捲動事件；遇到此問題時啟用。</string>
     <string name="title_optimize_hardware_touchpad">平板觸控板支援</string>
-    <string name="summary_optimize_hardware_touchpad">為平板鍵盤的觸控板啟用原生輸入支援，需要 Root 權限。</string>
+    <string name="summary_optimize_hardware_touchpad">為支援的平板鍵盤觸控板使用專用事件處理，Root 與非 Root 版本皆可使用。</string>
     <string name="title_show_guide_button">顯示 Guide 按鈕</string>
     <string name="summary_show_guide_button">在螢幕控制上顯示 Guide 按鈕。</string>
     <string name="title_half_height_osc_portrait">直向模式下半螢幕控制</string>
@@ -820,9 +820,29 @@
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（實驗性）</string>
     <string name="mic_menu_action_show_button">顯示或隱藏懸浮麥克風按鈕</string>
     <string name="mic_menu_action_toggle_microphone">直接切換麥克風</string>
-    <string name="native_mouse_mode_preset_enhanced">直接觸控</string>
-    <string name="native_mouse_mode_preset_classic">單指滑鼠</string>
-    <string name="native_mouse_mode_preset_trackpad">觸控板</string>
-    <string name="native_mouse_mode_preset_native">外接滑鼠</string>
+    <string name="native_mouse_mode_preset_enhanced">分區直接觸控（觸控區 + 游標區）</string>
+    <string name="native_mouse_mode_preset_classic">觸點直接定位游標</string>
+    <string name="native_mouse_mode_preset_trackpad">觸控板（相對移動）</string>
+    <string name="native_mouse_mode_preset_native">外接滑鼠（擷取游標）</string>
     <string name="pacing_precise_sync">精確同步（建議）</string>
+    <string name="title_background_stream_behavior">Moonlight 進入背景時</string>
+    <string name="summary_background_stream_behavior">選擇立即中斷、返回時恢復、保持連線，或保持連線並繼續播放聲音。</string>
+    <string name="background_stream_behavior_disconnect">立即中斷連線</string>
+    <string name="background_stream_behavior_resume">中斷，返回時自動恢復</string>
+    <string name="background_stream_behavior_keep_connected">保持串流連線</string>
+    <string name="background_stream_behavior_keep_audio">保持連線並播放聲音</string>
+    <string name="title_quit_behavior">「退出」操作</string>
+    <string name="summary_quit_behavior">選擇「退出」是否同時結束主機上正在串流的應用程式。</string>
+    <string name="quit_behavior_stop_host_app">同時結束主機應用程式</string>
+    <string name="quit_behavior_disconnect_only">僅中斷連線</string>
+    <string name="title_dualsense_output_mode">DualSense 無線輸出方式</string>
+    <string name="summary_dualsense_output_mode">選擇 Moonlight 如何向無線 DualSense 傳送振動、自適應扳機和燈光輸出。</string>
+    <string name="dualsense_output_mode_off">關閉</string>
+    <string name="dualsense_output_mode_system_bluetooth">Android 系統藍牙</string>
+    <string name="dualsense_output_mode_wireless_bridge">外接 USB 藍牙橋接</string>
+    <string name="dualsense_output_mode_both">同時使用兩種輸出路徑</string>
+    <string name="title_seekbar_bitrate_baseline">基準位元率</string>
+    <string name="summary_seekbar_bitrate_baseline">智慧位元率從此數值開始，並圍繞它動態調整；最低和最高範圍由所選智慧位元率模式決定。</string>
+    <string name="summary_checkbox_enable_audiofx_passthrough">啟用音訊直通時無法使用，因為直通會略過系統音訊效果。</string>
+    <string name="summary_checkbox_enable_spatializer_passthrough">啟用音訊直通時無法使用，因為直通會略過 Android 空間音訊。</string>
 </resources>

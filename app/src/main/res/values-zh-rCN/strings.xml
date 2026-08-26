@@ -218,7 +218,7 @@
     <string name="summary_checkbox_stretch_video">改变串流画面宽高比以铺满屏幕，可能造成画面变形。</string>
     <string name="title_checkbox_disable_warnings">隐藏串流连接警告</string>
     <string name="summary_checkbox_disable_warnings">串流期间隐藏连接质量警告浮层。</string>
-    <string name="title_checkbox_enable_pip">启用画中画观察模式</string>
+    <string name="title_checkbox_enable_pip">画中画（仅观看）</string>
     <string name="summary_checkbox_enable_pip">允许多任务时观看串流画面，但是不能操作。</string>
     <string name="category_audio_settings">音频</string>
     <string name="category_microphone_settings">麦克风</string>
@@ -256,8 +256,8 @@
 
     <string name="title_checkbox_multi_controller">将手柄识别为独立玩家</string>
     <string name="summary_checkbox_multi_controller">让主机分别识别每个已连接手柄；关闭后会将它们合并为一个手柄。</string>
-    <string name="title_list_game_rumble_mode">游戏振动输出</string>
-    <string name="summary_list_game_rumble_mode">选择游戏振动在手柄与设备之间的输出方式</string>
+    <string name="title_list_game_rumble_mode">主机游戏振动输出</string>
+    <string name="summary_list_game_rumble_mode">选择游戏发送的原生振动输出到哪里；它与根据音频生成的模拟振动不同。</string>
     <string name="game_rumble_mode_coordinated">协同振动</string>
     <string name="game_rumble_mode_device">设备振动</string>
     <string name="game_rumble_mode_controller">手柄振动</string>
@@ -440,7 +440,7 @@
     <string name="summary_game_menu_opacity">调整串流返回菜单的透明度。低性能渲染模式会保持不透明。</string>
     <string name="game_menu_opacity_button">调整返回菜单透明度，当前 %1$d%%</string>
     <string name="game_menu_card_list_separator">、</string>
-    <string name="category_backup_restore">备份</string>
+    <string name="category_backup_restore">备份与同步</string>
     <string name="category_display_behavior">显示与布局</string>
     <string name="title_language_list">语言</string>
     <string name="summary_language_list">选择 Moonlight 使用的界面语言。</string>
@@ -486,8 +486,8 @@
     <string name="title_checkbox_resume_stream">自动恢复串流</string>
     <string name="summary_checkbox_resume_stream">当从后台切回Moonlight时，自动恢复串流会话。</string>
     <string name="category_host_settings">主机</string>
-    <string name="title_checkbox_enable_sops">允许主机优化游戏设置</string>
-    <string name="summary_checkbox_enable_sops">允许兼容的主机软件根据请求的串流分辨率和质量调整受支持游戏。</string>
+    <string name="title_checkbox_enable_sops">让游戏设置匹配串流规格</string>
+    <string name="summary_checkbox_enable_sops">允许兼容的主机软件根据请求的串流分辨率和质量调整受支持游戏；更改发生在主机上。</string>
     <string name="title_checkbox_host_audio">同时在主机播放声音</string>
     <string name="summary_checkbox_host_audio">在主机和本设备上同时输出串流音频。</string>
     <string name="title_checkbox_clipboard_sync_text">同步剪贴板文本</string>
@@ -508,7 +508,7 @@
     <string name="title_hdr_peak_brightness_nits">HDR 峰值亮度</string>
     <string name="summary_hdr_peak_brightness_nits">数值越高，Sunshine 会按更亮的 HDR 屏幕处理。修改后需要重新连接串流。</string>
     <string name="suffix_hdr_peak_brightness_nits">尼特</string>
-    <string name="title_hdr_mode">HDR 传递格式</string>
+    <string name="title_hdr_mode">HDR 格式</string>
     <string name="summary_hdr_mode">选择 HDR10 (PQ)、HDR10+、HLG 或 Dolby Vision 8.1（实验性）。使用 HDR10+ 前需在 Sunshine 中开启“动态元数据分析”。</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需开启动态元数据分析）</string>
     <string name="hdr_mode_hlg">HLG (混合对数伽马)</string>
@@ -550,7 +550,7 @@
     <string name="summary_checkbox_swap_quit_and_disconnect">“退出”操作只断开 Moonlight，不再要求主机停止正在串流的游戏或应用。</string>
     <string name="mic_stats_continuity">音频连续性: %1$.1f%% (捕获:%2$d 编码:%3$d 发送:%4$d 丢弃:%5$d)</string>
     <string name="title_osc_opacity">更改屏幕按钮透明度</string>
-    <string name="dialog_title_osc_opacity">透明度</string>
+    <string name="dialog_title_osc_opacity">屏幕控制按钮透明度</string>
     <string name="summary_osc_opacity">令屏幕按钮变得更透明/更不透明。</string>
     <string name="nettest_text_failure">您设备的当前网络似乎正在阻止Moonlight。连接到该网络时，可能无法通过互联网串流。
 \n
@@ -655,7 +655,7 @@
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
     <string name="title_optimize_hardware_touchpad">适配平板触摸板</string>
-    <string name="summary_optimize_hardware_touchpad">为平板键盘触摸板启用原生触摸板输入适配。需要 Root 权限。</string>
+    <string name="summary_optimize_hardware_touchpad">为受支持的平板键盘触摸板使用专用事件处理，Root 与非 Root 版本均可用。</string>
     <string name="title_checkbox_enable_esc_menu">双击按键打开串流菜单</string>
     <string name="summary_checkbox_enable_esc_menu">双击所选按键打开串流返回菜单；单击仍会发送到主机。</string>
     <string name="title_list_esc_menu_key">串流菜单快捷键</string>
@@ -666,15 +666,15 @@
     <string name="summary_checkbox_enable_audiofx">允许均衡器等系统效果处理 Moonlight 本机解码的音频；直通音频会绕过这些效果，此选项也可能增加延迟。</string>
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
     <string name="summary_checkbox_enable_spatializer">对 Moonlight 本机解码的音频使用 Android 空间化处理，需要 Android 13 和兼容的输出设备；直通音频会绕过此处理。</string>
-    <string name="title_checkbox_enable_mic">麦克风重定向 (实验性)</string>
+    <string name="title_checkbox_enable_mic">将本机麦克风发送到主机（实验性）</string>
     <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Sunshine Foundation 20250720 或更高版本。</string>
-    <string name="title_list_mic_menu_action_mode">返回菜单麦克风按钮</string>
+    <string name="title_list_mic_menu_action_mode">串流菜单中的麦克风操作</string>
     <string name="summary_list_mic_menu_action_mode">选择串流返回菜单中的麦克风按钮执行什么操作。</string>
     <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量，更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="title_list_mic_icon_color">麦克风图标颜色</string>
     <string name="summary_list_mic_icon_color">选择麦克风按钮图标的颜色。</string>
-    <string name="title_checkbox_show_mic_button">显示麦克风悬浮按钮</string>
+    <string name="title_checkbox_show_mic_button">串流开始时显示麦克风悬浮按钮</string>
     <string name="summary_checkbox_show_mic_button">串流时显示麦克风按钮。可直接拖动，位置会自动记忆。</string>
     <string name="title_list_mic_button_position">快速设置按钮位置</string>
     <string name="summary_list_mic_button_position">将麦克风按钮放到屏幕边缘。拖动位置会暂时覆盖预设，再次选择预设即可清除。</string>
@@ -700,8 +700,8 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">人声增强</string>
     <string name="summary_checkbox_mic_voice_enhancement">减少低频噪声并提升语音清晰度，可用于固定增益和音量平衡模式。</string>
-    <string name="title_checkbox_reduce_refresh_rate">允许降低刷新率</string>
-    <string name="summary_checkbox_reduce_refresh_rate">较低的屏幕刷新率可以在增加一些视频延迟的情况下省电。</string>
+    <string name="title_checkbox_reduce_refresh_rate">允许使用较低的屏幕刷新率</string>
+    <string name="summary_checkbox_reduce_refresh_rate">仅用于“平衡”帧节奏。匹配串流的较低刷新率可以省电，但可能增加视频延迟。</string>
     <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。
 \n
 \n尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</string>
@@ -904,11 +904,11 @@
 
     <!-- 本地鼠标模式预设 -->
     <string name="title_list_native_mouse_mode_preset">主机指针操作模式</string>
-    <string name="summary_list_native_mouse_mode_preset">选择屏幕触控或外接鼠标如何控制主机指针。</string>
-    <string name="native_mouse_mode_preset_enhanced">直接触控</string>
-    <string name="native_mouse_mode_preset_classic">单指鼠标</string>
-    <string name="native_mouse_mode_preset_trackpad">触控板</string>
-    <string name="native_mouse_mode_preset_native">外接鼠标</string>
+    <string name="summary_list_native_mouse_mode_preset">选择分区触控与指针、触点直接定位、触控板相对移动或捕获外接鼠标。</string>
+    <string name="native_mouse_mode_preset_enhanced">分区直接触控（触控区 + 指针区）</string>
+    <string name="native_mouse_mode_preset_classic">触点直接定位指针</string>
+    <string name="native_mouse_mode_preset_trackpad">触控板（相对移动）</string>
+    <string name="native_mouse_mode_preset_native">外接鼠标（捕获指针）</string>
     <string name="toast_preset_applied">预设已应用: %s</string>
 
     <!-- 自定义特殊按键 -->
@@ -1089,12 +1089,12 @@
     <string name="notification_content_streaming">正在串流： %1$s (%2$s)</string>
 
     <!-- 音频振动设置 -->
-    <string name="title_checkbox_audio_vibration">启用音频驱动振动</string>
-    <string name="summary_checkbox_audio_vibration">根据游戏内低音和音频事件振动设备。</string>
+    <string name="title_checkbox_audio_vibration">音频模拟振动</string>
+    <string name="summary_checkbox_audio_vibration">根据低音和其他音频事件生成振动；它与游戏发送的原生振动不同。</string>
     <string name="title_seekbar_audio_vibration_strength">振动强度</string>
     <string name="summary_seekbar_audio_vibration_strength">调整音频驱动振动的强度。</string>
-    <string name="title_list_audio_vibration_mode">振动路由</string>
-    <string name="summary_list_audio_vibration_mode">选择振动的传递方式。</string>
+    <string name="title_list_audio_vibration_mode">音频模拟振动输出</string>
+    <string name="summary_list_audio_vibration_mode">选择根据音频生成的振动输出到哪里。</string>
     <string name="title_list_audio_vibration_scene">场景模式</string>
     <string name="summary_list_audio_vibration_scene">根据内容类型优化振动模式。</string>
 
@@ -1117,7 +1117,7 @@
     <string name="toast_local_cursor_fallback">已自动使用兼容指针模式</string>
 
     <!-- 特殊按键映射 -->
-    <string name="title_special_key_map">特殊按键映射</string>
+    <string name="title_special_key_map">Moonlight 键盘快捷键</string>
     <string name="summary_special_key_map">键盘Home键映射Esc键，Esc+数字键/符号映射F1到F12，Esc+Q键映射串流菜单，安卓截图键映射Windows截图，安卓上一首/播放暂停/下一首分别映射到F5/F10/F11。</string>
 
     <!-- 修复鼠标中键 -->
@@ -2059,4 +2059,24 @@
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
     <string name="mic_menu_action_show_button">显示或隐藏悬浮麦克风按钮</string>
     <string name="mic_menu_action_toggle_microphone">直接开关麦克风</string>
+    <string name="title_background_stream_behavior">Moonlight 进入后台时</string>
+    <string name="summary_background_stream_behavior">选择立即断开、返回时恢复、保持连接，或保持连接并继续播放声音。</string>
+    <string name="background_stream_behavior_disconnect">立即断开连接</string>
+    <string name="background_stream_behavior_resume">断开，返回时自动恢复</string>
+    <string name="background_stream_behavior_keep_connected">保持串流连接</string>
+    <string name="background_stream_behavior_keep_audio">保持连接并播放声音</string>
+    <string name="title_quit_behavior">“退出”操作</string>
+    <string name="summary_quit_behavior">选择“退出”是否同时结束主机上正在串流的应用。</string>
+    <string name="quit_behavior_stop_host_app">同时结束主机应用</string>
+    <string name="quit_behavior_disconnect_only">仅断开连接</string>
+    <string name="title_dualsense_output_mode">DualSense 无线输出方式</string>
+    <string name="summary_dualsense_output_mode">选择 Moonlight 如何向无线 DualSense 发送振动、自适应扳机和灯光输出。</string>
+    <string name="dualsense_output_mode_off">关闭</string>
+    <string name="dualsense_output_mode_system_bluetooth">Android 系统蓝牙</string>
+    <string name="dualsense_output_mode_wireless_bridge">外置 USB 蓝牙桥接</string>
+    <string name="dualsense_output_mode_both">同时使用两种输出路径</string>
+    <string name="title_seekbar_bitrate_baseline">基准码率</string>
+    <string name="summary_seekbar_bitrate_baseline">智能码率从此数值开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
+    <string name="summary_checkbox_enable_audiofx_passthrough">启用音频直通时不可用，因为直通会绕过系统音频效果。</string>
+    <string name="summary_checkbox_enable_spatializer_passthrough">启用音频直通时不可用，因为直通会绕过 Android 空间音频。</string>
 </resources>

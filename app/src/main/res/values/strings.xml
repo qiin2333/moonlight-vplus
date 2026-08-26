@@ -295,9 +295,9 @@
     <string name="summary_checkbox_enable_spatializer">Use Android Spatializer for audio decoded by Moonlight. Requires Android 13 and compatible output; passthrough audio bypasses it.</string>
     <string name="title_checkbox_control_only">Control-only mode</string>
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
-    <string name="title_checkbox_enable_mic">Enable microphone redirection</string>
+    <string name="title_checkbox_enable_mic">Send this device’s microphone to the host</string>
     <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Sunshine Foundation build 20250720 or later.</string>
-    <string name="title_list_mic_menu_action_mode">Stream menu microphone action</string>
+    <string name="title_list_mic_menu_action_mode">Microphone action in the stream menu</string>
     <string name="summary_list_mic_menu_action_mode">Choose what the microphone button in the stream menu does</string>
     <string name="mic_menu_action_show_button">Show or hide floating microphone button</string>
     <string name="mic_menu_action_toggle_microphone">Toggle microphone directly</string>
@@ -306,7 +306,7 @@
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
     <string name="title_list_mic_icon_color">Microphone icon color</string>
     <string name="summary_list_mic_icon_color">Choose the color scheme for the microphone button icon</string>
-    <string name="title_checkbox_show_mic_button">Show microphone floating button</string>
+    <string name="title_checkbox_show_mic_button">Show floating microphone button when streaming starts</string>
     <string name="summary_checkbox_show_mic_button">Show the microphone button when streaming. You can drag it and its position will be remembered.</string>
     <string name="title_list_mic_button_position">Quick button position</string>
     <string name="summary_list_mic_button_position">Place the microphone button at a screen edge. A dragged position overrides this preset until you choose a preset again.</string>
@@ -332,14 +332,14 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Voice enhancement</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce low-frequency noise and improve speech clarity. Available in both fixed gain and volume balance modes.</string>
-    <string name="title_checkbox_reduce_refresh_rate">Allow refresh rate reduction</string>
-    <string name="summary_checkbox_reduce_refresh_rate">Lower display refresh rates can save power at the expense of some additional video latency</string>
+    <string name="title_checkbox_reduce_refresh_rate">Allow a lower display refresh rate</string>
+    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced frame pacing. A lower matching refresh rate can save power but may add video latency.</string>
 
     <string name="category_gamepad_settings">Gamepad</string>
     <string name="title_checkbox_multi_controller">Separate controllers and players</string>
     <string name="summary_checkbox_multi_controller">Expose each connected controller as a separate controller on the host. Turn off to combine them as one.</string>
-    <string name="title_list_game_rumble_mode">Game vibration output</string>
-    <string name="summary_list_game_rumble_mode">Choose how game vibration is shared between your controller and device</string>
+    <string name="title_list_game_rumble_mode">Host game rumble output</string>
+    <string name="summary_list_game_rumble_mode">Choose where rumble events sent by the game are delivered. This is separate from audio-simulated vibration.</string>
     <string name="game_rumble_mode_coordinated">Coordinated vibration</string>
     <string name="game_rumble_mode_device">Device vibration</string>
     <string name="game_rumble_mode_controller">Controller vibration</string>
@@ -485,7 +485,7 @@
     <string name="title_checkbox_absolute_mouse_mode">Remote desktop mouse mode</string>
     <string name="summary_checkbox_absolute_mouse_mode">This can make mouse acceleration behave more naturally for remote desktop usage, but it is incompatible with many games.</string>
     <string name="title_optimize_hardware_touchpad">Tablet touchpad support</string>
-    <string name="summary_optimize_hardware_touchpad">Enable native touchpad input support for tablet keyboard touchpads. Requires root permission.</string>
+    <string name="summary_optimize_hardware_touchpad">Use dedicated event handling for supported tablet keyboard touchpads. Available in both root and non-root builds.</string>
     <string name="title_checkbox_enable_esc_menu">Double-press key for stream menu</string>
     <string name="summary_checkbox_enable_esc_menu">Double-press the selected key to open the stream return menu; a single press is still sent to the host.</string>
     <string name="title_list_esc_menu_key">Stream menu shortcut key</string>
@@ -527,7 +527,7 @@
     <string name="toast_reset_osc_success">On-screen controls reset to default</string>
     <string name="title_osc_opacity">Change opacity of on-screen controls</string>
     <string name="summary_osc_opacity">Make the on-screen controls more/less transparent</string>
-    <string name="dialog_title_osc_opacity">Change opacity</string>
+    <string name="dialog_title_osc_opacity">On-screen control opacity</string>
     <string name="suffix_osc_opacity">%</string>
 
     <string name="category_float_ball_settings">Float Ball Settings</string>
@@ -564,9 +564,9 @@
     <string name="float_ball_action_lock_screen">Lock Screen</string>
 
     <string name="category_ui_settings">Interface</string>
-    <string name="category_backup_restore">Backups</string>
+    <string name="category_backup_restore">Backup &amp; sync</string>
     <string name="category_display_behavior">Display &amp; layout</string>
-    <string name="title_checkbox_enable_pip">Enable Picture-in-Picture observer mode</string>
+    <string name="title_checkbox_enable_pip">Picture-in-Picture (view only)</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>
     <string name="title_checkbox_enable_background_audio">Background Audio Mode</string>
     <string name="summary_checkbox_enable_background_audio">Hide the entire window and play audio in background, allowing you to use other apps while listening</string>
@@ -630,8 +630,8 @@
     <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
     <string name="category_host_settings">Host</string>
-    <string name="title_checkbox_enable_sops">Let the host optimize game settings</string>
-    <string name="summary_checkbox_enable_sops">Allow compatible host software to adjust supported games for the requested stream resolution and quality.</string>
+    <string name="title_checkbox_enable_sops">Match game settings to the stream</string>
+    <string name="summary_checkbox_enable_sops">Allow compatible host software to adjust supported games for the requested stream resolution and quality. Changes are made on the host.</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
     <string name="title_checkbox_clipboard_sync_text">Sync clipboard text with PC</string>
@@ -674,7 +674,7 @@
     <string name="title_hdr_peak_brightness_nits">HDR peak brightness</string>
     <string name="summary_hdr_peak_brightness_nits">Higher values make Sunshine target a brighter HDR display. Reconnect the stream after changing this.</string>
     <string name="suffix_hdr_peak_brightness_nits">nits</string>
-    <string name="title_hdr_mode">HDR transfer format</string>
+    <string name="title_hdr_mode">HDR format</string>
     <string name="summary_hdr_mode">Choose HDR10 (PQ), HDR10+, HLG, or Dolby Vision 8.1 (experimental). HDR10+ requires Dynamic Metadata Analysis to be enabled in Sunshine.</string>
     <string name="hdr_mode_hdr10">HDR10 (PQ)</string>
     <string name="hdr_mode_hdr10_plus">HDR10+ (requires Dynamic Metadata Analysis)</string>
@@ -1108,11 +1108,11 @@
 
     <!-- 本地鼠标模式预设 -->
     <string name="title_list_native_mouse_mode_preset">Control method preset</string>
-    <string name="summary_list_native_mouse_mode_preset">Choose how you want to control the host</string>
-    <string name="native_mouse_mode_preset_enhanced">Direct touch</string>
-    <string name="native_mouse_mode_preset_classic">Single-finger mouse</string>
-    <string name="native_mouse_mode_preset_trackpad">Touchpad</string>
-    <string name="native_mouse_mode_preset_native">External mouse</string>
+    <string name="summary_list_native_mouse_mode_preset">Choose between a split touch/pointer layout, direct pointer positioning, relative touchpad movement, or captured external-mouse input.</string>
+    <string name="native_mouse_mode_preset_enhanced">Split direct touch (touch + pointer zones)</string>
+    <string name="native_mouse_mode_preset_classic">Direct pointer positioning</string>
+    <string name="native_mouse_mode_preset_trackpad">Touchpad (relative movement)</string>
+    <string name="native_mouse_mode_preset_native">External mouse (captured pointer)</string>
     <string name="toast_preset_applied">Preset applied: %s</string>
 
     <!-- 自定义特殊按键 -->
@@ -1373,13 +1373,13 @@ Tap again to replace it.</string>
     <string name="notification_content_streaming">Streaming in progress: %1$s (%2$s)</string>
 
     <!-- Audio Vibration Settings -->
-    <string name="title_checkbox_audio_vibration">Enable audio-driven vibration</string>
-    <string name="summary_checkbox_audio_vibration">Vibrate device based on in-game bass and audio events</string>
+    <string name="title_checkbox_audio_vibration">Audio-simulated vibration</string>
+    <string name="summary_checkbox_audio_vibration">Generate vibration from bass and other audio events. This is separate from rumble events sent by the game.</string>
     <string name="title_seekbar_audio_vibration_strength">Vibration strength</string>
     <string name="summary_seekbar_audio_vibration_strength">Adjust the intensity of audio-driven vibration</string>
     <string name="suffix_seekbar_audio_vibration_strength">%</string>
-    <string name="title_list_audio_vibration_mode">Vibration routing</string>
-    <string name="summary_list_audio_vibration_mode">Choose how vibration is delivered</string>
+    <string name="title_list_audio_vibration_mode">Audio vibration output</string>
+    <string name="summary_list_audio_vibration_mode">Choose where vibration generated from audio is delivered.</string>
     <string name="title_list_audio_vibration_scene">Scene mode</string>
     <string name="summary_list_audio_vibration_scene">Optimize vibration pattern for content type</string>
 
@@ -1402,7 +1402,7 @@ Tap again to replace it.</string>
     <string name="toast_local_cursor_fallback">Using compatible cursor mode for this host</string>
 
     <!-- Special key mapping -->
-    <string name="title_special_key_map">Special key mapping</string>
+    <string name="title_special_key_map">Moonlight keyboard shortcuts</string>
     <string name="summary_special_key_map">Maps Home to Esc, Esc+number/symbol to F1-F12, Esc+Q to stream menu, Android screenshot to Windows screenshot, Android prev/play-pause/next to F5/F10/F11.</string>
 
     <!-- Fix mouse middle button -->
@@ -2137,4 +2137,24 @@ Tap again to replace it.</string>
     <string name="audio_vibration_scene_game_movie">Game or movie</string>
     <string name="audio_vibration_scene_music">Music</string>
     <string name="audio_vibration_scene_auto">Automatic</string>
+    <string name="title_background_stream_behavior">When Moonlight goes to the background</string>
+    <string name="summary_background_stream_behavior">Choose whether to disconnect, resume later, keep the connection, or keep the connection with audio.</string>
+    <string name="background_stream_behavior_disconnect">Disconnect immediately</string>
+    <string name="background_stream_behavior_resume">Disconnect and resume when returning</string>
+    <string name="background_stream_behavior_keep_connected">Keep the stream connected</string>
+    <string name="background_stream_behavior_keep_audio">Keep the stream connected with audio</string>
+    <string name="title_quit_behavior">Quit action</string>
+    <string name="summary_quit_behavior">Choose whether Quit also stops the streamed app on the host.</string>
+    <string name="quit_behavior_stop_host_app">Stop the app on the host</string>
+    <string name="quit_behavior_disconnect_only">Disconnect only</string>
+    <string name="title_dualsense_output_mode">DualSense wireless output</string>
+    <string name="summary_dualsense_output_mode">Choose how Moonlight sends vibration, adaptive triggers, and light-bar output to wireless DualSense controllers.</string>
+    <string name="dualsense_output_mode_off">Off</string>
+    <string name="dualsense_output_mode_system_bluetooth">Android system Bluetooth</string>
+    <string name="dualsense_output_mode_wireless_bridge">External USB Bluetooth bridge</string>
+    <string name="dualsense_output_mode_both">Both output paths</string>
+    <string name="title_seekbar_bitrate_baseline">Baseline bitrate</string>
+    <string name="summary_seekbar_bitrate_baseline">Adaptive bitrate starts here and adjusts around this value. The selected ABR mode controls the minimum and maximum range.</string>
+    <string name="summary_checkbox_enable_audiofx_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses system audio effects.</string>
+    <string name="summary_checkbox_enable_spatializer_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses Android spatial audio.</string>
 </resources>

@@ -303,6 +303,41 @@
         <item>3</item>
     </string-array>
 
+    <string-array name="background_stream_behavior_names">
+        <item>@string/background_stream_behavior_disconnect</item>
+        <item>@string/background_stream_behavior_resume</item>
+        <item>@string/background_stream_behavior_keep_connected</item>
+        <item>@string/background_stream_behavior_keep_audio</item>
+    </string-array>
+    <string-array name="background_stream_behavior_values" translatable="false">
+        <item>disconnect</item>
+        <item>resume</item>
+        <item>keep_connected</item>
+        <item>keep_audio</item>
+    </string-array>
+
+    <string-array name="quit_behavior_names">
+        <item>@string/quit_behavior_stop_host_app</item>
+        <item>@string/quit_behavior_disconnect_only</item>
+    </string-array>
+    <string-array name="quit_behavior_values" translatable="false">
+        <item>stop_host_app</item>
+        <item>disconnect_only</item>
+    </string-array>
+
+    <string-array name="dualsense_output_mode_names">
+        <item>@string/dualsense_output_mode_off</item>
+        <item>@string/dualsense_output_mode_system_bluetooth</item>
+        <item>@string/dualsense_output_mode_wireless_bridge</item>
+        <item>@string/dualsense_output_mode_both</item>
+    </string-array>
+    <string-array name="dualsense_output_mode_values" translatable="false">
+        <item>off</item>
+        <item>system_bluetooth</item>
+        <item>wireless_bridge</item>
+        <item>both</item>
+    </string-array>
+
     <!-- Performance overlay orientation options -->
     <string-array name="perf_overlay_orientation_names">
         <item>@string/orientation_horizontal</item>

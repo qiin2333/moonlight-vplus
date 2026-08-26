@@ -3083,6 +3083,8 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_clipboard_sync_text",
             "checkbox_control_only",
             "checkbox_disable_warnings",
+            "checkbox_dualsense_direct_bluetooth",
+            "checkbox_dualsense_wireless_bridge",
             "checkbox_enable_audio_passthrough",
             "checkbox_enable_audiofx",
             "checkbox_enable_analytics",

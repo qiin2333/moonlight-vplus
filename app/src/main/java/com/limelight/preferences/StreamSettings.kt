@@ -940,6 +940,9 @@ class StreamSettings : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         private companion object {
             private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
+            private const val BACKGROUND_STREAM_BEHAVIOR_PREF_KEY = "list_background_stream_behavior"
+            private const val QUIT_BEHAVIOR_PREF_KEY = "list_quit_behavior"
+            private const val DUALSENSE_OUTPUT_MODE_PREF_KEY = "list_dualsense_output_mode"
             private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
             private const val ANDROIDX_EXPAND_BUTTON_CLASS = "androidx.preference.ExpandButton"
             private const val EXPAND_FOCUS_RESTORE_ATTEMPTS = 3
@@ -959,6 +962,7 @@ class StreamSettings : AppCompatActivity() {
         }
         private val configSyncPreferenceChangeListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                refreshLegacyModeSelectors()
                 if (!suppressConfigSyncPreferenceChanges) {
                     handleConfigSyncPreferenceChanged(key)
                 }
@@ -967,6 +971,7 @@ class StreamSettings : AppCompatActivity() {
         private var configSyncSnapshotInProgress = false
         private var configSyncPreferenceListenerRegistered = false
         private var suppressConfigSyncPreferenceChanges = false
+        private var pendingDualSenseOutputMode: DualSenseOutputMode? = null
 
         // 分类列表（用于抽屉菜单同步）
         private val categoryList: MutableList<PreferenceCategory> = ArrayList()
@@ -1241,6 +1246,10 @@ class StreamSettings : AppCompatActivity() {
                 )
 
             updateRuntimeVisibility(hostCadencePref, selectedFramePacing == "precise-sync")
+            updateRuntimeVisibility(
+                findPreference("checkbox_reduce_refresh_rate"),
+                selectedFramePacing == "balanced",
+            )
         }
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -1454,6 +1463,23 @@ class StreamSettings : AppCompatActivity() {
                 crossinline currentValueProvider: (T) -> String
         ) {
             val originalSummary = pref.summary?.toString()?.takeIf { it.isNotBlank() }
+            applyHighlightedSummary(
+                pref,
+                accent,
+                valueText,
+                disabledAccent,
+                currentValueProvider,
+            ) { originalSummary }
+        }
+
+        private inline fun <reified T : Preference> applyHighlightedSummary(
+                pref: T,
+                accent: Int,
+                valueText: Int,
+                disabledAccent: Int,
+                crossinline currentValueProvider: (T) -> String,
+                crossinline descriptionProvider: (T) -> CharSequence?
+        ) {
             pref.summaryProvider = Preference.SummaryProvider<T> { p ->
                 val current = currentValueProvider(p)
                 val builder = SpannableStringBuilder()
@@ -1471,8 +1497,9 @@ class StreamSettings : AppCompatActivity() {
                 builder.setSpan(
                         StyleSpan(Typeface.BOLD),
                         valueStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                if (originalSummary != null) {
-                    builder.append('\n').append(originalSummary)
+                val description = descriptionProvider(p)?.takeIf { it.isNotBlank() }
+                if (description != null) {
+                    builder.append('\n').append(description)
                 }
                 builder
             }
@@ -2930,6 +2957,7 @@ class StreamSettings : AppCompatActivity() {
                     PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
                 )?.isChecked = false
             }
+            refreshLegacyModeSelectors()
             registerConfigSyncPreferenceListener()
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
@@ -3204,10 +3232,15 @@ class StreamSettings : AppCompatActivity() {
             setupInputModePresetPreference()
             setupMicrophoneButtonPositionPreference()
             setupFloatBallPositionPreference()
+            setupLegacyBackedModeSelectors()
+            setupAudioPipelineVisibility()
+            setupDisplayLayoutVisibility()
+            setupHdrPreferenceVisibility()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
             applyListPreferenceCurrentValueSummary(screen)
+            setupAdaptiveBitratePresentation()
             updateHostCadencePreciseSyncVisibility()
 
             // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
@@ -3336,8 +3369,10 @@ class StreamSettings : AppCompatActivity() {
                 categoryGamepadSettings.removePreference(deviceRumbleStrength)
             } else {
                 fun updateDeviceRumbleStrengthEnabled(value: String?) {
-                    deviceRumbleStrength.isEnabled =
-                        GameRumbleMode.fromPreferenceValue(value) != GameRumbleMode.CONTROLLER
+                    updateRuntimeVisibility(
+                        deviceRumbleStrength,
+                        GameRumbleMode.fromPreferenceValue(value) != GameRumbleMode.CONTROLLER,
+                    )
                 }
                 updateDeviceRumbleStrengthEnabled(gameRumbleMode.value)
                 gameRumbleMode.onPreferenceChangeListener =
@@ -3835,10 +3870,18 @@ class StreamSettings : AppCompatActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
             if (requestCode != BLUETOOTH_CONNECT_PERMISSION_REQUEST) return
             val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
-            findPreference<CheckBoxPreference>(
-                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
-            )?.isChecked = granted
-            if (!granted) {
+            val pendingMode = pendingDualSenseOutputMode
+            pendingDualSenseOutputMode = null
+            if (granted && pendingMode != null) {
+                persistDualSenseOutputMode(pendingMode)
+            } else if (!granted) {
+                PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                    putBoolean(
+                        PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING,
+                        false,
+                    )
+                }
+                refreshLegacyModeSelectors()
                 Toast.makeText(
                     requireContext(),
                     R.string.toast_dualsense_bluetooth_permission_denied,
@@ -4222,6 +4265,264 @@ class StreamSettings : AppCompatActivity() {
                 findPreference("reset_background_image"),
                 source !is BackgroundSource.Auto,
             )
+        }
+
+        private fun setupLegacyBackedModeSelectors() {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+
+            listOf(
+                "checkbox_resume_stream",
+                "checkbox_extreme_resume",
+                "checkbox_background_audio",
+                "checkbox_swap_quit_and_disconnect",
+                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING,
+                "checkbox_dualsense_wireless_bridge",
+            ).forEach { key -> findPreference<Preference>(key)?.isVisible = false }
+
+            findPreference<ListPreference>(BACKGROUND_STREAM_BEHAVIOR_PREF_KEY)
+                ?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                    val mode = BackgroundStreamBehaviorPolicy
+                        .fromPreferenceValue(newValue as? String)
+                    prefs.edit {
+                        putBoolean("checkbox_resume_stream", mode.resumeAutomatically)
+                        putBoolean("checkbox_extreme_resume", mode.keepConnected)
+                        putBoolean("checkbox_background_audio", mode.playAudio)
+                    }
+                    true
+                }
+
+            findPreference<ListPreference>(QUIT_BEHAVIOR_PREF_KEY)
+                ?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                    val mode = QuitBehavior.fromPreferenceValue(newValue as? String)
+                    prefs.edit {
+                        putBoolean(
+                            "checkbox_swap_quit_and_disconnect",
+                            mode == QuitBehavior.DISCONNECT_ONLY,
+                        )
+                    }
+                    true
+                }
+
+            val dualSenseSelector = findPreference<ListPreference>(DUALSENSE_OUTPUT_MODE_PREF_KEY)
+            if (dualSenseSelector != null) {
+                val packageManager = requireContext().packageManager
+                val supportsSystemBluetooth = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
+                val supportsWirelessBridge =
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)
+                val supportedModes = buildList {
+                    add(DualSenseOutputMode.OFF)
+                    if (supportsSystemBluetooth) add(DualSenseOutputMode.SYSTEM_BLUETOOTH)
+                    if (supportsWirelessBridge) add(DualSenseOutputMode.WIRELESS_BRIDGE)
+                    if (supportsSystemBluetooth && supportsWirelessBridge) {
+                        add(DualSenseOutputMode.BOTH)
+                    }
+                }
+                val allModeLabels = resources.getTextArray(R.array.dualsense_output_mode_names)
+                dualSenseSelector.entries = supportedModes
+                    .map { mode -> allModeLabels[mode.ordinal] }
+                    .toTypedArray()
+                dualSenseSelector.entryValues = supportedModes
+                    .map { mode -> mode.preferenceValue }
+                    .toTypedArray()
+                updateRuntimeVisibility(
+                    dualSenseSelector,
+                    supportsSystemBluetooth || supportsWirelessBridge,
+                )
+                dualSenseSelector.onPreferenceChangeListener =
+                    Preference.OnPreferenceChangeListener { _, newValue ->
+                        val mode = DualSenseOutputMode.fromPreferenceValue(newValue as? String)
+                        val needsBluetoothPermission = mode.systemBluetooth &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                            ContextCompat.checkSelfPermission(
+                                requireContext(),
+                                Manifest.permission.BLUETOOTH_CONNECT,
+                            ) != PackageManager.PERMISSION_GRANTED
+                        if (needsBluetoothPermission) {
+                            pendingDualSenseOutputMode = mode
+                            requestPermissions(
+                                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                                BLUETOOTH_CONNECT_PERMISSION_REQUEST,
+                            )
+                            false
+                        } else {
+                            persistDualSenseOutputMode(mode)
+                            true
+                        }
+                    }
+            }
+
+            refreshLegacyModeSelectors()
+        }
+
+        private fun persistDualSenseOutputMode(mode: DualSenseOutputMode) {
+            PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                putBoolean(
+                    PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING,
+                    mode.systemBluetooth,
+                )
+                putBoolean("checkbox_dualsense_wireless_bridge", mode.wirelessBridge)
+            }
+            findPreference<ListPreference>(DUALSENSE_OUTPUT_MODE_PREF_KEY)?.value =
+                mode.preferenceValue
+        }
+
+        private fun refreshLegacyModeSelectors() {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            findPreference<ListPreference>(BACKGROUND_STREAM_BEHAVIOR_PREF_KEY)?.value =
+                BackgroundStreamBehaviorPolicy.fromLegacy(
+                    prefs.getBoolean("checkbox_resume_stream", false),
+                    prefs.getBoolean("checkbox_extreme_resume", false),
+                    prefs.getBoolean("checkbox_background_audio", false),
+                ).preferenceValue
+            findPreference<ListPreference>(QUIT_BEHAVIOR_PREF_KEY)?.value =
+                QuitBehavior.fromLegacy(
+                    prefs.getBoolean("checkbox_swap_quit_and_disconnect", false),
+                ).preferenceValue
+
+            val selector = findPreference<ListPreference>(DUALSENSE_OUTPUT_MODE_PREF_KEY)
+            val legacyMode = DualSenseOutputMode.fromLegacy(
+                prefs.getBoolean(
+                    PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING,
+                    false,
+                ),
+                prefs.getBoolean("checkbox_dualsense_wireless_bridge", false),
+            )
+            val availableValues = selector?.entryValues?.map(CharSequence::toString).orEmpty()
+            selector?.value = when {
+                legacyMode.preferenceValue in availableValues -> legacyMode.preferenceValue
+                DualSenseOutputMode.SYSTEM_BLUETOOTH.preferenceValue in availableValues &&
+                    legacyMode == DualSenseOutputMode.BOTH ->
+                    DualSenseOutputMode.SYSTEM_BLUETOOTH.preferenceValue
+                DualSenseOutputMode.WIRELESS_BRIDGE.preferenceValue in availableValues &&
+                    legacyMode == DualSenseOutputMode.BOTH ->
+                    DualSenseOutputMode.WIRELESS_BRIDGE.preferenceValue
+                else -> DualSenseOutputMode.OFF.preferenceValue
+            }
+        }
+
+        private fun setupAdaptiveBitratePresentation() {
+            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate")
+                ?: return
+            val bitrate = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
+                ?: return
+            val accent = ContextCompat.getColor(bitrate.context, R.color.ui_shell_accent)
+            val valueText = ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_primary)
+            val disabledAccent =
+                ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_disabled_primary)
+            var adaptiveBitrateEnabled = adaptiveBitrate.isChecked
+
+            applyHighlightedSummary(
+                bitrate,
+                accent,
+                valueText,
+                disabledAccent,
+                currentValueProvider = {
+                    val display = it.formatDisplayValue(it.currentValue)
+                    val suffix = it.suffix?.takeIf { suffix -> suffix.isNotBlank() }
+                    if (suffix != null) "$display $suffix" else display
+                },
+                descriptionProvider = {
+                    getString(
+                        if (adaptiveBitrateEnabled) R.string.summary_seekbar_bitrate_baseline
+                        else R.string.summary_seekbar_bitrate
+                    )
+                },
+            )
+
+            fun updatePresentation(enabled: Boolean) {
+                adaptiveBitrateEnabled = enabled
+                bitrate.setTitle(
+                    if (enabled) R.string.title_seekbar_bitrate_baseline
+                    else R.string.title_seekbar_bitrate
+                )
+            }
+
+            updatePresentation(adaptiveBitrate.isChecked)
+            adaptiveBitrate.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updatePresentation(newValue == true)
+                    true
+                }
+        }
+
+        private fun setupAudioPipelineVisibility() {
+            val passthrough = findPreference<CheckBoxPreference>("checkbox_enable_audio_passthrough")
+                ?: return
+            val audioEffects = findPreference<Preference>("checkbox_enable_audiofx")
+            val spatializer = findPreference<Preference>("checkbox_enable_spatializer")
+
+            fun updateState(enabled: Boolean) {
+                audioEffects?.isEnabled = !enabled
+                audioEffects?.setSummary(
+                    if (enabled) R.string.summary_checkbox_enable_audiofx_passthrough
+                    else R.string.summary_checkbox_enable_audiofx
+                )
+                spatializer?.isEnabled = !enabled
+                spatializer?.setSummary(
+                    if (enabled) R.string.summary_checkbox_enable_spatializer_passthrough
+                    else R.string.summary_checkbox_enable_spatializer
+                )
+            }
+
+            updateState(passthrough.isChecked)
+            passthrough.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updateState(newValue == true)
+                    true
+                }
+        }
+
+        private fun setupDisplayLayoutVisibility() {
+            val stretchVideo = findPreference<CheckBoxPreference>("checkbox_stretch_video") ?: return
+            val layoutPreferences = listOf(
+                "list_screen_position",
+                "seekbar_screen_offset_x",
+                "seekbar_screen_offset_y",
+            ).mapNotNull { key -> findPreference<Preference>(key) }
+
+            fun updateState(stretched: Boolean) {
+                layoutPreferences.forEach { preference ->
+                    updateRuntimeVisibility(preference, !stretched)
+                }
+            }
+
+            updateState(stretchVideo.isChecked)
+            stretchVideo.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updateState(newValue == true)
+                    true
+                }
+        }
+
+        private fun setupHdrPreferenceVisibility() {
+            val hdr = findPreference<CheckBoxPreference>("checkbox_enable_hdr") ?: return
+            val brightnessOverride =
+                findPreference<CheckBoxPreference>("checkbox_hdr_brightness_override")
+            val hdrChildren = listOf(
+                "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override",
+                "list_hdr_mode",
+            ).mapNotNull { key -> findPreference<Preference>(key) }
+            val peakBrightness = findPreference<Preference>("seekbar_hdr_peak_brightness_nits")
+
+            fun updateState(hdrEnabled: Boolean, overrideEnabled: Boolean) {
+                hdrChildren.forEach { preference ->
+                    updateRuntimeVisibility(preference, hdrEnabled)
+                }
+                updateRuntimeVisibility(peakBrightness, hdrEnabled && overrideEnabled)
+            }
+
+            updateState(hdr.isChecked, brightnessOverride?.isChecked == true)
+            hdr.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                updateState(newValue == true, brightnessOverride?.isChecked == true)
+                true
+            }
+            brightnessOverride?.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updateState(hdr.isChecked, newValue == true)
+                    true
+                }
         }
 
         private fun setupInputModePresetPreference() {

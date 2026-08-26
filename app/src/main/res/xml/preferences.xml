@@ -53,7 +53,7 @@
     <PreferenceCategory android:title="@string/category_advanced_features"
         android:key="category_advanced_features"
         android:layout="@layout/preference_category_material"
-        app:initialExpandedChildrenCount="7">
+        app:initialExpandedChildrenCount="5">
         <CheckBoxPreference
             android:key="checkbox_adaptive_bitrate"
             android:title="@string/title_adaptive_bitrate"
@@ -198,6 +198,14 @@
             android:key="checkbox_lock_screen_after_disconnect"
             android:summary="@string/summary_checkbox_lock_screen_after_disconnect"
             android:title="@string/title_checkbox_lock_screen_after_disconnect" />
+        <ListPreference
+            android:key="list_quit_behavior"
+            android:title="@string/title_quit_behavior"
+            android:summary="@string/summary_quit_behavior"
+            android:entries="@array/quit_behavior_names"
+            android:entryValues="@array/quit_behavior_values"
+            android:persistent="false" />
+        <!-- Legacy storage flag. Kept for runtime behavior and old backups. -->
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_swap_quit_and_disconnect"
@@ -208,6 +216,13 @@
             android:title="@string/title_checkbox_control_only"
             android:summary="@string/summary_checkbox_control_only"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_background_stream_behavior"
+            android:title="@string/title_background_stream_behavior"
+            android:summary="@string/summary_background_stream_behavior"
+            android:entries="@array/background_stream_behavior_names"
+            android:entryValues="@array/background_stream_behavior_values"
+            android:persistent="false" />
         <CheckBoxPreference
             android:key="checkbox_clipboard_sync_text"
             android:title="@string/title_checkbox_clipboard_sync_text"
@@ -218,6 +233,7 @@
             android:title="@string/title_checkbox_clipboard_sync_image"
             android:summary="@string/summary_checkbox_clipboard_sync_image"
             android:defaultValue="false" />
+        <!-- Legacy storage flags. Kept for runtime behavior and old backups. -->
         <CheckBoxPreference
             android:key="checkbox_resume_stream"
             android:title="@string/title_checkbox_resume_stream"
@@ -719,6 +735,14 @@
             android:title="@string/title_checkbox_usb_bind_all"
             android:summary="@string/summary_checkbox_usb_bind_all"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_dualsense_output_mode"
+            android:title="@string/title_dualsense_output_mode"
+            android:summary="@string/summary_dualsense_output_mode"
+            android:entries="@array/dualsense_output_mode_names"
+            android:entryValues="@array/dualsense_output_mode_values"
+            android:persistent="false" />
+        <!-- Legacy storage flags. Kept for runtime behavior and old backups. -->
         <CheckBoxPreference
             android:key="checkbox_dualsense_direct_bluetooth"
             android:title="@string/title_dualsense_direct_bluetooth"
