@@ -161,18 +161,15 @@ class StreamSettings : AppCompatActivity() {
                 "category_screen_position" -> R.drawable.phc_video_camera
                 "category_display_behavior" -> R.drawable.phc_perf_resolution
                 "category_audio_settings" -> R.drawable.phc_audio
-                "category_microphone_settings" -> R.drawable.ic_mic_gm
                 "category_gamepad_settings" -> R.drawable.phc_gamepad
                 "category_input_settings" -> R.drawable.phc_keyboard
-                "category_enhanced_touch" -> R.drawable.phc_touch
                 "category_onscreen_controls" -> R.drawable.phc_game_controller
-                "category_float_ball" -> R.drawable.phc_eye
                 "category_crown_features" -> R.drawable.phc_crown
                 "category_host_settings" -> R.drawable.phc_host
-                "category_connection_settings" -> R.drawable.phc_plug
                 "category_ui_settings" -> R.drawable.phc_lightbulb
                 "category_advanced_settings" -> R.drawable.phc_settings    // legacy
                 "category_advanced_features" -> R.drawable.phc_lightning   // 性能与流畅度
+                "category_framegen_settings" -> R.drawable.phc_video_camera
                 "category_help" -> R.drawable.phc_info
                 else -> R.drawable.phc_list
             }
@@ -660,13 +657,14 @@ class StreamSettings : AppCompatActivity() {
      * 通知 Activity 分类已加载
      */
     fun onCategoriesLoaded(loadedCategories: List<CategoryItem>) {
+        val selectedKey = categories.getOrNull(selectedCategoryIndex)?.key
         categories.clear()
         categories.addAll(loadedCategories)
 
-        // 验证并校正 selectedCategoryIndex（屏幕旋转后恢复时可能越界）
-        if (selectedCategoryIndex >= categories.size) {
-            selectedCategoryIndex = 0.coerceAtLeast(categories.size - 1)
-        }
+        selectedCategoryIndex = selectedKey
+            ?.let { key -> categories.indexOfFirst { it.key == key } }
+            ?.takeIf { it >= 0 }
+            ?: selectedCategoryIndex.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
 
         categoryAdapter?.notifyDataSetChanged()
     }
@@ -942,6 +940,9 @@ class StreamSettings : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         private companion object {
             private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
+            private const val BACKGROUND_STREAM_BEHAVIOR_PREF_KEY = "list_background_stream_behavior"
+            private const val QUIT_BEHAVIOR_PREF_KEY = "list_quit_behavior"
+            private const val DUALSENSE_OUTPUT_MODE_PREF_KEY = "list_dualsense_output_mode"
             private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
             private const val ANDROIDX_EXPAND_BUTTON_CLASS = "androidx.preference.ExpandButton"
             private const val EXPAND_FOCUS_RESTORE_ATTEMPTS = 3
@@ -961,11 +962,16 @@ class StreamSettings : AppCompatActivity() {
         }
         private val configSyncPreferenceChangeListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                handleConfigSyncPreferenceChanged(key)
+                refreshSettingsPresentation(key)
+                if (!suppressConfigSyncPreferenceChanges) {
+                    handleConfigSyncPreferenceChanged(key)
+                }
             }
         private var configSyncSnapshotDirty = false
         private var configSyncSnapshotInProgress = false
         private var configSyncPreferenceListenerRegistered = false
+        private var suppressConfigSyncPreferenceChanges = false
+        private var pendingDualSenseOutputMode: DualSenseOutputMode? = null
 
         // 分类列表（用于抽屉菜单同步）
         private val categoryList: MutableList<PreferenceCategory> = ArrayList()
@@ -1239,7 +1245,11 @@ class StreamSettings : AppCompatActivity() {
                     PreferenceConfiguration.DEFAULT_FRAME_PACING
                 )
 
-            hostCadencePref.isVisible = selectedFramePacing == "precise-sync"
+            updateRuntimeVisibility(hostCadencePref, selectedFramePacing == "precise-sync")
+            updateRuntimeVisibility(
+                findPreference("checkbox_reduce_refresh_rate"),
+                selectedFramePacing == "balanced",
+            )
         }
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -1266,27 +1276,7 @@ class StreamSettings : AppCompatActivity() {
             if (activity == null || activity !is StreamSettings) return
 
             val settingsActivity = activity
-            val screen = preferenceScreen ?: return
-
-            // 收集所有分类
-            categoryList.clear()
-            val items: MutableList<CategoryItem> = ArrayList()
-            for (i in 0 until screen.preferenceCount) {
-                val pref = screen.getPreference(i)
-                if (pref !is PreferenceCategory) continue
-
-                if (pref.title == null) continue
-
-                val title = pref.title.toString()
-                val key = pref.key ?: "category_$i"
-                val iconRes = getIconForCategory(key)
-
-                categoryList.add(pref)
-                items.add(CategoryItem(key, title, iconRes))
-            }
-
-            // 通知 Activity 分类已加载
-            settingsActivity.onCategoriesLoaded(items)
+            rebuildCategoryList()
 
             // 添加滚动监听
             Handler(Looper.getMainLooper()).post {
@@ -1311,63 +1301,47 @@ class StreamSettings : AppCompatActivity() {
             }
         }
 
-        /**
-         * 记录每个折叠分组的原始 initialExpandedChildrenCount，
-         * 搜索时全部展开，清空搜索时还原。
-         */
-        private val originalCollapseCounts = mutableMapOf<String, Int>()
+        private val visibilityController by lazy {
+            SettingsVisibilityController(
+                screenProvider = { preferenceScreen },
+                onCategoryEligibilityChanged = { rebuildCategoryList() },
+            )
+        }
+
+        private val modeStore by lazy {
+            LegacySettingsModeStore(
+                PreferenceManager.getDefaultSharedPreferences(requireContext())
+            )
+        }
+
+        private fun rebuildCategoryList() {
+            val settingsActivity = activity as? StreamSettings ?: return
+            val screen = preferenceScreen ?: return
+            categoryList.clear()
+            val items = ArrayList<CategoryItem>()
+            for (i in 0 until screen.preferenceCount) {
+                val category = screen.getPreference(i) as? PreferenceCategory ?: continue
+                val eligible = visibilityController.isRuntimeVisible(category)
+                val title = category.title?.toString() ?: continue
+                if (!eligible) continue
+                val key = category.key ?: "category_$i"
+                categoryList.add(category)
+                items.add(CategoryItem(key, title, getIconForCategory(key)))
+            }
+            categoryPositionsValid = false
+            settingsActivity.onCategoriesLoaded(items)
+        }
+
+        private fun updateRuntimeVisibility(preference: Preference?, visible: Boolean) {
+            visibilityController.setRuntimeVisible(preference, visible)
+        }
 
         /**
          * 应用搜索过滤。空查询恢复全部可见性 + 原始折叠状态；
          * 非空查询仅显示匹配的项，匹配类的整组也展开。
          */
         fun applySearchFilter(query: String) {
-            val screen = preferenceScreen ?: return
-            val q = query.trim().lowercase(Locale.getDefault())
-            val isSearching = q.isNotEmpty()
-
-            for (i in 0 until screen.preferenceCount) {
-                val category = screen.getPreference(i) as? PreferenceCategory ?: continue
-                val catKey = category.key ?: "category_$i"
-
-                // 一次性记录原始折叠数（仅首次进入搜索时）
-                if (isSearching && !originalCollapseCounts.containsKey(catKey)) {
-                    originalCollapseCounts[catKey] = category.initialExpandedChildrenCount
-                }
-
-                if (!isSearching) {
-                    // 还原
-                    category.isVisible = true
-                    for (j in 0 until category.preferenceCount) {
-                        category.getPreference(j).isVisible = true
-                    }
-                    originalCollapseCounts[catKey]?.let { category.initialExpandedChildrenCount = it }
-                    continue
-                }
-
-                // 搜索中：完全展开（避免折叠掉匹配项）
-                category.initialExpandedChildrenCount = Int.MAX_VALUE
-
-                val categoryMatches = category.title?.toString()?.lowercase(Locale.getDefault())?.contains(q) == true
-                var anyChildMatches = false
-                for (j in 0 until category.preferenceCount) {
-                    val child = category.getPreference(j)
-                    val childMatches = categoryMatches || preferenceMatches(child, q)
-                    child.isVisible = childMatches
-                    if (childMatches) anyChildMatches = true
-                }
-                category.isVisible = categoryMatches || anyChildMatches
-            }
-        }
-
-        private fun preferenceMatches(p: Preference, q: String): Boolean {
-            val title = p.title?.toString()?.lowercase(Locale.getDefault())
-            if (title != null && title.contains(q)) return true
-            val summary = p.summary?.toString()?.lowercase(Locale.getDefault())
-            if (summary != null && summary.contains(q)) return true
-            val key = p.key?.lowercase(Locale.getDefault())
-            if (key != null && key.contains(q)) return true
-            return false
+            visibilityController.applySearch(query)
         }
 
         /**
@@ -1422,6 +1396,23 @@ class StreamSettings : AppCompatActivity() {
                 crossinline currentValueProvider: (T) -> String
         ) {
             val originalSummary = pref.summary?.toString()?.takeIf { it.isNotBlank() }
+            applyHighlightedSummary(
+                pref,
+                accent,
+                valueText,
+                disabledAccent,
+                currentValueProvider,
+            ) { originalSummary }
+        }
+
+        private inline fun <reified T : Preference> applyHighlightedSummary(
+                pref: T,
+                accent: Int,
+                valueText: Int,
+                disabledAccent: Int,
+                crossinline currentValueProvider: (T) -> String,
+                crossinline descriptionProvider: (T) -> CharSequence?
+        ) {
             pref.summaryProvider = Preference.SummaryProvider<T> { p ->
                 val current = currentValueProvider(p)
                 val builder = SpannableStringBuilder()
@@ -1439,8 +1430,9 @@ class StreamSettings : AppCompatActivity() {
                 builder.setSpan(
                         StyleSpan(Typeface.BOLD),
                         valueStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                if (originalSummary != null) {
-                    builder.append('\n').append(originalSummary)
+                val description = descriptionProvider(p)?.takeIf { it.isNotBlank() }
+                if (description != null) {
+                    builder.append('\n').append(description)
                 }
                 builder
             }
@@ -1947,13 +1939,13 @@ class StreamSettings : AppCompatActivity() {
                     }
                     PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
                         putString(ConfigurationSyncManager.PREF_EXTERNAL_SYNC_TREE_URI, uri.toString())
-                        putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, true)
-                        putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, true)
-                        putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, true)
+                        putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, false)
+                        putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, false)
+                        putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false)
                     }
                     Toast.makeText(context, R.string.toast_config_sync_password_saved, Toast.LENGTH_SHORT).show()
                     updateExternalSyncDirectorySummary()
-                    writeConfigSyncLocalSnapshot(showToast = true, requireAutoEnabled = false)
+                    showEnableExternalSyncConfirmation()
                 }
             } catch (e: Exception) {
                 Log.e("ConfigSync", "Failed to select external configuration sync directory", e)
@@ -2894,10 +2886,18 @@ class StreamSettings : AppCompatActivity() {
                     Manifest.permission.BLUETOOTH_CONNECT
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                findPreference<CheckBoxPreference>(
-                    PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
-                )?.isChecked = false
+                val store = modeStore
+                val mode = store.dualSenseMode()
+                if (mode.systemBluetooth) {
+                    store.setDualSenseMode(
+                        DualSenseOutputMode.fromLegacy(
+                            systemBluetooth = false,
+                            wirelessBridge = mode.wirelessBridge,
+                        )
+                    )
+                }
             }
+            refreshSettingsPresentation()
             registerConfigSyncPreferenceListener()
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
@@ -3168,13 +3168,15 @@ class StreamSettings : AppCompatActivity() {
             setupFramegenPreferences()
             setupConfigSyncPreferences()
             setupMicVolumeProcessingPreferences()
+            setupInputModePresetPreference()
             setupMicrophoneButtonPositionPreference()
             setupFloatBallPositionPreference()
+            setupLegacyBackedModeSelectors()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
             applyListPreferenceCurrentValueSummary(screen)
-            updateHostCadencePreciseSyncVisibility()
+            setupAdaptiveBitratePresentation()
 
             // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
             val localImagePicker = findPreference<LocalImagePickerPreference>("local_image_picker")
@@ -3196,8 +3198,19 @@ class StreamSettings : AppCompatActivity() {
                     BackgroundSource.setActive(context, BackgroundSource.Auto)
                 }
 
+                updateBackgroundPreferenceVisibility(
+                    if (url.isNotEmpty()) BackgroundSource.Api.prefValue else BackgroundSource.Auto.prefValue
+                )
+
                 true
             }
+            findPreference<ListPreference>(BackgroundSource.KEY_SOURCE)?.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updateBackgroundPreferenceVisibility(newValue as? String)
+                    true
+                }
+            findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible =
+                MediaCodecHelper.hasMediaTekDecoder()
 
             // hide on-screen controls category on non touch screen devices
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
@@ -3220,33 +3233,6 @@ class StreamSettings : AppCompatActivity() {
                 category.removePreference(findPreference("checkbox_gamepad_motion_sensors")!!)
             }
 
-            val directBluetooth = findPreference<CheckBoxPreference>(
-                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
-            )!!
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
-            ) {
-                findPreference<PreferenceCategory>("category_gamepad_settings")!!
-                    .removePreference(directBluetooth)
-            } else {
-                directBluetooth.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { _, newValue ->
-                        if (newValue != true || ContextCompat.checkSelfPermission(
-                                requireContext(),
-                                Manifest.permission.BLUETOOTH_CONNECT
-                            ) == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            true
-                        } else {
-                            requestPermissions(
-                                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
-                                BLUETOOTH_CONNECT_PERMISSION_REQUEST
-                            )
-                            false
-                        }
-                    }
-            }
-
             // Hide gamepad motion sensor fallback option if the device has no gyro or accelerometer
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER) &&
                     !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_GYROSCOPE)) {
@@ -3259,7 +3245,6 @@ class StreamSettings : AppCompatActivity() {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!
                 category.removePreference(findPreference("checkbox_usb_bind_all")!!)
                 category.removePreference(findPreference("checkbox_usb_driver")!!)
-                category.removePreference(findPreference("checkbox_dualsense_wireless_bridge")!!)
             }
 
             // Remove PiP mode on devices pre-Oreo, where the feature is not available (some low RAM devices),
@@ -3267,7 +3252,7 @@ class StreamSettings : AppCompatActivity() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
                     !requireActivity().packageManager.hasSystemFeature("android.software.picture_in_picture") ||
                     requireActivity().packageManager.hasSystemFeature("com.amazon.software.fireos")) {
-                val category = findPreference<PreferenceCategory>("category_screen_position")!!
+                val category = findPreference<PreferenceCategory>("category_display_behavior")!!
                 category.removePreference(findPreference("checkbox_enable_pip")!!)
             }
 
@@ -3276,31 +3261,14 @@ class StreamSettings : AppCompatActivity() {
             val categoryGamepadSettings = findPreference<PreferenceCategory>("category_gamepad_settings")!!
             val deviceVibrator = requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator
             val deviceRumbleStrength = findPreference<Preference>("seekbar_vibrate_fallback_strength")!!
-            val gameRumbleMode = findPreference<ListPreference>(
-                PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING
-            )!!
             // Routing remains useful without a phone motor because controller-only and Smart
             // still work. Only the device-specific strength control should disappear.
             if (!deviceVibrator.hasVibrator()) {
                 categoryGamepadSettings.removePreference(deviceRumbleStrength)
-                // The entire OSC category may have already been removed by the touchscreen check above
-                val category = findPreference<PreferenceCategory>("category_onscreen_controls")
-                category?.removePreference(findPreference("checkbox_vibrate_osc")!!)
             } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
                     !deviceVibrator.hasAmplitudeControl()) {
                 // Remove the vibration strength selector of the device doesn't have amplitude control
                 categoryGamepadSettings.removePreference(deviceRumbleStrength)
-            } else {
-                fun updateDeviceRumbleStrengthEnabled(value: String?) {
-                    deviceRumbleStrength.isEnabled =
-                        GameRumbleMode.fromPreferenceValue(value) != GameRumbleMode.CONTROLLER
-                }
-                updateDeviceRumbleStrengthEnabled(gameRumbleMode.value)
-                gameRumbleMode.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { _, newValue ->
-                        updateDeviceRumbleStrengthEnabled(newValue as? String)
-                        true
-                    }
             }
 
             // 获取目标显示器（优先使用外接显示器）
@@ -3686,11 +3654,6 @@ class StreamSettings : AppCompatActivity() {
                         // Allow the original preference change to take place
                         true
                     }
-            findPreference<Preference>(PreferenceConfiguration.FRAME_PACING_PREF_STRING)!!.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { _, newValue ->
-                        updateHostCadencePreciseSyncVisibility(newValue as String)
-                        true
-                    }
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
                         startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
@@ -3732,69 +3695,35 @@ class StreamSettings : AppCompatActivity() {
                         true
                     }
 
-            val mouseModePresetPref = findPreference<ListPreference>(PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING)!!
+            refreshSettingsPresentation()
+        }
 
-            // 添加本地鼠标模式预设选择监听器
-            // 每种预设对应 (enhancedTouch, trackpad, nativePointer) 三元组
-            val touchPresetMap = mapOf(
-                    "enhanced" to Triple(true,  false, false),
-                    "classic"  to Triple(false, false, false),
-                    "trackpad" to Triple(false, true,  false),
-                    "native"   to Triple(false, false, true)
-            )
-            mouseModePresetPref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-                val preset = newValue as String
-                val flags = touchPresetMap[preset] ?: return@OnPreferenceChangeListener true
-                val prefs = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireActivity())
-                prefs.edit {
-                    putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, flags.first)
-                    putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, flags.second)
-                    putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, flags.third)
-                    putBoolean(PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING, false)
+        private fun showEnableExternalSyncConfirmation() {
+            appDialogBuilder()
+                .setTitle(R.string.title_enable_external_config_sync)
+                .setMessage(R.string.message_enable_external_config_sync)
+                .setPositiveButton(R.string.config_sync_action_enable) { _, _ ->
+                    suppressConfigSyncPreferenceChanges = true
+                    try {
+                        PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
+                            putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, true)
+                            putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, true)
+                            putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, true)
+                        }
+                    } finally {
+                        suppressConfigSyncPreferenceChanges = false
+                    }
+                    writeConfigSyncLocalSnapshot(showToast = true, requireAutoEnabled = true)
                 }
-
-                // 显示提示信息
-                val presetName = when (preset) {
-                    "enhanced" -> getString(R.string.native_mouse_mode_preset_enhanced)
-                    "classic" -> getString(R.string.native_mouse_mode_preset_classic)
-                    "trackpad" -> getString(R.string.native_mouse_mode_preset_trackpad)
-                    "native" -> getString(R.string.native_mouse_mode_preset_native)
-                    else -> ""
-                }
-                Toast.makeText(activity,
-                        getString(R.string.toast_preset_applied, presetName),
-                        Toast.LENGTH_SHORT).show()
-
-                true
-            }
+                .setNegativeButton(android.R.string.cancel, null)
+                .showStyled()
         }
 
         private fun initializeTouchModeDefaultsIfNeeded() {
             val context = requireContext()
-            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val touchModeKeys = arrayOf(
-                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
-                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
-                PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
-                PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING
+            modeStore.ensureTouchDefaults(
+                context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
             )
-            if (touchModeKeys.any(prefs::contains)) return
-
-            val state = TouchModePreferencePolicy.resolve(
-                hasTouchscreen = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
-                enhancedTouch = null,
-                touchscreenTrackpad = null,
-                nativeMousePointer = null,
-                screenDs5Touchpad = null
-            )
-            val preset = TouchModePreferencePolicy.presetFor(state)
-            prefs.edit {
-                putBoolean(PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING, state.enhancedTouch)
-                putBoolean(PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING, state.touchscreenTrackpad)
-                putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, state.nativeMousePointer)
-                putBoolean(PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING, state.screenDs5Touchpad)
-                putString(PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING, preset.preferenceValue)
-            }
         }
 
         override fun onRequestPermissionsResult(
@@ -3805,10 +3734,19 @@ class StreamSettings : AppCompatActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
             if (requestCode != BLUETOOTH_CONNECT_PERMISSION_REQUEST) return
             val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
-            findPreference<CheckBoxPreference>(
-                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING
-            )?.isChecked = granted
-            if (!granted) {
+            val pendingMode = pendingDualSenseOutputMode
+            pendingDualSenseOutputMode = null
+            if (granted && pendingMode != null) {
+                persistDualSenseOutputMode(pendingMode)
+            } else if (!granted) {
+                val currentMode = modeStore.dualSenseMode()
+                modeStore.setDualSenseMode(
+                    DualSenseOutputMode.fromLegacy(
+                        systemBluetooth = false,
+                        wirelessBridge = currentMode.wirelessBridge,
+                    )
+                )
+                refreshModeSelectors()
                 Toast.makeText(
                     requireContext(),
                     R.string.toast_dualsense_bluetooth_permission_denied,
@@ -4178,31 +4116,375 @@ class StreamSettings : AppCompatActivity() {
             )
         }
 
-        /**
-         * 麦克风"音量增益及其平衡"：
-         * "音量增益"与"音量平衡"两个子功能互斥，开启一个时自动关闭另一个
-         */
-        private fun setupMicVolumeProcessingPreferences() {
-            val gainPref = findPreference<CheckBoxPreference>("checkbox_mic_gain")
-            val balancePref = findPreference<CheckBoxPreference>("checkbox_mic_balance")
+        private fun updateBackgroundPreferenceVisibility(sourceValue: String?) {
+            val source = BackgroundSource.fromPrefValue(sourceValue)
+            updateRuntimeVisibility(
+                findPreference(BackgroundSource.KEY_API_URL),
+                source is BackgroundSource.Api,
+            )
+            updateRuntimeVisibility(
+                findPreference("local_image_picker"),
+                source is BackgroundSource.Local,
+            )
+            updateRuntimeVisibility(
+                findPreference("reset_background_image"),
+                source !is BackgroundSource.Auto,
+            )
+        }
 
-            // Imported or individually synced settings can briefly contain both flags.
-            // Gain has the same precedence as the runtime processor.
-            if (gainPref?.isChecked == true && balancePref?.isChecked == true) {
-                balancePref.isChecked = false
+        private fun setupLegacyBackedModeSelectors() {
+            val store = modeStore
+
+            listOf(
+                LegacySettingsModeStore.KEY_RESUME_STREAM,
+                LegacySettingsModeStore.KEY_KEEP_STREAM_CONNECTED,
+                LegacySettingsModeStore.KEY_BACKGROUND_AUDIO,
+                LegacySettingsModeStore.KEY_DISCONNECT_ONLY_ON_QUIT,
+                PreferenceConfiguration.DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING,
+                LegacySettingsModeStore.KEY_DUALSENSE_WIRELESS_BRIDGE,
+            ).forEach { key -> findPreference<Preference>(key)?.isVisible = false }
+
+            findPreference<ListPreference>(BACKGROUND_STREAM_BEHAVIOR_PREF_KEY)
+                ?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                    val mode = BackgroundStreamBehaviorPolicy
+                        .fromPreferenceValue(newValue as? String)
+                    store.setBackgroundMode(mode)
+                    true
+                }
+
+            findPreference<ListPreference>(QUIT_BEHAVIOR_PREF_KEY)
+                ?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                    val mode = QuitBehavior.fromPreferenceValue(newValue as? String)
+                    store.setQuitMode(mode)
+                    true
+                }
+
+            val dualSenseSelector = findPreference<ListPreference>(DUALSENSE_OUTPUT_MODE_PREF_KEY)
+            if (dualSenseSelector != null) {
+                val packageManager = requireContext().packageManager
+                val supportsSystemBluetooth = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
+                val supportsWirelessBridge =
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)
+                val supportedModes = buildList {
+                    add(DualSenseOutputMode.OFF)
+                    if (supportsSystemBluetooth) add(DualSenseOutputMode.SYSTEM_BLUETOOTH)
+                    if (supportsWirelessBridge) add(DualSenseOutputMode.WIRELESS_BRIDGE)
+                    if (supportsSystemBluetooth && supportsWirelessBridge) {
+                        add(DualSenseOutputMode.BOTH)
+                    }
+                }
+                val allModeLabels = resources.getTextArray(R.array.dualsense_output_mode_names)
+                dualSenseSelector.entries = supportedModes
+                    .map { mode -> allModeLabels[mode.ordinal] }
+                    .toTypedArray()
+                dualSenseSelector.entryValues = supportedModes
+                    .map { mode -> mode.preferenceValue }
+                    .toTypedArray()
+                updateRuntimeVisibility(
+                    dualSenseSelector,
+                    supportsSystemBluetooth || supportsWirelessBridge,
+                )
+                dualSenseSelector.onPreferenceChangeListener =
+                    Preference.OnPreferenceChangeListener { _, newValue ->
+                        val mode = DualSenseOutputMode.fromPreferenceValue(newValue as? String)
+                        val needsBluetoothPermission = mode.systemBluetooth &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                            ContextCompat.checkSelfPermission(
+                                requireContext(),
+                                Manifest.permission.BLUETOOTH_CONNECT,
+                            ) != PackageManager.PERMISSION_GRANTED
+                        if (needsBluetoothPermission) {
+                            pendingDualSenseOutputMode = mode
+                            requestPermissions(
+                                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                                BLUETOOTH_CONNECT_PERMISSION_REQUEST,
+                            )
+                            false
+                        } else {
+                            persistDualSenseOutputMode(mode)
+                            true
+                        }
+                    }
             }
 
-            gainPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-                if (newValue == true) {
-                    balancePref?.setChecked(false)
-                }
+            refreshModeSelectors()
+        }
+
+        private fun persistDualSenseOutputMode(mode: DualSenseOutputMode) {
+            modeStore.setDualSenseMode(mode)
+            refreshModeSelectors()
+        }
+
+        private fun refreshModeSelectors() {
+            val store = modeStore
+            findPreference<ListPreference>(BACKGROUND_STREAM_BEHAVIOR_PREF_KEY)?.value =
+                store.backgroundMode().preferenceValue
+            findPreference<ListPreference>(QUIT_BEHAVIOR_PREF_KEY)?.value =
+                store.quitMode().preferenceValue
+
+            val selector = findPreference<ListPreference>(DUALSENSE_OUTPUT_MODE_PREF_KEY)
+            val legacyMode = store.dualSenseMode()
+            val availableValues = selector?.entryValues?.map(CharSequence::toString).orEmpty()
+            selector?.value = when {
+                legacyMode.preferenceValue in availableValues -> legacyMode.preferenceValue
+                DualSenseOutputMode.SYSTEM_BLUETOOTH.preferenceValue in availableValues &&
+                    legacyMode == DualSenseOutputMode.BOTH ->
+                    DualSenseOutputMode.SYSTEM_BLUETOOTH.preferenceValue
+                DualSenseOutputMode.WIRELESS_BRIDGE.preferenceValue in availableValues &&
+                    legacyMode == DualSenseOutputMode.BOTH ->
+                    DualSenseOutputMode.WIRELESS_BRIDGE.preferenceValue
+                else -> DualSenseOutputMode.OFF.preferenceValue
+            }
+
+            refreshTouchModeSelector(store)
+            refreshMicrophoneModeSelector(store)
+        }
+
+        /** Reapplies preference presentation derived from the changed stored value. */
+        private fun refreshSettingsPresentation(changedKey: String? = null) {
+            if (changedKey == null || changedKey in LegacySettingsModeStore.modeKeys) {
+                refreshModeSelectors()
+            }
+            if (changedKey == null || changedKey == "checkbox_adaptive_bitrate") {
+                updateAdaptiveBitratePresentation()
+            }
+            if (changedKey == null || changedKey == "checkbox_enable_audio_passthrough") {
+                updateAudioPipelineVisibility()
+            }
+            if (changedKey == null || changedKey == "checkbox_stretch_video") {
+                updateDisplayLayoutVisibility()
+            }
+            if (changedKey == null || changedKey == "checkbox_enable_hdr" ||
+                changedKey == "checkbox_hdr_brightness_override"
+            ) {
+                updateHdrPreferenceVisibility()
+            }
+            if (changedKey == null ||
+                changedKey == PreferenceConfiguration.FRAME_PACING_PREF_STRING
+            ) {
+                updateHostCadencePreciseSyncVisibility()
+            }
+            if (changedKey == null ||
+                changedKey == PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING
+            ) {
+                updateDeviceRumbleVisibility()
+            }
+            if (changedKey == null || changedKey == BackgroundSource.KEY_SOURCE) {
+                updateBackgroundPreferenceVisibility(
+                    BackgroundSource.current(requireContext()).prefValue
+                )
+            }
+        }
+
+        private fun refreshTouchModeSelector(store: LegacySettingsModeStore) {
+            val selector = findPreference<ListPreference>(
+                PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING
+            ) ?: return
+            val hasTouchscreen = requireContext().packageManager.hasSystemFeature(
+                PackageManager.FEATURE_TOUCHSCREEN
+            )
+            val state = store.touchState(hasTouchscreen)
+            val preset = TouchModePreferencePolicy.exactPresetFor(state)
+            store.reconcileTouchModeMirror(state)
+
+            selector.entries = resources.getTextArray(R.array.native_mouse_mode_preset_names)
+            selector.entryValues = resources.getTextArray(R.array.native_mouse_mode_preset_values)
+            if (preset == null) {
+                selector.entries = selector.entries +
+                    getString(R.string.native_mouse_mode_preset_custom)
+                selector.entryValues = selector.entryValues + LegacySettingsModeStore.TOUCH_MODE_CUSTOM
+            }
+            selector.value = preset?.preferenceValue ?: LegacySettingsModeStore.TOUCH_MODE_CUSTOM
+
+            listOf(
+                "seekbar_flat_region_pixels",
+                "checkbox_enhanced_touch_on_which_side",
+                "enhanced_touch_zone_divider",
+                "pointer_velocity_factor",
+            ).forEach { key ->
+                updateRuntimeVisibility(
+                    findPreference(key),
+                    hasTouchscreen && state.enhancedTouch,
+                )
+            }
+        }
+
+        private fun refreshMicrophoneModeSelector(store: LegacySettingsModeStore) {
+            val selector = findPreference<ListPreference>(
+                PreferenceConfiguration.MIC_VOLUME_PROCESSING_MODE_PREF_STRING
+            ) ?: return
+            val mode = store.microphoneMode()
+            val flags = MicVolumeProcessingPolicy.flagsFor(mode)
+            store.reconcileMicrophoneModeMirror(mode)
+
+            selector.entries = resources.getTextArray(R.array.mic_volume_processing_mode_names)
+            selector.entryValues = resources.getTextArray(R.array.mic_volume_processing_mode_values)
+            if (mode == MicVolumeProcessingPolicy.LEGACY_PROCESSING_ONLY) {
+                selector.entries = selector.entries +
+                    getString(R.string.mic_volume_processing_mode_legacy)
+                selector.entryValues = selector.entryValues + mode
+            }
+            selector.value = mode
+
+            updateRuntimeVisibility(findPreference("seekbar_mic_gain_db"), flags.gain)
+            updateRuntimeVisibility(findPreference("seekbar_mic_balance_target"), flags.balance)
+            updateRuntimeVisibility(
+                findPreference("checkbox_mic_voice_enhancement"),
+                flags.processing,
+            )
+        }
+
+        private fun setupAdaptiveBitratePresentation() {
+            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate")
+                ?: return
+            val bitrate = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
+                ?: return
+            val accent = ContextCompat.getColor(bitrate.context, R.color.ui_shell_accent)
+            val valueText = ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_primary)
+            val disabledAccent =
+                ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_disabled_primary)
+
+            applyHighlightedSummary(
+                bitrate,
+                accent,
+                valueText,
+                disabledAccent,
+                currentValueProvider = {
+                    val display = it.formatDisplayValue(it.currentValue)
+                    val suffix = it.suffix?.takeIf { suffix -> suffix.isNotBlank() }
+                    if (suffix != null) "$display $suffix" else display
+                },
+                descriptionProvider = {
+                    getString(
+                        if (adaptiveBitrate.isChecked) R.string.summary_seekbar_bitrate_baseline
+                        else R.string.summary_seekbar_bitrate
+                    )
+                },
+            )
+        }
+
+        private fun updateAdaptiveBitratePresentation() {
+            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate")
+                ?: return
+            findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
+                ?.setTitle(
+                    if (adaptiveBitrate.isChecked) R.string.title_seekbar_bitrate_baseline
+                    else R.string.title_seekbar_bitrate
+                )
+        }
+
+        private fun updateAudioPipelineVisibility() {
+            val passthrough = findPreference<CheckBoxPreference>("checkbox_enable_audio_passthrough")
+                ?: return
+            val audioEffects = findPreference<Preference>("checkbox_enable_audiofx")
+            val spatializer = findPreference<Preference>("checkbox_enable_spatializer")
+
+            audioEffects?.isEnabled = !passthrough.isChecked
+            audioEffects?.setSummary(
+                if (passthrough.isChecked) R.string.summary_checkbox_enable_audiofx_passthrough
+                else R.string.summary_checkbox_enable_audiofx
+            )
+            spatializer?.isEnabled = !passthrough.isChecked
+            spatializer?.setSummary(
+                if (passthrough.isChecked) R.string.summary_checkbox_enable_spatializer_passthrough
+                else R.string.summary_checkbox_enable_spatializer
+            )
+        }
+
+        private fun updateDisplayLayoutVisibility() {
+            val stretchVideo = findPreference<CheckBoxPreference>("checkbox_stretch_video") ?: return
+            val layoutPreferences = listOf(
+                "list_screen_position",
+                "seekbar_screen_offset_x",
+                "seekbar_screen_offset_y",
+            ).mapNotNull { key -> findPreference<Preference>(key) }
+
+            layoutPreferences.forEach { preference ->
+                updateRuntimeVisibility(preference, !stretchVideo.isChecked)
+            }
+        }
+
+        private fun updateHdrPreferenceVisibility() {
+            val hdr = findPreference<CheckBoxPreference>("checkbox_enable_hdr") ?: return
+            val brightnessOverride =
+                findPreference<CheckBoxPreference>("checkbox_hdr_brightness_override")
+            val hdrChildren = listOf(
+                "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override",
+                "list_hdr_mode",
+            ).mapNotNull { key -> findPreference<Preference>(key) }
+            val peakBrightness = findPreference<Preference>("seekbar_hdr_peak_brightness_nits")
+
+            hdrChildren.forEach { preference ->
+                updateRuntimeVisibility(preference, hdr.isChecked)
+            }
+            updateRuntimeVisibility(
+                peakBrightness,
+                hdr.isChecked && brightnessOverride?.isChecked == true,
+            )
+        }
+
+        private fun updateDeviceRumbleVisibility() {
+            val strength = findPreference<Preference>("seekbar_vibrate_fallback_strength")
+                ?: return
+            val mode = findPreference<ListPreference>(
+                PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING
+            )?.value
+            updateRuntimeVisibility(
+                strength,
+                GameRumbleMode.fromPreferenceValue(mode) != GameRumbleMode.CONTROLLER,
+            )
+        }
+
+        private fun setupInputModePresetPreference() {
+            val presetPref = findPreference<ListPreference>(
+                PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING
+            ) ?: return
+
+            findPreference<Preference>(
+                PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING
+            )?.isVisible = false
+            findPreference<Preference>(
+                PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING
+            )?.isVisible = false
+
+            presetPref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                val preset = TouchModePreset.fromPreferenceValue(newValue as? String)
+                    ?: return@OnPreferenceChangeListener false
+                modeStore.setTouchPreset(preset)
+                refreshModeSelectors()
+                val presetName = presetPref.entries[
+                    presetPref.entryValues.indexOfFirst { it.toString() == preset.preferenceValue }
+                ]
+                Toast.makeText(
+                    activity,
+                    getString(R.string.toast_preset_applied, presetName),
+                    Toast.LENGTH_SHORT,
+                ).show()
                 true
             }
+        }
 
-            balancePref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-                if (newValue == true) {
-                    gainPref?.setChecked(false)
-                }
+        private fun setupMicVolumeProcessingPreferences() {
+            val modePref = findPreference<ListPreference>(
+                PreferenceConfiguration.MIC_VOLUME_PROCESSING_MODE_PREF_STRING
+            ) ?: return
+            findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.MIC_VOLUME_PROCESSING_PREF_STRING
+            )?.isVisible = false
+            findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.MIC_GAIN_ENABLED_PREF_STRING
+            )?.isVisible = false
+            findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.MIC_BALANCE_ENABLED_PREF_STRING
+            )?.isVisible = false
+
+            modePref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                modeStore.setMicrophoneMode(
+                    newValue as? String ?: MicVolumeProcessingPolicy.OFF
+                )
+                refreshModeSelectors()
                 true
             }
         }
@@ -4270,16 +4552,16 @@ class StreamSettings : AppCompatActivity() {
         ) {
             val showAdaptive = unlocked && dllReady
             findPreference<CheckBoxPreference>(FramegenSettings.PREF_ADAPTIVE_ENABLED)?.let { pref ->
-                pref.isVisible = showAdaptive
+                updateRuntimeVisibility(pref, showAdaptive)
                 pref.isEnabled = showAdaptive
             }
         }
 
         private fun updateFramegenQualityVisibility(selectedPreset: String?) {
             val showCustomWidth = selectedPreset == FramegenSettings.QUALITY_CUSTOM
-            findPreference<Preference>(FramegenSettings.PREF_INTERNAL_WIDTH)?.isVisible = showCustomWidth
-            findPreference<Preference>(FramegenSettings.PREF_SLOW_THRESHOLD_MS)?.isVisible = showCustomWidth
-            findPreference<Preference>(FramegenSettings.PREF_PRESENT_REAL_FIRST)?.isVisible = showCustomWidth
+            updateRuntimeVisibility(findPreference(FramegenSettings.PREF_INTERNAL_WIDTH), showCustomWidth)
+            updateRuntimeVisibility(findPreference(FramegenSettings.PREF_SLOW_THRESHOLD_MS), showCustomWidth)
+            updateRuntimeVisibility(findPreference(FramegenSettings.PREF_PRESENT_REAL_FIRST), showCustomWidth)
         }
 
         private fun showDeveloperUnlockDialog() {

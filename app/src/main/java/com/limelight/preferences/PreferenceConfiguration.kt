@@ -147,11 +147,9 @@ class PreferenceConfiguration {
     var lockScreenAfterDisconnect = false
     var swapQuitAndDisconnect = false
     var bindAllUsb = false
-    var mouseEmulation = false
     var analogStickForScrolling: AnalogStickForScrolling = AnalogStickForScrolling.NONE
     var mouseNavButtons = false
     var unlockFps = false
-    var vibrateOsc = false
     var gameRumbleMode = GameRumbleMode.CONTROLLER
     var deviceRumbleStrength = 0
     var enableAudioVibration = false
@@ -323,6 +321,14 @@ class PreferenceConfiguration {
                 .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                 .putString(MIC_ICON_COLOR_PREF_STRING, micIconColor)
                 .putString(MIC_MENU_ACTION_MODE_PREF_STRING, micMenuActionMode)
+                .putString(
+                    MIC_VOLUME_PROCESSING_MODE_PREF_STRING,
+                    MicVolumeProcessingPolicy.modeFor(
+                        micVolumeProcessingEnabled,
+                        micGainEnabled,
+                        micBalanceEnabled,
+                    ),
+                )
                 .putBoolean(MIC_VOLUME_PROCESSING_PREF_STRING, micVolumeProcessingEnabled)
                 .putBoolean(MIC_GAIN_ENABLED_PREF_STRING, micGainEnabled)
                 .putInt(MIC_GAIN_DB_PREF_STRING, micGainDb)
@@ -526,10 +532,8 @@ class PreferenceConfiguration {
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"
-        private const val MOUSE_EMULATION_STRING = "checkbox_mouse_emulation"
         private const val ANALOG_SCROLLING_PREF_STRING = "analog_scrolling"
         private const val MOUSE_NAV_BUTTONS_STRING = "checkbox_mouse_nav_buttons"
-        private const val VIBRATE_OSC_PREF_STRING = "checkbox_vibrate_osc"
         private const val LEGACY_VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
         const val GAME_RUMBLE_MODE_PREF_STRING = "list_game_rumble_mode"
         private const val DEVICE_RUMBLE_STRENGTH_PREF_STRING = "seekbar_vibrate_fallback_strength"
@@ -566,7 +570,7 @@ class PreferenceConfiguration {
         private const val FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING = "checkbox_force_mtk_max_operating_rate"
         private const val DEFAULT_FORCE_MTK_MAX_OPERATING_RATE = false
         private const val REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate"
-        private const val FULL_RANGE_PREF_STRING = "checkbox_full_range"
+        internal const val FULL_RANGE_PREF_STRING = "checkbox_full_range"
         private const val GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse"
         private const val GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors"
         private const val GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback"
@@ -584,10 +588,11 @@ class PreferenceConfiguration {
         const val MIC_MENU_ACTION_MODE_PREF_STRING = "list_mic_menu_action_mode"
 
         // 麦克风音量增益及其平衡设置
-        private const val MIC_VOLUME_PROCESSING_PREF_STRING = "checkbox_mic_volume_processing"
-        private const val MIC_GAIN_ENABLED_PREF_STRING = "checkbox_mic_gain"
+        const val MIC_VOLUME_PROCESSING_MODE_PREF_STRING = "list_mic_volume_processing_mode"
+        internal const val MIC_VOLUME_PROCESSING_PREF_STRING = "checkbox_mic_volume_processing"
+        internal const val MIC_GAIN_ENABLED_PREF_STRING = "checkbox_mic_gain"
         private const val MIC_GAIN_DB_PREF_STRING = "seekbar_mic_gain_db"
-        private const val MIC_BALANCE_ENABLED_PREF_STRING = "checkbox_mic_balance"
+        internal const val MIC_BALANCE_ENABLED_PREF_STRING = "checkbox_mic_balance"
         private const val MIC_BALANCE_TARGET_PERCENT_PREF_STRING = "seekbar_mic_balance_target"
         private const val MIC_VOICE_ENHANCEMENT_PREF_STRING = "checkbox_mic_voice_enhancement"
 
@@ -738,11 +743,9 @@ class PreferenceConfiguration {
         private const val DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal"
         private const val DEFAULT_PERF_OVERLAY_POSITION = "top"
         private const val DEFAULT_BIND_ALL_USB = false
-        private const val DEFAULT_MOUSE_EMULATION = true
         private const val DEFAULT_ANALOG_STICK_FOR_SCROLLING = "right"
         private const val DEFAULT_MOUSE_NAV_BUTTONS = false
         private const val DEFAULT_UNLOCK_FPS = false
-        private const val DEFAULT_VIBRATE_OSC = true
         private const val DEFAULT_DEVICE_RUMBLE_STRENGTH = 100
         private const val DEFAULT_AUDIO_VIBRATION = false
         private const val DEFAULT_CLIPBOARD_SYNC_TEXT = false
@@ -780,10 +783,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_MIC_MENU_ACTION_MODE = MIC_MENU_ACTION_SHOW_BUTTON
 
         // 麦克风音量增益及其平衡默认值
-        private const val DEFAULT_MIC_VOLUME_PROCESSING = false
-        private const val DEFAULT_MIC_GAIN_ENABLED = false
         private const val DEFAULT_MIC_GAIN_DB = 0
-        private const val DEFAULT_MIC_BALANCE_ENABLED = false
         private const val DEFAULT_MIC_BALANCE_TARGET_PERCENT = 50
         private const val DEFAULT_MIC_VOICE_ENHANCEMENT = true
         private const val DEFAULT_ENABLE_ESC_MENU = true // 默认启用ESC菜单
@@ -1377,10 +1377,8 @@ class PreferenceConfiguration {
             }
 
             config.bindAllUsb = prefs.getBoolean(BIND_ALL_USB_STRING, DEFAULT_BIND_ALL_USB)
-            config.mouseEmulation = prefs.getBoolean(MOUSE_EMULATION_STRING, DEFAULT_MOUSE_EMULATION)
             config.mouseNavButtons = prefs.getBoolean(MOUSE_NAV_BUTTONS_STRING, DEFAULT_MOUSE_NAV_BUTTONS)
             config.unlockFps = prefs.getBoolean(UNLOCK_FPS_STRING, DEFAULT_UNLOCK_FPS)
-            config.vibrateOsc = prefs.getBoolean(VIBRATE_OSC_PREF_STRING, DEFAULT_VIBRATE_OSC)
             config.gameRumbleMode = GameRumbleMode.fromPreferenceValue(
                 prefs.getString(GAME_RUMBLE_MODE_PREF_STRING, GameRumbleMode.CONTROLLER.preferenceValue)
             )
@@ -1458,12 +1456,19 @@ class PreferenceConfiguration {
             config.micIconColor = prefs.getString(MIC_ICON_COLOR_PREF_STRING, DEFAULT_MIC_ICON_COLOR) ?: DEFAULT_MIC_ICON_COLOR
             config.micMenuActionMode = prefs.getString(MIC_MENU_ACTION_MODE_PREF_STRING, DEFAULT_MIC_MENU_ACTION_MODE) ?: DEFAULT_MIC_MENU_ACTION_MODE
 
-            // 读取麦克风音量增益及其平衡设置
-            config.micVolumeProcessingEnabled = prefs.getBoolean(MIC_VOLUME_PROCESSING_PREF_STRING, DEFAULT_MIC_VOLUME_PROCESSING)
-            config.micGainEnabled = prefs.getBoolean(MIC_GAIN_ENABLED_PREF_STRING, DEFAULT_MIC_GAIN_ENABLED)
+            // Legacy flags remain authoritative so importing an old backup can override a
+            // previously stored mode value. The settings UI keeps both representations synced.
+            val micProcessingMode = MicVolumeProcessingPolicy.resolveMode(
+                storedMode = prefs.getString(MIC_VOLUME_PROCESSING_MODE_PREF_STRING, null),
+                processing = prefs.getBooleanOrNull(MIC_VOLUME_PROCESSING_PREF_STRING),
+                gain = prefs.getBooleanOrNull(MIC_GAIN_ENABLED_PREF_STRING),
+                balance = prefs.getBooleanOrNull(MIC_BALANCE_ENABLED_PREF_STRING),
+            )
+            val micProcessingFlags = MicVolumeProcessingPolicy.flagsFor(micProcessingMode)
+            config.micVolumeProcessingEnabled = micProcessingFlags.processing
+            config.micGainEnabled = micProcessingFlags.gain
             config.micGainDb = prefs.getInt(MIC_GAIN_DB_PREF_STRING, DEFAULT_MIC_GAIN_DB).coerceIn(-20, 20)
-            config.micBalanceEnabled = prefs.getBoolean(MIC_BALANCE_ENABLED_PREF_STRING, DEFAULT_MIC_BALANCE_ENABLED) &&
-                    !config.micGainEnabled
+            config.micBalanceEnabled = micProcessingFlags.balance
             config.micBalanceTargetPercent = prefs.getInt(MIC_BALANCE_TARGET_PERCENT_PREF_STRING, DEFAULT_MIC_BALANCE_TARGET_PERCENT).coerceIn(1, 100)
             config.micVoiceEnhancementEnabled = prefs.getBoolean(MIC_VOICE_ENHANCEMENT_PREF_STRING, DEFAULT_MIC_VOICE_ENHANCEMENT)
 

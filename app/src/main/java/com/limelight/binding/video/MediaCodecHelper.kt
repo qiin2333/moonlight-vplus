@@ -42,6 +42,16 @@ object MediaCodecHelper {
     private val amlogicDecoderPrefixes = listOf("omx.amlogic", "c2.amlogic")
     private val tegraDecoderPrefixes = listOf("omx.nvidia", "c2.nvidia")
 
+    internal fun isMediaTekCodecName(name: String): Boolean =
+        mtkDecoderPrefixes.any { name.startsWith(it, ignoreCase = true) }
+
+    @JvmStatic
+    fun hasMediaTekDecoder(): Boolean = runCatching {
+        MediaCodecList(MediaCodecList.ALL_CODECS).codecInfos.any { codecInfo ->
+            !codecInfo.isEncoder && isMediaTekCodecName(codecInfo.name)
+        }
+    }.getOrDefault(false)
+
     // ==================== Known Vendor Low Latency Options ====================
     // Representative vendor low-latency keys for each SoC vendor.
     // Used by decoderSupportsKnownVendorLowLatencyOption() to probe whether

@@ -241,15 +241,15 @@
 
     <!-- Screen position options -->
     <string-array name="screen_position_names">
-        <item>Top Left</item>
-        <item>Top Center</item>
-        <item>Top Right</item>
-        <item>Center Left</item>
-        <item>Center</item>
-        <item>Center Right</item>
-        <item>Bottom Left</item>
-        <item>Bottom Center</item>
-        <item>Bottom Right</item>
+        <item>@string/position_top_left</item>
+        <item>@string/position_top_center</item>
+        <item>@string/position_top_right</item>
+        <item>@string/position_center_left</item>
+        <item>@string/position_center</item>
+        <item>@string/position_center_right</item>
+        <item>@string/position_bottom_left</item>
+        <item>@string/position_bottom_center</item>
+        <item>@string/position_bottom_right</item>
     </string-array>
 
     <string-array name="screen_position_values">
@@ -303,10 +303,45 @@
         <item>3</item>
     </string-array>
 
+    <string-array name="background_stream_behavior_names">
+        <item>@string/background_stream_behavior_disconnect</item>
+        <item>@string/background_stream_behavior_resume</item>
+        <item>@string/background_stream_behavior_keep_connected</item>
+        <item>@string/background_stream_behavior_keep_audio</item>
+    </string-array>
+    <string-array name="background_stream_behavior_values" translatable="false">
+        <item>disconnect</item>
+        <item>resume</item>
+        <item>keep_connected</item>
+        <item>keep_audio</item>
+    </string-array>
+
+    <string-array name="quit_behavior_names">
+        <item>@string/quit_behavior_stop_host_app</item>
+        <item>@string/quit_behavior_disconnect_only</item>
+    </string-array>
+    <string-array name="quit_behavior_values" translatable="false">
+        <item>stop_host_app</item>
+        <item>disconnect_only</item>
+    </string-array>
+
+    <string-array name="dualsense_output_mode_names">
+        <item>@string/dualsense_output_mode_off</item>
+        <item>@string/dualsense_output_mode_system_bluetooth</item>
+        <item>@string/dualsense_output_mode_wireless_bridge</item>
+        <item>@string/dualsense_output_mode_both</item>
+    </string-array>
+    <string-array name="dualsense_output_mode_values" translatable="false">
+        <item>off</item>
+        <item>system_bluetooth</item>
+        <item>wireless_bridge</item>
+        <item>both</item>
+    </string-array>
+
     <!-- Performance overlay orientation options -->
     <string-array name="perf_overlay_orientation_names">
-        <item>Horizontal</item>
-        <item>Vertical</item>
+        <item>@string/orientation_horizontal</item>
+        <item>@string/orientation_vertical</item>
     </string-array>
     <string-array name="perf_overlay_orientation_values" translatable="false">
         <item>horizontal</item>
@@ -315,8 +350,8 @@
     
     <!-- Performance overlay position options - horizontal -->
     <string-array name="perf_overlay_position_horizontal_names">
-        <item>Top</item>
-        <item>Bottom</item>
+        <item>@string/position_top</item>
+        <item>@string/position_bottom</item>
     </string-array>
     <string-array name="perf_overlay_position_horizontal_values" translatable="false">
         <item>top</item>
@@ -325,10 +360,10 @@
     
     <!-- Performance overlay position options - vertical -->
     <string-array name="perf_overlay_position_vertical_names">
-        <item>Top Left</item>
-        <item>Top Right</item>
-        <item>Bottom Left</item>
-        <item>Bottom Right</item>
+        <item>@string/position_top_left</item>
+        <item>@string/position_top_right</item>
+        <item>@string/position_bottom_left</item>
+        <item>@string/position_bottom_right</item>
     </string-array>
     <string-array name="perf_overlay_position_vertical_values" translatable="false">
         <item>top_left</item>
@@ -339,15 +374,15 @@
     
     <!-- Performance overlay display items -->
     <string-array name="perf_overlay_display_items_names">
-        <item>🎬 Resolution &amp; Target FPS</item>
-        <item>Codec Decoder Info</item>
-        <item>Rx/Rd/FG Frame Rates</item>
-        <item>📶 Packet Loss</item>
-        <item>🌐 Bitrate &amp; Network Latency</item>
-        <item>⏱️/🥵 Decode Latency (normal &lt; 15ms)</item>
-        <item>🖥 Host Latency</item>
-        <item>🔋 Battery Level</item>
-        <item>📉 1% Low FPS (Smoothness)</item>
+        <item>@string/perf_stats_item_resolution_fps</item>
+        <item>@string/perf_stats_item_decoder</item>
+        <item>@string/perf_stats_item_frame_rates</item>
+        <item>@string/perf_stats_item_packet_loss</item>
+        <item>@string/perf_stats_item_network</item>
+        <item>@string/perf_stats_item_decode_latency</item>
+        <item>@string/perf_stats_item_host_latency</item>
+        <item>@string/perf_stats_item_battery</item>
+        <item>@string/perf_stats_item_one_percent_low</item>
     </string-array>
     <string-array name="perf_overlay_display_items_values" translatable="false">
         <item>resolution</item>
@@ -389,12 +424,12 @@
         <item>bottom_right</item>
     </string-array>
     <string-array name="mic_icon_color_entries">
-        <item>Gradient Blue</item>
-        <item>Gradient Purple</item>
-        <item>Gradient Green</item>
-        <item>Gradient Orange</item>
-        <item>Gradient Red</item>
-        <item>Solid White</item>
+        <item>@string/mic_icon_color_gradient_blue</item>
+        <item>@string/mic_icon_color_gradient_purple</item>
+        <item>@string/mic_icon_color_gradient_green</item>
+        <item>@string/mic_icon_color_gradient_orange</item>
+        <item>@string/mic_icon_color_gradient_red</item>
+        <item>@string/mic_icon_color_solid_white</item>
     </string-array>
     <string-array name="mic_icon_color_values" translatable="false">
         <item>gradient_blue</item>
@@ -417,6 +452,17 @@
         <item>classic</item>
         <item>trackpad</item>
         <item>native</item>
+    </string-array>
+
+    <string-array name="mic_volume_processing_mode_names">
+        <item>@string/mic_volume_processing_mode_off</item>
+        <item>@string/mic_volume_processing_mode_gain</item>
+        <item>@string/mic_volume_processing_mode_balance</item>
+    </string-array>
+    <string-array name="mic_volume_processing_mode_values" translatable="false">
+        <item>off</item>
+        <item>gain</item>
+        <item>balance</item>
     </string-array>
 
     <string-array name="esc_menu_key_names">
@@ -452,10 +498,10 @@
 
     <!-- Audio Vibration Mode -->
     <string-array name="audio_vibration_mode_names">
-        <item>Auto</item>
-        <item>Device only</item>
-        <item>Gamepad only</item>
-        <item>Both</item>
+        <item>@string/audio_vibration_route_auto</item>
+        <item>@string/audio_vibration_route_device</item>
+        <item>@string/audio_vibration_route_gamepad</item>
+        <item>@string/audio_vibration_route_both</item>
     </string-array>
     <string-array name="audio_vibration_mode_values" translatable="false">
         <item>auto</item>
@@ -477,9 +523,9 @@
 
     <!-- Audio Vibration Scene -->
     <string-array name="audio_vibration_scene_names">
-        <item>Game / Movie</item>
-        <item>Music</item>
-        <item>Auto</item>
+        <item>@string/audio_vibration_scene_game_movie</item>
+        <item>@string/audio_vibration_scene_music</item>
+        <item>@string/audio_vibration_scene_auto</item>
     </string-array>
     <string-array name="audio_vibration_scene_values" translatable="false">
         <item>0</item>

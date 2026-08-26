@@ -199,22 +199,28 @@
     </style>
 
     <style name="MyPreferenceCompact" parent="@style/Preference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyCheckBoxPreferenceCompact" parent="@style/Preference.CheckBoxPreference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
         <item name="widgetLayout">@layout/preference_widget_app_checkbox</item>
     </style>
     <style name="MySwitchPreferenceCompact" parent="@style/Preference.SwitchPreferenceCompat.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyDialogPreferenceCompact" parent="@style/Preference.DialogPreference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyEditTextPreferenceCompact" parent="@style/Preference.DialogPreference.EditTextPreference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyDropDownPreferenceCompact" parent="@style/Preference.DropDown.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
 
@@ -222,6 +228,8 @@
         <item name="android:textViewStyle">@style/PreferenceTextWithShadow</item>
         <item name="android:titleTextAppearance">@style/PreferenceTitleWithShadow</item>
         <item name="android:subtitleTextAppearance">@style/PreferenceSummaryWithShadow</item>
+        <!-- AndroidX preference_material binds titles through textAppearanceListItem. -->
+        <item name="android:textAppearanceListItem">@style/PreferenceTitleWithShadow</item>
         <!-- Preference 的 summary 在 AOSP 默认布局里通常使用 ?android:attr/textAppearanceSmall -->
         <item name="android:textAppearanceSmall">@style/PreferenceSummaryWithShadow</item>
         <!-- 某些系统的 Preference 列表项 summary 会走 list item 的 secondary textAppearance -->
@@ -243,8 +251,8 @@
     </style>
 
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
-        <item name="android:textSize">18sp</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/settings_preference_title_text</item>
     </style>
 
