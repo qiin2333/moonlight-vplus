@@ -199,22 +199,28 @@
     </style>
 
     <style name="MyPreferenceCompact" parent="@style/Preference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyCheckBoxPreferenceCompact" parent="@style/Preference.CheckBoxPreference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
         <item name="widgetLayout">@layout/preference_widget_app_checkbox</item>
     </style>
     <style name="MySwitchPreferenceCompact" parent="@style/Preference.SwitchPreferenceCompat.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyDialogPreferenceCompact" parent="@style/Preference.DialogPreference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyEditTextPreferenceCompact" parent="@style/Preference.DialogPreference.EditTextPreference.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
     <style name="MyDropDownPreferenceCompact" parent="@style/Preference.DropDown.Material">
+        <item name="android:layout">@layout/preference_material_compact</item>
         <item name="iconSpaceReserved">false</item>
     </style>
 
