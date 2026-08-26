@@ -35,6 +35,7 @@ class ConfigurationSyncSchemaTest {
             PreferenceConfiguration.MIC_BALANCE_ENABLED_PREF_STRING,
             PreferenceConfiguration.ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING,
             "checkbox_vibrate_osc",
+            "checkbox_mouse_emulation",
         ).forEach { key ->
             assertTrue("Expected portable key: $key", ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }

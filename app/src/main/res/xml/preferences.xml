@@ -285,6 +285,7 @@
         <CheckBoxPreference
             android:key="checkbox_stretch_video"
             android:title="@string/title_checkbox_stretch_video"
+            android:summary="@string/summary_checkbox_stretch_video"
             android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_reverse_resolution"
@@ -647,11 +648,6 @@
             android:summary="@string/summary_checkbox_multi_controller"
             android:defaultValue="true" />
         <CheckBoxPreference
-            android:key="checkbox_mouse_emulation"
-            android:title="@string/title_checkbox_mouse_emulation"
-            android:summary="@string/summary_checkbox_mouse_emulation"
-            android:defaultValue="true" />
-        <CheckBoxPreference
             android:key="checkbox_enable_start_key_menu"
             android:title="@string/title_checkbox_enable_start_key_menu"
             android:summary="@string/summary_checkbox_enable_start_key_menu"
@@ -679,7 +675,6 @@
             android:defaultValue="false" />
         <ListPreference
             android:key="analog_scrolling"
-            android:dependency="checkbox_mouse_emulation"
             android:title="@string/title_analog_scrolling"
             android:summary="@string/summary_analog_scrolling"
             android:entries="@array/analog_scrolling_names"

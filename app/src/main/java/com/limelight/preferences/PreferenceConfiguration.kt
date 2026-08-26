@@ -147,7 +147,6 @@ class PreferenceConfiguration {
     var lockScreenAfterDisconnect = false
     var swapQuitAndDisconnect = false
     var bindAllUsb = false
-    var mouseEmulation = false
     var analogStickForScrolling: AnalogStickForScrolling = AnalogStickForScrolling.NONE
     var mouseNavButtons = false
     var unlockFps = false
@@ -533,7 +532,6 @@ class PreferenceConfiguration {
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"
-        private const val MOUSE_EMULATION_STRING = "checkbox_mouse_emulation"
         private const val ANALOG_SCROLLING_PREF_STRING = "analog_scrolling"
         private const val MOUSE_NAV_BUTTONS_STRING = "checkbox_mouse_nav_buttons"
         private const val LEGACY_VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
@@ -745,7 +743,6 @@ class PreferenceConfiguration {
         private const val DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal"
         private const val DEFAULT_PERF_OVERLAY_POSITION = "top"
         private const val DEFAULT_BIND_ALL_USB = false
-        private const val DEFAULT_MOUSE_EMULATION = true
         private const val DEFAULT_ANALOG_STICK_FOR_SCROLLING = "right"
         private const val DEFAULT_MOUSE_NAV_BUTTONS = false
         private const val DEFAULT_UNLOCK_FPS = false
@@ -1380,7 +1377,6 @@ class PreferenceConfiguration {
             }
 
             config.bindAllUsb = prefs.getBoolean(BIND_ALL_USB_STRING, DEFAULT_BIND_ALL_USB)
-            config.mouseEmulation = prefs.getBoolean(MOUSE_EMULATION_STRING, DEFAULT_MOUSE_EMULATION)
             config.mouseNavButtons = prefs.getBoolean(MOUSE_NAV_BUTTONS_STRING, DEFAULT_MOUSE_NAV_BUTTONS)
             config.unlockFps = prefs.getBoolean(UNLOCK_FPS_STRING, DEFAULT_UNLOCK_FPS)
             config.gameRumbleMode = GameRumbleMode.fromPreferenceValue(
