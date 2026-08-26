@@ -1748,6 +1748,7 @@ Tap again to replace it.</string>
     <string name="summary_game_menu_cards_none">No cards shown</string>
     <string name="title_game_menu_opacity">Game menu opacity</string>
     <string name="summary_game_menu_opacity">Adjust the opacity of the in-stream game menu. Low-performance rendering mode remains opaque.</string>
+    <string name="game_menu_opacity_button">Adjust game menu opacity, currently %1$d%%</string>
     <string name="game_menu_card_list_separator">, </string>
     <string name="toast_enable_mic_redirect">Enable microphone redirection in Settings first</string>
     <string name="game_menu_enable_pan_zoom">Pan and Zoom</string>

@@ -115,6 +115,76 @@ class FloatBallPlacementTest {
         )
     }
 
+    @Test
+    fun edgeSnapUsesPhysicalWindowEdgesDespiteSystemInsets() {
+        val edgeViewport = floatBallViewport(
+            screenWidth = 1000,
+            screenHeight = 600,
+            ballSize = 50,
+            enableEdgeSnap = true,
+            safeInsetLeft = 40,
+            safeInsetTop = 20,
+            safeInsetRight = 80,
+            safeInsetBottom = 60
+        )
+
+        assertEquals(
+            FloatingButtonCoordinates(0, 275),
+            FloatBallPlacement.applyEdge(
+                FloatingButtonCoordinates(400, 275),
+                FloatBallEdge.LEFT,
+                edgeViewport
+            )
+        )
+        assertEquals(
+            FloatingButtonCoordinates(950, 275),
+            FloatBallPlacement.applyEdge(
+                FloatingButtonCoordinates(400, 275),
+                FloatBallEdge.RIGHT,
+                edgeViewport
+            )
+        )
+        assertEquals(
+            FloatingButtonCoordinates(-25, 275),
+            FloatBallPlacement.halfShownCoordinates(
+                FloatingButtonCoordinates(0, 275),
+                FloatBallEdge.LEFT,
+                ballSize = 50
+            )
+        )
+        assertEquals(
+            FloatingButtonCoordinates(975, 275),
+            FloatBallPlacement.halfShownCoordinates(
+                FloatingButtonCoordinates(950, 275),
+                FloatBallEdge.RIGHT,
+                ballSize = 50
+            )
+        )
+    }
+
+    @Test
+    fun freePlacementStillRespectsSystemInsets() {
+        val freeViewport = floatBallViewport(
+            screenWidth = 1000,
+            screenHeight = 600,
+            ballSize = 50,
+            enableEdgeSnap = false,
+            safeInsetLeft = 40,
+            safeInsetTop = 20,
+            safeInsetRight = 80,
+            safeInsetBottom = 60
+        )
+
+        assertEquals(
+            FloatingButtonCoordinates(40, 20),
+            FloatingButtonPlacement.clampCustom(-100f, -100f, freeViewport)
+        )
+        assertEquals(
+            FloatingButtonCoordinates(870, 490),
+            FloatingButtonPlacement.clampCustom(1200f, 900f, freeViewport)
+        )
+    }
+
     private companion object {
         val viewport = FloatingButtonViewport(1000, 600, 50, 50, 0)
     }

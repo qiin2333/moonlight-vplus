@@ -11,12 +11,18 @@ internal data class GameMenuQuickAction(
     val enabled: Boolean = true
 )
 
+internal data class GameMenuOpacityAnchor(
+    val centerX: Int,
+    val bottomY: Int
+)
+
 internal data class GameMenuComposeUiState(
     val title: String,
     val options: List<GameMenu.MenuOption>,
     val superOptions: List<GameMenu.MenuOption>,
     val appName: String,
     val crownToggleText: String,
+    val gameMenuOpacity: Int,
     val deviceQuickOptions: List<GameMenu.MenuOption>,
     val quickActions: List<GameMenuQuickAction>,
     val visibleCards: GameMenuVisibleCards,
@@ -84,6 +90,7 @@ internal data class GameMenuCallbacks(
     val iconForOption: (String?) -> Int,
     val onBack: () -> Unit,
     val onCrownToggle: () -> Unit,
+    val onEditOpacity: (GameMenuOpacityAnchor) -> Unit,
     val onOptionClick: (GameMenu.MenuOption) -> Unit,
     val onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     val onSegmentClick: (GameMenu.SegmentOption) -> Unit,
