@@ -1272,7 +1272,7 @@ class StreamSettings : AppCompatActivity() {
 
                 // Rebuild dynamic native/custom entries from a clean resource list.
                 Handler(Looper.getMainLooper()).post {
-                    (activity as? StreamSettings)?.recreate()
+                    (activity as? StreamSettings)?.reloadSettings()
                 }
                 true
             }

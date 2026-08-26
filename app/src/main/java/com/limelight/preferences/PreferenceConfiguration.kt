@@ -849,7 +849,10 @@ class PreferenceConfiguration {
         )
 
         fun isLowResolutionPreset(resolution: String?): Boolean {
-            return resolution == RES_360P || resolution == RES_480P
+            return when (resolution) {
+                RES_360P, RES_480P, "360x640", "480x854" -> true
+                else -> false
+            }
         }
 
         // ---- Public static methods ----

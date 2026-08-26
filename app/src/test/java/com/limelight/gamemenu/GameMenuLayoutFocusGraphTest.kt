@@ -54,19 +54,29 @@ class GameMenuLayoutFocusGraphTest {
         val resourceRoot = listOf(File("src/main/res"), File("app/src/main/res"))
             .firstOrNull(File::isDirectory)
             ?: error("Unable to locate app/src/main/res")
+        val requiredShortLabelNames = setOf(
+            "enhanced",
+            "classic",
+            "trackpad",
+            "native_mouse",
+            "ds5"
+        )
         val shortLabelPattern = Regex(
-            """<string name="game_menu_touch_mode_(?:enhanced|classic|trackpad|native_mouse|ds5)_short">([^<]+)</string>"""
+            """<string name="game_menu_touch_mode_(enhanced|classic|trackpad|native_mouse|ds5)_short">([^<]+)</string>"""
         )
 
         listOf("values", "values-es", "values-pt", "values-zh-rCN").forEach { directory ->
             val stringsFile = File(resourceRoot, "$directory/strings.xml")
-            val labels = shortLabelPattern.findAll(stringsFile.readText())
-                .map { it.groupValues[1].trim() }
-                .toList()
-            assertTrue("$directory must define touch-mode short labels", labels.isNotEmpty())
-            labels.forEach { label ->
+            val labelsByName = shortLabelPattern.findAll(stringsFile.readText())
+                .associate { match -> match.groupValues[1] to match.groupValues[2].trim() }
+            assertEquals(
+                "$directory must define exactly the required touch-mode short labels",
+                requiredShortLabelNames,
+                labelsByName.keys
+            )
+            labelsByName.forEach { (name, label) ->
                 assertTrue(
-                    "$directory label '$label' exceeds the five-code-point single-row budget",
+                    "$directory label '$name' ('$label') exceeds the five-code-point single-row budget",
                     label.codePointCount(0, label.length) <= 5
                 )
             }
