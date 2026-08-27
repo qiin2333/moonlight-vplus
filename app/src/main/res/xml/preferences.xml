@@ -597,6 +597,11 @@
             android:entries="@array/audio_vibration_scene_names"
             android:entryValues="@array/audio_vibration_scene_values"
             android:defaultValue="0" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_microphone_settings"
+        android:key="category_microphone_settings"
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="4">
         <CheckBoxPreference
             android:key="checkbox_enable_mic"
             android:title="@string/title_checkbox_enable_mic"
