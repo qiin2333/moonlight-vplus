@@ -1476,9 +1476,9 @@
     <string name="game_menu_audio_haptics_route_both_short">两者</string>
     <string name="game_menu_card_config_title">卡片配置</string>
     <string name="toast_enable_mic_redirect">请在设置中开启麦克风重定向</string>
-    <string name="game_menu_enable_pan_zoom">平移与缩放</string>
-    <string name="toast_pan_zoom_disabled">已关闭平移/缩放</string>
-    <string name="toast_pan_zoom_enabled">已开启平移/缩放</string>
+    <string name="game_menu_enable_three_finger_pan_zoom">三指平移/缩放</string>
+    <string name="toast_three_finger_pan_zoom_disabled">已关闭三指平移/缩放</string>
+    <string name="toast_three_finger_pan_zoom_enabled">已开启三指平移/缩放</string>
     <string name="toast_super_command_error">发送超级命令时发生错误: %s</string>
     <string name="toast_install_permission_denied">未获得安装权限，下载已取消</string>
     <string name="toast_check_update_failed">检查更新失败，请稍后重试</string>

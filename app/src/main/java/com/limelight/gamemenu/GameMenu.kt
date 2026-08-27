@@ -2156,19 +2156,25 @@ class GameMenu(
             inlineControl = InlineControl.Segmented(buildTouchModeSegments(compactLabels = true))
         ))
 
+        // 三指平移/缩放（默认开启，状态持久化；关闭时回退"三指快击唤键盘"）
         normalOptions.add(MenuOption(
-            label = getString(R.string.game_menu_enable_pan_zoom).trim(),
+            label = getString(R.string.game_menu_enable_three_finger_pan_zoom).trim(),
             isWithGameFocus = false,
             runnable = Runnable {
+                val enabled = !game.prefConfig.enableThreeFingerPanZoom
+                game.prefConfig.enableThreeFingerPanZoom = enabled
+                android.preference.PreferenceManager.getDefaultSharedPreferences(game).edit {
+                    putBoolean(PreferenceConfiguration.THREE_FINGER_PAN_ZOOM_PREF_STRING, enabled)
+                }
                 Toast.makeText(game,
-                    if (game.getisTouchOverrideEnabled()) getString(R.string.toast_pan_zoom_disabled) else getString(R.string.toast_pan_zoom_enabled),
+                    if (enabled) getString(R.string.toast_three_finger_pan_zoom_enabled)
+                    else getString(R.string.toast_three_finger_pan_zoom_disabled),
                     Toast.LENGTH_SHORT).show()
-                game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled())
             },
-            iconKey = "game_menu_mouse_emulation",
+            iconKey = "game_menu_enable_three_finger_pan_zoom",
             isShowIcon = true,
             isKeepDialog = true,
-            inlineControl = InlineControl.Toggle(game.getisTouchOverrideEnabled())
+            inlineControl = InlineControl.Toggle(game.prefConfig.enableThreeFingerPanZoom)
         ))
 
         // 王冠功能
@@ -2301,6 +2307,7 @@ class GameMenu(
             "game_menu_cancel" to R.drawable.ic_cancel_cute,
             "mouse_mode" to R.drawable.ic_mouse_cute,
             "game_menu_mouse_emulation" to R.drawable.ic_mouse_emulation_cute,
+            "game_menu_enable_three_finger_pan_zoom" to R.drawable.ic_mouse_emulation_cute,
             "crown_function_menu" to R.drawable.ic_super_crown,
             "crown_visibility" to R.drawable.ic_ui_settings,
             "crown_touch" to R.drawable.ic_touch_settings,

@@ -79,6 +79,13 @@ class TouchInputHandler(private val game: Game) {
     private var twoFingerStartX = 0f
     private var twoFingerStartY = 0f
 
+    // 三指平移/缩放状态（无需"平移与缩放"开关，第三指按下即进入，全部抬起才退出）
+    private var threeFingerMode = false
+    private var threeFingerDownTime = 0L
+    private var threeFingerMoved = false
+    private val threeFingerStartX = FloatArray(3)
+    private val threeFingerStartY = FloatArray(3)
+
     private var lastAbsTouchUpTime = 0L
     private var lastAbsTouchDownTime = 0L
     private var lastAbsTouchUpX = 0f
@@ -456,6 +463,75 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                val actionMasked = event.actionMasked
+                val pointerCount = event.pointerCount
+
+                // 三指直接平移/缩放（游戏菜单"三指平移/缩放"开关控制，默认开启）：
+                // 第三指按下即进入，事件全量交给 PanZoomHandler（平移/缩放联动
+                // streamView 与本地光标），全部抬起才退出。原有的"三指快击唤键盘"行为保留：
+                // 无位移、300ms 内抬起、且唤键盘指数配置为 3 时仍触发键盘切换；只要手指
+                // 动了（平移/缩放意图）就不再算快击。
+                if (game.prefConfig.enableThreeFingerPanZoom && (pointerCount >= 3 || threeFingerMode)) {
+                    if (!threeFingerMode) {
+                        threeFingerMode = true
+                        threeFingerDownTime = event.eventTime
+                        threeFingerMoved = false
+                        repeat(3) { i ->
+                            threeFingerStartX[i] = event.getX(i)
+                            threeFingerStartY[i] = event.getY(i)
+                        }
+                        // 取消此前 1/2 指已发给主机的触摸/鼠标状态，避免游戏侧"粘键/粘指"
+                        twoFingerTapPending = false
+                        twoFingerMoved = true
+                        for (ctx in touchContextMap) ctx?.cancelTouch()
+                        nativeTouchPointerMap.clear()
+                        game.conn?.sendTouchEvent(
+                            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
+                            0f, 0f, 0f, 0f, 0f,
+                            MoonBridge.LI_ROT_UNKNOWN
+                        )
+                    }
+
+                    when (actionMasked) {
+                        MotionEvent.ACTION_MOVE -> {
+                            // 任一手指相对落点时位移超过阈值 => 视为真正的平移/缩放手势
+                            if (!threeFingerMoved && pointerCount >= 3) {
+                                for (i in 0 until 3) {
+                                    val dx = event.getX(i) - threeFingerStartX[i]
+                                    val dy = event.getY(i) - threeFingerStartY[i]
+                                    if (sqrt(dx * dx + dy * dy) > THREE_FINGER_MOVE_THRESHOLD) {
+                                        threeFingerMoved = true
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            threeFingerMode = false
+                            if (actionMasked == MotionEvent.ACTION_UP && !threeFingerMoved &&
+                                game.prefConfig.nativeTouchFingersToToggleKeyboard == 3 &&
+                                event.eventTime - threeFingerDownTime < MULTI_FINGER_TAP_THRESHOLD
+                            ) {
+                                game.toggleKeyboard()
+                            }
+                        }
+                        else -> {}
+                    }
+
+                    game.panZoomHandler.handleTouchEvent(event)
+                    return true
+                }
+
+                // 三指平移/缩放关闭时回退原行为：第三指落下即取消已下发的 1/2 指触摸，
+                // 快击（300ms 内抬起）仍可唤键盘（由下方 UP 分支的 multiFingerDownTime 判定）
+                if (!game.prefConfig.enableThreeFingerPanZoom &&
+                    actionMasked == MotionEvent.ACTION_POINTER_DOWN && pointerCount == 3
+                ) {
+                    multiFingerDownTime = event.eventTime
+                    for (ctx in touchContextMap) ctx?.cancelTouch()
+                    return true
+                }
+
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                     enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
@@ -490,6 +566,10 @@ class TouchInputHandler(private val game: Game) {
                     nativeTouchPointerMap.clear()
                 }
 
+                if (!game.prefConfig.touchscreenTrackpad && game.prefConfig.enableEnhancedTouch && trySendTouchEvent(view, event)) {
+                    return true
+                }
+
                 if (game.virtualController != null &&
                     (game.virtualController?.controllerMode == VirtualController.ControllerMode.MoveButtons ||
                         game.virtualController?.controllerMode == VirtualController.ControllerMode.ResizeButtons)
@@ -498,13 +578,6 @@ class TouchInputHandler(private val game: Game) {
                 }
 
                 val actionIndex = event.actionIndex
-
-                // 三指手势特殊处理
-                if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN && event.pointerCount == 3) {
-                    multiFingerDownTime = event.eventTime
-                    for (ctx in touchContextMap) ctx?.cancelTouch()
-                    return true
-                }
 
                 val context = getTouchContext(actionIndex) ?: return false
 
@@ -1401,10 +1474,11 @@ class TouchInputHandler(private val game: Game) {
         const val TOUCH_CONTEXT_LENGTH = 2
         private const val TWO_FINGER_TAP_THRESHOLD = 100L
         private const val TWO_FINGER_MOVE_THRESHOLD = 40f
-        // Matches the verified HarmonyOS DS5 touchpad behavior (24vp tap slop,
+// Matches the verified HarmonyOS DS5 touchpad behavior (24vp tap slop,
         // 50ms clickpad hold).
         private const val SCREEN_DS5_TAP_MOVEMENT_DP = 24f
         private const val SCREEN_DS5_CLICK_RELEASE_MS = 50L
+        private const val THREE_FINGER_MOVE_THRESHOLD = 40f
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100L
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20f
         private const val STYLUS_UP_DEAD_ZONE_DELAY = 150L
