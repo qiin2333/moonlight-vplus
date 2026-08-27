@@ -630,7 +630,7 @@
     <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
     <string name="category_host_settings">Host</string>
-    <string name="title_checkbox_enable_sops">Match game settings to the stream</string>
+    <string name="title_checkbox_enable_sops">Optimize game settings</string>
     <string name="summary_checkbox_enable_sops">Allow compatible host software to adjust supported games for the requested stream resolution and quality. Changes are made on the host.</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
