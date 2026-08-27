@@ -7,6 +7,7 @@
 
     <PreferenceCategory android:title="@string/category_basic_settings"
         android:key="category_basic_settings"
+        android:order="0"
         android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="list_resolution"
@@ -52,6 +53,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_features"
         android:key="category_advanced_features"
+        android:order="4"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="6">
         <CheckBoxPreference
@@ -111,65 +113,11 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
-        <ListPreference
-            android:key="video_format"
-            android:title="@string/title_video_format"
-            android:entries="@array/video_format_names"
-            android:entryValues="@array/video_format_values"
-            android:summary="@string/summary_video_format"
-            android:defaultValue="auto" />
-        <CheckBoxPreference
-            android:key="checkbox_enable_hdr"
-            android:title="@string/title_enable_hdr"
-            android:summary="@string/summary_enable_hdr"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_enable_hdr_high_brightness"
-            android:dependency="checkbox_enable_hdr"
-            android:title="@string/title_enable_hdr_high_brightness"
-            android:summary="@string/summary_enable_hdr_high_brightness"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_hdr_brightness_override"
-            android:dependency="checkbox_enable_hdr"
-            android:title="@string/title_hdr_brightness_override"
-            android:summary="@string/summary_hdr_brightness_override"
-            android:defaultValue="false" />
-        <com.limelight.preferences.SeekBarPreference
-            android:key="seekbar_hdr_peak_brightness_nits"
-            android:dependency="checkbox_hdr_brightness_override"
-            android:dialogMessage="@string/summary_hdr_peak_brightness_nits"
-            seekbar:min="300"
-            android:max="4000"
-            android:defaultValue="1000"
-            seekbar:step="50"
-            seekbar:keyStep="100"
-            seekbar:divisor="1"
-            android:summary="@string/summary_hdr_peak_brightness_nits"
-            android:text="@string/suffix_hdr_peak_brightness_nits"
-            android:title="@string/title_hdr_peak_brightness_nits" />
-        <ListPreference
-            android:key="list_hdr_mode"
-            android:dependency="checkbox_enable_hdr"
-            android:title="@string/title_hdr_mode"
-            android:summary="@string/summary_hdr_mode"
-            android:entries="@array/hdr_mode_entries"
-            android:entryValues="@array/hdr_mode_values"
-            android:defaultValue="1" />
-        <CheckBoxPreference
-            android:key="checkbox_full_range"
-            android:title="@string/title_full_range"
-            android:summary="@string/summary_full_range"
-            android:defaultValue="false" />
-        <Preference
-            android:key="capability_diagnostic"
-            android:title="@string/title_capability_diagnostic"
-            android:summary="@string/summary_capability_diagnostic" />
-
     </PreferenceCategory>
     <!-- Runtime gating is enforced again in Game before capture starts. -->
     <PreferenceCategory android:title="@string/category_framegen_settings"
         android:key="category_framegen_settings"
+        android:order="5"
         android:layout="@layout/preference_category_material">
         <Preference
             android:key="pref_framegen_pick_lossless_dll"
@@ -228,6 +176,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings"
         android:key="category_host_settings"
+        android:order="2"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="8">
         <CheckBoxPreference
@@ -312,8 +261,70 @@
             android:defaultValue="false"/>
     </PreferenceCategory>
     <PreferenceCategory
+        android:key="category_screen_position"
+        android:title="@string/category_screen_position_settings"
+        android:icon="@drawable/ic_screen_position"
+        android:order="1"
+        android:layout="@layout/preference_category_material">
+        <ListPreference
+            android:key="video_format"
+            android:title="@string/title_video_format"
+            android:entries="@array/video_format_names"
+            android:entryValues="@array/video_format_values"
+            android:summary="@string/summary_video_format"
+            android:defaultValue="auto" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_hdr"
+            android:title="@string/title_enable_hdr"
+            android:summary="@string/summary_enable_hdr"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_enable_hdr_high_brightness"
+            android:dependency="checkbox_enable_hdr"
+            android:title="@string/title_enable_hdr_high_brightness"
+            android:summary="@string/summary_enable_hdr_high_brightness"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_hdr_brightness_override"
+            android:dependency="checkbox_enable_hdr"
+            android:title="@string/title_hdr_brightness_override"
+            android:summary="@string/summary_hdr_brightness_override"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_hdr_peak_brightness_nits"
+            android:dependency="checkbox_hdr_brightness_override"
+            android:dialogMessage="@string/summary_hdr_peak_brightness_nits"
+            seekbar:min="300"
+            android:max="4000"
+            android:defaultValue="1000"
+            seekbar:step="50"
+            seekbar:keyStep="100"
+            seekbar:divisor="1"
+            android:summary="@string/summary_hdr_peak_brightness_nits"
+            android:text="@string/suffix_hdr_peak_brightness_nits"
+            android:title="@string/title_hdr_peak_brightness_nits" />
+        <ListPreference
+            android:key="list_hdr_mode"
+            android:dependency="checkbox_enable_hdr"
+            android:title="@string/title_hdr_mode"
+            android:summary="@string/summary_hdr_mode"
+            android:entries="@array/hdr_mode_entries"
+            android:entryValues="@array/hdr_mode_values"
+            android:defaultValue="1" />
+        <CheckBoxPreference
+            android:key="checkbox_full_range"
+            android:title="@string/title_full_range"
+            android:summary="@string/summary_full_range"
+            android:defaultValue="false" />
+        <Preference
+            android:key="capability_diagnostic"
+            android:title="@string/title_capability_diagnostic"
+            android:summary="@string/summary_capability_diagnostic" />
+    </PreferenceCategory>
+    <PreferenceCategory
         android:key="category_display_behavior"
         android:title="@string/category_display_behavior"
+        android:order="3"
         android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_enable_pip"

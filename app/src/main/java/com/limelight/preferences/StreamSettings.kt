@@ -158,6 +158,7 @@ class StreamSettings : AppCompatActivity() {
         private fun getIconForCategory(key: String): Int {
             return when (key) {
                 "category_basic_settings" -> R.drawable.phc_settings
+                "category_screen_position" -> R.drawable.phc_video_camera
                 "category_display_behavior" -> R.drawable.phc_perf_resolution
                 "category_audio_settings" -> R.drawable.phc_audio
                 "category_microphone_settings" -> R.drawable.ic_mic_gm
@@ -3546,7 +3547,7 @@ class StreamSettings : AppCompatActivity() {
             // Remove HDR preference for devices below Nougat
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
                 LimeLog.info("Excluding HDR toggle based on OS")
-                val category = findPreference<PreferenceCategory>("category_advanced_features")!!
+                val category = findPreference<PreferenceCategory>("category_screen_position")!!
                 // 必须先移除依赖项，再移除被依赖的项，否则会崩溃
                 val hdrModePref = findPreference<Preference>("list_hdr_mode")
                 if (hdrModePref != null) {
@@ -3580,7 +3581,7 @@ class StreamSettings : AppCompatActivity() {
                 val foundHlg = hdrTypeSupport.hasHlg
                 val foundDolbyVision = hdrTypeSupport.hasDolbyVision
 
-                val category = findPreference<PreferenceCategory>("category_advanced_features")!!
+                val category = findPreference<PreferenceCategory>("category_screen_position")!!
                 val hdrPref = findPreference<CheckBoxPreference>("checkbox_enable_hdr")
                 val hdrHighBrightnessPref = findPreference<CheckBoxPreference>("checkbox_enable_hdr_high_brightness")
                 val hdrBrightnessOverridePref = findPreference<CheckBoxPreference>("checkbox_hdr_brightness_override")

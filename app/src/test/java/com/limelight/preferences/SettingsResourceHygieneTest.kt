@@ -2,6 +2,7 @@ package com.limelight.preferences
 
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -126,7 +127,6 @@ class SettingsResourceHygieneTest {
             .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
 
         setOf(
-            "category_screen_position",
             "category_enhanced_touch",
             "category_float_ball",
             "category_connection_settings",
@@ -135,7 +135,7 @@ class SettingsResourceHygieneTest {
         }
 
         val expectedKeysByCategory = mapOf(
-            "category_advanced_features" to setOf(
+            "category_screen_position" to setOf(
                 "video_format",
                 "checkbox_enable_hdr",
                 "checkbox_enable_hdr_high_brightness",
@@ -189,6 +189,21 @@ class SettingsResourceHygieneTest {
                 "checkbox_dualsense_wireless_bridge",
             ),
         )
+
+        listOf(
+            "category_basic_settings",
+            "category_screen_position",
+            "category_host_settings",
+            "category_display_behavior",
+            "category_advanced_features",
+            "category_framegen_settings",
+        ).forEachIndexed { order, categoryKey ->
+            assertEquals(
+                "Unexpected sidebar order for $categoryKey",
+                order.toString(),
+                categories[categoryKey]?.getAttributeNS(ANDROID_NAMESPACE, "order"),
+            )
+        }
 
         expectedKeysByCategory.forEach { (categoryKey, expectedKeys) ->
             val category = categories[categoryKey]
