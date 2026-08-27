@@ -276,7 +276,7 @@
     <string name="title_checkbox_small_icon_mode">使用小封面</string>
     <string name="summary_checkbox_small_icon_mode">使用小圖示以在螢幕上顯示更多應用程式</string>
     <string name="category_host_settings">主機</string>
-    <string name="title_checkbox_enable_sops">自動最佳化遊戲</string>
+    <string name="title_checkbox_enable_sops">最佳化遊戲設定</string>
     <string name="summary_checkbox_enable_sops">允許相容的主機軟體依照所請求的串流解析度與品質調整支援的遊戲；變更發生在主機上。</string>
     <string name="title_checkbox_host_audio">在電腦上播放音訊</string>
     <string name="summary_checkbox_host_audio">在電腦和本裝置同時輸出音訊</string>
