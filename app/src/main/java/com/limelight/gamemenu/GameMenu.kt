@@ -254,6 +254,7 @@ class GameMenu(
     private val bitrateCardController = BitrateCardController(game, conn)
     private val audioHapticsCardController = AudioHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
+    private val touchPointerSensitivityController = TouchPointerSensitivityController(game)
     private val renderingProfile = GameMenuRenderingProfile.from(game)
     private val systemHapticsEnabled = Settings.System.getInt(
         game.contentResolver,
@@ -826,7 +827,10 @@ class GameMenu(
                 SegmentOption(
                     label = getString(if (compactLabels) R.string.game_menu_touch_mode_ds5_short else R.string.game_menu_touch_mode_ds5),
                     selected = isScreenDs5Touchpad,
-                    runnable = Runnable { game.setScreenDs5TouchpadEnabled(true) },
+                    runnable = Runnable {
+                        game.setScreenDs5TouchpadEnabled(true)
+                        touchPointerSensitivityController.refreshApplicability()
+                    },
                     subtitle = getString(R.string.game_menu_touch_mode_ds5_summary)
                 )
             )
@@ -868,6 +872,7 @@ class GameMenu(
                 preset.preferenceValue
             )
         }
+        touchPointerSensitivityController.refreshApplicability()
     }
 
     /**
@@ -1148,6 +1153,7 @@ class GameMenu(
                 bitrate = bitrateCardController.snapshot(),
                 audioHaptics = audioHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
+                touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
                 pageLayout = pageLayout
             )
@@ -1164,6 +1170,11 @@ class GameMenu(
         }
         gyroCardController.start { gyro ->
             composeUiState?.let { it.value = it.value.copy(gyro = gyro) }
+        }
+        touchPointerSensitivityController.start { sensitivity ->
+            composeUiState?.let {
+                it.value = it.value.copy(touchPointerSensitivity = sensitivity)
+            }
         }
 
         val callbacks = GameMenuCallbacks(
@@ -1203,6 +1214,20 @@ class GameMenu(
             onGyroSensitivityFinished = gyroCardController::persistSensitivity,
             onGyroInvertX = gyroCardController::setInvertX,
             onGyroInvertY = gyroCardController::setInvertY,
+            onTouchPointerSensitivity = touchPointerSensitivityController::preview,
+            onTouchPointerSensitivityFinished = touchPointerSensitivityController::persist,
+            onSaveTouchPointerSensitivityPreset = { showTouchPointerPresetEditor() },
+            onApplyTouchPointerSensitivityPreset = { id ->
+                val preset = touchPointerSensitivityController.preset(id)
+                if (touchPointerSensitivityController.applyPreset(id) && preset != null) {
+                    Toast.makeText(
+                        game,
+                        game.getString(R.string.toast_preset_applied, preset.name),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onManageTouchPointerSensitivityPresets = ::showTouchPointerSensitivityPresetManager,
             onCustomKey = { sendKeys(it.keys) }
         )
 
@@ -1296,6 +1321,7 @@ class GameMenu(
             bitrateCardController.dispose()
             audioHapticsCardController.dispose()
             gyroCardController.dispose()
+            touchPointerSensitivityController.dispose()
             menuStack.clear()
             onDismiss(this)
         }
@@ -1450,6 +1476,131 @@ class GameMenu(
     private fun persistGameMenuOpacity(opacity: Int) {
         previewGameMenuOpacity(opacity)
         game.prefConfig.writePreferences(game)
+    }
+
+    private fun showTouchPointerSensitivityPresetManager() {
+        val presets = touchPointerSensitivityController.snapshot().presets
+        if (presets.isEmpty()) return
+
+        registerChildDialog(
+            AppActionSheet.show(
+                context = game,
+                title = getString(R.string.game_menu_touch_pointer_manage_presets),
+                actions = presets.mapIndexed { index, preset ->
+                    AppActionSheet.Action(
+                        id = index,
+                        title = preset.name,
+                        opensSubmenu = true,
+                        trailingText = game.getString(
+                            R.string.game_menu_touch_pointer_preset_field_count,
+                            preset.values.keys.count { key ->
+                                TouchPointerPresetField.entries.any { it.storageKey == key }
+                            }
+                        )
+                    )
+                } + AppActionSheet.Action(
+                    id = DELETE_PRESETS_ACTION_ID,
+                    title = getString(R.string.game_menu_touch_pointer_delete_presets),
+                    destructive = true
+                ),
+                onAction = { action ->
+                    game.window.decorView.post {
+                        if (action.id == DELETE_PRESETS_ACTION_ID) {
+                            showTouchPointerPresetDeleteDialog()
+                        } else {
+                            presets.getOrNull(action.id)?.let { preset ->
+                                showTouchPointerPresetEditor(preset.id)
+                            }
+                        }
+                    }
+                }
+            )
+        )
+    }
+
+    private fun showTouchPointerPresetEditor(presetId: String? = null) {
+        val preset = presetId?.let(touchPointerSensitivityController::preset)
+        val selectedFields = touchPointerSensitivityController.selectedFields(preset)
+        val fields = TouchPointerPresetField.entries.map { field ->
+            TouchPointerPresetEditor.FieldOption(
+                field = field,
+                label = touchPointerPresetFieldLabel(field),
+                value = touchPointerPresetFieldValue(field),
+                checked = field in selectedFields
+            )
+        }
+        registerChildDialog(
+            TouchPointerPresetEditor.show(
+                context = game,
+                title = getString(
+                    if (preset == null) R.string.game_menu_touch_pointer_create_preset
+                    else R.string.game_menu_touch_pointer_edit_preset
+                ),
+                initialName = preset?.name ?: touchPointerSensitivityController.defaultName(),
+                fields = fields,
+                onSave = { name, selected ->
+                    touchPointerSensitivityController.savePreset(preset?.id, name, selected)
+                }
+            )
+        )
+    }
+
+    private fun showTouchPointerPresetDeleteDialog() {
+        val presets = touchPointerSensitivityController.snapshot().presets
+        if (presets.isEmpty()) return
+        registerChildDialog(
+            AppActionSheet.showMultiSelect(
+                context = game,
+                title = getString(R.string.game_menu_touch_pointer_delete_presets),
+                actions = presets.mapIndexed { index, preset ->
+                    AppActionSheet.Action(index, preset.name, checked = false, destructive = true)
+                },
+                confirmLabel = getString(R.string.dialog_button_delete),
+                cancelLabel = getString(R.string.dialog_button_cancel),
+                minimumSelectionCount = 1,
+                forceInitialFocus = true,
+                onConfirm = { selected ->
+                    val ids = selected.mapNotNullTo(linkedSetOf()) { index ->
+                        presets.getOrNull(index)?.id
+                    }
+                    val removed = touchPointerSensitivityController.removePresets(ids)
+                    if (removed > 0) {
+                        Toast.makeText(
+                            game,
+                            game.getString(
+                                R.string.game_menu_touch_pointer_presets_deleted,
+                                removed
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+        )
+    }
+
+    private fun touchPointerPresetFieldLabel(field: TouchPointerPresetField): String = getString(
+        when (field) {
+            TouchPointerPresetField.POINTER_SPEED -> R.string.title_pointer_velocity_factor
+            TouchPointerPresetField.INITIAL_STABLE_ZONE ->
+                R.string.title_seekbar_long_press_flat_region
+            TouchPointerPresetField.ZONE_DIVIDER -> R.string.title_enhanced_touch_zone_divider
+            TouchPointerPresetField.POINTER_ZONE_SIDE ->
+                R.string.title_checkbox_enhanced_touch_on_which_side
+        }
+    )
+
+    private fun touchPointerPresetFieldValue(field: TouchPointerPresetField): String {
+        val value = touchPointerSensitivityController.fieldValue(field)
+        return when (field) {
+            TouchPointerPresetField.POINTER_SPEED,
+            TouchPointerPresetField.ZONE_DIVIDER -> "$value%"
+            TouchPointerPresetField.INITIAL_STABLE_ZONE -> "$value px"
+            TouchPointerPresetField.POINTER_ZONE_SIDE -> getString(
+                if (value.toBoolean()) R.string.game_menu_touch_pointer_side_left
+                else R.string.game_menu_touch_pointer_side_right
+            )
+        }
     }
 
     private fun registerChildDialog(dialog: Dialog, onDismiss: () -> Unit = {}) {
@@ -2282,6 +2433,7 @@ class GameMenu(
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
         private const val AXIS_REPEAT_INITIAL_DELAY_MS = 350L
         private const val AXIS_REPEAT_INTERVAL_MS = 90L
+        private const val DELETE_PRESETS_ACTION_ID = -1
         private const val DIALOG_DIM_AMOUNT = 0.0f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"

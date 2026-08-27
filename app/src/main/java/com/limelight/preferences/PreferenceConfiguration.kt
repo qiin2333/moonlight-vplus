@@ -340,6 +340,13 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_START_KEY_MENU_PREF_STRING, enableStartKeyMenu)
                 .putBoolean(CONTROL_ONLY_PREF_STRING, controlOnly)
                 .putBoolean(ENABLE_ENHANCED_TOUCH_PREF_STRING, enableEnhancedTouch)
+                .putInt(LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING, longPressflatRegionPixels)
+                .putBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, enhancedTouchOnWhichSide)
+                .putInt(ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING, enhanceTouchZoneDivider)
+                .putInt(
+                    POINTER_VELOCITY_FACTOR_PREF_STRING,
+                    pointerVelocityFactor.roundToInt()
+                )
                 .putBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, touchscreenTrackpad)
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)

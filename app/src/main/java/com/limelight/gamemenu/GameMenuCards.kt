@@ -132,6 +132,11 @@ internal fun GameMenuCard(
     } else {
         Modifier
     }
+    val cardFocusModifier = if (onLongClick != null) {
+        Modifier.focusProperties { canFocus = false }
+    } else {
+        Modifier
+    }
     Surface(
         color = colorResource(R.color.game_menu_card_background),
         shape = GameMenuCardShape,
@@ -140,7 +145,7 @@ internal fun GameMenuCard(
             .fillMaxWidth()
             // Keep long-press configuration on the card without making the whole
             // card consume a controller focus slot before its child controls.
-            .focusProperties { canFocus = false }
+            .then(cardFocusModifier)
             .then(longClickModifier)
     ) {
         Column(
@@ -215,6 +220,231 @@ private fun CompactGameMenuSlider(
         },
         modifier = modifier
     )
+}
+
+@Composable
+internal fun TouchPointerSensitivityControl(
+    state: TouchPointerSensitivityState,
+    onValueChange: (Float) -> Boolean,
+    onValueChangeFinished: () -> Unit,
+    onSavePreset: () -> Unit,
+    onApplyPreset: (String) -> Unit,
+    onManagePresets: () -> Unit,
+    modifier: Modifier = Modifier,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    if (!state.applicable) return
+
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    GameMenuCard(
+        title = stringResource(R.string.game_menu_touch_pointer_speed),
+        status = stringResource(
+            R.string.game_menu_touch_pointer_speed_value,
+            state.percent
+        )
+    ) {
+        Text(
+            text = stringResource(R.string.game_menu_touch_pointer_speed_summary),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 10.sp,
+            lineHeight = 14.sp
+        )
+        Box(
+            modifier = modifier
+                .focusProperties { canFocus = true }
+                .fillMaxWidth()
+                .height(GameMenuSliderSpec.height)
+                .gamepadFocusOutline(GameMenuControlShape)
+                .handleSliderDpad(
+                    value = state.percent.toFloat(),
+                    step = TouchPointerSensitivityPolicy.DPAD_STEP_PERCENT.toFloat(),
+                    valueRange = TouchPointerSensitivityPolicy.MIN_PERCENT.toFloat()..
+                            TouchPointerSensitivityPolicy.MAX_PERCENT.toFloat(),
+                    onValueChange = { value ->
+                        if (onValueChange(value)) {
+                            hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        }
+                    },
+                    onValueChangeFinished = onValueChangeFinished
+                )
+                .focusable()
+                .lockParentScrollDuringGesture(onSliderGesture)
+        ) {
+            CompactGameMenuSlider(
+                value = state.percent.toFloat(),
+                onValueChange = { value ->
+                    if (onValueChange(value)) {
+                        hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
+                },
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = TouchPointerSensitivityPolicy.MIN_PERCENT.toFloat()..
+                        TouchPointerSensitivityPolicy.MAX_PERCENT.toFloat(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(GameMenuSliderSpec.height)
+                    .focusProperties { canFocus = false }
+            )
+        }
+        Row {
+            Text(
+                text = "${TouchPointerSensitivityPolicy.MIN_PERCENT}%",
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 9.sp
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "${TouchPointerSensitivityPolicy.MAX_PERCENT}%",
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 9.sp
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.game_menu_touch_pointer_saved_presets),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.weight(1f))
+            SensitivityPresetActionButton(
+                iconRes = R.drawable.ic_add,
+                contentDescription = stringResource(
+                    R.string.game_menu_touch_pointer_save_preset
+                ),
+                enabled = true,
+                onClick = onSavePreset
+            )
+            if (state.presets.isNotEmpty()) {
+                Spacer(Modifier.width(GameMenuDimens.tight))
+                SensitivityPresetActionButton(
+                    iconRes = R.drawable.phc_action_edit,
+                    contentDescription = stringResource(
+                        R.string.game_menu_touch_pointer_manage_presets
+                    ),
+                    enabled = true,
+                    onClick = onManagePresets
+                )
+            }
+        }
+        if (state.presets.isEmpty()) {
+            Text(
+                text = stringResource(R.string.game_menu_touch_pointer_no_presets),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 10.sp
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
+                state.presets.chunked(3).forEach { rowPresets ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
+                    ) {
+                        rowPresets.forEach { preset ->
+                            SensitivityPresetButton(
+                                name = preset.name,
+                                selected = preset.id in state.matchingPresetIds,
+                                onClick = { onApplyPreset(preset.id) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        repeat(3 - rowPresets.size) {
+                            Spacer(
+                                Modifier
+                                    .weight(1f)
+                                    .height(36.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SensitivityPresetButton(
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    val shape = GameMenuControlShape
+    val accent = colorResource(R.color.game_menu_accent)
+    Box(
+        modifier = modifier
+            .height(36.dp)
+            .clip(shape)
+            .background(
+                if (selected) accent.copy(alpha = 0.14f)
+                else colorResource(R.color.game_menu_list_item_normal)
+            )
+            .border(
+                GameMenuDimens.surfaceStroke,
+                if (selected) accent else colorResource(R.color.game_menu_button_border),
+                shape
+            )
+            .gamepadFocusOutline(shape)
+            .clickable(role = Role.Button) {
+                hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onClick()
+            }
+            .semantics {
+                contentDescription = name
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = name,
+            color = if (selected) accent else colorResource(R.color.game_menu_text_primary),
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun SensitivityPresetActionButton(
+    iconRes: Int,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    val shape = CircleShape
+    val accent = colorResource(R.color.game_menu_accent)
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .focusProperties { canFocus = enabled }
+            .clip(shape)
+            .background(accent.copy(alpha = if (enabled) 0.10f else 0.04f))
+            .border(
+                GameMenuDimens.surfaceStroke,
+                accent.copy(alpha = if (enabled) 0.24f else 0.08f),
+                shape
+            )
+            .gamepadFocusOutline(shape)
+            .semantics { this.contentDescription = contentDescription }
+            .clickable(enabled = enabled, role = Role.Button) {
+                hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onClick()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = accent.copy(alpha = if (enabled) 1f else 0.36f),
+            modifier = Modifier.size(16.dp)
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -132,6 +132,8 @@ private const val GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP = 576
 private const val ORIENTATION_MISMATCH_THRESHOLD = 1.5f
 private const val GAME_MENU_LANDSCAPE_WIDTH_FRACTION = 0.98f
 private const val GAME_MENU_PORTRAIT_WIDTH_FRACTION = 0.95f
+internal const val TOUCH_MODE_PRIMARY_PANE_WEIGHT = 1f
+internal const val TOUCH_MODE_SECONDARY_PANE_WEIGHT = 2f
 internal const val GAME_MENU_BACKDROP_TAG = "gameMenuBackdrop"
 internal const val GAME_MENU_PANEL_TAG = "gameMenuPanel"
 internal const val GAME_MENU_GUIDE_INPUT_BLOCKER_TAG = "gameMenuGuideInputBlocker"
@@ -600,10 +602,12 @@ private fun GameMenuContent(
 
         if (wideTouchMode) {
             TouchModeTable(
-                options = state.options,
+                state = state,
                 callbacks = callbacks,
                 initialFocusRequester = initialFocusRequester,
                 topFocusRequester = touchModeBackFocusRequester,
+                sliderGestureActive = sliderGestureActive,
+                onSliderGesture = { sliderGestureActive = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -640,6 +644,18 @@ private fun GameMenuContent(
                     callbacks.onSegmentClick,
                     initialFocusRequester = initialFocusRequester
                 )
+                if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
+                    TouchPointerSensitivityControl(
+                        state = state.touchPointerSensitivity,
+                        onValueChange = callbacks.onTouchPointerSensitivity,
+                        onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
+                        onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
+                        onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
+                        onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                        modifier = Modifier.testTag("touchPointerSensitivity"),
+                        onSliderGesture = { sliderGestureActive = it }
+                    )
+                }
                 if (!state.isSubmenu) {
                     GameMenuCards(state, callbacks) { sliderGestureActive = it }
                 }
@@ -705,27 +721,32 @@ internal fun Modifier.touchModeFocusNavigation(
 
 @Composable
 private fun TouchModeTable(
-    options: List<GameMenu.MenuOption>,
+    state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
     initialFocusRequester: FocusRequester,
     topFocusRequester: FocusRequester,
+    sliderGestureActive: Boolean,
+    onSliderGesture: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val options = state.options
     val primaryModes = options.filter {
         it.presentation == GameMenuOptionPresentation.PRIMARY_MODE
     }
     val compatibleActions = options.filter {
         it.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION
     }
+    val showSensitivity = state.touchPointerSensitivity.applicable
+    val secondaryCount = compatibleActions.size + if (showSensitivity) 1 else 0
     val primaryFocusRequesters = remember(primaryModes.size, initialFocusRequester) {
         List(primaryModes.size) { index ->
             if (index == 0) initialFocusRequester else FocusRequester()
         }
     }
-    val compatibleFocusRequesters = remember(compatibleActions.size) {
-        List(compatibleActions.size) { FocusRequester() }
+    val secondaryFocusRequesters = remember(secondaryCount) {
+        List(secondaryCount) { FocusRequester() }
     }
-    val focusRequesters = primaryFocusRequesters + compatibleFocusRequesters
+    val focusRequesters = primaryFocusRequesters + secondaryFocusRequesters
 
     Row(
         modifier = modifier,
@@ -733,7 +754,7 @@ private fun TouchModeTable(
     ) {
         GameMenuScrollablePane(
             modifier = Modifier
-                .weight(1f)
+                .weight(TOUCH_MODE_PRIMARY_PANE_WEIGHT)
                 .fillMaxHeight()
                 .testTag("touchModePrimaryPane")
         ) {
@@ -749,7 +770,7 @@ private fun TouchModeTable(
                 primaryModes.forEachIndexed { globalIndex, option ->
                     val targets = touchModeFocusTargets(
                         primaryModes.size,
-                        compatibleActions.size,
+                        secondaryCount,
                         globalIndex
                     )
                     TouchModeChoice(
@@ -770,13 +791,40 @@ private fun TouchModeTable(
         }
 
         GameMenuScrollablePane(
+            scrollEnabled = !sliderGestureActive,
             modifier = Modifier
-                .weight(1f)
+                .weight(TOUCH_MODE_SECONDARY_PANE_WEIGHT)
                 .fillMaxHeight()
                 .testTag("touchModeCompatiblePane")
         ) {
             primaryModes.firstOrNull(GameMenu.MenuOption::selected)?.let { selected ->
                 TouchModePreview(selected)
+                Spacer(Modifier.height(GameMenuDimens.compact))
+            }
+            if (showSensitivity) {
+                val globalIndex = primaryModes.size
+                val targets = touchModeFocusTargets(
+                    primaryModes.size,
+                    secondaryCount,
+                    globalIndex
+                )
+                TouchPointerSensitivityControl(
+                    state = state.touchPointerSensitivity,
+                    onValueChange = callbacks.onTouchPointerSensitivity,
+                    onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
+                    onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
+                    onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
+                    onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                    modifier = Modifier
+                        .testTag("touchPointerSensitivity")
+                        .touchModeFocusNavigation(
+                            targets,
+                            focusRequesters,
+                            topFocusRequester
+                        )
+                        .focusRequester(focusRequesters[globalIndex]),
+                    onSliderGesture = onSliderGesture
+                )
                 Spacer(Modifier.height(GameMenuDimens.compact))
             }
             Text(
@@ -786,10 +834,11 @@ private fun TouchModeTable(
             )
             Spacer(Modifier.height(GameMenuDimens.compact))
             compatibleActions.forEachIndexed { compatibleIndex, option ->
-                val globalIndex = primaryModes.size + compatibleIndex
+                val globalIndex = primaryModes.size +
+                        (if (showSensitivity) 1 else 0) + compatibleIndex
                 val targets = touchModeFocusTargets(
                     primaryModes.size,
-                    compatibleActions.size,
+                    secondaryCount,
                     globalIndex
                 )
                 MenuOptionColumn(
@@ -818,6 +867,7 @@ private fun TouchModeTable(
 @Composable
 private fun GameMenuScrollablePane(
     modifier: Modifier = Modifier,
+    scrollEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -829,7 +879,7 @@ private fun GameMenuScrollablePane(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(end = GameMenuDimens.section)
-                .verticalScroll(scrollState),
+                .verticalScroll(scrollState, enabled = scrollEnabled),
             verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
         ) {
             content()
