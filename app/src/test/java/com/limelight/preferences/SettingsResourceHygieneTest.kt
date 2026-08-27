@@ -126,6 +126,7 @@ class SettingsResourceHygieneTest {
             .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
 
         setOf(
+            "category_screen_position",
             "category_enhanced_touch",
             "category_float_ball",
             "category_connection_settings",
@@ -134,6 +135,16 @@ class SettingsResourceHygieneTest {
         }
 
         val expectedKeysByCategory = mapOf(
+            "category_advanced_features" to setOf(
+                "video_format",
+                "checkbox_enable_hdr",
+                "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override",
+                "seekbar_hdr_peak_brightness_nits",
+                "list_hdr_mode",
+                "checkbox_full_range",
+                "capability_diagnostic",
+            ),
             "category_host_settings" to setOf(
                 "list_background_stream_behavior",
                 "list_quit_behavior",
