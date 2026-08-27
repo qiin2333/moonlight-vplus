@@ -11,3 +11,6 @@
 	*** dialogSnapshot*(...);
 }
 -keep class com.limelight.utils.AboutDialogLauncher$DialogSnapshot { *; }
+
+# Compose instrumentation invokes this state across the target/test APK boundary.
+-keep class com.limelight.gamemenu.TouchPointerSensitivityState { *; }

@@ -9,6 +9,12 @@ import org.junit.Test
 
 class GameMenuLayoutFocusGraphTest {
     @Test
+    fun touchModeWideLayoutUsesOneToTwoPaneRatio() {
+        assertEquals(1f, TOUCH_MODE_PRIMARY_PANE_WEIGHT)
+        assertEquals(2f, TOUCH_MODE_SECONDARY_PANE_WEIGHT)
+    }
+
+    @Test
     fun touchModeSplitPanesKeepVerticalOrderAndMapAcrossColumns() {
         assertEquals(
             TouchModeFocusTargets(left = null, right = 8, up = 3, down = null),
@@ -21,6 +27,22 @@ class GameMenuLayoutFocusGraphTest {
         assertEquals(
             TouchModeFocusTargets(left = 3, right = null, up = 7, down = null),
             touchModeFocusTargets(primaryCount = 5, compatibleCount = 4, globalIndex = 8)
+        )
+    }
+
+    @Test
+    fun touchPointerSensitivityParticipatesInTheSecondaryFocusColumn() {
+        assertEquals(
+            TouchModeFocusTargets(left = 0, right = null, up = null, down = 6),
+            touchModeFocusTargets(primaryCount = 5, compatibleCount = 5, globalIndex = 5)
+        )
+        assertEquals(
+            TouchModeFocusTargets(left = 1, right = null, up = 5, down = 7),
+            touchModeFocusTargets(primaryCount = 5, compatibleCount = 5, globalIndex = 6)
+        )
+        assertEquals(
+            TouchModeFocusTargets(left = null, right = 9, up = 3, down = null),
+            touchModeFocusTargets(primaryCount = 5, compatibleCount = 5, globalIndex = 4)
         )
     }
 
