@@ -118,7 +118,7 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun consolidatedCategoriesKeepEveryPreferenceKey() {
+    fun settingsCategoriesKeepEveryPreferenceKey() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
         val categories = preferences.documentElement
             .getElementsByTagName("PreferenceCategory")
@@ -126,7 +126,6 @@ class SettingsResourceHygieneTest {
             .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
 
         setOf(
-            "category_microphone_settings",
             "category_enhanced_touch",
             "category_float_ball",
             "category_connection_settings",
@@ -151,7 +150,7 @@ class SettingsResourceHygieneTest {
                 "list_float_ball_double_click_action",
                 "list_float_ball_long_click_action",
             ),
-            "category_audio_settings" to setOf(
+            "category_microphone_settings" to setOf(
                 "checkbox_enable_mic",
                 "list_mic_menu_action_mode",
                 "checkbox_show_mic_button",
@@ -189,7 +188,7 @@ class SettingsResourceHygieneTest {
                 .toSet()
             expectedKeys.forEach { preferenceKey ->
                 assertTrue(
-                    "$preferenceKey was not moved under $categoryKey",
+                    "$preferenceKey is missing from $categoryKey",
                     preferenceKey in actualKeys,
                 )
             }
