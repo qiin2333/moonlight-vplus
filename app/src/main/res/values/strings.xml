@@ -1103,8 +1103,6 @@
     <string name="game_menu_touch_pointer_save_preset">Create preset</string>
     <string name="game_menu_touch_pointer_manage_presets">Manage presets</string>
     <string name="game_menu_touch_pointer_no_presets">No saved presets</string>
-    <string name="game_menu_touch_pointer_preset_saved">Preset saved</string>
-    <string name="game_menu_touch_pointer_preset_exists">This value is already saved</string>
     <string name="game_menu_touch_pointer_preset_limit">Up to 12 presets can be saved</string>
     <string name="game_menu_touch_pointer_presets_deleted">Deleted %1$d preset(s)</string>
     <string name="game_menu_touch_pointer_default_preset_name">Preset%1$d</string>

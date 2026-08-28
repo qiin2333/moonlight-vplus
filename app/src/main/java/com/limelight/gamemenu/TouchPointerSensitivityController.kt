@@ -131,40 +131,46 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
     private fun parse(
         json: String,
         defaultName: (Int) -> String
-    ): List<TouchPointerSensitivityPreset>? = runCatching {
-        val array = JSONObject(json).optJSONArray("presets") ?: return@runCatching emptyList()
-        val seenIds = hashSetOf<String>()
-        buildList {
-            for (index in 0 until minOf(array.length(), TouchPointerSensitivityPolicy.MAX_PRESETS)) {
-                val item = array.optJSONObject(index) ?: continue
-                val rawName = item.optString("name")
-                val name = rawName.takeIf(TouchPointerSensitivityPolicy::isValidName)
-                    ?: defaultName(index + 1)
-                val valuesObject = item.optJSONObject("values") ?: JSONObject()
-                val values = linkedMapOf<String, String>()
-                val keys = valuesObject.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    if (key.isBlank()) continue
-                    val value = valuesObject.opt(key)
-                    if (value != null && value !== JSONObject.NULL) {
-                        values[key] = value.toString()
+    ): List<TouchPointerSensitivityPreset>? {
+        val root = runCatching { JSONObject(json) }.getOrNull() ?: return null
+        val array = root.optJSONArray("presets") ?: return null
+        return runCatching {
+            val seenIds = hashSetOf<String>()
+            buildList<TouchPointerSensitivityPreset> {
+                for (index in 0 until minOf(
+                    array.length(),
+                    TouchPointerSensitivityPolicy.MAX_PRESETS
+                )) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val rawName = item.optString("name")
+                    val name = rawName.takeIf(TouchPointerSensitivityPolicy::isValidName)
+                        ?: defaultName(index + 1)
+                    val valuesObject = item.optJSONObject("values") ?: JSONObject()
+                    val values = linkedMapOf<String, String>()
+                    val keys = valuesObject.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        if (key.isBlank()) continue
+                        val value = valuesObject.opt(key)
+                        if (value != null && value !== JSONObject.NULL) {
+                            values[key] = value.toString()
+                        }
+                    }
+                    if (values.isNotEmpty()) {
+                        var id = normalizedUuid(item.optString("id"))
+                        while (!seenIds.add(id)) id = UUID.randomUUID().toString()
+                        add(
+                            TouchPointerSensitivityPreset(
+                                id = id,
+                                name = name,
+                                values = values
+                            )
+                        )
                     }
                 }
-                if (values.isNotEmpty()) {
-                    var id = normalizedUuid(item.optString("id"))
-                    while (!seenIds.add(id)) id = UUID.randomUUID().toString()
-                    add(
-                        TouchPointerSensitivityPreset(
-                            id = id,
-                            name = name,
-                            values = values
-                        )
-                    )
-                }
             }
-        }
-    }.getOrNull()
+        }.getOrNull()
+    }
 
     private fun migrateLegacyPercentages(
         defaultName: (Int) -> String

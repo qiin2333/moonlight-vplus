@@ -173,6 +173,70 @@ class TouchPointerSensitivityPresetStoreTest {
     }
 
     @Test
+    fun malformedDefaultJsonDoesNotHideValidGameMenuPresets() {
+        val presetId = UUID.randomUUID().toString()
+        val legacyJson = singlePresetJson(presetId, "125")
+        defaultPreferences.edit()
+            .putString(TouchPointerPresetPreferences.JSON_KEY, "{}")
+            .commit()
+        legacyPreferences.edit()
+            .putString(TouchPointerPresetPreferences.JSON_KEY, legacyJson)
+            .commit()
+
+        val presets = TouchPointerSensitivityPresetStore(context).load { "Fallback$it" }
+
+        assertEquals(presetId, presets.single().id)
+        assertEquals(
+            legacyJson,
+            presetPreferences.getString(TouchPointerPresetPreferences.JSON_KEY, null)
+        )
+        assertFalse(defaultPreferences.contains(TouchPointerPresetPreferences.JSON_KEY))
+        assertFalse(legacyPreferences.contains(TouchPointerPresetPreferences.JSON_KEY))
+    }
+
+    @Test
+    fun malformedDedicatedJsonFallsBackToValidGameMenuPresets() {
+        val presetId = UUID.randomUUID().toString()
+        val legacyJson = singlePresetJson(presetId, "150")
+        presetPreferences.edit()
+            .putString(TouchPointerPresetPreferences.JSON_KEY, "{\"presets\":{}}")
+            .commit()
+        legacyPreferences.edit()
+            .putString(TouchPointerPresetPreferences.JSON_KEY, legacyJson)
+            .commit()
+
+        val presets = TouchPointerSensitivityPresetStore(context).load { "Fallback$it" }
+
+        assertEquals(presetId, presets.single().id)
+        assertEquals(
+            legacyJson,
+            presetPreferences.getString(TouchPointerPresetPreferences.JSON_KEY, null)
+        )
+    }
+
+    @Test
+    fun validEmptyDedicatedPresetListDoesNotResurrectLegacyPresets() {
+        val emptyJson = JSONObject()
+            .put("version", 1)
+            .put("presets", JSONArray())
+            .toString()
+        presetPreferences.edit()
+            .putString(TouchPointerPresetPreferences.JSON_KEY, emptyJson)
+            .commit()
+        legacyPreferences.edit()
+            .putString(
+                TouchPointerPresetPreferences.JSON_KEY,
+                singlePresetJson(UUID.randomUUID().toString(), "175")
+            )
+            .commit()
+
+        val store = TouchPointerSensitivityPresetStore(context)
+
+        assertTrue(store.load { "Fallback$it" }.isEmpty())
+        assertTrue(store.load { "Fallback$it" }.isEmpty())
+    }
+
+    @Test
     fun unifiedPreferenceWritePersistsTouchSnapshotFields() {
         val config = PreferenceConfiguration.readPreferences(context).apply {
             pointerVelocityFactor = 175f
@@ -208,6 +272,22 @@ class TouchPointerSensitivityPresetStoreTest {
             .remove("touch_pointer_sensitivity_presets")
             .commit()
     }
+
+    private fun singlePresetJson(id: String, speed: String): String = JSONObject()
+        .put("version", 1)
+        .put(
+            "presets",
+            JSONArray().put(
+                JSONObject()
+                    .put("id", id)
+                    .put("name", "Preset1")
+                    .put(
+                        "values",
+                        JSONObject().put("pointer_velocity_factor", speed)
+                    )
+            )
+        )
+        .toString()
 
     private fun restorePreferences(
         preferences: SharedPreferences,

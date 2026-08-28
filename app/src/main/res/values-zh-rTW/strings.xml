@@ -586,8 +586,6 @@
     <string name="game_menu_touch_pointer_save_preset">建立預設</string>
     <string name="game_menu_touch_pointer_manage_presets">管理預設</string>
     <string name="game_menu_touch_pointer_no_presets">尚未儲存預設</string>
-    <string name="game_menu_touch_pointer_preset_saved">預設已儲存</string>
-    <string name="game_menu_touch_pointer_preset_exists">此數值已儲存</string>
     <string name="game_menu_touch_pointer_preset_limit">最多可儲存 12 組預設</string>
     <string name="game_menu_touch_pointer_presets_deleted">已刪除 %1$d 組預設</string>
     <string name="game_menu_touch_pointer_default_preset_name">預設%1$d</string>
