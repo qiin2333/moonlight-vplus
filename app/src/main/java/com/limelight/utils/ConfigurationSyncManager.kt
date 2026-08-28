@@ -3186,6 +3186,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "list_screen_position",
             "perf_overlay_display_items",
             "pointer_velocity_factor",
+            PreferenceConfiguration.TOUCH_POINTER_SENSITIVITY_PRESETS_PREF_STRING,
             "pref_enable_double_click_drag",
             "pref_enable_local_cursor_rendering",
             "seekbar_audio_vibration_strength",

@@ -536,6 +536,8 @@ class PreferenceConfiguration {
         private const val PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked"
         private const val PERF_OVERLAY_BG_OPACITY_STRING = "seekbar_perf_overlay_bg_opacity"
         const val GAME_MENU_OPACITY_PREF_STRING = "seekbar_game_menu_opacity"
+        const val TOUCH_POINTER_SENSITIVITY_PRESETS_PREF_STRING =
+            "touch_pointer_sensitivity_presets_json"
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"

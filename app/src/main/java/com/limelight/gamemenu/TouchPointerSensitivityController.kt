@@ -2,9 +2,11 @@ package com.limelight.gamemenu
 
 import android.content.Context
 import androidx.core.content.edit
+import androidx.preference.PreferenceManager
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.touch.NativeTouchContext
+import com.limelight.preferences.PreferenceConfiguration
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -73,14 +75,16 @@ internal enum class TouchPointerPresetSaveResult {
 }
 
 internal class TouchPointerSensitivityPresetStore(context: Context) {
-    private val preferences = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
+    private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+    private val legacyPreferences = context.getSharedPreferences(LEGACY_PREF_FILE, Context.MODE_PRIVATE)
 
     fun load(defaultName: (Int) -> String): List<TouchPointerSensitivityPreset> {
         val json = preferences.getString(PREF_JSON_KEY, null)
         if (!json.isNullOrBlank()) {
             parse(json, defaultName)?.let { return it }
         }
-        return migrateLegacy(defaultName)
+        migrateLegacyStore(defaultName)?.let { return it }
+        return migrateLegacyPercentages(defaultName)
     }
 
     fun save(presets: Collection<TouchPointerSensitivityPreset>) {
@@ -142,17 +146,18 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
         }
     }.getOrNull()
 
-    private fun migrateLegacy(
+    private fun migrateLegacyPercentages(
         defaultName: (Int) -> String
     ): List<TouchPointerSensitivityPreset> {
-        val values = preferences.getStringSet(PREF_LEGACY_KEY, emptySet())
-            .orEmpty()
+        val values = sequenceOf(preferences, legacyPreferences)
+            .flatMap { it.getStringSet(PREF_LEGACY_KEY, emptySet()).orEmpty().asSequence() }
             .mapNotNull(String::toIntOrNull)
             .filter { it in TouchPointerSensitivityPolicy.MIN_PERCENT..
                 TouchPointerSensitivityPolicy.MAX_PERCENT }
             .distinct()
             .sorted()
             .take(TouchPointerSensitivityPolicy.MAX_PRESETS)
+            .toList()
         if (values.isEmpty()) return emptyList()
 
         val migrated = values.mapIndexed { index, percent ->
@@ -165,7 +170,27 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
             )
         }
         save(migrated)
+        clearLegacyPreferences()
         return migrated
+    }
+
+    private fun migrateLegacyStore(
+        defaultName: (Int) -> String
+    ): List<TouchPointerSensitivityPreset>? {
+        val json = legacyPreferences.getString(PREF_JSON_KEY, null)
+            ?.takeUnless(String::isBlank)
+            ?: return null
+        val migrated = parse(json, defaultName) ?: return null
+        save(migrated)
+        clearLegacyPreferences()
+        return migrated
+    }
+
+    private fun clearLegacyPreferences() {
+        legacyPreferences.edit {
+            remove(PREF_JSON_KEY)
+            remove(PREF_LEGACY_KEY)
+        }
     }
 
     private fun normalizedUuid(value: String): String = runCatching {
@@ -174,8 +199,9 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
 
     private companion object {
         const val STORAGE_VERSION = 1
-        const val PREF_FILE = "game_menu_prefs"
-        const val PREF_JSON_KEY = "touch_pointer_sensitivity_presets_json"
+        const val LEGACY_PREF_FILE = "game_menu_prefs"
+        const val PREF_JSON_KEY =
+            PreferenceConfiguration.TOUCH_POINTER_SENSITIVITY_PRESETS_PREF_STRING
         const val PREF_LEGACY_KEY = "touch_pointer_sensitivity_presets"
     }
 }

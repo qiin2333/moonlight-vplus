@@ -108,6 +108,15 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
+    fun touchPointerSensitivityPresetsArePortable() {
+        assertTrue(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                PreferenceConfiguration.TOUCH_POINTER_SENSITIVITY_PRESETS_PREF_STRING
+            )
+        )
+    }
+
+    @Test
     fun schemaV1FixtureHasExpectedSectionsAndTypedValues() {
         validateSchemaFixture(
             readFixture("config-sync/schema-v1.example.json").asJsonObject,
