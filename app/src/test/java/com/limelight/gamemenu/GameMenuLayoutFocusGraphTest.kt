@@ -72,6 +72,35 @@ class GameMenuLayoutFocusGraphTest {
     }
 
     @Test
+    fun touchModeSegmentsUseTwoRowsOnPhonesAndOneRowOnLargeScreens() {
+        assertEquals(
+            3,
+            responsiveSegmentColumnCount(
+                itemCount = 5,
+                smallestScreenWidthDp = 411,
+                smallScreenColumnCount = 3
+            )
+        )
+        assertEquals(2, segmentedRowCount(itemCount = 5, columnCount = 3))
+        assertEquals(
+            SegmentedFocusTargets(left = 0, right = 2, up = null, down = 4),
+            segmentedFocusTargets(itemCount = 5, index = 1, columnCount = 3)
+        )
+        assertEquals(
+            SegmentedFocusTargets(left = 3, right = null, up = 1, down = null),
+            segmentedFocusTargets(itemCount = 5, index = 4, columnCount = 3)
+        )
+        assertEquals(
+            5,
+            responsiveSegmentColumnCount(
+                itemCount = 5,
+                smallestScreenWidthDp = LARGE_SCREEN_MIN_SMALLEST_WIDTH_DP,
+                smallScreenColumnCount = 3
+            )
+        )
+    }
+
+    @Test
     fun localizedTouchModeShortLabelsFitTheFiveSegmentBudget() {
         val resourceRoot = listOf(File("src/main/res"), File("app/src/main/res"))
             .firstOrNull(File::isDirectory)

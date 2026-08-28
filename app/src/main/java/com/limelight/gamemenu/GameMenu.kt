@@ -550,7 +550,10 @@ class GameMenu(
             val checked: Boolean,
             val toggleAction: Runnable? = null
         ) : InlineControl
-        data class Segmented(val segments: List<SegmentOption>) : InlineControl
+        data class Segmented(
+            val segments: List<SegmentOption>,
+            val smallScreenColumnCount: Int? = null
+        ) : InlineControl
     }
 
     data class SegmentOption(
@@ -2308,7 +2311,10 @@ class GameMenu(
             isShowIcon = true,
             isKeepDialog = true,
             showChevron = true,
-            inlineControl = InlineControl.Segmented(buildTouchModeSegments(compactLabels = true))
+            inlineControl = InlineControl.Segmented(
+                segments = buildTouchModeSegments(compactLabels = true),
+                smallScreenColumnCount = 3
+            )
         ))
 
         normalOptions.add(MenuOption(
