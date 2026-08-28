@@ -815,14 +815,17 @@ private fun TouchModeTable(
                     onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
                     onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
                     onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                    sliderFocusRequester = focusRequesters[globalIndex],
+                    leftExitRequester = targets.left?.let(focusRequesters::get)
+                        ?: FocusRequester.Cancel,
+                    rightExitRequester = targets.right?.let(focusRequesters::get)
+                        ?: FocusRequester.Cancel,
+                    upExitRequester = targets.up?.let(focusRequesters::get)
+                        ?: topFocusRequester,
+                    downExitRequester = targets.down?.let(focusRequesters::get)
+                        ?: FocusRequester.Cancel,
                     modifier = Modifier
-                        .testTag("touchPointerSensitivity")
-                        .touchModeFocusNavigation(
-                            targets,
-                            focusRequesters,
-                            topFocusRequester
-                        )
-                        .focusRequester(focusRequesters[globalIndex]),
+                        .testTag("touchPointerSensitivity"),
                     onSliderGesture = onSliderGesture
                 )
                 Spacer(Modifier.height(GameMenuDimens.compact))
