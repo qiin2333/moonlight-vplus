@@ -388,6 +388,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_ui_settings"
         android:key="category_ui_settings"
+        android:order="12"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="9">
         <com.limelight.preferences.LanguagePreference
@@ -532,6 +533,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings"
         android:key="category_audio_settings"
+        android:order="6"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="11">
         <ListPreference
@@ -605,6 +607,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_microphone_settings"
         android:key="category_microphone_settings"
+        android:order="7"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="4">
         <CheckBoxPreference
@@ -717,6 +720,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"
+        android:order="8"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="4">
         <Preference
@@ -813,6 +817,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_input_settings"
         android:key="category_input_settings"
+        android:order="9"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="4">
         <ListPreference
@@ -963,6 +968,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls"
+        android:order="10"
         android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="false"
@@ -1014,6 +1020,7 @@
         android:key="category_crown_features"
         android:title="@string/category_crown_features"
         android:icon="@drawable/ic_enhance"
+        android:order="11"
         android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="false"
@@ -1027,6 +1034,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_backup_restore"
         android:key="category_backup_restore"
+        android:order="13"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="5">
         <Preference
@@ -1055,6 +1063,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
         android:key="category_help"
+        android:order="14"
         android:layout="@layout/preference_category_material">
         <!-- <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_setup_guide"

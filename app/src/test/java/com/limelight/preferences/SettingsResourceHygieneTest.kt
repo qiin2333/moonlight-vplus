@@ -197,6 +197,15 @@ class SettingsResourceHygieneTest {
             "category_display_behavior",
             "category_advanced_features",
             "category_framegen_settings",
+            "category_audio_settings",
+            "category_microphone_settings",
+            "category_gamepad_settings",
+            "category_input_settings",
+            "category_onscreen_controls",
+            "category_crown_features",
+            "category_ui_settings",
+            "category_backup_restore",
+            "category_help",
         ).forEachIndexed { order, categoryKey ->
             assertEquals(
                 "Unexpected sidebar order for $categoryKey",
