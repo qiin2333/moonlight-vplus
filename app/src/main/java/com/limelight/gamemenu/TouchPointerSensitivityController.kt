@@ -7,7 +7,7 @@ import androidx.preference.PreferenceManager
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.touch.NativeTouchContext
-import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.TouchPointerPresetPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -76,15 +76,20 @@ internal enum class TouchPointerPresetSaveResult {
 }
 
 internal class TouchPointerSensitivityPresetStore(context: Context) {
-    private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-    private val legacyPreferences = context.getSharedPreferences(LEGACY_PREF_FILE, Context.MODE_PRIVATE)
+    private val preferences = context.getSharedPreferences(
+        TouchPointerPresetPreferences.FILE_NAME,
+        Context.MODE_PRIVATE
+    )
+    private val defaultPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+    private val legacyGameMenuPreferences =
+        context.getSharedPreferences(LEGACY_GAME_MENU_PREF_FILE, Context.MODE_PRIVATE)
 
     fun load(defaultName: (Int) -> String): List<TouchPointerSensitivityPreset> {
         val json = preferences.getString(PREF_JSON_KEY, null)
         if (!json.isNullOrBlank()) {
             parse(json, defaultName)?.let { return it }
         }
-        migrateLegacyStore(defaultName)?.let { return it }
+        migrateLegacyJson(defaultName)?.let { return it }
         return migrateLegacyPercentages(defaultName)
     }
 
@@ -164,7 +169,7 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
     private fun migrateLegacyPercentages(
         defaultName: (Int) -> String
     ): List<TouchPointerSensitivityPreset> {
-        val values = sequenceOf(preferences, legacyPreferences)
+        val values = sequenceOf(preferences, defaultPreferences, legacyGameMenuPreferences)
             .flatMap { it.getStringSet(PREF_LEGACY_KEY, emptySet()).orEmpty().asSequence() }
             .mapNotNull(String::toIntOrNull)
             .filter { it in TouchPointerSensitivityPolicy.MIN_PERCENT..
@@ -190,23 +195,28 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
         return migrated
     }
 
-    private fun migrateLegacyStore(
+    private fun migrateLegacyJson(
         defaultName: (Int) -> String
     ): List<TouchPointerSensitivityPreset>? {
-        val json = legacyPreferences.getString(PREF_JSON_KEY, null)
-            ?.takeUnless(String::isBlank)
-            ?: return null
-        val migrated = parse(json, defaultName) ?: return null
-        if (writePresets(migrated, synchronous = true)) {
-            clearLegacyPreferences()
+        for (source in sequenceOf(defaultPreferences, legacyGameMenuPreferences)) {
+            val json = source.getString(PREF_JSON_KEY, null)
+                ?.takeUnless(String::isBlank)
+                ?: continue
+            val migrated = parse(json, defaultName) ?: continue
+            if (writePresets(migrated, synchronous = true)) {
+                clearLegacyPreferences()
+            }
+            return migrated
         }
-        return migrated
+        return null
     }
 
     private fun clearLegacyPreferences() {
-        legacyPreferences.edit {
-            remove(PREF_JSON_KEY)
-            remove(PREF_LEGACY_KEY)
+        sequenceOf(defaultPreferences, legacyGameMenuPreferences).forEach { source ->
+            source.edit {
+                remove(PREF_JSON_KEY)
+                remove(PREF_LEGACY_KEY)
+            }
         }
     }
 
@@ -216,9 +226,8 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
 
     private companion object {
         const val STORAGE_VERSION = 1
-        const val LEGACY_PREF_FILE = "game_menu_prefs"
-        const val PREF_JSON_KEY =
-            PreferenceConfiguration.TOUCH_POINTER_SENSITIVITY_PRESETS_PREF_STRING
+        const val LEGACY_GAME_MENU_PREF_FILE = "game_menu_prefs"
+        const val PREF_JSON_KEY = TouchPointerPresetPreferences.JSON_KEY
         const val PREF_LEGACY_KEY = "touch_pointer_sensitivity_presets"
     }
 }

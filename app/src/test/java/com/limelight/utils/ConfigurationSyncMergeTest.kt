@@ -13,6 +13,42 @@ import org.junit.Test
 
 class ConfigurationSyncMergeTest {
     @Test
+    fun mergePreservesNewestDedicatedTouchPointerPresetJson() {
+        val deviceA = syncPackage(
+            deviceId = "device-a",
+            defaultValues = values(
+                "touch_pointer_sensitivity_presets_json" to typedValue(
+                    "string",
+                    JsonPrimitive("old-presets"),
+                    1000L,
+                    "device-a"
+                )
+            )
+        )
+        val deviceB = syncPackage(
+            deviceId = "device-b",
+            touchPointerPresetValues = values(
+                "touch_pointer_sensitivity_presets_json" to typedValue(
+                    "string",
+                    JsonPrimitive("new-presets"),
+                    2000L,
+                    "device-b"
+                )
+            )
+        )
+
+        val mergedValues = preferenceValues(
+            ConfigurationSyncManager.mergeSyncPackagesForTest(listOf(deviceA, deviceB)),
+            "touchPointerPresets"
+        )
+
+        assertEquals(
+            "new-presets",
+            mergedValues["touch_pointer_sensitivity_presets_json"].asJsonObject["value"].asString
+        )
+    }
+
+    @Test
     fun mergeChoosesNewestScalarAndUnionsStringSets() {
         val deviceA = syncPackage(
             deviceId = "device-a",
@@ -373,6 +409,7 @@ class ConfigurationSyncMergeTest {
     private fun syncPackage(
         deviceId: String,
         defaultValues: JsonObject = JsonObject(),
+        touchPointerPresetValues: JsonObject = JsonObject(),
         crownProfiles: JsonArray = JsonArray(),
         pairingState: JsonObject = pairingState()
     ): String {
@@ -394,6 +431,7 @@ class ConfigurationSyncMergeTest {
         packageSections.add("sceneConfigs", preferenceSection())
         packageSections.add("appViewPreferences", preferenceSection())
         packageSections.add("hiddenApps", preferenceSection())
+        packageSections.add("touchPointerPresets", preferenceSection(touchPointerPresetValues))
         packageSections.add("crownProfiles", crownProfiles)
         packageSections.add("pairing", pairingState)
         root.add("sections", packageSections)

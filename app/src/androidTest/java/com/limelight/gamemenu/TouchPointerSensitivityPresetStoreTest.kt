@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.preference.PreferenceManager
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.TouchPointerPresetPreferences
 import java.util.UUID
 import org.json.JSONArray
 import org.json.JSONObject
@@ -25,13 +26,20 @@ class TouchPointerSensitivityPresetStoreTest {
         get() = context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
     private val defaultPreferences
         get() = PreferenceManager.getDefaultSharedPreferences(context)
+    private val presetPreferences
+        get() = context.getSharedPreferences(
+            TouchPointerPresetPreferences.FILE_NAME,
+            Context.MODE_PRIVATE
+        )
     private lateinit var defaultPreferencesSnapshot: Map<String, *>
     private lateinit var legacyPreferencesSnapshot: Map<String, *>
+    private lateinit var presetPreferencesSnapshot: Map<String, *>
 
     @Before
     fun setUp() {
         defaultPreferencesSnapshot = defaultPreferences.all.toMap()
         legacyPreferencesSnapshot = legacyPreferences.all.toMap()
+        presetPreferencesSnapshot = presetPreferences.all.toMap()
         clearTestPreferences()
     }
 
@@ -39,6 +47,7 @@ class TouchPointerSensitivityPresetStoreTest {
     fun tearDown() {
         restorePreferences(defaultPreferences, defaultPreferencesSnapshot)
         restorePreferences(legacyPreferences, legacyPreferencesSnapshot)
+        restorePreferences(presetPreferences, presetPreferencesSnapshot)
     }
 
     @Test
@@ -55,7 +64,7 @@ class TouchPointerSensitivityPresetStoreTest {
         })
         assertTrue(presets.all { runCatching { UUID.fromString(it.id) }.isSuccess })
         assertFalse(legacyPreferences.contains("touch_pointer_sensitivity_presets"))
-        assertTrue(defaultPreferences.contains("touch_pointer_sensitivity_presets_json"))
+        assertTrue(presetPreferences.contains(TouchPointerPresetPreferences.JSON_KEY))
     }
 
     @Test
@@ -89,9 +98,9 @@ class TouchPointerSensitivityPresetStoreTest {
                     .put("values", JSONObject().put("pointer_velocity_factor", "100"))
             )
         }
-        defaultPreferences.edit()
+        presetPreferences.edit()
             .putString(
-                "touch_pointer_sensitivity_presets_json",
+                TouchPointerPresetPreferences.JSON_KEY,
                 JSONObject().put("version", 1).put("presets", array).toString()
             )
             .commit()
@@ -103,7 +112,7 @@ class TouchPointerSensitivityPresetStoreTest {
     }
 
     @Test
-    fun migratesExistingNamedPresetsIntoDefaultPreferences() {
+    fun migratesExistingNamedPresetsIntoDedicatedPreferences() {
         val presetId = UUID.randomUUID().toString()
         val json = JSONObject()
             .put("version", 1)
@@ -129,9 +138,38 @@ class TouchPointerSensitivityPresetStoreTest {
         assertEquals(presetId, presets.single().id)
         assertEquals(
             json,
-            defaultPreferences.getString("touch_pointer_sensitivity_presets_json", null)
+            presetPreferences.getString(TouchPointerPresetPreferences.JSON_KEY, null)
         )
         assertFalse(legacyPreferences.contains("touch_pointer_sensitivity_presets_json"))
+    }
+
+    @Test
+    fun migratesCurrentDefaultPreferenceStorageIntoDedicatedPreferences() {
+        val presetId = UUID.randomUUID().toString()
+        val json = JSONObject()
+            .put("version", 1)
+            .put(
+                "presets",
+                JSONArray().put(
+                    JSONObject()
+                        .put("id", presetId)
+                        .put("name", "Preset1")
+                        .put(
+                            "values",
+                            JSONObject().put("pointer_velocity_factor", "150")
+                        )
+                )
+            )
+            .toString()
+        defaultPreferences.edit()
+            .putString(TouchPointerPresetPreferences.JSON_KEY, json)
+            .commit()
+
+        val presets = TouchPointerSensitivityPresetStore(context).load { "Fallback$it" }
+
+        assertEquals(presetId, presets.single().id)
+        assertEquals(json, presetPreferences.getString(TouchPointerPresetPreferences.JSON_KEY, null))
+        assertFalse(defaultPreferences.contains(TouchPointerPresetPreferences.JSON_KEY))
     }
 
     @Test
@@ -158,12 +196,16 @@ class TouchPointerSensitivityPresetStoreTest {
             .remove("touch_pointer_sensitivity_presets")
             .commit()
         defaultPreferences.edit()
-            .remove("touch_pointer_sensitivity_presets_json")
+            .remove(TouchPointerPresetPreferences.JSON_KEY)
             .remove("touch_pointer_sensitivity_presets")
             .remove("pointer_velocity_factor")
             .remove("seekbar_flat_region_pixels")
             .remove("enhanced_touch_zone_divider")
             .remove("checkbox_enhanced_touch_on_which_side")
+            .commit()
+        presetPreferences.edit()
+            .remove(TouchPointerPresetPreferences.JSON_KEY)
+            .remove("touch_pointer_sensitivity_presets")
             .commit()
     }
 

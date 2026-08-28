@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.TouchPointerPresetPreferences
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.ui.FloatBallPreferences
 import org.junit.Assert.assertEquals
@@ -108,10 +109,20 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
-    fun touchPointerSensitivityPresetsArePortable() {
-        assertTrue(
+    fun touchPointerSensitivityPresetsUsePortableDedicatedStorage() {
+        assertFalse(
             ConfigurationSyncManager.isPortableDefaultPreferenceKey(
-                PreferenceConfiguration.TOUCH_POINTER_SENSITIVITY_PRESETS_PREF_STRING
+                TouchPointerPresetPreferences.JSON_KEY
+            )
+        )
+        assertTrue(
+            TouchPointerPresetPreferences.FILE_NAME in
+                ConfigurationSyncManager.portableSharedPreferenceNames()
+        )
+        assertTrue(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                TouchPointerPresetPreferences.FILE_NAME,
+                TouchPointerPresetPreferences.JSON_KEY
             )
         )
     }
