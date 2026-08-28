@@ -1,6 +1,7 @@
 package com.limelight.gamemenu
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.preference.PreferenceManager
@@ -24,15 +25,20 @@ class TouchPointerSensitivityPresetStoreTest {
         get() = context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
     private val defaultPreferences
         get() = PreferenceManager.getDefaultSharedPreferences(context)
+    private lateinit var defaultPreferencesSnapshot: Map<String, *>
+    private lateinit var legacyPreferencesSnapshot: Map<String, *>
 
     @Before
     fun setUp() {
+        defaultPreferencesSnapshot = defaultPreferences.all.toMap()
+        legacyPreferencesSnapshot = legacyPreferences.all.toMap()
         clearTestPreferences()
     }
 
     @After
     fun tearDown() {
-        clearTestPreferences()
+        restorePreferences(defaultPreferences, defaultPreferencesSnapshot)
+        restorePreferences(legacyPreferences, legacyPreferencesSnapshot)
     }
 
     @Test
@@ -130,7 +136,7 @@ class TouchPointerSensitivityPresetStoreTest {
 
     @Test
     fun unifiedPreferenceWritePersistsTouchSnapshotFields() {
-        val config = PreferenceConfiguration().apply {
+        val config = PreferenceConfiguration.readPreferences(context).apply {
             pointerVelocityFactor = 175f
             longPressflatRegionPixels = 24
             enhanceTouchZoneDivider = 63
@@ -147,7 +153,10 @@ class TouchPointerSensitivityPresetStoreTest {
     }
 
     private fun clearTestPreferences() {
-        legacyPreferences.edit().clear().commit()
+        legacyPreferences.edit()
+            .remove("touch_pointer_sensitivity_presets_json")
+            .remove("touch_pointer_sensitivity_presets")
+            .commit()
         defaultPreferences.edit()
             .remove("touch_pointer_sensitivity_presets_json")
             .remove("touch_pointer_sensitivity_presets")
@@ -156,5 +165,23 @@ class TouchPointerSensitivityPresetStoreTest {
             .remove("enhanced_touch_zone_divider")
             .remove("checkbox_enhanced_touch_on_which_side")
             .commit()
+    }
+
+    private fun restorePreferences(
+        preferences: SharedPreferences,
+        snapshot: Map<String, *>
+    ) {
+        val editor = preferences.edit().clear()
+        snapshot.forEach { (key, value) ->
+            when (value) {
+                is Boolean -> editor.putBoolean(key, value)
+                is Float -> editor.putFloat(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is String -> editor.putString(key, value)
+                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+            }
+        }
+        assertTrue(editor.commit())
     }
 }

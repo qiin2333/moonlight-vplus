@@ -17,6 +17,28 @@ import android.widget.Toast
 import com.limelight.R
 
 internal object TouchPointerPresetEditor {
+    internal class CodePointLengthFilter(private val maxCodePoints: Int) : InputFilter {
+        override fun filter(
+            source: CharSequence,
+            start: Int,
+            end: Int,
+            dest: android.text.Spanned,
+            dstart: Int,
+            dend: Int
+        ): CharSequence? {
+            val retainedDestCodePoints = Character.codePointCount(dest, 0, dest.length) -
+                Character.codePointCount(dest, dstart, dend)
+            val availableCodePoints = maxCodePoints - retainedDestCodePoints
+            if (availableCodePoints <= 0) return ""
+
+            val sourceCodePoints = Character.codePointCount(source, start, end)
+            if (sourceCodePoints <= availableCodePoints) return null
+
+            val keepEnd = Character.offsetByCodePoints(source, start, availableCodePoints)
+            return source.subSequence(start, keepEnd)
+        }
+    }
+
     data class FieldOption(
         val field: TouchPointerPresetField,
         val label: String,
@@ -39,7 +61,9 @@ internal object TouchPointerPresetEditor {
             setSelection(text.length)
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            filters = arrayOf(InputFilter.LengthFilter(TouchPointerSensitivityPolicy.MAX_NAME_LENGTH))
+            filters = arrayOf(
+                CodePointLengthFilter(TouchPointerSensitivityPolicy.MAX_NAME_LENGTH)
+            )
             hint = context.getString(R.string.game_menu_touch_pointer_preset_name_hint)
         }
         val fieldChecks = fields.associateWith { option ->

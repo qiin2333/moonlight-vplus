@@ -1,5 +1,6 @@
 package com.limelight.gamemenu
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
@@ -88,6 +89,15 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
     }
 
     fun save(presets: Collection<TouchPointerSensitivityPreset>) {
+        writePresets(presets, synchronous = false)
+    }
+
+    // Migration commits synchronously so legacy data is never removed before the new copy is durable.
+    @SuppressLint("ApplySharedPref")
+    private fun writePresets(
+        presets: Collection<TouchPointerSensitivityPreset>,
+        synchronous: Boolean
+    ): Boolean {
         val array = JSONArray()
         presets.take(TouchPointerSensitivityPolicy.MAX_PRESETS).forEach { preset ->
             val values = JSONObject()
@@ -102,9 +112,14 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
         val root = JSONObject()
             .put("version", STORAGE_VERSION)
             .put("presets", array)
-        preferences.edit {
-            putString(PREF_JSON_KEY, root.toString())
-            remove(PREF_LEGACY_KEY)
+        val editor = preferences.edit()
+            .putString(PREF_JSON_KEY, root.toString())
+            .remove(PREF_LEGACY_KEY)
+        return if (synchronous) {
+            editor.commit()
+        } else {
+            editor.apply()
+            true
         }
     }
 
@@ -169,8 +184,9 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
                 )
             )
         }
-        save(migrated)
-        clearLegacyPreferences()
+        if (writePresets(migrated, synchronous = true)) {
+            clearLegacyPreferences()
+        }
         return migrated
     }
 
@@ -181,8 +197,9 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
             ?.takeUnless(String::isBlank)
             ?: return null
         val migrated = parse(json, defaultName) ?: return null
-        save(migrated)
-        clearLegacyPreferences()
+        if (writePresets(migrated, synchronous = true)) {
+            clearLegacyPreferences()
+        }
         return migrated
     }
 

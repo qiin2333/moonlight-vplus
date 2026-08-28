@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -83,6 +84,33 @@ class TouchPointerPresetEditorTest {
         assertFalse(saveCalled)
     }
 
+    @Test
+    fun supplementaryCharactersUseCodePointNameLimit() {
+        val emoji = "\uD83D\uDE00"
+        activityRule.runOnUiThread {
+            dialog = TouchPointerPresetEditor.show(
+                context = activityRule.activity,
+                title = "Create",
+                initialName = "",
+                fields = testFields(checked = true),
+                onSave = { _, _ -> TouchPointerPresetSaveResult.SAVED }
+            )
+        }
+        activityRule.waitUntil(5_000) { dialog?.isShowing == true }
+
+        activityRule.runOnUiThread {
+            val input = firstEditText(dialog) ?: error("Missing preset name input")
+            input.setText(emoji.repeat(TouchPointerSensitivityPolicy.MAX_NAME_LENGTH))
+            input.append(emoji)
+            val actual = input.text.toString()
+            assertEquals(
+                TouchPointerSensitivityPolicy.MAX_NAME_LENGTH,
+                actual.codePointCount(0, actual.length)
+            )
+            assertEquals(emoji.repeat(TouchPointerSensitivityPolicy.MAX_NAME_LENGTH), actual)
+        }
+    }
+
     private fun testFields(checked: Boolean) = listOf(
         TouchPointerPresetEditor.FieldOption(
             field = TouchPointerPresetField.POINTER_SPEED,
@@ -95,6 +123,11 @@ class TouchPointerPresetEditorTest {
     private fun firstCheckBox(dialog: Dialog?): CheckBox? {
         val root = dialog?.window?.decorView ?: return null
         return findView(root) { it is CheckBox } as? CheckBox
+    }
+
+    private fun firstEditText(dialog: Dialog?): EditText? {
+        val root = dialog?.window?.decorView ?: return null
+        return findView(root) { it is EditText } as? EditText
     }
 
     private fun findView(view: View, predicate: (View) -> Boolean): View? {
