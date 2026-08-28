@@ -2157,24 +2157,30 @@ class GameMenu(
         ))
 
         // 三指平移/缩放（默认开启，状态持久化；关闭时回退"三指快击唤键盘"）
+        // 行点击与复选框点击共用同一切换逻辑：runnable 走行点击，
+        // toggleAction 走复选框（InlineControl.Toggle 无 toggleAction 时点击复选框不生效）
+        val threeFingerPanZoomToggle = Runnable {
+            val enabled = !game.prefConfig.enableThreeFingerPanZoom
+            game.prefConfig.enableThreeFingerPanZoom = enabled
+            android.preference.PreferenceManager.getDefaultSharedPreferences(game).edit {
+                putBoolean(PreferenceConfiguration.THREE_FINGER_PAN_ZOOM_PREF_STRING, enabled)
+            }
+            Toast.makeText(game,
+                if (enabled) getString(R.string.toast_three_finger_pan_zoom_enabled)
+                else getString(R.string.toast_three_finger_pan_zoom_disabled),
+                Toast.LENGTH_SHORT).show()
+        }
         normalOptions.add(MenuOption(
             label = getString(R.string.game_menu_enable_three_finger_pan_zoom).trim(),
             isWithGameFocus = false,
-            runnable = Runnable {
-                val enabled = !game.prefConfig.enableThreeFingerPanZoom
-                game.prefConfig.enableThreeFingerPanZoom = enabled
-                android.preference.PreferenceManager.getDefaultSharedPreferences(game).edit {
-                    putBoolean(PreferenceConfiguration.THREE_FINGER_PAN_ZOOM_PREF_STRING, enabled)
-                }
-                Toast.makeText(game,
-                    if (enabled) getString(R.string.toast_three_finger_pan_zoom_enabled)
-                    else getString(R.string.toast_three_finger_pan_zoom_disabled),
-                    Toast.LENGTH_SHORT).show()
-            },
+            runnable = threeFingerPanZoomToggle,
             iconKey = "game_menu_enable_three_finger_pan_zoom",
             isShowIcon = true,
             isKeepDialog = true,
-            inlineControl = InlineControl.Toggle(game.prefConfig.enableThreeFingerPanZoom)
+            inlineControl = InlineControl.Toggle(
+                checked = game.prefConfig.enableThreeFingerPanZoom,
+                toggleAction = threeFingerPanZoomToggle
+            )
         ))
 
         // 王冠功能

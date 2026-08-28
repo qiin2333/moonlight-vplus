@@ -85,6 +85,8 @@ class TouchInputHandler(private val game: Game) {
     private var threeFingerMoved = false
     private val threeFingerStartX = FloatArray(3)
     private val threeFingerStartY = FloatArray(3)
+    /** 进入三指模式时的原始 pointerId，用于模式尾巴段（部分手指已抬起）仍能按 ID 追踪移动 */
+    private val threeFingerStartPointerIds = IntArray(3)
 
     private var lastAbsTouchUpTime = 0L
     private var lastAbsTouchDownTime = 0L
@@ -479,6 +481,7 @@ class TouchInputHandler(private val game: Game) {
                         repeat(3) { i ->
                             threeFingerStartX[i] = event.getX(i)
                             threeFingerStartY[i] = event.getY(i)
+                            threeFingerStartPointerIds[i] = event.getPointerId(i)
                         }
                         // 取消此前 1/2 指已发给主机的触摸/鼠标状态，避免游戏侧"粘键/粘指"
                         twoFingerTapPending = false
@@ -494,11 +497,16 @@ class TouchInputHandler(private val game: Game) {
 
                     when (actionMasked) {
                         MotionEvent.ACTION_MOVE -> {
-                            // 任一手指相对落点时位移超过阈值 => 视为真正的平移/缩放手势
-                            if (!threeFingerMoved && pointerCount >= 3) {
+                            // 任一手指相对落点时位移超过阈值 => 视为真正的平移/缩放手势。
+                            // 按原始 pointerId 追踪：模式尾巴段（部分手指已抬起、pointerCount
+                            // 降到 2/1）剩余手指的移动同样计入，避免"抬一指后双指平移仍被
+                            // 算作快击"而误触键盘切换。
+                            if (!threeFingerMoved) {
                                 for (i in 0 until 3) {
-                                    val dx = event.getX(i) - threeFingerStartX[i]
-                                    val dy = event.getY(i) - threeFingerStartY[i]
+                                    val idx = event.findPointerIndex(threeFingerStartPointerIds[i])
+                                    if (idx < 0) continue // 该指已抬起
+                                    val dx = event.getX(idx) - threeFingerStartX[i]
+                                    val dy = event.getY(idx) - threeFingerStartY[i]
                                     if (sqrt(dx * dx + dy * dy) > THREE_FINGER_MOVE_THRESHOLD) {
                                         threeFingerMoved = true
                                         break
