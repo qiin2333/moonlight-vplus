@@ -190,6 +190,7 @@ internal class TouchPointerSensitivityController(
     private var presets = loadPresets()
     private var state = readState()
     private var persistedPercent = state.percent
+    private var persistencePending = false
 
     fun snapshot(): TouchPointerSensitivityState = state
 
@@ -198,6 +199,7 @@ internal class TouchPointerSensitivityController(
         presets = loadPresets()
         state = readState()
         persistedPercent = state.percent
+        persistencePending = false
         applyPointerSpeedRuntime(state.percent)
         emitState()
     }
@@ -215,6 +217,7 @@ internal class TouchPointerSensitivityController(
 
         game.prefConfig.pointerVelocityFactor = bounded.toFloat()
         applyPointerSpeedRuntime(bounded)
+        persistencePending = true
         state = readState()
         emitState()
         return bounded / TouchPointerSensitivityPolicy.DPAD_STEP_PERCENT !=
@@ -222,9 +225,11 @@ internal class TouchPointerSensitivityController(
     }
 
     fun persist() {
-        if (state.percent == persistedPercent) return
-        game.prefConfig.writePreferences(game)
-        persistedPercent = state.percent
+        if (!persistencePending && state.percent == persistedPercent) return
+        if (game.prefConfig.writePreferences(game)) {
+            persistedPercent = state.percent
+            persistencePending = false
+        }
     }
 
     fun defaultName(): String {
@@ -295,13 +300,17 @@ internal class TouchPointerSensitivityController(
         }
         if (!applied) return false
 
-        game.prefConfig.writePreferences(game)
-        persistedPercent = TouchPointerSensitivityPolicy.normalize(
-            game.prefConfig.pointerVelocityFactor
-        )
+        persistencePending = true
+        val persisted = game.prefConfig.writePreferences(game)
+        if (persisted) {
+            persistedPercent = TouchPointerSensitivityPolicy.normalize(
+                game.prefConfig.pointerVelocityFactor
+            )
+            persistencePending = false
+        }
         state = readState()
         emitState()
-        return true
+        return persisted
     }
 
     fun removePresets(ids: Set<String>): Int {

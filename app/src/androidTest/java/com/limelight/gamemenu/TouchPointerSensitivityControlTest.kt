@@ -158,6 +158,46 @@ class TouchPointerSensitivityControlTest {
         }
     }
 
+    @Test
+    fun directionalInputReachesPresetActionsAndGrid() {
+        lateinit var inputModeManager: InputModeManager
+        composeTestRule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            TouchPointerSensitivityControl(
+                state = TouchPointerSensitivityState(
+                    percent = 100,
+                    applicable = true,
+                    presets = testPresets(),
+                    matchingPresetIds = setOf("preset-100")
+                ),
+                onValueChange = { false },
+                onValueChangeFinished = {},
+                onSavePreset = {},
+                onApplyPreset = {},
+                onManagePresets = {},
+                modifier = Modifier.testTag("touchPointerSensitivity"),
+                onSliderGesture = {}
+            )
+        }
+
+        composeTestRule.runOnIdle {
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+        }
+        composeTestRule.onNodeWithTag("touchPointerSensitivity").requestFocus()
+        composeTestRule.onNodeWithTag("touchPointerSensitivity").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").performKeyInput {
+            pressKey(Key.DirectionRight)
+        }
+        composeTestRule.onNodeWithTag("touchPointerPresetManage").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchPointerPresetManage").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag("touchPointerPreset:preset-100").assertIsFocused()
+    }
+
     private fun testPresets(): List<TouchPointerSensitivityPreset> = listOf(50, 100, 150).map {
         TouchPointerSensitivityPreset(
             id = "preset-$it",

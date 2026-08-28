@@ -45,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -56,6 +58,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -230,12 +233,31 @@ internal fun TouchPointerSensitivityControl(
     onSavePreset: () -> Unit,
     onApplyPreset: (String) -> Unit,
     onManagePresets: () -> Unit,
+    sliderFocusRequester: FocusRequester? = null,
+    leftExitRequester: FocusRequester = FocusRequester.Default,
+    rightExitRequester: FocusRequester = FocusRequester.Default,
+    upExitRequester: FocusRequester = FocusRequester.Default,
+    downExitRequester: FocusRequester = FocusRequester.Default,
     modifier: Modifier = Modifier,
     onSliderGesture: (Boolean) -> Unit
 ) {
     if (!state.applicable) return
 
     val hapticFeedback = LocalGameMenuHapticFeedback.current
+    val ownedSliderFocusRequester = remember { FocusRequester() }
+    val sliderRequester = sliderFocusRequester ?: ownedSliderFocusRequester
+    val saveRequester = remember { FocusRequester() }
+    val manageRequester = remember { FocusRequester() }
+    val presetIds = state.presets.map(TouchPointerSensitivityPreset::id)
+    val presetRequesters = remember(presetIds) {
+        List(presetIds.size) { FocusRequester() }
+    }
+    val actionRequesters = if (state.presets.isEmpty()) {
+        listOf(saveRequester)
+    } else {
+        listOf(saveRequester, manageRequester)
+    }
+    val firstPresetRequester = presetRequesters.firstOrNull() ?: downExitRequester
     GameMenuCard(
         title = stringResource(R.string.game_menu_touch_pointer_speed),
         status = stringResource(
@@ -251,7 +273,12 @@ internal fun TouchPointerSensitivityControl(
         )
         Box(
             modifier = modifier
-                .focusProperties { canFocus = true }
+                .focusRequester(sliderRequester)
+                .focusProperties {
+                    canFocus = true
+                    up = upExitRequester
+                    down = saveRequester
+                }
                 .fillMaxWidth()
                 .height(GameMenuSliderSpec.height)
                 .gamepadFocusOutline(GameMenuControlShape)
@@ -316,6 +343,19 @@ internal fun TouchPointerSensitivityControl(
                     R.string.game_menu_touch_pointer_save_preset
                 ),
                 enabled = true,
+                modifier = Modifier
+                    .testTag("touchPointerPresetSave")
+                    .focusRequester(saveRequester)
+                    .focusProperties {
+                        up = sliderRequester
+                        down = firstPresetRequester
+                        left = leftExitRequester
+                        right = if (state.presets.isEmpty()) {
+                            rightExitRequester
+                        } else {
+                            manageRequester
+                        }
+                    },
                 onClick = onSavePreset
             )
             if (state.presets.isNotEmpty()) {
@@ -326,6 +366,16 @@ internal fun TouchPointerSensitivityControl(
                         R.string.game_menu_touch_pointer_manage_presets
                     ),
                     enabled = true,
+                    modifier = Modifier
+                        .testTag("touchPointerPresetManage")
+                        .focusRequester(manageRequester)
+                        .focusProperties {
+                            up = sliderRequester
+                            down = presetRequesters.getOrNull(1)
+                                ?: firstPresetRequester
+                            left = saveRequester
+                            right = rightExitRequester
+                        },
                     onClick = onManagePresets
                 )
             }
@@ -338,17 +388,48 @@ internal fun TouchPointerSensitivityControl(
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
-                state.presets.chunked(3).forEach { rowPresets ->
+                state.presets.chunked(3).forEachIndexed { rowIndex, rowPresets ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
                     ) {
-                        rowPresets.forEach { preset ->
+                        rowPresets.forEachIndexed { columnIndex, preset ->
+                            val index = rowIndex * 3 + columnIndex
+                            val rowStart = rowIndex * 3
+                            val rowEnd = minOf(rowStart + 3, state.presets.size)
+                            val nextRowStart = rowStart + 3
+                            val upRequester = if (rowIndex == 0) {
+                                actionRequesters[minOf(columnIndex, actionRequesters.lastIndex)]
+                            } else {
+                                presetRequesters[index - 3]
+                            }
+                            val downRequester = if (nextRowStart < state.presets.size) {
+                                presetRequesters[minOf(nextRowStart + columnIndex, state.presets.lastIndex)]
+                            } else {
+                                downExitRequester
+                            }
                             SensitivityPresetButton(
                                 name = preset.name,
                                 selected = preset.id in state.matchingPresetIds,
                                 onClick = { onApplyPreset(preset.id) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("touchPointerPreset:${preset.id}")
+                                    .focusRequester(presetRequesters[index])
+                                    .focusProperties {
+                                        up = upRequester
+                                        down = downRequester
+                                        left = if (columnIndex > 0) {
+                                            presetRequesters[index - 1]
+                                        } else {
+                                            leftExitRequester
+                                        }
+                                        right = if (index + 1 < rowEnd) {
+                                            presetRequesters[index + 1]
+                                        } else {
+                                            rightExitRequester
+                                        }
+                                    }
                             )
                         }
                         repeat(3 - rowPresets.size) {
@@ -414,13 +495,14 @@ private fun SensitivityPresetActionButton(
     iconRes: Int,
     contentDescription: String,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = CircleShape
     val accent = colorResource(R.color.game_menu_accent)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(32.dp)
             .focusProperties { canFocus = enabled }
             .clip(shape)

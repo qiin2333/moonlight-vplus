@@ -22,15 +22,17 @@ class TouchPointerSensitivityPresetStoreTest {
         get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val preferences
         get() = context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
+    private val defaultPreferences
+        get() = PreferenceManager.getDefaultSharedPreferences(context)
 
     @Before
     fun setUp() {
-        preferences.edit().clear().commit()
+        clearTestPreferences()
     }
 
     @After
     fun tearDown() {
-        preferences.edit().clear().commit()
+        clearTestPreferences()
     }
 
     @Test
@@ -110,5 +112,15 @@ class TouchPointerSensitivityPresetStoreTest {
         assertEquals(24, prefs.getInt("seekbar_flat_region_pixels", -1))
         assertEquals(63, prefs.getInt("enhanced_touch_zone_divider", -1))
         assertTrue(prefs.getBoolean("checkbox_enhanced_touch_on_which_side", false))
+    }
+
+    private fun clearTestPreferences() {
+        preferences.edit().clear().commit()
+        defaultPreferences.edit()
+            .remove("pointer_velocity_factor")
+            .remove("seekbar_flat_region_pixels")
+            .remove("enhanced_touch_zone_divider")
+            .remove("checkbox_enhanced_touch_on_which_side")
+            .commit()
     }
 }

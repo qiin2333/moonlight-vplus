@@ -134,6 +134,22 @@ class SettingsResourceHygieneTest {
             assertFalse("Retired category is still present: $retiredKey", retiredKey in categories)
         }
 
+        val ownersByPreferenceKey = mutableMapOf<String, MutableList<String>>()
+        categories.forEach { (categoryKey, category) ->
+            category.childNodes.asElementSequence()
+                .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+                .filter(String::isNotEmpty)
+                .forEach { preferenceKey ->
+                    ownersByPreferenceKey.getOrPut(preferenceKey, ::mutableListOf)
+                        .add(categoryKey)
+                }
+        }
+        val duplicateOwners = ownersByPreferenceKey.filterValues { it.size != 1 }
+        assertTrue(
+            "Preference keys must have exactly one category owner: $duplicateOwners",
+            duplicateOwners.isEmpty(),
+        )
+
         val expectedKeysByCategory = mapOf(
             "category_screen_position" to setOf(
                 "video_format",
