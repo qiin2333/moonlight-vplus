@@ -62,7 +62,7 @@ class TouchPointerSensitivityControlTest {
                         percent = percent,
                         applicable = true,
                         presets = testPresets(),
-                        matchingPresetIds = setOf("preset-100")
+                        activePresetId = "preset-100"
                     ),
                     onValueChange = { value ->
                         percent = TouchPointerSensitivityPolicy.normalize(value)
@@ -87,6 +87,14 @@ class TouchPointerSensitivityControlTest {
         composeTestRule.onNodeWithTag("focusBeforeSensitivity").performKeyInput {
             pressKey(Key.DirectionDown)
         }
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
+        composeTestRule.onNodeWithTag("touchPointerPreset:preset-50").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchPointerPreset:preset-50").performKeyInput {
+            pressKey(Key.DirectionDown)
+        }
         composeTestRule.runOnIdle {
             assertEquals(true, focused)
         }
@@ -108,7 +116,7 @@ class TouchPointerSensitivityControlTest {
                         percent = 100,
                         applicable = false,
                         presets = emptyList(),
-                        matchingPresetIds = emptySet()
+                        activePresetId = null
                 ),
                 onValueChange = { false },
                 onValueChangeFinished = {},
@@ -134,7 +142,7 @@ class TouchPointerSensitivityControlTest {
                         percent = 100,
                         applicable = true,
                         presets = testPresets(),
-                        matchingPresetIds = setOf("preset-100")
+                        activePresetId = "preset-100"
                 ),
                 onValueChange = { false },
                 onValueChangeFinished = {},
@@ -163,6 +171,37 @@ class TouchPointerSensitivityControlTest {
     }
 
     @Test
+    fun equalPresetValuesOnlySelectTheActivePresetId() {
+        val duplicateValues = mapOf(
+            TouchPointerPresetField.POINTER_SPEED.storageKey to "100"
+        )
+        composeTestRule.setContent {
+            TouchPointerSensitivityControl(
+                state = TouchPointerSensitivityState(
+                    percent = 100,
+                    applicable = true,
+                    presets = listOf(
+                        TouchPointerSensitivityPreset("preset-a", "Preset A", duplicateValues),
+                        TouchPointerSensitivityPreset("preset-b", "Preset B", duplicateValues),
+                        TouchPointerSensitivityPreset("preset-c", "Preset C", duplicateValues)
+                    ),
+                    activePresetId = "preset-b"
+                ),
+                onValueChange = { false },
+                onValueChangeFinished = {},
+                onSavePreset = {},
+                onApplyPreset = {},
+                onManagePresets = {},
+                onSliderGesture = {}
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Preset A").assertIsNotSelected()
+        composeTestRule.onNodeWithContentDescription("Preset B").assertIsSelected()
+        composeTestRule.onNodeWithContentDescription("Preset C").assertIsNotSelected()
+    }
+
+    @Test
     fun directionalInputReachesPresetActionsAndGrid() {
         lateinit var inputModeManager: InputModeManager
         composeTestRule.setContent {
@@ -172,7 +211,7 @@ class TouchPointerSensitivityControlTest {
                     percent = 100,
                     applicable = true,
                     presets = testPresets(),
-                    matchingPresetIds = setOf("preset-100")
+                    activePresetId = "preset-100"
                 ),
                 onValueChange = { false },
                 onValueChangeFinished = {},
@@ -187,10 +226,7 @@ class TouchPointerSensitivityControlTest {
         composeTestRule.runOnIdle {
             inputModeManager.requestInputMode(InputMode.Keyboard)
         }
-        composeTestRule.onNodeWithTag("touchPointerSensitivity").requestFocus()
-        composeTestRule.onNodeWithTag("touchPointerSensitivity").performKeyInput {
-            pressKey(Key.DirectionDown)
-        }
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").requestFocus()
         composeTestRule.onNodeWithTag("touchPointerPresetSave").assertIsFocused()
         composeTestRule.onNodeWithTag("touchPointerPresetSave").performKeyInput {
             pressKey(Key.DirectionRight)

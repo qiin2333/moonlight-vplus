@@ -6,12 +6,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.SeekBar
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.limelight.R
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,16 +37,16 @@ class TouchPointerPresetEditorTest {
     @Test
     fun validLocalizedNameAndSelectedFieldsAreSaved() {
         var savedName = ""
-        var savedFields = emptySet<TouchPointerPresetField>()
+        var savedValues = emptyMap<TouchPointerPresetField, String>()
         activityRule.runOnUiThread {
             dialog = TouchPointerPresetEditor.show(
                 context = activityRule.activity,
                 title = "Create",
                 initialName = "预设1",
                 fields = testFields(checked = true),
-                onSave = { name, fields ->
+                onSave = { name, values ->
                     savedName = name
-                    savedFields = fields
+                    savedValues = values
                     TouchPointerPresetSaveResult.SAVED
                 }
             )
@@ -55,7 +60,40 @@ class TouchPointerPresetEditorTest {
         activityRule.waitUntil(5_000) { dialog?.isShowing == false }
 
         assertEquals("预设1", savedName)
-        assertEquals(setOf(TouchPointerPresetField.POINTER_SPEED), savedFields)
+        assertEquals(
+            mapOf(TouchPointerPresetField.POINTER_SPEED to "100"),
+            savedValues
+        )
+    }
+
+    @Test
+    fun editedNumericValueIsSaved() {
+        var savedValues = emptyMap<TouchPointerPresetField, String>()
+        activityRule.runOnUiThread {
+            dialog = TouchPointerPresetEditor.show(
+                context = activityRule.activity,
+                title = "Create",
+                initialName = "Preset 1",
+                fields = testFields(checked = true),
+                onSave = { _, values ->
+                    savedValues = values
+                    TouchPointerPresetSaveResult.SAVED
+                }
+            )
+        }
+        activityRule.waitUntil(5_000) { dialog?.isShowing == true }
+
+        activityRule.runOnUiThread {
+            val seekBar = firstSeekBar(dialog) ?: error("Missing preset value slider")
+            seekBar.progress = 175
+            (dialog as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        }
+        activityRule.waitUntil(5_000) { dialog?.isShowing == false }
+
+        assertEquals(
+            mapOf(TouchPointerPresetField.POINTER_SPEED to "175"),
+            savedValues
+        )
     }
 
     @Test
@@ -111,11 +149,43 @@ class TouchPointerPresetEditorTest {
         }
     }
 
+    @Test
+    fun customControlsUseDialogThemedContext() {
+        activityRule.runOnUiThread {
+            dialog = TouchPointerPresetEditor.show(
+                context = activityRule.activity,
+                title = "Create",
+                initialName = "Preset 1",
+                fields = testFields(checked = true),
+                onSave = { _, _ -> TouchPointerPresetSaveResult.SAVED }
+            )
+        }
+        activityRule.waitUntil(5_000) { dialog?.isShowing == true }
+
+        activityRule.runOnUiThread {
+            val alertDialog = dialog as AlertDialog
+            val expectedTextColor = ContextCompat.getColor(
+                alertDialog.context,
+                R.color.app_dialog_text_primary
+            )
+            assertSame(alertDialog.context, firstEditText(dialog)?.context)
+            assertSame(alertDialog.context, firstCheckBox(dialog)?.context)
+            assertEquals(expectedTextColor, firstEditText(dialog)?.currentTextColor)
+            assertEquals(expectedTextColor, firstCheckBox(dialog)?.currentTextColor)
+            assertEquals(
+                expectedTextColor,
+                findTextView(dialog, alertDialog.context.getString(
+                    R.string.game_menu_touch_pointer_preset_fields
+                ))?.currentTextColor
+            )
+        }
+    }
+
     private fun testFields(checked: Boolean) = listOf(
         TouchPointerPresetEditor.FieldOption(
             field = TouchPointerPresetField.POINTER_SPEED,
             label = "Pointer speed",
-            value = "100%",
+            value = "100",
             checked = checked
         )
     )
@@ -128,6 +198,16 @@ class TouchPointerPresetEditorTest {
     private fun firstEditText(dialog: Dialog?): EditText? {
         val root = dialog?.window?.decorView ?: return null
         return findView(root) { it is EditText } as? EditText
+    }
+
+    private fun firstSeekBar(dialog: Dialog?): SeekBar? {
+        val root = dialog?.window?.decorView ?: return null
+        return findView(root) { it is SeekBar } as? SeekBar
+    }
+
+    private fun findTextView(dialog: Dialog?, text: String): TextView? {
+        val root = dialog?.window?.decorView ?: return null
+        return findView(root) { it is TextView && it.text.toString() == text } as? TextView
     }
 
     private fun findView(view: View, predicate: (View) -> Boolean): View? {

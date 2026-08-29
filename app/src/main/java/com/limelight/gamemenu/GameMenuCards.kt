@@ -234,7 +234,7 @@ internal fun TouchPointerSensitivityControl(
     onSavePreset: () -> Unit,
     onApplyPreset: (String) -> Unit,
     onManagePresets: () -> Unit,
-    sliderFocusRequester: FocusRequester? = null,
+    initialFocusRequester: FocusRequester? = null,
     leftExitRequester: FocusRequester = FocusRequester.Default,
     rightExitRequester: FocusRequester = FocusRequester.Default,
     upExitRequester: FocusRequester = FocusRequester.Default,
@@ -245,20 +245,14 @@ internal fun TouchPointerSensitivityControl(
     if (!state.applicable) return
 
     val hapticFeedback = LocalGameMenuHapticFeedback.current
-    val ownedSliderFocusRequester = remember { FocusRequester() }
-    val sliderRequester = sliderFocusRequester ?: ownedSliderFocusRequester
-    val saveRequester = remember { FocusRequester() }
+    val ownedInitialFocusRequester = remember { FocusRequester() }
+    val saveRequester = initialFocusRequester ?: ownedInitialFocusRequester
+    val sliderRequester = remember { FocusRequester() }
     val manageRequester = remember { FocusRequester() }
     val presetIds = state.presets.map(TouchPointerSensitivityPreset::id)
     val presetRequesters = remember(presetIds) {
         List(presetIds.size) { FocusRequester() }
     }
-    val actionRequesters = if (state.presets.isEmpty()) {
-        listOf(saveRequester)
-    } else {
-        listOf(saveRequester, manageRequester)
-    }
-    val firstPresetRequester = presetRequesters.firstOrNull() ?: downExitRequester
     GameMenuCard(
         title = stringResource(R.string.game_menu_touch_pointer_speed),
         status = stringResource(
@@ -266,6 +260,19 @@ internal fun TouchPointerSensitivityControl(
             state.percent
         )
     ) {
+        SensitivityPresetSection(
+            state = state,
+            saveRequester = saveRequester,
+            manageRequester = manageRequester,
+            presetRequesters = presetRequesters,
+            sliderRequester = sliderRequester,
+            leftExitRequester = leftExitRequester,
+            rightExitRequester = rightExitRequester,
+            upExitRequester = upExitRequester,
+            onSavePreset = onSavePreset,
+            onApplyPreset = onApplyPreset,
+            onManagePresets = onManagePresets
+        )
         Text(
             text = stringResource(R.string.game_menu_touch_pointer_speed_summary),
             color = colorResource(R.color.game_menu_text_secondary),
@@ -277,8 +284,8 @@ internal fun TouchPointerSensitivityControl(
                 .focusRequester(sliderRequester)
                 .focusProperties {
                     canFocus = true
-                    up = upExitRequester
-                    down = saveRequester
+                    up = presetRequesters.lastOrNull() ?: saveRequester
+                    down = downExitRequester
                 }
                 .fillMaxWidth()
                 .height(GameMenuSliderSpec.height)
@@ -327,120 +334,131 @@ internal fun TouchPointerSensitivityControl(
                 fontSize = 9.sp
             )
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.game_menu_touch_pointer_saved_presets),
-                color = colorResource(R.color.game_menu_text_secondary),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun SensitivityPresetSection(
+    state: TouchPointerSensitivityState,
+    saveRequester: FocusRequester,
+    manageRequester: FocusRequester,
+    presetRequesters: List<FocusRequester>,
+    sliderRequester: FocusRequester,
+    leftExitRequester: FocusRequester,
+    rightExitRequester: FocusRequester,
+    upExitRequester: FocusRequester,
+    onSavePreset: () -> Unit,
+    onApplyPreset: (String) -> Unit,
+    onManagePresets: () -> Unit
+) {
+    val actionRequesters = if (state.presets.isEmpty()) {
+        listOf(saveRequester)
+    } else {
+        listOf(saveRequester, manageRequester)
+    }
+    val firstPresetRequester = presetRequesters.firstOrNull() ?: sliderRequester
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.game_menu_touch_pointer_saved_presets),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.weight(1f))
+        SensitivityPresetActionButton(
+            iconRes = R.drawable.ic_add,
+            contentDescription = stringResource(R.string.game_menu_touch_pointer_save_preset),
+            enabled = true,
+            modifier = Modifier
+                .testTag("touchPointerPresetSave")
+                .focusRequester(saveRequester)
+                .focusProperties {
+                    up = upExitRequester
+                    down = firstPresetRequester
+                    left = leftExitRequester
+                    right = if (state.presets.isEmpty()) rightExitRequester else manageRequester
+                },
+            onClick = onSavePreset
+        )
+        if (state.presets.isNotEmpty()) {
+            Spacer(Modifier.width(GameMenuDimens.tight))
             SensitivityPresetActionButton(
-                iconRes = R.drawable.ic_add,
+                iconRes = R.drawable.phc_action_edit,
                 contentDescription = stringResource(
-                    R.string.game_menu_touch_pointer_save_preset
+                    R.string.game_menu_touch_pointer_manage_presets
                 ),
                 enabled = true,
                 modifier = Modifier
-                    .testTag("touchPointerPresetSave")
-                    .focusRequester(saveRequester)
+                    .testTag("touchPointerPresetManage")
+                    .focusRequester(manageRequester)
                     .focusProperties {
-                        up = sliderRequester
-                        down = firstPresetRequester
-                        left = leftExitRequester
-                        right = if (state.presets.isEmpty()) {
-                            rightExitRequester
-                        } else {
-                            manageRequester
-                        }
+                        up = upExitRequester
+                        down = presetRequesters.getOrNull(1) ?: firstPresetRequester
+                        left = saveRequester
+                        right = rightExitRequester
                     },
-                onClick = onSavePreset
+                onClick = onManagePresets
             )
-            if (state.presets.isNotEmpty()) {
-                Spacer(Modifier.width(GameMenuDimens.tight))
-                SensitivityPresetActionButton(
-                    iconRes = R.drawable.phc_action_edit,
-                    contentDescription = stringResource(
-                        R.string.game_menu_touch_pointer_manage_presets
-                    ),
-                    enabled = true,
-                    modifier = Modifier
-                        .testTag("touchPointerPresetManage")
-                        .focusRequester(manageRequester)
-                        .focusProperties {
-                            up = sliderRequester
-                            down = presetRequesters.getOrNull(1)
-                                ?: firstPresetRequester
-                            left = saveRequester
-                            right = rightExitRequester
-                        },
-                    onClick = onManagePresets
-                )
-            }
         }
-        if (state.presets.isEmpty()) {
-            Text(
-                text = stringResource(R.string.game_menu_touch_pointer_no_presets),
-                color = colorResource(R.color.game_menu_text_secondary),
-                fontSize = 10.sp
-            )
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
-                state.presets.chunked(3).forEachIndexed { rowIndex, rowPresets ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
-                    ) {
-                        rowPresets.forEachIndexed { columnIndex, preset ->
-                            val index = rowIndex * 3 + columnIndex
-                            val rowStart = rowIndex * 3
-                            val rowEnd = minOf(rowStart + 3, state.presets.size)
-                            val nextRowStart = rowStart + 3
-                            val upRequester = if (rowIndex == 0) {
-                                actionRequesters[minOf(columnIndex, actionRequesters.lastIndex)]
-                            } else {
-                                presetRequesters[index - 3]
-                            }
-                            val downRequester = if (nextRowStart < state.presets.size) {
-                                presetRequesters[minOf(nextRowStart + columnIndex, state.presets.lastIndex)]
-                            } else {
-                                downExitRequester
-                            }
-                            SensitivityPresetButton(
-                                name = preset.name,
-                                selected = preset.id in state.matchingPresetIds,
-                                onClick = { onApplyPreset(preset.id) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("touchPointerPreset:${preset.id}")
-                                    .focusRequester(presetRequesters[index])
-                                    .focusProperties {
-                                        up = upRequester
-                                        down = downRequester
-                                        left = if (columnIndex > 0) {
-                                            presetRequesters[index - 1]
-                                        } else {
-                                            leftExitRequester
-                                        }
-                                        right = if (index + 1 < rowEnd) {
-                                            presetRequesters[index + 1]
-                                        } else {
-                                            rightExitRequester
-                                        }
-                                    }
-                            )
-                        }
-                        repeat(3 - rowPresets.size) {
-                            Spacer(
-                                Modifier
-                                    .weight(1f)
-                                    .height(36.dp)
-                            )
-                        }
+    }
+    if (state.presets.isEmpty()) {
+        Text(
+            text = stringResource(R.string.game_menu_touch_pointer_no_presets),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 10.sp
+        )
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
+        state.presets.chunked(3).forEachIndexed { rowIndex, rowPresets ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
+            ) {
+                rowPresets.forEachIndexed { columnIndex, preset ->
+                    val index = rowIndex * 3 + columnIndex
+                    val rowStart = rowIndex * 3
+                    val rowEnd = minOf(rowStart + 3, state.presets.size)
+                    val nextRowStart = rowStart + 3
+                    val upRequester = if (rowIndex == 0) {
+                        actionRequesters[minOf(columnIndex, actionRequesters.lastIndex)]
+                    } else {
+                        presetRequesters[index - 3]
                     }
+                    val downRequester = if (nextRowStart < state.presets.size) {
+                        presetRequesters[minOf(nextRowStart + columnIndex, state.presets.lastIndex)]
+                    } else {
+                        sliderRequester
+                    }
+                    SensitivityPresetButton(
+                        name = preset.name,
+                        selected = preset.id == state.activePresetId,
+                        onClick = { onApplyPreset(preset.id) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("touchPointerPreset:${preset.id}")
+                            .focusRequester(presetRequesters[index])
+                            .focusProperties {
+                                up = upRequester
+                                down = downRequester
+                                left = if (columnIndex > 0) {
+                                    presetRequesters[index - 1]
+                                } else {
+                                    leftExitRequester
+                                }
+                                right = if (index + 1 < rowEnd) {
+                                    presetRequesters[index + 1]
+                                } else {
+                                    rightExitRequester
+                                }
+                            }
+                    )
+                }
+                repeat(3 - rowPresets.size) {
+                    Spacer(Modifier.weight(1f).height(36.dp))
                 }
             }
         }

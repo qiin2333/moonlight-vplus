@@ -28,7 +28,7 @@ internal data class TouchPointerSensitivityState(
     val percent: Int,
     val applicable: Boolean,
     val presets: List<TouchPointerSensitivityPreset>,
-    val matchingPresetIds: Set<String>
+    val activePresetId: String?
 )
 
 internal object TouchPointerSensitivityPolicy {
@@ -168,6 +168,20 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
         }
     }
 
+    fun loadActivePresetId(): String? = preferences
+        .getString(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY, null)
+        ?.let { value -> runCatching { UUID.fromString(value).toString() }.getOrNull() }
+
+    fun saveActivePresetId(id: String?) {
+        preferences.edit {
+            if (id == null) {
+                remove(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY)
+            } else {
+                putString(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY, id)
+            }
+        }
+    }
+
     private companion object {
         const val STORAGE_VERSION = 1
         const val PREF_JSON_KEY = TouchPointerPresetPreferences.JSON_KEY
@@ -182,6 +196,7 @@ internal class TouchPointerSensitivityController(
 ) {
     private var onStateChanged: ((TouchPointerSensitivityState) -> Unit)? = null
     private var presets = loadPresets()
+    private var activePresetId = presetStore.loadActivePresetId()
     private var state = readState()
     private var persistedPercent = state.percent
     private var persistencePending = false
@@ -191,6 +206,7 @@ internal class TouchPointerSensitivityController(
     fun start(onStateChanged: (TouchPointerSensitivityState) -> Unit) {
         this.onStateChanged = onStateChanged
         presets = loadPresets()
+        activePresetId = presetStore.loadActivePresetId()
         state = readState()
         persistedPercent = state.percent
         persistencePending = false
@@ -246,18 +262,23 @@ internal class TouchPointerSensitivityController(
             TouchPointerPresetField.entries.firstOrNull { it.storageKey == key }
         }.ifEmpty { TouchPointerPresetField.entries.toSet() }
 
-    fun fieldValue(field: TouchPointerPresetField): String = captureField(field)
+    fun fieldValue(
+        field: TouchPointerPresetField,
+        preset: TouchPointerSensitivityPreset? = null
+    ): String = preset?.values?.get(field.storageKey)
+        ?.let { normalizeFieldValue(field, it) }
+        ?: captureField(field)
 
     fun savePreset(
         id: String?,
         name: String,
-        selectedFields: Set<TouchPointerPresetField>
+        fieldValues: Map<TouchPointerPresetField, String>
     ): TouchPointerPresetSaveResult {
         val normalizedName = TouchPointerSensitivityPolicy.normalizeName(name)
         if (!TouchPointerSensitivityPolicy.isValidName(normalizedName)) {
             return TouchPointerPresetSaveResult.INVALID_NAME
         }
-        if (selectedFields.isEmpty()) return TouchPointerPresetSaveResult.NO_FIELDS
+        if (fieldValues.isEmpty()) return TouchPointerPresetSaveResult.NO_FIELDS
 
         val existingIndex = id?.let { target -> presets.indexOfFirst { it.id == target } } ?: -1
         if (existingIndex < 0 && presets.size >= TouchPointerSensitivityPolicy.MAX_PRESETS) {
@@ -267,7 +288,17 @@ internal class TouchPointerSensitivityController(
         val previous = presets.getOrNull(existingIndex)
         val values = previous?.values.orEmpty().toMutableMap()
         TouchPointerPresetField.entries.forEach { values.remove(it.storageKey) }
-        selectedFields.forEach { field -> values[field.storageKey] = captureField(field) }
+        fieldValues.forEach { (field, rawValue) ->
+            normalizeFieldValue(field, rawValue)?.let { value ->
+                values[field.storageKey] = value
+            }
+        }
+        if (values.keys.none { key ->
+                TouchPointerPresetField.entries.any { it.storageKey == key }
+            }
+        ) {
+            return TouchPointerPresetSaveResult.NO_FIELDS
+        }
         val updated = TouchPointerSensitivityPreset(
             id = previous?.id ?: UUID.randomUUID().toString(),
             name = normalizedName,
@@ -301,6 +332,7 @@ internal class TouchPointerSensitivityController(
                 game.prefConfig.pointerVelocityFactor
             )
             persistencePending = false
+            setActivePresetId(id)
         }
         state = readState()
         emitState()
@@ -315,6 +347,9 @@ internal class TouchPointerSensitivityController(
 
         presets = remaining
         presetStore.save(presets)
+        if (activePresetId in ids) {
+            setActivePresetId(null)
+        }
         state = readState()
         emitState()
         return removed
@@ -331,13 +366,24 @@ internal class TouchPointerSensitivityController(
 
     private fun readState(): TouchPointerSensitivityState {
         val percent = TouchPointerSensitivityPolicy.normalize(game.prefConfig.pointerVelocityFactor)
-        val matchingIds = presets.filter(::matchesCurrent).mapTo(linkedSetOf()) { it.id }
+        val validActivePresetId = activePresetId?.takeIf { id ->
+            presets.firstOrNull { it.id == id }?.let(::matchesCurrent) == true
+        }
+        if (validActivePresetId != activePresetId) {
+            setActivePresetId(validActivePresetId)
+        }
         return TouchPointerSensitivityState(
             percent = percent,
             applicable = isApplicable(),
             presets = presets,
-            matchingPresetIds = matchingIds
+            activePresetId = validActivePresetId
         )
+    }
+
+    private fun setActivePresetId(id: String?) {
+        if (activePresetId == id) return
+        activePresetId = id
+        presetStore.saveActivePresetId(id)
     }
 
     private fun captureField(field: TouchPointerPresetField): String = when (field) {
@@ -358,40 +404,49 @@ internal class TouchPointerSensitivityController(
     }
 
     private fun applyField(field: TouchPointerPresetField, rawValue: String): Boolean = when (field) {
-        TouchPointerPresetField.POINTER_SPEED -> rawValue.toIntOrNull()?.let { value ->
-            val bounded = value.coerceIn(
-                TouchPointerSensitivityPolicy.MIN_PERCENT,
-                TouchPointerSensitivityPolicy.MAX_PERCENT
-            )
+        TouchPointerPresetField.POINTER_SPEED -> normalizeFieldValue(field, rawValue)
+            ?.toIntOrNull()?.let { bounded ->
             game.prefConfig.pointerVelocityFactor = bounded.toFloat()
             applyPointerSpeedRuntime(bounded)
             true
         } ?: false
-        TouchPointerPresetField.INITIAL_STABLE_ZONE -> rawValue.toIntOrNull()?.let { value ->
-            val bounded = value.coerceIn(
-                TouchPointerSensitivityPolicy.MIN_STABLE_ZONE_PIXELS,
-                TouchPointerSensitivityPolicy.MAX_STABLE_ZONE_PIXELS
-            )
+        TouchPointerPresetField.INITIAL_STABLE_ZONE -> normalizeFieldValue(field, rawValue)
+            ?.toIntOrNull()?.let { bounded ->
             game.prefConfig.longPressflatRegionPixels = bounded
             NativeTouchContext.INTIAL_ZONE_PIXELS = bounded.toFloat()
             true
         } ?: false
-        TouchPointerPresetField.ZONE_DIVIDER -> rawValue.toIntOrNull()?.let { value ->
-            val bounded = value.coerceIn(
-                TouchPointerSensitivityPolicy.MIN_ZONE_DIVIDER,
-                TouchPointerSensitivityPolicy.MAX_ZONE_DIVIDER
-            )
+        TouchPointerPresetField.ZONE_DIVIDER -> normalizeFieldValue(field, rawValue)
+            ?.toIntOrNull()?.let { bounded ->
             game.prefConfig.enhanceTouchZoneDivider = bounded
             NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER = bounded * 0.01f
             true
         } ?: false
         TouchPointerPresetField.POINTER_ZONE_SIDE ->
-            rawValue.toBooleanStrictOrNull()?.let { value ->
+            normalizeFieldValue(field, rawValue)?.toBooleanStrictOrNull()?.let { value ->
                 game.prefConfig.enhancedTouchOnWhichSide = value
                 NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT = if (value) -1 else 1
                 true
             } ?: false
     }
+
+    private fun normalizeFieldValue(field: TouchPointerPresetField, rawValue: String): String? =
+        when (field) {
+            TouchPointerPresetField.POINTER_SPEED -> rawValue.toIntOrNull()?.coerceIn(
+                TouchPointerSensitivityPolicy.MIN_PERCENT,
+                TouchPointerSensitivityPolicy.MAX_PERCENT
+            )?.toString()
+            TouchPointerPresetField.INITIAL_STABLE_ZONE -> rawValue.toIntOrNull()?.coerceIn(
+                TouchPointerSensitivityPolicy.MIN_STABLE_ZONE_PIXELS,
+                TouchPointerSensitivityPolicy.MAX_STABLE_ZONE_PIXELS
+            )?.toString()
+            TouchPointerPresetField.ZONE_DIVIDER -> rawValue.toIntOrNull()?.coerceIn(
+                TouchPointerSensitivityPolicy.MIN_ZONE_DIVIDER,
+                TouchPointerSensitivityPolicy.MAX_ZONE_DIVIDER
+            )?.toString()
+            TouchPointerPresetField.POINTER_ZONE_SIDE ->
+                rawValue.toBooleanStrictOrNull()?.toString()
+        }
 
     private fun matchesCurrent(preset: TouchPointerSensitivityPreset): Boolean {
         val knownValues = preset.values.mapNotNull { (key, value) ->

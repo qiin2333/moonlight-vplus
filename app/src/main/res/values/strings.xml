@@ -1095,10 +1095,10 @@
     <string name="game_menu_touch_mode_ds5_summary">Screen becomes a DualSense touchpad; tap or firm press to click</string>
     <string name="game_menu_touch_mode_primary_group">Primary input mode (choose one)</string>
     <string name="game_menu_touch_mode_compatible_group">Compatible options</string>
-    <string name="game_menu_touch_mode_preview_title">Current mode</string>
     <string name="game_menu_touch_pointer_speed">Pointer-zone speed</string>
     <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
     <string name="game_menu_touch_pointer_speed_summary">Only affects the pointer-control zone in split direct touch. New gestures use the updated speed.</string>
+    <string name="game_menu_touch_pointer_zone_position">Pointer zone position</string>
     <string name="game_menu_touch_pointer_saved_presets">Saved presets</string>
     <string name="game_menu_touch_pointer_save_preset">Create preset</string>
     <string name="game_menu_touch_pointer_manage_presets">Manage presets</string>
@@ -1113,7 +1113,6 @@
     <string name="game_menu_touch_pointer_preset_name_hint">Preset name</string>
     <string name="game_menu_touch_pointer_preset_name_error">Enter 1–%1$d printable characters</string>
     <string name="game_menu_touch_pointer_preset_fields">Replace these fields</string>
-    <string name="game_menu_touch_pointer_preset_field_value">%1$s · %2$s</string>
     <string name="game_menu_touch_pointer_preset_field_count">%1$d fields</string>
     <string name="game_menu_touch_pointer_preset_no_fields">Select at least one field</string>
     <string name="game_menu_touch_pointer_side_left">Left</string>

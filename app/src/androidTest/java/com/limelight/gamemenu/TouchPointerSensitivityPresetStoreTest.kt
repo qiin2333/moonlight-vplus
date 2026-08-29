@@ -116,6 +116,17 @@ class TouchPointerSensitivityPresetStoreTest {
     }
 
     @Test
+    fun activePresetIdPersistsSeparatelyFromPresetJson() {
+        val activeId = UUID.randomUUID().toString()
+        val store = TouchPointerSensitivityPresetStore(context)
+
+        store.saveActivePresetId(activeId)
+
+        assertEquals(activeId, TouchPointerSensitivityPresetStore(context).loadActivePresetId())
+        assertEquals(null, presetPreferences.getString(TouchPointerPresetPreferences.JSON_KEY, null))
+    }
+
+    @Test
     fun unifiedPreferenceWritePersistsTouchSnapshotFields() {
         val config = PreferenceConfiguration.readPreferences(context).apply {
             pointerVelocityFactor = 175f
@@ -143,6 +154,7 @@ class TouchPointerSensitivityPresetStoreTest {
             .commit()
         presetPreferences.edit()
             .remove(TouchPointerPresetPreferences.JSON_KEY)
+            .remove(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY)
             .commit()
     }
 

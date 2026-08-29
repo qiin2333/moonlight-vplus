@@ -1520,12 +1520,17 @@ class GameMenu(
 
     private fun showTouchPointerPresetEditor(presetId: String? = null) {
         val preset = presetId?.let(touchPointerSensitivityController::preset)
-        val selectedFields = touchPointerSensitivityController.selectedFields(preset)
+        val selectedFields = if (preset == null) {
+            TouchPointerPresetField.entries
+                .filterNotTo(linkedSetOf()) { it == TouchPointerPresetField.POINTER_ZONE_SIDE }
+        } else {
+            touchPointerSensitivityController.selectedFields(preset)
+        }
         val fields = TouchPointerPresetField.entries.map { field ->
             TouchPointerPresetEditor.FieldOption(
                 field = field,
                 label = touchPointerPresetFieldLabel(field),
-                value = touchPointerPresetFieldValue(field),
+                value = touchPointerSensitivityController.fieldValue(field, preset),
                 checked = field in selectedFields
             )
         }
@@ -1538,8 +1543,8 @@ class GameMenu(
                 ),
                 initialName = preset?.name ?: touchPointerSensitivityController.defaultName(),
                 fields = fields,
-                onSave = { name, selected ->
-                    touchPointerSensitivityController.savePreset(preset?.id, name, selected)
+                onSave = { name, values ->
+                    touchPointerSensitivityController.savePreset(preset?.id, name, values)
                 }
             )
         )
@@ -1586,22 +1591,9 @@ class GameMenu(
                 R.string.title_seekbar_long_press_flat_region
             TouchPointerPresetField.ZONE_DIVIDER -> R.string.title_enhanced_touch_zone_divider
             TouchPointerPresetField.POINTER_ZONE_SIDE ->
-                R.string.title_checkbox_enhanced_touch_on_which_side
+                R.string.game_menu_touch_pointer_zone_position
         }
     )
-
-    private fun touchPointerPresetFieldValue(field: TouchPointerPresetField): String {
-        val value = touchPointerSensitivityController.fieldValue(field)
-        return when (field) {
-            TouchPointerPresetField.POINTER_SPEED,
-            TouchPointerPresetField.ZONE_DIVIDER -> "$value%"
-            TouchPointerPresetField.INITIAL_STABLE_ZONE -> "$value px"
-            TouchPointerPresetField.POINTER_ZONE_SIDE -> getString(
-                if (value.toBoolean()) R.string.game_menu_touch_pointer_side_left
-                else R.string.game_menu_touch_pointer_side_right
-            )
-        }
-    }
 
     private fun registerChildDialog(dialog: Dialog, onDismiss: () -> Unit = {}) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()

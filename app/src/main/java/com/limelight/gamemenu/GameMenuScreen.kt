@@ -797,10 +797,6 @@ private fun TouchModeTable(
                 .fillMaxHeight()
                 .testTag("touchModeCompatiblePane")
         ) {
-            primaryModes.firstOrNull(GameMenu.MenuOption::selected)?.let { selected ->
-                TouchModePreview(selected)
-                Spacer(Modifier.height(GameMenuDimens.compact))
-            }
             if (showSensitivity) {
                 val globalIndex = primaryModes.size
                 val targets = touchModeFocusTargets(
@@ -815,7 +811,7 @@ private fun TouchModeTable(
                     onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
                     onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
                     onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
-                    sliderFocusRequester = focusRequesters[globalIndex],
+                    initialFocusRequester = focusRequesters[globalIndex],
                     leftExitRequester = targets.left?.let(focusRequesters::get)
                         ?: FocusRequester.Cancel,
                     rightExitRequester = targets.right?.let(focusRequesters::get)
@@ -925,45 +921,6 @@ private fun GameMenuVerticalScrollbar(
             size = Size(size.width, thumbHeight),
             cornerRadius = CornerRadius(radius, radius)
         )
-    }
-}
-
-@Composable
-private fun TouchModePreview(option: GameMenu.MenuOption) {
-    Surface(
-        color = colorResource(R.color.game_menu_card_background),
-        shape = GameMenuCardShape,
-        border = BorderStroke(
-            GameMenuDimens.surfaceStroke,
-            colorResource(R.color.game_menu_list_item_border)
-        ),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(GameMenuDimens.outer),
-            verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
-        ) {
-            Text(
-                text = stringResource(R.string.game_menu_touch_mode_preview_title),
-                color = colorResource(R.color.game_menu_text_secondary),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = option.label,
-                color = colorResource(R.color.game_menu_accent),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-            option.subtitle?.takeIf(String::isNotBlank)?.let { subtitle ->
-                Text(
-                    text = subtitle,
-                    color = colorResource(R.color.game_menu_text_secondary),
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp
-                )
-            }
-        }
     }
 }
 
