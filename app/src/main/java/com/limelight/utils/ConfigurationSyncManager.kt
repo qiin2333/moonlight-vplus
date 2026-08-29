@@ -294,7 +294,7 @@ class ConfigurationSyncManager(private val context: Context) {
                     valuesFromSection(sections.optJSONObject(SECTION_DEFAULT_PREFERENCES)),
                     PORTABLE_DEFAULT_PREF_KEYS
                 ) + countValues(
-                    valuesFromSection(touchPointerPresetSectionCore(sections)),
+                    valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
                     TOUCH_POINTER_PRESET_PREF_KEYS
                 ),
             appLastSettingsCount = countValues(
@@ -343,7 +343,7 @@ class ConfigurationSyncManager(private val context: Context) {
                     TouchPointerPresetPreferences.FILE_NAME,
                     Context.MODE_PRIVATE
                 ),
-                valuesFromSection(touchPointerPresetSectionCore(sections)),
+                valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
                 TOUCH_POINTER_PRESET_PREF_KEYS
             )
         val appLastSettingsImported = applyPreferences(
@@ -1223,20 +1223,12 @@ class ConfigurationSyncManager(private val context: Context) {
     }
 
     private fun encodeTouchPointerPresetPreferences(): JSONObject {
-        val dedicatedPreferences = context.getSharedPreferences(
-            TouchPointerPresetPreferences.FILE_NAME,
-            Context.MODE_PRIVATE
-        )
-        val sourcePreferences = if (
-            dedicatedPreferences.contains(TouchPointerPresetPreferences.JSON_KEY)
-        ) {
-            dedicatedPreferences
-        } else {
-            PreferenceManager.getDefaultSharedPreferences(context)
-        }
         return encodePreferences(
             SECTION_TOUCH_POINTER_PRESETS,
-            sourcePreferences,
+            context.getSharedPreferences(
+                TouchPointerPresetPreferences.FILE_NAME,
+                Context.MODE_PRIVATE
+            ),
             TOUCH_POINTER_PRESET_PREF_KEYS
         )
     }
@@ -1314,7 +1306,7 @@ class ConfigurationSyncManager(private val context: Context) {
                 JSONObject().put(
                     KEY_VALUES,
                     mergeEncodedValues(
-                        valuesFromSection(touchPointerPresetSectionCore(sections)),
+                        valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
                         null,
                         TOUCH_POINTER_PRESET_PREF_KEYS
                     )
@@ -2341,8 +2333,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 .put(
                     SECTION_TOUCH_POINTER_PRESETS,
                     mergedPreferenceSectionCore(
-                        touchPointerPresetSectionCore(externalSections),
-                        touchPointerPresetSectionCore(localSections),
+                        externalSections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
+                        localSections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
                         TOUCH_POINTER_PRESET_PREF_KEYS,
                         metadata.deviceId
                     )
@@ -2444,7 +2436,7 @@ class ConfigurationSyncManager(private val context: Context) {
                 .put(
                     SECTION_TOUCH_POINTER_PRESETS,
                     mergedPreferenceSectionCore(
-                        touchPointerPresetSectionCore(sections),
+                        sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
                         null,
                         TOUCH_POINTER_PRESET_PREF_KEYS,
                         "hash"
@@ -2458,23 +2450,6 @@ class ConfigurationSyncManager(private val context: Context) {
                     SECTION_PAIRING,
                     normalizedPairingSectionCore(sections.optJSONObject(SECTION_PAIRING))
                 )
-        }
-
-        private fun touchPointerPresetSectionCore(sections: JSONObject): JSONObject? {
-            val dedicatedSection = sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)
-            val dedicatedValue = dedicatedSection
-                ?.optJSONObject(KEY_VALUES)
-                ?.optJSONObject(TouchPointerPresetPreferences.JSON_KEY)
-            if (dedicatedValue != null) return dedicatedSection
-
-            val legacyValue = sections.optJSONObject(SECTION_DEFAULT_PREFERENCES)
-                ?.optJSONObject(KEY_VALUES)
-                ?.optJSONObject(TouchPointerPresetPreferences.JSON_KEY)
-                ?: return dedicatedSection
-            return JSONObject().put(
-                KEY_VALUES,
-                JSONObject().put(TouchPointerPresetPreferences.JSON_KEY, legacyValue)
-            )
         }
 
         private fun mergedPreferenceSectionCore(

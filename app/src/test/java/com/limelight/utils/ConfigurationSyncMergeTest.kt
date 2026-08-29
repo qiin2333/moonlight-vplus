@@ -16,7 +16,7 @@ class ConfigurationSyncMergeTest {
     fun mergePreservesNewestDedicatedTouchPointerPresetJson() {
         val deviceA = syncPackage(
             deviceId = "device-a",
-            defaultValues = values(
+            touchPointerPresetValues = values(
                 "touch_pointer_sensitivity_presets_json" to typedValue(
                     "string",
                     JsonPrimitive("old-presets"),
