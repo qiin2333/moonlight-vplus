@@ -254,11 +254,7 @@ internal fun TouchPointerSensitivityControl(
         List(presetIds.size) { FocusRequester() }
     }
     GameMenuCard(
-        title = stringResource(R.string.game_menu_touch_pointer_speed),
-        status = stringResource(
-            R.string.game_menu_touch_pointer_speed_value,
-            state.percent
-        )
+        title = stringResource(R.string.game_menu_touch_pointer_saved_presets)
     ) {
         SensitivityPresetSection(
             state = state,
@@ -273,6 +269,27 @@ internal fun TouchPointerSensitivityControl(
             onApplyPreset = onApplyPreset,
             onManagePresets = onManagePresets
         )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.game_menu_touch_pointer_speed),
+                color = colorResource(R.color.game_menu_text_primary),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(
+                    R.string.game_menu_touch_pointer_speed_value,
+                    state.percent
+                ),
+                color = colorResource(R.color.game_menu_accent),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Text(
             text = stringResource(R.string.game_menu_touch_pointer_speed_summary),
             color = colorResource(R.color.game_menu_text_secondary),
@@ -361,12 +378,6 @@ private fun SensitivityPresetSection(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = stringResource(R.string.game_menu_touch_pointer_saved_presets),
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
         Spacer(Modifier.weight(1f))
         SensitivityPresetActionButton(
             iconRes = R.drawable.ic_add,
