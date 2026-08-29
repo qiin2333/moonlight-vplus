@@ -132,8 +132,11 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
                         }
                     }
                     if (values.isNotEmpty()) {
-                        var id = normalizedUuid(item.optString("id"))
-                        while (!seenIds.add(id)) id = UUID.randomUUID().toString()
+                        val id = stableUuid(
+                            value = item.optString("id"),
+                            index = index,
+                            seenIds = seenIds
+                        )
                         add(
                             TouchPointerSensitivityPreset(
                                 id = id,
@@ -150,6 +153,20 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
     private fun normalizedUuid(value: String): String = runCatching {
         UUID.fromString(value).toString()
     }.getOrElse { UUID.randomUUID().toString() }
+
+    private fun stableUuid(value: String, index: Int, seenIds: MutableSet<String>): String {
+        val normalized = runCatching { UUID.fromString(value).toString() }.getOrNull()
+        if (normalized != null && seenIds.add(normalized)) return normalized
+
+        var attempt = 0
+        while (true) {
+            val candidate = UUID.nameUUIDFromBytes(
+                "$index\u0000$value\u0000$attempt".toByteArray(Charsets.UTF_8)
+            ).toString()
+            if (seenIds.add(candidate)) return candidate
+            attempt++
+        }
+    }
 
     private companion object {
         const val STORAGE_VERSION = 1

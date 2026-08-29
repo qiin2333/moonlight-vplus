@@ -82,10 +82,13 @@ class TouchPointerSensitivityPresetStoreTest {
             )
             .commit()
 
-        val presets = TouchPointerSensitivityPresetStore(context).load { "Fallback$it" }
+        val store = TouchPointerSensitivityPresetStore(context)
+        val firstLoad = store.load { "Fallback$it" }
+        val secondLoad = store.load { "Fallback$it" }
 
-        assertEquals(listOf("Preset1", "Preset1"), presets.map { it.name })
-        assertEquals(2, presets.map { it.id }.distinct().size)
+        assertEquals(listOf("Preset1", "Preset1"), firstLoad.map { it.name })
+        assertEquals(2, firstLoad.map { it.id }.distinct().size)
+        assertEquals(firstLoad.map { it.id }, secondLoad.map { it.id })
     }
 
     @Test

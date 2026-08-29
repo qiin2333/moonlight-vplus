@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -148,6 +150,8 @@ class TouchPointerSensitivityControlTest {
         composeTestRule.runOnIdle {
             inputModeManager.requestInputMode(InputMode.Keyboard)
         }
+        composeTestRule.onNodeWithContentDescription("Preset100").assertIsSelected()
+        composeTestRule.onNodeWithContentDescription("Preset150").assertIsNotSelected()
         composeTestRule.onNodeWithContentDescription("Preset150").requestFocus()
         composeTestRule.onNodeWithContentDescription("Preset150").assertIsFocused()
         composeTestRule.onNodeWithContentDescription("Preset150").performKeyInput {
