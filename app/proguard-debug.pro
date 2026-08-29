@@ -12,5 +12,7 @@
 }
 -keep class com.limelight.utils.AboutDialogLauncher$DialogSnapshot { *; }
 
-# Compose instrumentation invokes this state across the target/test APK boundary.
--keep class com.limelight.gamemenu.TouchPointerSensitivityState { *; }
+# Instrumentation invokes these target-APK symbols after the debug APK is minified.
+-keep class com.limelight.gamemenu.TouchPointerSensitivity** { *; }
+-keep class com.limelight.gamemenu.TouchPointerPreset** { *; }
+-keep class com.limelight.gamemenu.GameMenuCardsKt { *; }
