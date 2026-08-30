@@ -69,6 +69,7 @@ import com.limelight.R
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.remoteconnect.EasyTierConnectionProfile
+import com.limelight.utils.remoteconnect.PendingRemoteConnectState
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -172,7 +173,9 @@ class EasyTierController(
     fun handleVpnPermissionResult(resultCode: Int) {
         if (resultCode == Activity.RESULT_OK) {
             LimeLog.info("$TAG: VPN权限已获取，启动EasyTier Manager。")
-            pendingConnectionProfile?.let { profile ->
+            val approvedProfile = pendingConnectionProfile
+                    ?: PendingRemoteConnectState.peek()?.easyTierProfile
+            approvedProfile?.let { profile ->
                 persistConnectionProfile(profile)
                 initEasyTierManager()
             }

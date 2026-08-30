@@ -20,6 +20,20 @@ class RemoteConnectCodeParserTest {
     }
 
     @Test
+    fun pendingConnectionSurvivesControllerRecreationUntilConsumed() {
+        val code = RemoteConnectCodeParser.parse(
+                "moonlight://pair?host=192.168.1.5&port=47989&pin=1234&name=PC",
+                nowEpochSeconds = 100
+        )
+
+        PendingRemoteConnectState.consume()
+        PendingRemoteConnectState.stage(code)
+        assertEquals(code, PendingRemoteConnectState.peek())
+        assertEquals(code, PendingRemoteConnectState.consume())
+        assertNull(PendingRemoteConnectState.peek())
+    }
+
+    @Test
     fun versionTwoParsesSafeEasyTierProfile() {
         val code = RemoteConnectCodeParser.parse(
                 "moonlight://pair?v=2&host=10.86.24.1&port=47989&pin=1234" +

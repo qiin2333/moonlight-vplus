@@ -20,6 +20,22 @@ internal data class RemoteConnectCode(
         val easyTierProfile: EasyTierConnectionProfile?
 )
 
+/** Retains an in-flight connection across activity recreation without persisting its secret. */
+internal object PendingRemoteConnectState {
+    private var code: RemoteConnectCode? = null
+
+    @Synchronized
+    fun stage(value: RemoteConnectCode) {
+        code = value
+    }
+
+    @Synchronized
+    fun peek(): RemoteConnectCode? = code
+
+    @Synchronized
+    fun consume(): RemoteConnectCode? = code.also { code = null }
+}
+
 internal object RemoteConnectCodeParser {
     private const val DEFAULT_SUNSHINE_PORT = 47989
     private val PROFILE_ID = Regex("[A-Za-z0-9._-]{1,128}")

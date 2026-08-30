@@ -67,6 +67,7 @@ import com.limelight.utils.Dialog
 import com.limelight.utils.easytier.EasyTierController
 import com.limelight.utils.remoteconnect.RemoteConnectCode
 import com.limelight.utils.remoteconnect.RemoteConnectCodeParser
+import com.limelight.utils.remoteconnect.PendingRemoteConnectState
 import com.limelight.utils.HelpLauncher
 import com.limelight.utils.Iperf3Tester
 import com.limelight.utils.NetHelper
@@ -470,6 +471,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     override fun onDestroy() {
         AboutDialogLauncher.release(this)
+        if (isFinishing) {
+            pendingRemoteConnectionCode = null
+            PendingRemoteConnectState.consume()
+        }
         super.onDestroy()
 
         uiScope.cancel()
@@ -2192,12 +2197,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun activateConnectionCode(code: RemoteConnectCode) {
         if (code.easyTierProfile != null) {
             pendingRemoteConnectionCode = code
+            PendingRemoteConnectState.stage(code)
             showToast(getString(R.string.remote_connect_preparing))
             try {
                 easyTierController?.activateConnectionProfile(code.easyTierProfile)
                         ?: throw IllegalStateException("EasyTier controller unavailable")
             } catch (_: Exception) {
                 pendingRemoteConnectionCode = null
+                PendingRemoteConnectState.consume()
                 showToast(getString(R.string.remote_connect_setup_failed))
             }
         } else {
@@ -3440,7 +3447,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VPN_PERMISSION_REQUEST_CODE && easyTierController != null) {
             easyTierController?.handleVpnPermissionResult(resultCode)
-            val pendingCode = pendingRemoteConnectionCode
+            val retainedCode = PendingRemoteConnectState.consume()
+            val pendingCode = pendingRemoteConnectionCode ?: retainedCode
             pendingRemoteConnectionCode = null
             if (resultCode == RESULT_OK && pendingCode != null) {
                 pairFromConnectionCode(pendingCode, waitForRemoteHost = true)
