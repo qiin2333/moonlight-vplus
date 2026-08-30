@@ -78,7 +78,7 @@ class EasyTierVpnService : VpnService() {
             val builder = Builder()
             builder.setSession("EasyTier VPN")
                 .addAddress(addressInfo.ip, addressInfo.networkLength)
-                .addDnsServer("223.5.5.5")
+                .addRoute(networkAddress(addressInfo.ip, addressInfo.networkLength), addressInfo.networkLength)
 
             try {
                 builder.addAddress("fd00::1", 128)
@@ -160,6 +160,18 @@ class EasyTierVpnService : VpnService() {
         val parts = cidr.split("/")
         require(parts.size == 2) { "Invalid CIDR: $cidr" }
         return IpAddressInfo(parts[0], parts[1].toInt())
+    }
+
+    private fun networkAddress(ip: String, prefixLength: Int): String {
+        require(prefixLength in 0..32) { "Invalid IPv4 prefix length" }
+        val value = ip.split('.').fold(0L) { result, octet ->
+            val parsed = octet.toInt()
+            require(parsed in 0..255) { "Invalid IPv4 address" }
+            (result shl 8) or parsed.toLong()
+        }
+        val mask = if (prefixLength == 0) 0L else (0xffffffffL shl (32 - prefixLength)) and 0xffffffffL
+        val network = value and mask
+        return "${(network shr 24) and 0xff}.${(network shr 16) and 0xff}.${(network shr 8) and 0xff}.${network and 0xff}"
     }
 
     companion object {

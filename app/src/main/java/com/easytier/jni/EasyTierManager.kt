@@ -1,6 +1,6 @@
 package com.easytier.jni
 
-import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
@@ -11,10 +11,11 @@ import org.json.JSONObject
 import java.util.Objects
 
 class EasyTierManager(
-    private val activity: Activity,
+    context: Context,
     private val instanceName: String,
-    private val networkConfig: String
+    internal val networkConfig: String
 ) {
+    private val appContext = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
 
     @Volatile
@@ -177,17 +178,18 @@ class EasyTierManager(
     }
 
     private fun startVpnService(ipv4: String, proxyCidrs: List<String>) {
-        val intent = Intent(activity, EasyTierVpnService::class.java)
+        val intent = Intent(appContext, EasyTierVpnService::class.java)
         intent.putExtra("ipv4_address", ipv4)
         intent.putStringArrayListExtra("proxy_cidrs", ArrayList(proxyCidrs))
         intent.putExtra("instance_name", instanceName)
-        activity.startService(intent)
+        appContext.startService(intent)
         vpnServiceIntent = intent
     }
 
     private fun stopVpnService() {
         val stopIntent = Intent(EasyTierVpnService.ACTION_STOP_VPN)
-        activity.sendBroadcast(stopIntent)
+        stopIntent.setPackage(appContext.packageName)
+        appContext.sendBroadcast(stopIntent)
         Log.i(TAG, "停止发送VPN广播。")
         vpnServiceIntent = null
     }
@@ -216,5 +218,19 @@ class EasyTierManager(
     companion object {
         private const val TAG = "EasyTierManager"
         private const val MONITOR_INTERVAL = 3000L
+    }
+}
+
+/** Keeps the active mesh alive across activity recreation and streaming UI transitions. */
+object EasyTierRuntime {
+    @Volatile
+    private var manager: EasyTierManager? = null
+
+    @Synchronized
+    fun getOrCreate(context: Context, instanceName: String, networkConfig: String): EasyTierManager {
+        val current = manager
+        if (current != null && current.networkConfig == networkConfig) return current
+        current?.stop()
+        return EasyTierManager(context, instanceName, networkConfig).also { manager = it }
     }
 }

@@ -223,6 +223,9 @@
     <string name="qr_invalid_code">Unrecognized QR code</string>
     <string name="qr_pairing">QR pairing…</string>
     <string name="qr_pair_success">Paired successfully!</string>
+    <string name="remote_connect_preparing">Preparing remote connection…</string>
+    <string name="remote_connect_setup_failed">Unable to configure remote connection.</string>
+    <string name="remote_connect_host_timeout">The host remote connection is not ready. Repair it on the host, then scan again.</string>
     <string name="msg_add_pc">Connecting to the PC…</string>
     <string name="addpc_fail">Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall.</string>
     <string name="addpc_fail_vpn">Unable to connect to the specified computer through the VPN. Check that the VPN routes this private subnet, does not exclude Moonlight, and that the host firewall allows the VPN network.</string>

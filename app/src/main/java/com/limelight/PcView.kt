@@ -6,6 +6,8 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.StringReader
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.UnknownHostException
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -63,6 +65,8 @@ import com.limelight.utils.CacheHelper
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.easytier.EasyTierController
+import com.limelight.utils.easytier.VPlusConnectionCode
+import com.limelight.utils.easytier.VPlusConnectionCodeParser
 import com.limelight.utils.HelpLauncher
 import com.limelight.utils.Iperf3Tester
 import com.limelight.utils.NetHelper
@@ -213,6 +217,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         private const val NETWORK_QUALITY_ID = 18
         private const val ADD_PC_MANUALLY_ID = 19
         private const val ADD_PC_QR_SCAN_ID = 20
+        private const val REMOTE_HOST_CONNECT_TIMEOUT_MS = 30_000L
 
     }
 
@@ -236,6 +241,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private var lastShakeTime = 0L
     private var activeSceneNumber: Int? = null
     private var pendingAddedComputerUuid: String? = null
+    private var pendingRemoteConnectionCode: VPlusConnectionCode? = null
+    private var pendingConnectionIntentUrl: String? = null
     private val exitGate = PcViewExitGate()
 
     // Helpers
@@ -283,6 +290,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             // 与网络往返重叠，最坏情况持平、最佳情况节省整段证书时间。
             managerBinder = localBinder
             showPendingAddedComputer()
+            consumePendingConnectionIntent()
             startComputerUpdates()
 
             // 后台预热：等 DiscoveryService bind（mDNS 可能还没好），并把客户端证书
@@ -370,6 +378,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
 
         easyTierController = EasyTierController(this, this)
+        captureConnectionIntent(intent)
         inForeground = true
 
         val glPrefs = GlPreferences.readPreferences(this)
@@ -387,6 +396,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             initializeViews()
         }
         AboutDialogLauncher.onConfigurationChanged(this, newConfig)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureConnectionIntent(intent)
     }
 
     override fun onResume() {
@@ -2119,29 +2134,51 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         integrator.initiateScan()
     }
 
+    private fun captureConnectionIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (intent.action != Intent.ACTION_VIEW ||
+            !uri.scheme.equals("moonlight", ignoreCase = true) ||
+            !uri.host.equals("pair", ignoreCase = true)
+        ) {
+            return
+        }
+
+        pendingConnectionIntentUrl = uri.toString()
+        consumePendingConnectionIntent()
+    }
+
+    private fun consumePendingConnectionIntent() {
+        if (!completeOnCreateCalled || managerBinder == null || easyTierController == null) return
+        val url = pendingConnectionIntentUrl ?: return
+        pendingConnectionIntentUrl = null
+        handleQrPairResult(url)
+    }
+
     private fun handleQrPairResult(url: String) {
-        val uri = url.toUri()
-        if ("moonlight" != uri.scheme || "pair" != uri.host) {
+        val code = try {
+            VPlusConnectionCodeParser.parse(url)
+        } catch (_: IllegalArgumentException) {
             showToast(getString(R.string.qr_invalid_code))
             return
         }
 
-        val host = uri.getQueryParameter("host")
-        val portStr = uri.getQueryParameter("port")
-        val pin = uri.getQueryParameter("pin")
-
-        if (host == null || pin == null) {
-            showToast(getString(R.string.qr_invalid_code))
-            return
+        if (code.easyTierProfile != null) {
+            pendingRemoteConnectionCode = code
+            showToast(getString(R.string.remote_connect_preparing))
+            try {
+                easyTierController?.activateConnectionProfile(code.easyTierProfile)
+                        ?: throw IllegalStateException("EasyTier controller unavailable")
+            } catch (_: Exception) {
+                pendingRemoteConnectionCode = null
+                showToast(getString(R.string.remote_connect_setup_failed))
+            }
+        } else {
+            pairFromConnectionCode(code, waitForRemoteHost = false)
         }
+    }
 
-        var port = NvHTTP.DEFAULT_HTTP_PORT
-        if (portStr != null) {
-            try { port = portStr.toInt() } catch (ignored: NumberFormatException) {}
-        }
-
+    private fun pairFromConnectionCode(code: VPlusConnectionCode, waitForRemoteHost: Boolean) {
         showToast(getString(R.string.qr_pairing))
-        val finalPort = port
         uiScope.launch {
             var message: String?
             var success = false
@@ -2150,10 +2187,16 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             try {
                 stopComputerUpdatesAndWait()
 
+                if (waitForRemoteHost && !waitForHostEndpoint(code.host, code.port)) {
+                    showToast(getString(R.string.remote_connect_host_timeout))
+                    startComputerUpdates()
+                    return@launch
+                }
+
                 val result = withContext(Dispatchers.IO) {
                     // Add the computer first
                     val addDetails = ComputerDetails()
-                    addDetails.manualAddress = ComputerDetails.AddressTuple(host, finalPort)
+                    addDetails.manualAddress = ComputerDetails.AddressTuple(code.host, code.port)
                     val added = managerBinder?.addComputerBlocking(addDetails) == true
                     if (!added) {
                         return@withContext QrPairResult(getString(R.string.addpc_fail), false, null, null)
@@ -2179,7 +2222,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                     }
 
                     val pm = httpConn.pairingManager
-                    val pairResult = pm.pair(httpConn.getServerInfo(true), pin)
+                    val pairResult = pm.pair(httpConn.getServerInfo(true), code.pin)
                     when (pairResult.state) {
                         PairState.PIN_WRONG ->
                             QrPairResult(getString(R.string.pair_incorrect_pin), false, null, null)
@@ -2226,6 +2269,22 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             }
         }
     }
+
+    private suspend fun waitForHostEndpoint(host: String, port: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            val deadline = SystemClock.elapsedRealtime() + REMOTE_HOST_CONNECT_TIMEOUT_MS
+            while (SystemClock.elapsedRealtime() < deadline) {
+                try {
+                    Socket().use { socket ->
+                        socket.connect(InetSocketAddress(host, port), 1_000)
+                        return@withContext true
+                    }
+                } catch (_: IOException) {
+                    Thread.sleep(500)
+                }
+            }
+            false
+        }
 
     private data class QrPairResult(
         val message: String?,
@@ -3353,6 +3412,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VPN_PERMISSION_REQUEST_CODE && easyTierController != null) {
             easyTierController?.handleVpnPermissionResult(resultCode)
+            val pendingCode = pendingRemoteConnectionCode
+            pendingRemoteConnectionCode = null
+            if (resultCode == RESULT_OK && pendingCode != null) {
+                pairFromConnectionCode(pendingCode, waitForRemoteHost = true)
+            }
         } else if (requestCode == UpdateManager.INSTALL_PERMISSION_REQUEST_CODE) {
             UpdateManager.onInstallPermissionResult(this)
         }

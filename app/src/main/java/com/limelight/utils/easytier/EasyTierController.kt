@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.doOnLayout
 import com.easytier.jni.EasyTierManager
+import com.easytier.jni.EasyTierRuntime
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
@@ -132,16 +133,16 @@ class EasyTierController(
     private fun initEasyTierManager() {
         val config = getEasyTierConfig()
 
-        if (easyTierManager != null && easyTierManager?.latestNetworkInfoJson != null) {
-            easyTierManager?.stop()
-        }
-        LimeLog.info("使用的easytier配置为：\n$config")
-        easyTierManager = EasyTierManager(activity, instanceName, config)
+        val redactedConfig = config.replace(
+                Regex("(?m)^(network_secret\\s*=\\s*)\".*\"$"),
+                "$1\"<redacted>\""
+        )
+        LimeLog.info("使用的easytier配置为：\n$redactedConfig")
+        easyTierManager = EasyTierRuntime.getOrCreate(activity.applicationContext, instanceName, config)
         LimeLog.info("$TAG: EasyTierManager initialized with instance: $instanceName")
     }
 
     fun onDestroy() {
-        easyTierManager?.stop()
         if (currentDialog != null && currentDialog?.isShowing == true) {
             currentDialog?.dismiss()
         }
@@ -167,6 +168,23 @@ class EasyTierController(
             LimeLog.warning("$TAG: VPN权限被拒绝。")
             Toast.makeText(activity, R.string.easytier_vpn_permission_required, Toast.LENGTH_LONG).show()
         }
+    }
+
+    /**
+     * Activates a host-issued V+ connection profile and starts the VPN permission flow.
+     * The structured profile is converted to an allow-listed TOML configuration here;
+     * connection codes are never allowed to inject raw EasyTier configuration.
+     */
+    internal fun activateConnectionProfile(profile: EasyTierConnectionProfile) {
+        val toml = EasyTierTomlCodec.buildConnectionProfile(profile)
+        activity.getSharedPreferences(EASYTIER_PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_TOML_CONFIG, toml)
+                .putString(KEY_ACTIVE_PROFILE, profile.id)
+                .putString(KEY_PROFILE_PREFIX + profile.id, toml)
+                .apply()
+        initEasyTierManager()
+        vpnCallback.requestVpnPermission()
     }
 
     // ==================== 对话框管理 ====================
@@ -1044,5 +1062,7 @@ class EasyTierController(
         private const val TAG = "EasyTierController"
         private const val EASYTIER_PREFS = "easytier_preferences"
         private const val KEY_TOML_CONFIG = "toml_config_string"
+        private const val KEY_ACTIVE_PROFILE = "active_connection_profile"
+        private const val KEY_PROFILE_PREFIX = "connection_profile."
     }
 }

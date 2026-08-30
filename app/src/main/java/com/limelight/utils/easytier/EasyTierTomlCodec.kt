@@ -4,6 +4,7 @@ internal data class EasyTierConfigUiState(
         val networkName: String = "",
         val networkSecret: String = "",
         val ipv4: String = "",
+        val dhcp: Boolean = false,
         val listeners: String = "",
         val peers: String = "",
         val useSmoltcp: Boolean = false,
@@ -38,6 +39,7 @@ internal object EasyTierTomlCodec {
                 networkName = extractValue(toml, "network_name", ""),
                 networkSecret = extractValue(toml, "network_secret", ""),
                 ipv4 = ipv4,
+                dhcp = extractValue(toml, "dhcp", "false").toBoolean(),
                 listeners = extractListAsString(toml, "listeners"),
                 peers = extractListAsString(toml, "uri"),
                 useSmoltcp = extractValue(toml, "use_smoltcp", "false").toBoolean(),
@@ -60,8 +62,10 @@ internal object EasyTierTomlCodec {
         val sb = StringBuilder()
         appendTomlString(sb, "hostname", "moonlight-V+")
         appendTomlString(sb, "instance_name", "Default")
-        sb.append("dhcp = false\n")
-        appendTomlString(sb, "ipv4", "${config.ipv4.ifBlank { DEFAULT_IPV4 }}/24", writeEmpty = true)
+        sb.append("dhcp = ${config.dhcp}\n")
+        if (!config.dhcp) {
+            appendTomlString(sb, "ipv4", "${config.ipv4.ifBlank { DEFAULT_IPV4 }}/24", writeEmpty = true)
+        }
 
         appendTomlStringArray(sb, "listeners", nonBlankLines(config.listeners))
 
@@ -92,6 +96,17 @@ internal object EasyTierTomlCodec {
 
         return sb.toString()
     }
+
+    fun buildConnectionProfile(profile: EasyTierConnectionProfile): String = build(
+            EasyTierConfigUiState(
+                    networkName = profile.networkName,
+                    networkSecret = profile.networkSecret,
+                    dhcp = true,
+                    listeners = "tcp://0.0.0.0:11010\nudp://0.0.0.0:11010",
+                    peers = profile.peers.joinToString("\n"),
+                    latencyFirst = true
+            )
+    )
 
     private fun extractValue(toml: String, key: String, defaultValue: String): String {
         for (rawLine in toml.split("\n")) {
