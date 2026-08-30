@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.view.View
 import android.view.ViewGroup
+import android.view.KeyEvent
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.SeekBar
@@ -178,6 +179,64 @@ class TouchPointerPresetEditorTest {
                     R.string.game_menu_touch_pointer_preset_fields
                 ))?.currentTextColor
             )
+        }
+    }
+
+    @Test
+    fun controllerNameEditingUsesTwoStageDismiss() {
+        val inputState = TouchPointerPresetEditor.InputState()
+        activityRule.runOnUiThread {
+            dialog = TouchPointerPresetEditor.show(
+                context = activityRule.activity,
+                title = "Create",
+                initialName = "Preset 1",
+                fields = testFields(checked = true),
+                inputState = inputState,
+                onSave = { _, _ -> TouchPointerPresetSaveResult.SAVED }
+            )
+        }
+        activityRule.waitUntil(5_000) { dialog?.isShowing == true }
+
+        activityRule.runOnUiThread {
+            val input = firstEditText(dialog) ?: error("Missing preset name input")
+            input.requestFocus()
+            input.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+            input.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+            assertTrue(inputState.isEditing)
+
+            assertTrue(inputState.handleDismissKey(
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_B)
+            ))
+            assertTrue(inputState.handleDismissKey(
+                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_B)
+            ))
+            assertFalse(inputState.isEditing)
+            assertTrue(dialog?.isShowing == true)
+        }
+    }
+
+    @Test
+    fun controllerBrowseModeMovesDownWithoutEditingName() {
+        val inputState = TouchPointerPresetEditor.InputState()
+        activityRule.runOnUiThread {
+            dialog = TouchPointerPresetEditor.show(
+                context = activityRule.activity,
+                title = "Create",
+                initialName = "Preset 1",
+                fields = testFields(checked = true),
+                inputState = inputState,
+                onSave = { _, _ -> TouchPointerPresetSaveResult.SAVED }
+            )
+        }
+        activityRule.waitUntil(5_000) { dialog?.isShowing == true }
+
+        activityRule.runOnUiThread {
+            val input = firstEditText(dialog) ?: error("Missing preset name input")
+            input.requestFocus()
+            input.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
+            input.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
+            assertFalse(inputState.isEditing)
+            assertTrue(firstCheckBox(dialog)?.isFocused == true)
         }
     }
 

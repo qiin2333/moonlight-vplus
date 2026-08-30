@@ -893,6 +893,7 @@
     <string name="game_menu_touch_mode_compatible_group">辅助选项（可共存）</string>
     <string name="game_menu_touch_pointer_speed">指针区速度</string>
     <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
+    <string name="game_menu_touch_pointer_pixels_value">%1$d 像素</string>
     <string name="game_menu_touch_pointer_speed_summary">仅影响分区直接触控的指针控制区；新触点手势使用调整后的速度。</string>
     <string name="game_menu_touch_pointer_zone_position">指针区位置</string>
     <string name="game_menu_touch_pointer_saved_presets">已保存预设</string>

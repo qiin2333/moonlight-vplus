@@ -127,7 +127,27 @@ class TouchPointerSensitivityPresetStoreTest {
     }
 
     @Test
-    fun unifiedPreferenceWritePersistsTouchSnapshotFields() {
+    fun deletedPresetIdsAreFilteredOnLoad() {
+        val deleted = TouchPointerSensitivityPreset(
+            id = UUID.randomUUID().toString(),
+            name = "Deleted",
+            values = mapOf(TouchPointerPresetField.POINTER_SPEED.storageKey to "100")
+        )
+        val retained = TouchPointerSensitivityPreset(
+            id = UUID.randomUUID().toString(),
+            name = "Retained",
+            values = mapOf(TouchPointerPresetField.POINTER_SPEED.storageKey to "150")
+        )
+        val store = TouchPointerSensitivityPresetStore(context)
+        store.save(listOf(deleted, retained))
+        store.markDeleted(setOf(deleted.id))
+
+        assertEquals(listOf(retained.id), store.load { "Fallback$it" }.map { it.id })
+    }
+
+    @Test
+    fun targetedPreferenceWritePersistsTouchSnapshotFields() {
+        defaultPreferences.edit().putString("list_resolution", "1280x720").commit()
         val config = PreferenceConfiguration.readPreferences(context).apply {
             pointerVelocityFactor = 175f
             longPressflatRegionPixels = 24
@@ -135,7 +155,7 @@ class TouchPointerSensitivityPresetStoreTest {
             enhancedTouchOnWhichSide = true
         }
 
-        assertTrue(config.writePreferences(context, synchronous = true))
+        assertTrue(config.writeTouchPointerPreferences(context, synchronous = true))
 
         assertEquals(175, defaultPreferences.getInt("pointer_velocity_factor", -1))
         assertEquals(24, defaultPreferences.getInt("seekbar_flat_region_pixels", -1))
@@ -143,6 +163,7 @@ class TouchPointerSensitivityPresetStoreTest {
         assertTrue(
             defaultPreferences.getBoolean("checkbox_enhanced_touch_on_which_side", false)
         )
+        assertEquals("1280x720", defaultPreferences.getString("list_resolution", null))
     }
 
     private fun clearTestPreferences() {
@@ -154,6 +175,7 @@ class TouchPointerSensitivityPresetStoreTest {
             .commit()
         presetPreferences.edit()
             .remove(TouchPointerPresetPreferences.JSON_KEY)
+            .remove(TouchPointerPresetPreferences.DELETED_IDS_KEY)
             .remove(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY)
             .commit()
     }

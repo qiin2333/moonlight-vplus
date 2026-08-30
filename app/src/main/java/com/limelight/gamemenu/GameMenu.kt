@@ -186,6 +186,7 @@ class GameMenu(
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
     private var activeChildDialog: Dialog? = null
+    private var activeChildDismissKeyHandler: ((KeyEvent) -> Boolean)? = null
     private var activeComposeView: ComposeView? = null
     private var parentFocusRestoreRequestState: MutableIntState? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
@@ -343,6 +344,7 @@ class GameMenu(
     private fun dispatchControllerKeyEventToOwner(dialog: Dialog, event: KeyEvent): Boolean {
         if (dialog === activeChildDialog) {
             if (!dialog.isShowing) return true
+            if (activeChildDismissKeyHandler?.invoke(event) == true) return true
             if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
                     prepareForInputOwnerChange()
                     dialog.cancel()
@@ -1310,6 +1312,7 @@ class GameMenu(
             prepareForInputOwnerChange()
             activeChildDialog?.dismiss()
             activeChildDialog = null
+            activeChildDismissKeyHandler = null
             resetAxisNavigation()
             if (this.activeDialog == dialog) this.activeDialog = null
             if (this.activeComposeView === composeView) this.activeComposeView = null
@@ -1534,6 +1537,7 @@ class GameMenu(
                 checked = field in selectedFields
             )
         }
+        val inputState = TouchPointerPresetEditor.InputState()
         registerChildDialog(
             TouchPointerPresetEditor.show(
                 context = game,
@@ -1543,10 +1547,12 @@ class GameMenu(
                 ),
                 initialName = preset?.name ?: touchPointerSensitivityController.defaultName(),
                 fields = fields,
+                inputState = inputState,
                 onSave = { name, values ->
                     touchPointerSensitivityController.savePreset(preset?.id, name, values)
                 }
-            )
+            ),
+            onDismissKey = inputState::handleDismissKey
         )
     }
 
@@ -1595,10 +1601,15 @@ class GameMenu(
         }
     )
 
-    private fun registerChildDialog(dialog: Dialog, onDismiss: () -> Unit = {}) {
+    private fun registerChildDialog(
+        dialog: Dialog,
+        onDismiss: () -> Unit = {},
+        onDismissKey: ((KeyEvent) -> Boolean)? = null
+    ) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
         prepareForInputOwnerChange()
         activeChildDialog = dialog
+        activeChildDismissKeyHandler = onDismissKey
 
         val decorView = dialog.window?.decorView
         decorView?.setOnKeyListener { _, keyCode, event ->
@@ -1626,6 +1637,7 @@ class GameMenu(
             if (activeChildDialog !== dialog) return@setOnDismissListener
             prepareForInputOwnerChange()
             activeChildDialog = null
+            activeChildDismissKeyHandler = null
             onDismiss()
             decorView?.setOnKeyListener(null)
             decorView?.setOnGenericMotionListener(null)

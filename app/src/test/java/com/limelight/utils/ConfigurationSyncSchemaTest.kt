@@ -125,6 +125,12 @@ class ConfigurationSyncSchemaTest {
                 TouchPointerPresetPreferences.JSON_KEY
             )
         )
+        assertTrue(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                TouchPointerPresetPreferences.FILE_NAME,
+                TouchPointerPresetPreferences.DELETED_IDS_KEY
+            )
+        )
         assertFalse(
             ConfigurationSyncManager.isPortableSharedPreferenceKey(
                 TouchPointerPresetPreferences.FILE_NAME,

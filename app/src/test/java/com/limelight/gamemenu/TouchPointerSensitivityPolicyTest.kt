@@ -7,6 +7,16 @@ import org.junit.Test
 
 class TouchPointerSensitivityPolicyTest {
     @Test
+    fun unknownOnlyPresetDoesNotSelectKnownFields() {
+        assertEquals(
+            emptySet<TouchPointerPresetField>(),
+            TouchPointerSensitivityPolicy.selectedFields(
+                mapOf("future_touch_field" to "future-value")
+            )
+        )
+    }
+
+    @Test
     fun `normalizes existing preference range`() {
         assertEquals(0, TouchPointerSensitivityPolicy.normalize(-20f))
         assertEquals(123, TouchPointerSensitivityPolicy.normalize(122.6f))

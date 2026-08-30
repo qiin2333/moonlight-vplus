@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
+import com.limelight.preferences.TouchPointerPresetPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -13,13 +14,15 @@ import org.junit.Test
 
 class ConfigurationSyncMergeTest {
     @Test
-    fun mergePreservesNewestDedicatedTouchPointerPresetJson() {
+    fun mergeUnionsDedicatedTouchPointerPresetsById() {
+        val presetA = "00000000-0000-0000-0000-000000000001"
+        val presetB = "00000000-0000-0000-0000-000000000002"
         val deviceA = syncPackage(
             deviceId = "device-a",
             touchPointerPresetValues = values(
                 "touch_pointer_sensitivity_presets_json" to typedValue(
                     "string",
-                    JsonPrimitive("old-presets"),
+                    JsonPrimitive(touchPresetJson(presetA, "Preset A", 1000L)),
                     1000L,
                     "device-a"
                 )
@@ -30,7 +33,7 @@ class ConfigurationSyncMergeTest {
             touchPointerPresetValues = values(
                 "touch_pointer_sensitivity_presets_json" to typedValue(
                     "string",
-                    JsonPrimitive("new-presets"),
+                    JsonPrimitive(touchPresetJson(presetB, "Preset B", 2000L)),
                     2000L,
                     "device-b"
                 )
@@ -42,10 +45,100 @@ class ConfigurationSyncMergeTest {
             "touchPointerPresets"
         )
 
-        assertEquals(
-            "new-presets",
-            mergedValues["touch_pointer_sensitivity_presets_json"].asJsonObject["value"].asString
+        assertEquals(setOf(presetA, presetB), presetIds(mergedValues))
+    }
+
+    @Test
+    fun mergeUsesNewestItemForMatchingPresetId() {
+        val presetId = "00000000-0000-0000-0000-000000000003"
+        val older = syncPackage(
+            deviceId = "device-a",
+            touchPointerPresetValues = values(
+                TouchPointerPresetPreferences.JSON_KEY to typedValue(
+                    "string",
+                    JsonPrimitive(touchPresetJson(presetId, "Older", 1000L)),
+                    3000L,
+                    "device-a"
+                )
+            )
         )
+        val newerItem = syncPackage(
+            deviceId = "device-b",
+            touchPointerPresetValues = values(
+                TouchPointerPresetPreferences.JSON_KEY to typedValue(
+                    "string",
+                    JsonPrimitive(touchPresetJson(presetId, "Newer", 2000L)),
+                    2000L,
+                    "device-b"
+                )
+            )
+        )
+
+        val mergedValues = preferenceValues(
+            ConfigurationSyncManager.mergeSyncPackagesForTest(listOf(older, newerItem)),
+            "touchPointerPresets"
+        )
+        val preset = presetArray(mergedValues)[0].asJsonObject
+        assertEquals("Newer", preset["name"].asString)
+    }
+
+    @Test
+    fun mergeTombstonePreventsDeletedPresetFromReturning() {
+        val presetId = "00000000-0000-0000-0000-000000000004"
+        val withPreset = syncPackage(
+            deviceId = "device-a",
+            touchPointerPresetValues = values(
+                TouchPointerPresetPreferences.JSON_KEY to typedValue(
+                    "string",
+                    JsonPrimitive(touchPresetJson(presetId, "Deleted", 1000L)),
+                    1000L,
+                    "device-a"
+                )
+            )
+        )
+        val withDeletion = syncPackage(
+            deviceId = "device-b",
+            touchPointerPresetValues = values(
+                TouchPointerPresetPreferences.DELETED_IDS_KEY to typedValue(
+                    "stringSet",
+                    stringArray(presetId),
+                    2000L,
+                    "device-b"
+                )
+            )
+        )
+
+        val mergedValues = preferenceValues(
+            ConfigurationSyncManager.mergeSyncPackagesForTest(listOf(withPreset, withDeletion)),
+            "touchPointerPresets"
+        )
+        assertTrue(presetArray(mergedValues).isEmpty)
+    }
+
+    private fun touchPresetJson(id: String, name: String, updatedAt: Long): String {
+        return JsonObject().apply {
+            addProperty("version", 1)
+            add("presets", JsonArray().apply {
+                add(JsonObject().apply {
+                    addProperty("id", id)
+                    addProperty("name", name)
+                    addProperty("updatedAt", updatedAt)
+                    add("values", JsonObject().apply {
+                        addProperty("pointer_velocity_factor", "100")
+                    })
+                })
+            })
+        }.toString()
+    }
+
+    private fun presetArray(values: JsonObject): JsonArray {
+        val encoded = values[TouchPointerPresetPreferences.JSON_KEY].asJsonObject
+        return JsonParser.parseString(encoded["value"].asString)
+            .asJsonObject["presets"].asJsonArray
+    }
+
+    private fun presetIds(values: JsonObject): Set<String> {
+        return presetArray(values).mapTo(linkedSetOf()) { it.asJsonObject["id"].asString }
     }
 
     @Test

@@ -14,7 +14,8 @@ import kotlin.math.roundToInt
 internal data class TouchPointerSensitivityPreset(
     val id: String,
     val name: String,
-    val values: Map<String, String>
+    val values: Map<String, String>,
+    val updatedAt: Long = 0L
 )
 
 internal enum class TouchPointerPresetField(val storageKey: String) {
@@ -64,6 +65,11 @@ internal object TouchPointerSensitivityPolicy {
         nativeMousePointer: Boolean,
         screenDs5Touchpad: Boolean
     ): Boolean = enhancedTouch && !trackpad && !nativeMousePointer && !screenDs5Touchpad
+
+    fun selectedFields(values: Map<String, String>): Set<TouchPointerPresetField> =
+        values.keys.mapNotNullTo(linkedSetOf()) { key ->
+            TouchPointerPresetField.entries.firstOrNull { it.storageKey == key }
+        }
 }
 
 internal enum class TouchPointerPresetSaveResult {
@@ -80,7 +86,11 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
     )
     fun load(defaultName: (Int) -> String): List<TouchPointerSensitivityPreset> {
         val json = preferences.getString(PREF_JSON_KEY, null) ?: return emptyList()
-        return parse(json, defaultName).orEmpty()
+        val deletedIds = preferences.getStringSet(
+            TouchPointerPresetPreferences.DELETED_IDS_KEY,
+            emptySet()
+        ).orEmpty()
+        return parse(json, defaultName).orEmpty().filterNot { it.id in deletedIds }
     }
 
     fun save(presets: Collection<TouchPointerSensitivityPreset>) {
@@ -93,6 +103,7 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
                     .put("id", normalizedUuid(preset.id))
                     .put("name", TouchPointerSensitivityPolicy.normalizeName(preset.name))
                     .put("values", values)
+                    .put("updatedAt", preset.updatedAt.coerceAtLeast(LEGACY_UPDATED_AT))
             )
         }
         val root = JSONObject()
@@ -141,7 +152,9 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
                             TouchPointerSensitivityPreset(
                                 id = id,
                                 name = name,
-                                values = values
+                                values = values,
+                                updatedAt = item.optLong("updatedAt", LEGACY_UPDATED_AT)
+                                    .coerceAtLeast(LEGACY_UPDATED_AT)
                             )
                         )
                     }
@@ -182,8 +195,20 @@ internal class TouchPointerSensitivityPresetStore(context: Context) {
         }
     }
 
+    fun markDeleted(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val deletedIds = preferences.getStringSet(
+            TouchPointerPresetPreferences.DELETED_IDS_KEY,
+            emptySet()
+        ).orEmpty() + ids
+        preferences.edit {
+            putStringSet(TouchPointerPresetPreferences.DELETED_IDS_KEY, deletedIds)
+        }
+    }
+
     private companion object {
         const val STORAGE_VERSION = 1
+        const val LEGACY_UPDATED_AT = 1L
         const val PREF_JSON_KEY = TouchPointerPresetPreferences.JSON_KEY
     }
 }
@@ -236,7 +261,7 @@ internal class TouchPointerSensitivityController(
 
     fun persist() {
         if (!persistencePending && state.percent == persistedPercent) return
-        if (game.prefConfig.writePreferences(game)) {
+        if (game.prefConfig.writeTouchPointerPreferences(game)) {
             persistedPercent = state.percent
             persistencePending = false
         }
@@ -257,10 +282,8 @@ internal class TouchPointerSensitivityController(
 
     fun preset(id: String): TouchPointerSensitivityPreset? = presets.firstOrNull { it.id == id }
 
-    fun selectedFields(preset: TouchPointerSensitivityPreset?): Set<TouchPointerPresetField> =
-        preset?.values?.keys.orEmpty().mapNotNullTo(linkedSetOf()) { key ->
-            TouchPointerPresetField.entries.firstOrNull { it.storageKey == key }
-        }.ifEmpty { TouchPointerPresetField.entries.toSet() }
+    fun selectedFields(preset: TouchPointerSensitivityPreset): Set<TouchPointerPresetField> =
+        TouchPointerSensitivityPolicy.selectedFields(preset.values)
 
     fun fieldValue(
         field: TouchPointerPresetField,
@@ -302,7 +325,8 @@ internal class TouchPointerSensitivityController(
         val updated = TouchPointerSensitivityPreset(
             id = previous?.id ?: UUID.randomUUID().toString(),
             name = normalizedName,
-            values = values
+            values = values,
+            updatedAt = System.currentTimeMillis()
         )
         presets = if (existingIndex >= 0) {
             presets.toMutableList().also { it[existingIndex] = updated }
@@ -326,7 +350,7 @@ internal class TouchPointerSensitivityController(
         if (!applied) return false
 
         persistencePending = true
-        val persisted = game.prefConfig.writePreferences(game)
+        val persisted = game.prefConfig.writeTouchPointerPreferences(game)
         if (persisted) {
             persistedPercent = TouchPointerSensitivityPolicy.normalize(
                 game.prefConfig.pointerVelocityFactor
@@ -346,6 +370,7 @@ internal class TouchPointerSensitivityController(
         if (removed == 0) return 0
 
         presets = remaining
+        presetStore.markDeleted(ids)
         presetStore.save(presets)
         if (activePresetId in ids) {
             setActivePresetId(null)

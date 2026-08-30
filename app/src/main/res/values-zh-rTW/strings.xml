@@ -581,6 +581,7 @@
     <string name="category_screen_position_settings">編碼與 HDR</string>
     <string name="game_menu_touch_pointer_speed">指標區速度</string>
     <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
+    <string name="game_menu_touch_pointer_pixels_value">%1$d 像素</string>
     <string name="game_menu_touch_pointer_speed_summary">僅影響分區直接觸控的指標控制區；新的觸控手勢會使用更新後的速度。</string>
     <string name="game_menu_touch_pointer_zone_position">指標區位置</string>
     <string name="game_menu_touch_pointer_saved_presets">已儲存預設</string>

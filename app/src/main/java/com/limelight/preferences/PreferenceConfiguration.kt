@@ -371,6 +371,25 @@ class PreferenceConfiguration {
         }
     }
 
+    /** Persist only the split direct-touch fields owned by sensitivity presets. */
+    fun writeTouchPointerPreferences(context: Context, synchronous: Boolean = false): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context) ?: return false
+        return try {
+            val editor = prefs.edit()
+                .putInt(LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING, longPressflatRegionPixels)
+                .putBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, enhancedTouchOnWhichSide)
+                .putInt(ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING, enhanceTouchZoneDivider)
+                .putInt(POINTER_VELOCITY_FACTOR_PREF_STRING, pointerVelocityFactor.roundToInt())
+            if (synchronous) editor.commit() else {
+                editor.apply()
+                true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     /**
      * Persist only the quality/display settings that PcView scene presets own.
      * This keeps scene switching from rewriting unrelated input, audio, or UI prefs.

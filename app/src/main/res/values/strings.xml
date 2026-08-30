@@ -1097,6 +1097,7 @@
     <string name="game_menu_touch_mode_compatible_group">Compatible options</string>
     <string name="game_menu_touch_pointer_speed">Pointer-zone speed</string>
     <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
+    <string name="game_menu_touch_pointer_pixels_value">%1$d pixels</string>
     <string name="game_menu_touch_pointer_speed_summary">Only affects the pointer-control zone in split direct touch. New gestures use the updated speed.</string>
     <string name="game_menu_touch_pointer_zone_position">Pointer zone position</string>
     <string name="game_menu_touch_pointer_saved_presets">Saved presets</string>

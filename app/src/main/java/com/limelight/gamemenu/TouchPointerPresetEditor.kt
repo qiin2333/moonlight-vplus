@@ -7,8 +7,10 @@ import android.graphics.Typeface
 import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -21,8 +23,32 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.limelight.R
 import com.limelight.utils.AppDialogStyler
+import com.limelight.ui.UiDismissKeyHandler
 
 internal object TouchPointerPresetEditor {
+    internal class InputState {
+        var isEditing: Boolean = false
+            private set
+        private var leaveEditing: (() -> Unit)? = null
+
+        internal fun bind(leaveEditing: () -> Unit) {
+            this.leaveEditing = leaveEditing
+        }
+
+        internal fun setEditing(editing: Boolean) {
+            isEditing = editing
+        }
+
+        fun handleDismissKey(event: KeyEvent): Boolean {
+            val dismissKey = event.keyCode == KeyEvent.KEYCODE_BACK ||
+                event.keyCode == KeyEvent.KEYCODE_ESCAPE ||
+                event.keyCode == KeyEvent.KEYCODE_BUTTON_B
+            if (!isEditing || !dismissKey) return false
+            if (event.action == KeyEvent.ACTION_UP) leaveEditing?.invoke()
+            return event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
+        }
+    }
+
     internal class CodePointLengthFilter(private val maxCodePoints: Int) : InputFilter {
         override fun filter(
             source: CharSequence,
@@ -56,7 +82,7 @@ internal object TouchPointerPresetEditor {
         val min: Int,
         val max: Int,
         val keyStep: Int,
-        val suffix: String
+        val valueStringRes: Int
     )
 
     private data class FieldControl(
@@ -72,6 +98,7 @@ internal object TouchPointerPresetEditor {
         title: String,
         initialName: String,
         fields: List<FieldOption>,
+        inputState: InputState = InputState(),
         onSave: (String, Map<TouchPointerPresetField, String>) -> TouchPointerPresetSaveResult
     ): Dialog {
         val builder = AlertDialog.Builder(context, R.style.AppDialogStyle)
@@ -93,6 +120,58 @@ internal object TouchPointerPresetEditor {
             hint = dialogContext.getString(R.string.game_menu_touch_pointer_preset_name_hint)
             setTextColor(primaryTextColor)
             setHintTextColor(secondaryTextColor)
+            showSoftInputOnFocus = false
+        }
+        val inputMethodManager = context.getSystemService(Context.INPUT_METHOD_SERVICE)
+            as? InputMethodManager
+        fun leaveNameEditing() {
+            if (!inputState.isEditing) return
+            inputState.setEditing(false)
+            nameInput.showSoftInputOnFocus = false
+            inputMethodManager?.hideSoftInputFromWindow(nameInput.windowToken, 0)
+        }
+        fun enterNameEditing() {
+            inputState.setEditing(true)
+            nameInput.showSoftInputOnFocus = true
+            nameInput.requestFocus()
+            nameInput.setSelection(nameInput.text.length)
+            nameInput.post {
+                inputMethodManager?.showSoftInput(nameInput, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+        inputState.bind(::leaveNameEditing)
+        nameInput.setOnClickListener { enterNameEditing() }
+        nameInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) leaveNameEditing()
+        }
+        nameInput.setOnKeyListener { view, keyCode, event ->
+            val confirmKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                keyCode == KeyEvent.KEYCODE_ENTER ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                keyCode == KeyEvent.KEYCODE_BUTTON_A
+            if (!inputState.isEditing && confirmKey) {
+                if (event.action == KeyEvent.ACTION_UP) enterNameEditing()
+                true
+            } else if (!inputState.isEditing && keyCode in setOf(
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT
+                )
+            ) {
+                if (event.action == KeyEvent.ACTION_UP) {
+                    val direction = when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP
+                        KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
+                        KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT
+                        else -> View.FOCUS_RIGHT
+                    }
+                    view.focusSearch(direction)?.requestFocus()
+                }
+                true
+            } else {
+                false
+            }
         }
         val fieldControls = fields.map { option ->
             val includeCheckBox = CheckBox(dialogContext).apply {
@@ -125,7 +204,10 @@ internal object TouchPointerPresetEditor {
                     contentDescription = option.label
                 }
                 fun updateValueText() {
-                    valueText.text = "${spec.min + seekBar.progress}${spec.suffix}"
+                    valueText.text = dialogContext.getString(
+                        spec.valueStringRes,
+                        spec.min + seekBar.progress
+                    )
                 }
                 seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(
@@ -288,6 +370,13 @@ internal object TouchPointerPresetEditor {
         }
         dialog.show()
         AppDialogStyler.apply(dialog, dialogContext)
+        dialog.setOnKeyListener { _, _, event ->
+            inputState.handleDismissKey(event) || UiDismissKeyHandler.handle(
+                event.action,
+                event.keyCode,
+                dialog::cancel
+            )
+        }
         dialog.window?.attributes = dialog.window?.attributes?.apply {
             gravity = Gravity.CENTER
         }
@@ -299,19 +388,19 @@ internal object TouchPointerPresetEditor {
             min = TouchPointerSensitivityPolicy.MIN_PERCENT,
             max = TouchPointerSensitivityPolicy.MAX_PERCENT,
             keyStep = TouchPointerSensitivityPolicy.DPAD_STEP_PERCENT,
-            suffix = "%"
+            valueStringRes = R.string.game_menu_touch_pointer_speed_value
         )
         TouchPointerPresetField.INITIAL_STABLE_ZONE -> NumericSpec(
             min = TouchPointerSensitivityPolicy.MIN_STABLE_ZONE_PIXELS,
             max = TouchPointerSensitivityPolicy.MAX_STABLE_ZONE_PIXELS,
             keyStep = 1,
-            suffix = " px"
+            valueStringRes = R.string.game_menu_touch_pointer_pixels_value
         )
         TouchPointerPresetField.ZONE_DIVIDER -> NumericSpec(
             min = TouchPointerSensitivityPolicy.MIN_ZONE_DIVIDER,
             max = TouchPointerSensitivityPolicy.MAX_ZONE_DIVIDER,
             keyStep = 1,
-            suffix = "%"
+            valueStringRes = R.string.game_menu_touch_pointer_speed_value
         )
         TouchPointerPresetField.POINTER_ZONE_SIDE -> null
     }
