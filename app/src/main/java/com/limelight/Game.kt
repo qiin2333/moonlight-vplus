@@ -293,7 +293,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        cancelKeepAliveNotification()
         isChangingResolution = false
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -1476,7 +1475,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onDestroy() {
-        cancelKeepAliveNotification()
+        if (isFinishing && !isChangingConfigurations) {
+            cancelKeepAliveNotification()
+        }
         micButtonPositionController?.dispose()
         micButtonPositionController = null
         if (::cursorServiceManager.isInitialized) {

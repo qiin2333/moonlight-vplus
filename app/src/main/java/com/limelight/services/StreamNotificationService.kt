@@ -33,8 +33,8 @@ class StreamNotificationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // START_STICKY restarts are delivered with a null intent. They must still
-        // satisfy the startForegroundService() contract before doing other work.
+        // Be defensive about unexpected null intents and always satisfy the
+        // startForegroundService() contract before doing other work.
         if (!isForegroundStarted && !createNotificationChannel()) {
             stopSelfResult(startId)
             return START_NOT_STICKY
@@ -50,7 +50,9 @@ class StreamNotificationService : Service() {
         }
 
         initWakeLock()
-        return START_STICKY
+        // The stream session only exists in this process. Restarting this service
+        // alone cannot restore it and risks a cold-start foreground-service timeout.
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
