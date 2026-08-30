@@ -75,6 +75,7 @@ import com.limelight.PcView
 import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.TargetDisplayResolver
+import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.audio.MicrophoneButtonPositionStore
@@ -3293,9 +3294,9 @@ class StreamSettings : AppCompatActivity() {
                 category.removePreference(findPreference("checkbox_absolute_mouse_mode")!!)
             }
 
-            // Hide gamepad motion sensor option when running on OSes before Android 12.
-            // Support for motion, LED, battery, and other extensions were introduced in S.
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            // InputDeviceSensorManager is unsafe on Android 12 and 12L. Keep the device-sensor
+            // fallback visible because it uses the regular SensorManager instead.
+            if (!InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!
                 category.removePreference(findPreference("checkbox_gamepad_motion_sensors")!!)
             }
