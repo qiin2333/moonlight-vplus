@@ -1,5 +1,7 @@
 package com.limelight.utils.easytier
 
+import com.limelight.utils.remoteconnect.EasyTierConnectionProfile
+
 internal data class EasyTierConfigUiState(
         val networkName: String = "",
         val networkSecret: String = "",
@@ -60,7 +62,7 @@ internal object EasyTierTomlCodec {
 
     fun build(config: EasyTierConfigUiState): String {
         val sb = StringBuilder()
-        appendTomlString(sb, "hostname", "moonlight-V+")
+        appendTomlString(sb, "hostname", "moonlight-remote")
         appendTomlString(sb, "instance_name", "Default")
         sb.append("dhcp = ${config.dhcp}\n")
         if (!config.dhcp) {
@@ -97,16 +99,35 @@ internal object EasyTierTomlCodec {
         return sb.toString()
     }
 
-    fun buildConnectionProfile(profile: EasyTierConnectionProfile): String = build(
-            EasyTierConfigUiState(
-                    networkName = profile.networkName,
-                    networkSecret = profile.networkSecret,
-                    dhcp = true,
-                    listeners = "tcp://0.0.0.0:11010\nudp://0.0.0.0:11010",
-                    peers = profile.peers.joinToString("\n"),
-                    latencyFirst = true
-            )
-    )
+    fun buildConnectionProfile(profile: EasyTierConnectionProfile): String {
+        val sb = StringBuilder()
+        appendTomlString(sb, "hostname", "moonlight-remote")
+        appendTomlString(sb, "instance_name", "Default")
+        sb.append("dhcp = true\n")
+        appendTomlStringArray(sb, "listeners", listOf("tcp://0.0.0.0:0", "udp://0.0.0.0:0"))
+        appendTomlString(sb, "rpc_portal", "127.0.0.1:0")
+
+        // Host-issued profiles must never accept peer-advertised subnet, DNS, or exit-node routes.
+        sb.append("exit_nodes = []\n")
+        sb.append("routes = []\n")
+        sb.append("proxy_network = []\n")
+        sb.append("\n[network_identity]\n")
+        appendTomlString(sb, "network_name", profile.networkName)
+        appendTomlString(sb, "network_secret", profile.networkSecret, writeEmpty = true)
+
+        for (peer in profile.peers) {
+            appendTomlPeer(sb, peer)
+        }
+
+        sb.append("\n[flags]\n")
+        sb.append("latency_first = true\n")
+        sb.append("enable_ipv6 = false\n")
+        sb.append("enable_exit_node = false\n")
+        sb.append("proxy_forward_by_system = false\n")
+        sb.append("accept_dns = false\n")
+        sb.append("relay_network_whitelist = \"\"\n")
+        return sb.toString()
+    }
 
     private fun extractValue(toml: String, key: String, defaultValue: String): String {
         for (rawLine in toml.split("\n")) {

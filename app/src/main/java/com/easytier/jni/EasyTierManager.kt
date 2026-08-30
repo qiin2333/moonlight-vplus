@@ -13,7 +13,8 @@ import java.util.Objects
 class EasyTierManager(
     context: Context,
     private val instanceName: String,
-    internal val networkConfig: String
+    internal val networkConfig: String,
+    internal val allowedRemoteHost: String? = null
 ) {
     private val appContext = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
@@ -127,7 +128,7 @@ class EasyTierManager(
                         }
 
                         val proxyCidrsArray = route.optJSONArray("proxy_cidrs")
-                        if (proxyCidrsArray != null) {
+                        if (allowedRemoteHost == null && proxyCidrsArray != null) {
                             for (j in 0 until proxyCidrsArray.length()) {
                                 newProxyCidrs.add(proxyCidrsArray.getString(j))
                             }
@@ -181,6 +182,7 @@ class EasyTierManager(
         val intent = Intent(appContext, EasyTierVpnService::class.java)
         intent.putExtra("ipv4_address", ipv4)
         intent.putStringArrayListExtra("proxy_cidrs", ArrayList(proxyCidrs))
+        intent.putExtra("allowed_remote_host", allowedRemoteHost)
         intent.putExtra("instance_name", instanceName)
         appContext.startService(intent)
         vpnServiceIntent = intent
@@ -227,10 +229,18 @@ object EasyTierRuntime {
     private var manager: EasyTierManager? = null
 
     @Synchronized
-    fun getOrCreate(context: Context, instanceName: String, networkConfig: String): EasyTierManager {
+    fun getOrCreate(
+        context: Context,
+        instanceName: String,
+        networkConfig: String,
+        allowedRemoteHost: String? = null
+    ): EasyTierManager {
         val current = manager
-        if (current != null && current.networkConfig == networkConfig) return current
+        if (current != null &&
+            current.networkConfig == networkConfig &&
+            current.allowedRemoteHost == allowedRemoteHost
+        ) return current
         current?.stop()
-        return EasyTierManager(context, instanceName, networkConfig).also { manager = it }
+        return EasyTierManager(context, instanceName, networkConfig, allowedRemoteHost).also { manager = it }
     }
 }

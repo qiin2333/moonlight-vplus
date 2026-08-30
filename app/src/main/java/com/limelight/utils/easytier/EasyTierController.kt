@@ -68,6 +68,7 @@ import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.remoteconnect.EasyTierConnectionProfile
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -131,14 +132,22 @@ class EasyTierController(
     // ==================== 初始化和生命周期 ====================
 
     private fun initEasyTierManager() {
+        val prefs = activity.getSharedPreferences(EASYTIER_PREFS, Context.MODE_PRIVATE)
         val config = getEasyTierConfig()
+        val activeProfile = prefs.getString(KEY_ACTIVE_PROFILE, null)
+        val allowedRemoteHost = activeProfile?.let { prefs.getString(KEY_PROFILE_HOST_PREFIX + it, null) }
 
         val redactedConfig = config.replace(
                 Regex("(?m)^(network_secret\\s*=\\s*)\".*\"$"),
                 "$1\"<redacted>\""
         )
         LimeLog.info("使用的easytier配置为：\n$redactedConfig")
-        easyTierManager = EasyTierRuntime.getOrCreate(activity.applicationContext, instanceName, config)
+        easyTierManager = EasyTierRuntime.getOrCreate(
+                activity.applicationContext,
+                instanceName,
+                config,
+                allowedRemoteHost
+        )
         LimeLog.info("$TAG: EasyTierManager initialized with instance: $instanceName")
     }
 
@@ -171,7 +180,7 @@ class EasyTierController(
     }
 
     /**
-     * Activates a host-issued V+ connection profile and starts the VPN permission flow.
+     * Activates a host-issued remote connection profile and starts the VPN permission flow.
      * The structured profile is converted to an allow-listed TOML configuration here;
      * connection codes are never allowed to inject raw EasyTier configuration.
      */
@@ -182,6 +191,7 @@ class EasyTierController(
                 .putString(KEY_TOML_CONFIG, toml)
                 .putString(KEY_ACTIVE_PROFILE, profile.id)
                 .putString(KEY_PROFILE_PREFIX + profile.id, toml)
+                .putString(KEY_PROFILE_HOST_PREFIX + profile.id, profile.hostVirtualIp)
                 .apply()
         initEasyTierManager()
         vpnCallback.requestVpnPermission()
@@ -761,7 +771,7 @@ class EasyTierController(
     private fun getEasyTierConfig(): String {
         val prefs = activity.getSharedPreferences(EASYTIER_PREFS, Context.MODE_PRIVATE)
         val defaultConfig = "instance_name = \"Default\"\n" +
-                "hostname = \"moonlight-V+\"\n" +
+                "hostname = \"moonlight-remote\"\n" +
                 "ipv4 = \"10.0.0.1/24\"\n" +
                 "dhcp = false\n" +
                 "listeners = [\"tcp://0.0.0.0:11010\", \"udp://0.0.0.0:11010\", \"wg://0.0.0.0:11011\"]\n" +
@@ -787,6 +797,7 @@ class EasyTierController(
         activity.getSharedPreferences(EASYTIER_PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY_TOML_CONFIG, EasyTierTomlCodec.build(config))
+                .remove(KEY_ACTIVE_PROFILE)
                 .apply()
 
         // 重新初始化
@@ -1064,5 +1075,6 @@ class EasyTierController(
         private const val KEY_TOML_CONFIG = "toml_config_string"
         private const val KEY_ACTIVE_PROFILE = "active_connection_profile"
         private const val KEY_PROFILE_PREFIX = "connection_profile."
+        private const val KEY_PROFILE_HOST_PREFIX = "connection_profile_host."
     }
 }

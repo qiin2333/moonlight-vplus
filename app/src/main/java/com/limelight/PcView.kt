@@ -65,8 +65,8 @@ import com.limelight.utils.CacheHelper
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.easytier.EasyTierController
-import com.limelight.utils.easytier.VPlusConnectionCode
-import com.limelight.utils.easytier.VPlusConnectionCodeParser
+import com.limelight.utils.remoteconnect.RemoteConnectCode
+import com.limelight.utils.remoteconnect.RemoteConnectCodeParser
 import com.limelight.utils.HelpLauncher
 import com.limelight.utils.Iperf3Tester
 import com.limelight.utils.NetHelper
@@ -241,7 +241,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private var lastShakeTime = 0L
     private var activeSceneNumber: Int? = null
     private var pendingAddedComputerUuid: String? = null
-    private var pendingRemoteConnectionCode: VPlusConnectionCode? = null
+    private var pendingRemoteConnectionCode: RemoteConnectCode? = null
     private var pendingConnectionIntentUrl: String? = null
     private val exitGate = PcViewExitGate()
 
@@ -2151,17 +2151,45 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (!completeOnCreateCalled || managerBinder == null || easyTierController == null) return
         val url = pendingConnectionIntentUrl ?: return
         pendingConnectionIntentUrl = null
-        handleQrPairResult(url)
+        handleQrPairResult(url, requireConfirmation = true)
     }
 
-    private fun handleQrPairResult(url: String) {
+    private fun handleQrPairResult(url: String, requireConfirmation: Boolean = false) {
         val code = try {
-            VPlusConnectionCodeParser.parse(url)
+            RemoteConnectCodeParser.parse(url)
         } catch (_: IllegalArgumentException) {
             showToast(getString(R.string.qr_invalid_code))
             return
         }
 
+        if (requireConfirmation) {
+            showExternalConnectionConfirmation(code)
+            return
+        }
+
+        activateConnectionCode(code)
+    }
+
+    private fun showExternalConnectionConfirmation(code: RemoteConnectCode) {
+        val label = code.name?.takeIf { it.isNotBlank() } ?: code.host
+        val message = if (code.easyTierProfile != null) {
+            getString(R.string.remote_connect_external_confirm_message, label, code.host)
+        } else {
+            getString(R.string.qr_pair_external_confirm_message, label, code.host)
+        }
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
+            .setTitle(R.string.remote_connect_external_confirm_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.remote_connect_external_confirm_action) { _, _ ->
+                activateConnectionCode(code)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, this)
+    }
+
+    private fun activateConnectionCode(code: RemoteConnectCode) {
         if (code.easyTierProfile != null) {
             pendingRemoteConnectionCode = code
             showToast(getString(R.string.remote_connect_preparing))
@@ -2177,7 +2205,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         }
     }
 
-    private fun pairFromConnectionCode(code: VPlusConnectionCode, waitForRemoteHost: Boolean) {
+    private fun pairFromConnectionCode(code: RemoteConnectCode, waitForRemoteHost: Boolean) {
         showToast(getString(R.string.qr_pairing))
         uiScope.launch {
             var message: String?
@@ -3394,7 +3422,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (scanResult != null) {
             if (scanResult.contents != null) {
-                handleQrPairResult(scanResult.contents.trim())
+                handleQrPairResult(scanResult.contents.trim(), requireConfirmation = false)
             }
             return
         }

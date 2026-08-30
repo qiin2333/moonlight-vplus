@@ -1,4 +1,4 @@
-package com.limelight.utils.easytier
+package com.limelight.utils.remoteconnect
 
 import java.net.URI
 import java.net.URLDecoder
@@ -12,7 +12,7 @@ internal data class EasyTierConnectionProfile(
         val hostVirtualIp: String
 )
 
-internal data class VPlusConnectionCode(
+internal data class RemoteConnectCode(
         val host: String,
         val port: Int,
         val pin: String,
@@ -20,13 +20,13 @@ internal data class VPlusConnectionCode(
         val easyTierProfile: EasyTierConnectionProfile?
 )
 
-internal object VPlusConnectionCodeParser {
+internal object RemoteConnectCodeParser {
     private const val DEFAULT_SUNSHINE_PORT = 47989
     private val PROFILE_ID = Regex("[A-Za-z0-9._-]{1,128}")
     private val IPV4 = Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}")
     private val ALLOWED_PEER_SCHEMES = setOf("tcp", "udp", "wg", "ws", "wss", "quic")
 
-    fun parse(raw: String, nowEpochSeconds: Long = System.currentTimeMillis() / 1000): VPlusConnectionCode {
+    fun parse(raw: String, nowEpochSeconds: Long = System.currentTimeMillis() / 1000): RemoteConnectCode {
         val uri = try {
             URI(raw)
         } catch (e: Exception) {
@@ -43,14 +43,18 @@ internal object VPlusConnectionCodeParser {
         require(host.isNotEmpty() && host.length <= 255) { "Missing host" }
         require(pin.matches(Regex("[0-9]{4}"))) { "Invalid PIN" }
 
-        val port = query.first("port")?.toIntOrNull() ?: DEFAULT_SUNSHINE_PORT
+        val rawPort = query.first("port")
+        val port = rawPort?.toIntOrNull()
+                ?: if (rawPort == null) DEFAULT_SUNSHINE_PORT else throw IllegalArgumentException("Invalid port")
         require(port in 1..65535) { "Invalid port" }
 
-        val version = query.first("v")?.toIntOrNull() ?: 1
+        val rawVersion = query.first("v")
+        val version = rawVersion?.toIntOrNull()
+                ?: if (rawVersion == null) 1 else throw IllegalArgumentException("Invalid connection code version")
         require(version == 1 || version == 2) { "Unsupported connection code version" }
 
         val profile = if (version == 2) parseEasyTierProfile(query, host, nowEpochSeconds) else null
-        return VPlusConnectionCode(
+        return RemoteConnectCode(
                 host = host,
                 port = port,
                 pin = pin,
