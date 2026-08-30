@@ -11,3 +11,8 @@
 	*** dialogSnapshot*(...);
 }
 -keep class com.limelight.utils.AboutDialogLauncher$DialogSnapshot { *; }
+
+# Instrumentation invokes these target-APK symbols after the debug APK is minified.
+-keep class com.limelight.gamemenu.TouchPointerSensitivity** { *; }
+-keep class com.limelight.gamemenu.TouchPointerPreset** { *; }
+-keep class com.limelight.gamemenu.GameMenuCardsKt { *; }

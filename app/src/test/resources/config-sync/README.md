@@ -15,6 +15,7 @@ sync with the sections exported by `ConfigurationSyncManager`:
 - `sceneConfigs`
 - `appViewPreferences`
 - `hiddenApps`
+- `touchPointerPresets` (optional in backups created before touch presets)
 - `crownProfiles`
 - `pairing`
 
