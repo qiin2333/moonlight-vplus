@@ -94,6 +94,7 @@ class EasyTierController(
 ) {
     private var easyTierManager: EasyTierManager? = null
     private var currentDialog: Dialog? = null
+    private var pendingConnectionProfile: EasyTierConnectionProfile? = null
     private val instanceName = "Default"
 
     private enum class EasyTierTab {
@@ -171,20 +172,32 @@ class EasyTierController(
     fun handleVpnPermissionResult(resultCode: Int) {
         if (resultCode == Activity.RESULT_OK) {
             LimeLog.info("$TAG: VPN权限已获取，启动EasyTier Manager。")
+            pendingConnectionProfile?.let { profile ->
+                persistConnectionProfile(profile)
+                initEasyTierManager()
+            }
+            pendingConnectionProfile = null
             easyTierManager?.start()
             Toast.makeText(activity, R.string.easytier_starting, Toast.LENGTH_SHORT).show()
         } else {
+            pendingConnectionProfile = null
             LimeLog.warning("$TAG: VPN权限被拒绝。")
             Toast.makeText(activity, R.string.easytier_vpn_permission_required, Toast.LENGTH_LONG).show()
         }
     }
 
     /**
-     * Activates a host-issued remote connection profile and starts the VPN permission flow.
+     * Stages a host-issued remote connection profile and starts the VPN permission flow.
      * The structured profile is converted to an allow-listed TOML configuration here;
-     * connection codes are never allowed to inject raw EasyTier configuration.
+     * connection codes are never allowed to inject raw EasyTier configuration. The profile
+     * is not persisted or selected until the user grants VPN permission.
      */
     internal fun activateConnectionProfile(profile: EasyTierConnectionProfile) {
+        pendingConnectionProfile = profile
+        vpnCallback.requestVpnPermission()
+    }
+
+    private fun persistConnectionProfile(profile: EasyTierConnectionProfile) {
         val toml = EasyTierTomlCodec.buildConnectionProfile(profile)
         activity.getSharedPreferences(EASYTIER_PREFS, Context.MODE_PRIVATE)
                 .edit()
@@ -193,8 +206,6 @@ class EasyTierController(
                 .putString(KEY_PROFILE_PREFIX + profile.id, toml)
                 .putString(KEY_PROFILE_HOST_PREFIX + profile.id, profile.hostVirtualIp)
                 .apply()
-        initEasyTierManager()
-        vpnCallback.requestVpnPermission()
     }
 
     // ==================== 对话框管理 ====================
