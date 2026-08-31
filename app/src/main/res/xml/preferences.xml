@@ -7,6 +7,7 @@
 
     <PreferenceCategory android:title="@string/category_basic_settings"
         android:key="category_basic_settings"
+        android:order="0"
         android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="list_resolution"
@@ -52,6 +53,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_advanced_features"
         android:key="category_advanced_features"
+        android:order="4"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="6">
         <CheckBoxPreference
@@ -111,16 +113,11 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_full_range"
-            android:title="@string/title_full_range"
-            android:summary="@string/summary_full_range"
-            android:defaultValue="false" />
-
     </PreferenceCategory>
     <!-- Runtime gating is enforced again in Game before capture starts. -->
     <PreferenceCategory android:title="@string/category_framegen_settings"
         android:key="category_framegen_settings"
+        android:order="5"
         android:layout="@layout/preference_category_material">
         <Preference
             android:key="pref_framegen_pick_lossless_dll"
@@ -179,6 +176,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings"
         android:key="category_host_settings"
+        android:order="2"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="8">
         <CheckBoxPreference
@@ -266,6 +264,7 @@
         android:key="category_screen_position"
         android:title="@string/category_screen_position_settings"
         android:icon="@drawable/ic_screen_position"
+        android:order="1"
         android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="video_format"
@@ -312,6 +311,11 @@
             android:entries="@array/hdr_mode_entries"
             android:entryValues="@array/hdr_mode_values"
             android:defaultValue="1" />
+        <CheckBoxPreference
+            android:key="checkbox_full_range"
+            android:title="@string/title_full_range"
+            android:summary="@string/summary_full_range"
+            android:defaultValue="false" />
         <Preference
             android:key="capability_diagnostic"
             android:title="@string/title_capability_diagnostic"
@@ -320,6 +324,7 @@
     <PreferenceCategory
         android:key="category_display_behavior"
         android:title="@string/category_display_behavior"
+        android:order="3"
         android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:key="checkbox_enable_pip"
@@ -383,6 +388,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_ui_settings"
         android:key="category_ui_settings"
+        android:order="12"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="9">
         <com.limelight.preferences.LanguagePreference
@@ -527,6 +533,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_audio_settings"
         android:key="category_audio_settings"
+        android:order="6"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="11">
         <ListPreference
@@ -597,6 +604,12 @@
             android:entries="@array/audio_vibration_scene_names"
             android:entryValues="@array/audio_vibration_scene_values"
             android:defaultValue="0" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_microphone_settings"
+        android:key="category_microphone_settings"
+        android:order="7"
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="4">
         <CheckBoxPreference
             android:key="checkbox_enable_mic"
             android:title="@string/title_checkbox_enable_mic"
@@ -707,6 +720,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_gamepad_settings"
         android:key="category_gamepad_settings"
+        android:order="8"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="4">
         <Preference
@@ -803,6 +817,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_input_settings"
         android:key="category_input_settings"
+        android:order="9"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="4">
         <ListPreference
@@ -953,6 +968,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls"
+        android:order="10"
         android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="false"
@@ -1004,6 +1020,7 @@
         android:key="category_crown_features"
         android:title="@string/category_crown_features"
         android:icon="@drawable/ic_enhance"
+        android:order="11"
         android:layout="@layout/preference_category_material">
         <CheckBoxPreference
             android:defaultValue="false"
@@ -1017,6 +1034,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_backup_restore"
         android:key="category_backup_restore"
+        android:order="13"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="5">
         <Preference
@@ -1045,6 +1063,7 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
         android:key="category_help"
+        android:order="14"
         android:layout="@layout/preference_category_material">
         <!-- <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_setup_guide"

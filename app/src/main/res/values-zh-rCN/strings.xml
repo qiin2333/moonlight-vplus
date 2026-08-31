@@ -488,7 +488,7 @@
     <string name="title_checkbox_resume_stream">自动恢复串流</string>
     <string name="summary_checkbox_resume_stream">当从后台切回Moonlight时，自动恢复串流会话。</string>
     <string name="category_host_settings">主机</string>
-    <string name="title_checkbox_enable_sops">让游戏设置匹配串流规格</string>
+    <string name="title_checkbox_enable_sops">自动优化主机设置</string>
     <string name="summary_checkbox_enable_sops">允许兼容的主机软件根据请求的串流分辨率和质量调整受支持游戏；更改发生在主机上。</string>
     <string name="title_checkbox_host_audio">同时在主机播放声音</string>
     <string name="summary_checkbox_host_audio">在主机和本设备上同时输出串流音频。</string>
