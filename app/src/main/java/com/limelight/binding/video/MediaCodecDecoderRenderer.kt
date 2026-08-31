@@ -528,7 +528,7 @@ class MediaCodecDecoderRenderer(
         // Presence-only probe; the strict resolution/fps validation happened in
         // Game.kt before the DV capability bit was ever reported to the host.
         dolbyVisionDecoder = MediaCodecHelper.findProbableSafeDecoder(
-            "video/dolby-vision", DV_PROFILE_DVHE_ST)
+            DolbyVisionCodecPolicy.MIME_TYPE, DV_PROFILE_DVHE_ST)
         if (dolbyVisionDecoder != null) {
             LimeLog.info("Selected Dolby Vision decoder: " + dolbyVisionDecoder.name)
         } else {
@@ -897,16 +897,22 @@ class MediaCodecDecoderRenderer(
         }
         videoDecoder!!.configure(format, outSurface, null, 0)
 
-        // Set DataSpace on the output Surface for HDR content.
-        // Equivalent to HarmonyOS OH_NativeWindow_SetColorSpace().
+        // Set DataSpace on the output Surface for ordinary HDR content.
+        // Dolby Vision's terminal decoder/compositor owns its output dataspace;
+        // overriding it with the HDR10 PQ dataspace can make queueBuffer fail.
+        val configuredMimeType = format.getString(MediaFormat.KEY_MIME).orEmpty()
+        hdrDataSpace = 0
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-            (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0
+            (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
+            DolbyVisionCodecPolicy.shouldForceSurfaceDataSpace(configuredMimeType)
         ) {
             hdrDataSpace = ColorRangePolicy.hdrDataSpace(
                 prefs.hdrMode,
                 getPreferredColorRange(),
             )
             applyHdrDataSpace(renderTarget!!.surface, "decoder output")
+        } else if (!DolbyVisionCodecPolicy.shouldForceSurfaceDataSpace(configuredMimeType)) {
+            LimeLog.info("Dolby Vision output: leaving Surface DataSpace under codec control")
         }
 
         configuredFormat = format
@@ -980,7 +986,7 @@ class MediaCodecDecoderRenderer(
      * framegen being off at connection time.
      */
     private fun isDolbyVisionRoutingActive(mimeType: String): Boolean =
-        mimeType == "video/dolby-vision"
+        mimeType == DolbyVisionCodecPolicy.MIME_TYPE
 
     private fun isDolbyVisionRoutingEligible(): Boolean =
         dolbyVisionDecoder != null &&
@@ -989,7 +995,7 @@ class MediaCodecDecoderRenderer(
 
     private fun initializeDolbyVisionDecoder(): Int {
         val dvDecoder = dolbyVisionDecoder ?: return -1
-        val mimeType = "video/dolby-vision"
+        val mimeType = DolbyVisionCodecPolicy.MIME_TYPE
 
         adaptivePlayback = MediaCodecHelper.decoderSupportsAdaptivePlayback(dvDecoder, mimeType)
         fusedIdrFrame = MediaCodecHelper.decoderSupportsFusedIdrFrame(dvDecoder, mimeType)
@@ -1032,17 +1038,28 @@ class MediaCodecDecoderRenderer(
                 attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
                 applyExtras(attemptFormat)
 
-                val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
-                    attemptFormat,
-                    dvDecoder,
-                    tryNumber,
-                    prefs.forceMtkMaxOperatingRate,
-                    hdr10PlusModeSelected = false,
-                )
+                // The native Dolby pipeline may require buffer metadata and
+                // fencing that generic low-latency extensions replace. A
+                // configure-only fallback cannot catch the later queueBuffer
+                // failure, so keep this path conservative from the start.
+                val newFormat = if (DolbyVisionCodecPolicy.shouldApplyLowLatencyOptions(mimeType)) {
+                    MediaCodecHelper.setDecoderLowLatencyOptions(
+                        attemptFormat,
+                        dvDecoder,
+                        tryNumber,
+                        prefs.forceMtkMaxOperatingRate,
+                        hdr10PlusModeSelected = false,
+                    )
+                } else {
+                    false
+                }
 
                 val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
                 if (tryConfigureDecoder(dvDecoder, attemptFormat, false)) {
-                    LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name} (signaling=$label)")
+                    LimeLog.info(
+                        "Dolby Vision decoder routing active: ${dvDecoder.name} " +
+                            "(signaling=$label, lowLatencyExtensions=false)"
+                    )
                     return 0
                 }
 
@@ -1112,7 +1129,7 @@ class MediaCodecDecoderRenderer(
             }
 
             if (dolbyVisionRoutingActive) {
-                mimeType = "video/dolby-vision"
+                mimeType = DolbyVisionCodecPolicy.MIME_TYPE
                 selectedDecoderInfo = dolbyVisionDecoder!!
             } else {
                 mimeType = "video/hevc"
