@@ -820,8 +820,18 @@ class MediaCodecDecoderRenderer(
         hdr10PlusOutputObserver.restartCodecConfiguration()
         stableOutputFormatTracker.reset()
 
+        val configuredMimeType = format.getString(MediaFormat.KEY_MIME).orEmpty()
+
         // Set HDR metadata if present
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (!DolbyVisionCodecPolicy.shouldAttachHdrStaticInfo(configuredMimeType)) {
+            // Dolby Vision carries its own dynamic metadata. Supplying CTA-861.3
+            // HDR10 static metadata can route vendor codecs through the HDR10
+            // compositor instead of their terminal Dolby pipeline.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                format.removeKey(MediaFormat.KEY_HDR_STATIC_INFO)
+            }
+            LimeLog.info("Dolby Vision input: omitting HDR static metadata")
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             if (currentHdrMetadata != null) {
                 val hdrStaticInfo = ByteBuffer.allocate(25).order(ByteOrder.LITTLE_ENDIAN)
                 val hdrMetadata = ByteBuffer.wrap(currentHdrMetadata!!).order(ByteOrder.LITTLE_ENDIAN)
@@ -900,7 +910,6 @@ class MediaCodecDecoderRenderer(
         // Set DataSpace on the output Surface for ordinary HDR content.
         // Dolby Vision's terminal decoder/compositor owns its output dataspace;
         // overriding it with the HDR10 PQ dataspace can make queueBuffer fail.
-        val configuredMimeType = format.getString(MediaFormat.KEY_MIME).orEmpty()
         hdrDataSpace = 0
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
             (getActiveVideoFormat() and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
@@ -1015,14 +1024,25 @@ class MediaCodecDecoderRenderer(
         //  2. color-mode vendor key alone.
         //  3. Plain Annex-B (approach 1): decodes, but devices that need the
         //     signaling above present the compatibility BL as HDR10.
-        // The dvcC payload describes exactly what our RPU carries: profile 8,
-        // level 30, rpu_present=1, el_present=0, bl_present=1, compat id 1.
-        val dvcC = ByteBuffer.wrap(
-            byteArrayOf(0x01, 0x00, 0x10, 0xF5.toByte(), 0x10))
+        // Android keeps the 24-byte Dolby Vision configuration record separate
+        // from HEVC CSD in csd-2. Pick the smallest valid level that covers the
+        // actual stream instead of advertising the old invalid fixed level 30.
+        val signalLevel = DolbyVisionCodecPolicy.selectSignalLevel(
+            initialWidth,
+            initialHeight,
+            if (refreshRate > 0) refreshRate else prefs.fps,
+        )
+        val dvConfigurationRecord =
+            DolbyVisionCodecPolicy.buildProfile81ConfigurationRecord(signalLevel)
+        LimeLog.info(
+            "Dolby Vision signal: ${signalLevel.label} " +
+                "(recordLevel=${signalLevel.recordValue}, codecLevel=${signalLevel.codecValue}, " +
+                "csd-2=${dvConfigurationRecord.size} bytes)"
+        )
         val colorModeKey = "feature-oplus-dolby-vision-color-mode"
         val attempts: List<Pair<String, (MediaFormat) -> Unit>> = listOf(
-            "dvcC+colorMode" to { f ->
-                f.setByteBuffer("csd-0", dvcC)
+            "dvvC+colorMode" to { f ->
+                f.setByteBuffer("csd-2", ByteBuffer.wrap(dvConfigurationRecord.copyOf()))
                 f.setInteger(colorModeKey, 1)
             },
             "colorMode" to { f -> f.setInteger(colorModeKey, 1) },
@@ -1036,6 +1056,7 @@ class MediaCodecDecoderRenderer(
 
                 val attemptFormat = createBaseMediaFormat(mimeType)
                 attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
+                attemptFormat.setInteger(MediaFormat.KEY_LEVEL, signalLevel.codecValue)
                 applyExtras(attemptFormat)
 
                 // The native Dolby pipeline may require buffer metadata and
