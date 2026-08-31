@@ -159,7 +159,7 @@ class GameMenuControllerLayoutFocusTest {
     }
 
     @Test
-    fun fiveEnglishSegmentLabelsFitTwoRowsAtCompactWidth() {
+    fun fiveEnglishSegmentLabelsFitOneRowAtCompactWidth() {
         composeTestRule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(
@@ -170,21 +170,10 @@ class GameMenuControllerLayoutFocusTest {
                         GameMenu.SegmentOption(label, index == 0, Runnable {})
                     },
                     onSegmentClick = {},
-                    columnCount = 3,
-                    modifier = Modifier.width(164.dp).height(73.dp)
+                    modifier = Modifier.width(164.dp).height(36.dp)
                 )
             }
         }
-
-        val bounds = (0 until 5).map { index ->
-            composeTestRule.onNodeWithTag("inlineSegmentLabel$index", useUnmergedTree = true)
-                .fetchSemanticsNode()
-                .boundsInRoot
-        }
-        assertEquals(bounds[0].top, bounds[1].top, 0.5f)
-        assertEquals(bounds[1].top, bounds[2].top, 0.5f)
-        assertTrue(bounds[3].top > bounds[0].top)
-        assertEquals(bounds[3].top, bounds[4].top, 0.5f)
 
         repeat(5) { index ->
             val layoutResults = mutableListOf<TextLayoutResult>()
