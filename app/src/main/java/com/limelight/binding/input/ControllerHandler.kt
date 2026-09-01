@@ -487,7 +487,8 @@ class ControllerHandler(
         val previousContext = inputDeviceContexts.get(deviceId)
         registerRumbleContextIfNeeded(deviceId)
         val context = inputDeviceContexts.get(deviceId)
-        if (previousContext == null && context != null) {
+        val likelyController0 = !prefConfig.multiController || currentControllers.toInt() == 0
+        if (previousContext == null && context != null && likelyController0) {
             gyroManager.onControllerSourceChanged(context.controllerNumber)
             gyroManager.onSensorsReenabled()
         }
