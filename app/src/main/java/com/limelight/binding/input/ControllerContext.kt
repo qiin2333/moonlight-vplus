@@ -45,6 +45,7 @@ open class GenericControllerContext(
     var reservedControllerNumber: Boolean = false
     internal val controllerArrival = ControllerArrivalTracker()
     var controllerNumber: Short = 0
+    @Volatile var controllerGyroRoutingParticipated: Boolean = false
 
     var inputMap: Int = 0
     internal val performanceOverlayShortcutState = ControllerButtonChordState(
@@ -428,6 +429,7 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
             this.controllerArrival.markReported()
         }
         this.controllerNumber = oldContext.controllerNumber
+        this.controllerGyroRoutingParticipated = oldContext.controllerGyroRoutingParticipated
 
         // We may have set this device to use the built-in sensor manager. If so, do that again.
         if (oldContext.sensorManager === handler.deviceSensorManager) {

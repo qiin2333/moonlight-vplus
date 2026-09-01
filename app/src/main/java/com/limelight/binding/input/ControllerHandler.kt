@@ -513,8 +513,7 @@ class ControllerHandler(
     override fun onInputDeviceRemoved(deviceId: Int) {
         val context = inputDeviceContexts.get(deviceId)
         if (context != null) {
-            val wasController0 = context.assignedControllerNumber &&
-                context.controllerNumber.toInt() == 0
+            val wasController0GyroSource = contextWasController0GyroSource(context)
             mainThreadHandler.post {
                 (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(deviceId)
             }
@@ -522,7 +521,7 @@ class ControllerHandler(
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
-            if (wasController0) {
+            if (wasController0GyroSource) {
                 gyroManager.onControllerSourceChanged(context.controllerNumber)
                 gyroManager.onSensorsReenabled()
             }
@@ -538,6 +537,7 @@ class ControllerHandler(
 
         // If we don't have a context for this device, we don't need to update anything
         val existingContext = inputDeviceContexts.get(deviceId) ?: return
+        val wasController0GyroSource = contextWasController0GyroSource(existingContext)
 
         LimeLog.info("Device changed: " + existingContext.name + " (" + deviceId + ")")
 
@@ -545,7 +545,7 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         newContext.migrateContext(existingContext)
         inputDeviceContexts.put(deviceId, newContext)
-        if (newContext.assignedControllerNumber && newContext.controllerNumber.toInt() == 0) {
+        if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
             gyroManager.onControllerSourceChanged(newContext.controllerNumber)
             gyroManager.onSensorsReenabled()
         }
@@ -790,6 +790,10 @@ class ControllerHandler(
         }
     }
 
+    private fun contextWasController0GyroSource(context: GenericControllerContext): Boolean =
+        context.controllerNumber.toInt() == 0 &&
+            (context.assignedControllerNumber || context.controllerGyroRoutingParticipated)
+
     private fun isAssociatedJoystick(originalDevice: InputDevice?, possibleAssociatedJoystick: InputDevice?): Boolean {
         if (possibleAssociatedJoystick == null) {
             return false
@@ -821,6 +825,8 @@ class ControllerHandler(
         if (context.assignedControllerNumber) {
             return false
         }
+        val wasUnassignedController0GyroSource =
+            context.controllerNumber.toInt() == 0 && context.controllerGyroRoutingParticipated
 
         if (context is InputDeviceContext) {
             LimeLog.info(context.name + " (" + context.id + ") needs a controller number assigned")
@@ -924,6 +930,10 @@ class ControllerHandler(
                 LimeLog.info("Physical controller connected, released defaultContext gyro")
             }
             gyroManager.onControllerSourceChanged(context.controllerNumber)
+            gyroManager.onSensorsReenabled()
+        } else if (wasUnassignedController0GyroSource) {
+            context.controllerGyroRoutingParticipated = false
+            gyroManager.onControllerSourceChanged(0.toShort())
             gyroManager.onSensorsReenabled()
         }
         hapticsCoordinator.refreshPrimaryController()
@@ -3081,8 +3091,7 @@ class ControllerHandler(
             driverControllerContexts.remove(controller.getControllerId())
         }
         if (context != null) {
-            val wasController0 = context.assignedControllerNumber &&
-                context.controllerNumber.toInt() == 0
+            val wasController0GyroSource = contextWasController0GyroSource(context)
             LimeLog.info("Removed controller: " + controller.getControllerId())
             mainThreadHandler.post {
                 (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(
@@ -3092,7 +3101,7 @@ class ControllerHandler(
             rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()
-            if (wasController0) {
+            if (wasController0GyroSource) {
                 gyroManager.onControllerSourceChanged(context.controllerNumber)
                 gyroManager.onSensorsReenabled()
             }
@@ -3124,6 +3133,9 @@ class ControllerHandler(
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+            if (context.controllerNumber.toInt() == 0) {
+                context.controllerGyroRoutingParticipated = true
+            }
             gyroManager.onControllerGyroSample(
                 x,
                 y,
@@ -3307,6 +3319,9 @@ class ControllerHandler(
                         // Enable the gyroscope if requested
                         val gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
                         if (reportRateHz.toInt() != 0 && gyroSensor != null) {
+                            if (controllerNumber.toInt() == 0) {
+                                deviceContext.controllerGyroRoutingParticipated = true
+                            }
                             deviceContext.gyroListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
                             sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / reportRateHz)
                         }
