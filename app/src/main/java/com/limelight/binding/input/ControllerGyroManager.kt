@@ -32,9 +32,9 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     private var virtualControllerGyroSuspendCallback: Runnable? = null
     private var virtualControllerGyroResumeCallback: Runnable? = null
     private val controllerGyroLivenessTracker = ControllerGyroLivenessTracker()
+    private val controllerGyroDemand = ControllerGyroDemandState()
     @Volatile private var controllerGyroUsesDeviceFallback = false
     @Volatile private var controllerGyroSourceGeneration = 0L
-    @Volatile private var controllerGyroHostReportRateHz: Short = 0
 
     fun setVirtualControllerGyroCallbacks(suspend: Runnable?, resume: Runnable?) {
         virtualControllerGyroSuspendCallback = suspend
@@ -145,6 +145,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         if (enabled) {
             // 互斥：关闭鼠标模式
             handler.prefConfig.gyroToMouse = false
+            updateAssistantDemand()
             gyroMouseRemainX = 0f
             gyroMouseRemainY = 0f
             gyroMouseLastTimestamp = 0
@@ -152,6 +153,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
             recomputeGyroHoldForAllContexts()
         } else {
+            updateAssistantDemand()
             registerRightStickGyro(false)
             clearAllGyroStates()
         }
@@ -174,13 +176,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             .firstOrNull { it.controllerNumber.toInt() == 0 }
 
         if (!enable) {
-            handler.handleSetMotionEventState(
-                0.toShort(),
-                MoonBridge.LI_MOTION_TYPE_GYRO,
-                0.toShort(),
-                fromGyroAssistant = true
-            )
-            registerDeviceGyroForDefaultContext(false)
+            restoreHostGyroAfterAssistantDisabled()
             return
         }
 
@@ -212,7 +208,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             handler.handleSetMotionEventState(
                 0.toShort(),
                 MoonBridge.LI_MOTION_TYPE_GYRO,
-                120.toShort(),
+                controllerGyroDemand.effectiveReportRateHz,
                 fromGyroAssistant = true
             )
             return
@@ -301,13 +297,38 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     }
 
     private fun isControllerGyroFallbackAllowed(): Boolean =
-        handler.prefConfig.gyroToRightStick ||
-            handler.prefConfig.gyroToMouse ||
+        controllerGyroDemand.assistantEnabled ||
             (handler.prefConfig.gamepadMotionSensorsFallbackToDevice &&
-                controllerGyroHostReportRateHz.toInt() != 0)
+                controllerGyroDemand.hostReportRateHz.toInt() != 0)
 
     private fun effectiveDeviceFallbackReportRateHz(): Short =
-        controllerGyroHostReportRateHz.takeIf { it.toInt() != 0 } ?: 120.toShort()
+        controllerGyroDemand.effectiveReportRateHz
+
+    private fun updateAssistantDemand() {
+        controllerGyroDemand.updateAssistantEnabled(
+            handler.prefConfig.gyroToRightStick || handler.prefConfig.gyroToMouse
+        )
+    }
+
+    private fun restoreHostGyroAfterAssistantDisabled() {
+        val hostReportRateHz = controllerGyroDemand.hostReportRateHz
+        if (controllerGyroUsesDeviceFallback) {
+            registerDeviceGyroForDefaultContext(
+                enable = hostReportRateHz.toInt() != 0,
+                allowWhenControllerPresent = true,
+                reportRateHz = controllerGyroDemand.effectiveReportRateHz
+            )
+            return
+        }
+
+        registerDeviceGyroForDefaultContext(false)
+        handler.handleSetMotionEventState(
+            0.toShort(),
+            MoonBridge.LI_MOTION_TYPE_GYRO,
+            hostReportRateHz,
+            fromGyroAssistant = true
+        )
+    }
 
     private fun invalidatePendingControllerGyroFallback() {
         controllerGyroSourceGeneration++
@@ -325,7 +346,6 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
         invalidatePendingControllerGyroFallback()
         controllerGyroUsesDeviceFallback = false
-        controllerGyroHostReportRateHz = 0
     }
 
     /** Route later host enable/disable requests away from a known phantom sensor. */
@@ -336,28 +356,55 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     ): Boolean {
         if (controllerNumber.toInt() != 0) return false
         if (isHostRequest) {
-            controllerGyroHostReportRateHz = reportRateHz
+            controllerGyroDemand.updateHostReportRate(reportRateHz)
         }
         if (!isUsingDeviceGyroFallback(controllerNumber)) return false
 
-        val assistantEnabled = handler.prefConfig.gyroToRightStick || handler.prefConfig.gyroToMouse
         val effectiveReportRateHz = effectiveDeviceFallbackReportRateHz()
         registerDeviceGyroForDefaultContext(
-            enable = assistantEnabled || controllerGyroHostReportRateHz.toInt() != 0,
+            enable = controllerGyroDemand.shouldSample,
             allowWhenControllerPresent = true,
             reportRateHz = effectiveReportRateHz
         )
         return true
     }
 
+    /**
+     * Combine independent host and assistant demand into the rate used by the
+     * physical listener. Controller contexts store this effective sampling rate,
+     * while [controllerGyroDemand] remains the source of truth for host demand.
+     */
+    fun effectiveControllerGyroReportRate(
+        controllerNumber: Short,
+        requestedReportRateHz: Short
+    ): Short {
+        if (controllerNumber.toInt() != 0) return requestedReportRateHz
+        return if (controllerGyroDemand.shouldSample) {
+            controllerGyroDemand.effectiveReportRateHz
+        } else {
+            0
+        }
+    }
+
     // 在系统重新启用传感器时，检查并恢复陀螺仪功能
     fun onSensorsReenabled() {
         if (handler.prefConfig.gyroToMouse) {
             LimeLog.info("Sensors re-enabled, restoring gyro-to-mouse")
-            registerDeviceGyroForDefaultContext(true)
+            registerDeviceGyroForDefaultContext(
+                enable = true,
+                reportRateHz = controllerGyroDemand.effectiveReportRateHz
+            )
         } else if (handler.prefConfig.gyroToRightStick) {
             LimeLog.info("Sensors re-enabled, restoring gyro-to-right-stick")
             registerRightStickGyro(true)
+        } else if (controllerGyroDemand.hostReportRateHz.toInt() != 0) {
+            LimeLog.info("Sensors re-enabled, restoring host gyroscope request")
+            handler.handleSetMotionEventState(
+                0.toShort(),
+                MoonBridge.LI_MOTION_TYPE_GYRO,
+                controllerGyroDemand.hostReportRateHz,
+                fromGyroAssistant = true
+            )
         }
     }
 
@@ -444,6 +491,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         if (enabled) {
             // 互斥：关闭右摇杆模式
             handler.prefConfig.gyroToRightStick = false
+            updateAssistantDemand()
             // 重置累加器
             gyroMouseRemainX = 0f
             gyroMouseRemainY = 0f
@@ -451,14 +499,18 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             // 暂停 VirtualController 自己的传感器监听，避免与 defaultContext 双重注册
             virtualControllerGyroSuspendCallback?.run()
             // Keep the existing gyro-to-mouse source selection behavior.
-            registerDeviceGyroForDefaultContext(true)
+            registerDeviceGyroForDefaultContext(
+                enable = true,
+                reportRateHz = controllerGyroDemand.effectiveReportRateHz
+            )
             // 重新计算所有 context 的 hold 状态（含 ALWAYS 情况）
             recomputeGyroHoldForAllContexts()
         } else {
+            updateAssistantDemand()
             gyroMouseRemainX = 0f
             gyroMouseRemainY = 0f
             gyroMouseLastTimestamp = 0
-            registerDeviceGyroForDefaultContext(false)
+            restoreHostGyroAfterAssistantDisabled()
             clearAllGyroStates()
             // 恢复 VirtualController 自己的传感器监听
             virtualControllerGyroResumeCallback?.run()
@@ -734,9 +786,13 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                         return
                     }
 
-                    handler.conn.sendControllerMotionEvent(
-                        controllerNumber.toByte(), motionType, gx, gy, gz
-                    )
+                    if (controllerNumber.toInt() != 0 ||
+                        controllerGyroDemand.hostReportRateHz.toInt() != 0
+                    ) {
+                        handler.conn.sendControllerMotionEvent(
+                            controllerNumber.toByte(), motionType, gx, gy, gz
+                        )
+                    }
                 } else {
                     // Pass m/s^2 directly without conversion
                     handler.conn.sendControllerMotionEvent(
@@ -750,5 +806,11 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
+    }
+
+    fun onStreamStopped() {
+        invalidatePendingControllerGyroFallback()
+        controllerGyroUsesDeviceFallback = false
+        controllerGyroDemand.clear()
     }
 }

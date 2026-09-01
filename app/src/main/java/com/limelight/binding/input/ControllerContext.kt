@@ -236,7 +236,14 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
             handler.handleSetMotionEventState(controllerNumber, MoonBridge.LI_MOTION_TYPE_ACCEL, accelReportRateHz)
         }
         if (gyroReportRateHz.toInt() != 0 && gyroListener == null) {
-            handler.handleSetMotionEventState(controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, gyroReportRateHz)
+            // This replays an existing effective sampling rate. It is not a new host
+            // request and must not overwrite the separately tracked host demand.
+            handler.handleSetMotionEventState(
+                controllerNumber,
+                MoonBridge.LI_MOTION_TYPE_GYRO,
+                gyroReportRateHz,
+                fromGyroAssistant = true
+            )
         }
     }
 

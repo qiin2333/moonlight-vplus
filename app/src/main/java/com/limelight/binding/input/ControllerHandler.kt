@@ -586,6 +586,7 @@ class ControllerHandler(
             mainThreadHandler.post { gestures.hideStartHoldWheel() }
         }
 
+        gyroManager.onStreamStopped()
         // 清理 defaultContext 上可能注册的手机陀螺仪传感器
         gyroManager.registerDeviceGyroForDefaultContext(false)
         defaultContext.destroy()
@@ -3265,15 +3266,22 @@ class ControllerHandler(
             return
         }
 
-        @Suppress("NAME_SHADOWING")
         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
-        val reportRateHz = Math.min(200, reportRateHz.toInt()).toShort()
+        val requestedReportRateHz = Math.min(200, reportRateHz.toInt()).toShort()
         val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
             gyroManager.handleControllerGyroReportRate(
                 controllerNumber,
-                reportRateHz,
+                requestedReportRateHz,
                 isHostRequest = !fromGyroAssistant
             )
+        val effectiveReportRateHz = if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+            gyroManager.effectiveControllerGyroReportRate(
+                controllerNumber,
+                requestedReportRateHz
+            )
+        } else {
+            requestedReportRateHz
+        }
 
         for (i in 0 until inputDeviceContexts.size()) {
             val deviceContext = inputDeviceContexts.valueAt(i)
@@ -3284,8 +3292,8 @@ class ControllerHandler(
                 // sensors disappear and reappear. By storing the desired report rate, we can
                 // reapply the desired motion sensor configuration after they reappear.
                 when (motionType) {
-                    MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = reportRateHz
-                    MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = reportRateHz
+                    MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = effectiveReportRateHz
+                    MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = effectiveReportRateHz
                 }
 
                 if (fallbackHandled) {
@@ -3305,9 +3313,9 @@ class ControllerHandler(
 
                         // Enable the accelerometer if requested
                         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        if (reportRateHz.toInt() != 0 && accelSensor != null) {
+                        if (effectiveReportRateHz.toInt() != 0 && accelSensor != null) {
                             deviceContext.accelListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
-                            sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / reportRateHz)
+                            sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / effectiveReportRateHz)
                         }
                     }
                     MoonBridge.LI_MOTION_TYPE_GYRO -> {
@@ -3318,12 +3326,12 @@ class ControllerHandler(
 
                         // Enable the gyroscope if requested
                         val gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                        if (reportRateHz.toInt() != 0 && gyroSensor != null) {
+                        if (effectiveReportRateHz.toInt() != 0 && gyroSensor != null) {
                             if (controllerNumber.toInt() == 0) {
                                 deviceContext.controllerGyroRoutingParticipated = true
                             }
                             deviceContext.gyroListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
-                            sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / reportRateHz)
+                            sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / effectiveReportRateHz)
                         }
                     }
                 }
