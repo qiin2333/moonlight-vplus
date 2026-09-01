@@ -663,7 +663,7 @@
     <string name="title_enable_hdr_high_brightness">HDR 使用螢幕最高亮度</string>
     <string name="summary_enable_hdr_high_brightness">HDR 串流期間把本機螢幕設為最高亮度，這會增加耗電與發熱。</string>
     <string name="title_hdr_mode">HDR 格式</string>
-    <string name="summary_hdr_mode">選擇 HDR10（PQ）、HDR10+、HLG 或 Dolby Vision 8.1（實驗性）。使用 HDR10+ 前需在 Sunshine 開啟動態中繼資料分析。</string>
+    <string name="summary_hdr_mode">選擇 HDR10（PQ）、HDR10+、HLG、Dolby Vision 8.1（實驗性）或 Dolby Vision 8.4 HLG（選 8.1 無畫面時）。使用 HDR10+ 前需在 Sunshine 開啟動態中繼資料分析。</string>
     <string name="title_perf_overlay_orientation">效能統計版面</string>
     <string name="summary_perf_overlay_orientation">選擇橫向單列或縱向單欄。</string>
     <string name="title_perf_overlay_position">效能統計位置</string>
@@ -842,7 +842,8 @@
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需要動態中繼資料分析）</string>
     <string name="hdr_mode_hlg">HLG（混合對數伽瑪）</string>
-    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（實驗性）</string>
+    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（絕大多數設備，優先選擇）</string>
+    <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG（選 8.1 無畫面時）</string>
     <string name="mic_menu_action_show_button">顯示或隱藏懸浮麥克風按鈕</string>
     <string name="mic_menu_action_toggle_microphone">直接切換麥克風</string>
     <string name="native_mouse_mode_preset_enhanced">分區直接觸控（觸控區 + 游標區）</string>

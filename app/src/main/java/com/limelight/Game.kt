@@ -804,6 +804,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                     intArrayOf(Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS)
                 MoonBridge.HDR_MODE_DOLBY_VISION ->
                     intArrayOf(Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION)
+                MoonBridge.HDR_MODE_DOLBY_VISION_84 ->
+                    intArrayOf(Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION)
                 MoonBridge.HDR_MODE_HDR10 -> intArrayOf(
                     // A mode advertising HDR10+ can also present the static HDR10 base layer.
                     Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS,
@@ -827,6 +829,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                     MoonBridge.HDR_MODE_HLG -> hdrTypeSupport.hasHlg
                     MoonBridge.HDR_MODE_HDR10_PLUS -> hdrTypeSupport.hasHdr10Plus
                     MoonBridge.HDR_MODE_DOLBY_VISION -> hdrTypeSupport.hasDolbyVision
+                    MoonBridge.HDR_MODE_DOLBY_VISION_84 -> hdrTypeSupport.hasDolbyVision
                     MoonBridge.HDR_MODE_HDR10 -> hdrTypeSupport.hasHdr10 || hdrTypeSupport.hasHdr10Plus
                     else -> false
                 }
@@ -835,6 +838,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                         MoonBridge.HDR_MODE_HLG -> "HLG"
                         MoonBridge.HDR_MODE_HDR10_PLUS -> "HDR10+"
                         MoonBridge.HDR_MODE_DOLBY_VISION -> "Dolby Vision"
+                        MoonBridge.HDR_MODE_DOLBY_VISION_84 -> "Dolby Vision (HLG)"
                         MoonBridge.HDR_MODE_HDR10 -> "HDR10"
                         else -> "HDR"
                     }
@@ -877,7 +881,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             framegenRequested = framegenRequested,
         )
         if (willStreamHdr &&
-            prefConfig.hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION &&
+            HdrModePolicy.isDolbyVisionMode(prefConfig.hdrMode) &&
             !dolbyVisionRequested
         ) {
             LimeLog.info(
@@ -920,14 +924,18 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
 
         val hevcHdrSupported = when {
-            prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ->
+            // DV 8.4 rides an HLG base layer: only Main10 decode support is
+            // required, exactly like the plain HLG selection.
+            prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ||
+                prefConfig.hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION_84 ->
                 decoderRenderer?.isHevcMain10Supported() == true
             hdr10PlusRequested ->
                 decoderRenderer?.isHevcHdr10PlusEligible() == true
             else -> decoderRenderer?.isHevcMain10Hdr10Supported() == true
         }
         val av1HdrSupported = when {
-            prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ->
+            prefConfig.hdrMode == MoonBridge.HDR_MODE_HLG ||
+                prefConfig.hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION_84 ->
                 decoderRenderer?.isAv1Main10Supported() == true
             hdr10PlusRequested ->
                 decoderRenderer?.isAv1Hdr10PlusEligible() == true
@@ -942,7 +950,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         if (willStreamHdr && !selectedCodecSupportsHdr) {
             willStreamHdr = false
             val requiredProfile = when (prefConfig.hdrMode) {
-                MoonBridge.HDR_MODE_HLG -> "Main10/HLG"
+                MoonBridge.HDR_MODE_HLG, MoonBridge.HDR_MODE_DOLBY_VISION_84 -> "Main10/HLG"
                 MoonBridge.HDR_MODE_HDR10_PLUS -> if (hdr10PlusRequested) "HDR10+" else "HDR10"
                 else -> "HDR10"
             }
@@ -1065,13 +1073,23 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 // just the DV bit so the host's fallback chain lands on plain
                 // HDR10, and an HDR10+ request reports the HDR10+ bit. Every
                 // other selection keeps the legacy no-attribute behavior.
-                if (dolbyVisionRequested) {
+                // The host negotiates 8.4 only for an 8.4-only report riding an
+                // HLG request, so the HLG-profile selection reports only that bit.
+                // willStreamHdr is re-checked because decoder validation above
+                // can clear it after these request flags were computed.
+                if (willStreamHdr && dolbyVisionRequested && HdrModePolicy.isDolbyVisionHlgMode(prefConfig.hdrMode)) {
+                    setDynamicHdrNegotiation(
+                        MoonBridge.DYNAMIC_HDR_CAPS_DOLBY_VISION_84,
+                        dolbyVisionDirectSurface = true,
+                        preference = MoonBridge.DYNAMIC_HDR_PREFERENCE_DOLBY_VISION,
+                    )
+                } else if (willStreamHdr && dolbyVisionRequested) {
                     setDynamicHdrNegotiation(
                         MoonBridge.DYNAMIC_HDR_CAPS_DOLBY_VISION_81,
                         dolbyVisionDirectSurface = true,
                         preference = MoonBridge.DYNAMIC_HDR_PREFERENCE_DOLBY_VISION,
                     )
-                } else if (hdr10PlusRequested) {
+                } else if (willStreamHdr && hdr10PlusRequested) {
                     setDynamicHdrNegotiation(
                         MoonBridge.DYNAMIC_HDR_CAPS_HDR10_PLUS,
                         dolbyVisionDirectSurface = false,

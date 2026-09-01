@@ -116,6 +116,21 @@ class StreamHdrFormatPolicyTest {
         )
     }
 
+    @Test
+    fun dolbyVisionHlgWinsOverThePlainHlgLabel() {
+        // A Profile 8.4 session is negotiated on an HLG base layer; without
+        // the explicit negotiation check the HLG branch would claim it.
+        assertEquals(
+            StreamHdrFormat.DOLBY_VISION,
+            resolve(isPqHdr = false, isHlg = true, dolbyVisionNegotiatedHlg = true),
+        )
+        // Plain HLG sessions stay HLG.
+        assertEquals(
+            StreamHdrFormat.HLG,
+            resolve(isPqHdr = false, isHlg = true),
+        )
+    }
+
     private fun resolve(
         hdrEnabled: Boolean = true,
         hdrStateKnown: Boolean = true,
@@ -124,6 +139,8 @@ class StreamHdrFormatPolicyTest {
         isHlg: Boolean = false,
         configured: Boolean = false,
         observed: Boolean = false,
+        dolbyVisionNegotiated: Boolean = false,
+        dolbyVisionNegotiatedHlg: Boolean = false,
     ): StreamHdrFormat = StreamHdrFormatPolicy.resolve(
         hdrEnabled = hdrEnabled,
         hdrStateKnown = hdrStateKnown,
@@ -132,5 +149,7 @@ class StreamHdrFormatPolicyTest {
         isHlg = isHlg,
         hdr10PlusConfigured = configured,
         hdr10PlusMetadataObserved = observed,
+        dolbyVisionNegotiated = dolbyVisionNegotiated,
+        dolbyVisionNegotiatedHlg = dolbyVisionNegotiatedHlg,
     )
 }

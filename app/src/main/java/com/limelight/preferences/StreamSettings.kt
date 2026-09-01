@@ -3651,6 +3651,11 @@ class StreamSettings : AppCompatActivity() {
                         if (foundDolbyVision) {
                             entries += getString(R.string.hdr_mode_dolby_vision)
                             entryValues += "4"
+                            // 8.4 rides the HLG base layer into the same DV
+                            // display pipeline; availability is decoder- and
+                            // display-gated identically to 8.1.
+                            entries += getString(R.string.hdr_mode_dolby_vision_84)
+                            entryValues += "5"
                         }
 
                         hdrModePref.entries = entries.toTypedArray()
