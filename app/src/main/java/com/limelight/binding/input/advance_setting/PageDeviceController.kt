@@ -24,6 +24,7 @@ class PageDeviceController(
     private val keyboardDrawing: LinearLayout = devicePage.findViewById(R.id.keyboard_drawing)
     private val mouseDrawing: FrameLayout = devicePage.findViewById(R.id.mouse_drawing)
     private val gamepadDrawing: FrameLayout = devicePage.findViewById(R.id.gamepad_drawing)
+    private val keyboardPickerController: KeyboardKeyPickerController
     private var deviceCallBack: DeviceCallBack? = null
 
     init {
@@ -35,6 +36,13 @@ class PageDeviceController(
             }
         }
         setListenersForDevice(devicePage, onClickListener)
+        keyboardPickerController = KeyboardKeyPickerController(
+            root = keyboardDrawing,
+            onKeySelected = { key ->
+                deviceCallBack?.OnKeyClick(key)
+                close()
+            }
+        )
 
         devicePage.findViewById<View>(R.id.device_cancel).setOnClickListener {
             close()
@@ -46,12 +54,20 @@ class PageDeviceController(
         keyboardDrawing.visibility = keyboardVisible
         mouseDrawing.visibility = mouseVisible
         gamepadDrawing.visibility = gamepadVisible
+        if (keyboardVisible == View.VISIBLE) {
+            keyboardPickerController.showPage(
+                KeyboardKeyPickerController.Page.MAIN,
+                requestContentFocus = false
+            )
+            keyboardPickerController.requestInitialFocus()
+        }
         controllerManager.superPagesController?.openNewPage(devicePage)
     }
 
     private fun setListenersForDevice(viewGroup: ViewGroup, listener: View.OnClickListener) {
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
+            if (child === keyboardDrawing) continue
             // 只为带有tag的TextView设置监听器，这些是实际的按键
             if (child is TextView && child.tag != null) {
                 child.setOnClickListener(listener)

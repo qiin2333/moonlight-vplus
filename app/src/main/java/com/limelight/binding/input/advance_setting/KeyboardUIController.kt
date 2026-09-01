@@ -111,6 +111,7 @@ class KeyboardUIController(
         modifierStates.put(KEY_LALT, MOD_NEUTRAL)
         modifierStates.put(KEY_RALT, MOD_NEUTRAL)
         modifierStates.put(KEY_LWIN, MOD_NEUTRAL)
+        modifierStates.put(KEY_RWIN, MOD_NEUTRAL)
     }
 
     private fun initSeekbars() {
@@ -625,6 +626,7 @@ class KeyboardUIController(
         private const val KEY_LALT = 57
         private const val KEY_RALT = 58
         private const val KEY_LWIN = 117
+        private const val KEY_RWIN = 118
         private const val KEY_SPACE = 62
     }
 }

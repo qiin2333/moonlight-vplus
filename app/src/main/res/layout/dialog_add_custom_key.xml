@@ -149,11 +149,11 @@
                 android:layout_marginTop="4dp"
                 android:layout_marginBottom="16dp">
 
-                <!-- 使用 <include> 标签嵌入虚拟键盘 -->
+                <!-- 复用王冠和串流虚拟键盘的 Main / Nav / Num 键区 -->
                 <include
-                    layout="@layout/virtual_keyboard"
+                    layout="@layout/keyboard_key_picker"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="280dp" />
 
             </FrameLayout>
 

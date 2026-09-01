@@ -41,6 +41,13 @@ object KeyCodeMapper {
             displayNameMap[androidKeyCode] = fKey
         }
 
+        // --- 数字小键盘 (0-9) ---
+        for (i in 0 until 10) {
+            val androidKeyCode = KeyEvent.KEYCODE_NUMPAD_0 + i
+            windowsKeyMap[androidKeyCode] = String.format("0x%02X", 0x60 + i)
+            displayNameMap[androidKeyCode] = "Num $i"
+        }
+
         // --- 修饰键 ---
         addMapping(KeyEvent.KEYCODE_SHIFT_LEFT, "L-Shift", "0xA0")   // VK_LSHIFT
         addMapping(KeyEvent.KEYCODE_SHIFT_RIGHT, "R-Shift", "0xA1")  // VK_RSHIFT
@@ -51,6 +58,7 @@ object KeyCodeMapper {
         addMapping(KeyEvent.KEYCODE_META_LEFT, "L-Win", "0x5B")      // VK_LWIN
         addMapping(KeyEvent.KEYCODE_META_RIGHT, "R-Win", "0x5C")     // VK_RWIN
         addMapping(KeyEvent.KEYCODE_CAPS_LOCK, "Cap", "0x14")        // VK_CAPITAL
+        addMapping(KeyEvent.KEYCODE_MENU, "Menu", "0x5D")
 
         // --- 控制与导航键 ---
         addMapping(KeyEvent.KEYCODE_ESCAPE, "ESC", "0x1B")
@@ -68,6 +76,15 @@ object KeyCodeMapper {
         addMapping(KeyEvent.KEYCODE_DPAD_DOWN, "↓", "0x28")
         addMapping(KeyEvent.KEYCODE_INSERT, "Ins", "0x2D")
         addMapping(KeyEvent.KEYCODE_FORWARD_DEL, "Del", "0x2E") // Delete key
+        addMapping(KeyEvent.KEYCODE_SYSRQ, "PrtSc", "0x2C")
+        addMapping(KeyEvent.KEYCODE_SCROLL_LOCK, "ScrLk", "0x91")
+        addMapping(KeyEvent.KEYCODE_BREAK, "Pause", "0x13")
+        addMapping(KeyEvent.KEYCODE_NUM_LOCK, "Num Lock", "0x90")
+        addMapping(KeyEvent.KEYCODE_NUMPAD_DIVIDE, "Num /", "0x6F")
+        addMapping(KeyEvent.KEYCODE_NUMPAD_MULTIPLY, "Num *", "0x6A")
+        addMapping(KeyEvent.KEYCODE_NUMPAD_SUBTRACT, "Num -", "0x6D")
+        addMapping(KeyEvent.KEYCODE_NUMPAD_ADD, "Num +", "0x6B")
+        addMapping(KeyEvent.KEYCODE_NUMPAD_DOT, "Num .", "0x6E")
 
         // --- 标点符号 ---
         addMapping(KeyEvent.KEYCODE_GRAVE, "`", "0xC0")
