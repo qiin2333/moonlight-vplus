@@ -520,13 +520,11 @@ class ControllerHandler(
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
+            gyroManager.onControllerSourceChanged(context.controllerNumber)
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
 
-            // 如果陀螺仪鼠标模式开着，手柄断开后重新在 defaultContext 上注册手机传感器
-            if (prefConfig.gyroToMouse) {
-                gyroManager.registerDeviceGyroForDefaultContext(true)
-            }
+            gyroManager.onSensorsReenabled()
         }
     }
 
@@ -544,6 +542,8 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         newContext.migrateContext(existingContext)
         inputDeviceContexts.put(deviceId, newContext)
+        gyroManager.onControllerSourceChanged(newContext.controllerNumber)
+        gyroManager.onSensorsReenabled()
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(newContext.controllerNumber)
         hapticsCoordinator.clearControllerIfUnavailable(existingContext.controllerNumber)
@@ -1388,10 +1388,16 @@ class ControllerHandler(
         // 需要清理 defaultContext 上的手机传感器，避免双重输入。
         // Only unregister if this device is likely to become controller 0.
         // Internal devices and the first external controller will get controllerNumber=0.
-        val likelyController0 = !context.external || (prefConfig.multiController && currentControllers.toInt() == 0)
-        if (prefConfig.gyroToMouse && defaultContext.gyroListener != null && likelyController0) {
-            gyroManager.registerDeviceGyroForDefaultContext(false)
-            LimeLog.info("Physical controller connected, released defaultContext gyro")
+        val likelyController0 = !context.external ||
+            !prefConfig.multiController ||
+            currentControllers.toInt() == 0
+        if ((prefConfig.gyroToMouse || prefConfig.gyroToRightStick) && likelyController0) {
+            if (defaultContext.gyroListener != null) {
+                gyroManager.registerDeviceGyroForDefaultContext(false)
+                LimeLog.info("Physical controller connected, released defaultContext gyro")
+            }
+            gyroManager.onControllerSourceChanged(context.controllerNumber)
+            gyroManager.onSensorsReenabled()
         }
 
         return context
@@ -3085,8 +3091,10 @@ class ControllerHandler(
             rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()
+            gyroManager.onControllerSourceChanged(context.controllerNumber)
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
+            gyroManager.onSensorsReenabled()
         }
     }
 
@@ -3103,6 +3111,8 @@ class ControllerHandler(
             }
             driverControllerContexts[controller.getControllerId()] = context
         }
+        gyroManager.onControllerSourceChanged(context.controllerNumber)
+        gyroManager.onSensorsReenabled()
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
     }
@@ -3113,6 +3123,11 @@ class ControllerHandler(
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+            gyroManager.onControllerGyroSample(x, y, z, context.controllerNumber)
+            if (gyroManager.isUsingDeviceGyroFallback(context.controllerNumber)) {
+                return
+            }
+
             if (prefConfig.gyroToMouse && context.gyroHoldActive) {
                 // x=pitch(deg/s), y=roll, z=yaw → 横屏下 z→mouseX, x→mouseY，转回 rad/s
                 gyroManager.applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime())
@@ -3241,6 +3256,12 @@ class ControllerHandler(
                 when (motionType) {
                     MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = reportRateHz
                     MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = reportRateHz
+                }
+
+                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
+                    gyroManager.handleControllerGyroReportRate(controllerNumber, reportRateHz)
+                ) {
+                    break
                 }
 
                 backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
