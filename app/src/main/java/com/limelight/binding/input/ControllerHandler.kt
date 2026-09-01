@@ -484,7 +484,13 @@ class ControllerHandler(
     // ========== InputDeviceListener callbacks ==========
 
     override fun onInputDeviceAdded(deviceId: Int) {
+        val previousContext = inputDeviceContexts.get(deviceId)
         registerRumbleContextIfNeeded(deviceId)
+        val context = inputDeviceContexts.get(deviceId)
+        if (previousContext == null && context != null) {
+            gyroManager.onControllerSourceChanged(context.controllerNumber)
+            gyroManager.onSensorsReenabled()
+        }
         hapticsCoordinator.refreshPrimaryController()
     }
 
@@ -3123,7 +3129,13 @@ class ControllerHandler(
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
-            gyroManager.onControllerGyroSample(x, y, z, context.controllerNumber)
+            gyroManager.onControllerGyroSample(
+                x,
+                y,
+                z,
+                context.controllerNumber,
+                System.nanoTime()
+            )
             if (gyroManager.isUsingDeviceGyroFallback(context.controllerNumber)) {
                 return
             }
@@ -3236,7 +3248,12 @@ class ControllerHandler(
 
     // ========== Sensor Management ==========
 
-    fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
+    fun handleSetMotionEventState(
+        controllerNumber: Short,
+        motionType: Byte,
+        reportRateHz: Short,
+        fromGyroAssistant: Boolean = false
+    ) {
         if (stopped) {
             return
         }
@@ -3244,6 +3261,12 @@ class ControllerHandler(
         @Suppress("NAME_SHADOWING")
         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
         val reportRateHz = Math.min(200, reportRateHz.toInt()).toShort()
+        val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
+            gyroManager.handleControllerGyroReportRate(
+                controllerNumber,
+                reportRateHz,
+                isHostRequest = !fromGyroAssistant
+            )
 
         for (i in 0 until inputDeviceContexts.size()) {
             val deviceContext = inputDeviceContexts.valueAt(i)
@@ -3258,9 +3281,7 @@ class ControllerHandler(
                     MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = reportRateHz
                 }
 
-                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
-                    gyroManager.handleControllerGyroReportRate(controllerNumber, reportRateHz)
-                ) {
+                if (fallbackHandled) {
                     break
                 }
 
