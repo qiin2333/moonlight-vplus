@@ -165,6 +165,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             .asSequence()
             .map { handler.inputDeviceContexts.valueAt(it) }
             .firstOrNull { it.controllerNumber.toInt() == 0 }
+        val driverContext = handler.driverControllerContexts.values
+            .firstOrNull { it.controllerNumber.toInt() == 0 }
 
         if (!enable) {
             handler.handleSetMotionEventState(
@@ -177,12 +179,18 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
 
         if (controllerContext != null) {
-            // Switching from gyro-mouse can leave defaultContext registered. The
-            // physical controller context must be the sole source in this branch.
+            // Switching from gyro-mouse can leave defaultContext registered. Clear it
+            // before selecting either the controller gyro or the device fallback.
             registerDeviceGyroForDefaultContext(false)
-            if (controllerContext.sensorManager == null) {
-                controllerContext.sensorManager = handler.deviceSensorManager
-                LimeLog.info("Controller 0 has no sensor manager; using device gyroscope")
+            val controllerGyro = controllerContext.sensorManager
+                ?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+            if (controllerGyro == null) {
+                LimeLog.info("Controller 0 has no gyroscope; using device gyroscope")
+                registerDeviceGyroForDefaultContext(
+                    enable = true,
+                    allowWhenControllerPresent = true
+                )
+                return
             }
             handler.backgroundThreadHandler.removeCallbacks(controllerContext.enableSensorRunnable)
             handler.handleSetMotionEventState(
@@ -190,6 +198,21 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 MoonBridge.LI_MOTION_TYPE_GYRO,
                 120.toShort()
             )
+            return
+        }
+
+        if (driverContext != null) {
+            registerDeviceGyroForDefaultContext(false)
+            val hasDriverGyro = driverContext.device?.let {
+                (it.capabilities.toInt() and MoonBridge.LI_CCAP_GYRO.toInt()) != 0
+            } == true
+            if (!hasDriverGyro) {
+                LimeLog.info("Controller 0 driver has no gyroscope; using device gyroscope")
+                registerDeviceGyroForDefaultContext(
+                    enable = true,
+                    allowWhenControllerPresent = true
+                )
+            }
             return
         }
 
@@ -220,24 +243,30 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
      * handleSetMotionEventState 只遍历 inputDeviceContexts，defaultContext 不在其中，
      * 所以需要这个专用方法。
      *
-     * 注意：如果已有物理手柄（controllerNumber=0 的 InputDeviceContext 存在），
-     * 则不注册，避免与手柄自身的传感器路径冲突产生双重输入。
+     * 注意：通常如果已有物理手柄（controllerNumber=0 的 InputDeviceContext 存在），
+     * 则不注册，避免与手柄自身的传感器路径冲突产生双重输入。调用方确认手柄
+     * 没有陀螺仪时，可以显式允许设备传感器回退。
      */
-    fun registerDeviceGyroForDefaultContext(enable: Boolean) {
+    fun registerDeviceGyroForDefaultContext(
+        enable: Boolean,
+        allowWhenControllerPresent: Boolean = false
+    ) {
         if (enable) {
             // 如果已有物理手柄占据 controllerNumber=0，不在 defaultContext 上额外注册
             // 手柄的传感器由 handleSetMotionEventState 通过 inputDeviceContexts 管理
-            for (i in 0 until handler.inputDeviceContexts.size()) {
-                if (handler.inputDeviceContexts.valueAt(i).controllerNumber.toInt() == 0) {
-                    LimeLog.info("Physical controller present, skipping defaultContext gyro registration")
-                    return
+            if (!allowWhenControllerPresent) {
+                for (i in 0 until handler.inputDeviceContexts.size()) {
+                    if (handler.inputDeviceContexts.valueAt(i).controllerNumber.toInt() == 0) {
+                        LimeLog.info("Physical controller present, skipping defaultContext gyro registration")
+                        return
+                    }
                 }
-            }
-            // 同样检查 USB 手柄
-            for (context in handler.driverControllerContexts.values) {
-                if (context.controllerNumber.toInt() == 0) {
-                    LimeLog.info("USB controller present, skipping defaultContext gyro registration")
-                    return
+                // 同样检查 USB 手柄
+                for (context in handler.driverControllerContexts.values) {
+                    if (context.controllerNumber.toInt() == 0) {
+                        LimeLog.info("USB controller present, skipping defaultContext gyro registration")
+                        return
+                    }
                 }
             }
             if (handler.defaultContext.sensorManager == null) {
