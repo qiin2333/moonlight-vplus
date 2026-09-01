@@ -842,8 +842,8 @@
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需要動態中繼資料分析）</string>
     <string name="hdr_mode_hlg">HLG（混合對數伽瑪）</string>
-    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（實驗性）</string>
-    <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG（實驗性）</string>
+    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（絕大多數設備，優先選擇）</string>
+    <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG（選 8.1 無畫面時）</string>
     <string name="mic_menu_action_show_button">顯示或隱藏懸浮麥克風按鈕</string>
     <string name="mic_menu_action_toggle_microphone">直接切換麥克風</string>
     <string name="native_mouse_mode_preset_enhanced">分區直接觸控（觸控區 + 游標區）</string>
