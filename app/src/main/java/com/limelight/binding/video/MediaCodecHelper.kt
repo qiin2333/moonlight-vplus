@@ -277,12 +277,21 @@ object MediaCodecHelper {
         }
     }
 
+    private fun isGenericDolbyVisionDecoder(decoderName: String): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            decoderName.startsWith("c2.dolby.vision", ignoreCase = true)
+
     private fun isQualcommDecoder(decoderName: String): Boolean =
         isDecoderInList(qualcommDecoderPrefixes, decoderName) ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            (isGenericDolbyVisionDecoder(decoderName) &&
                 (Build.SOC_MANUFACTURER.equals("Qualcomm", ignoreCase = true) ||
-                    Build.SOC_MANUFACTURER.equals("QTI", ignoreCase = true)) &&
-                decoderName.startsWith("c2.dolby.vision", ignoreCase = true))
+                    Build.SOC_MANUFACTURER.equals("QTI", ignoreCase = true)))
+
+    private fun isMediaTekDecoder(decoderName: String): Boolean =
+        isDecoderInList(mtkDecoderPrefixes, decoderName) ||
+            (isGenericDolbyVisionDecoder(decoderName) &&
+                (Build.SOC_MANUFACTURER.equals("MediaTek", ignoreCase = true) ||
+                    Build.SOC_MANUFACTURER.equals("MTK", ignoreCase = true)))
 
     // ==================== Low Latency Capability Probing ====================
 
@@ -571,7 +580,7 @@ object MediaCodecHelper {
                     )
                     setNewOption = true
                 }
-                isDecoderInList(mtkDecoderPrefixes, decoderName) -> if (tryNumber < 4) {
+                isMediaTekDecoder(decoderName) -> if (tryNumber < 4) {
                     applyMtkVendorParams(videoFormat, tryNumber, allowMtkMaxOperatingRate)
                     setNewOption = true
                 }
