@@ -675,7 +675,7 @@
     <string name="summary_hdr_peak_brightness_nits">Higher values make Sunshine target a brighter HDR display. Reconnect the stream after changing this.</string>
     <string name="suffix_hdr_peak_brightness_nits">nits</string>
     <string name="title_hdr_mode">HDR format</string>
-    <string name="summary_hdr_mode">Choose HDR10 (PQ), HDR10+, HLG, or Dolby Vision 8.1 (experimental). HDR10+ requires Dynamic Metadata Analysis to be enabled in Sunshine.</string>
+    <string name="summary_hdr_mode">Choose HDR10 (PQ), HDR10+, HLG, Dolby Vision 8.1 (experimental), or Dolby Vision 8.4 HLG (use if 8.1 shows no picture). HDR10+ requires Dynamic Metadata Analysis to be enabled in Sunshine.</string>
     <string name="hdr_mode_hdr10">HDR10 (PQ)</string>
     <string name="hdr_mode_hdr10_plus">HDR10+ (requires Dynamic Metadata Analysis)</string>
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>

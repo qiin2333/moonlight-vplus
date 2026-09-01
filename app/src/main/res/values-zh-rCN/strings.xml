@@ -511,7 +511,7 @@
     <string name="summary_hdr_peak_brightness_nits">数值越高，Sunshine 会按更亮的 HDR 屏幕处理。修改后需要重新连接串流。</string>
     <string name="suffix_hdr_peak_brightness_nits">尼特</string>
     <string name="title_hdr_mode">HDR 格式</string>
-    <string name="summary_hdr_mode">选择 HDR10 (PQ)、HDR10+、HLG 或 Dolby Vision 8.1（实验性）。使用 HDR10+ 前需在 Sunshine 中开启“动态元数据分析”。</string>
+    <string name="summary_hdr_mode">选择 HDR10 (PQ)、HDR10+、HLG、Dolby Vision 8.1（实验性）或 Dolby Vision 8.4 HLG（选 8.1 无画面时）。使用 HDR10+ 前需在 Sunshine 中开启“动态元数据分析”。</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需开启动态元数据分析）</string>
     <string name="hdr_mode_hlg">HLG (混合对数伽马)</string>
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（绝大多数设备，优先选择）</string>
