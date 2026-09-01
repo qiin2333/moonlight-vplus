@@ -277,6 +277,13 @@ object MediaCodecHelper {
         }
     }
 
+    private fun isQualcommDecoder(decoderName: String): Boolean =
+        isDecoderInList(qualcommDecoderPrefixes, decoderName) ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                (Build.SOC_MANUFACTURER.equals("Qualcomm", ignoreCase = true) ||
+                    Build.SOC_MANUFACTURER.equals("QTI", ignoreCase = true)) &&
+                decoderName.startsWith("c2.dolby.vision", ignoreCase = true))
+
     // ==================== Low Latency Capability Probing ====================
 
     private fun decoderSupportsAndroidRLowLatency(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
@@ -330,7 +337,7 @@ object MediaCodecHelper {
         // Operate at maximum rate to lower latency on Qualcomm platforms.
         // Crashes on Snapdragon 765G (Adreno 620) and non-Qualcomm devices.
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-            (isDecoderInList(qualcommDecoderPrefixes, decoderName) || isSnapdragonGSeries) &&
+            (isQualcommDecoder(decoderName) || isSnapdragonGSeries) &&
             !isAdreno620
     }
 
@@ -556,7 +563,7 @@ object MediaCodecHelper {
             val decoderName = decoderInfo.name
 
             when {
-                isDecoderInList(qualcommDecoderPrefixes, decoderName) -> if (tryNumber < 5) {
+                isQualcommDecoder(decoderName) -> if (tryNumber < 5) {
                     applyQualcommVendorParams(
                         videoFormat,
                         tryNumber,

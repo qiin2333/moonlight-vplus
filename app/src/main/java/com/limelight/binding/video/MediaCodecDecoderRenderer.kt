@@ -59,6 +59,7 @@ class MediaCodecDecoderRenderer(
         @SuppressLint("InlinedApi")
         private const val DV_PROFILE_DVHE_ST =
             MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheSt
+        private const val DV_COLOR_MODE_KEY = "feature-oplus-dolby-vision-color-mode"
         // Each thread that touches the MediaCodec object or any associated buffers must have a flag
         // here and must call doCodecRecoveryIfRequired() on a regular basis.
         private const val CR_FLAG_INPUT_THREAD = 0x1
@@ -97,6 +98,8 @@ class MediaCodecDecoderRenderer(
     private val context: Context = activity
     private val activity: Activity = activity
     private var videoDecoder: MediaCodec? = null
+    @Volatile
+    private var dolbyVisionRoutingActive = false
     private var rendererThread: Thread? = null
     private var needsSpsBitstreamFixup = false
     private var isExynos4 = false
@@ -938,6 +941,7 @@ class MediaCodecDecoderRenderer(
         throwOnCodecError: Boolean
     ): Boolean {
         var configured = false
+        dolbyVisionRoutingActive = false
         try {
             videoDecoder = MediaCodec.createByCodecName(selectedDecoderInfo.name)
 
@@ -945,6 +949,10 @@ class MediaCodecDecoderRenderer(
             setupAsyncCallback()
 
             configureAndStartDecoder(format)
+            dolbyVisionRoutingActive =
+                isDolbyVisionMime(format.getString(MediaFormat.KEY_MIME)) &&
+                    format.containsKey(DV_COLOR_MODE_KEY) &&
+                    format.getInteger(DV_COLOR_MODE_KEY) == 1
             LimeLog.info("Using codec " + selectedDecoderInfo.name + " for hardware decoding " + format.getString(MediaFormat.KEY_MIME))
             configured = true
         } catch (e: IllegalArgumentException) {
@@ -971,6 +979,9 @@ class MediaCodecDecoderRenderer(
         return configured
     }
 
+    private fun isDolbyVisionMime(mimeType: String?): Boolean =
+        mimeType == "video/dolby-vision"
+
     /**
      * Whether this session should ride the HEVC base layer through the native
      * video/dolby-vision decoder: the host negotiated Dolby Vision Profile
@@ -980,9 +991,6 @@ class MediaCodecDecoderRenderer(
      * input, and DV requests were gated on framegen being off at connection
      * time.
      */
-    private fun isDolbyVisionRoutingActive(mimeType: String): Boolean =
-        mimeType == "video/dolby-vision"
-
     private fun isDolbyVisionRoutingEligible(): Boolean =
         dolbyVisionDecoder != null &&
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
@@ -1020,13 +1028,12 @@ class MediaCodecDecoderRenderer(
             MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84
         val dvcC = ByteBuffer.wrap(
             byteArrayOf(0x01, 0x00, 0x10, 0xF5.toByte(), if (dv84Negotiated) 0x40 else 0x10))
-        val colorModeKey = "feature-oplus-dolby-vision-color-mode"
         val attempts: List<Pair<String, (MediaFormat) -> Unit>> = listOf(
             "dvcC+colorMode" to { f ->
                 f.setByteBuffer("csd-0", dvcC)
-                f.setInteger(colorModeKey, 1)
+                f.setInteger(DV_COLOR_MODE_KEY, 1)
             },
-            "colorMode" to { f -> f.setInteger(colorModeKey, 1) },
+            "colorMode" to { f -> f.setInteger(DV_COLOR_MODE_KEY, 1) },
             "plain" to { },
         )
 
@@ -1049,7 +1056,8 @@ class MediaCodecDecoderRenderer(
 
                 val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
                 if (tryConfigureDecoder(dvDecoder, attemptFormat, false)) {
-                    LimeLog.info("Dolby Vision decoder routing active: ${dvDecoder.name} (signaling=$label)")
+                    LimeLog.info("Dolby Vision decoder configured: ${dvDecoder.name} " +
+                        "(signaling=$label, nativeMapping=$dolbyVisionRoutingActive)")
                     return 0
                 }
 
@@ -1066,6 +1074,7 @@ class MediaCodecDecoderRenderer(
     fun initializeDecoder(throwOnCodecError: Boolean): Int {
         val mimeType: String
         val selectedDecoderInfo: MediaCodecInfo
+        dolbyVisionRoutingActive = false
 
         if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
             mimeType = "video/avc"
@@ -1104,21 +1113,21 @@ class MediaCodecDecoderRenderer(
                 isExynos4, hevcDecoder != null, av1Decoder != null
             )
         } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-            // Dolby Vision Profile 8.1 routing: the wire stream is HEVC either
+            // Dolby Vision Profile 8 routing: the wire stream is HEVC either
             // way, but configuring the device's video/dolby-vision decoder lets
             // the terminal Dolby engine consume the RPU and perform the tone
             // mapping. Falls back to the plain HEVC decoder on any configure
             // failure — the base layer remains decodable.
-            var dolbyVisionRoutingActive = false
+            var dolbyVisionDecoderConfigured = false
             if (isDolbyVisionRoutingEligible()) {
                 if (initializeDolbyVisionDecoder() == 0) {
-                    dolbyVisionRoutingActive = true
+                    dolbyVisionDecoderConfigured = true
                 } else {
                     LimeLog.warning("Dolby Vision decoder configuration failed; falling back to HEVC")
                 }
             }
 
-            if (dolbyVisionRoutingActive) {
+            if (dolbyVisionDecoderConfigured) {
                 mimeType = "video/dolby-vision"
                 selectedDecoderInfo = dolbyVisionDecoder!!
             } else {
@@ -1148,7 +1157,7 @@ class MediaCodecDecoderRenderer(
         fusedIdrFrame = MediaCodecHelper.decoderSupportsFusedIdrFrame(selectedDecoderInfo, mimeType)
 
         var decoderConfigured = false
-        if (isDolbyVisionRoutingActive(mimeType)) {
+        if (isDolbyVisionMime(mimeType)) {
             // initializeDolbyVisionDecoder() already configured the codec; the
             // shared tail below still owns post-configure setup.
             decoderConfigured = true
@@ -1869,6 +1878,7 @@ class MediaCodecDecoderRenderer(
     }
 
     override fun cleanup() {
+        dolbyVisionRoutingActive = false
         if (videoDecoder != null) {
             try {
                 videoDecoder!!.release()
@@ -1890,6 +1900,19 @@ class MediaCodecDecoderRenderer(
         // The enabled flag is the authoritative stream HDR state. Static metadata may be absent
         // for HLG, NVIDIA GameStream, or a valid Sunshine HDR transition.
         hdr10PlusOutputObserver.onHostHdrMode(enabled)
+
+        // Dolby Vision mastering and mapping updates are carried in-band by the RPU.
+        // Restarting an active DV codec for generic HDR static metadata can leave some
+        // Qualcomm components with stale output-buffer IDs and a permanently black Surface.
+        if (dolbyVisionRoutingActive) {
+            // Keep the latest host metadata available if a later codec recovery must fall
+            // back to HEVC. With no host metadata, the existing default metadata path remains.
+            if (enabled && hdrMetadata != null) {
+                currentHdrMetadata = hdrMetadata
+            }
+            LimeLog.info("Dolby Vision HDR state updated without codec restart: enabled=$enabled")
+            return
+        }
 
         // HDR metadata is only supported in Android 7.0 and later, so don't bother
         // restarting the codec on anything earlier than that.
