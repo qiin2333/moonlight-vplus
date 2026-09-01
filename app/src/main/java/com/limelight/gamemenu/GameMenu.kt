@@ -50,6 +50,7 @@ import com.limelight.StreamActionExecutor
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.MenuAxisNavigationState
+import com.limelight.binding.input.advance_setting.KeyboardKeyPickerController
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
@@ -100,13 +101,6 @@ internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
         keyCode == KeyEvent.KEYCODE_BUTTON_A ||
         keyCode == KeyEvent.KEYCODE_TAB
-}
-
-internal fun nearestFocusIndex(sourceCenter: Int, targetCenters: List<Int>): Int {
-    require(targetCenters.isNotEmpty())
-    return targetCenters.indices.minBy { index ->
-        kotlin.math.abs(targetCenters[index] - sourceCenter)
-    }
 }
 
 internal fun resolveCustomKeyName(enteredName: String, selectedKeysName: String): String {
@@ -2045,7 +2039,32 @@ class GameMenu(
         }
 
         val keyboardDrawing = dialogView.findViewById<ViewGroup>(R.id.keyboard_drawing)
-        setupCompactKeyboardListeners(keyboardDrawing, keysDisplay)
+        val keyboardPickerController = KeyboardKeyPickerController(
+            root = keyboardDrawing,
+            onKeySelected = { key ->
+                val androidKeyCode = key.tag.toString().removePrefix("k")
+                val currentCodes = keysDisplay.tag.toString()
+                keysDisplay.tag = if (currentCodes.isEmpty()) {
+                    androidKeyCode
+                } else {
+                    "$currentCodes,$androidKeyCode"
+                }
+
+                val displayName = androidKeyCode.toIntOrNull()
+                    ?.let(KeyCodeMapper::getDisplayName)
+                    ?: key.text.toString()
+                val currentText = keysDisplay.text.toString()
+                keysDisplay.text = if (currentText.isEmpty()) {
+                    displayName
+                } else {
+                    "$currentText + $displayName"
+                }
+            },
+            externalViews = listOfNotNull(saveButton, closeButton, nameInput, clearButton),
+            editableView = nameInput,
+            isEditing = { nameEditing },
+            onEnterEditing = ::enterNameEditing
+        )
 
         // 保存按钮事件
         saveButton?.setOnClickListener {
@@ -2082,147 +2101,7 @@ class GameMenu(
         registerChildDialog(dialog)
         dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
-        setupCompactKeyboardControllerNavigation(
-            keyboardDrawing,
-            controlRows = listOf(
-                listOfNotNull(saveButton, closeButton),
-                listOfNotNull(nameInput, clearButton)
-            ),
-            editableView = nameInput,
-            isEditing = { nameEditing },
-            onEnterEditing = ::enterNameEditing
-        )
-    }
-
-    private fun setupCompactKeyboardListeners(parent: ViewGroup?, keysDisplay: TextView) {
-        if (parent == null) return
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            if (child is ViewGroup) {
-                setupCompactKeyboardListeners(child, keysDisplay)
-            } else if (child is TextView && child.tag != null) {
-                child.setOnClickListener { v ->
-                    val androidKeyCode = v.tag.toString()
-                    val currentTag = keysDisplay.tag.toString()
-
-                    val newTag = if (currentTag.isEmpty()) androidKeyCode else "$currentTag,$androidKeyCode"
-                    keysDisplay.tag = newTag
-
-                    val currentText = keysDisplay.text.toString()
-                    val displayName = KeyCodeMapper.getDisplayName(androidKeyCode.toInt())
-                    val newText = if (currentText.isEmpty()) displayName else "$currentText + $displayName"
-                    keysDisplay.text = newText
-                }
-            }
-        }
-    }
-
-    private fun setupCompactKeyboardControllerNavigation(
-        keyboard: ViewGroup?,
-        controlRows: List<List<View>>,
-        editableView: EditText? = null,
-        isEditing: () -> Boolean = { false },
-        onEnterEditing: () -> Unit = {}
-    ) {
-        if (keyboard == null) return
-        val keyboardRows = mutableListOf<List<View>>()
-        for (index in 0 until keyboard.childCount) {
-            val row = keyboard.getChildAt(index) as? ViewGroup ?: continue
-            val keys = mutableListOf<View>()
-            collectCompactKeyboardKeys(row, keys)
-            if (keys.isNotEmpty()) keyboardRows.add(keys)
-        }
-        if (keyboardRows.isEmpty()) return
-
-        val focusRows = buildList {
-            addAll(controlRows.filter { it.isNotEmpty() })
-            addAll(keyboardRows)
-        }
-        focusRows.flatten().forEach { view ->
-            if (view.id == View.NO_ID) view.id = View.generateViewId()
-            view.isFocusable = true
-            view.isFocusableInTouchMode = true
-        }
-
-        keyboard.post {
-            val laidOutRows = focusRows.map { row ->
-                row.sortedBy(::viewHorizontalCenterOnScreen)
-            }
-            laidOutRows.forEachIndexed { rowIndex, row ->
-                val upRow = laidOutRows[(rowIndex - 1 + laidOutRows.size) % laidOutRows.size]
-                val downRow = laidOutRows[(rowIndex + 1) % laidOutRows.size]
-                val upCenters = upRow.map(::viewHorizontalCenterOnScreen)
-                val downCenters = downRow.map(::viewHorizontalCenterOnScreen)
-                row.forEachIndexed { columnIndex, view ->
-                    val center = viewHorizontalCenterOnScreen(view)
-                    val leftTarget = row[(columnIndex - 1 + row.size) % row.size]
-                    val rightTarget = row[(columnIndex + 1) % row.size]
-                    val upTarget = upRow[nearestFocusIndex(center, upCenters)]
-                    val downTarget = downRow[nearestFocusIndex(center, downCenters)]
-                    view.nextFocusLeftId = leftTarget.id
-                    view.nextFocusRightId = rightTarget.id
-                    view.nextFocusUpId = upTarget.id
-                    view.nextFocusDownId = downTarget.id
-                    view.setOnKeyListener { _, keyCode, event ->
-                        if (view === editableView) {
-                            val confirmKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                                keyCode == KeyEvent.KEYCODE_ENTER ||
-                                keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
-                                keyCode == KeyEvent.KEYCODE_BUTTON_A
-                            if (confirmKey) {
-                                if (event.action == KeyEvent.ACTION_UP) onEnterEditing()
-                                return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
-                                    event.action == KeyEvent.ACTION_UP
-                            }
-                            if (isEditing()) {
-                                if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-                                    keyCode == KeyEvent.KEYCODE_DPAD_DOWN
-                                ) {
-                                    return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
-                                        event.action == KeyEvent.ACTION_UP
-                                }
-                                return@setOnKeyListener false
-                            }
-                        }
-                        val target = when (keyCode) {
-                            KeyEvent.KEYCODE_DPAD_LEFT -> leftTarget
-                            KeyEvent.KEYCODE_DPAD_RIGHT -> rightTarget
-                            KeyEvent.KEYCODE_DPAD_UP -> upTarget
-                            KeyEvent.KEYCODE_DPAD_DOWN -> downTarget
-                            else -> return@setOnKeyListener false
-                        }
-                        if (event.action == KeyEvent.ACTION_DOWN) {
-                            target.requestFocus()
-                        }
-                        event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
-                    }
-                }
-            }
-            val initialTarget = keyboardRows.first().first()
-            initialTarget.requestFocus()
-            keyboard.post {
-                if (laidOutRows.flatten().none(View::hasFocus)) {
-                    initialTarget.requestFocus()
-                }
-            }
-        }
-    }
-
-    private fun collectCompactKeyboardKeys(parent: ViewGroup, output: MutableList<View>) {
-        for (index in 0 until parent.childCount) {
-            val child = parent.getChildAt(index)
-            if (child is ViewGroup) {
-                collectCompactKeyboardKeys(child, output)
-            } else if (child is TextView && child.tag != null && child.visibility == View.VISIBLE) {
-                output.add(child)
-            }
-        }
-    }
-
-    private fun viewHorizontalCenterOnScreen(view: View): Int {
-        val location = IntArray(2)
-        view.getLocationOnScreen(location)
-        return location[0] + view.width / 2
+        keyboardPickerController.requestInitialFocus()
     }
 
     private fun showDeleteKeysDialog() {

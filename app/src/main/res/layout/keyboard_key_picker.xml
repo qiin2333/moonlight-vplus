@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/keyboard_drawing"
+    style="@style/VirtualKeyboardStyle"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:minHeight="220dp"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/keyboard_picker_tabs"
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/keyboard_picker_tab_main"
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/keyboard_picker_tab_selector"
+            android:contentDescription="@string/keyboard_picker_main_description"
+            android:text="@string/keyboard_picker_main" />
+
+        <TextView
+            android:id="@+id/keyboard_picker_tab_nav"
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/keyboard_picker_tab_selector"
+            android:contentDescription="@string/keyboard_picker_nav_description"
+            android:text="@string/keyboard_picker_nav" />
+
+        <TextView
+            android:id="@+id/keyboard_picker_tab_num"
+            style="@style/KeyboardKeyRefined.Modifier"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/keyboard_picker_tab_selector"
+            android:contentDescription="@string/keyboard_picker_num_description"
+            android:text="@string/keyboard_picker_num" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <include
+            android:id="@+id/keyboard_picker_main"
+            layout="@layout/layout_keyboard_main" />
+
+        <include
+            android:id="@+id/keyboard_picker_nav"
+            layout="@layout/layout_keyboard_nav"
+            android:visibility="gone" />
+
+        <include
+            android:id="@+id/keyboard_picker_num"
+            layout="@layout/layout_keyboard_numpad"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>

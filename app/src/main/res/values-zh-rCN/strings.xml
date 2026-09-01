@@ -1428,6 +1428,12 @@
 
     <!-- 缺失的翻译补全 -->
     <string name="dialog_virtual_keyboard_hint">点击按键来创建组合键</string>
+    <string name="keyboard_picker_main">主键区</string>
+    <string name="keyboard_picker_nav">功能与导航</string>
+    <string name="keyboard_picker_num">数字键盘</string>
+    <string name="keyboard_picker_main_description">主键盘按键</string>
+    <string name="keyboard_picker_nav_description">功能键和导航键</string>
+    <string name="keyboard_picker_num_description">数字小键盘</string>
     <string name="error_interrupted">操作已中断</string>
     <string name="float_ball_action_lock_screen">锁屏</string>
     <string name="float_ball_action_screenshot">截图</string>

@@ -1152,6 +1152,14 @@
     <string name="dialog_button_cancel">CANCEL</string>
     <string name="dialog_button_clear">CLEAR</string>
     <string name="dialog_virtual_keyboard_hint">Select keys to create a combination</string>
+    <string name="keyboard_picker_main">Main</string>
+    <string name="keyboard_picker_nav">Navigation</string>
+    <string name="keyboard_picker_num">Numpad</string>
+    <string name="keyboard_picker_main_description">Main keyboard keys</string>
+    <string name="keyboard_picker_nav_description">Function and navigation keys</string>
+    <string name="keyboard_picker_num_description">Numeric keypad</string>
+    <string name="keyboard_key_right_win" translatable="false">R-Win</string>
+    <string name="keyboard_key_menu" translatable="false">Menu</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select Custom Keys to Delete</string>

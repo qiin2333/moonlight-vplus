@@ -174,12 +174,6 @@ class GameMenuKeyEventTest {
     }
 
     @Test
-    fun unevenKeyboardRowsChooseNearestHorizontalTarget() {
-        assertEquals(1, nearestFocusIndex(80, listOf(0, 100, 240)))
-        assertEquals(2, nearestFocusIndex(220, listOf(0, 100, 240)))
-    }
-
-    @Test
     fun controllerOnlyCustomKeyUsesSelectedCombinationAsName() {
         assertEquals("Ctrl + A", resolveCustomKeyName("", " Ctrl + A "))
         assertEquals("My shortcut", resolveCustomKeyName(" My shortcut ", "Ctrl + A"))
