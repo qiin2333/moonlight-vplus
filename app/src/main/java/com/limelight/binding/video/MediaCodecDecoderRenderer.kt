@@ -1030,7 +1030,10 @@ class MediaCodecDecoderRenderer(
         val signalLevel = DolbyVisionCodecPolicy.selectSignalLevel(
             initialWidth,
             initialHeight,
-            if (refreshRate > 0) refreshRate else prefs.fps,
+            // Dolby Vision level describes the encoded stream, not the panel's
+            // presentation rate. A high-refresh display (for example 165 Hz)
+            // must not promote a 60 FPS stream to the 8K60 fallback level.
+            prefs.fps,
         )
         val dvConfigurationRecord =
             DolbyVisionCodecPolicy.buildProfile81ConfigurationRecord(signalLevel)
