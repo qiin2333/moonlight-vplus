@@ -187,7 +187,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         if (controllerGyroUsesDeviceFallback) {
             registerDeviceGyroForDefaultContext(
                 enable = true,
-                allowWhenControllerPresent = true
+                allowWhenControllerPresent = true,
+                reportRateHz = effectiveDeviceFallbackReportRateHz()
             )
             return
         }
@@ -202,7 +203,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 LimeLog.info("Controller 0 has no gyroscope; using device gyroscope")
                 registerDeviceGyroForDefaultContext(
                     enable = true,
-                    allowWhenControllerPresent = true
+                    allowWhenControllerPresent = true,
+                    reportRateHz = effectiveDeviceFallbackReportRateHz()
                 )
                 return
             }
@@ -225,7 +227,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 LimeLog.info("Controller 0 driver has no gyroscope; using device gyroscope")
                 registerDeviceGyroForDefaultContext(
                     enable = true,
-                    allowWhenControllerPresent = true
+                    allowWhenControllerPresent = true,
+                    reportRateHz = effectiveDeviceFallbackReportRateHz()
                 )
             }
             return
@@ -238,7 +241,10 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             virtualControllerGyroResumeCallback?.run()
             LimeLog.info("Using VirtualController gyroscope for right-stick mode")
         } else {
-            registerDeviceGyroForDefaultContext(true)
+            registerDeviceGyroForDefaultContext(
+                enable = true,
+                reportRateHz = effectiveDeviceFallbackReportRateHz()
+            )
         }
     }
 
