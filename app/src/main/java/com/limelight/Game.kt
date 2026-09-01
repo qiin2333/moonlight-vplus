@@ -1298,7 +1298,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             micButton?.visibility = View.GONE
         }
         controllerHandler.enableSensors()
-        controllerHandler.onSensorsReenabled()
         UiHelper.notifyStreamExitingPiP(this)
     }
 
