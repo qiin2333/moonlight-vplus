@@ -680,6 +680,7 @@
     <string name="hdr_mode_hdr10_plus">HDR10+ (requires Dynamic Metadata Analysis)</string>
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (Experimental)</string>
+    <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG (Experimental)</string>
     <string name="title_full_range">Force full color range (Experimental)</string>
     <string name="summary_full_range">Requests full-range video from the host and decodes it as full range. Leave this off unless limited/full range mismatch makes the picture look washed out or crushes shadow and highlight detail. This is separate from HDR.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>

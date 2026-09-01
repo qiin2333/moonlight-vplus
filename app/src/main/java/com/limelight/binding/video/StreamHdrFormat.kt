@@ -32,6 +32,7 @@ internal object StreamHdrFormatPolicy {
         hdr10PlusConfigured: Boolean,
         hdr10PlusMetadataObserved: Boolean,
         dolbyVisionNegotiated: Boolean = false,
+        dolbyVisionNegotiatedHlg: Boolean = false,
     ): StreamHdrFormat {
         val observedHdr10Plus = isTenBitStream &&
             isPqHdr &&
@@ -44,6 +45,11 @@ internal object StreamHdrFormatPolicy {
 
         if (!effectiveHdrEnabled || !isTenBitStream) {
             return StreamHdrFormat.SDR
+        }
+        if (dolbyVisionNegotiatedHlg) {
+            // Profile 8.4 rides an HLG base layer; without this check the HLG
+            // branch below would mislabel the session as plain HLG.
+            return StreamHdrFormat.DOLBY_VISION
         }
         if (isHlg) {
             return StreamHdrFormat.HLG

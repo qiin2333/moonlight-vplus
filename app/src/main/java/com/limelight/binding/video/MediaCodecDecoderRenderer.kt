@@ -974,10 +974,11 @@ class MediaCodecDecoderRenderer(
     /**
      * Whether this session should ride the HEVC base layer through the native
      * video/dolby-vision decoder: the host negotiated Dolby Vision Profile
-     * 8.1, a DvheSt decoder was found, and the stream is 10-bit (the RPU only
-     * pairs with Main10). Direct-surface output is implicit: frame generation
-     * is already incompatible with HDR input, and DV requests were gated on
-     * framegen being off at connection time.
+     * 8.1 (PQ base) or 8.4 (HLG base), a DvheSt decoder was found, and the
+     * stream is 10-bit (the RPU only pairs with Main10). Direct-surface
+     * output is implicit: frame generation is already incompatible with HDR
+     * input, and DV requests were gated on framegen being off at connection
+     * time.
      */
     private fun isDolbyVisionRoutingActive(mimeType: String): Boolean =
         mimeType == "video/dolby-vision"
@@ -985,7 +986,8 @@ class MediaCodecDecoderRenderer(
     private fun isDolbyVisionRoutingEligible(): Boolean =
         dolbyVisionDecoder != null &&
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 &&
-            MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81
+            (MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81 ||
+                MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84)
 
     private fun initializeDolbyVisionDecoder(): Int {
         val dvDecoder = dolbyVisionDecoder ?: return -1
@@ -2135,6 +2137,7 @@ class MediaCodecDecoderRenderer(
             performanceInfo.rttInfo = rttInfo
             performanceInfo.framesWithHostProcessingLatency = frameHostProcessingLatency.code
             val hdr10PlusRuntime = hdr10PlusOutputObserver.snapshot()
+            val negotiatedDynamicHdr = MoonBridge.getNegotiatedDynamicHdrFormat()
             performanceInfo.hdrFormat = StreamHdrFormatPolicy.resolve(
                 hdrEnabled = hdr10PlusRuntime.streamState == HdrStreamState.ENABLED,
                 hdrStateKnown = hdr10PlusRuntime.streamState != HdrStreamState.UNKNOWN,
@@ -2143,8 +2146,10 @@ class MediaCodecDecoderRenderer(
                 isHlg = prefs.hdrMode == MoonBridge.HDR_MODE_HLG,
                 hdr10PlusConfigured = hdr10PlusRuntime.configured,
                 hdr10PlusMetadataObserved = hdr10PlusRuntime.metadataObserved,
-                dolbyVisionNegotiated = MoonBridge.getNegotiatedDynamicHdrFormat() ==
+                dolbyVisionNegotiated = negotiatedDynamicHdr ==
                     MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81,
+                dolbyVisionNegotiatedHlg = negotiatedDynamicHdr ==
+                    MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84,
             )
             performanceInfo.minHostProcessingLatency = minHostProcessingLatency
             performanceInfo.maxHostProcessingLatency = maxHostProcessingLatency
