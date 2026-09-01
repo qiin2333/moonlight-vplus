@@ -242,7 +242,7 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
                 controllerNumber,
                 MoonBridge.LI_MOTION_TYPE_GYRO,
                 gyroReportRateHz,
-                fromGyroAssistant = true
+                isHostRequest = false
             )
         }
     }

@@ -3260,7 +3260,7 @@ class ControllerHandler(
         controllerNumber: Short,
         motionType: Byte,
         reportRateHz: Short,
-        fromGyroAssistant: Boolean = false
+        isHostRequest: Boolean = true
     ) {
         if (stopped) {
             return
@@ -3272,7 +3272,7 @@ class ControllerHandler(
             gyroManager.handleControllerGyroReportRate(
                 controllerNumber,
                 requestedReportRateHz,
-                isHostRequest = !fromGyroAssistant
+                isHostRequest = isHostRequest
             )
         val effectiveReportRateHz = if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
             gyroManager.effectiveControllerGyroReportRate(

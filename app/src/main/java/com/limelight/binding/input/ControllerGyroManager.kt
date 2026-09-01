@@ -209,7 +209,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 0.toShort(),
                 MoonBridge.LI_MOTION_TYPE_GYRO,
                 controllerGyroDemand.effectiveReportRateHz,
-                fromGyroAssistant = true
+                isHostRequest = false
             )
             return
         }
@@ -326,7 +326,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             0.toShort(),
             MoonBridge.LI_MOTION_TYPE_GYRO,
             hostReportRateHz,
-            fromGyroAssistant = true
+            isHostRequest = false
         )
     }
 
@@ -403,7 +403,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 0.toShort(),
                 MoonBridge.LI_MOTION_TYPE_GYRO,
                 controllerGyroDemand.hostReportRateHz,
-                fromGyroAssistant = true
+                isHostRequest = false
             )
         }
     }
