@@ -31,6 +31,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     // to avoid double-registration on the same sensor when mouse mode is active.
     private var virtualControllerGyroSuspendCallback: Runnable? = null
     private var virtualControllerGyroResumeCallback: Runnable? = null
+    private val controllerGyroLivenessTracker = ControllerGyroLivenessTracker()
+    @Volatile private var controllerGyroUsesDeviceFallback = false
 
     fun setVirtualControllerGyroCallbacks(suspend: Runnable?, resume: Runnable?) {
         virtualControllerGyroSuspendCallback = suspend
@@ -143,24 +145,24 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             gyroMouseRemainX = 0f
             gyroMouseRemainY = 0f
             gyroMouseLastTimestamp = 0
-            registerRightStickGyro(true)
+            registerGyroAssistant(enable = true, useVirtualController = true)
 
             recomputeGyroHoldForAllContexts()
         } else {
-            registerRightStickGyro(false)
+            registerGyroAssistant(enable = false, useVirtualController = true)
             clearAllGyroStates()
         }
     }
 
     /**
-     * Register the sensor source used by gyro-to-right-stick mode.
+     * Register the sensor source used by either gyro assistant mode.
      *
      * inputDeviceContexts is keyed by Android input device ID, not controller number,
      * so looking up key 0 does not find controller 0 on most devices. When there is no
      * Android InputDevice for controller 0, use the regular device SensorManager on
      * defaultContext (the same reliable path used by gyro-to-mouse mode).
      */
-    private fun registerRightStickGyro(enable: Boolean) {
+    private fun registerGyroAssistant(enable: Boolean, useVirtualController: Boolean) {
         val controllerContext = (0 until handler.inputDeviceContexts.size())
             .asSequence()
             .map { handler.inputDeviceContexts.valueAt(it) }
@@ -175,6 +177,14 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 0.toShort()
             )
             registerDeviceGyroForDefaultContext(false)
+            return
+        }
+
+        if (controllerGyroUsesDeviceFallback) {
+            registerDeviceGyroForDefaultContext(
+                enable = true,
+                allowWhenControllerPresent = true
+            )
             return
         }
 
@@ -218,7 +228,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
         // VirtualController owns its own listener when the on-screen controller is enabled.
         // Otherwise defaultContext is the only controller-0 target available to this mode.
-        if (handler.prefConfig.onscreenController) {
+        if (handler.prefConfig.onscreenController && useVirtualController) {
             registerDeviceGyroForDefaultContext(false)
             virtualControllerGyroResumeCallback?.run()
             LimeLog.info("Using VirtualController gyroscope for right-stick mode")
@@ -227,14 +237,84 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
     }
 
+    /**
+     * Observe physical-controller gyro samples before they are routed to an assistant
+     * or forwarded to the host. This is shared by Android sensors and custom drivers.
+     */
+    fun onControllerGyroSample(x: Float, y: Float, z: Float, controllerNumber: Short) {
+        if (controllerNumber.toInt() != 0 || controllerGyroUsesDeviceFallback) return
+        if (!handler.prefConfig.gyroToRightStick &&
+            !handler.prefConfig.gyroToMouse &&
+            !handler.prefConfig.gamepadMotionSensorsFallbackToDevice
+        ) {
+            return
+        }
+
+        if (!controllerGyroLivenessTracker.onSample(x, y, z)) {
+            return
+        }
+
+        handler.mainThreadHandler.post {
+            if (controllerGyroUsesDeviceFallback) {
+                return@post
+            }
+
+            LimeLog.warning(
+                "Controller 0 gyroscope is reporting only zero samples; using device gyroscope"
+            )
+            controllerGyroUsesDeviceFallback = true
+
+            // Stop every Android InputDevice listener for controller 0 without
+            // clearing the host-requested rate stored on its context.
+            for (i in 0 until handler.inputDeviceContexts.size()) {
+                val context = handler.inputDeviceContexts.valueAt(i)
+                if (context.controllerNumber.toInt() != 0) continue
+                context.gyroListener?.let { listener ->
+                    context.sensorManager?.unregisterListener(listener)
+                    context.gyroListener = null
+                }
+            }
+
+            registerDeviceGyroForDefaultContext(
+                enable = true,
+                allowWhenControllerPresent = true
+            )
+        }
+    }
+
+    fun isUsingDeviceGyroFallback(controllerNumber: Short): Boolean =
+        controllerNumber.toInt() == 0 && controllerGyroUsesDeviceFallback
+
+    fun onControllerSourceChanged(controllerNumber: Short) {
+        if (controllerNumber.toInt() != 0) return
+
+        if (controllerGyroUsesDeviceFallback) {
+            registerDeviceGyroForDefaultContext(false)
+        }
+        controllerGyroLivenessTracker.reset()
+        controllerGyroUsesDeviceFallback = false
+    }
+
+    /** Route later host enable/disable requests away from a known phantom sensor. */
+    fun handleControllerGyroReportRate(controllerNumber: Short, reportRateHz: Short): Boolean {
+        if (!isUsingDeviceGyroFallback(controllerNumber)) return false
+
+        val assistantEnabled = handler.prefConfig.gyroToRightStick || handler.prefConfig.gyroToMouse
+        registerDeviceGyroForDefaultContext(
+            enable = assistantEnabled || reportRateHz.toInt() != 0,
+            allowWhenControllerPresent = true
+        )
+        return true
+    }
+
     // 在系统重新启用传感器时，检查并恢复陀螺仪功能
     fun onSensorsReenabled() {
         if (handler.prefConfig.gyroToMouse) {
             LimeLog.info("Sensors re-enabled, restoring gyro-to-mouse")
-            registerDeviceGyroForDefaultContext(true)
+            registerGyroAssistant(enable = true, useVirtualController = false)
         } else if (handler.prefConfig.gyroToRightStick) {
             LimeLog.info("Sensors re-enabled, restoring gyro-to-right-stick")
-            registerRightStickGyro(true)
+            registerGyroAssistant(enable = true, useVirtualController = true)
         }
     }
 
@@ -325,15 +405,15 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             gyroMouseLastTimestamp = 0
             // 暂停 VirtualController 自己的传感器监听，避免与 defaultContext 双重注册
             virtualControllerGyroSuspendCallback?.run()
-            // 直接在 defaultContext 上注册手机陀螺仪（含屏幕旋转修正）
-            registerDeviceGyroForDefaultContext(true)
+            // Prefer a usable controller gyro, with the Android device gyro as fallback.
+            registerGyroAssistant(enable = true, useVirtualController = false)
             // 重新计算所有 context 的 hold 状态（含 ALWAYS 情况）
             recomputeGyroHoldForAllContexts()
         } else {
             gyroMouseRemainX = 0f
             gyroMouseRemainY = 0f
             gyroMouseLastTimestamp = 0
-            registerDeviceGyroForDefaultContext(false)
+            registerGyroAssistant(enable = false, useVirtualController = false)
             clearAllGyroStates()
             // 恢复 VirtualController 自己的传感器监听
             virtualControllerGyroResumeCallback?.run()
@@ -535,6 +615,17 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             override fun onSensorChanged(sensorEvent: SensorEvent) {
                 if (handler.isControllerLocallyCaptured(controllerNumber)) return
 
+                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
+                    !needsDeviceOrientationCorrection
+                ) {
+                    onControllerGyroSample(
+                        sensorEvent.values[0],
+                        sensorEvent.values[1],
+                        sensorEvent.values[2],
+                        controllerNumber
+                    )
+                }
+
                 // Android will invoke our callback any time we get a new reading,
                 // even if the values are the same as last time. Don't report a
                 // duplicate set of values to save bandwidth.
@@ -615,3 +706,4 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
     }
 }
+
