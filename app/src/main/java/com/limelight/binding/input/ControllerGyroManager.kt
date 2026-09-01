@@ -262,7 +262,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
 
         handler.mainThreadHandler.post {
-            if (sourceGeneration != controllerGyroSourceGeneration ||
+            if (handler.stopped ||
+                sourceGeneration != controllerGyroSourceGeneration ||
                 controllerGyroUsesDeviceFallback ||
                 !isControllerGyroFallbackAllowed()
             ) {

@@ -484,14 +484,7 @@ class ControllerHandler(
     // ========== InputDeviceListener callbacks ==========
 
     override fun onInputDeviceAdded(deviceId: Int) {
-        val previousContext = inputDeviceContexts.get(deviceId)
         registerRumbleContextIfNeeded(deviceId)
-        val context = inputDeviceContexts.get(deviceId)
-        val likelyController0 = !prefConfig.multiController || currentControllers.toInt() == 0
-        if (previousContext == null && context != null && likelyController0) {
-            gyroManager.onControllerSourceChanged(context.controllerNumber)
-            gyroManager.onSensorsReenabled()
-        }
         hapticsCoordinator.refreshPrimaryController()
     }
 
@@ -520,6 +513,8 @@ class ControllerHandler(
     override fun onInputDeviceRemoved(deviceId: Int) {
         val context = inputDeviceContexts.get(deviceId)
         if (context != null) {
+            val wasController0 = context.assignedControllerNumber &&
+                context.controllerNumber.toInt() == 0
             mainThreadHandler.post {
                 (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(deviceId)
             }
@@ -527,11 +522,12 @@ class ControllerHandler(
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
-            gyroManager.onControllerSourceChanged(context.controllerNumber)
+            if (wasController0) {
+                gyroManager.onControllerSourceChanged(context.controllerNumber)
+                gyroManager.onSensorsReenabled()
+            }
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
-
-            gyroManager.onSensorsReenabled()
         }
     }
 
@@ -549,8 +545,10 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         newContext.migrateContext(existingContext)
         inputDeviceContexts.put(deviceId, newContext)
-        gyroManager.onControllerSourceChanged(newContext.controllerNumber)
-        gyroManager.onSensorsReenabled()
+        if (newContext.assignedControllerNumber && newContext.controllerNumber.toInt() == 0) {
+            gyroManager.onControllerSourceChanged(newContext.controllerNumber)
+            gyroManager.onSensorsReenabled()
+        }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(newContext.controllerNumber)
         hapticsCoordinator.clearControllerIfUnavailable(existingContext.controllerNumber)
@@ -918,6 +916,16 @@ class ControllerHandler(
 
         LimeLog.info("Assigned as controller " + context.controllerNumber)
         context.assignedControllerNumber = true
+        if (context.controllerNumber.toInt() == 0) {
+            if ((prefConfig.gyroToMouse || prefConfig.gyroToRightStick) &&
+                defaultContext.gyroListener != null
+            ) {
+                gyroManager.registerDeviceGyroForDefaultContext(false)
+                LimeLog.info("Physical controller connected, released defaultContext gyro")
+            }
+            gyroManager.onControllerSourceChanged(context.controllerNumber)
+            gyroManager.onSensorsReenabled()
+        }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
 
@@ -1390,22 +1398,6 @@ class ControllerHandler(
         // Otherwise create a new context
         context = createInputDeviceContextForDevice(event.device)
         inputDeviceContexts.put(event.deviceId, context)
-
-        // 如果陀螺仪鼠标模式开着，且新手柄会占用 controllerNumber=0，
-        // 需要清理 defaultContext 上的手机传感器，避免双重输入。
-        // Only unregister if this device is likely to become controller 0.
-        // Internal devices and the first external controller will get controllerNumber=0.
-        val likelyController0 = !context.external ||
-            !prefConfig.multiController ||
-            currentControllers.toInt() == 0
-        if ((prefConfig.gyroToMouse || prefConfig.gyroToRightStick) && likelyController0) {
-            if (defaultContext.gyroListener != null) {
-                gyroManager.registerDeviceGyroForDefaultContext(false)
-                LimeLog.info("Physical controller connected, released defaultContext gyro")
-            }
-            gyroManager.onControllerSourceChanged(context.controllerNumber)
-            gyroManager.onSensorsReenabled()
-        }
 
         return context
     }
@@ -3089,6 +3081,8 @@ class ControllerHandler(
             driverControllerContexts.remove(controller.getControllerId())
         }
         if (context != null) {
+            val wasController0 = context.assignedControllerNumber &&
+                context.controllerNumber.toInt() == 0
             LimeLog.info("Removed controller: " + controller.getControllerId())
             mainThreadHandler.post {
                 (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(
@@ -3098,10 +3092,12 @@ class ControllerHandler(
             rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()
-            gyroManager.onControllerSourceChanged(context.controllerNumber)
+            if (wasController0) {
+                gyroManager.onControllerSourceChanged(context.controllerNumber)
+                gyroManager.onSensorsReenabled()
+            }
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
-            gyroManager.onSensorsReenabled()
         }
     }
 
@@ -3118,8 +3114,6 @@ class ControllerHandler(
             }
             driverControllerContexts[controller.getControllerId()] = context
         }
-        gyroManager.onControllerSourceChanged(context.controllerNumber)
-        gyroManager.onSensorsReenabled()
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
     }
