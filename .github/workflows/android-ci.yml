@@ -144,9 +144,9 @@ jobs:
           path: |
             app/build/outputs/apk/nonRoot/debug/*.apk
 
-      # ===== Release (Signed) Build (tags only) =====
+      # ===== Release (Signed) Build (tags or explicit manual test build) =====
       - name: Decode keystore for Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -155,7 +155,7 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -164,7 +164,7 @@ jobs:
         run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -e
@@ -295,7 +295,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release APK and mapping
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: app-nonroot-release-signed
