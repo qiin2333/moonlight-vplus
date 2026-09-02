@@ -332,7 +332,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_getEstimatedRttInfo(JNIEnv *env, jcla
 
 JNIEXPORT jlong JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getRtpVideoBytesReceived(JNIEnv *env, jclass clazz) {
-    return (jlong)LiGetRtpVideoBytesReceived();
+    return (jlong)LiGetRTPVideoBytesReceived();
 }
 
 JNIEXPORT jstring JNICALL
