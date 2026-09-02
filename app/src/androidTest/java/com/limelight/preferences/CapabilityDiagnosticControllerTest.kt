@@ -2,13 +2,19 @@ package com.limelight.preferences
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.view.KeyEvent
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
@@ -78,6 +84,35 @@ class CapabilityDiagnosticControllerTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             activity.isFinishing || activity.isDestroyed
         }
+    }
+
+    @Test
+    fun landscapeContentAvoidsSystemBarsAndDisplayCutout() {
+        composeTestRule.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.activity.resources.configuration.orientation ==
+                Configuration.ORIENTATION_LANDSCAPE
+        }
+
+        var expectedRightInset = 0
+        var expectedBottomInset = 0
+        composeTestRule.runOnIdle {
+            val insets = ViewCompat.getRootWindowInsets(composeTestRule.activity.window.decorView)
+                ?.getInsets(
+                    WindowInsetsCompat.Type.systemBars() or
+                        WindowInsetsCompat.Type.displayCutout()
+                )
+            expectedRightInset = insets?.right ?: 0
+            expectedBottomInset = insets?.bottom ?: 0
+        }
+
+        val rootBounds = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val contentBounds = composeTestRule
+            .onNodeWithTag(CapabilityDiagnosticTags.CONTENT)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertEquals(rootBounds.right - expectedRightInset, contentBounds.right, 1f)
+        assertEquals(rootBounds.bottom - expectedBottomInset, contentBounds.bottom, 1f)
     }
 
     private fun sendKey(keyCode: Int) {

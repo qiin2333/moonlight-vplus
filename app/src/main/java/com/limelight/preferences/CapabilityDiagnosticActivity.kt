@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
@@ -42,6 +43,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -78,6 +84,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -712,6 +720,14 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
         val listState = rememberLazyListState()
         val scope = rememberCoroutineScope()
         val scrollStep = with(LocalDensity.current) { 88.dp.toPx() }
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val layoutDirection = LocalLayoutDirection.current
+        val safeArea = WindowInsets.systemBars
+                .union(WindowInsets.displayCutout)
+                .asPaddingValues()
+        val safeRight = if (isLandscape) safeArea.calculateRightPadding(layoutDirection) else 0.dp
+        val safeBottom = safeArea.calculateBottomPadding()
         var requestedFocusTarget by remember {
             mutableStateOf<CapabilityDiagnosticFocusTarget?>(null)
         }
@@ -745,7 +761,12 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(background)
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                        modifier = Modifier
+                                .fillMaxSize()
+                                .padding(end = safeRight, bottom = safeBottom)
+                                .testTag(CapabilityDiagnosticTags.CONTENT)
+                ) {
                     DiagnosticTopBar(
                             panel = panel,
                             primary = primary,
@@ -1252,6 +1273,7 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
 }
 
 internal object CapabilityDiagnosticTags {
+    const val CONTENT = "capability_diagnostic_content"
     const val REPORT = "capability_diagnostic_report"
     const val LIST = "capability_diagnostic_list"
     const val BACK = "capability_diagnostic_back"
