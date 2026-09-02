@@ -468,6 +468,8 @@
     <string name="category_input_settings">Input</string>
     <string name="title_checkbox_touchscreen_trackpad">Use the touchscreen as a trackpad</string>
     <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, multi-point touch will be enabled.</string>
+    <string name="title_checkbox_touch_keyboard_auto_invoke">Auto-invoke the PC touch keyboard</string>
+    <string name="summary_checkbox_touch_keyboard_auto_invoke">When enabled, the streamed PC shows its touch keyboard when a text field gains focus (Sunshine hosts with the virtual touchscreen).</string>
 
     <string name="title_checkbox_sync_touch_event_with_display">Align touch delivery with display refresh</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Batch touch updates to the local display refresh cadence. This may improve consistency but can add input delay.</string>

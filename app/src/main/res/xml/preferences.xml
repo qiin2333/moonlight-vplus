@@ -835,6 +835,11 @@
             android:summary="@string/summary_checkbox_touchscreen_trackpad"
             android:defaultValue="true" />
         <CheckBoxPreference
+            android:key="checkbox_touch_keyboard_auto_invoke"
+            android:title="@string/title_checkbox_touch_keyboard_auto_invoke"
+            android:summary="@string/summary_checkbox_touch_keyboard_auto_invoke"
+            android:defaultValue="true" />
+        <CheckBoxPreference
             android:key="pref_enable_double_click_drag"
             android:title="@string/title_enable_double_click_drag"
             android:summary="@string/summary_enable_double_click_drag"

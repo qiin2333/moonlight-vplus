@@ -743,6 +743,11 @@ class NvHTTP(
         streamConfig.getUseVdd()?.let { useVdd ->
             queryParams += "&useVdd=${if (useVdd) 1 else 0}"
         }
+        // Sunshine extension: touch-keyboard auto-invoke intent. Explicitly
+        // sending 0 lets the client override a host-side per-client opt-in.
+        streamConfig.getTouchKeyboard()?.let { touchKeyboard ->
+            queryParams += "&touchKeyboard=${if (touchKeyboard) 1 else 0}"
+        }
 
         val customScreenMode = streamConfig.customScreenMode
         if (customScreenMode != -1) {

@@ -1099,6 +1099,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             }
             .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
             .setUseVdd(pcUseVdd)
+            .setTouchKeyboard(prefConfig.touchKeyboardAutoInvoke)
             .setEnableMic(prefConfig.enableMic)
             .setControlOnly(prefConfig.controlOnly)
             .setCustomScreenMode(prefConfig.screenCombinationMode)

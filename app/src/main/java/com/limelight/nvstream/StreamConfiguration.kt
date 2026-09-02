@@ -48,6 +48,8 @@ class StreamConfiguration private constructor() {
     private var enableMic: Boolean = false
     private var useVdd: Boolean? = null
     private var controlOnly: Boolean = false
+    /** Sunshine extension: ask the host to auto-invoke its touch keyboard. Default = undeclared (null). */
+    private var touchKeyboard: Boolean? = null
     /** Requested audio codec — see [MoonBridge.AUDIO_CODEC_OPUS]/AC3/EAC3. Default = OPUS. */
     var audioCodec: Int = MoonBridge.AUDIO_CODEC_OPUS
         private set
@@ -70,6 +72,7 @@ class StreamConfiguration private constructor() {
     fun getPersistGamepadsAfterDisconnect(): Boolean = persistGamepadsAfterDisconnect
     fun getEnableMic(): Boolean = enableMic
     fun getUseVdd(): Boolean? = useVdd
+    fun getTouchKeyboard(): Boolean? = touchKeyboard
     fun getControlOnly(): Boolean = controlOnly
 
     class Builder {
@@ -116,6 +119,7 @@ class StreamConfiguration private constructor() {
             config.hdrPeakBrightnessNits = peakBrightnessNits.coerceIn(300, 4000)
         }
         fun setUseVdd(value: Boolean?): Builder = apply { config.useVdd = value }
+        fun setTouchKeyboard(value: Boolean?): Builder = apply { config.touchKeyboard = value }
         fun setEnableMic(enable: Boolean): Builder = apply { config.enableMic = enable }
         fun setControlOnly(controlOnly: Boolean): Builder = apply { config.controlOnly = controlOnly }
         fun setAudioCodec(codec: Int): Builder = apply { config.audioCodec = codec }
