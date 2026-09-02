@@ -44,10 +44,6 @@ import org.cgutman.shieldcontrollerextensions.SceManager
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ConcurrentSkipListMap
 
-internal fun controllerStickDeadzoneRadius(deadzonePercentage: Int): Double {
-    return deadzonePercentage.coerceAtLeast(0).toDouble() / 100.0
-}
-
 class ControllerHandler(
     internal val activityContext: Activity,
     internal val conn: NvConnection,

@@ -20,4 +20,17 @@ class ControllerDeadzoneTest {
     fun negativeRestoredValueFallsBackToZero() {
         assertEquals(0.0, controllerStickDeadzoneRadius(-1), 0.0)
     }
+
+    @Test
+    fun zeroControllerDeadzoneSelectionIsDetectedForWarning() {
+        assertEquals(
+            true,
+            isZeroControllerDeadzone(CONTROLLER_DEADZONE_PREFERENCE_KEY, 0)
+        )
+        assertEquals(
+            false,
+            isZeroControllerDeadzone(CONTROLLER_DEADZONE_PREFERENCE_KEY, 1)
+        )
+        assertEquals(false, isZeroControllerDeadzone("another_preference", 0))
+    }
 }

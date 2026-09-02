@@ -368,6 +368,7 @@
     <string name="summary_troubleshooting">檢視診斷和修正常見串流問題的提示</string>
     <string name="summary_privacy_policy">檢視 Moonlight 的隱私權政策</string>
     <string name="summary_seekbar_deadzone">忽略此半徑內的搖桿位移；部分遊戲還會套用更大的額外死區。</string>
+    <string name="toast_zero_deadzone_warning" formatted="false">0% 死區會傳送所有非零搖桿位移，手把漂移可能導致意外移動。</string>
     <string name="title_checkbox_absolute_mouse_mode">遠端桌面滑鼠模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">這可以讓滑鼠在遠端桌面使用中的加速表現更加自然，但與很多遊戲不相容。</string>
     <string name="title_checkbox_enable_audiofx">使用系統音訊效果</string>
