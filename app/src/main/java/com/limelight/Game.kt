@@ -63,7 +63,6 @@ import com.limelight.utils.PanZoomHandler
 import com.limelight.utils.FullscreenProgressOverlay
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
-import com.limelight.utils.NetHelper
 import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.AppSettingsManager
@@ -82,7 +81,6 @@ import android.graphics.Rect
 import android.hardware.input.InputManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
-import android.net.TrafficStats
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
@@ -219,9 +217,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     private var externalStreamView: StreamView? = null
-    private var previousTimeMillis: Long = 0
-    private var previousRxBytes: Long = 0
-
     lateinit var notificationOverlayManager: NotificationOverlayManager
     private var performanceOverlayManager: PerformanceOverlayManager? = null
     private var jitterMonitorManager: JitterMonitorManager? = null
@@ -2614,17 +2609,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         latestPerfInfo = performanceInfo
 
         runOnUiThread {
-            val currentRxBytes = TrafficStats.getTotalRxBytes()
-            val timeMillis = System.currentTimeMillis()
-            val timeMillisInterval = timeMillis - previousTimeMillis
-
-            if (timeMillisInterval in 1..<5000) {
-                performanceInfo.bandWidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval)
-            }
-
-            previousTimeMillis = timeMillis
-            previousRxBytes = currentRxBytes
-
             if (controllerManager != null && performanceInfoDisplays.isNotEmpty()) {
                 val perfAttrs = HashMap<String, String>()
                 perfAttrs[getString(R.string.perf_decoder)] = performanceInfo.decoder ?: ""
