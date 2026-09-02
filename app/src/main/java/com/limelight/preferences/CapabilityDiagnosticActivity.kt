@@ -29,6 +29,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -764,8 +765,7 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
                 Column(
                         modifier = Modifier
                                 .fillMaxSize()
-                                .padding(end = safeRight, bottom = safeBottom)
-                                .testTag(CapabilityDiagnosticTags.CONTENT)
+                                .absolutePadding(right = safeRight, bottom = safeBottom)
                 ) {
                     DiagnosticTopBar(
                             panel = panel,
@@ -1273,7 +1273,6 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
 }
 
 internal object CapabilityDiagnosticTags {
-    const val CONTENT = "capability_diagnostic_content"
     const val REPORT = "capability_diagnostic_report"
     const val LIST = "capability_diagnostic_list"
     const val BACK = "capability_diagnostic_back"

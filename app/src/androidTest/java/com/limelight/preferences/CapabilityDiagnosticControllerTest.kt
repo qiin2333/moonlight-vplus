@@ -108,7 +108,7 @@ class CapabilityDiagnosticControllerTest {
 
         val rootBounds = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
         val contentBounds = composeTestRule
-            .onNodeWithTag(CapabilityDiagnosticTags.CONTENT)
+            .onNodeWithTag(CapabilityDiagnosticTags.REPORT)
             .fetchSemanticsNode()
             .boundsInRoot
         assertEquals(rootBounds.right - expectedRightInset, contentBounds.right, 1f)
