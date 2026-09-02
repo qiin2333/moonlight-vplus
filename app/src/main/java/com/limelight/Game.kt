@@ -1741,6 +1741,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setMetaKeyCaptureState(enabled: Boolean) {
+        // Native keyboard capture is available starting in Android 16.1 (API 36.1).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+            Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+        ) {
+            val windowLayoutParams = window.attributes
+            windowLayoutParams.setKeyboardCaptureEnabled(enabled)
+            window.attributes = windowLayoutParams
+            return
+        }
+
+        // Older Samsung devices expose a proprietary API for Meta key capture.
         try {
             val semWindowManager = Class.forName("com.samsung.android.view.SemWindowManager")
             val getInstanceMethod = semWindowManager.getMethod("getInstance")

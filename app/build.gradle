@@ -48,7 +48,11 @@ if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.s
 android {
     ndkVersion "28.2.13676358"
 
-    compileSdkVersion 36
+    compileSdk {
+        version = release(36) {
+            it.minorApiLevel = 1
+        }
+    }
 
     namespace 'com.limelight'
 
