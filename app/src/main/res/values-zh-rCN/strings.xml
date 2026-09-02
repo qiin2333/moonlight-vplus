@@ -243,6 +243,8 @@
     <string name="category_input_settings">触控、鼠标与键盘</string>
     <string name="title_checkbox_touchscreen_trackpad">将触控屏作为触控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。如果禁用，则启用多点触控模式。</string>
+    <string name="title_checkbox_touch_keyboard_auto_invoke">自动弹出电脑触摸键盘</string>
+    <string name="summary_checkbox_touch_keyboard_auto_invoke">启用后，串流的电脑在文本框获得焦点时会自动弹出其触摸键盘（需要带有虚拟触摸屏的 Sunshine 主机）。</string>
 
     <string name="title_seekbar_long_press_flat_region">长按防抖半径</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半径内时持续发送初始位置，以减少全屏长按抖动；设为 0 则关闭。</string>

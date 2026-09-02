@@ -143,6 +143,8 @@
     <string name="category_input_settings">觸控、滑鼠與鍵盤</string>
     <string name="title_checkbox_touchscreen_trackpad">將觸控式螢幕作為觸控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果啟用，則將觸控式螢幕作為觸控板使用。 如果停用，則觸控式螢幕直接控制滑鼠游標。</string>
+    <string name="title_checkbox_touch_keyboard_auto_invoke">自動彈出電腦觸摸鍵盤</string>
+    <string name="summary_checkbox_touch_keyboard_auto_invoke">啟用後，串流的電腦在文字方塊獲得焦點時會自動彈出其觸摸鍵盤（需要帶有虛擬觸摸屏的 Sunshine 主機）。</string>
     <string name="title_checkbox_multi_controller">將手把識別為獨立玩家</string>
     <string name="summary_checkbox_multi_controller">讓主機分別識別每個已連線手把；關閉後會將它們合併為一個手把。</string>
     <string name="title_list_game_rumble_mode">主機遊戲振動輸出</string>
