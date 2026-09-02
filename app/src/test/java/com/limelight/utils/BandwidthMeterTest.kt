@@ -8,6 +8,7 @@ class BandwidthMeterTest {
     @Test
     fun bandwidthFormattingSwitchesUnitsAtOneMbps() {
         assertEquals("850 Kbps", formatBandwidthMbps(0.85))
+        assertEquals("999 Kbps", formatBandwidthMbps(0.9996))
         assertEquals("1.0 Mbps", formatBandwidthMbps(1.0))
         assertEquals("12.3 Mbps", formatBandwidthMbps(12.34))
     }

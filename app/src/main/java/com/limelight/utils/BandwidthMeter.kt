@@ -5,7 +5,8 @@ import java.util.Locale
 internal fun formatBandwidthMbps(bandwidthMbps: Double): String {
     if (!bandwidthMbps.isFinite() || bandwidthMbps < 0.0) return "N/A"
     return if (bandwidthMbps < 1.0) {
-        String.format(Locale.US, "%.0f Kbps", bandwidthMbps * 1000.0)
+        val kilobitsPerSecond = minOf(999.0, bandwidthMbps * 1000.0)
+        String.format(Locale.US, "%.0f Kbps", kilobitsPerSecond)
     } else {
         String.format(Locale.US, "%.1f Mbps", bandwidthMbps)
     }
