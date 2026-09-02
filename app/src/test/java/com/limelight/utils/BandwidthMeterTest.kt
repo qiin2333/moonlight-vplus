@@ -28,6 +28,16 @@ class BandwidthMeterTest {
     }
 
     @Test
+    fun shortIntervalsKeepTheBaselineForAValidLaterSample() {
+        val meter = BandwidthMeter()
+
+        assertNull(meter.update(0L, 0L))
+        assertNull(meter.update(100_000L, 100_000_000L))
+        assertNull(meter.update(200_000L, 200_000_000L))
+        assertEquals(8.0, meter.update(1_000_000L, 1_000_000_000L)!!, 0.0001)
+    }
+
+    @Test
     fun shortZeroBurstsHoldTheLastValue() {
         val meter = BandwidthMeter()
 

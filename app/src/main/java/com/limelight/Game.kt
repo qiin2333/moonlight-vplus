@@ -1139,6 +1139,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         )
 
         createConnectionAndHandler()
+        performanceOverlayManager?.recordStreamStart()
 
         audioVibrationService?.controllerHandler = controllerHandler
 

@@ -49,7 +49,10 @@ internal class BandwidthMeter(
         }
 
         val intervalNanos = nowNanos - previousTimeNanos
-        if (intervalNanos !in minIntervalNanos..maxIntervalNanos) {
+        if (intervalNanos < minIntervalNanos) {
+            return smoothedMbps
+        }
+        if (intervalNanos > maxIntervalNanos) {
             previousBytes = totalBytes
             previousTimeNanos = nowNanos
             return smoothedMbps

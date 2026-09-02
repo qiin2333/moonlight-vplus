@@ -287,6 +287,7 @@ class PerformanceOverlayManager(
     }
 
     fun recordStreamStart() {
+        bandwidthMeter.reset()
         hasDisplayableBattery = UiHelper.hasDisplayableBattery(activity)
         streamStartBatteryLevel = if (hasDisplayableBattery) {
             UiHelper.getBatteryLevel(activity)
