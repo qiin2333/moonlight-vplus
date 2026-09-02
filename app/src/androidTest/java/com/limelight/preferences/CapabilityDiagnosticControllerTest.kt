@@ -71,11 +71,12 @@ class CapabilityDiagnosticControllerTest {
 
     @Test
     fun gamepadBackClosesPage() {
+        val activity = composeTestRule.activity
         InstrumentationRegistry.getInstrumentation()
             .sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_B)
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.activity.isFinishing || composeTestRule.activity.isDestroyed
+            activity.isFinishing || activity.isDestroyed
         }
     }
 
