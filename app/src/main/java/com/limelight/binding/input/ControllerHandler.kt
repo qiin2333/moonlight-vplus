@@ -44,6 +44,10 @@ import org.cgutman.shieldcontrollerextensions.SceManager
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ConcurrentSkipListMap
 
+internal fun controllerStickDeadzoneRadius(deadzonePercentage: Int): Double {
+    return deadzonePercentage.coerceAtLeast(0).toDouble() / 100.0
+}
+
 class ControllerHandler(
     internal val activityContext: Activity,
     internal val conn: NvConnection,
@@ -416,8 +420,6 @@ class ControllerHandler(
         sceManager = SceManager(activityContext)
         sceManager.start()
 
-        var deadzonePercentage = prefConfig.deadzonePercentage
-
         val ids = InputDevice.getDeviceIds()
         for (id in ids) {
             val dev = InputDevice.getDevice(id) ?: continue
@@ -434,12 +436,7 @@ class ControllerHandler(
             }
         }
 
-        // 1% is the lowest possible deadzone we support
-        if (deadzonePercentage <= 0) {
-            deadzonePercentage = 1
-        }
-
-        stickDeadzone = deadzonePercentage.toDouble() / 100.0
+        stickDeadzone = controllerStickDeadzoneRadius(prefConfig.deadzonePercentage)
 
         // Initialize the default context for events with no device
         defaultContext = InputDeviceContext(this)
