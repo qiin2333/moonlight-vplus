@@ -270,6 +270,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         crownSessionController.toggleBackKeyMenuType()
     }
 
+    // Enables two-finger local pan/zoom while keeping one-finger touch routed
+    // to the host. The legacy accessor name is kept for menu/config callers.
     var isTouchOverrideEnabled = false
 
     fun getisTouchOverrideEnabled(): Boolean = isTouchOverrideEnabled

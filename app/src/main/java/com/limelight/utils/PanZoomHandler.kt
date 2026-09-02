@@ -144,6 +144,10 @@ class PanZoomHandler(
             distanceX: Float,
             distanceY: Float
         ): Boolean {
+            // A single finger belongs to the game input stream. Pan/zoom is
+            // deliberately a two-finger gesture so it can coexist with touch.
+            if (e2.pointerCount < 2) return false
+
             childX = streamView.x - distanceX
             childY = streamView.y - distanceY
 
