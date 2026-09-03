@@ -3,6 +3,7 @@ package com.limelight.preferences
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.content.Context
+import android.os.Build
 import android.view.KeyEvent
 import androidx.preference.Preference
 import androidx.test.core.app.ActivityScenario
@@ -21,7 +22,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.R
 import org.junit.After
+import org.junit.AfterClass
+import org.junit.Assume
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -110,7 +114,9 @@ class CustomResolutionsDialogControllerTest {
         onView(withContentDescription(deleteDescription(resolution))).check(matches(hasFocus()))
 
         sendKey(KeyEvent.KEYCODE_BUTTON_A)
-        onView(withContentDescription(deleteDescription(resolution))).check(doesNotExist())
+        onView(withId(R.id.custom_resolution_list)).check(matches(withEffectiveVisibility(GONE)))
+        onView(withContentDescription(deleteDescription(resolution)))
+            .check(matches(withEffectiveVisibility(GONE)))
         onView(withId(R.id.custom_resolution_width_field)).check(matches(hasFocus()))
 
         sendKey(KeyEvent.KEYCODE_BUTTON_B)
@@ -124,8 +130,9 @@ class CustomResolutionsDialogControllerTest {
         waitUntil {
             var landscape = false
             scenario.onActivity {
-                landscape = it.resources.configuration.orientation ==
-                    Configuration.ORIENTATION_LANDSCAPE
+                val configuration = it.resources.configuration
+                landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE &&
+                    configuration.screenHeightDp <= 480
             }
             landscape
         }
@@ -190,5 +197,43 @@ class CustomResolutionsDialogControllerTest {
             Thread.sleep(50)
         }
         throw AssertionError("Condition was not met before timeout")
+    }
+
+    companion object {
+        private var compactDisplayConfigured = false
+
+        @BeforeClass
+        @JvmStatic
+        fun configureCompactDisplay() {
+            Assume.assumeTrue("This test changes emulator display metrics", isEmulator())
+            compactDisplayConfigured = true
+            executeShellCommand("wm size 1280x480")
+            executeShellCommand("wm density 160")
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun restoreDisplayConfiguration() {
+            if (!compactDisplayConfigured) return
+            executeShellCommand("wm density reset")
+            executeShellCommand("wm size reset")
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            compactDisplayConfigured = false
+        }
+
+        private fun executeShellCommand(command: String) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation
+                .executeShellCommand(command)
+                .use { }
+        }
+
+        private fun isEmulator(): Boolean {
+            return Build.FINGERPRINT.startsWith("generic") ||
+                Build.FINGERPRINT.contains("emulator") ||
+                Build.MODEL.contains("sdk_gphone") ||
+                Build.HARDWARE == "goldfish" ||
+                Build.HARDWARE == "ranchu"
+        }
     }
 }
