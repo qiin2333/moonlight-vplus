@@ -26,6 +26,7 @@ class PanZoomHandler(
     private var parentHeight = 0f
     private var childWidth = 0f
     private var childHeight = 0f
+    private var imeOffsetY = 0f
 
     init {
         scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
@@ -43,15 +44,19 @@ class PanZoomHandler(
         gestureDetector.onTouchEvent(motionEvent)
     }
 
-    private fun updateDimensions() {
+    private fun updateDimensions(): Boolean {
+        if (parent == null) parent = streamView.parent as? View
+        val currentParent = parent ?: return false
         childHeight = streamView.height * scaleFactor
         childWidth = streamView.width * scaleFactor
-        parentWidth = parent!!.width.toFloat()
-        parentHeight = parent!!.height.toFloat()
+        parentWidth = currentParent.width.toFloat()
+        parentHeight = currentParent.height.toFloat()
+        return streamView.width > 0 && streamView.height > 0 &&
+            currentParent.width > 0 && currentParent.height > 0
     }
 
     private fun constrainToBounds() {
-        updateDimensions()
+        if (!updateDimensions()) return
 
         if (parentWidth >= childWidth) {
             childX = (parentWidth - childWidth) / 2
@@ -74,12 +79,23 @@ class PanZoomHandler(
         streamView.scaleX = scaleFactor
         streamView.scaleY = scaleFactor
         streamView.x = childX
-        streamView.y = childY
+        streamView.y = childY + imeOffsetY
 
         cursorOverlay.scaleX = scaleFactor
         cursorOverlay.scaleY = scaleFactor
         cursorOverlay.x = childX
-        cursorOverlay.y = childY
+        cursorOverlay.y = childY + imeOffsetY
+    }
+
+    fun setImeOffsetY(offsetY: Float) {
+        imeOffsetY = offsetY.coerceAtMost(0f)
+        applyTransform()
+    }
+
+    fun captureYToParent(y: Int, captureHeight: Int): Float {
+        if (captureHeight <= 0) return childY
+        if (!updateDimensions()) return childY
+        return childY + y.coerceIn(0, captureHeight).toFloat() / captureHeight * childHeight
     }
 
     fun handleSurfaceChange() {
@@ -94,7 +110,7 @@ class PanZoomHandler(
         val prevParentWidth = parentWidth
         val prevParentHeight = parentHeight
 
-        updateDimensions()
+        if (!updateDimensions()) return
 
         val viewScaleX = childWidth / prevChildWidth
         val viewScaleY = childHeight / prevChildHeight
@@ -121,10 +137,10 @@ class PanZoomHandler(
             val focusY = detector.focusY
 
             val dPivotX = (childX - focusX) / scaleFactor * newScaleFactor
-            val dPivotY = (childY - focusY) / scaleFactor * newScaleFactor
+            val dPivotY = (childY + imeOffsetY - focusY) / scaleFactor * newScaleFactor
 
             childX = focusX + dPivotX
-            childY = focusY + dPivotY
+            childY = focusY + dPivotY - imeOffsetY
 
             scaleFactor = newScaleFactor
 
@@ -144,8 +160,11 @@ class PanZoomHandler(
             distanceX: Float,
             distanceY: Float
         ): Boolean {
-            childX = streamView.x - distanceX
-            childY = streamView.y - distanceY
+            // View coordinates include the temporary IME offset. Gesture state
+            // must remain in the persistent base transform or the IME offset is
+            // folded into childY and applied twice on the next transform.
+            childX -= distanceX
+            childY -= distanceY
 
             constrainToBounds()
             return true
