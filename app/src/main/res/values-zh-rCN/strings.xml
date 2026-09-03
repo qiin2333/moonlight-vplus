@@ -39,7 +39,7 @@
     <string name="pair_pairing_msg"> 请在目标电脑上输入以下PIN码： </string>
     <string name="pair_incorrect_pin"> PIN码错误 </string>
     <string name="pair_fail"> 配对失败 </string>
-    <string name="pair_already_in_progress">主机存在未完成的配对请求。请在主机端取消该请求，或重启 Sunshine 后重试。</string>
+    <string name="pair_already_in_progress"> 配对中，请稍候 </string>
     <!-- WOL messages -->
     <string name="wol_pc_online"> 电脑在线中 </string>
     <string name="wol_no_mac">无法唤醒电脑，因为没有存储的 MAC 地址</string>
@@ -56,7 +56,7 @@
     <string name="error_manager_not_running">ComputerManager 服务未运行。请稍等几秒或重启App。</string>
     <string name="error_unknown_host"> 无法解析主机地址 </string>
     <string name="error_404">GFE返回了HTTP 404 错误，确保你的电脑显卡支持串流。使用远程桌面软件同样会引起此错误，请尝试重启电脑或重装GFE。</string>
-    <string name="pair_http_404">主机未提供请求的配对接口（HTTP 404）。请确认 Moonlight 连接的是主机 HTTP 端口，并检查主机服务、端口转发或代理配置。</string>
+    <string name="pair_http_404">配对失败，请稍后重试。</string>
     <string name="title_decoding_error"> 视频解码器崩溃 </string>
     <string name="message_decoding_error">由于与该设备的视频解码器不兼容，Moonlight已崩溃。如果崩溃继续，请尝试调整串流设置。</string>
     <string name="title_decoding_reset"> 重置视频设置 </string>
