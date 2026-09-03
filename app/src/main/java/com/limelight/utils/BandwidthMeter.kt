@@ -2,6 +2,7 @@ package com.limelight.utils
 
 import java.util.Locale
 
+/** Formats a Mbps value as "N K/s" below 1 MiB/s, otherwise "N.NN M/s" (1024-based). */
 internal fun formatBandwidthSpeed(bandwidthMbps: Double): String {
     if (!bandwidthMbps.isFinite() || bandwidthMbps < 0.0) return "N/A"
     val kBps = bandwidthMbps * 125_000.0 / 1024.0
@@ -28,6 +29,7 @@ internal class BandwidthMeter(
     private var previousTimeNanos = 0L
     private var lastMbps: Double? = null
 
+    /** Clears the baseline so the next update() starts a fresh measurement window. */
     fun reset() {
         hasBaseline = false
         previousBytes = 0L
