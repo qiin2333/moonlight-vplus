@@ -11,6 +11,7 @@ import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.os.Build
 import com.limelight.LimeLog
+import com.limelight.preferences.PreferenceConfiguration
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -514,11 +515,15 @@ object MediaCodecHelper {
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
         allowMtkMaxOperatingRate: Boolean,
+        mimeType: String?,
+        hevcLowLatencyMode: Int,
     ): Boolean = setDecoderLowLatencyOptions(
         videoFormat,
         decoderInfo,
         tryNumber,
         allowMtkMaxOperatingRate,
+        mimeType,
+        hevcLowLatencyMode,
         hdr10PlusModeSelected = false,
     )
 
@@ -528,8 +533,14 @@ object MediaCodecHelper {
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
         allowMtkMaxOperatingRate: Boolean,
+        mimeType: String?,
+        hevcLowLatencyMode: Int,
         hdr10PlusModeSelected: Boolean,
     ): Boolean {
+        if (shouldSkipHevcLowLatencyOptions(mimeType, decoderInfo.name, hevcLowLatencyMode)) {
+            return false
+        }
+
         // Options are tried in order of most to least risky. The decoder will use
         // the first MediaFormat that doesn't fail in configure().
         var setNewOption = false
@@ -604,6 +615,42 @@ object MediaCodecHelper {
         }
 
         return setNewOption
+    }
+
+    /**
+     * Amlogic C2 HEVC decoders stall the display pipeline when MediaCodec
+     * low-latency mode is active: the codec reports 60 FPS while the surface
+     * refreshes around once per second (issue #499, moonlight-android#1584).
+     * configure() succeeds, so the normal option-sweep fallback never triggers —
+     * the only reliable fix is to not set low-latency options in the first place.
+     *
+     * AUTO skips them for every Amlogic HEVC decoder (costs ~1-2 frames of
+     * latency, never breaks playback); OFF skips them for all HEVC/DV streams;
+     * ON restores the previous always-on behavior.
+     *
+     * Skipping returns false at try 0, so the caller's option-sweep loop runs a
+     * single bare-format configure attempt — intentional: there is deliberately
+     * nothing left to sweep, and the incidental transient-failure retries the
+     * old sweep provided are not worth reintroducing.
+     */
+    private fun shouldSkipHevcLowLatencyOptions(
+        mimeType: String?,
+        decoderName: String,
+        hevcLowLatencyMode: Int,
+    ): Boolean {
+        if (mimeType != "video/hevc" && mimeType != "video/dolby-vision") return false
+        val skip = when (hevcLowLatencyMode) {
+            PreferenceConfiguration.HEVC_LOW_LATENCY_OFF -> true
+            PreferenceConfiguration.HEVC_LOW_LATENCY_ON -> false
+            else -> mimeType == "video/hevc" && isDecoderInList(amlogicDecoderPrefixes, decoderName)
+        }
+        if (skip) {
+            LimeLog.info(
+                "Skipping low-latency decoder options for $mimeType on $decoderName " +
+                    "(mode=${hevcLowLatencyMode})"
+            )
+        }
+        return skip
     }
 
     // ==================== Decoder Capability Queries ====================
