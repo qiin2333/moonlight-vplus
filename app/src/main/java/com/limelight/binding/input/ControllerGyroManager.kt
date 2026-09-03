@@ -272,6 +272,18 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 return@post
             }
 
+            val fallbackRegistered = registerDeviceGyroForDefaultContext(
+                enable = true,
+                allowWhenControllerPresent = true,
+                reportRateHz = effectiveDeviceFallbackReportRateHz()
+            )
+            if (!fallbackRegistered) {
+                LimeLog.warning(
+                    "Controller 0 gyroscope fallback is unavailable; keeping controller gyroscope"
+                )
+                return@post
+            }
+
             LimeLog.warning(
                 "Controller 0 gyroscope is reporting only zero samples; using device gyroscope"
             )
@@ -287,12 +299,6 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                     context.gyroListener = null
                 }
             }
-
-            registerDeviceGyroForDefaultContext(
-                enable = true,
-                allowWhenControllerPresent = true,
-                reportRateHz = effectiveDeviceFallbackReportRateHz()
-            )
         }
     }
 
@@ -416,12 +422,13 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
      * 注意：通常如果已有物理手柄（controllerNumber=0 的 InputDeviceContext 存在），
      * 则不注册，避免与手柄自身的传感器路径冲突产生双重输入。调用方确认手柄
      * 没有陀螺仪时，可以显式允许设备传感器回退。
+     * 返回 true 表示请求已应用；启用请求只有在新监听器注册成功后才返回 true。
      */
     fun registerDeviceGyroForDefaultContext(
         enable: Boolean,
         allowWhenControllerPresent: Boolean = false,
         reportRateHz: Short = 120
-    ) {
+    ): Boolean {
         if (enable) {
             // 如果已有物理手柄占据 controllerNumber=0，不在 defaultContext 上额外注册
             // 手柄的传感器由 handleSetMotionEventState 通过 inputDeviceContexts 管理
@@ -429,50 +436,50 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 for (i in 0 until handler.inputDeviceContexts.size()) {
                     if (handler.inputDeviceContexts.valueAt(i).controllerNumber.toInt() == 0) {
                         LimeLog.info("Physical controller present, skipping defaultContext gyro registration")
-                        return
+                        return false
                     }
                 }
                 // 同样检查 USB 手柄
                 for (context in handler.driverControllerContexts.values) {
                     if (context.controllerNumber.toInt() == 0) {
                         LimeLog.info("USB controller present, skipping defaultContext gyro registration")
-                        return
+                        return false
                     }
                 }
             }
             if (handler.defaultContext.sensorManager == null) {
                 if (handler.deviceSensorManager == null) {
                     LimeLog.warning("deviceSensorManager is null, cannot register gyro on defaultContext")
-                    return
+                    return false
                 }
                 handler.defaultContext.sensorManager = handler.deviceSensorManager
             }
-            val gyroSensor = handler.defaultContext.sensorManager!!.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-            if (gyroSensor != null) {
-                if (handler.defaultContext.gyroListener != null) {
-                    handler.defaultContext.sensorManager!!.unregisterListener(handler.defaultContext.gyroListener)
-                    handler.defaultContext.gyroListener = null
-                }
-                handler.defaultContext.gyroReportRateHz = reportRateHz
-                handler.defaultContext.gyroListener = createSensorListener(
-                    handler.defaultContext.controllerNumber,
-                    MoonBridge.LI_MOTION_TYPE_GYRO,
-                    true /* needsDeviceOrientationCorrection */
-                )
-                val registered = handler.defaultContext.sensorManager!!.registerListener(
-                    handler.defaultContext.gyroListener, gyroSensor, 1000000 / reportRateHz
-                )
-                if (registered) {
-                    LimeLog.info("Gyro registered on defaultContext")
-                } else {
-                    handler.defaultContext.gyroListener = null
-                    handler.defaultContext.gyroReportRateHz = 0
-                    handler.defaultContext.sensorManager = null
-                    LimeLog.warning("Failed to register gyro on defaultContext")
-                }
-            } else {
+            val sensorManager = handler.defaultContext.sensorManager!!
+            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+            if (gyroSensor == null) {
                 LimeLog.warning("No gyroscope sensor available on this device")
+                return false
             }
+
+            val oldListener = handler.defaultContext.gyroListener
+            val newListener = createSensorListener(
+                handler.defaultContext.controllerNumber,
+                MoonBridge.LI_MOTION_TYPE_GYRO,
+                true /* needsDeviceOrientationCorrection */
+            )
+            val registered = sensorManager.registerListener(
+                newListener, gyroSensor, 1000000 / reportRateHz
+            )
+            if (!registered) {
+                LimeLog.warning("Failed to register gyro on defaultContext")
+                return false
+            }
+
+            oldListener?.let { sensorManager.unregisterListener(it) }
+            handler.defaultContext.gyroListener = newListener
+            handler.defaultContext.gyroReportRateHz = reportRateHz
+            LimeLog.info("Gyro registered on defaultContext")
+            return true
         } else {
             if (handler.defaultContext.gyroListener != null && handler.defaultContext.sensorManager != null) {
                 handler.defaultContext.sensorManager!!.unregisterListener(handler.defaultContext.gyroListener)
@@ -482,6 +489,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 handler.defaultContext.sensorManager = null
                 LimeLog.info("Gyro unregistered from defaultContext")
             }
+            return true
         }
     }
 
