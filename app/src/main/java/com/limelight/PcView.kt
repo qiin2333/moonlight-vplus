@@ -36,6 +36,7 @@ import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.HostHttpNotFoundException
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
@@ -2058,8 +2059,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 }
             } catch (e: UnknownHostException) {
                 message = getString(R.string.error_unknown_host)
+            } catch (e: HostHttpNotFoundException) {
+                message = getString(
+                    if (e.isPairingEndpoint) R.string.pair_http_404 else R.string.pair_fail
+                )
             } catch (e: FileNotFoundException) {
-                message = getString(R.string.pair_http_404)
+                message = getString(R.string.pair_fail)
             } catch (e: InterruptedException) {
                 message = getString(R.string.pair_fail)
             } catch (e: XmlPullParserException) {
@@ -2207,8 +2212,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: HostHttpNotFoundException) {
+                message = getString(
+                    if (e.isPairingEndpoint) R.string.pair_http_404 else R.string.pair_fail
+                )
             } catch (e: FileNotFoundException) {
-                message = getString(R.string.pair_http_404)
+                message = getString(R.string.pair_fail)
             } catch (e: Exception) {
                 message = e.message
             }

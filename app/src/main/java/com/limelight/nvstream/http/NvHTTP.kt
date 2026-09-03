@@ -417,7 +417,7 @@ class NvHTTP(
                 throw e
             }
 
-            LimeLog.warning("$completeUrl -> TLS handshake failed; rebuilding HTTP client and retrying once")
+            LimeLog.warning("$requestDescription -> TLS handshake failed; rebuilding HTTP client and retrying once")
             rebuildHttpClientsAfterTlsFailure(client).newCall(request).execute()
         }
 
@@ -431,7 +431,7 @@ class NvHTTP(
 
         if (response.code == 404) {
             LimeLog.warning("Host returned HTTP 404 for $requestDescription")
-            throw FileNotFoundException(requestDescription)
+            throw HostHttpNotFoundException(requestDescription, path == "pair")
         } else {
             throw HostHttpResponseException(response.code, response.message)
         }
