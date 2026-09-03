@@ -10,7 +10,10 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.hasFocus
+import androidx.test.espresso.matcher.ViewMatchers.isCompletelyDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.Visibility.GONE
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.rules.ActivityScenarioRule
@@ -43,7 +46,8 @@ class CustomResolutionsDialogControllerTest {
         rotateToLandscape(activityRule.scenario)
         showCustomResolutionsDialog(activityRule.scenario)
 
-        onView(withId(R.id.add_resolution_button)).check(matches(isDisplayed()))
+        onView(withId(R.id.custom_resolution_list)).check(matches(withEffectiveVisibility(GONE)))
+        onView(withId(R.id.add_resolution_button)).check(matches(isCompletelyDisplayed()))
         onView(withId(R.id.custom_resolution_width_field)).check(matches(hasFocus()))
 
         sendKey(KeyEvent.KEYCODE_DPAD_DOWN)

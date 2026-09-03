@@ -3,6 +3,7 @@ package com.limelight.preferences
 import android.content.Context
 import android.content.DialogInterface
 import android.content.res.Configuration
+import android.database.DataSetObserver
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -42,6 +43,8 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
     private var inputMethodManager: InputMethodManager? = null
     private var dialogBackCallback: OnBackPressedCallback? = null
     private var platformBackCallback: OnBackInvokedCallback? = null
+    private var resolutionAdapter: CustomResolutionsAdapter? = null
+    private var resolutionDataObserver: DataSetObserver? = null
 
     private fun getPref(): CustomResolutionsPreference =
         preference as CustomResolutionsPreference
@@ -59,11 +62,12 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
             screenHeightDp = configuration.screenHeightDp
         )
         val body = createMainLayout(context, layoutSpec)
-        val controls = createInputControls(context, pref)
+        val controls = createInputControls(context, pref, layoutSpec)
         val list = createListView(context, pref)
         val inputPane = createInputPane(context, controls.root)
 
         addContent(body, list, inputPane, layoutSpec)
+        observePaneVisibility(pref, body, list, inputPane, layoutSpec)
         configureControllerNavigation(context, pref, list, controls, layoutSpec)
         body.post { controls.widthField.requestFocus() }
         return body
@@ -84,6 +88,9 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
 
     override fun onDestroyView() {
         clearBackCallbacks()
+        resolutionDataObserver?.let { resolutionAdapter?.unregisterDataSetObserver(it) }
+        resolutionDataObserver = null
+        resolutionAdapter = null
         leaveEditing()
         getPref().adapter.setOnDeleteFocusRestoreListener(null)
         super.onDestroyView()
@@ -119,7 +126,7 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
 
     private fun createListView(context: Context, pref: CustomResolutionsPreference): ListView {
         return ListView(context).apply {
-            id = View.generateViewId()
+            id = R.id.custom_resolution_list
             adapter = pref.adapter
             dividerHeight = dpToPx(context, 1)
             divider = ColorDrawable(ContextCompat.getColor(context, R.color.app_dialog_outline))
@@ -136,12 +143,23 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
 
     private fun createInputControls(
         context: Context,
-        pref: CustomResolutionsPreference
+        pref: CustomResolutionsPreference,
+        spec: CustomResolutionDialogLayoutSpec
     ): InputControls {
         val inputRow = LayoutInflater.from(context).inflate(R.layout.custom_resolutions_form, null)
         val widthField = inputRow.findViewById<EditText>(R.id.custom_resolution_width_field)
         val heightField = inputRow.findViewById<EditText>(R.id.custom_resolution_height_field)
         val addButton = inputRow.findViewById<Button>(R.id.add_resolution_button)
+
+        if (spec.useTwoPane) {
+            inputRow.findViewById<View>(R.id.custom_resolution_input_title).visibility = View.GONE
+            inputRow.setPadding(
+                dpToPx(context, 12),
+                dpToPx(context, 8),
+                dpToPx(context, 12),
+                dpToPx(context, 8)
+            )
+        }
 
         addButton.setOnClickListener { pref.onSubmitResolution(widthField, heightField) }
         return InputControls(inputRow, widthField, heightField, addButton)
@@ -193,6 +211,42 @@ class CustomResolutionsPreferenceDialogFragment : PreferenceDialogFragmentCompat
                 }
             )
         }
+    }
+
+    private fun observePaneVisibility(
+        pref: CustomResolutionsPreference,
+        body: LinearLayout,
+        list: ListView,
+        inputPane: ScrollView,
+        spec: CustomResolutionDialogLayoutSpec
+    ) {
+        if (!spec.useTwoPane) return
+
+        fun update() {
+            val hasItems = pref.adapter.count > 0
+            list.visibility = if (hasItems) View.VISIBLE else View.GONE
+            list.layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                if (hasItems) 0.85f else 0f
+            ).apply {
+                marginEnd = if (hasItems) dpToPx(body.context, 12) else 0
+            }
+            inputPane.layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                if (hasItems) 1.15f else 1f
+            )
+        }
+
+        val observer = object : DataSetObserver() {
+            override fun onChanged() = update()
+            override fun onInvalidated() = update()
+        }
+        resolutionAdapter = pref.adapter
+        resolutionDataObserver = observer
+        pref.adapter.registerDataSetObserver(observer)
+        update()
     }
 
     private fun configureControllerNavigation(
