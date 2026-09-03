@@ -49,6 +49,21 @@ class BandwidthMeterTest {
     }
 
     @Test
+    fun longIntervalRestartsTheIdleHoldWindow() {
+        val meter = BandwidthMeter()
+
+        meter.update(0L, 1_000_000_000L)
+        assertEquals(8.0, meter.update(1_000_000L, 2_000_000_000L)!!, 0.0001)
+        assertEquals(8.0, meter.update(1_000_000L, 3_000_000_000L)!!, 0.0001)
+        assertEquals(8.0, meter.update(1_000_000L, 4_000_000_000L)!!, 0.0001)
+
+        assertEquals(8.0, meter.update(1_000_000L, 10_000_000_000L)!!, 0.0001)
+        assertEquals(8.0, meter.update(1_000_000L, 11_000_000_000L)!!, 0.0001)
+        assertEquals(8.0, meter.update(1_000_000L, 12_000_000_000L)!!, 0.0001)
+        assertEquals(0.0, meter.update(1_000_000L, 13_000_000_000L)!!, 0.0001)
+    }
+
+    @Test
     fun counterResetReestablishesBaseline() {
         val meter = BandwidthMeter()
 

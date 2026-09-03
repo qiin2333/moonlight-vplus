@@ -55,6 +55,7 @@ internal class BandwidthMeter(
         if (intervalNanos > maxIntervalNanos) {
             previousBytes = totalBytes
             previousTimeNanos = nowNanos
+            idleSamples = 0
             return smoothedMbps
         }
 
