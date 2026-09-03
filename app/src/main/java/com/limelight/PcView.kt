@@ -2068,9 +2068,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             } catch (e: InterruptedException) {
                 message = getString(R.string.pair_fail)
             } catch (e: XmlPullParserException) {
-                message = e.message
+                message = getString(R.string.pair_fail)
             } catch (e: IOException) {
-                message = e.message
+                message = getString(R.string.pair_fail)
             } finally {
                 Dialog.closeDialogs()
             }
@@ -2218,8 +2218,15 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 )
             } catch (e: FileNotFoundException) {
                 message = getString(R.string.pair_fail)
+            } catch (e: UnknownHostException) {
+                message = getString(R.string.error_unknown_host)
+            } catch (e: XmlPullParserException) {
+                message = getString(R.string.pair_fail)
+            } catch (e: IOException) {
+                message = getString(R.string.pair_fail)
             } catch (e: Exception) {
-                message = e.message
+                LimeLog.warning("QR pairing failed: ${e.javaClass.simpleName}")
+                message = getString(R.string.pair_fail)
             }
 
             if (message != null) {
