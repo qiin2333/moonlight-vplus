@@ -6,17 +6,17 @@ import org.junit.Test
 
 class BandwidthMeterTest {
     @Test
-    fun bandwidthFormattingSwitchesUnitsAtOneMbps() {
-        assertEquals("850 Kbps", formatBandwidthMbps(0.85))
-        assertEquals("999 Kbps", formatBandwidthMbps(0.9996))
-        assertEquals("1.0 Mbps", formatBandwidthMbps(1.0))
-        assertEquals("12.3 Mbps", formatBandwidthMbps(12.34))
+    fun bandwidthFormattingSwitchesUnitsAtOneMegabytePerSecond() {
+        assertEquals("104\u00A0K\u2060/\u2060s", formatBandwidthSpeed(0.85))
+        assertEquals("977\u00A0K\u2060/\u2060s", formatBandwidthSpeed(8.0))
+        assertEquals("1.00\u00A0M\u2060/\u2060s", formatBandwidthSpeed(8.388608))
+        assertEquals("1.47\u00A0M\u2060/\u2060s", formatBandwidthSpeed(12.34))
     }
 
     @Test
     fun invalidBandwidthFormattingReturnsUnavailable() {
-        assertEquals("N/A", formatBandwidthMbps(-1.0))
-        assertEquals("N/A", formatBandwidthMbps(Double.NaN))
+        assertEquals("N/A", formatBandwidthSpeed(-1.0))
+        assertEquals("N/A", formatBandwidthSpeed(Double.NaN))
     }
 
     @Test
@@ -38,29 +38,34 @@ class BandwidthMeterTest {
     }
 
     @Test
-    fun shortZeroBurstsHoldTheLastValue() {
+    fun zeroDeltaReportsZeroImmediately() {
         val meter = BandwidthMeter()
 
         meter.update(0L, 1_000_000_000L)
         assertEquals(8.0, meter.update(1_000_000L, 2_000_000_000L)!!, 0.0001)
-        assertEquals(8.0, meter.update(1_000_000L, 3_000_000_000L)!!, 0.0001)
-        assertEquals(8.0, meter.update(1_000_000L, 4_000_000_000L)!!, 0.0001)
-        assertEquals(0.0, meter.update(1_000_000L, 5_000_000_000L)!!, 0.0001)
+        assertEquals(0.0, meter.update(1_000_000L, 3_000_000_000L)!!, 0.0001)
     }
 
     @Test
-    fun longIntervalRestartsTheIdleHoldWindow() {
+    fun largeDownwardShiftIsReflectedWithinOneSample() {
+        val meter = BandwidthMeter()
+
+        meter.update(0L, 0L)
+        assertEquals(60.0, meter.update(7_500_000L, 1_000_000_000L)!!, 0.0001)
+        assertEquals(0.5, meter.update(7_562_500L, 2_000_000_000L)!!, 0.0001)
+    }
+
+    @Test
+    fun longIntervalHoldsLastValueThenZeroReportsImmediately() {
         val meter = BandwidthMeter()
 
         meter.update(0L, 1_000_000_000L)
         assertEquals(8.0, meter.update(1_000_000L, 2_000_000_000L)!!, 0.0001)
-        assertEquals(8.0, meter.update(1_000_000L, 3_000_000_000L)!!, 0.0001)
-        assertEquals(8.0, meter.update(1_000_000L, 4_000_000_000L)!!, 0.0001)
 
+        // Interval > 5s: re-baseline and keep the last value
         assertEquals(8.0, meter.update(1_000_000L, 10_000_000_000L)!!, 0.0001)
-        assertEquals(8.0, meter.update(1_000_000L, 11_000_000_000L)!!, 0.0001)
-        assertEquals(8.0, meter.update(1_000_000L, 12_000_000_000L)!!, 0.0001)
-        assertEquals(0.0, meter.update(1_000_000L, 13_000_000_000L)!!, 0.0001)
+        // The next valid window reports its true rate immediately
+        assertEquals(0.0, meter.update(1_000_000L, 11_000_000_000L)!!, 0.0001)
     }
 
     @Test
