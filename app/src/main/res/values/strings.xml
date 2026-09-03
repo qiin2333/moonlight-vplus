@@ -71,7 +71,7 @@
     <string name="pair_pairing_help">If your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.</string>
     <string name="pair_incorrect_pin">Incorrect PIN</string>
     <string name="pair_fail">Pairing failed</string>
-    <string name="pair_already_in_progress">Pairing already in progress</string>
+    <string name="pair_already_in_progress">The host has an unfinished pairing request. Cancel it on the host or restart Sunshine, then try again.</string>
 
     <!-- WOL messages -->
     <string name="wol_pc_online">Computer is online</string>
@@ -96,6 +96,7 @@
     <string name="error_404">GFE returned an HTTP 404 error. Make sure your PC is running a supported GPU.
 	    Using remote desktop software can also cause this error. Try rebooting your machine or reinstalling GFE.
     </string>
+    <string name="pair_http_404">The host did not provide the requested pairing endpoint (HTTP 404). Verify that Moonlight is connected to the host HTTP port and check the host service, port forwarding, or proxy configuration.</string>
     <string name="error_interrupted">The operation was interrupted</string>
     <string name="title_decoding_error">Video Decoder Crashed</string>
     <string name="message_decoding_error">Moonlight has crashed due to an incompatibility with this device\'s video decoder. Try adjusting the streaming settings if the crashes continue.</string>

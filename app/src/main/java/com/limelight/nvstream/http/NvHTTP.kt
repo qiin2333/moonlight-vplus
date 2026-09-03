@@ -408,6 +408,7 @@ class NvHTTP(
     @Throws(IOException::class, InterruptedException::class)
     private fun openHttpConnection(client: OkHttpClient, baseUrl: HttpUrl, path: String, query: String?, displayName: String? = null): ResponseBody {
         val completeUrl = getCompleteUrl(baseUrl, path, query, displayName)
+        val requestDescription = getSafeRequestDescription(path, query, completeUrl)
         val request = Request.Builder().url(completeUrl).get().build()
         val response = try {
             client.newCall(request).execute()
@@ -429,7 +430,8 @@ class NvHTTP(
         body.close()
 
         if (response.code == 404) {
-            throw FileNotFoundException(completeUrl.toString())
+            LimeLog.warning("Host returned HTTP 404 for $requestDescription")
+            throw FileNotFoundException(requestDescription)
         } else {
             throw HostHttpResponseException(response.code, response.message)
         }
@@ -448,18 +450,46 @@ class NvHTTP(
             resp.close()
 
             if (verbose && path != "serverinfo") {
-                LimeLog.info("${getCompleteUrl(baseUrl, path, query, displayName)} -> $respString")
+                if (isSensitivePairingRequest(path)) {
+                    LimeLog.info("${getSafeRequestDescription(path, query)} -> response_received")
+                } else {
+                    LimeLog.info("${getCompleteUrl(baseUrl, path, query, displayName)} -> $respString")
+                }
             }
 
             return respString
         } catch (e: IOException) {
             if (verbose && path != "serverinfo") {
-                LimeLog.warning("${getCompleteUrl(baseUrl, path, query, displayName)} -> ${e.message}")
-                e.printStackTrace()
+                if (isSensitivePairingRequest(path)) {
+                    LimeLog.warning("${getSafeRequestDescription(path, query)} -> ${e.javaClass.simpleName}")
+                } else {
+                    LimeLog.warning("${getCompleteUrl(baseUrl, path, query, displayName)} -> ${e.message}")
+                    e.printStackTrace()
+                }
             }
             throw e
         }
     }
+
+    private fun getSafeRequestDescription(path: String, query: String?, completeUrl: HttpUrl? = null): String {
+        if (path == "unpair") {
+            return "unpair"
+        }
+        if (path != "pair") {
+            return completeUrl?.toString() ?: path
+        }
+
+        return when {
+            query?.contains("phrase=getservercert") == true -> "pair/getservercert"
+            query?.contains("clientchallenge=") == true -> "pair/clientchallenge"
+            query?.contains("serverchallengeresp=") == true -> "pair/serverchallengeresp"
+            query?.contains("clientpairingsecret=") == true -> "pair/clientpairingsecret"
+            query?.contains("phrase=pairchallenge") == true -> "pair/pairchallenge"
+            else -> "pair/unknown"
+        }
+    }
+
+    private fun isSensitivePairingRequest(path: String): Boolean = path == "pair" || path == "unpair"
 
     @Throws(IOException::class, InterruptedException::class)
     private fun openHttpConnectionPost(client: OkHttpClient, baseUrl: HttpUrl, path: String, jsonData: String): String {

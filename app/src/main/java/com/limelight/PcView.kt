@@ -2059,7 +2059,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             } catch (e: UnknownHostException) {
                 message = getString(R.string.error_unknown_host)
             } catch (e: FileNotFoundException) {
-                message = getString(R.string.error_404)
+                message = getString(R.string.pair_http_404)
             } catch (e: InterruptedException) {
                 message = getString(R.string.pair_fail)
             } catch (e: XmlPullParserException) {
@@ -2207,6 +2207,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: FileNotFoundException) {
+                message = getString(R.string.pair_http_404)
             } catch (e: Exception) {
                 message = e.message
             }
