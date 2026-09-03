@@ -629,7 +629,7 @@
     <string name="title_force_mtk_max_operating_rate">強制聯發科解碼器最高運作速率（實驗性）</string>
     <string name="summary_force_mtk_max_operating_rate">僅用於聯發科解碼器的相容性選項。在部分裝置上可能降低延遲，也可能在其他裝置上造成嚴重延遲；除非正在排查已知聯發科解碼問題，否則請保持關閉。</string>
     <string name="title_hevc_low_latency_mode">HEVC 低延遲解碼</string>
-    <string name="summary_hevc_low_latency_mode">Amlogic 晶片電視盒子開啟解碼器低延遲模式後，HEVC 畫面可能變成幻燈片（幀率顯示正常但幾乎不重新整理）。自動：僅在 Amlogic HEVC 解碼器上略過低延遲選項（這些裝置多 1–2 幀延遲）；關閉：所有 HEVC 串流略過；開啟：恢復原有行為。</string>
+    <string name="summary_hevc_low_latency_mode">Amlogic 晶片電視盒子開啟解碼器低延遲模式後，HEVC 畫面可能變成幻燈片（幀率顯示正常但幾乎不重新整理）。自動：僅在 Amlogic HEVC 解碼器上略過低延遲選項（這些裝置多 1–2 幀延遲）；關閉：所有 HEVC 與杜比視界串流略過；開啟：恢復原有行為。</string>
     <string name="hevc_low_latency_auto">自動</string>
     <string name="hevc_low_latency_on">開啟</string>
     <string name="hevc_low_latency_off">關閉</string>
