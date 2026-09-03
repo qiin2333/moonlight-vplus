@@ -57,7 +57,8 @@
     <string name="error_unknown_host"> 无法解析主机地址 </string>
     <string name="error_404">GFE返回了HTTP 404 错误，确保你的电脑显卡支持串流。使用远程桌面软件同样会引起此错误，请尝试重启电脑或重装GFE。</string>
     <string name="pair_http_404">配对失败，请稍后重试。</string>
-    <string name="pair_connection_interrupted">连接中断，请稍后重试。</string>
+    <string name="pair_connection_interrupted_with_code">连接中断，请稍后重试。（错误码：%1$s）</string>
+    <string name="pair_fail_with_code">配对失败，请稍后重试。（错误码：%1$s）</string>
     <string name="title_decoding_error"> 视频解码器崩溃 </string>
     <string name="message_decoding_error">由于与该设备的视频解码器不兼容，Moonlight已崩溃。如果崩溃继续，请尝试调整串流设置。</string>
     <string name="title_decoding_reset"> 重置视频设置 </string>

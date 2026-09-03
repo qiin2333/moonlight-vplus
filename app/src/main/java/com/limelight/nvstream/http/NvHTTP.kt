@@ -459,16 +459,25 @@ class NvHTTP(
 
             return respString
         } catch (e: IOException) {
+            val pairingError = if (path == "pair" && e !is HostHttpNotFoundException) {
+                PairingTransportException.from(getSafeRequestDescription(path, query), e)
+            } else {
+                null
+            }
             if (verbose && path != "serverinfo") {
-                if (isSensitivePairingRequest(path)) {
+                if (pairingError != null) {
+                    LimeLog.warning(
+                        "${pairingError.message} -> ${pairingError.errorCode} ${pairingError.reason.logName}"
+                    )
+                } else if (isSensitivePairingRequest(path)) {
                     LimeLog.warning("${getSafeRequestDescription(path, query)} -> ${e.javaClass.simpleName}")
                 } else {
                     LimeLog.warning("${getCompleteUrl(baseUrl, path, query, displayName)} -> ${e.message}")
                     e.printStackTrace()
                 }
             }
-            if (path == "pair" && e !is HostHttpNotFoundException) {
-                throw PairingTransportException.from(getSafeRequestDescription(path, query), e)
+            if (pairingError != null) {
+                throw pairingError
             }
             throw e
         }

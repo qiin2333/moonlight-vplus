@@ -2253,10 +2253,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun pairingTransportErrorMessage(error: PairingTransportException): String {
         return getString(
             if (error.reason == PairingTransportException.Reason.RESPONSE_INTERRUPTED) {
-                R.string.pair_connection_interrupted
+                R.string.pair_connection_interrupted_with_code
             } else {
-                R.string.pair_fail
-            }
+                R.string.pair_fail_with_code
+            },
+            error.errorCode
         )
     }
 
