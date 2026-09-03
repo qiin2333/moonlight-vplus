@@ -35,7 +35,9 @@ class PairingTransportException(
                 causes.any { it is UnknownHostException } -> Reason.HOST_LOOKUP_FAILED
                 causes.any { it is ConnectException || it is NoRouteToHostException } -> Reason.CONNECTION_FAILED
                 causes.any { it is EOFException || it is SocketException } ||
-                    cause.message?.startsWith("unexpected end of stream", ignoreCase = true) == true ->
+                    causes.any {
+                        it.message?.startsWith("unexpected end of stream", ignoreCase = true) == true
+                    } ->
                     Reason.RESPONSE_INTERRUPTED
                 else -> Reason.OTHER
             }

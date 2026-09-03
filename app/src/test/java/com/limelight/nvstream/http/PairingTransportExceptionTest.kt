@@ -30,6 +30,21 @@ class PairingTransportExceptionTest {
     }
 
     @Test
+    fun classifiesNestedUnexpectedEndOfStreamAsInterrupted() {
+        val exception = PairingTransportException.from(
+            "pair/getservercert",
+            IOException(
+                "request failed",
+                IOException("Unexpected end of stream on http://host/pair?sensitive=value")
+            )
+        )
+
+        assertEquals(PairingTransportException.Reason.RESPONSE_INTERRUPTED, exception.reason)
+        assertEquals("P01", exception.errorCode)
+        assertEquals("pair/getservercert", exception.message)
+    }
+
+    @Test
     fun classifiesCommonNetworkFailures() {
         assertEquals(
             PairingTransportException.Reason.TIMEOUT,
