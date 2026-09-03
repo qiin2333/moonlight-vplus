@@ -41,6 +41,7 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.http.PairingManager.PairState
+import com.limelight.nvstream.http.PairingTransportException
 import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.preferences.AddComputerManually
 import com.limelight.preferences.BackgroundSource
@@ -2067,6 +2068,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 message = getString(R.string.pair_fail)
             } catch (e: InterruptedException) {
                 message = getString(R.string.pair_fail)
+            } catch (e: PairingTransportException) {
+                message = pairingTransportErrorMessage(e)
             } catch (e: XmlPullParserException) {
                 message = getString(R.string.pair_fail)
             } catch (e: IOException) {
@@ -2220,6 +2223,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 message = getString(R.string.pair_fail)
             } catch (e: UnknownHostException) {
                 message = getString(R.string.error_unknown_host)
+            } catch (e: PairingTransportException) {
+                message = pairingTransportErrorMessage(e)
             } catch (e: XmlPullParserException) {
                 message = getString(R.string.pair_fail)
             } catch (e: IOException) {
@@ -2243,6 +2248,16 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 startComputerUpdates()
             }
         }
+    }
+
+    private fun pairingTransportErrorMessage(error: PairingTransportException): String {
+        return getString(
+            if (error.reason == PairingTransportException.Reason.RESPONSE_INTERRUPTED) {
+                R.string.pair_connection_interrupted
+            } else {
+                R.string.pair_fail
+            }
+        )
     }
 
     private data class QrPairResult(

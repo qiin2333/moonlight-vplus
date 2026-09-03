@@ -42,6 +42,7 @@
     <string name="error_unknown_host"> 無法解析主機位址 </string>
     <string name="error_404">GFE 傳回了 HTTP 404 錯誤，請確保你的電腦 GPU 支援串流。使用遠端桌面軟體同樣會引起此錯誤，請嘗試重啟電腦或重新安裝 GFE。</string>
     <string name="pair_http_404">配對失敗，請稍後再試。</string>
+    <string name="pair_connection_interrupted">連線中斷，請稍後再試。</string>
     <string name="title_decoding_error">視訊解碼器已當機</string>
     <string name="message_decoding_error">由於與這個裝置的視訊解碼器不相容，Moonlight 已當機。若當機持續，請嘗試調整串流設定。</string>
     <string name="title_decoding_reset">重設視訊設定</string>

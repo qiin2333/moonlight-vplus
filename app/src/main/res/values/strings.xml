@@ -97,6 +97,7 @@
 	    Using remote desktop software can also cause this error. Try rebooting your machine or reinstalling GFE.
     </string>
     <string name="pair_http_404">Pairing failed. Please try again shortly.</string>
+    <string name="pair_connection_interrupted">Connection interrupted. Please try again shortly.</string>
     <string name="error_interrupted">The operation was interrupted</string>
     <string name="title_decoding_error">Video Decoder Crashed</string>
     <string name="message_decoding_error">Moonlight has crashed due to an incompatibility with this device\'s video decoder. Try adjusting the streaming settings if the crashes continue.</string>

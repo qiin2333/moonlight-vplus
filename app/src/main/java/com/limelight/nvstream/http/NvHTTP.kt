@@ -467,6 +467,9 @@ class NvHTTP(
                     e.printStackTrace()
                 }
             }
+            if (path == "pair" && e !is HostHttpNotFoundException) {
+                throw PairingTransportException.from(getSafeRequestDescription(path, query), e)
+            }
             throw e
         }
     }
