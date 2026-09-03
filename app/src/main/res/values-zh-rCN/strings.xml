@@ -164,6 +164,13 @@
     <string name="qr_invalid_code">无法识别的二维码</string>
     <string name="qr_pairing">二维码配对中…</string>
     <string name="qr_pair_success">配对成功！</string>
+    <string name="remote_connect_preparing">正在准备远程连接…</string>
+    <string name="remote_connect_setup_failed">无法配置远程连接。</string>
+    <string name="remote_connect_host_timeout">主机远程连接尚未就绪，请在主机端修复后重新扫码。</string>
+    <string name="remote_connect_external_confirm_title">确认连接</string>
+    <string name="remote_connect_external_confirm_message">要连接到 %1$s（%2$s）吗？这会在本设备保存一个私有网络配置。VPN 只路由到这台主机的流量；配置会一直保留，直到你替换或移除它。</string>
+    <string name="qr_pair_external_confirm_message">要与 %1$s（%2$s）配对吗？请仅在信任打开此链接的应用或网站时继续。</string>
+    <string name="remote_connect_external_confirm_action">连接</string>
     <string name="msg_add_pc"> 正在连接电脑…… </string>
     <string name="addpc_fail">无法连接至指定电脑。请确保所需端口没有被防火墙阻止。</string>
     <string name="addpc_fail_vpn">无法通过 VPN 连接至指定电脑。请检查 VPN 是否包含该私网网段的路由、是否排除了 Moonlight，以及主机防火墙是否允许 VPN 网段访问。</string>

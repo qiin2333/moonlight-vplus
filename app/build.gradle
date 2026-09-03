@@ -22,6 +22,7 @@ def escapeBuildConfigString = { value ->
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
+def enableX8664TestAbi = (project.findProperty("enableX8664TestAbi") ?: "false").toString().toBoolean()
 def audioHapticsAppLabel = "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
@@ -80,6 +81,9 @@ android {
             def supportedAbis = ['arm64-v8a', 'armeabi-v7a']
             if (enableX86TestAbi) {
                 supportedAbis += 'x86'
+            }
+            if (enableX8664TestAbi) {
+                supportedAbis += 'x86_64'
             }
             abiFilters(*supportedAbis)
         }
