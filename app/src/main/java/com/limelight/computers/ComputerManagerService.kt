@@ -76,6 +76,7 @@ class ComputerManagerService : Service() {
 
     private lateinit var idManager: IdentityManager
     private val pollingTuples = LinkedList<PollingTuple>()
+    private val pollingTupleLockCoordinator = PollingTupleLockCoordinator(pollingTuples)
     private val activePollFlights = ConcurrentHashMap<String, PollFlight>()
     private val recentPollResults = ConcurrentHashMap<String, RecentPoll>()
 
@@ -343,11 +344,7 @@ class ComputerManagerService : Service() {
         }
 
         fun invalidateStateForComputer(uuid: String) {
-            val tuple = synchronized(pollingTuples) {
-                pollingTuples.firstOrNull { uuid == it.computer.uuid }
-            } ?: return
-
-            synchronized(tuple.networkLock) {
+            pollingTupleLockCoordinator.withCurrent(uuid) { tuple ->
                 tuple.computer.state = ComputerDetails.State.UNKNOWN
             }
         }
@@ -572,33 +569,19 @@ class ComputerManagerService : Service() {
         LimeLog.warning("$source reported not paired for ${computer.name ?: uuid}; marking host not paired")
 
         var canonicalComputer = computer
-        var canonicalTuple: PollingTuple? = null
-        synchronized(pollingTuples) {
-            if (uuid != null) {
-                for (tuple in pollingTuples) {
-                    if (tuple.computer.uuid == uuid) {
-                        canonicalComputer = tuple.computer
-                        canonicalTuple = tuple
-                        break
-                    }
-                }
+        val updatedCanonical = uuid != null && pollingTupleLockCoordinator.withCurrent(uuid) { tuple ->
+            canonicalComputer = tuple.computer
+            tuple.pairStateEpoch++
+            applyNotPairedState(computer)
+            if (canonicalComputer !== computer) {
+                applyNotPairedState(canonicalComputer)
             }
         }
-
-        val keysToClear = (getPollKeys(computer) + getPollKeys(canonicalComputer)).distinct()
-        val tuple = canonicalTuple
-        if (tuple != null) {
-            synchronized(tuple.networkLock) {
-                tuple.pairStateEpoch++
-                applyNotPairedState(computer)
-                if (canonicalComputer !== computer) {
-                    applyNotPairedState(canonicalComputer)
-                }
-            }
-        } else {
+        if (!updatedCanonical) {
             applyNotPairedState(computer)
         }
 
+        val keysToClear = (getPollKeys(computer) + getPollKeys(canonicalComputer)).distinct()
         for (key in keysToClear) {
             recentPollResults.remove(key)
             activePollFlights.remove(key)
@@ -667,18 +650,15 @@ class ComputerManagerService : Service() {
         verified.activeAddress = computer.activeAddress
 
         val uuid = computer.uuid
-        val canonicalTuple = synchronized(pollingTuples) {
-            if (uuid == null) null else pollingTuples.firstOrNull { it.computer.uuid == uuid }
+        val updatedCanonical = uuid != null && pollingTupleLockCoordinator.withCurrent(uuid) { tuple ->
+            tuple.computer.update(verified)
+            computer.update(verified)
+            emitComputerUpdate(tuple.computer)
         }
-        val canonicalComputer = canonicalTuple?.computer ?: computer
-        if (canonicalTuple != null) {
-            synchronized(canonicalTuple.networkLock) {
-                canonicalComputer.update(verified)
-            }
+        if (!updatedCanonical) {
+            computer.update(verified)
+            emitComputerUpdate(computer)
         }
-
-        computer.update(verified)
-        emitComputerUpdate(canonicalComputer)
     }
 
     private fun applyNotPairedState(computer: ComputerDetails) {
