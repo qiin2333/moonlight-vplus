@@ -9,6 +9,7 @@ import android.view.Surface
 import com.limelight.LimeLog
 import com.limelight.nvstream.jni.MoonBridge
 
+/** Outcome of applying a device-gyro listener request. */
 internal enum class DeviceGyroRegistrationResult {
     APPLIED,
     UNAVAILABLE,
@@ -360,11 +361,13 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         )
     }
 
+    /** Starts a new source lifecycle with a fresh bounded registration retry. */
     private fun invalidatePendingControllerGyroFallback() {
         controllerGyroRegistrationRetryAvailable = true
         resetPendingControllerGyroFallback()
     }
 
+    /** Reopens liveness detection without replenishing the current source's retry budget. */
     private fun resetPendingControllerGyroFallback() {
         controllerGyroSourceGeneration++
         controllerGyroLivenessTracker.reset()
