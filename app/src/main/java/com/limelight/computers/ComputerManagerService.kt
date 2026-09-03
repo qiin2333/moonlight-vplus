@@ -343,14 +343,12 @@ class ComputerManagerService : Service() {
         }
 
         fun invalidateStateForComputer(uuid: String) {
-            synchronized(pollingTuples) {
-                for (tuple in pollingTuples) {
-                    if (uuid == tuple.computer.uuid) {
-                        synchronized(tuple.networkLock) {
-                            tuple.computer.state = ComputerDetails.State.UNKNOWN
-                        }
-                    }
-                }
+            val tuple = synchronized(pollingTuples) {
+                pollingTuples.firstOrNull { uuid == it.computer.uuid }
+            } ?: return
+
+            synchronized(tuple.networkLock) {
+                tuple.computer.state = ComputerDetails.State.UNKNOWN
             }
         }
     }
@@ -669,18 +667,13 @@ class ComputerManagerService : Service() {
         verified.activeAddress = computer.activeAddress
 
         val uuid = computer.uuid
-        var canonicalComputer = computer
-        synchronized(pollingTuples) {
-            if (uuid != null) {
-                for (tuple in pollingTuples) {
-                    if (tuple.computer.uuid == uuid) {
-                        canonicalComputer = tuple.computer
-                        synchronized(tuple.networkLock) {
-                            tuple.computer.update(verified)
-                        }
-                        break
-                    }
-                }
+        val canonicalTuple = synchronized(pollingTuples) {
+            if (uuid == null) null else pollingTuples.firstOrNull { it.computer.uuid == uuid }
+        }
+        val canonicalComputer = canonicalTuple?.computer ?: computer
+        if (canonicalTuple != null) {
+            synchronized(canonicalTuple.networkLock) {
+                canonicalComputer.update(verified)
             }
         }
 
