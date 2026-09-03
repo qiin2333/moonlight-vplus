@@ -11,12 +11,14 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDialogFragmentCompat
 
 import com.limelight.R
+import com.limelight.binding.input.isZeroControllerDeadzone
 import com.limelight.utils.AppDialogStyler
 import kotlin.math.roundToInt
 
@@ -223,10 +225,22 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
                 !pref.isLogarithmic && pref.minValue < 0 -> seekBar!!.progress + pref.minValue
                 else -> seekBar!!.progress
             }
-            if (pref.callChangeListener(valueToSave)) {
-                pref.setProgress(valueToSave)
+            if (persistValue(pref, valueToSave) &&
+                isZeroControllerDeadzone(pref.key, valueToSave)
+            ) {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.toast_zero_deadzone_warning,
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
+    }
+
+    private fun persistValue(pref: SeekBarPreference, value: Int): Boolean {
+        if (!pref.callChangeListener(value)) return false
+        pref.setProgress(value)
+        return true
     }
 
     companion object {

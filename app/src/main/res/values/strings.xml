@@ -349,6 +349,7 @@
     <string name="title_seekbar_deadzone">Analog stick deadzone</string>
     <string name="summary_seekbar_deadzone">Ignore stick movement inside this radius. Some games apply an additional, larger deadzone.</string>
     <string name="suffix_seekbar_deadzone">%</string>
+    <string name="toast_zero_deadzone_warning" formatted="false">0% deadzone sends every non-zero stick movement. Controller drift may cause unintended movement.</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One USB gamepad driver</string>
     <string name="summary_checkbox_xb1_driver">Enables a built-in USB driver for devices without native Xbox controller support</string>
     <string name="title_dualsense_direct_bluetooth">DualSense system Bluetooth output (experimental)</string>

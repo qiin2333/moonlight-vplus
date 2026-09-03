@@ -267,6 +267,7 @@
     <string name="game_rumble_mode_controller">手柄振动</string>
     <string name="title_seekbar_deadzone">摇杆死区</string>
     <string name="summary_seekbar_deadzone">忽略此半径内的摇杆位移；部分游戏还会额外应用更大的死区。</string>
+    <string name="toast_zero_deadzone_warning" formatted="false">0% 死区会发送所有非零摇杆位移，手柄漂移可能导致意外移动。</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One USB 手柄驱动</string>
     <string name="summary_checkbox_xb1_driver">为缺少原生 Xbox 手柄支持的设备启用内置 USB 驱动。</string>
     <string name="title_dualsense_direct_bluetooth">DualSense 系统蓝牙输出（实验性）</string>

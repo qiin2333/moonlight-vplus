@@ -731,6 +731,7 @@
             android:key="seekbar_deadzone"
             android:defaultValue="7"
             android:max="20"
+            seekbar:min="0"
             android:summary="@string/summary_seekbar_deadzone"
             android:text="@string/suffix_seekbar_deadzone"
             android:title="@string/title_seekbar_deadzone"/>
