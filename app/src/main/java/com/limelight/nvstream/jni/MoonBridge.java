@@ -623,6 +623,9 @@ public class MoonBridge {
     // The RTT is in the top 32 bits, and the RTT variance is in the bottom 32 bits
     public static native long getEstimatedRttInfo();
 
+    /** Returns wire-level bytes received by the active video RTP stream. */
+    public static native long getRtpVideoBytesReceived();
+
     public static native String getLaunchUrlQueryParameters();
 
     public static native byte guessControllerType(int vendorId, int productId);

@@ -10,7 +10,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
-import android.net.TrafficStats
+import android.os.SystemClock
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -37,13 +37,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 
 import com.limelight.binding.video.PerformanceInfo
+import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
 import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.BandwidthMeter
 import com.limelight.utils.MoonPhaseUtils
-import com.limelight.utils.NetHelper
 import com.limelight.utils.UiHelper
+import com.limelight.utils.formatBandwidthMbps
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -91,10 +93,7 @@ class PerformanceOverlayManager(
         BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
     }
 
-    // 计算带宽用
-    private var previousTimeMillis = 0L
-    private var previousRxBytes = 0L
-    private var lastValidBandwidth = "N/A"
+    private val bandwidthMeter = BandwidthMeter()
 
     // 月相缓存
     private var currentMoonPhaseIcon = "🌙"
@@ -288,6 +287,7 @@ class PerformanceOverlayManager(
     }
 
     fun recordStreamStart() {
+        bandwidthMeter.reset()
         hasDisplayableBattery = UiHelper.hasDisplayableBattery(activity)
         streamStartBatteryLevel = if (hasDisplayableBattery) {
             UiHelper.getBatteryLevel(activity)
@@ -315,28 +315,11 @@ class PerformanceOverlayManager(
     }
 
     private fun updateBandwidthInfo(performanceInfo: PerformanceInfo) {
-        val currentRxBytes = TrafficStats.getTotalRxBytes()
-        val timeMillis = System.currentTimeMillis()
-        val timeMillisInterval = timeMillis - previousTimeMillis
-
-        val calculatedBandwidth = NetHelper.calculateBandwidth(currentRxBytes, previousRxBytes, timeMillisInterval)
-
-        if (timeMillisInterval > 5000) {
-            performanceInfo.bandWidth = lastValidBandwidth
-            previousTimeMillis = timeMillis
-            previousRxBytes = currentRxBytes
-            return
-        }
-
-        if (calculatedBandwidth != "0 K/s") {
-            performanceInfo.bandWidth = calculatedBandwidth
-            lastValidBandwidth = calculatedBandwidth
-            previousTimeMillis = timeMillis
-        } else {
-            performanceInfo.bandWidth = lastValidBandwidth
-        }
-
-        previousRxBytes = currentRxBytes
+        val bandwidthMbps = bandwidthMeter.update(
+            MoonBridge.getRtpVideoBytesReceived(),
+            SystemClock.elapsedRealtimeNanos()
+        )
+        performanceInfo.bandWidth = bandwidthMbps?.let(::formatBandwidthMbps) ?: "N/A"
     }
 
     private fun buildDecoderInfo(performanceInfo: PerformanceInfo): String {

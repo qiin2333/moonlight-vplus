@@ -1,6 +1,5 @@
 package com.limelight.utils
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -137,26 +136,6 @@ object NetHelper {
             if (bytes[0] == 192.toByte() && bytes[1] == 168.toByte()) return true
         }
         return false
-    }
-
-    @SuppressLint("DefaultLocale")
-    fun calculateBandwidth(currentRxBytes: Long, previousRxBytes: Long, timeInterval: Long): String {
-        if (timeInterval !in 1..5000) return "N/A"
-        if (currentRxBytes < 0 || previousRxBytes < 0) return "N/A"
-
-        val rxBytesDifference = currentRxBytes - previousRxBytes
-        if (rxBytesDifference < 0) return "N/A"
-
-        val rxBytesPerDifference = rxBytesDifference / 1024
-        val speedKBps = rxBytesPerDifference / (timeInterval / 1000.0)
-
-        // 单位之间使用 NBSP (\u00A0)，斜杠两侧使用 Word Joiner (\u2060, zero-width)
-        // 防止性能覆盖层 TextView 在空格或斜杠处断行（UAX#14 中 / 属 Slash 类是断行机会）
-        return if (speedKBps < 1024) {
-            String.format("%.0f\u00A0K\u2060/\u2060s", speedKBps)
-        } else {
-            String.format("%.2f\u00A0M\u2060/\u2060s", speedKBps / 1024)
-        }
     }
 
     /**
