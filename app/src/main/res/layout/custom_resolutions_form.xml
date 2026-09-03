@@ -7,6 +7,7 @@
     android:paddingVertical="20dp">
 
     <TextView
+        android:id="@+id/custom_resolution_input_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/custom_resolution_input_title"
@@ -39,6 +40,8 @@
             <EditText
                 android:id="@+id/custom_resolution_width_field"
                 android:inputType="number"
+                android:imeOptions="actionNext"
+                android:singleLine="true"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
@@ -67,6 +70,8 @@
             <EditText
                 android:id="@+id/custom_resolution_height_field"
                 android:inputType="number"
+                android:imeOptions="actionDone"
+                android:singleLine="true"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
@@ -90,7 +95,7 @@
 
         <Button
             android:id="@+id/add_resolution_button"
-            android:layout_width="240dp"
+            android:layout_width="match_parent"
             android:layout_height="48dp"
             android:text="@string/add_resolution"
             android:background="@drawable/game_menu_button_bg"
