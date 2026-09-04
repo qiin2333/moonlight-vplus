@@ -228,6 +228,17 @@
         <item>precise-sync</item>
     </string-array>
 
+    <string-array name="hevc_low_latency_mode_names">
+        <item>@string/hevc_low_latency_auto</item>
+        <item>@string/hevc_low_latency_on</item>
+        <item>@string/hevc_low_latency_off</item>
+    </string-array>
+    <string-array name="hevc_low_latency_mode_values" translatable="false">
+        <item>auto</item>
+        <item>on</item>
+        <item>off</item>
+    </string-array>
+
     <string-array name="analog_scrolling_names">
         <item>@string/analogscroll_none</item>
         <item>@string/analogscroll_right</item>

@@ -113,6 +113,13 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_hevc_low_latency_mode"
+            android:title="@string/title_hevc_low_latency_mode"
+            android:summary="@string/summary_hevc_low_latency_mode"
+            android:entries="@array/hevc_low_latency_mode_names"
+            android:entryValues="@array/hevc_low_latency_mode_values"
+            android:defaultValue="auto" />
     </PreferenceCategory>
     <!-- Runtime gating is enforced again in Game before capture starts. -->
     <PreferenceCategory android:title="@string/category_framegen_settings"
