@@ -275,6 +275,14 @@ public class DigitalSwitchButton extends Element {
     }
 
     @Override
+    protected void releaseLatchedInput() {
+        if (isPressed()) {
+            setPressed(false);
+            onReleaseCallback();
+        }
+    }
+
+    @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, text);

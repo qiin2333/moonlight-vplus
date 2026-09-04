@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Direkt zur Konfiguration wechseln</string>
+    <string name="crown_direct_config_target">Zu %1$s wechseln</string>
+    <string name="crown_direct_config_unavailable">Konfiguration nicht verfügbar (Aktion deaktiviert)</string>
+    <string name="crown_direct_config_self">Aktuelle Konfiguration; kein Wechsel nötig</string>
+    <string name="crown_direct_config_no_other">Keine weiteren Konfigurationen verfügbar</string>
+    <string name="game_menu_edit_mode">Tastenlayout bearbeiten</string>
+    <string name="game_menu_configure_settings">Konfiguration wechseln</string>
+</resources>

@@ -19,6 +19,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.annotations.SerializedName;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
+import com.limelight.binding.input.advance_setting.DirectConfigTransfer;
 import com.limelight.binding.input.advance_setting.element.DigitalSwitchButton;
 import com.limelight.binding.input.advance_setting.element.Element;
 import com.limelight.utils.ConfigurationSyncScheduler;
@@ -770,6 +771,14 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
      * @return 0表示成功，负数表示不同的错误代码。
      */
     public int importConfig(String configString) {
+        return importConfig(configString, false);
+    }
+
+    public int importConfigForBackup(String configString) {
+        return importConfig(configString, true);
+    }
+
+    private int importConfig(String configString, boolean fromBackup) {
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(ContentValues.class, new ContentValuesSerializer());
         Gson gson = gsonBuilder.create();
@@ -797,6 +806,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
 
         ContentValues settingValues = gson.fromJson(settingString, ContentValues.class);
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
+        sanitizeDirectConfigActions(elements, fromBackup);
 
         // --- 预处理，建立从旧ID到内存中ContentValues对象的映射 ---
         Map<Long, ContentValues> oldIdToObjectMap = new HashMap<>();
@@ -911,6 +921,7 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         String elementsString = exportFile.getElements();
 
         ContentValues[] elements = gson.fromJson(elementsString, ContentValues[].class);
+        sanitizeDirectConfigActions(elements, false);
 
         // 将组按键及其子按键存储在MAP中
         Map<ContentValues, List<ContentValues>> groupButtonMaps = new HashMap<>();
@@ -956,6 +967,44 @@ public class SuperConfigDatabaseHelper extends SQLiteOpenHelper {
         }
 
         return 0;
+    }
+
+    private void sanitizeDirectConfigActions(ContentValues[] elements, boolean fromBackup) {
+        for (ContentValues element : elements) {
+            for (String field : DirectConfigTransfer.FIELDS) {
+                Object value = element.get(field);
+                if (value instanceof String) {
+                    element.put(field, DirectConfigTransfer.forImport((String) value, fromBackup));
+                }
+            }
+        }
+    }
+
+    public void restoreDirectConfigActions(long configId, Map<Long, Long> replacements,
+                                           Map<String, Long> profiles) {
+        // Most profiles have no cross-config actions. Do not scan every element on each sync.
+        StringBuilder filter = new StringBuilder("config_id = ? AND (");
+        for (String field : DirectConfigTransfer.FIELDS) {
+            if (filter.charAt(filter.length() - 1) != '(') filter.append(" OR ");
+            filter.append(field).append(" LIKE '%DCS:%'");
+        }
+        filter.append(')');
+        List<Long> affectedIds = new ArrayList<>();
+        try (Cursor cursor = readableDataBase.query("element", new String[]{Element.COLUMN_LONG_ELEMENT_ID},
+                filter.toString(), new String[]{String.valueOf(configId)}, null, null, null)) {
+            while (cursor.moveToNext()) affectedIds.add(cursor.getLong(0));
+        }
+        for (Long elementId : affectedIds) {
+            Map<String, Object> element = queryAllElementAttributes(configId, elementId);
+            ContentValues changes = new ContentValues();
+            for (String field : DirectConfigTransfer.FIELDS) {
+                Object value = element.get(field);
+                if (!(value instanceof String)) continue;
+                String restored = DirectConfigTransfer.restoreValue((String) value, replacements, profiles);
+                if (!restored.equals(value)) changes.put(field, restored);
+            }
+            if (changes.size() > 0) updateElement(configId, elementId, changes);
+        }
     }
 
 

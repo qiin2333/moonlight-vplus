@@ -99,6 +99,8 @@ private fun MenuOptionRow(
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = GameMenuCardShape
     val inlineControl = option.inlineControl
+    val emphasizedCrownAction = option.isCrownControl &&
+        (option.iconKey == "crown_profiles" || option.iconKey == "crown_layout")
     val showChevronAfterTitle = option.showChevron && inlineControl != null
     val hasDedicatedToggleAction = inlineControl is GameMenu.InlineControl.Toggle &&
         inlineControl.toggleAction != null
@@ -164,7 +166,7 @@ private fun MenuOptionRow(
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = Color.Unspecified,
+                tint = if (emphasizedCrownAction) colorResource(R.color.game_menu_accent) else Color.Unspecified,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(GameMenuDimens.section))
@@ -194,8 +196,12 @@ private fun MenuOptionRow(
                         colorResource(R.color.game_menu_text_primary)
                     },
                     fontSize = 13.sp,
-                    fontWeight = if (option.isCrownControl) FontWeight.Medium else FontWeight.Normal,
-                    maxLines = 1,
+                    fontWeight = when {
+                        emphasizedCrownAction -> FontWeight.Bold
+                        option.isCrownControl -> FontWeight.Medium
+                        else -> FontWeight.Normal
+                    },
+                    maxLines = if (emphasizedCrownAction) 2 else 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = if (showChevronAfterTitle) {
                         Modifier.weight(1f, fill = false)

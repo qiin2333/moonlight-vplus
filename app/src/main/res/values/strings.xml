@@ -991,8 +991,8 @@
     <string name="toast_elements_hidden">Buttons hidden</string>
     <string name="toast_back_key_menu_switch_1">Exited Crown configuration</string>
     <string name="toast_back_key_menu_switch_2">Entered Crown configuration</string>
-    <string name="game_menu_edit_mode">Button Layout</string>
-    <string name="game_menu_configure_settings">Crown Profiles</string>
+    <string name="game_menu_edit_mode">Edit Button Layout</string>
+    <string name="game_menu_configure_settings">Switch Config</string>
     
     <!-- External display -->
     <string name="title_use_external_display">Send stream to external display</string>

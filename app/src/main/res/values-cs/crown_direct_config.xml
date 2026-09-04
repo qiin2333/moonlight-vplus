@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Přepnout přímo na konfiguraci</string>
+    <string name="crown_direct_config_target">Přepnout na %1$s</string>
+    <string name="crown_direct_config_unavailable">Konfigurace není dostupná (akce vypnuta)</string>
+    <string name="crown_direct_config_self">Aktuální konfigurace; není třeba přepínat</string>
+    <string name="crown_direct_config_no_other">Žádné další konfigurace</string>
+    <string name="game_menu_edit_mode">Upravit rozložení tlačítek</string>
+    <string name="game_menu_configure_settings">Přepnout konfiguraci</string>
+</resources>
