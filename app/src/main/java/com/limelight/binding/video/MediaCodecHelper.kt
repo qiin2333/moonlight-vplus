@@ -536,14 +536,19 @@ object MediaCodecHelper {
         hevcLowLatencyMode: Int,
         hdr10PlusModeSelected: Boolean,
     ): Boolean {
-        // Skipping returns false at try 0, so the caller's option-sweep loop runs
-        // a single bare-format configure attempt (see HevcLowLatencyPolicy).
         if (HevcLowLatencyPolicy.shouldSkipLowLatencyOptions(mimeType, decoderInfo.name, hevcLowLatencyMode)) {
+            // Realtime scheduling is separate from low-latency buffering. If the
+            // priority hint is rejected, the caller retries with a fresh bare format.
+            var priorityRequested = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && tryNumber == 0) {
+                videoFormat.setInteger(MediaFormat.KEY_PRIORITY, 0)
+                priorityRequested = true
+            }
             LimeLog.info(
                 "Skipping low-latency decoder options for $mimeType on ${decoderInfo.name} " +
-                    "(mode=$hevcLowLatencyMode)"
+                    "(mode=$hevcLowLatencyMode, realtimePriority=$priorityRequested)"
             )
-            return false
+            return priorityRequested
         }
 
         // Options are tried in order of most to least risky. The decoder will use
