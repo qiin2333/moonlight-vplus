@@ -373,7 +373,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
-        panZoomHandler = PanZoomHandler(this, this, streamView, cursorOverlayView, prefConfig)
+        panZoomHandler = PanZoomHandler(this, streamView, cursorOverlayView, ::updatePipAutoEnter)
 
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)
@@ -1777,6 +1777,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         } else {
             if (::touchInputHandler.isInitialized) {
                 touchInputHandler.cancelNonRootTouchpad()
+                touchInputHandler.cancelThreeFingerPanZoom()
             }
             inputCaptureProvider.disableCapture()
         }

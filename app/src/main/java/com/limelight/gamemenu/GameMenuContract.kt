@@ -59,6 +59,17 @@ internal fun gameMenuChildDialogOption(
     isKeepDialog = true
 )
 
+internal fun threeFingerPanZoomOption(label: String, checked: Boolean, toggle: Runnable) = GameMenu.MenuOption(
+    label = label,
+    isWithGameFocus = false,
+    runnable = toggle,
+    iconKey = "game_menu_enable_three_finger_pan_zoom",
+    isShowIcon = true,
+    isKeepDialog = true,
+    inlineControl = GameMenu.InlineControl.Toggle(checked, toggle),
+    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
+)
+
 internal class GameMenuGuideDismissController {
     private var dismissAction: (() -> Unit)? = null
 

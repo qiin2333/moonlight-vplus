@@ -6,15 +6,11 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 
-import com.limelight.Game
-import com.limelight.preferences.PreferenceConfiguration
-
 class PanZoomHandler(
     context: Context,
-    private val game: Game,
     private val streamView: View,
     private val cursorOverlay: View,
-    private val prefConfig: PreferenceConfiguration
+    private val onScaleEnd: () -> Unit
 ) {
     private val scaleGestureDetector: ScaleGestureDetector
     private val gestureDetector: GestureDetector
@@ -133,7 +129,7 @@ class PanZoomHandler(
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
-            game.updatePipAutoEnter()
+            onScaleEnd()
         }
     }
 

@@ -2190,9 +2190,7 @@ class GameMenu(
             inlineControl = InlineControl.Segmented(buildTouchModeSegments(compactLabels = true))
         ))
 
-        // 三指平移/缩放（默认开启，状态持久化；关闭时回退"三指快击唤键盘"）
-        // 行点击与复选框点击共用同一切换逻辑：runnable 走行点击，
-        // toggleAction 走复选框（InlineControl.Toggle 无 toggleAction 时点击复选框不生效）
+        // Row and checkbox share the action and both refresh the persisted state.
         val threeFingerPanZoomToggle = Runnable {
             val enabled = !game.prefConfig.enableThreeFingerPanZoom
             game.prefConfig.enableThreeFingerPanZoom = enabled
@@ -2204,17 +2202,10 @@ class GameMenu(
                 else getString(R.string.toast_three_finger_pan_zoom_disabled),
                 Toast.LENGTH_SHORT).show()
         }
-        normalOptions.add(MenuOption(
+        normalOptions.add(threeFingerPanZoomOption(
             label = getString(R.string.game_menu_enable_three_finger_pan_zoom).trim(),
-            isWithGameFocus = false,
-            runnable = threeFingerPanZoomToggle,
-            iconKey = "game_menu_enable_three_finger_pan_zoom",
-            isShowIcon = true,
-            isKeepDialog = true,
-            inlineControl = InlineControl.Toggle(
-                checked = game.prefConfig.enableThreeFingerPanZoom,
-                toggleAction = threeFingerPanZoomToggle
-            )
+            checked = game.prefConfig.enableThreeFingerPanZoom,
+            toggle = threeFingerPanZoomToggle
         ))
 
         // 王冠功能
