@@ -29,6 +29,7 @@ internal data class GameMenuComposeUiState(
     val bitrate: BitrateCardState,
     val audioHaptics: AudioHapticsCardState,
     val gyro: GyroCardState,
+    val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
     val quickEditMode: Boolean = false,
     val isSubmenu: Boolean = false,
@@ -117,5 +118,10 @@ internal data class GameMenuCallbacks(
     val onGyroSensitivityFinished: () -> Unit,
     val onGyroInvertX: (Boolean) -> Unit,
     val onGyroInvertY: (Boolean) -> Unit,
+    val onTouchPointerSensitivity: (Float) -> Boolean,
+    val onTouchPointerSensitivityFinished: () -> Unit,
+    val onSaveTouchPointerSensitivityPreset: () -> Unit,
+    val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
+    val onManageTouchPointerSensitivityPresets: () -> Unit,
     val onCustomKey: (CustomKeyData) -> Unit
 )

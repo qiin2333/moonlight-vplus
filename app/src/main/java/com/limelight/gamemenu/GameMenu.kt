@@ -50,6 +50,7 @@ import com.limelight.StreamActionExecutor
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.MenuAxisNavigationState
+import com.limelight.binding.input.advance_setting.KeyboardKeyPickerController
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
@@ -100,13 +101,6 @@ internal fun isGameMenuNavigationKey(keyCode: Int): Boolean {
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
         keyCode == KeyEvent.KEYCODE_BUTTON_A ||
         keyCode == KeyEvent.KEYCODE_TAB
-}
-
-internal fun nearestFocusIndex(sourceCenter: Int, targetCenters: List<Int>): Int {
-    require(targetCenters.isNotEmpty())
-    return targetCenters.indices.minBy { index ->
-        kotlin.math.abs(targetCenters[index] - sourceCenter)
-    }
 }
 
 internal fun resolveCustomKeyName(enteredName: String, selectedKeysName: String): String {
@@ -186,6 +180,7 @@ class GameMenu(
     // 当前激活的对话框（如果有）
     private var activeDialog: ComponentDialog? = null
     private var activeChildDialog: Dialog? = null
+    private var activeChildDismissKeyHandler: ((KeyEvent) -> Boolean)? = null
     private var activeComposeView: ComposeView? = null
     private var parentFocusRestoreRequestState: MutableIntState? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
@@ -254,6 +249,7 @@ class GameMenu(
     private val bitrateCardController = BitrateCardController(game, conn)
     private val audioHapticsCardController = AudioHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
+    private val touchPointerSensitivityController = TouchPointerSensitivityController(game)
     private val renderingProfile = GameMenuRenderingProfile.from(game)
     private val systemHapticsEnabled = Settings.System.getInt(
         game.contentResolver,
@@ -342,6 +338,7 @@ class GameMenu(
     private fun dispatchControllerKeyEventToOwner(dialog: Dialog, event: KeyEvent): Boolean {
         if (dialog === activeChildDialog) {
             if (!dialog.isShowing) return true
+            if (activeChildDismissKeyHandler?.invoke(event) == true) return true
             if (UiDismissKeyHandler.handle(event.action, event.keyCode) {
                     prepareForInputOwnerChange()
                     dialog.cancel()
@@ -826,7 +823,10 @@ class GameMenu(
                 SegmentOption(
                     label = getString(if (compactLabels) R.string.game_menu_touch_mode_ds5_short else R.string.game_menu_touch_mode_ds5),
                     selected = isScreenDs5Touchpad,
-                    runnable = Runnable { game.setScreenDs5TouchpadEnabled(true) },
+                    runnable = Runnable {
+                        game.setScreenDs5TouchpadEnabled(true)
+                        touchPointerSensitivityController.refreshApplicability()
+                    },
                     subtitle = getString(R.string.game_menu_touch_mode_ds5_summary)
                 )
             )
@@ -868,6 +868,7 @@ class GameMenu(
                 preset.preferenceValue
             )
         }
+        touchPointerSensitivityController.refreshApplicability()
     }
 
     /**
@@ -1148,6 +1149,7 @@ class GameMenu(
                 bitrate = bitrateCardController.snapshot(),
                 audioHaptics = audioHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
+                touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
                 pageLayout = pageLayout
             )
@@ -1164,6 +1166,11 @@ class GameMenu(
         }
         gyroCardController.start { gyro ->
             composeUiState?.let { it.value = it.value.copy(gyro = gyro) }
+        }
+        touchPointerSensitivityController.start { sensitivity ->
+            composeUiState?.let {
+                it.value = it.value.copy(touchPointerSensitivity = sensitivity)
+            }
         }
 
         val callbacks = GameMenuCallbacks(
@@ -1203,6 +1210,20 @@ class GameMenu(
             onGyroSensitivityFinished = gyroCardController::persistSensitivity,
             onGyroInvertX = gyroCardController::setInvertX,
             onGyroInvertY = gyroCardController::setInvertY,
+            onTouchPointerSensitivity = touchPointerSensitivityController::preview,
+            onTouchPointerSensitivityFinished = touchPointerSensitivityController::persist,
+            onSaveTouchPointerSensitivityPreset = { showTouchPointerPresetEditor() },
+            onApplyTouchPointerSensitivityPreset = { id ->
+                val preset = touchPointerSensitivityController.preset(id)
+                if (touchPointerSensitivityController.applyPreset(id) && preset != null) {
+                    Toast.makeText(
+                        game,
+                        game.getString(R.string.toast_preset_applied, preset.name),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onManageTouchPointerSensitivityPresets = ::showTouchPointerSensitivityPresetManager,
             onCustomKey = { sendKeys(it.keys) }
         )
 
@@ -1285,6 +1306,7 @@ class GameMenu(
             prepareForInputOwnerChange()
             activeChildDialog?.dismiss()
             activeChildDialog = null
+            activeChildDismissKeyHandler = null
             resetAxisNavigation()
             if (this.activeDialog == dialog) this.activeDialog = null
             if (this.activeComposeView === composeView) this.activeComposeView = null
@@ -1296,6 +1318,7 @@ class GameMenu(
             bitrateCardController.dispose()
             audioHapticsCardController.dispose()
             gyroCardController.dispose()
+            touchPointerSensitivityController.dispose()
             menuStack.clear()
             onDismiss(this)
         }
@@ -1452,10 +1475,135 @@ class GameMenu(
         game.prefConfig.writePreferences(game)
     }
 
-    private fun registerChildDialog(dialog: Dialog, onDismiss: () -> Unit = {}) {
+    private fun showTouchPointerSensitivityPresetManager() {
+        val presets = touchPointerSensitivityController.snapshot().presets
+        if (presets.isEmpty()) return
+
+        registerChildDialog(
+            AppActionSheet.show(
+                context = game,
+                title = getString(R.string.game_menu_touch_pointer_manage_presets),
+                actions = presets.mapIndexed { index, preset ->
+                    AppActionSheet.Action(
+                        id = index,
+                        title = preset.name,
+                        opensSubmenu = true,
+                        trailingText = game.getString(
+                            R.string.game_menu_touch_pointer_preset_field_count,
+                            preset.values.keys.count { key ->
+                                TouchPointerPresetField.entries.any { it.storageKey == key }
+                            }
+                        )
+                    )
+                } + AppActionSheet.Action(
+                    id = DELETE_PRESETS_ACTION_ID,
+                    title = getString(R.string.game_menu_touch_pointer_delete_presets),
+                    destructive = true
+                ),
+                onAction = { action ->
+                    game.window.decorView.post {
+                        if (action.id == DELETE_PRESETS_ACTION_ID) {
+                            showTouchPointerPresetDeleteDialog()
+                        } else {
+                            presets.getOrNull(action.id)?.let { preset ->
+                                showTouchPointerPresetEditor(preset.id)
+                            }
+                        }
+                    }
+                }
+            )
+        )
+    }
+
+    private fun showTouchPointerPresetEditor(presetId: String? = null) {
+        val preset = presetId?.let(touchPointerSensitivityController::preset)
+        val selectedFields = if (preset == null) {
+            TouchPointerPresetField.entries
+                .filterNotTo(linkedSetOf()) { it == TouchPointerPresetField.POINTER_ZONE_SIDE }
+        } else {
+            touchPointerSensitivityController.selectedFields(preset)
+        }
+        val fields = TouchPointerPresetField.entries.map { field ->
+            TouchPointerPresetEditor.FieldOption(
+                field = field,
+                label = touchPointerPresetFieldLabel(field),
+                value = touchPointerSensitivityController.fieldValue(field, preset),
+                checked = field in selectedFields
+            )
+        }
+        val inputState = TouchPointerPresetEditor.InputState()
+        registerChildDialog(
+            TouchPointerPresetEditor.show(
+                context = game,
+                title = getString(
+                    if (preset == null) R.string.game_menu_touch_pointer_create_preset
+                    else R.string.game_menu_touch_pointer_edit_preset
+                ),
+                initialName = preset?.name ?: touchPointerSensitivityController.defaultName(),
+                fields = fields,
+                inputState = inputState,
+                onSave = { name, values ->
+                    touchPointerSensitivityController.savePreset(preset?.id, name, values)
+                }
+            ),
+            onDismissKey = inputState::handleDismissKey
+        )
+    }
+
+    private fun showTouchPointerPresetDeleteDialog() {
+        val presets = touchPointerSensitivityController.snapshot().presets
+        if (presets.isEmpty()) return
+        registerChildDialog(
+            AppActionSheet.showMultiSelect(
+                context = game,
+                title = getString(R.string.game_menu_touch_pointer_delete_presets),
+                actions = presets.mapIndexed { index, preset ->
+                    AppActionSheet.Action(index, preset.name, checked = false, destructive = true)
+                },
+                confirmLabel = getString(R.string.dialog_button_delete),
+                cancelLabel = getString(R.string.dialog_button_cancel),
+                minimumSelectionCount = 1,
+                forceInitialFocus = true,
+                onConfirm = { selected ->
+                    val ids = selected.mapNotNullTo(linkedSetOf()) { index ->
+                        presets.getOrNull(index)?.id
+                    }
+                    val removed = touchPointerSensitivityController.removePresets(ids)
+                    if (removed > 0) {
+                        Toast.makeText(
+                            game,
+                            game.getString(
+                                R.string.game_menu_touch_pointer_presets_deleted,
+                                removed
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+        )
+    }
+
+    private fun touchPointerPresetFieldLabel(field: TouchPointerPresetField): String = getString(
+        when (field) {
+            TouchPointerPresetField.POINTER_SPEED -> R.string.title_pointer_velocity_factor
+            TouchPointerPresetField.INITIAL_STABLE_ZONE ->
+                R.string.title_seekbar_long_press_flat_region
+            TouchPointerPresetField.ZONE_DIVIDER -> R.string.title_enhanced_touch_zone_divider
+            TouchPointerPresetField.POINTER_ZONE_SIDE ->
+                R.string.game_menu_touch_pointer_zone_position
+        }
+    )
+
+    private fun registerChildDialog(
+        dialog: Dialog,
+        onDismiss: () -> Unit = {},
+        onDismissKey: ((KeyEvent) -> Boolean)? = null
+    ) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
         prepareForInputOwnerChange()
         activeChildDialog = dialog
+        activeChildDismissKeyHandler = onDismissKey
 
         val decorView = dialog.window?.decorView
         decorView?.setOnKeyListener { _, keyCode, event ->
@@ -1483,6 +1631,7 @@ class GameMenu(
             if (activeChildDialog !== dialog) return@setOnDismissListener
             prepareForInputOwnerChange()
             activeChildDialog = null
+            activeChildDismissKeyHandler = null
             onDismiss()
             decorView?.setOnKeyListener(null)
             decorView?.setOnGenericMotionListener(null)
@@ -1890,7 +2039,32 @@ class GameMenu(
         }
 
         val keyboardDrawing = dialogView.findViewById<ViewGroup>(R.id.keyboard_drawing)
-        setupCompactKeyboardListeners(keyboardDrawing, keysDisplay)
+        val keyboardPickerController = KeyboardKeyPickerController(
+            root = keyboardDrawing,
+            onKeySelected = { key ->
+                val androidKeyCode = key.tag.toString().removePrefix("k")
+                val currentCodes = keysDisplay.tag.toString()
+                keysDisplay.tag = if (currentCodes.isEmpty()) {
+                    androidKeyCode
+                } else {
+                    "$currentCodes,$androidKeyCode"
+                }
+
+                val displayName = androidKeyCode.toIntOrNull()
+                    ?.let(KeyCodeMapper::getDisplayName)
+                    ?: key.text.toString()
+                val currentText = keysDisplay.text.toString()
+                keysDisplay.text = if (currentText.isEmpty()) {
+                    displayName
+                } else {
+                    "$currentText + $displayName"
+                }
+            },
+            externalViews = listOfNotNull(saveButton, closeButton, nameInput, clearButton),
+            editableView = nameInput,
+            isEditing = { nameEditing },
+            onEnterEditing = ::enterNameEditing
+        )
 
         // 保存按钮事件
         saveButton?.setOnClickListener {
@@ -1927,147 +2101,7 @@ class GameMenu(
         registerChildDialog(dialog)
         dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialogContent?.minimumHeight = game.resources.displayMetrics.heightPixels
-        setupCompactKeyboardControllerNavigation(
-            keyboardDrawing,
-            controlRows = listOf(
-                listOfNotNull(saveButton, closeButton),
-                listOfNotNull(nameInput, clearButton)
-            ),
-            editableView = nameInput,
-            isEditing = { nameEditing },
-            onEnterEditing = ::enterNameEditing
-        )
-    }
-
-    private fun setupCompactKeyboardListeners(parent: ViewGroup?, keysDisplay: TextView) {
-        if (parent == null) return
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            if (child is ViewGroup) {
-                setupCompactKeyboardListeners(child, keysDisplay)
-            } else if (child is TextView && child.tag != null) {
-                child.setOnClickListener { v ->
-                    val androidKeyCode = v.tag.toString()
-                    val currentTag = keysDisplay.tag.toString()
-
-                    val newTag = if (currentTag.isEmpty()) androidKeyCode else "$currentTag,$androidKeyCode"
-                    keysDisplay.tag = newTag
-
-                    val currentText = keysDisplay.text.toString()
-                    val displayName = KeyCodeMapper.getDisplayName(androidKeyCode.toInt())
-                    val newText = if (currentText.isEmpty()) displayName else "$currentText + $displayName"
-                    keysDisplay.text = newText
-                }
-            }
-        }
-    }
-
-    private fun setupCompactKeyboardControllerNavigation(
-        keyboard: ViewGroup?,
-        controlRows: List<List<View>>,
-        editableView: EditText? = null,
-        isEditing: () -> Boolean = { false },
-        onEnterEditing: () -> Unit = {}
-    ) {
-        if (keyboard == null) return
-        val keyboardRows = mutableListOf<List<View>>()
-        for (index in 0 until keyboard.childCount) {
-            val row = keyboard.getChildAt(index) as? ViewGroup ?: continue
-            val keys = mutableListOf<View>()
-            collectCompactKeyboardKeys(row, keys)
-            if (keys.isNotEmpty()) keyboardRows.add(keys)
-        }
-        if (keyboardRows.isEmpty()) return
-
-        val focusRows = buildList {
-            addAll(controlRows.filter { it.isNotEmpty() })
-            addAll(keyboardRows)
-        }
-        focusRows.flatten().forEach { view ->
-            if (view.id == View.NO_ID) view.id = View.generateViewId()
-            view.isFocusable = true
-            view.isFocusableInTouchMode = true
-        }
-
-        keyboard.post {
-            val laidOutRows = focusRows.map { row ->
-                row.sortedBy(::viewHorizontalCenterOnScreen)
-            }
-            laidOutRows.forEachIndexed { rowIndex, row ->
-                val upRow = laidOutRows[(rowIndex - 1 + laidOutRows.size) % laidOutRows.size]
-                val downRow = laidOutRows[(rowIndex + 1) % laidOutRows.size]
-                val upCenters = upRow.map(::viewHorizontalCenterOnScreen)
-                val downCenters = downRow.map(::viewHorizontalCenterOnScreen)
-                row.forEachIndexed { columnIndex, view ->
-                    val center = viewHorizontalCenterOnScreen(view)
-                    val leftTarget = row[(columnIndex - 1 + row.size) % row.size]
-                    val rightTarget = row[(columnIndex + 1) % row.size]
-                    val upTarget = upRow[nearestFocusIndex(center, upCenters)]
-                    val downTarget = downRow[nearestFocusIndex(center, downCenters)]
-                    view.nextFocusLeftId = leftTarget.id
-                    view.nextFocusRightId = rightTarget.id
-                    view.nextFocusUpId = upTarget.id
-                    view.nextFocusDownId = downTarget.id
-                    view.setOnKeyListener { _, keyCode, event ->
-                        if (view === editableView) {
-                            val confirmKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                                keyCode == KeyEvent.KEYCODE_ENTER ||
-                                keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
-                                keyCode == KeyEvent.KEYCODE_BUTTON_A
-                            if (confirmKey) {
-                                if (event.action == KeyEvent.ACTION_UP) onEnterEditing()
-                                return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
-                                    event.action == KeyEvent.ACTION_UP
-                            }
-                            if (isEditing()) {
-                                if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-                                    keyCode == KeyEvent.KEYCODE_DPAD_DOWN
-                                ) {
-                                    return@setOnKeyListener event.action == KeyEvent.ACTION_DOWN ||
-                                        event.action == KeyEvent.ACTION_UP
-                                }
-                                return@setOnKeyListener false
-                            }
-                        }
-                        val target = when (keyCode) {
-                            KeyEvent.KEYCODE_DPAD_LEFT -> leftTarget
-                            KeyEvent.KEYCODE_DPAD_RIGHT -> rightTarget
-                            KeyEvent.KEYCODE_DPAD_UP -> upTarget
-                            KeyEvent.KEYCODE_DPAD_DOWN -> downTarget
-                            else -> return@setOnKeyListener false
-                        }
-                        if (event.action == KeyEvent.ACTION_DOWN) {
-                            target.requestFocus()
-                        }
-                        event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
-                    }
-                }
-            }
-            val initialTarget = keyboardRows.first().first()
-            initialTarget.requestFocus()
-            keyboard.post {
-                if (laidOutRows.flatten().none(View::hasFocus)) {
-                    initialTarget.requestFocus()
-                }
-            }
-        }
-    }
-
-    private fun collectCompactKeyboardKeys(parent: ViewGroup, output: MutableList<View>) {
-        for (index in 0 until parent.childCount) {
-            val child = parent.getChildAt(index)
-            if (child is ViewGroup) {
-                collectCompactKeyboardKeys(child, output)
-            } else if (child is TextView && child.tag != null && child.visibility == View.VISIBLE) {
-                output.add(child)
-            }
-        }
-    }
-
-    private fun viewHorizontalCenterOnScreen(view: View): Int {
-        val location = IntArray(2)
-        view.getLocationOnScreen(location)
-        return location[0] + view.width / 2
+        keyboardPickerController.requestInitialFocus()
     }
 
     private fun showDeleteKeysDialog() {
@@ -2294,6 +2328,7 @@ class GameMenu(
         private const val GAME_FOCUS_RETRY_DELAY_MS = 10L
         private const val AXIS_REPEAT_INITIAL_DELAY_MS = 350L
         private const val AXIS_REPEAT_INTERVAL_MS = 90L
+        private const val DELETE_PRESETS_ACTION_ID = -1
         private const val DIALOG_DIM_AMOUNT = 0.0f
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"

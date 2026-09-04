@@ -349,6 +349,7 @@
     <string name="title_seekbar_deadzone">Analog stick deadzone</string>
     <string name="summary_seekbar_deadzone">Ignore stick movement inside this radius. Some games apply an additional, larger deadzone.</string>
     <string name="suffix_seekbar_deadzone">%</string>
+    <string name="toast_zero_deadzone_warning" formatted="false">0% deadzone sends every non-zero stick movement. Controller drift may cause unintended movement.</string>
     <string name="title_checkbox_xb1_driver">Xbox 360/One USB gamepad driver</string>
     <string name="summary_checkbox_xb1_driver">Enables a built-in USB driver for devices without native Xbox controller support</string>
     <string name="title_dualsense_direct_bluetooth">DualSense system Bluetooth output (experimental)</string>
@@ -468,6 +469,8 @@
     <string name="category_input_settings">Input</string>
     <string name="title_checkbox_touchscreen_trackpad">Use the touchscreen as a trackpad</string>
     <string name="summary_checkbox_touchscreen_trackpad">If enabled, the touchscreen acts like a trackpad. If disabled, multi-point touch will be enabled.</string>
+    <string name="title_checkbox_touch_keyboard_auto_invoke">Auto-invoke the PC touch keyboard</string>
+    <string name="summary_checkbox_touch_keyboard_auto_invoke">When enabled, the streamed PC shows its touch keyboard when a text field gains focus (Sunshine hosts with the virtual touchscreen).</string>
 
     <string name="title_checkbox_sync_touch_event_with_display">Align touch delivery with display refresh</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Batch touch updates to the local display refresh cadence. This may improve consistency but can add input delay.</string>
@@ -630,7 +633,7 @@
     <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
     <string name="category_host_settings">Host</string>
-    <string name="title_checkbox_enable_sops">Match game settings to the stream</string>
+    <string name="title_checkbox_enable_sops">Optimize game settings</string>
     <string name="summary_checkbox_enable_sops">Allow compatible host software to adjust supported games for the requested stream resolution and quality. Changes are made on the host.</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
@@ -675,11 +678,12 @@
     <string name="summary_hdr_peak_brightness_nits">Higher values make Sunshine target a brighter HDR display. Reconnect the stream after changing this.</string>
     <string name="suffix_hdr_peak_brightness_nits">nits</string>
     <string name="title_hdr_mode">HDR format</string>
-    <string name="summary_hdr_mode">Choose HDR10 (PQ), HDR10+, HLG, or Dolby Vision 8.1 (experimental). HDR10+ requires Dynamic Metadata Analysis to be enabled in Sunshine.</string>
+    <string name="summary_hdr_mode">Choose HDR10 (PQ), HDR10+, HLG, Dolby Vision 8.1 (experimental), or Dolby Vision 8.4 HLG (use if 8.1 shows no picture). HDR10+ requires Dynamic Metadata Analysis to be enabled in Sunshine.</string>
     <string name="hdr_mode_hdr10">HDR10 (PQ)</string>
     <string name="hdr_mode_hdr10_plus">HDR10+ (requires Dynamic Metadata Analysis)</string>
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
-    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (Experimental)</string>
+    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (use this first)</string>
+    <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG (use if 8.1 shows no picture)</string>
     <string name="title_full_range">Force full color range (Experimental)</string>
     <string name="summary_full_range">Requests full-range video from the host and decodes it as full range. Leave this off unless limited/full range mismatch makes the picture look washed out or crushes shadow and highlight detail. This is separate from HDR.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
@@ -1095,7 +1099,29 @@
     <string name="game_menu_touch_mode_ds5_summary">Screen becomes a DualSense touchpad; tap or firm press to click</string>
     <string name="game_menu_touch_mode_primary_group">Primary input mode (choose one)</string>
     <string name="game_menu_touch_mode_compatible_group">Compatible options</string>
-    <string name="game_menu_touch_mode_preview_title">Current mode</string>
+    <string name="game_menu_touch_pointer_speed">Pointer-zone speed</string>
+    <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
+    <string name="game_menu_touch_pointer_pixels_value">%1$d pixels</string>
+    <string name="game_menu_touch_pointer_speed_summary">Only affects the pointer-control zone in split direct touch. New gestures use the updated speed.</string>
+    <string name="game_menu_touch_pointer_zone_position">Pointer zone position</string>
+    <string name="game_menu_touch_pointer_saved_presets">Saved presets</string>
+    <string name="game_menu_touch_pointer_save_preset">Create preset</string>
+    <string name="game_menu_touch_pointer_manage_presets">Manage presets</string>
+    <string name="game_menu_touch_pointer_no_presets">No saved presets</string>
+    <string name="game_menu_touch_pointer_preset_limit">Up to 12 presets can be saved</string>
+    <string name="game_menu_touch_pointer_presets_deleted">Deleted %1$d preset(s)</string>
+    <string name="game_menu_touch_pointer_default_preset_name">Preset%1$d</string>
+    <string name="game_menu_touch_pointer_create_preset">Create preset</string>
+    <string name="game_menu_touch_pointer_edit_preset">Edit preset</string>
+    <string name="game_menu_touch_pointer_delete_presets">Delete presets</string>
+    <string name="game_menu_touch_pointer_preset_name">Preset name</string>
+    <string name="game_menu_touch_pointer_preset_name_hint">Preset name</string>
+    <string name="game_menu_touch_pointer_preset_name_error">Enter 1–%1$d printable characters</string>
+    <string name="game_menu_touch_pointer_preset_fields">Replace these fields</string>
+    <string name="game_menu_touch_pointer_preset_field_count">%1$d fields</string>
+    <string name="game_menu_touch_pointer_preset_no_fields">Select at least one field</string>
+    <string name="game_menu_touch_pointer_side_left">Left</string>
+    <string name="game_menu_touch_pointer_side_right">Right</string>
     <string name="toast_ds5_touchpad_unsupported">Host doesn\'t support DS5 touchpad; touches fall back to the previous mode</string>
     <string name="game_menu_current_selection">Current: %1$s</string>
     <string name="game_menu_trackpad_double_click_drag">Double-tap and hold to drag</string>
@@ -1130,6 +1156,14 @@
     <string name="dialog_button_cancel">CANCEL</string>
     <string name="dialog_button_clear">CLEAR</string>
     <string name="dialog_virtual_keyboard_hint">Select keys to create a combination</string>
+    <string name="keyboard_picker_main">Main</string>
+    <string name="keyboard_picker_nav">Navigation</string>
+    <string name="keyboard_picker_num">Numpad</string>
+    <string name="keyboard_picker_main_description">Main keyboard keys</string>
+    <string name="keyboard_picker_nav_description">Function and navigation keys</string>
+    <string name="keyboard_picker_num_description">Numeric keypad</string>
+    <string name="keyboard_key_right_win" translatable="false">R-Win</string>
+    <string name="keyboard_key_menu" translatable="false">Menu</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select Custom Keys to Delete</string>

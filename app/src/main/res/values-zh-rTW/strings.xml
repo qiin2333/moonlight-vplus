@@ -143,6 +143,8 @@
     <string name="category_input_settings">觸控、滑鼠與鍵盤</string>
     <string name="title_checkbox_touchscreen_trackpad">將觸控式螢幕作為觸控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果啟用，則將觸控式螢幕作為觸控板使用。 如果停用，則觸控式螢幕直接控制滑鼠游標。</string>
+    <string name="title_checkbox_touch_keyboard_auto_invoke">自動彈出電腦觸摸鍵盤</string>
+    <string name="summary_checkbox_touch_keyboard_auto_invoke">啟用後，串流的電腦在文字方塊獲得焦點時會自動彈出其觸摸鍵盤（需要帶有虛擬觸摸屏的 Sunshine 主機）。</string>
     <string name="title_checkbox_multi_controller">將手把識別為獨立玩家</string>
     <string name="summary_checkbox_multi_controller">讓主機分別識別每個已連線手把；關閉後會將它們合併為一個手把。</string>
     <string name="title_list_game_rumble_mode">主機遊戲振動輸出</string>
@@ -276,7 +278,7 @@
     <string name="title_checkbox_small_icon_mode">使用小封面</string>
     <string name="summary_checkbox_small_icon_mode">使用小圖示以在螢幕上顯示更多應用程式</string>
     <string name="category_host_settings">主機</string>
-    <string name="title_checkbox_enable_sops">讓遊戲設定符合串流規格</string>
+    <string name="title_checkbox_enable_sops">最佳化遊戲設定</string>
     <string name="summary_checkbox_enable_sops">允許相容的主機軟體依照所請求的串流解析度與品質調整支援的遊戲；變更發生在主機上。</string>
     <string name="title_checkbox_host_audio">在電腦上播放音訊</string>
     <string name="summary_checkbox_host_audio">在電腦和本裝置同時輸出音訊</string>
@@ -366,6 +368,7 @@
     <string name="summary_troubleshooting">檢視診斷和修正常見串流問題的提示</string>
     <string name="summary_privacy_policy">檢視 Moonlight 的隱私權政策</string>
     <string name="summary_seekbar_deadzone">忽略此半徑內的搖桿位移；部分遊戲還會套用更大的額外死區。</string>
+    <string name="toast_zero_deadzone_warning" formatted="false">0% 死區會傳送所有非零搖桿位移，手把漂移可能導致意外移動。</string>
     <string name="title_checkbox_absolute_mouse_mode">遠端桌面滑鼠模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">這可以讓滑鼠在遠端桌面使用中的加速表現更加自然，但與很多遊戲不相容。</string>
     <string name="title_checkbox_enable_audiofx">使用系統音訊效果</string>
@@ -579,6 +582,29 @@
     <string name="category_enhanced_touch_settings">直接觸控調校</string>
     <string name="category_display_behavior">顯示與版面配置</string>
     <string name="category_screen_position_settings">編碼與 HDR</string>
+    <string name="game_menu_touch_pointer_speed">指標區速度</string>
+    <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
+    <string name="game_menu_touch_pointer_pixels_value">%1$d 像素</string>
+    <string name="game_menu_touch_pointer_speed_summary">僅影響分區直接觸控的指標控制區；新的觸控手勢會使用更新後的速度。</string>
+    <string name="game_menu_touch_pointer_zone_position">指標區位置</string>
+    <string name="game_menu_touch_pointer_saved_presets">已儲存預設</string>
+    <string name="game_menu_touch_pointer_save_preset">建立預設</string>
+    <string name="game_menu_touch_pointer_manage_presets">管理預設</string>
+    <string name="game_menu_touch_pointer_no_presets">尚未儲存預設</string>
+    <string name="game_menu_touch_pointer_preset_limit">最多可儲存 12 組預設</string>
+    <string name="game_menu_touch_pointer_presets_deleted">已刪除 %1$d 組預設</string>
+    <string name="game_menu_touch_pointer_default_preset_name">預設%1$d</string>
+    <string name="game_menu_touch_pointer_create_preset">建立預設</string>
+    <string name="game_menu_touch_pointer_edit_preset">編輯預設</string>
+    <string name="game_menu_touch_pointer_delete_presets">刪除預設</string>
+    <string name="game_menu_touch_pointer_preset_name">預設名稱</string>
+    <string name="game_menu_touch_pointer_preset_name_hint">預設名稱</string>
+    <string name="game_menu_touch_pointer_preset_name_error">請輸入 1–%1$d 個可顯示字元</string>
+    <string name="game_menu_touch_pointer_preset_fields">替換以下欄位</string>
+    <string name="game_menu_touch_pointer_preset_field_count">%1$d 項</string>
+    <string name="game_menu_touch_pointer_preset_no_fields">請至少選擇一個欄位</string>
+    <string name="game_menu_touch_pointer_side_left">左側</string>
+    <string name="game_menu_touch_pointer_side_right">右側</string>
     <string name="title_checkbox_lock_screen_after_disconnect">串流結束後鎖定主機</string>
     <string name="summary_checkbox_lock_screen_after_disconnect">斷線或結束串流後向主機傳送 Win+L，不會鎖定目前 Android 裝置。</string>
     <string name="title_checkbox_swap_quit_and_disconnect">讓「結束」僅中斷連線</string>
@@ -640,7 +666,7 @@
     <string name="title_enable_hdr_high_brightness">HDR 使用螢幕最高亮度</string>
     <string name="summary_enable_hdr_high_brightness">HDR 串流期間把本機螢幕設為最高亮度，這會增加耗電與發熱。</string>
     <string name="title_hdr_mode">HDR 格式</string>
-    <string name="summary_hdr_mode">選擇 HDR10（PQ）、HDR10+、HLG 或 Dolby Vision 8.1（實驗性）。使用 HDR10+ 前需在 Sunshine 開啟動態中繼資料分析。</string>
+    <string name="summary_hdr_mode">選擇 HDR10（PQ）、HDR10+、HLG、Dolby Vision 8.1（實驗性）或 Dolby Vision 8.4 HLG（選 8.1 無畫面時）。使用 HDR10+ 前需在 Sunshine 開啟動態中繼資料分析。</string>
     <string name="title_perf_overlay_orientation">效能統計版面</string>
     <string name="summary_perf_overlay_orientation">選擇橫向單列或縱向單欄。</string>
     <string name="title_perf_overlay_position">效能統計位置</string>
@@ -819,7 +845,8 @@
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需要動態中繼資料分析）</string>
     <string name="hdr_mode_hlg">HLG（混合對數伽瑪）</string>
-    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（實驗性）</string>
+    <string name="hdr_mode_dolby_vision">Dolby Vision 8.1（絕大多數設備，優先選擇）</string>
+    <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG（選 8.1 無畫面時）</string>
     <string name="mic_menu_action_show_button">顯示或隱藏懸浮麥克風按鈕</string>
     <string name="mic_menu_action_toggle_microphone">直接切換麥克風</string>
     <string name="native_mouse_mode_preset_enhanced">分區直接觸控（觸控區 + 游標區）</string>

@@ -75,6 +75,7 @@ import com.limelight.PcView
 import com.limelight.R
 import com.limelight.ExternalDisplayManager
 import com.limelight.TargetDisplayResolver
+import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.audio.MicrophoneButtonPositionStore
@@ -161,6 +162,7 @@ class StreamSettings : AppCompatActivity() {
                 "category_screen_position" -> R.drawable.phc_video_camera
                 "category_display_behavior" -> R.drawable.phc_perf_resolution
                 "category_audio_settings" -> R.drawable.phc_audio
+                "category_microphone_settings" -> R.drawable.ic_mic_gm
                 "category_gamepad_settings" -> R.drawable.phc_gamepad
                 "category_input_settings" -> R.drawable.phc_keyboard
                 "category_onscreen_controls" -> R.drawable.phc_game_controller
@@ -3293,9 +3295,9 @@ class StreamSettings : AppCompatActivity() {
                 category.removePreference(findPreference("checkbox_absolute_mouse_mode")!!)
             }
 
-            // Hide gamepad motion sensor option when running on OSes before Android 12.
-            // Support for motion, LED, battery, and other extensions were introduced in S.
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            // InputDeviceSensorManager is unsafe on Android 12 and 12L. Keep the device-sensor
+            // fallback visible because it uses the regular SensorManager instead.
+            if (!InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!
                 category.removePreference(findPreference("checkbox_gamepad_motion_sensors")!!)
             }
@@ -3649,6 +3651,11 @@ class StreamSettings : AppCompatActivity() {
                         if (foundDolbyVision) {
                             entries += getString(R.string.hdr_mode_dolby_vision)
                             entryValues += "4"
+                            // 8.4 rides the HLG base layer into the same DV
+                            // display pipeline; availability is decoder- and
+                            // display-gated identically to 8.1.
+                            entries += getString(R.string.hdr_mode_dolby_vision_84)
+                            entryValues += "5"
                         }
 
                         hdrModePref.entries = entries.toTypedArray()

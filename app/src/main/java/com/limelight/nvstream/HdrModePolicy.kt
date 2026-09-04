@@ -12,10 +12,15 @@ internal object HdrModePolicy {
         hdrMode == MoonBridge.HDR_MODE_HDR10_PLUS
 
     fun isDolbyVisionMode(hdrMode: Int): Boolean =
-        hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION
+        hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION ||
+            hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION_84
+
+    fun isDolbyVisionHlgMode(hdrMode: Int): Boolean =
+        hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION_84
 
     fun isPqMode(hdrMode: Int): Boolean =
-        hdrMode == MoonBridge.HDR_MODE_HDR10 || isHdr10PlusMode(hdrMode) || isDolbyVisionMode(hdrMode)
+        hdrMode == MoonBridge.HDR_MODE_HDR10 || isHdr10PlusMode(hdrMode) ||
+            hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION
 
     fun shouldRequestHdr10Plus(
         hdrEnabled: Boolean,
@@ -31,6 +36,7 @@ internal object HdrModePolicy {
      * Dolby Vision additionally needs the device's native decode path: a
      * video/dolby-vision decoder advertising the DvheSt profile at the
      * stream's dimensions, and a display that reports Dolby Vision support.
+     * Both the 8.1 (PQ base) and 8.4 (HLG base) selections share it.
      */
     fun shouldRequestDolbyVision(
         hdrEnabled: Boolean,
@@ -45,6 +51,8 @@ internal object HdrModePolicy {
         !framegenRequested
 
     fun toProtocolMode(hdrMode: Int): Int = when {
+        // 8.4 rides the HLG base layer; everything else Dolby/HDR10+ is PQ.
+        isDolbyVisionHlgMode(hdrMode) -> MoonBridge.HDR_MODE_HLG
         isPqMode(hdrMode) -> MoonBridge.HDR_MODE_HDR10
         hdrMode == MoonBridge.HDR_MODE_HLG -> MoonBridge.HDR_MODE_HLG
         else -> MoonBridge.HDR_MODE_SDR

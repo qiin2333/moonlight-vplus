@@ -2,6 +2,7 @@ package com.limelight.preferences
 
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -118,7 +119,7 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun consolidatedCategoriesKeepEveryPreferenceKey() {
+    fun settingsCategoriesKeepEveryPreferenceKey() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
         val categories = preferences.documentElement
             .getElementsByTagName("PreferenceCategory")
@@ -126,7 +127,6 @@ class SettingsResourceHygieneTest {
             .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
 
         setOf(
-            "category_microphone_settings",
             "category_enhanced_touch",
             "category_float_ball",
             "category_connection_settings",
@@ -135,6 +135,16 @@ class SettingsResourceHygieneTest {
         }
 
         val expectedKeysByCategory = mapOf(
+            "category_screen_position" to setOf(
+                "video_format",
+                "checkbox_enable_hdr",
+                "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override",
+                "seekbar_hdr_peak_brightness_nits",
+                "list_hdr_mode",
+                "checkbox_full_range",
+                "capability_diagnostic",
+            ),
             "category_host_settings" to setOf(
                 "list_background_stream_behavior",
                 "list_quit_behavior",
@@ -151,7 +161,7 @@ class SettingsResourceHygieneTest {
                 "list_float_ball_double_click_action",
                 "list_float_ball_long_click_action",
             ),
-            "category_audio_settings" to setOf(
+            "category_microphone_settings" to setOf(
                 "checkbox_enable_mic",
                 "list_mic_menu_action_mode",
                 "checkbox_show_mic_button",
@@ -180,6 +190,30 @@ class SettingsResourceHygieneTest {
             ),
         )
 
+        listOf(
+            "category_basic_settings",
+            "category_screen_position",
+            "category_host_settings",
+            "category_display_behavior",
+            "category_advanced_features",
+            "category_framegen_settings",
+            "category_audio_settings",
+            "category_microphone_settings",
+            "category_gamepad_settings",
+            "category_input_settings",
+            "category_onscreen_controls",
+            "category_crown_features",
+            "category_ui_settings",
+            "category_backup_restore",
+            "category_help",
+        ).forEachIndexed { order, categoryKey ->
+            assertEquals(
+                "Unexpected sidebar order for $categoryKey",
+                order.toString(),
+                categories[categoryKey]?.getAttributeNS(ANDROID_NAMESPACE, "order"),
+            )
+        }
+
         expectedKeysByCategory.forEach { (categoryKey, expectedKeys) ->
             val category = categories[categoryKey]
             assertNotNull("Missing target category: $categoryKey", category)
@@ -189,7 +223,7 @@ class SettingsResourceHygieneTest {
                 .toSet()
             expectedKeys.forEach { preferenceKey ->
                 assertTrue(
-                    "$preferenceKey was not moved under $categoryKey",
+                    "$preferenceKey is missing from $categoryKey",
                     preferenceKey in actualKeys,
                 )
             }

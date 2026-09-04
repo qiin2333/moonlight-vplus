@@ -3,6 +3,7 @@ package com.limelight.preferences
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -185,11 +186,11 @@ class CustomResolutionsPreference(
 
     fun loadStoredResolutions() {
         val prefs = context.getSharedPreferences(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE, Context.MODE_PRIVATE)
-        val stored = prefs.getStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, null) ?: return
+        val stored = prefs.getStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, emptySet()).orEmpty()
 
         val sortedList = ArrayList(stored)
         sortedList.sortWith(ResolutionComparator())
-        adapter.addAll(sortedList)
+        adapter.replaceAll(sortedList)
     }
 
     private fun saveResolutions() {
@@ -260,9 +261,14 @@ class ResolutionComparator : Comparator<String> {
 class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
     private val resolutions = ArrayList<String>()
     private var listener: EventListener? = null
+    private var onDeleteFocusRestore: ((Int) -> Unit)? = null
 
     fun setOnDataChangedListener(listener: EventListener) {
         this.listener = listener
+    }
+
+    fun setOnDeleteFocusRestoreListener(listener: ((Int) -> Unit)?) {
+        onDeleteFocusRestore = listener
     }
 
     override fun notifyDataSetChanged() {
@@ -278,12 +284,17 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
 
     private fun createListItemView(): View {
         val row = LinearLayout(context).apply {
+            id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
             )
             setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
             orientation = LinearLayout.HORIZONTAL
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setBackgroundResource(R.drawable.app_dialog_list_item_bg)
         }
 
         val listItemText = TextView(context).apply {
@@ -300,14 +311,22 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
         }
 
         val deleteButton = ImageButton(context).apply {
+            id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)).apply {
                 gravity = Gravity.CENTER_VERTICAL
             }
             setImageResource(R.drawable.ic_delete)
             setColorFilter(ContextCompat.getColor(context, R.color.app_dialog_accent_color))
-            setBackgroundResource(android.R.color.transparent)
+            setBackgroundResource(R.drawable.custom_resolution_delete_button_bg)
             setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
+            isFocusableInTouchMode = true
         }
+
+        row.nextFocusRightId = deleteButton.id
+        deleteButton.nextFocusLeftId = row.id
+        deleteButton.nextFocusRightId = R.id.custom_resolution_width_field
+        bindButtonA(row) { row.performClick() }
+        bindButtonA(deleteButton) { deleteButton.performClick() }
 
         row.addView(listItemText)
         row.addView(deleteButton)
@@ -321,10 +340,15 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
         val deleteButton = row.getChildAt(1) as ImageButton
 
         listItemText.text = resolutions[position]
+        row.contentDescription = resolutions[position]
+        deleteButton.contentDescription =
+            "${context.getString(R.string.dialog_button_delete)} ${resolutions[position]}"
+        row.setOnClickListener { deleteButton.requestFocus() }
 
         deleteButton.setOnClickListener {
             resolutions.removeAt(position)
             notifyDataSetChanged()
+            onDeleteFocusRestore?.invoke(position.coerceAtMost(resolutions.lastIndex).coerceAtLeast(0))
         }
     }
 
@@ -343,7 +367,8 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
 
     fun getAll(): ArrayList<String> = ArrayList(resolutions)
 
-    fun addAll(list: ArrayList<String>) {
+    fun replaceAll(list: ArrayList<String>) {
+        resolutions.clear()
         resolutions.addAll(list)
         notifyDataSetChanged()
     }
@@ -353,5 +378,16 @@ class CustomResolutionsAdapter(private val context: Context) : BaseAdapter() {
     private fun dpToPx(value: Int): Int {
         val density = context.resources.displayMetrics.density
         return (value * density + 0.5f).toInt()
+    }
+
+    private fun bindButtonA(view: View, onConfirm: () -> Unit) {
+        view.setOnKeyListener { _, keyCode, event ->
+            if (keyCode != KeyEvent.KEYCODE_BUTTON_A) {
+                false
+            } else {
+                if (event.action == KeyEvent.ACTION_UP) onConfirm()
+                true
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
@@ -13,6 +14,9 @@ import android.os.Build
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.Display
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.Window
 import android.view.WindowManager
 import android.widget.Toast
@@ -20,8 +24,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -36,8 +44,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,12 +66,28 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -67,9 +97,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.ControllerPageScrollState
+import com.limelight.binding.input.resolveControllerPageRightStickYAxis
+import com.limelight.ui.UiDialogKeyHandler
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
+import kotlinx.coroutines.launch
 
 /**
  * 编解码与屏幕能力检测页面。
@@ -79,6 +114,10 @@ import com.limelight.utils.UiHelper
 class CapabilityDiagnosticActivity : ComponentActivity() {
 
     private lateinit var plainTextReport: StringBuilder
+    private val controllerPageScrollState = ControllerPageScrollState()
+    private var controllerScrollSequence by mutableIntStateOf(0)
+    private var controllerScrollDirection by mutableIntStateOf(0)
+    private var controllerScrollDeviceId: Int? = null
 
     private fun tr(@StringRes id: Int, vararg args: Any): String {
         return if (args.isEmpty()) getString(id) else getString(id, *args)
@@ -103,6 +142,8 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
         setContent {
             CapabilityDiagnosticScreen(
                     cards = cards,
+                    controllerScrollSequence = controllerScrollSequence,
+                    controllerScrollDirection = controllerScrollDirection,
                     onBack = { finish() },
                     onCopy = {
                         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -114,6 +155,71 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
         }
 
         UiHelper.notifyNewRootView(this)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_MOVE &&
+                event.source and InputDevice.SOURCE_CLASS_JOYSTICK != 0) {
+            val verticalAxes = collectControllerVerticalAxes(event)
+            if (verticalAxes.isNotEmpty()) {
+                if (controllerScrollDeviceId != event.deviceId) {
+                    controllerPageScrollState.reset()
+                    controllerScrollDeviceId = event.deviceId
+                }
+                val update = controllerPageScrollState.update(verticalAxes, event.eventTime)
+                if (update.shouldScroll) {
+                    controllerScrollDirection = update.direction
+                    controllerScrollSequence++
+                }
+                if (update.consumed) return true
+            }
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) resetControllerScroll()
+    }
+
+    override fun onStop() {
+        resetControllerScroll()
+        super.onStop()
+    }
+
+    private fun collectControllerVerticalAxes(event: MotionEvent): List<Float> {
+        val device = event.device ?: return emptyList()
+        if (!ControllerHandler.isGameControllerDevice(device)) return emptyList()
+
+        val axes = ArrayList<Float>(3)
+        if (ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_HAT_Y) != null) {
+            axes += event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+        }
+
+        val hasRxRy =
+                ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_RX) != null &&
+                ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_RY) != null
+        val hasZRz =
+                ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Z) != null &&
+                ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_RZ) != null
+        val rightStickYAxis = resolveControllerPageRightStickYAxis(
+                hasRxRy = hasRxRy,
+                hasZRz = hasZRz,
+                isLegacyDualShockMapping = device.vendorId == 0x054c &&
+                        device.hasKeys(KeyEvent.KEYCODE_BUTTON_C)[0]
+        )
+        if (rightStickYAxis != null) axes += event.getAxisValue(rightStickYAxis)
+
+        if (ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_X) != null &&
+                ControllerHandler.getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Y) != null) {
+            axes += event.getAxisValue(MotionEvent.AXIS_Y)
+        }
+        return axes
+    }
+
+    private fun resetControllerScroll() {
+        controllerPageScrollState.reset()
+        controllerScrollDeviceId = null
     }
 
     private fun generateReport(): List<DiagnosticCard> {
@@ -599,6 +705,8 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
     @Composable
     private fun CapabilityDiagnosticScreen(
             cards: List<DiagnosticCard>,
+            controllerScrollSequence: Int,
+            controllerScrollDirection: Int,
             onBack: () -> Unit,
             onCopy: () -> Unit
     ) {
@@ -607,6 +715,39 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
         val primary = Color(0xFFEEEEEE)
         val secondary = Color(0xAAFFFFFF)
         val accent = colorResource(R.color.crown_accent)
+        val reportFocusRequester = remember { FocusRequester() }
+        val backFocusRequester = remember { FocusRequester() }
+        val copyFocusRequester = remember { FocusRequester() }
+        val listState = rememberLazyListState()
+        val scope = rememberCoroutineScope()
+        val scrollStep = with(LocalDensity.current) { 88.dp.toPx() }
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val layoutDirection = LocalLayoutDirection.current
+        val safeArea = WindowInsets.systemBars
+                .union(WindowInsets.displayCutout)
+                .asPaddingValues()
+        val safeRight = if (isLandscape) safeArea.calculateRightPadding(layoutDirection) else 0.dp
+        val safeBottom = safeArea.calculateBottomPadding()
+        var requestedFocusTarget by remember {
+            mutableStateOf<CapabilityDiagnosticFocusTarget?>(null)
+        }
+
+        LaunchedEffect(Unit) { reportFocusRequester.requestFocus() }
+        LaunchedEffect(requestedFocusTarget) {
+            val focusTarget = requestedFocusTarget ?: return@LaunchedEffect
+            withFrameNanos { }
+            when (focusTarget) {
+                CapabilityDiagnosticFocusTarget.REPORT -> reportFocusRequester.requestFocus()
+                CapabilityDiagnosticFocusTarget.BACK -> backFocusRequester.requestFocus()
+                CapabilityDiagnosticFocusTarget.COPY -> copyFocusRequester.requestFocus()
+            }
+        }
+        LaunchedEffect(controllerScrollSequence) {
+            if (controllerScrollSequence > 0 && controllerScrollDirection != 0) {
+                listState.scrollBy(scrollStep * controllerScrollDirection)
+            }
+        }
 
         MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -621,28 +762,90 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(background)
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                        modifier = Modifier
+                                .fillMaxSize()
+                                .absolutePadding(right = safeRight, bottom = safeBottom)
+                ) {
                     DiagnosticTopBar(
                             panel = panel,
                             primary = primary,
                             secondary = secondary,
                             accent = accent,
+                            reportFocusRequester = reportFocusRequester,
+                            backFocusRequester = backFocusRequester,
+                            copyFocusRequester = copyFocusRequester,
+                            onFocusTargetRequested = { requestedFocusTarget = it },
                             onBack = onBack,
                             onCopy = onCopy
                     )
 
-                    LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    top = 12.dp,
-                                    bottom = 80.dp
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Box(
+                            modifier = Modifier
+                                    .fillMaxSize()
+                                    .focusRequester(reportFocusRequester)
+                                    .focusProperties {
+                                        up = reportFocusRequester
+                                        down = reportFocusRequester
+                                        left = backFocusRequester
+                                        right = copyFocusRequester
+                                    }
+                                    .onPreviewKeyEvent { event ->
+                                        val nativeEvent = event.nativeKeyEvent
+                                        when (nativeEvent.keyCode) {
+                                            KeyEvent.KEYCODE_DPAD_UP,
+                                            KeyEvent.KEYCODE_PAGE_UP -> {
+                                                if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                                                    scope.launch { listState.scrollBy(-scrollStep) }
+                                                }
+                                                true
+                                            }
+                                            KeyEvent.KEYCODE_DPAD_DOWN,
+                                            KeyEvent.KEYCODE_PAGE_DOWN -> {
+                                                if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                                                    scope.launch { listState.scrollBy(scrollStep) }
+                                                }
+                                                true
+                                            }
+                                            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                                if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                                                    requestedFocusTarget = CapabilityDiagnosticFocusTarget.BACK
+                                                }
+                                                true
+                                            }
+                                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                                if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                                                    requestedFocusTarget = CapabilityDiagnosticFocusTarget.COPY
+                                                }
+                                                true
+                                            }
+                                            else -> UiDialogKeyHandler.handle(
+                                                    action = nativeEvent.action,
+                                                    keyCode = nativeEvent.keyCode,
+                                                    onDismiss = onBack,
+                                                    onConfirm = {}
+                                            )
+                                        }
+                                    }
+                                    .focusable()
+                                    .testTag(CapabilityDiagnosticTags.REPORT)
                     ) {
-                        items(cards) { card ->
-                            DiagnosticCardView(card)
+                        LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(CapabilityDiagnosticTags.LIST),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        top = 12.dp,
+                                        bottom = 80.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(cards) { card ->
+                                DiagnosticCardView(card)
+                            }
                         }
                     }
                 }
@@ -656,9 +859,18 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
             primary: Color,
             secondary: Color,
             accent: Color,
+            reportFocusRequester: FocusRequester,
+            backFocusRequester: FocusRequester,
+            copyFocusRequester: FocusRequester,
+            onFocusTargetRequested: (CapabilityDiagnosticFocusTarget) -> Unit,
             onBack: () -> Unit,
             onCopy: () -> Unit
     ) {
+        var backFocused by remember { mutableStateOf(false) }
+        var copyFocused by remember { mutableStateOf(false) }
+        val backShape = CircleShape
+        val copyShape = RoundedCornerShape(999.dp)
+
         Surface(
                 color = panel,
                 tonalElevation = 0.dp,
@@ -676,6 +888,31 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
                         modifier = Modifier
                                 .align(Alignment.CenterStart)
                                 .size(40.dp)
+                                .focusRequester(backFocusRequester)
+                                .focusProperties {
+                                    up = backFocusRequester
+                                    down = reportFocusRequester
+                                    left = backFocusRequester
+                                    right = copyFocusRequester
+                                }
+                                .onFocusChanged {
+                                    backFocused = it.isFocused
+                                }
+                                .then(
+                                        if (backFocused) Modifier.border(2.dp, accent, backShape)
+                                        else Modifier
+                                )
+                                .onPreviewKeyEvent { event ->
+                                    handleCapabilityTopBarKey(
+                                            event = event.nativeKeyEvent,
+                                            horizontalKeyCode = KeyEvent.KEYCODE_DPAD_RIGHT,
+                                            horizontalTarget = CapabilityDiagnosticFocusTarget.COPY,
+                                            onFocusTargetRequested = onFocusTargetRequested,
+                                            onDismiss = onBack,
+                                            onConfirm = onBack
+                                    )
+                                }
+                                .testTag(CapabilityDiagnosticTags.BACK)
                 ) {
                     Icon(
                             painter = painterResource(R.drawable.ic_arrow_right),
@@ -711,8 +948,34 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
                                 containerColor = accent.copy(alpha = 0.18f),
                                 contentColor = primary
                         ),
-                        shape = RoundedCornerShape(999.dp),
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        shape = copyShape,
+                        modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .focusRequester(copyFocusRequester)
+                                .focusProperties {
+                                    up = copyFocusRequester
+                                    down = reportFocusRequester
+                                    left = backFocusRequester
+                                    right = copyFocusRequester
+                                }
+                                .onFocusChanged {
+                                    copyFocused = it.isFocused
+                                }
+                                .then(
+                                        if (copyFocused) Modifier.border(2.dp, accent, copyShape)
+                                        else Modifier
+                                )
+                                .onPreviewKeyEvent { event ->
+                                    handleCapabilityTopBarKey(
+                                            event = event.nativeKeyEvent,
+                                            horizontalKeyCode = KeyEvent.KEYCODE_DPAD_LEFT,
+                                            horizontalTarget = CapabilityDiagnosticFocusTarget.BACK,
+                                            onFocusTargetRequested = onFocusTargetRequested,
+                                            onDismiss = onBack,
+                                            onConfirm = onCopy
+                                    )
+                                }
+                                .testTag(CapabilityDiagnosticTags.COPY)
                 ) {
                     Text(
                             text = stringResource(R.string.layout_capability_diagnostic_text_79d3a),
@@ -1007,4 +1270,45 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
         Info(Color(0xFF42A5F5), Color(0x1A42A5F5)),
         Muted(Color(0x66FFFFFF), Color(0x10FFFFFF))
     }
+}
+
+internal object CapabilityDiagnosticTags {
+    const val REPORT = "capability_diagnostic_report"
+    const val LIST = "capability_diagnostic_list"
+    const val BACK = "capability_diagnostic_back"
+    const val COPY = "capability_diagnostic_copy"
+}
+
+internal enum class CapabilityDiagnosticFocusTarget {
+    REPORT,
+    BACK,
+    COPY
+}
+
+private fun handleCapabilityTopBarKey(
+    event: KeyEvent,
+    horizontalKeyCode: Int,
+    horizontalTarget: CapabilityDiagnosticFocusTarget,
+    onFocusTargetRequested: (CapabilityDiagnosticFocusTarget) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+): Boolean = when (event.keyCode) {
+    horizontalKeyCode -> {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            onFocusTargetRequested(horizontalTarget)
+        }
+        true
+    }
+    KeyEvent.KEYCODE_DPAD_DOWN -> {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            onFocusTargetRequested(CapabilityDiagnosticFocusTarget.REPORT)
+        }
+        true
+    }
+    else -> UiDialogKeyHandler.handle(
+        action = event.action,
+        keyCode = event.keyCode,
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
+    )
 }

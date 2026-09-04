@@ -416,8 +416,6 @@ class ControllerHandler(
         sceManager = SceManager(activityContext)
         sceManager.start()
 
-        var deadzonePercentage = prefConfig.deadzonePercentage
-
         val ids = InputDevice.getDeviceIds()
         for (id in ids) {
             val dev = InputDevice.getDevice(id) ?: continue
@@ -434,12 +432,7 @@ class ControllerHandler(
             }
         }
 
-        // 1% is the lowest possible deadzone we support
-        if (deadzonePercentage <= 0) {
-            deadzonePercentage = 1
-        }
-
-        stickDeadzone = deadzonePercentage.toDouble() / 100.0
+        stickDeadzone = controllerStickDeadzoneRadius(prefConfig.deadzonePercentage)
 
         // Initialize the default context for events with no device
         defaultContext = InputDeviceContext(this)
@@ -513,6 +506,7 @@ class ControllerHandler(
     override fun onInputDeviceRemoved(deviceId: Int) {
         val context = inputDeviceContexts.get(deviceId)
         if (context != null) {
+            val wasController0GyroSource = contextWasController0GyroSource(context)
             mainThreadHandler.post {
                 (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(deviceId)
             }
@@ -520,13 +514,12 @@ class ControllerHandler(
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
+            if (wasController0GyroSource) {
+                gyroManager.onControllerSourceChanged(context.controllerNumber)
+                gyroManager.onSensorsReenabled()
+            }
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
-
-            // 如果陀螺仪鼠标模式开着，手柄断开后重新在 defaultContext 上注册手机传感器
-            if (prefConfig.gyroToMouse) {
-                gyroManager.registerDeviceGyroForDefaultContext(true)
-            }
         }
     }
 
@@ -537,6 +530,7 @@ class ControllerHandler(
 
         // If we don't have a context for this device, we don't need to update anything
         val existingContext = inputDeviceContexts.get(deviceId) ?: return
+        val wasController0GyroSource = contextWasController0GyroSource(existingContext)
 
         LimeLog.info("Device changed: " + existingContext.name + " (" + deviceId + ")")
 
@@ -544,6 +538,10 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         newContext.migrateContext(existingContext)
         inputDeviceContexts.put(deviceId, newContext)
+        if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
+            gyroManager.onControllerSourceChanged(newContext.controllerNumber)
+            gyroManager.onSensorsReenabled()
+        }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(newContext.controllerNumber)
         hapticsCoordinator.clearControllerIfUnavailable(existingContext.controllerNumber)
@@ -581,6 +579,7 @@ class ControllerHandler(
             mainThreadHandler.post { gestures.hideStartHoldWheel() }
         }
 
+        gyroManager.onStreamStopped()
         // 清理 defaultContext 上可能注册的手机陀螺仪传感器
         gyroManager.registerDeviceGyroForDefaultContext(false)
         defaultContext.destroy()
@@ -785,6 +784,10 @@ class ControllerHandler(
         }
     }
 
+    private fun contextWasController0GyroSource(context: GenericControllerContext): Boolean =
+        context.controllerNumber.toInt() == 0 &&
+            (context.assignedControllerNumber || context.controllerGyroRoutingParticipated)
+
     private fun isAssociatedJoystick(originalDevice: InputDevice?, possibleAssociatedJoystick: InputDevice?): Boolean {
         if (possibleAssociatedJoystick == null) {
             return false
@@ -816,6 +819,8 @@ class ControllerHandler(
         if (context.assignedControllerNumber) {
             return false
         }
+        val wasUnassignedController0GyroSource =
+            context.controllerNumber.toInt() == 0 && context.controllerGyroRoutingParticipated
 
         if (context is InputDeviceContext) {
             LimeLog.info(context.name + " (" + context.id + ") needs a controller number assigned")
@@ -911,6 +916,20 @@ class ControllerHandler(
 
         LimeLog.info("Assigned as controller " + context.controllerNumber)
         context.assignedControllerNumber = true
+        if (context.controllerNumber.toInt() == 0) {
+            if ((prefConfig.gyroToMouse || prefConfig.gyroToRightStick) &&
+                defaultContext.gyroListener != null
+            ) {
+                gyroManager.registerDeviceGyroForDefaultContext(false)
+                LimeLog.info("Physical controller connected, released defaultContext gyro")
+            }
+            gyroManager.onControllerSourceChanged(context.controllerNumber)
+            gyroManager.onSensorsReenabled()
+        } else if (wasUnassignedController0GyroSource) {
+            context.controllerGyroRoutingParticipated = false
+            gyroManager.onControllerSourceChanged(0.toShort())
+            gyroManager.onSensorsReenabled()
+        }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
 
@@ -1095,26 +1114,22 @@ class ControllerHandler(
             }
         }
 
-        // On Android 12, we can try to use the InputDevice's sensors. This may not work if the
-        // Linux kernel version doesn't have motion sensor support, which is common for third-party
-        // gamepads.
-        //
-        // Android 12 has a bug that causes InputDeviceSensorManager to cause a NPE on a background
-        // thread due to bad error checking in InputListener callbacks. InputDeviceSensorManager is
-        // created upon the first call to InputDevice.getSensorManager(), so we avoid calling this
-        // on Android 12 unless we have a gamepad that could plausibly have motion sensors.
+        // InputDevice sensors were added in Android 12, but Android 12 and 12L can crash on a
+        // background SensorThread after InputDeviceSensorManager observes a removed device.
+        // Merely accessing dev.sensorManager creates that manager, so don't touch it before
+        // Android 13. Device-level sensor fallback uses the regular SensorManager and remains safe.
         // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
-        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ||
-                    (Build.VERSION.SDK_INT == Build.VERSION_CODES.S &&
-                            (context.vendorId == 0x054c || context.vendorId == 0x057e))) && // Sony or Nintendo
-            prefConfig.gamepadMotionSensors
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            InputDeviceSensorPolicy.shouldUse(
+                Build.VERSION.SDK_INT,
+                prefConfig.gamepadMotionSensors,
+            )
         ) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (dev.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null ||
-                    dev.sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
-                ) {
-                    context.sensorManager = dev.sensorManager
-                }
+            val sensorManager = dev.sensorManager
+            if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null ||
+                sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
+            ) {
+                context.sensorManager = sensorManager
             }
         }
 
@@ -1387,16 +1402,6 @@ class ControllerHandler(
         // Otherwise create a new context
         context = createInputDeviceContextForDevice(event.device)
         inputDeviceContexts.put(event.deviceId, context)
-
-        // 如果陀螺仪鼠标模式开着，且新手柄会占用 controllerNumber=0，
-        // 需要清理 defaultContext 上的手机传感器，避免双重输入。
-        // Only unregister if this device is likely to become controller 0.
-        // Internal devices and the first external controller will get controllerNumber=0.
-        val likelyController0 = !context.external || (prefConfig.multiController && currentControllers.toInt() == 0)
-        if (prefConfig.gyroToMouse && defaultContext.gyroListener != null && likelyController0) {
-            gyroManager.registerDeviceGyroForDefaultContext(false)
-            LimeLog.info("Physical controller connected, released defaultContext gyro")
-        }
 
         return context
     }
@@ -3080,6 +3085,7 @@ class ControllerHandler(
             driverControllerContexts.remove(controller.getControllerId())
         }
         if (context != null) {
+            val wasController0GyroSource = contextWasController0GyroSource(context)
             LimeLog.info("Removed controller: " + controller.getControllerId())
             mainThreadHandler.post {
                 (gestures as? GameMenuAxisSourceLifecycle)?.releaseControllerMenuAxisSource(
@@ -3089,6 +3095,10 @@ class ControllerHandler(
             rumbleManager.forgetUsbDevice(controller)
             releaseControllerNumber(context)
             context.destroy()
+            if (wasController0GyroSource) {
+                gyroManager.onControllerSourceChanged(context.controllerNumber)
+                gyroManager.onSensorsReenabled()
+            }
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
         }
@@ -3117,6 +3127,20 @@ class ControllerHandler(
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+            if (context.controllerNumber.toInt() == 0) {
+                context.controllerGyroRoutingParticipated = true
+            }
+            gyroManager.onControllerGyroSample(
+                x,
+                y,
+                z,
+                context.controllerNumber,
+                System.nanoTime()
+            )
+            if (gyroManager.isUsingDeviceGyroFallback(context.controllerNumber)) {
+                return
+            }
+
             if (prefConfig.gyroToMouse && context.gyroHoldActive) {
                 // x=pitch(deg/s), y=roll, z=yaw → 横屏下 z→mouseX, x→mouseY，转回 rad/s
                 gyroManager.applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime())
@@ -3225,14 +3249,32 @@ class ControllerHandler(
 
     // ========== Sensor Management ==========
 
-    fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
+    fun handleSetMotionEventState(
+        controllerNumber: Short,
+        motionType: Byte,
+        reportRateHz: Short,
+        isHostRequest: Boolean = true
+    ) {
         if (stopped) {
             return
         }
 
-        @Suppress("NAME_SHADOWING")
         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
-        val reportRateHz = Math.min(200, reportRateHz.toInt()).toShort()
+        val requestedReportRateHz = Math.min(200, reportRateHz.toInt()).toShort()
+        val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
+            gyroManager.handleControllerGyroReportRate(
+                controllerNumber,
+                requestedReportRateHz,
+                isHostRequest = isHostRequest
+            )
+        val effectiveReportRateHz = if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+            gyroManager.effectiveControllerGyroReportRate(
+                controllerNumber,
+                requestedReportRateHz
+            )
+        } else {
+            requestedReportRateHz
+        }
 
         for (i in 0 until inputDeviceContexts.size()) {
             val deviceContext = inputDeviceContexts.valueAt(i)
@@ -3243,8 +3285,12 @@ class ControllerHandler(
                 // sensors disappear and reappear. By storing the desired report rate, we can
                 // reapply the desired motion sensor configuration after they reappear.
                 when (motionType) {
-                    MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = reportRateHz
-                    MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = reportRateHz
+                    MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = effectiveReportRateHz
+                    MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = effectiveReportRateHz
+                }
+
+                if (fallbackHandled) {
+                    break
                 }
 
                 backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
@@ -3260,9 +3306,9 @@ class ControllerHandler(
 
                         // Enable the accelerometer if requested
                         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        if (reportRateHz.toInt() != 0 && accelSensor != null) {
+                        if (effectiveReportRateHz.toInt() != 0 && accelSensor != null) {
                             deviceContext.accelListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
-                            sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / reportRateHz)
+                            sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / effectiveReportRateHz)
                         }
                     }
                     MoonBridge.LI_MOTION_TYPE_GYRO -> {
@@ -3273,9 +3319,12 @@ class ControllerHandler(
 
                         // Enable the gyroscope if requested
                         val gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                        if (reportRateHz.toInt() != 0 && gyroSensor != null) {
+                        if (effectiveReportRateHz.toInt() != 0 && gyroSensor != null) {
+                            if (controllerNumber.toInt() == 0) {
+                                deviceContext.controllerGyroRoutingParticipated = true
+                            }
                             deviceContext.gyroListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
-                            sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / reportRateHz)
+                            sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / effectiveReportRateHz)
                         }
                     }
                 }
