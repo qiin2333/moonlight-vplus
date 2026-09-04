@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">تغییر مستقیم پیکربندی</string>
+    <string name="crown_direct_config_target">تغییر به %1$s</string>
+    <string name="crown_direct_config_unavailable">پیکربندی در دسترس نیست (عملیات غیرفعال است)</string>
+    <string name="crown_direct_config_self">پیکربندی فعلی است؛ نیازی به تغییر نیست</string>
+    <string name="crown_direct_config_no_other">پیکربندی دیگری موجود نیست</string>
+    <string name="game_menu_edit_mode">ویرایش چیدمان دکمه‌ها</string>
+    <string name="game_menu_configure_settings">تغییر پیکربندی</string>
+</resources>

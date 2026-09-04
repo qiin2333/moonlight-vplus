@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">מעבר ישיר לתצורה</string>
+    <string name="crown_direct_config_target">מעבר אל %1$s</string>
+    <string name="crown_direct_config_unavailable">התצורה אינה זמינה (הפעולה מושבתת)</string>
+    <string name="crown_direct_config_self">זו התצורה הנוכחית; אין צורך לעבור</string>
+    <string name="crown_direct_config_no_other">אין תצורות נוספות זמינות</string>
+    <string name="game_menu_edit_mode">עריכת פריסת הכפתורים</string>
+    <string name="game_menu_configure_settings">החלפת תצורה</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Прямое переключение конфигурации</string>
+    <string name="crown_direct_config_target">Переключить на %1$s</string>
+    <string name="crown_direct_config_unavailable">Конфигурация недоступна (действие отключено)</string>
+    <string name="crown_direct_config_self">Текущая конфигурация; переключение не требуется</string>
+    <string name="crown_direct_config_no_other">Других конфигураций нет</string>
+    <string name="game_menu_edit_mode">Изменить раскладку кнопок</string>
+    <string name="game_menu_configure_settings">Переключить конфигурацию</string>
+</resources>

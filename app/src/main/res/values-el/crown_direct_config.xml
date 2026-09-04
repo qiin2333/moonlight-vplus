@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Άμεση αλλαγή διαμόρφωσης</string>
+    <string name="crown_direct_config_target">Μετάβαση σε %1$s</string>
+    <string name="crown_direct_config_unavailable">Η διαμόρφωση δεν είναι διαθέσιμη (η ενέργεια είναι ανενεργή)</string>
+    <string name="crown_direct_config_self">Τρέχουσα διαμόρφωση· δεν απαιτείται αλλαγή</string>
+    <string name="crown_direct_config_no_other">Δεν υπάρχουν άλλες διαμορφώσεις</string>
+    <string name="game_menu_edit_mode">Επεξεργασία διάταξης κουμπιών</string>
+    <string name="game_menu_configure_settings">Αλλαγή διαμόρφωσης</string>
+</resources>

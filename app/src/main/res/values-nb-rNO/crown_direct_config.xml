@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Bytt konfigurasjon direkte</string>
+    <string name="crown_direct_config_target">Bytt til %1$s</string>
+    <string name="crown_direct_config_unavailable">Konfigurasjonen er utilgjengelig (handlingen er deaktivert)</string>
+    <string name="crown_direct_config_self">Gjeldende konfigurasjon; bytte er ikke nødvendig</string>
+    <string name="crown_direct_config_no_other">Ingen andre konfigurasjoner tilgjengelig</string>
+    <string name="game_menu_edit_mode">Rediger knappoppsett</string>
+    <string name="game_menu_configure_settings">Bytt konfigurasjon</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Bezpośrednie przełączenie konfiguracji</string>
+    <string name="crown_direct_config_target">Przełącz na %1$s</string>
+    <string name="crown_direct_config_unavailable">Konfiguracja niedostępna (akcja wyłączona)</string>
+    <string name="crown_direct_config_self">Bieżąca konfiguracja; przełączanie nie jest potrzebne</string>
+    <string name="crown_direct_config_no_other">Brak innych konfiguracji</string>
+    <string name="game_menu_edit_mode">Edytuj układ przycisków</string>
+    <string name="game_menu_configure_settings">Przełącz konfigurację</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Chuyển trực tiếp cấu hình</string>
+    <string name="crown_direct_config_target">Chuyển sang %1$s</string>
+    <string name="crown_direct_config_unavailable">Cấu hình không khả dụng (đã tắt thao tác)</string>
+    <string name="crown_direct_config_self">Cấu hình hiện tại; không cần chuyển</string>
+    <string name="crown_direct_config_no_other">Không có cấu hình nào khác</string>
+    <string name="game_menu_edit_mode">Chỉnh sửa bố cục nút</string>
+    <string name="game_menu_configure_settings">Chuyển cấu hình</string>
+</resources>

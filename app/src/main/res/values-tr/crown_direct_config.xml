@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Doğrudan yapılandırmaya geç</string>
+    <string name="crown_direct_config_target">%1$s yapılandırmasına geç</string>
+    <string name="crown_direct_config_unavailable">Yapılandırma kullanılamıyor (eylem devre dışı)</string>
+    <string name="crown_direct_config_self">Geçerli yapılandırma; geçiş gerekmiyor</string>
+    <string name="crown_direct_config_no_other">Başka yapılandırma yok</string>
+    <string name="game_menu_edit_mode">Düğme düzenini düzenle</string>
+    <string name="game_menu_configure_settings">Yapılandırmayı değiştir</string>
+</resources>

@@ -16,6 +16,7 @@ import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
+import com.limelight.binding.input.advance_setting.DirectConfigTransfer
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.preferences.BackgroundSource
 import com.limelight.preferences.PreferenceConfiguration
@@ -1498,16 +1499,22 @@ class ConfigurationSyncManager(private val context: Context) {
         )
         val seenProfileIds = mutableSetOf<String>()
 
-        for (configId in helper.queryAllConfigIds()) {
+        val payloads = helper.queryAllConfigIds().mapNotNull { configId ->
+            runCatching { helper.exportConfig(configId) }.getOrNull()
+                ?.takeIf { it.isNotBlank() }?.let { configId to it }
+        }.toMap()
+        val profileIds = payloads.mapValues { (configId, payload) ->
+            crownProfileIdForConfig(statePrefs, stateEditor, configId, payload)
+        }
+
+        for ((configId, rawPayload) in payloads) {
             val name = helper.queryConfigAttribute(
                 configId,
                 PageConfigController.COLUMN_STRING_CONFIG_NAME,
                 "default"
             ) as? String ?: "default"
-            val payload = runCatching { helper.exportConfig(configId) }.getOrNull()
-                ?.takeIf { it.isNotBlank() }
-                ?: continue
-            val profileId = crownProfileIdForConfig(statePrefs, stateEditor, configId, payload)
+            val payload = DirectConfigTransfer.forBackup(rawPayload, profileIds)
+            val profileId = profileIds.getValue(configId)
 
             profiles.add(
                 stampCrownProfile(
@@ -1584,8 +1591,14 @@ class ConfigurationSyncManager(private val context: Context) {
         )
         val existingProfileHashes = mutableMapOf<String, Long>()
         val existingConfigIds = helper.queryAllConfigIds().toMutableSet()
+        val localProfileIds = existingConfigIds.mapNotNull { configId ->
+            statePrefs.getString(crownProfileIdByConfigKey(configId), null)?.let { configId to it }
+        }.toMap()
+        val replacements = mutableMapOf<Long, Long?>()
         for (configId in helper.queryAllConfigIds()) {
-            val payload = runCatching { helper.exportConfig(configId) }.getOrNull()
+            val payload = runCatching {
+                DirectConfigTransfer.forBackup(helper.exportConfig(configId), localProfileIds)
+            }.getOrNull()
             val name = helper.queryConfigAttribute(
                 configId,
                 PageConfigController.COLUMN_STRING_CONFIG_NAME,
@@ -1618,6 +1631,7 @@ class ConfigurationSyncManager(private val context: Context) {
             if (profile.optBoolean(KEY_CROWN_PROFILE_DELETED, false)) {
                 val configId = mappedCrownProfileConfigId(statePrefs, profileId, existingConfigIds)
                 if (configId != null) {
+                    replacements[configId] = null
                     helper.deleteConfig(configId)
                     existingConfigIds.remove(configId)
                     replaceSelectedCrownConfig(configId, null)
@@ -1639,7 +1653,9 @@ class ConfigurationSyncManager(private val context: Context) {
             val mappedConfigId = mappedCrownProfileConfigId(statePrefs, profileId, existingConfigIds)
             var replacedConfigId: Long? = null
             if (mappedConfigId != null) {
-                val localPayload = runCatching { helper.exportConfig(mappedConfigId) }.getOrNull()
+                val localPayload = runCatching {
+                    DirectConfigTransfer.forBackup(helper.exportConfig(mappedConfigId), localProfileIds)
+                }.getOrNull()
                 val localName = helper.queryConfigAttribute(
                     mappedConfigId,
                     PageConfigController.COLUMN_STRING_CONFIG_NAME,
@@ -1662,6 +1678,7 @@ class ConfigurationSyncManager(private val context: Context) {
             val importedConfigId = importCrownProfileAndFindId(helper, payload, existingConfigIds)
             if (importedConfigId != null) {
                 if (replacedConfigId != null) {
+                    replacements[replacedConfigId] = importedConfigId
                     helper.deleteConfig(replacedConfigId)
                     existingConfigIds.remove(replacedConfigId)
                     replaceSelectedCrownConfig(replacedConfigId, importedConfigId)
@@ -1678,6 +1695,13 @@ class ConfigurationSyncManager(private val context: Context) {
 
         stateEditor.putStringSet(CROWN_PROFILE_TRACKED_IDS, trackedProfileIds)
         stateEditor.apply()
+        // Resolve only after every profile has an actual local ID, independent of import order.
+        val restoredProfiles = trackedProfileIds.mapNotNull { profileId ->
+            mappedCrownProfileConfigId(statePrefs, profileId, existingConfigIds)?.let { profileId to it }
+        }.toMap()
+        for (configId in existingConfigIds) {
+            helper.restoreDirectConfigActions(configId, replacements, restoredProfiles)
+        }
         return imported to failed
     }
 
@@ -2034,7 +2058,7 @@ class ConfigurationSyncManager(private val context: Context) {
         payload: String,
         existingConfigIds: Set<Long>
     ): Long? {
-        if (helper.importConfig(payload) != 0) return null
+        if (helper.importConfigForBackup(payload) != 0) return null
         return helper.queryAllConfigIds()
             .filter { it !in existingConfigIds }
             .maxOrNull()

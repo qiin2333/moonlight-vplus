@@ -787,8 +787,8 @@
     <string name="toast_elements_hidden">按键已隐藏</string>
     <string name="toast_back_key_menu_switch_1">已退出王冠配置</string>
     <string name="toast_back_key_menu_switch_2">已进入王冠配置</string>
-    <string name="game_menu_edit_mode">按键布局</string>
-    <string name="game_menu_configure_settings">配置档案</string>
+    <string name="game_menu_edit_mode">编辑按键布局</string>
+    <string name="game_menu_configure_settings">切换配置</string>
 
     <!-- External display -->
     <string name="title_use_external_display">把串流发送到外接显示器</string>

@@ -14,6 +14,7 @@ import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.StartWheelAction
 import com.limelight.binding.input.advance_setting.ControllerManager
+import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog
 import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
@@ -176,6 +177,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     var connecting = false
     var connected = false
     private var activeGameMenu: GameMenu? = null
+    private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
     private var startHoldWheelView: ComposeView? = null
     private val startHoldWheelVisible = mutableStateOf(false)
@@ -1544,6 +1546,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onPause() {
+        crownConfigPicker?.dismiss()
+        controllerManager?.elementController?.cancelDirectConfigSwitch()
         updateAudioHapticsRuntimeEnabled(false)
         audioVibrationService?.stop()
         if (::floatBallHandler.isInitialized) {
@@ -1782,6 +1786,20 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
         setMetaKeyCaptureState(grab)
         grabbedInput = grab
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            controllerManager?.elementController?.cancelDirectConfigSwitch()
+        }
+        return try {
+            super.dispatchTouchEvent(event)
+        } finally {
+            // The final UP reaches all old input receivers before a Crown layout is replaced.
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                controllerManager?.elementController?.finishStreamTouch(event.actionMasked)
+            }
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -2724,6 +2742,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
+        crownConfigPicker?.takeIf { it.isShowing }?.let {
+            it.dispatchKeyEvent(event)
+            return true
+        }
         val menu = activeGameMenu ?: return false
         if (!menu.dispatchControllerKeyEvent(event)) return false
         return activeGameMenu === menu && menu.isShowing()
@@ -2736,6 +2758,13 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         rightStickX: Float,
         rightStickY: Float
     ): Boolean {
+        crownConfigPicker?.takeIf { it.isShowing }?.let {
+            it.dispatchAxes(
+                ControllerHandler.usbGameMenuAxisSourceId(controllerId),
+                listOf(leftStickX to leftStickY), rightStickY
+            )
+            return true
+        }
         val menu = activeGameMenu ?: return false
         if (!menu.dispatchControllerAxes(
                 sourceId = ControllerHandler.usbGameMenuAxisSourceId(controllerId),
@@ -2751,7 +2780,35 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun releaseControllerMenuAxisSource(sourceId: Int) {
+        crownConfigPicker?.releaseSource(sourceId)
         activeGameMenu?.releaseControllerAxisSource(sourceId)
+    }
+
+    fun showCrownConfigPicker(names: List<String>, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
+        if (isFinishing || isDestroyed || names.isEmpty() || crownConfigPicker != null) return
+        val picker = CrownConfigPickerDialog(
+            this, names,
+            readAxes = { event ->
+                (controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = false)
+                    ?: emptyList()) to controllerHandler.getMenuRightStickY(event)
+            },
+            onSelected = onSelected
+        )
+        crownConfigPicker = picker
+        picker.setOnDismissListener {
+            if (crownConfigPicker === picker) {
+                crownConfigPicker = null
+                controllerHandler.onExternalGameMenuDismissed()
+                onDismiss()
+            }
+        }
+        try {
+            picker.show()
+            controllerHandler.onExternalGameMenuOpened()
+        } catch (exception: android.view.WindowManager.BadTokenException) {
+            crownConfigPicker = null
+            onDismiss()
+        }
     }
 
     override fun showUsbControllerShortcutHint() {

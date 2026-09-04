@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">直接切換配置</string>
+    <string name="crown_direct_config_target">切換到%1$s</string>
+    <string name="crown_direct_config_unavailable">配置已失效（已停用）</string>
+    <string name="crown_direct_config_self">目前配置，無需切換</string>
+    <string name="crown_direct_config_no_other">暫無其他配置</string>
+</resources>

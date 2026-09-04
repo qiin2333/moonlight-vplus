@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Ganti konfigurasi secara langsung</string>
+    <string name="crown_direct_config_target">Ganti ke %1$s</string>
+    <string name="crown_direct_config_unavailable">Konfigurasi tidak tersedia (tindakan dinonaktifkan)</string>
+    <string name="crown_direct_config_self">Konfigurasi saat ini; tidak perlu diganti</string>
+    <string name="crown_direct_config_no_other">Tidak ada konfigurasi lain</string>
+    <string name="game_menu_edit_mode">Edit tata letak tombol</string>
+    <string name="game_menu_configure_settings">Ganti konfigurasi</string>
+</resources>
