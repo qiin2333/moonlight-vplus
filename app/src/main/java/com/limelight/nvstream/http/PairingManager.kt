@@ -60,14 +60,19 @@ class PairingManager(
             false
         )
 
+        var getServerCertStatusCode: Int? = null
         val pairedValue: String? = try {
             NvHTTP.getXmlString(getCert, "paired", true)
         } catch (e: HostHttpResponseException) {
+            getServerCertStatusCode = e.getErrorCode()
             LimeLog.warning("getservercert returned status ${e.getErrorCode()}, checking paired value anyway")
             extractXmlValue(getCert, "paired")
         }
-        if (pairedValue == null || pairedValue != "1") {
-            return PairResult(PairState.FAILED, null)
+        when (classifyGetServerCertResponse(getServerCertStatusCode, pairedValue)) {
+            PairState.ALREADY_IN_PROGRESS ->
+                return PairResult(PairState.ALREADY_IN_PROGRESS, extractXmlValue(getCert, "pairname"))
+            PairState.FAILED -> return PairResult(PairState.FAILED, null)
+            else -> Unit
         }
 
         val pairName: String? = try {
@@ -78,7 +83,7 @@ class PairingManager(
 
         val serverCert = extractPlainCert(getCert)
         if (serverCert == null) {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.ALREADY_IN_PROGRESS, pairName)
         }
 
@@ -90,7 +95,7 @@ class PairingManager(
 
         val challengeResp = http.executePairingCommand("clientchallenge=${bytesToHex(encryptedChallenge)}", true)
         if (NvHTTP.getXmlString(challengeResp, "paired", true) != "1") {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.FAILED, pairName)
         }
 
@@ -105,7 +110,7 @@ class PairingManager(
         val challengeRespEncrypted = encryptAes(challengeRespHash, aesKey)
         val secretResp = http.executePairingCommand("serverchallengeresp=${bytesToHex(challengeRespEncrypted)}", true)
         if (NvHTTP.getXmlString(secretResp, "paired", true) != "1") {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.FAILED, pairName)
         }
 
@@ -114,30 +119,36 @@ class PairingManager(
         val serverSignature = serverSecretResp.copyOfRange(16, serverSecretResp.size)
 
         if (!verifySignature(serverSecret, serverSignature, serverCert)) {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.FAILED, pairName)
         }
 
         val serverChallengeRespHash = hashAlgo.hashData(concatBytes(concatBytes(randomChallenge, serverCert.signature), serverSecret))
         if (!serverChallengeRespHash.contentEquals(serverResponse)) {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.PIN_WRONG, pairName)
         }
 
         val clientPairingSecret = concatBytes(clientSecret, signData(clientSecret, pk))
         val clientSecretResp = http.executePairingCommand("clientpairingsecret=${bytesToHex(clientPairingSecret)}", true)
         if (NvHTTP.getXmlString(clientSecretResp, "paired", true) != "1") {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.FAILED, pairName)
         }
 
         val pairChallenge = http.executePairingChallenge()
         if (NvHTTP.getXmlString(pairChallenge, "paired", true) != "1") {
-            http.unpair()
+            cleanupFailedPairing()
             return PairResult(PairState.FAILED, pairName)
         }
 
         return PairResult(PairState.PAIRED, pairName)
+    }
+
+    private fun cleanupFailedPairing() {
+        runBestEffortCleanup(http::unpair)?.let { e ->
+            LimeLog.warning("Failed to clean up incomplete pairing: ${e.javaClass.simpleName}")
+        }
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
@@ -306,6 +317,23 @@ class PairingManager(
             return String.format(null as Locale?, "%d%d%d%d",
                 r.nextInt(10), r.nextInt(10),
                 r.nextInt(10), r.nextInt(10))
+        }
+
+        internal fun classifyGetServerCertResponse(statusCode: Int?, pairedValue: String?): PairState? {
+            return when {
+                statusCode == 409 -> PairState.ALREADY_IN_PROGRESS
+                pairedValue != "1" -> PairState.FAILED
+                else -> null
+            }
+        }
+
+        internal fun runBestEffortCleanup(cleanup: () -> Unit): IOException? {
+            return try {
+                cleanup()
+                null
+            } catch (e: IOException) {
+                e
+            }
         }
 
         private fun extractXmlValue(xml: String, tagName: String): String? {

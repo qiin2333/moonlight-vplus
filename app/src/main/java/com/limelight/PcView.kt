@@ -36,10 +36,12 @@ import com.limelight.dialogs.AddressSelectionDialog
 import com.limelight.grid.PcGridAdapter
 import com.limelight.grid.assets.DiskAssetLoader
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.HostHttpNotFoundException
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.http.PairingManager.PairState
+import com.limelight.nvstream.http.PairingTransportException
 import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.preferences.AddComputerManually
 import com.limelight.preferences.BackgroundSource
@@ -2058,14 +2060,20 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 }
             } catch (e: UnknownHostException) {
                 message = getString(R.string.error_unknown_host)
+            } catch (e: HostHttpNotFoundException) {
+                message = getString(
+                    if (e.isPairingEndpoint) R.string.pair_http_404 else R.string.pair_fail
+                )
             } catch (e: FileNotFoundException) {
-                message = getString(R.string.error_404)
+                message = getString(R.string.pair_fail)
             } catch (e: InterruptedException) {
                 message = getString(R.string.pair_fail)
+            } catch (e: PairingTransportException) {
+                message = pairingTransportErrorMessage(e)
             } catch (e: XmlPullParserException) {
-                message = e.message
+                message = getString(R.string.pair_fail)
             } catch (e: IOException) {
-                message = e.message
+                message = getString(R.string.pair_fail)
             } finally {
                 Dialog.closeDialogs()
             }
@@ -2207,8 +2215,23 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: HostHttpNotFoundException) {
+                message = getString(
+                    if (e.isPairingEndpoint) R.string.pair_http_404 else R.string.pair_fail
+                )
+            } catch (e: FileNotFoundException) {
+                message = getString(R.string.pair_fail)
+            } catch (e: UnknownHostException) {
+                message = getString(R.string.error_unknown_host)
+            } catch (e: PairingTransportException) {
+                message = pairingTransportErrorMessage(e)
+            } catch (e: XmlPullParserException) {
+                message = getString(R.string.pair_fail)
+            } catch (e: IOException) {
+                message = getString(R.string.pair_fail)
             } catch (e: Exception) {
-                message = e.message
+                LimeLog.warning("QR pairing failed: ${e.javaClass.simpleName}")
+                message = getString(R.string.pair_fail)
             }
 
             if (message != null) {
@@ -2225,6 +2248,17 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
                 startComputerUpdates()
             }
         }
+    }
+
+    private fun pairingTransportErrorMessage(error: PairingTransportException): String {
+        return getString(
+            if (error.reason == PairingTransportException.Reason.RESPONSE_INTERRUPTED) {
+                R.string.pair_connection_interrupted_with_code
+            } else {
+                R.string.pair_fail_with_code
+            },
+            error.errorCode
+        )
     }
 
     private data class QrPairResult(
