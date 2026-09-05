@@ -62,4 +62,11 @@ internal object DecoderInputBufferSizing {
         } else {
             booleanArrayOf(true)
         }
+
+    fun requiresReconfiguration(
+        currentWidth: Int,
+        currentHeight: Int,
+        newWidth: Int,
+        newHeight: Int,
+    ): Boolean = newWidth > currentWidth || newHeight > currentHeight
 }

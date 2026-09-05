@@ -2,7 +2,9 @@ package com.limelight.binding.video
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DecoderInputBufferSizingTest {
@@ -96,5 +98,13 @@ class DecoderInputBufferSizingTest {
             booleanArrayOf(true),
             DecoderInputBufferSizing.overrideAttempts(DecoderInputBufferMode.FORCE_ENABLED, 2_764_800),
         )
+    }
+
+    @Test
+    fun resolutionGrowthRequiresARecomputedConfiguration() {
+        assertFalse(DecoderInputBufferSizing.requiresReconfiguration(1920, 1080, 1280, 720))
+        assertFalse(DecoderInputBufferSizing.requiresReconfiguration(1920, 1080, 1920, 1080))
+        assertTrue(DecoderInputBufferSizing.requiresReconfiguration(1920, 1080, 2560, 1080))
+        assertTrue(DecoderInputBufferSizing.requiresReconfiguration(1920, 1080, 1920, 1440))
     }
 }

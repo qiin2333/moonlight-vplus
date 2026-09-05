@@ -180,6 +180,8 @@ class MediaCodecDecoderRenderer(
     private var outputFormat: MediaFormat? = null
     private val stableOutputFormatTracker = StableOutputFormatTracker()
     private var configuredFormat: MediaFormat? = null
+    @Volatile
+    private var decoderConfigurationDirty = false
 
     private var needsBaselineSpsHack = false
     private var savedSps: SeqParameterSet? = null
@@ -1312,6 +1314,7 @@ class MediaCodecDecoderRenderer(
             }, null)
         }
 
+        decoderConfigurationDirty = false
         return 0
     }
 
@@ -1392,7 +1395,7 @@ class MediaCodecDecoderRenderer(
                 }
 
                 // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
+                if (!decoderConfigurationDirty && codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
                     LimeLog.warning("Trying to restart decoder after CodecException")
                     try {
                         videoDecoder!!.stop()
@@ -1416,7 +1419,7 @@ class MediaCodecDecoderRenderer(
 
                 // For "non-recoverable" exceptions on L+, we can call reset() to recover
                 // without having to recreate the entire decoder again.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                if (!decoderConfigurationDirty && codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
                     LimeLog.warning("Trying to reset decoder after CodecException")
                     try {
                         videoDecoder!!.reset()
@@ -1439,8 +1442,14 @@ class MediaCodecDecoderRenderer(
 
                 // If we _still_ haven't managed to recover, go for the nuclear option and just
                 // throw away the old decoder and reinitialize a new one from scratch.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to recreate decoder after CodecException")
+                if (decoderConfigurationDirty || codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                    LimeLog.warning(
+                        if (decoderConfigurationDirty) {
+                            "Recreating decoder for updated stream dimensions"
+                        } else {
+                            "Trying to recreate decoder after CodecException"
+                        }
+                    )
                     videoDecoder!!.release()
 
                     try {
@@ -2005,7 +2014,12 @@ class MediaCodecDecoderRenderer(
         LimeLog.info("Decoder notified of resolution change: ${initialWidth}x${initialHeight} -> ${width}x${height}")
 
         // Check if new resolution exceeds current decoder configuration
-        val needsRestart = width > initialWidth || height > initialHeight
+        val needsRestart = DecoderInputBufferSizing.requiresReconfiguration(
+            initialWidth,
+            initialHeight,
+            width,
+            height,
+        )
 
         // Update tracked resolution
         initialWidth = width
@@ -2013,6 +2027,7 @@ class MediaCodecDecoderRenderer(
 
         if (needsRestart) {
             LimeLog.info("New resolution exceeds decoder config, triggering codec restart")
+            decoderConfigurationDirty = true
 
             // Reset recovery counter since this is an expected restart
             codecRecoveryAttempts = 0
