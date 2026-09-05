@@ -2195,6 +2195,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         orientationManager.syncOrientationOnFirstFrame(baseWidth, baseHeight)
 
+        // Decoder sizing must use the encoded stream dimensions. baseWidth/baseHeight describe
+        // the unscaled host resolution and are only used by the UI and saved stream settings.
+        if (connected) {
+            decoderRenderer?.onResolutionChanged(alignedWidth, alignedHeight)
+        }
+
         if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) {
             return
         }
@@ -2203,10 +2209,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         prefConfig.width = baseWidth
         prefConfig.height = baseHeight
-
-        if (connected && decoderRenderer != null) {
-            decoderRenderer?.onResolutionChanged(baseWidth, baseHeight)
-        }
 
         val isLandscape = baseWidth > baseHeight
         runOnUiThread {

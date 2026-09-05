@@ -146,7 +146,9 @@ class MediaCodecDecoderRenderer(
     var firstFrameCallback: (() -> Unit)? = null
     @Volatile
     private var firstFrameDelivered = false
+    @Volatile
     private var initialWidth = 0
+    @Volatile
     private var initialHeight = 0
     private var videoFormat = 0
     private var renderTarget: SurfaceHolder? = null
@@ -180,6 +182,8 @@ class MediaCodecDecoderRenderer(
     private var outputFormat: MediaFormat? = null
     private val stableOutputFormatTracker = StableOutputFormatTracker()
     private var configuredFormat: MediaFormat? = null
+    private val decoderConfigurationLock = Any()
+    private val decoderConfigurationTracker = DecoderConfigurationTracker()
     @Volatile
     private var decoderConfigurationDirty = false
 
@@ -747,12 +751,16 @@ class MediaCodecDecoderRenderer(
         val overrideAttempts: BooleanArray,
     )
 
-    private fun inputSizingPlan(decoderInfo: MediaCodecInfo, mimeType: String): InputSizingPlan {
+    private fun inputSizingPlan(
+        decoderInfo: MediaCodecInfo,
+        mimeType: String,
+        configuration: DecoderConfigurationSnapshot,
+    ): InputSizingPlan {
         val requestedSize = DecoderInputBufferSizing.requestedInputSize(
             prefs.decoderInputBufferMode,
             mimeType,
-            initialWidth,
-            initialHeight,
+            configuration.width,
+            configuration.height,
             decoderDefaultInputSize(decoderInfo, mimeType),
         )
         return InputSizingPlan(
@@ -764,8 +772,13 @@ class MediaCodecDecoderRenderer(
     private fun createBaseMediaFormat(
         mimeType: String,
         inputSizeOverride: Int?,
+        configuration: DecoderConfigurationSnapshot,
     ): MediaFormat {
-        val videoFormat = MediaFormat.createVideoFormat(mimeType, initialWidth, initialHeight)
+        val videoFormat = MediaFormat.createVideoFormat(
+            mimeType,
+            configuration.width,
+            configuration.height,
+        )
 
         if (inputSizeOverride != null) {
             videoFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, inputSizeOverride)
@@ -784,8 +797,8 @@ class MediaCodecDecoderRenderer(
 
         // Populate keys for adaptive playback
         if (adaptivePlayback) {
-            videoFormat.setInteger(MediaFormat.KEY_MAX_WIDTH, initialWidth)
-            videoFormat.setInteger(MediaFormat.KEY_MAX_HEIGHT, initialHeight)
+            videoFormat.setInteger(MediaFormat.KEY_MAX_WIDTH, configuration.width)
+            videoFormat.setInteger(MediaFormat.KEY_MAX_HEIGHT, configuration.height)
         }
 
         // Android 7.0 adds color options to the MediaFormat
@@ -830,14 +843,15 @@ class MediaCodecDecoderRenderer(
     private fun getDecoderProfileCandidates(
         mimeType: String,
         selectedDecoderInfo: MediaCodecInfo,
+        configuration: DecoderConfigurationSnapshot,
     ): List<Int?> {
         val activeHdr10PlusEligible = if (mimeType == HdrDecoderProfileSelector.MIME_HEVC ||
             mimeType == HdrDecoderProfileSelector.MIME_AV1
         ) {
             val activeFullRange = ColorRangePolicy.isFullRange(getPreferredColorRange())
             val activeSelector = hdrProfileSelector.forStreamParameters(
-                width = initialWidth,
-                height = initialHeight,
+                width = configuration.width,
+                height = configuration.height,
                 frameRate = if (refreshRate > 0) refreshRate else prefs.fps,
                 fullRange = activeFullRange,
             )
@@ -1036,7 +1050,9 @@ class MediaCodecDecoderRenderer(
             (MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81 ||
                 MoonBridge.getNegotiatedDynamicHdrFormat() == MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84)
 
-    private fun initializeDolbyVisionDecoder(): Int {
+    private fun initializeDolbyVisionDecoder(
+        configuration: DecoderConfigurationSnapshot,
+    ): Int {
         val dvDecoder = dolbyVisionDecoder ?: return -1
         val mimeType = "video/dolby-vision"
 
@@ -1076,7 +1092,7 @@ class MediaCodecDecoderRenderer(
             "plain" to { },
         )
 
-        val sizingPlan = inputSizingPlan(dvDecoder, mimeType)
+        val sizingPlan = inputSizingPlan(dvDecoder, mimeType, configuration)
         for ((sizingIndex, applyInputSizeOverride) in sizingPlan.overrideAttempts.withIndex()) {
             for ((label, applyExtras) in attempts) {
                 var tryNumber = 0
@@ -1086,6 +1102,7 @@ class MediaCodecDecoderRenderer(
                     val attemptFormat = createBaseMediaFormat(
                         mimeType,
                         sizingPlan.requestedSize.takeIf { applyInputSizeOverride },
+                        configuration,
                     )
                     attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
                     applyExtras(attemptFormat)
@@ -1120,6 +1137,23 @@ class MediaCodecDecoderRenderer(
     }
 
     fun initializeDecoder(throwOnCodecError: Boolean): Int {
+        val configuration = synchronized(decoderConfigurationLock) {
+            decoderConfigurationTracker.snapshot()
+        }
+        val result = initializeDecoder(throwOnCodecError, configuration)
+        if (result == 0) {
+            synchronized(decoderConfigurationLock) {
+                decoderConfigurationDirty =
+                    !decoderConfigurationTracker.markConfigured(configuration)
+            }
+        }
+        return result
+    }
+
+    private fun initializeDecoder(
+        throwOnCodecError: Boolean,
+        configuration: DecoderConfigurationSnapshot,
+    ): Int {
         val mimeType: String
         val selectedDecoderInfo: MediaCodecInfo
         dolbyVisionRoutingActive = false
@@ -1131,7 +1165,7 @@ class MediaCodecDecoderRenderer(
                 return -1
             }
 
-            if (initialWidth > 4096 || initialHeight > 4096) {
+            if (configuration.width > 4096 || configuration.height > 4096) {
                 LimeLog.severe("> 4K streaming only supported on HEVC")
                 return -1
             }
@@ -1168,7 +1202,7 @@ class MediaCodecDecoderRenderer(
             // failure — the base layer remains decodable.
             var dolbyVisionDecoderConfigured = false
             if (isDolbyVisionRoutingEligible()) {
-                if (initializeDolbyVisionDecoder() == 0) {
+                if (initializeDolbyVisionDecoder(configuration) == 0) {
                     dolbyVisionDecoderConfigured = true
                 } else {
                     LimeLog.warning("Dolby Vision decoder configuration failed; falling back to HEVC")
@@ -1210,10 +1244,14 @@ class MediaCodecDecoderRenderer(
             // shared tail below still owns post-configure setup.
             decoderConfigured = true
         } else {
-            val profileCandidates = getDecoderProfileCandidates(mimeType, selectedDecoderInfo)
+            val profileCandidates = getDecoderProfileCandidates(
+                mimeType,
+                selectedDecoderInfo,
+                configuration,
+            )
             hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
-            val sizingPlan = inputSizingPlan(selectedDecoderInfo, mimeType)
+            val sizingPlan = inputSizingPlan(selectedDecoderInfo, mimeType, configuration)
             sizingLoop@ for ((sizingIndex, applyInputSizeOverride) in sizingPlan.overrideAttempts.withIndex()) {
                 for ((profileIndex, profile) in profileCandidates.withIndex()) {
                     var tryNumber = 0
@@ -1226,6 +1264,7 @@ class MediaCodecDecoderRenderer(
                         val mediaFormat = createBaseMediaFormat(
                             mimeType,
                             sizingPlan.requestedSize.takeIf { applyInputSizeOverride },
+                            configuration,
                         )
                         if (profile != null) {
                             mediaFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
@@ -1314,13 +1353,16 @@ class MediaCodecDecoderRenderer(
             }, null)
         }
 
-        decoderConfigurationDirty = false
         return 0
     }
 
     override fun setup(format: Int, width: Int, height: Int, redrawRate: Int): Int {
         this.initialWidth = width
         this.initialHeight = height
+        synchronized(decoderConfigurationLock) {
+            decoderConfigurationTracker.reset(width, height)
+            decoderConfigurationDirty = false
+        }
         this.videoFormat = format
         this.refreshRate = redrawRate
 
@@ -1362,124 +1404,140 @@ class MediaCodecDecoderRenderer(
 
             // This is the final thread to quiesce, so let's perform the codec recovery now.
             if (codecRecoveryThreadQuiescedFlags == CR_FLAG_ALL) {
-                // Input and output buffers are invalidated by stop() and reset().
-                nextInputBuffer = null
-                nextInputBufferIndex = -1
-                framePacingController.clearBuffers()
-                if (asyncModeEnabled && availableInputBuffers != null) {
-                    availableInputBuffers!!.clear()
-                }
+                var recoveryComplete = false
+                while (!recoveryComplete) {
+                    // Input and output buffers are invalidated by stop() and reset().
+                    nextInputBuffer = null
+                    nextInputBufferIndex = -1
+                    framePacingController.clearBuffers()
+                    if (asyncModeEnabled && availableInputBuffers != null) {
+                        availableInputBuffers!!.clear()
+                    }
 
-                // If we just need a flush, do so now with all threads quiesced.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_FLUSH) {
-                    LimeLog.warning("Flushing decoder")
-                    try {
-                        videoDecoder!!.flush()
-                        if (asyncModeEnabled) {
-                            videoDecoder!!.start() // Resume async callbacks after flush
+                    // If we just need a flush, do so now with all threads quiesced.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_FLUSH) {
+                        LimeLog.warning("Flushing decoder")
+                        try {
+                            videoDecoder!!.flush()
+                            if (asyncModeEnabled) {
+                                videoDecoder!!.start() // Resume async callbacks after flush
+                            }
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
+
+                            // Something went wrong during the restart, let's use a bigger hammer
+                            // and try a reset instead.
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_RESTART)
                         }
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
-
-                        // Something went wrong during the restart, let's use a bigger hammer
-                        // and try a reset instead.
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_RESTART)
                     }
-                }
 
-                // We don't count flushes as codec recovery attempts
-                if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
-                    codecRecoveryAttempts++
-                    LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
-                }
-
-                // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
-                if (!decoderConfigurationDirty && codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
-                    LimeLog.warning("Trying to restart decoder after CodecException")
-                    try {
-                        videoDecoder!!.stop()
-                        setupAsyncCallback() // Re-set callback after stop() for reliable async mode
-                        configureAndStartDecoder(configuredFormat!!)
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
-
-                        // Something went wrong during the restart, let's use a bigger hammer
-                        // and try a reset instead.
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
+                    // We don't count flushes as codec recovery attempts
+                    if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+                        codecRecoveryAttempts++
+                        LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
                     }
-                }
 
-                // For "non-recoverable" exceptions on L+, we can call reset() to recover
-                // without having to recreate the entire decoder again.
-                if (!decoderConfigurationDirty && codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to reset decoder after CodecException")
-                    try {
-                        videoDecoder!!.reset()
-                        setupAsyncCallback() // reset() clears callback, must re-set before configure
-                        configureAndStartDecoder(configuredFormat!!)
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
+                    // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
+                    if (!decoderConfigurationDirty && codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
+                        LimeLog.warning("Trying to restart decoder after CodecException")
+                        try {
+                            videoDecoder!!.stop()
+                            setupAsyncCallback() // Re-set callback after stop() for reliable async mode
+                            configureAndStartDecoder(configuredFormat!!)
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
 
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
 
-                        // Something went wrong during the reset, we'll have to resort to
-                        // releasing and recreating the decoder now.
+                            // Something went wrong during the restart, let's use a bigger hammer
+                            // and try a reset instead.
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
+                        }
                     }
-                }
 
-                // If we _still_ haven't managed to recover, go for the nuclear option and just
-                // throw away the old decoder and reinitialize a new one from scratch.
-                if (decoderConfigurationDirty || codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning(
-                        if (decoderConfigurationDirty) {
-                            "Recreating decoder for updated stream dimensions"
+                    // For "non-recoverable" exceptions on L+, we can call reset() to recover
+                    // without having to recreate the entire decoder again.
+                    if (!decoderConfigurationDirty && codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                        LimeLog.warning("Trying to reset decoder after CodecException")
+                        try {
+                            videoDecoder!!.reset()
+                            setupAsyncCallback() // reset() clears callback, must re-set before configure
+                            configureAndStartDecoder(configuredFormat!!)
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
+
+                            // Something went wrong during the reset, we'll have to resort to
+                            // releasing and recreating the decoder now.
+                        }
+                    }
+
+                    // If we _still_ haven't managed to recover, go for the nuclear option and just
+                    // throw away the old decoder and reinitialize a new one from scratch.
+                    if (decoderConfigurationDirty || codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                        LimeLog.warning(
+                            if (decoderConfigurationDirty) {
+                                "Recreating decoder for updated stream dimensions"
+                            } else {
+                                "Trying to recreate decoder after CodecException"
+                            }
+                        )
+                        videoDecoder!!.release()
+
+                        try {
+                            val err = initializeDecoder(true)
+                            if (err != 0) {
+                                throw IllegalStateException("Decoder reset failed: $err")
+                            }
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            // If we failed to recover after all of these attempts, just crash
+                            if (!reportedCrash) {
+                                reportedCrash = true
+                                crashListener.notifyCrash(e)
+                            }
+                            throw RendererException(createDiagnostics(), e)
+                        }
+                    }
+
+                    // A resolution callback may arrive while initializeDecoder() is configuring
+                    // an older snapshot. Finish only after the latest required generation has
+                    // been configured and the quiescence state can be released atomically with it.
+                    synchronized(decoderConfigurationLock) {
+                        if (decoderConfigurationDirty && !stopping) {
+                            if (codecRecoveryType.get() == CR_RECOVERY_TYPE_NONE) {
+                                codecRecoveryType.set(CR_RECOVERY_TYPE_RESTART)
+                            }
                         } else {
-                            "Trying to recreate decoder after CodecException"
+                            if (stopping) {
+                                decoderConfigurationDirty = false
+                            }
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            framePacingController.updateDecoder(videoDecoder!!)
+                            codecRecoveryThreadQuiescedFlags = 0
+                            (codecRecoveryMonitor as Object).notifyAll()
+                            recoveryComplete = true
                         }
-                    )
-                    videoDecoder!!.release()
-
-                    try {
-                        val err = initializeDecoder(true)
-                        if (err != 0) {
-                            throw IllegalStateException("Decoder reset failed: $err")
-                        }
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        // If we failed to recover after all of these attempts, just crash
-                        if (!reportedCrash) {
-                            reportedCrash = true
-                            crashListener.notifyCrash(e)
-                        }
-                        throw RendererException(createDiagnostics(), e)
                     }
                 }
-
-                // Update frame pacing controller with potentially new decoder reference
-                framePacingController.updateDecoder(videoDecoder!!)
-
-                // Wake all quiesced threads and allow them to begin work again
-                codecRecoveryThreadQuiescedFlags = 0
-                (codecRecoveryMonitor as Object).notifyAll()
             } else {
                 // If we haven't quiesced all threads yet, wait to be signalled after recovery.
                 // The final thread to be quiesced will handle the codec recovery.
@@ -2006,36 +2064,33 @@ class MediaCodecDecoderRenderer(
     }
 
     override fun onResolutionChanged(width: Int, height: Int) {
-        // Skip if resolution hasn't actually changed
-        if (width == initialWidth && height == initialHeight) {
-            return
+        val (previousWidth, previousHeight, needsRestart) = synchronized(decoderConfigurationLock) {
+            if (width == initialWidth && height == initialHeight) {
+                return
+            }
+
+            val oldWidth = initialWidth
+            val oldHeight = initialHeight
+            val restartRequired = decoderConfigurationTracker.updateResolution(width, height)
+            initialWidth = width
+            initialHeight = height
+
+            if (restartRequired) {
+                decoderConfigurationDirty = true
+                codecRecoveryAttempts = 0
+
+                // Promote to restart: None->Restart or Flush->Restart. An in-progress full
+                // rebuild observes the newer tracker generation and performs another pass.
+                if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
+                    codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART)
+                }
+            }
+            Triple(oldWidth, oldHeight, restartRequired)
         }
 
-        LimeLog.info("Decoder notified of resolution change: ${initialWidth}x${initialHeight} -> ${width}x${height}")
-
-        // Check if new resolution exceeds current decoder configuration
-        val needsRestart = DecoderInputBufferSizing.requiresReconfiguration(
-            initialWidth,
-            initialHeight,
-            width,
-            height,
-        )
-
-        // Update tracked resolution
-        initialWidth = width
-        initialHeight = height
-
+        LimeLog.info("Decoder notified of resolution change: ${previousWidth}x${previousHeight} -> ${width}x${height}")
         if (needsRestart) {
             LimeLog.info("New resolution exceeds decoder config, triggering codec restart")
-            decoderConfigurationDirty = true
-
-            // Reset recovery counter since this is an expected restart
-            codecRecoveryAttempts = 0
-
-            // Promote to restart: None->Restart or Flush->Restart
-            if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
-                codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART)
-            }
         }
     }
 
