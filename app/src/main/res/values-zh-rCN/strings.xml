@@ -2055,6 +2055,11 @@
     <string name="config_sync_action_enable">启用同步</string>
     <string name="title_force_mtk_max_operating_rate">强制联发科解码器最高运行速率（实验性）</string>
     <string name="summary_force_mtk_max_operating_rate">仅用于联发科解码器的兼容性选项。在部分设备上可能降低延迟，也可能在另一些设备上造成严重延迟；除非在排查已知联发科解码问题，否则请保持关闭。</string>
+    <string name="title_hevc_low_latency_mode">HEVC 低延迟解码</string>
+    <string name="summary_hevc_low_latency_mode">自动：对 Amlogic HEVC 解码器使用兼容配置；开启：恢复低延迟选项；关闭：对所有 HEVC 和杜比视界串流使用兼容配置。兼容配置可能增加解码延迟。</string>
+    <string name="hevc_low_latency_auto">自动</string>
+    <string name="hevc_low_latency_on">开启</string>
+    <string name="hevc_low_latency_off">关闭</string>
     <string name="position_top_left">左上</string>
     <string name="position_top_center">顶部居中</string>
     <string name="position_top_right">右上</string>

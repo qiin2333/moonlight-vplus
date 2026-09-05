@@ -16,6 +16,11 @@ import org.junit.Test
 
 class ConfigurationSyncSchemaTest {
     @Test
+    fun hevcLowLatencyModeIsPortable() {
+        assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_hevc_low_latency_mode"))
+    }
+
+    @Test
     fun colorRangePreferenceRemainsPortable() {
         assertTrue(
             ConfigurationSyncManager.isPortableDefaultPreferenceKey(
