@@ -1020,13 +1020,14 @@ class TouchInputHandler(private val game: Game) {
     private fun sendTouchEventForPointer(view: View?, event: MotionEvent, eventType: Byte, pointerIndex: Int): Boolean {
         val normalizedCoords = getEnhancedPointerNormalizedXY(view, event, pointerIndex)
         val normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex)
-        return game.conn?.sendTouchEvent(
+        val result = game.conn?.sendTouchEvent(
             eventType, event.getPointerId(pointerIndex),
             normalizedCoords[0], normalizedCoords[1],
             getPressureOrDistance(event, pointerIndex),
             normalizedContactArea[0], normalizedContactArea[1],
             getRotationDegrees(event, pointerIndex)
-        ) != MoonBridge.LI_ERR_UNSUPPORTED
+        )
+        return result != null && result != MoonBridge.LI_ERR_UNSUPPORTED
     }
 
     private fun trySendTouchEvent(view: View?, event: MotionEvent): Boolean {
@@ -1042,11 +1043,12 @@ class TouchInputHandler(private val game: Game) {
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
-                val result = game.conn?.sendTouchEvent(
+                val sendResult = game.conn?.sendTouchEvent(
                     MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
                     0f, 0f, 0f, 0f, 0f,
                     MoonBridge.LI_ROT_UNKNOWN
-                ) != MoonBridge.LI_ERR_UNSUPPORTED
+                )
+                val result = sendResult != null && sendResult != MoonBridge.LI_ERR_UNSUPPORTED
                 nativeTouchPointerMap.clear()
                 return result
             }
