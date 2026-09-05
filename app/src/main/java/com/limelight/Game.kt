@@ -1685,7 +1685,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         reportStreamAnalytics(decoderMessage)
 
-        if (shouldResumeSession && isResumeStreamEnabled) {
+        if (StreamKeepAlivePolicy.shouldStartForResume(
+                isFinishing = isFinishing,
+                shouldResumeSession = shouldResumeSession,
+                isResumeStreamEnabled = isResumeStreamEnabled,
+            )
+        ) {
             showKeepAliveNotification()
             LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。")
         } else {
@@ -2017,6 +2022,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (isExtremeResumeEnabled && connected) {
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.")
+            shouldResumeSession = false
             if (progressOverlay != null) {
                 progressOverlay?.dismiss()
                 progressOverlay = null
