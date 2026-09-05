@@ -730,8 +730,45 @@ class MediaCodecDecoderRenderer(
         isProcessingPaused = false
     }
 
-    private fun createBaseMediaFormat(mimeType: String): MediaFormat {
+    private fun decoderDefaultInputSize(decoderInfo: MediaCodecInfo, mimeType: String): Int? =
+        try {
+            val defaultFormat = decoderInfo.getCapabilitiesForType(mimeType).defaultFormat
+            if (defaultFormat.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
+                defaultFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE).takeIf { it > 0 }
+            } else null
+        } catch (_: RuntimeException) {
+            null
+        }
+
+    private data class InputSizingPlan(
+        val requestedSize: Int?,
+        val overrideAttempts: BooleanArray,
+    )
+
+    private fun inputSizingPlan(decoderInfo: MediaCodecInfo, mimeType: String): InputSizingPlan {
+        val requestedSize = DecoderInputBufferSizing.requestedInputSize(
+            prefs.decoderInputBufferMode,
+            mimeType,
+            initialWidth,
+            initialHeight,
+            decoderDefaultInputSize(decoderInfo, mimeType),
+        )
+        return InputSizingPlan(
+            requestedSize,
+            DecoderInputBufferSizing.overrideAttempts(prefs.decoderInputBufferMode, requestedSize),
+        )
+    }
+
+    private fun createBaseMediaFormat(
+        mimeType: String,
+        inputSizeOverride: Int?,
+    ): MediaFormat {
         val videoFormat = MediaFormat.createVideoFormat(mimeType, initialWidth, initialHeight)
+
+        if (inputSizeOverride != null) {
+            videoFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, inputSizeOverride)
+            LimeLog.info("Decoder MediaFormat: KEY_MAX_INPUT_SIZE=$inputSizeOverride")
+        }
 
         // Avoid setting KEY_FRAME_RATE on Lollipop and earlier to reduce compatibility risk
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1037,36 +1074,45 @@ class MediaCodecDecoderRenderer(
             "plain" to { },
         )
 
-        for ((label, applyExtras) in attempts) {
-            var tryNumber = 0
-            while (true) {
-                LimeLog.info("Decoder configuration try: profile=DvheSt+$label options=$tryNumber")
+        val sizingPlan = inputSizingPlan(dvDecoder, mimeType)
+        for ((sizingIndex, applyInputSizeOverride) in sizingPlan.overrideAttempts.withIndex()) {
+            for ((label, applyExtras) in attempts) {
+                var tryNumber = 0
+                while (true) {
+                    LimeLog.info("Decoder configuration try: profile=DvheSt+$label options=$tryNumber")
 
-                val attemptFormat = createBaseMediaFormat(mimeType)
-                attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
-                applyExtras(attemptFormat)
+                    val attemptFormat = createBaseMediaFormat(
+                        mimeType,
+                        sizingPlan.requestedSize.takeIf { applyInputSizeOverride },
+                    )
+                    attemptFormat.setInteger(MediaFormat.KEY_PROFILE, DV_PROFILE_DVHE_ST)
+                    applyExtras(attemptFormat)
 
-                val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
-                    attemptFormat,
-                    dvDecoder,
-                    tryNumber,
-                    prefs.forceMtkMaxOperatingRate,
-                    hdr10PlusModeSelected = false,
-                )
+                    val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+                        attemptFormat,
+                        dvDecoder,
+                        tryNumber,
+                        prefs.forceMtkMaxOperatingRate,
+                        hdr10PlusModeSelected = false,
+                    )
 
-                val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
-                if (tryConfigureDecoder(dvDecoder, attemptFormat, false)) {
-                    LimeLog.info("Dolby Vision decoder configured: ${dvDecoder.name} " +
-                        "(signaling=$label, nativeMapping=$dolbyVisionRoutingActive)")
-                    return 0
+                    val isLastTry = !newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1
+                    if (tryConfigureDecoder(dvDecoder, attemptFormat, false)) {
+                        LimeLog.info("Dolby Vision decoder configured: ${dvDecoder.name} " +
+                            "(signaling=$label, nativeMapping=$dolbyVisionRoutingActive)")
+                        return 0
+                    }
+
+                    if (isLastTry) {
+                        break
+                    }
+                    tryNumber++
                 }
-
-                if (isLastTry) {
-                    break
-                }
-                tryNumber++
+                LimeLog.warning("Dolby Vision signaling '$label' rejected by decoder; trying next")
             }
-            LimeLog.warning("Dolby Vision signaling '$label' rejected by decoder; trying next")
+            if (sizingIndex < sizingPlan.overrideAttempts.lastIndex) {
+                LimeLog.warning("Dolby Vision input-size override rejected; retrying codec defaults")
+            }
         }
         return -5
     }
@@ -1165,54 +1211,64 @@ class MediaCodecDecoderRenderer(
             val profileCandidates = getDecoderProfileCandidates(mimeType, selectedDecoderInfo)
             hdr10PlusOutputObserver.beginCodecConfiguration(false)
 
-            profileLoop@ for ((profileIndex, profile) in profileCandidates.withIndex()) {
-                var tryNumber = 0
-                while (true) {
-                    LimeLog.info(
-                        "Decoder configuration try: profile=${hdrProfileSelector.profileName(mimeType, profile)} " +
-                            "options=$tryNumber"
-                    )
-
-                    val mediaFormat = createBaseMediaFormat(mimeType)
-                    if (profile != null) {
-                        mediaFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
-                    }
-                    val configuringHdr10Plus = hdrProfileSelector.isHdr10PlusProfile(mimeType, profile)
-                    hdr10PlusOutputObserver.beginCodecConfiguration(configuringHdr10Plus)
-
-                    // Try low latency options while omitting Qualcomm output fences for HDR10+.
-                    val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
-                        mediaFormat,
-                        selectedDecoderInfo,
-                        tryNumber,
-                        prefs.forceMtkMaxOperatingRate,
-                        hdr10PlusModeSelected = HdrModePolicy.isHdr10PlusMode(prefs.hdrMode),
-                    )
-
-                    val isLastProfile = profileIndex == profileCandidates.lastIndex
-                    if (tryConfigureDecoder(
-                            selectedDecoderInfo,
-                            mediaFormat,
-                            !newFormat && isLastProfile && throwOnCodecError,
+            val sizingPlan = inputSizingPlan(selectedDecoderInfo, mimeType)
+            sizingLoop@ for ((sizingIndex, applyInputSizeOverride) in sizingPlan.overrideAttempts.withIndex()) {
+                for ((profileIndex, profile) in profileCandidates.withIndex()) {
+                    var tryNumber = 0
+                    while (true) {
+                        LimeLog.info(
+                            "Decoder configuration try: profile=${hdrProfileSelector.profileName(mimeType, profile)} " +
+                                "options=$tryNumber"
                         )
-                    ) {
-                        decoderConfigured = true
-                        break@profileLoop
+
+                        val mediaFormat = createBaseMediaFormat(
+                            mimeType,
+                            sizingPlan.requestedSize.takeIf { applyInputSizeOverride },
+                        )
+                        if (profile != null) {
+                            mediaFormat.setInteger(MediaFormat.KEY_PROFILE, profile)
+                        }
+                        val configuringHdr10Plus = hdrProfileSelector.isHdr10PlusProfile(mimeType, profile)
+                        hdr10PlusOutputObserver.beginCodecConfiguration(configuringHdr10Plus)
+
+                        // Try low latency options while omitting Qualcomm output fences for HDR10+.
+                        val newFormat = MediaCodecHelper.setDecoderLowLatencyOptions(
+                            mediaFormat,
+                            selectedDecoderInfo,
+                            tryNumber,
+                            prefs.forceMtkMaxOperatingRate,
+                            hdr10PlusModeSelected = HdrModePolicy.isHdr10PlusMode(prefs.hdrMode),
+                        )
+
+                        val isLastProfile = profileIndex == profileCandidates.lastIndex
+                        val isLastSizingAttempt = sizingIndex == sizingPlan.overrideAttempts.lastIndex
+                        if (tryConfigureDecoder(
+                                selectedDecoderInfo,
+                                mediaFormat,
+                                !newFormat && isLastProfile && isLastSizingAttempt && throwOnCodecError,
+                            )
+                        ) {
+                            decoderConfigured = true
+                            break@sizingLoop
+                        }
+
+                        hdr10PlusOutputObserver.beginCodecConfiguration(false)
+
+                        if (!newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1) {
+                            break
+                        }
+                        tryNumber++
                     }
 
-                    hdr10PlusOutputObserver.beginCodecConfiguration(false)
-
-                    if (!newFormat || tryNumber >= MAX_DECODER_CONFIGURATION_TRIES - 1) {
-                        break
+                    if (profileIndex < profileCandidates.lastIndex) {
+                        LimeLog.warning(
+                            "Decoder rejected ${hdrProfileSelector.profileName(mimeType, profile)} profile; trying " +
+                                hdrProfileSelector.profileName(mimeType, profileCandidates[profileIndex + 1])
+                        )
                     }
-                    tryNumber++
                 }
-
-                if (profileIndex < profileCandidates.lastIndex) {
-                    LimeLog.warning(
-                        "Decoder rejected ${hdrProfileSelector.profileName(mimeType, profile)} profile; trying " +
-                            hdrProfileSelector.profileName(mimeType, profileCandidates[profileIndex + 1])
-                    )
+                if (sizingIndex < sizingPlan.overrideAttempts.lastIndex) {
+                    LimeLog.warning("Decoder input-size override rejected; retrying codec defaults")
                 }
             }
         }

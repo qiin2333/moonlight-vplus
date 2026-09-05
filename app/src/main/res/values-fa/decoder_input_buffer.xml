@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">بافر ورودی رمزگشا</string>
+    <string name="summary_decoder_input_buffer_mode">بافرهای ناموجود یا بسیار کوچک را خودکار تکمیل می‌کند. حالت‌های اجباری را فقط برای بررسی سازگاری استفاده کنید.</string>
+    <string name="decoder_input_buffer_mode_auto">خودکار (پیشنهادی)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">فعال‌سازی اجباری</string>
+    <string name="decoder_input_buffer_mode_force_disabled">غیرفعال‌سازی اجباری</string>
+</resources>

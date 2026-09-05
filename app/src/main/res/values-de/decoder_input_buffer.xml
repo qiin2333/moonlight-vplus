@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Decoder-Eingabepuffer</string>
+    <string name="summary_decoder_input_buffer_mode">Ergänzt fehlende oder zu kleine Decoder-Puffer automatisch. Erzwungene Modi nur zur Kompatibilitätsprüfung verwenden.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatisch (empfohlen)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Aktivierung erzwingen</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Deaktivierung erzwingen</string>
+</resources>

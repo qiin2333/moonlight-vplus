@@ -13,6 +13,7 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.preference.PreferenceManager
 import com.limelight.binding.input.haptics.GameRumbleMode
+import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
 import kotlin.math.max
 import kotlin.math.min
@@ -108,6 +109,7 @@ class PreferenceConfiguration {
     var nativeTouchFingersToToggleKeyboard = 0 // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
 
     var videoFormat: FormatOption = FormatOption.AUTO
+    internal var decoderInputBufferMode: DecoderInputBufferMode = DecoderInputBufferMode.AUTO
     var deadzonePercentage = 0
     @JvmField var oscOpacity = 0
     var stretchVideo = false
@@ -296,6 +298,7 @@ class PreferenceConfiguration {
                 .putString(FPS_PREF_STRING, fps.toString())
                 .putInt(BITRATE_PREF_STRING, bitrate)
                 .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
+                .putString(DECODER_INPUT_BUFFER_MODE_PREF_STRING, decoderInputBufferMode.preferenceValue)
                 .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
                 .putBoolean(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING, enableHdrHighBrightness)
                 .putBoolean(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING, hdrBrightnessOverride)
@@ -449,6 +452,7 @@ class PreferenceConfiguration {
         copy.enableAdaptiveBitrate = this.enableAdaptiveBitrate
         copy.abrMode = this.abrMode
         copy.videoFormat = this.videoFormat
+        copy.decoderInputBufferMode = this.decoderInputBufferMode
         copy.framePacing = this.framePacing
         copy.enableHostCadencePreciseSync = this.enableHostCadencePreciseSync
         copy.stretchVideo = this.stretchVideo
@@ -542,6 +546,7 @@ class PreferenceConfiguration {
         const val DUALSENSE_DIRECT_BLUETOOTH_PREF_STRING =
             "checkbox_dualsense_direct_bluetooth"
         private const val VIDEO_FORMAT_PREF_STRING = "video_format"
+        private const val DECODER_INPUT_BUFFER_MODE_PREF_STRING = "decoder_input_buffer_mode"
         private const val ONSCREEN_KEYBOARD_PREF_STRING = "checkbox_show_onscreen_keyboard"
         private const val ONLY_L3_R3_PREF_STRING = "checkbox_only_show_L3R3"
         private const val SHOW_GUIDE_BUTTON_PREF_STRING = "checkbox_show_guide_button"
@@ -1145,6 +1150,7 @@ class PreferenceConfiguration {
                 .remove(RESOLUTION_PREF_STRING)
                 .remove(FPS_PREF_STRING)
                 .remove(VIDEO_FORMAT_PREF_STRING)
+                .remove(DECODER_INPUT_BUFFER_MODE_PREF_STRING)
                 .remove(ENABLE_HDR_PREF_STRING)
                 .remove(ENABLE_HDR_HIGH_BRIGHTNESS_PREF_STRING)
                 .remove(HDR_BRIGHTNESS_OVERRIDE_PREF_STRING)
@@ -1336,6 +1342,9 @@ class PreferenceConfiguration {
             }
 
             config.videoFormat = getVideoFormatValue(context)
+            config.decoderInputBufferMode = DecoderInputBufferMode.fromPreferenceValue(
+                prefs.getString(DECODER_INPUT_BUFFER_MODE_PREF_STRING, DecoderInputBufferMode.AUTO.preferenceValue)
+            )
             config.framePacing = getFramePacingValue(context)
             config.enableHostCadencePreciseSync = prefs.getBoolean(ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING, true)
 

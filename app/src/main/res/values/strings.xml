@@ -2193,4 +2193,9 @@ Tap again to replace it.</string>
     <string name="summary_seekbar_bitrate_baseline">Adaptive bitrate starts here and adjusts around this value. The selected ABR mode controls the minimum and maximum range.</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses system audio effects.</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses Android spatial audio.</string>
+    <string name="title_decoder_input_buffer_mode">Decoder input buffer</string>
+    <string name="summary_decoder_input_buffer_mode">Automatically supplements missing or undersized decoder buffers. Use forced modes only for compatibility testing.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatic (recommended)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Force enabled</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Force disabled</string>
 </resources>
