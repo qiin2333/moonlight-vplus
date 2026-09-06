@@ -106,6 +106,7 @@ class PreferenceConfiguration {
     var enhanceTouchZoneDivider = 0 //Assigned to NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER
     var pointerVelocityFactor = 0f //Assigned to NativeTouchContext.POINTER_VELOCITY_FACTOR
     var nativeTouchFingersToToggleKeyboard = 0 // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
+    var enableThreeFingerPanZoom = true // 三指平移/缩放（游戏菜单开关持久化，默认开）
 
     var videoFormat: FormatOption = FormatOption.AUTO
     var deadzonePercentage = 0
@@ -677,6 +678,7 @@ class PreferenceConfiguration {
         const val SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display"
         const val ENABLE_KEYBOARD_TOGGLE_IN_NATIVE_TOUCH = "checkbox_enable_keyboard_toggle_in_native_touch"
         const val NATIVE_TOUCH_FINGERS_TO_TOGGLE_KEYBOARD_PREF_STRING = "seekbar_keyboard_toggle_fingers_native_touch"
+        const val THREE_FINGER_PAN_ZOOM_PREF_STRING = "checkbox_three_finger_pan_zoom"
         const val AUDIO_CONFIG_PREF_STRING = "list_audio_config"
         /** Audio codec preference: "auto" | "opus" | "ac3" | "eac3" */
         const val AUDIO_CODEC_PREF_STRING = "list_audio_codec"
@@ -1286,6 +1288,9 @@ class PreferenceConfiguration {
             } else {
                 config.nativeTouchFingersToToggleKeyboard = -1 // completely disable keyboard toggle in multi-point touch
             }
+
+            // 三指平移/缩放（游戏菜单"三指平移/缩放"开关，持久化）
+            config.enableThreeFingerPanZoom = prefs.getBoolean(THREE_FINGER_PAN_ZOOM_PREF_STRING, true)
 
             // Enhance touch settings
             config.enhancedTouchOnWhichSide = prefs.getBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, true) // by default, enhanced touch zone is on the right side.

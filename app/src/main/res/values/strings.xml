@@ -1789,9 +1789,9 @@ Tap again to replace it.</string>
     <string name="game_menu_opacity_button">Adjust game menu opacity, currently %1$d%%</string>
     <string name="game_menu_card_list_separator">, </string>
     <string name="toast_enable_mic_redirect">Enable microphone redirection in Settings first</string>
-    <string name="game_menu_enable_pan_zoom">Pan and Zoom</string>
-    <string name="toast_pan_zoom_disabled">Pan/Zoom disabled</string>
-    <string name="toast_pan_zoom_enabled">Pan/Zoom enabled</string>
+    <string name="game_menu_enable_three_finger_pan_zoom">Three-Finger Pan and Zoom</string>
+    <string name="toast_three_finger_pan_zoom_disabled">Three-finger Pan/Zoom disabled</string>
+    <string name="toast_three_finger_pan_zoom_enabled">Three-finger Pan/Zoom enabled</string>
     <string name="toast_super_command_error">Couldn\'t send super command: %s</string>
     <string name="toast_install_permission_denied">Install permission denied, download cancelled</string>
     <string name="toast_check_update_failed">Failed to check for updates, please try later</string>

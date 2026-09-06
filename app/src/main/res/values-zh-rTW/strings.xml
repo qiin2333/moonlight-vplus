@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="game_menu_enable_three_finger_pan_zoom">三指平移/縮放</string>
+    <string name="toast_three_finger_pan_zoom_disabled">已關閉三指平移/縮放</string>
+    <string name="toast_three_finger_pan_zoom_enabled">已開啟三指平移/縮放</string>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc"> 電腦已刪除 </string>
     <string name="scut_not_paired"> 電腦未配對 </string>

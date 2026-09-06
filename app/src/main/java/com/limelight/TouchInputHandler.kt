@@ -9,6 +9,7 @@ import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.limelight.binding.input.touch.AbsoluteTouchContext
@@ -16,6 +17,7 @@ import com.limelight.binding.input.touch.EnhancedTouchGestureRouteOwner
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
+import com.limelight.binding.input.touch.ThreeFingerPanZoomGesture
 import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
 import com.limelight.binding.input.touchpad.ScreenDs5PressureClickDetector
 import com.limelight.binding.input.touchpad.ScreenDs5TapClickDetector
@@ -78,6 +80,13 @@ class TouchInputHandler(private val game: Game) {
     private var twoFingerMoved = false
     private var twoFingerStartX = 0f
     private var twoFingerStartY = 0f
+
+    private val threeFingerPanZoom = ThreeFingerPanZoomGesture(
+        movementThreshold = ViewConfiguration.get(game).scaledTouchSlop.toFloat(),
+        cancelHostTouches = ::cancelTouchesForPanZoom,
+        panZoom = { game.panZoomHandler.handleTouchEvent(it) },
+        toggleKeyboard = { game.toggleKeyboard() }
+    )
 
     private var lastAbsTouchUpTime = 0L
     private var lastAbsTouchDownTime = 0L
@@ -456,6 +465,24 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                val editingController = game.virtualController?.controllerMode.let {
+                    it == VirtualController.ControllerMode.MoveButtons ||
+                        it == VirtualController.ControllerMode.ResizeButtons
+                }
+                // Existing owners (DS5/manual pan/zoom/controller editor) keep their input.
+                // Once claimed, a three-finger gesture consumes its entire tail even if settings change.
+                if (threeFingerPanZoom.handle(
+                        event,
+                        enabled = game.prefConfig.enableThreeFingerPanZoom &&
+                            !game.prefConfig.screenDs5Touchpad &&
+                            !game.getisTouchOverrideEnabled() && !editingController,
+                        keyboardFingers = if (enhancedTouchRouteOwner.ownsContinuation()) {
+                            game.prefConfig.nativeTouchFingersToToggleKeyboard
+                        } else 3
+                    )) {
+                    return true
+                }
+
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                     enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
@@ -499,7 +526,7 @@ class TouchInputHandler(private val game: Game) {
 
                 val actionIndex = event.actionIndex
 
-                // 三指手势特殊处理
+                // Keep the legacy shortcut below DS5 and enhanced-touch routing when disabled.
                 if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN && event.pointerCount == 3) {
                     multiFingerDownTime = event.eventTime
                     for (ctx in touchContextMap) ctx?.cancelTouch()
@@ -1384,6 +1411,28 @@ class TouchInputHandler(private val game: Game) {
 
     fun cancelNonRootTouchpad() {
         nonRootTouchpadHandler.cancelAll(game.conn)
+    }
+
+    fun cancelThreeFingerPanZoom() {
+        threeFingerPanZoom.cancel()
+    }
+
+    private fun cancelTouchesForPanZoom() {
+        multiFingerDownTime = 0L
+        twoFingerTapPending = false
+        twoFingerMoved = true
+        for (context in touchContextMap) {
+            context?.cancelTouch()
+            context?.setPointerCount(0)
+        }
+        if (enhancedTouchRouteOwner.ownsContinuation()) {
+            game.conn?.sendTouchEvent(
+                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
+                0f, 0f, 0f, 0f, 0f, MoonBridge.LI_ROT_UNKNOWN
+            )
+        }
+        enhancedTouchRouteOwner.finish()
+        nativeTouchPointerMap.clear()
     }
 
     /**
