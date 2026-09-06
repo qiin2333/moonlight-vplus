@@ -1405,7 +1405,20 @@ class MediaCodecDecoderRenderer(
             // This is the final thread to quiesce, so let's perform the codec recovery now.
             if (codecRecoveryThreadQuiescedFlags == CR_FLAG_ALL) {
                 var recoveryComplete = false
+                var recoveryPasses = 0
                 while (!recoveryComplete) {
+                    if (recoveryPasses >= CR_MAX_TRIES) {
+                        val failure = IllegalStateException(
+                            "Decoder configuration did not settle after $recoveryPasses recovery passes"
+                        )
+                        if (!reportedCrash) {
+                            reportedCrash = true
+                            crashListener.notifyCrash(failure)
+                        }
+                        throw RendererException(createDiagnostics(), failure)
+                    }
+                    recoveryPasses++
+
                     // Input and output buffers are invalidated by stop() and reset().
                     nextInputBuffer = null
                     nextInputBufferIndex = -1
