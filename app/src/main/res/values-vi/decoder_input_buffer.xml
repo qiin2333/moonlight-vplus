@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Bộ đệm đầu vào của bộ giải mã</string>
+    <string name="summary_decoder_input_buffer_mode">Tự động bổ sung bộ đệm bị thiếu hoặc quá nhỏ. Chỉ dùng chế độ bắt buộc khi kiểm tra tính tương thích.</string>
+    <string name="decoder_input_buffer_mode_auto">Tự động (khuyên dùng)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Buộc bật</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Buộc tắt</string>
+</resources>

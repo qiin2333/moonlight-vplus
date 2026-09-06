@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Dekóder bemeneti puffere</string>
+    <string name="summary_decoder_input_buffer_mode">Automatikusan kiegészíti a hiányzó vagy túl kicsi puffereket. A kényszerített módokat csak kompatibilitási vizsgálathoz használja.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatikus (ajánlott)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Kényszerített engedélyezés</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Kényszerített letiltás</string>
+</resources>

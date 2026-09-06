@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Bufor wejściowy dekodera</string>
+    <string name="summary_decoder_input_buffer_mode">Automatycznie uzupełnia brakujące lub zbyt małe bufory. Trybów wymuszonych używaj tylko do sprawdzania zgodności.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatycznie (zalecane)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Wymuś włączenie</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Wymuś wyłączenie</string>
+</resources>

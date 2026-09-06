@@ -273,6 +273,13 @@
             android:entryValues="@array/video_format_values"
             android:summary="@string/summary_video_format"
             android:defaultValue="auto" />
+        <ListPreference
+            android:key="decoder_input_buffer_mode"
+            android:title="@string/title_decoder_input_buffer_mode"
+            android:summary="@string/summary_decoder_input_buffer_mode"
+            android:entries="@array/decoder_input_buffer_mode_names"
+            android:entryValues="@array/decoder_input_buffer_mode_values"
+            android:defaultValue="auto" />
         <CheckBoxPreference
             android:key="checkbox_enable_hdr"
             android:title="@string/title_enable_hdr"

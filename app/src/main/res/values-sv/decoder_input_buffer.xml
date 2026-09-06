@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Avkodarens indatabuffert</string>
+    <string name="summary_decoder_input_buffer_mode">Kompletterar automatiskt saknade eller för små avkodarbuffertar. Använd tvingade lägen endast för kompatibilitetstestning.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatiskt (rekommenderas)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Tvinga aktivering</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Tvinga inaktivering</string>
+</resources>

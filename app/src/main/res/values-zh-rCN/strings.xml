@@ -2113,4 +2113,9 @@
     <string name="summary_seekbar_bitrate_baseline">智能码率从此数值开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">启用音频直通时不可用，因为直通会绕过系统音频效果。</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">启用音频直通时不可用，因为直通会绕过 Android 空间音频。</string>
+    <string name="title_decoder_input_buffer_mode">解码输入缓冲区</string>
+    <string name="summary_decoder_input_buffer_mode">自动补足缺失或过小的解码缓冲区；仅在兼容性排查时使用强制模式。</string>
+    <string name="decoder_input_buffer_mode_auto">自动（推荐）</string>
+    <string name="decoder_input_buffer_mode_force_enabled">强制启用</string>
+    <string name="decoder_input_buffer_mode_force_disabled">强制关闭</string>
 </resources>

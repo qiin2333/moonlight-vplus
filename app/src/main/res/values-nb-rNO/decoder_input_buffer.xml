@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Inndatabuffer for dekoder</string>
+    <string name="summary_decoder_input_buffer_mode">Supplerer automatisk manglende eller for små dekoderbuffere. Bruk tvungne moduser bare ved kompatibilitetstesting.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatisk (anbefalt)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Tving på</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Tving av</string>
+</resources>

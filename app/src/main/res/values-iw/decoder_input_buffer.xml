@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">מאגר קלט של המפענח</string>
+    <string name="summary_decoder_input_buffer_mode">משלים אוטומטית מאגרים חסרים או קטנים מדי. יש להשתמש במצבים הכפויים רק לבדיקת תאימות.</string>
+    <string name="decoder_input_buffer_mode_auto">אוטומטי (מומלץ)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">הפעלה כפויה</string>
+    <string name="decoder_input_buffer_mode_force_disabled">השבתה כפויה</string>
+</resources>

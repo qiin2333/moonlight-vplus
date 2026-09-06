@@ -876,4 +876,9 @@
     <string name="summary_checkbox_enable_spatializer_passthrough">啟用音訊直通時無法使用，因為直通會略過 Android 空間音訊。</string>
     <string name="game_menu_edit_mode">編輯按鍵佈局</string>
     <string name="game_menu_configure_settings">切換配置</string>
+    <string name="title_decoder_input_buffer_mode">解碼輸入緩衝區</string>
+    <string name="summary_decoder_input_buffer_mode">自動補足缺少或過小的解碼緩衝區；僅在相容性疑難排解時使用強制模式。</string>
+    <string name="decoder_input_buffer_mode_auto">自動（建議）</string>
+    <string name="decoder_input_buffer_mode_force_enabled">強制啟用</string>
+    <string name="decoder_input_buffer_mode_force_disabled">強制停用</string>
 </resources>
