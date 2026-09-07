@@ -20,10 +20,13 @@ import com.limelight.usbip.UsbIpBackend
 import com.limelight.usbip.UsbReverseTunnel
 import com.limelight.utils.AppActionSheet
 import java.security.cert.X509Certificate
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 
 /** One foreground stream owns one export. Permission and UI state stay on the main
  * thread; blocking native cleanup is serialized behind export on the worker. */
+@SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
 class UsbForwardingController(
     private val game: Game,
     private val host: String,
@@ -32,15 +35,31 @@ class UsbForwardingController(
     private val port: Int,
     private val token: String
 ) : AutoCloseable {
+    companion object {
+        private val cleanupLock = Any()
+        private var lastCleanup = CompletableFuture.completedFuture<Void>(null)
+
+        fun previousCleanup(): CompletableFuture<Void> = synchronized(cleanupLock) { lastCleanup }
+
+        private fun publishCleanup(cleanup: CompletableFuture<Void>): CompletableFuture<Void> = synchronized(cleanupLock) {
+            val previous = lastCleanup
+            lastCleanup = cleanup
+            previous
+        }
+    }
+
     private val manager = game.getSystemService(Context.USB_SERVICE) as UsbManager
     private val backend = UsbIpBackend(game)
     private val worker = Executors.newSingleThreadExecutor()
-    private val permissionAction = "${game.packageName}.USB_FORWARD_PERMISSION"
+    private val lifecycleLock = Any()
+    private val predecessorCleanup = previousCleanup()
+    private val closeCompletion = CompletableFuture<Void>()
+    private val permissionAction = "${game.packageName}.USB_FORWARD_PERMISSION.${UUID.randomUUID()}"
     private var generation = 0L
     private var selected: UsbDevice? = null
     private var pendingPermission = false
     private var busy = false
-    private var closed = false
+    @Volatile private var closed = false
     private var sheet: Dialog? = null
     private var message = R.string.usb_forward_choose
     @Volatile private var export: UsbIpBackend.Export? = null
@@ -116,10 +135,13 @@ class UsbForwardingController(
 
     // The app enables core library desugaring, which provides CompletableFuture
     // callbacks on API 22 and 23 even though the framework added them in API 24.
-    @SuppressLint("NewApi")
     private fun export(device: UsbDevice, operation: Long) {
-        worker.execute {
+        enqueue {
             try {
+                // Activity recreation publishes its cleanup before a replacement
+                // controller can enqueue native work.
+                predecessorCleanup.get()
+                if (closed) return@enqueue
                 val handle = backend.export(device).get()
                 export = handle
                 game.runOnUiThread {
@@ -186,7 +208,7 @@ class UsbForwardingController(
         message = R.string.usb_forward_releasing
         val activeTunnel = tunnel
         tunnel = null
-        worker.execute {
+        enqueue {
             val released = runCatching {
                 // SSLSocket.close() may perform network I/O on Android. Keep it
                 // off the activity thread along with the native exporter cleanup.
@@ -212,11 +234,46 @@ class UsbForwardingController(
     }
 
     override fun close() {
-        if (closed) return
-        stopForeground()
-        closed = true
+        val activeTunnel: UsbReverseTunnel?
+        val cleanupPredecessor: CompletableFuture<Void>
+        synchronized(lifecycleLock) {
+            if (closed) return
+            closed = true
+            ++generation
+            activeTunnel = tunnel
+            tunnel = null
+            cleanupPredecessor = publishCleanup(closeCompletion)
+            worker.execute {
+                var failure: Throwable? = null
+                fun cleanup(step: () -> Unit) {
+                    try { step() } catch (error: Throwable) { if (failure == null) failure = error }
+                }
+                // Preserve the global native-owner order across consecutive
+                // Activity instances, including overlapping close callbacks.
+                cleanup { cleanupPredecessor.get() }
+                cleanup { activeTunnel?.close() }
+                cleanup { backend.closeAsync().get() }
+                export = null
+                try {
+                    if (failure == null) closeCompletion.complete(null)
+                    else closeCompletion.completeExceptionally(failure!!)
+                } finally {
+                    worker.shutdown()
+                }
+            }
+        }
+        sheet?.dismiss()
+        sheet = null
+        completePermission()
         game.unregisterReceiver(receiver)
-        worker.execute { backend.close() }
-        worker.shutdown()
+    }
+
+    fun cleanupCompletion(): CompletableFuture<Void> = closeCompletion
+
+    private fun enqueue(action: () -> Unit): Boolean = synchronized(lifecycleLock) {
+        if (closed) false else {
+            worker.execute(action)
+            true
+        }
     }
 }

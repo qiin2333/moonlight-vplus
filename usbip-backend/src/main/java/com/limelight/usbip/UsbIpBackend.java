@@ -31,6 +31,7 @@ public final class UsbIpBackend implements AutoCloseable {
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r ->
             new Thread(r, "MoonlightUsbIp"));
     private boolean closed;
+    private Future<?> closeFuture;
     // Access only on executor, except nativeOwner which uses the class monitor.
     private UsbDeviceConnection connection;
     private Export active;
@@ -115,10 +116,15 @@ public final class UsbIpBackend implements AutoCloseable {
         }
     }
 
-    @Override public synchronized void close() {
-        if (closed) return;
+    public synchronized Future<?> closeAsync() {
+        if (closeFuture != null) return closeFuture;
         closed = true;
-        executor.execute(this::cleanup);
+        closeFuture = executor.submit(this::cleanup);
         executor.shutdown();
+        return closeFuture;
+    }
+
+    @Override public void close() {
+        closeAsync();
     }
 }

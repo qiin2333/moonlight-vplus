@@ -177,10 +177,28 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     var connecting = false
     var connected = false
     private var usbForwarding: UsbForwardingController? = null
+    private var usbForwardingCreationPending = false
 
+    @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
     fun showUsbForwarding() {
         if (!connected || !com.limelight.usbip.UsbIpBackend.isSupported()) return
         if (usbForwarding == null) {
+            val previousCleanup = UsbForwardingController.previousCleanup()
+            if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
+                if (!usbForwardingCreationPending) {
+                    usbForwardingCreationPending = true
+                    previousCleanup.whenComplete { _, error ->
+                        runOnUiThread {
+                            usbForwardingCreationPending = false
+                            if (!isDestroyed && connected) {
+                                if (error == null) showUsbForwarding()
+                                else Toast.makeText(this, R.string.usb_forward_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+                return
+            }
             val port = BuildConfig.USB_TUNNEL_PORT.toIntOrNull()
             val cert = parseServerCert()
             if (port == null || port !in 1..65535 || BuildConfig.USB_TUNNEL_TOKEN.isEmpty() || cert == null) {
