@@ -36,13 +36,18 @@ jobs:
       - name: Install emulator image
         run: |
           sdkmanager 'system-images;android-34;google_apis;x86_64'
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           echo no | avdmanager create avd --name usbip-ci --package 'system-images;android-34;google_apis;x86_64' --device pixel_2
+          test -f "$ANDROID_AVD_HOME/usbip-ci.ini"
           sudo chmod 666 /dev/kvm
       - name: Run native lifecycle tests on Android x86_64
         timeout-minutes: 15
         env:
           ANDROID_SERIAL: emulator-5554
         run: |
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          test -f "$ANDROID_AVD_HOME/usbip-ci.ini"
           "$ANDROID_HOME/emulator/emulator" -avd usbip-ci -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > emulator.log 2>&1 &
           for attempt in $(seq 1 120); do
             if [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; then break; fi

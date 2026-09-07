@@ -2,6 +2,7 @@ package com.limelight
 
 import android.app.Dialog
 import android.app.PendingIntent
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,6 +12,7 @@ import android.hardware.usb.UsbManager
 import android.os.Build
 import android.view.InputDevice
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.driver.wireless.hci.HciUsbDeviceProbe
 import com.limelight.nvstream.http.LimelightCryptoProvider
@@ -62,8 +64,7 @@ class UsbForwardingController(
 
     init {
         val filter = IntentFilter(permissionAction).apply { addAction(UsbManager.ACTION_USB_DEVICE_DETACHED) }
-        if (Build.VERSION.SDK_INT >= 33) game.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        else game.registerReceiver(receiver, filter)
+        ContextCompat.registerReceiver(game, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     fun show() {
@@ -113,6 +114,9 @@ class UsbForwardingController(
         }
     }
 
+    // The app enables core library desugaring, which provides CompletableFuture
+    // callbacks on API 22 and 23 even though the framework added them in API 24.
+    @SuppressLint("NewApi")
     private fun export(device: UsbDevice, operation: Long) {
         worker.execute {
             try {
