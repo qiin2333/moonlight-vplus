@@ -43,10 +43,12 @@ ARM64 artifacts, then builds and runs the same native tests in an API 34 x86_64 
 - API 34 x86_64 emulator: `OK (4 tests)`, including 100 protocol start/stop cycles,
   30 failed-wrap cycles with FD-count verification, invalid FD recovery, and stopping
   an incomplete client request.
-- Connected Meizu 17 / Android 13 refused the test APK with
-  `INSTALL_FAILED_USER_RESTRICTED`; no test ran on that physical device.
-  Its USB host manager also reported zero attached OTG devices.
-- ARM64 runtime/device export, USB permission UI on hardware, physical bidirectional
+- After an installation retry, Meizu 17 / Android 13 ARM64 ran all four native tests:
+  `OK (4 tests)` in 0.243 seconds, including the protocol and FD lifecycle checks above.
+  The separate diagnostic app still failed installation with
+  `INSTALL_FAILED_USER_RESTRICTED`. The USB host manager reported zero OTG devices;
+  the phone remained in USB device/sink mode, connected to the development computer.
+- Physical device export, USB permission UI on hardware, physical bidirectional
   traffic, and Moonlight/Sunshine streaming integration are **not yet verified**.
 
 ## Resource ownership
