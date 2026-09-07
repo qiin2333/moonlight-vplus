@@ -104,6 +104,35 @@ after allowing colon-containing IDs. Full Moonlight session/UI wiring, real VHCI
 import through this TLS component, network failure recovery and sustained physical
 USB traffic remain pending.
 
+### Physical TLS / Windows VHCI run (2026-09-07)
+
+The opt-in `physicalExportThroughSunshine` instrumented test connects the same TLS
+component to a real diagnostic export for 45 seconds. Select only that test and
+provide `sunshineProbePort`, `physicalExportPort`, and `physicalBusId`; configure the
+Sunshine probe with the real usbip-win2 executable instead of `synthetic`.
+The test only asserts that the tunnel stays open. Desktop driver state and payload
+checks must be collected separately; passing it alone is not functional device proof.
+
+- CH340 `1a86:7523`, `1-9:0`: real Windows usbip-win2 0.9.7.7 import succeeded at
+  hub port 1 through Android TLS and the production Sunshine service. Windows
+  enumerated the matching USB device; the tunnel stayed open for 45 seconds.
+  PnP reported code 28 (CH340 driver missing). No serial payload test was possible.
+  After teardown `usbip port` was empty; Sunshine's detach command reported that
+  the device was already disconnected. This is not evidence that explicit detach
+  itself succeeded.
+- WCH's official CH341SER archive was downloaded from its WCH-IC GitHub release;
+  catalog signature verified as Microsoft Windows Hardware Compatibility Publisher.
+  Installation was not attempted because the current process is not administrator.
+- Keyboard `046d:b34d`, `1-10:0`: first import caused keyboard configuration changes
+  to recreate the diagnostic Activity and close the export. The diagnostic manifest
+  now handles keyboard/keyboardHidden/navigation changes without recreation.
+  Two subsequent Windows attach attempts timed out before forwarding; the export
+  remained visible, but successful HID import/input and the complete fix are not
+  yet verified. No keyboard support claim follows from this run.
+- Test forwards were removed, the diagnostic export released, and no imported
+  port remained. The transport still used wireless ADB as its TCP carrier and test
+  credentials, not the user's paired Moonlight streaming session.
+
 Before app integration: add per-device ownership coordination with UsbDriverService,
 normal Android input filtering, the existing permission-prompt coordinator, service
 death handling, a private/authenticated backend transport, paired TLS lifecycle wiring,

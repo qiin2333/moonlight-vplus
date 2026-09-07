@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application android:label="Moonlight USB/IP Diagnostics" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
-        <activity android:name=".MainActivity" android:exported="true">
+        <!-- Claiming a HID device changes Android's keyboard/navigation configuration.
+             Keep this foreground diagnostic alive while the input driver detaches. -->
+        <activity android:name=".MainActivity" android:exported="true"
+            android:configChanges="keyboard|keyboardHidden|navigation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -19,6 +19,22 @@ import java.util.concurrent.*;
 import javax.net.ssl.*;
 
 public class UsbReverseTunnelTest {
+    /** Opt-in hardware run: diagnostic app owns the authorized physical export. */
+    @Test public void physicalExportThroughSunshine() throws Exception {
+        android.os.Bundle args = InstrumentationRegistry.getArguments();
+        String localPort = args.getString("physicalExportPort");
+        org.junit.Assume.assumeTrue("Physical export not configured", localPort != null);
+        Identity host = new Identity("server"), client = new Identity("client");
+        try (UsbReverseTunnel tunnel = new UsbReverseTunnel()) {
+            tunnel.start("127.0.0.1", Integer.parseInt(args.getString("sunshineProbePort")),
+                    "interop-test-only", args.getString("physicalBusId"), Integer.parseInt(localPort),
+                    client.cert, client.key, host.cert).get(15, TimeUnit.SECONDS);
+            // Bound window for desktop PnP/driver checks; never leaves a persistent tunnel.
+            try { tunnel.completion().get(45, TimeUnit.SECONDS); fail("Physical tunnel ended early"); }
+            catch (TimeoutException expected) { }
+        }
+    }
+
     /** Optional interoperability run against Sunshine's production reverse_tunnel_probe.
      * Its synthetic importer sends a binary request and only completes attach after a reply.
      */
