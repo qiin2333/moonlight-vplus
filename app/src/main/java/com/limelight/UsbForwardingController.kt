@@ -180,10 +180,13 @@ class UsbForwardingController(
         completePermission()
         busy = true
         message = R.string.usb_forward_releasing
-        tunnel?.close()
+        val activeTunnel = tunnel
         tunnel = null
         worker.execute {
             val released = runCatching {
+                // SSLSocket.close() may perform network I/O on Android. Keep it
+                // off the activity thread along with the native exporter cleanup.
+                activeTunnel?.close()
                 export?.let { backend.release(it).get() }
                 export = null
             }.isSuccess
