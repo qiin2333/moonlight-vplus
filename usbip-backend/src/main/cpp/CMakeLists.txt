@@ -10,7 +10,7 @@ endif()
 
 # Fixed revisions; fetched sources and license files remain in the build tree.
 FetchContent_Declare(usbipdcpp TIMEOUT 600 URL https://codeload.github.com/yunsmall/usbipdcpp/tar.gz/1355113f030c4c13404030e6e7426bceb6085276
-    URL_HASH SHA256=0e48cc6fc3ed0d33d7bddda68ee29513faf5b19dcc56250fcde4df12f7f00a9e4)
+    URL_HASH SHA256=0e48cc6fc3ed0d33d7bdda68ee29513faf5b19dcc56250fcde4df12f7f00a9e4)
 FetchContent_Declare(libusb TIMEOUT 600 URL https://codeload.github.com/libusb/libusb/tar.gz/refs/tags/v1.0.29
     URL_HASH SHA256=7c2dd39c0b2589236e48c93247c986ae272e27570942b4163cb00a060fcf1b74)
 FetchContent_Declare(asio TIMEOUT 600 URL https://codeload.github.com/chriskohlhoff/asio/tar.gz/refs/tags/asio-1-30-2
@@ -23,6 +23,8 @@ foreach(dep usbipdcpp libusb asio spdlog)
         FetchContent_Populate(${dep})
     endif()
 endforeach()
+include(${CMAKE_CURRENT_LIST_DIR}/patch_usbipdcpp.cmake)
+moonlight_patch_usbipdcpp(${usbipdcpp_SOURCE_DIR} patched_server_source patched_server_include)
 
 # Mirror libusb's Android source list. Do not discover host pkg-config libraries.
 set(usb_sources core descriptor hotplug io sync strerror)
@@ -49,7 +51,10 @@ file(GLOB core_sources CONFIGURE_DEPENDS
     ${usbipdcpp_SOURCE_DIR}/src/DeviceHandler/*.cpp
     ${usbipdcpp_SOURCE_DIR}/src/InterfaceHandler/*.cpp
     ${usbipdcpp_SOURCE_DIR}/src/LibusbHandler/*.cpp)
+list(FILTER core_sources EXCLUDE REGEX "[/\\\\]Server\\.cpp$")
+list(APPEND core_sources ${patched_server_source})
 add_library(moonlight_usbip SHARED usbip_jni.cpp ${core_sources})
+target_include_directories(moonlight_usbip BEFORE PRIVATE ${patched_server_include})
 target_include_directories(moonlight_usbip PRIVATE
     ${usbipdcpp_SOURCE_DIR}/include ${asio_SOURCE_DIR}/asio/include
     ${CMAKE_CURRENT_BINARY_DIR}/include)

@@ -23,11 +23,16 @@ public class UsbReverseTunnelTest {
     @Test public void physicalExportThroughSunshine() throws Exception {
         android.os.Bundle args = InstrumentationRegistry.getArguments();
         String localPort = args.getString("physicalExportPort");
-        org.junit.Assume.assumeTrue("Physical export not configured", localPort != null);
+        String sunshineProbePort = args.getString("sunshineProbePort");
+        String physicalBusId = args.getString("physicalBusId");
+        org.junit.Assume.assumeTrue("Physical export not configured",
+                localPort != null && !localPort.isEmpty()
+                        && sunshineProbePort != null && !sunshineProbePort.isEmpty()
+                        && physicalBusId != null && !physicalBusId.isEmpty());
         Identity host = new Identity("server"), client = new Identity("client");
         try (UsbReverseTunnel tunnel = new UsbReverseTunnel()) {
-            tunnel.start("127.0.0.1", Integer.parseInt(args.getString("sunshineProbePort")),
-                    "interop-test-only", args.getString("physicalBusId"), Integer.parseInt(localPort),
+            tunnel.start("127.0.0.1", Integer.parseInt(sunshineProbePort),
+                    "interop-test-only", physicalBusId, Integer.parseInt(localPort),
                     client.cert, client.key, host.cert).get(15, TimeUnit.SECONDS);
             // Bound window for desktop PnP/driver checks; never leaves a persistent tunnel.
             try { tunnel.completion().get(45, TimeUnit.SECONDS); fail("Physical tunnel ended early"); }

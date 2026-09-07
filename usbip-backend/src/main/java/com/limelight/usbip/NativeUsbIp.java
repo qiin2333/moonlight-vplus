@@ -10,6 +10,7 @@ final class NativeUsbIp {
         }
     }
     static native int start();
+    static native void authorizeLocalConnection(int sourcePort);
     static native String bind(int fd);
     static native void stop();
     private NativeUsbIp() {}

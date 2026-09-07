@@ -26,6 +26,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.limelight.BuildConfig
 import androidx.activity.ComponentDialog
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.CompositionLocalProvider
@@ -2172,7 +2173,10 @@ class GameMenu(
      * 构建普通菜单选项
      */
     private fun buildNormalMenuOptions(normalOptions: MutableList<MenuOption>) {
-        if (com.limelight.usbip.UsbIpBackend.isSupported()) {
+        val usbTunnelPort = BuildConfig.USB_TUNNEL_PORT.toIntOrNull()
+        if (com.limelight.usbip.UsbIpBackend.isSupported() &&
+            usbTunnelPort != null && usbTunnelPort in 1..65535 &&
+            BuildConfig.USB_TUNNEL_TOKEN.isNotEmpty()) {
             normalOptions.add(MenuOption(getString(R.string.usb_forward_title), false,
                 { game.showUsbForwarding() }, "mouse_mode", true))
         }

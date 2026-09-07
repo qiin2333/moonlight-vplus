@@ -8,6 +8,7 @@
 #include <usbipdcpp/LibusbHandler/tools.h>
 #include <memory>
 #include <mutex>
+#include <atomic>
 #include <stdexcept>
 
 namespace {
@@ -15,12 +16,14 @@ std::mutex mutex;
 std::unique_ptr<usbipdcpp::LibusbServer> server;
 int deviceFd = -1;
 bool initialized = false;
+std::atomic_uint16_t authorizedSourcePort{0};
 void fail(JNIEnv* env, const char* message) {
     if (env->ExceptionCheck()) return;
     jclass type = env->FindClass("java/io/IOException");
     if (type) { env->ThrowNew(type, message); env->DeleteLocalRef(type); }
 }
 void stop() {
+    authorizedSourcePort.store(0, std::memory_order_release);
     if (server) { server->stop(); server.reset(); }
     if (deviceFd >= 0) { close(deviceFd); deviceFd = -1; }
     if (initialized) { libusb_exit(nullptr); initialized = false; }
@@ -37,6 +40,12 @@ Java_com_limelight_usbip_NativeUsbIp_start(JNIEnv* env, jclass) {
         initialized = true;
         server = std::make_unique<usbipdcpp::LibusbServer>();
         server->set_hotplug_enabled(false);
+        server->get_server().set_connection_filter([](const asio::ip::tcp::endpoint& peer) {
+            if (!peer.address().is_loopback()) return false;
+            std::uint16_t expected = peer.port();
+            return expected != 0 && authorizedSourcePort.compare_exchange_strong(
+                    expected, 0, std::memory_order_acq_rel);
+        });
         asio::ip::tcp::endpoint endpoint(asio::ip::address_v4::loopback(), 0);
         if (auto ec = server->start(endpoint); ec)
             throw std::runtime_error(ec.message());
@@ -44,6 +53,16 @@ Java_com_limelight_usbip_NativeUsbIp_start(JNIEnv* env, jclass) {
     } catch (const std::exception& error) {
         stop(); fail(env, error.what()); return 0;
     }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_usbip_NativeUsbIp_authorizeLocalConnection(JNIEnv* env, jclass, jint sourcePort) {
+    std::lock_guard lock(mutex);
+    if (!server || sourcePort < 1 || sourcePort > 65535) {
+        fail(env, "Invalid USB/IP local connection authorization");
+        return;
+    }
+    authorizedSourcePort.store(static_cast<std::uint16_t>(sourcePort), std::memory_order_release);
 }
 
 extern "C" JNIEXPORT jstring JNICALL

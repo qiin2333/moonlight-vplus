@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.core.content.ContextCompat;
 import com.limelight.usbip.UsbIpBackend;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,18 +32,10 @@ public final class MainActivity extends Activity {
     private long generation;
     private String permissionAction;
 
-    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+    private final BroadcastReceiver permissionReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-            if (device == null || destroyed) return;
-            if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(intent.getAction())) {
-                if (pending != null && pending.equals(device)) {
-                    generation++; pending = null; busy = false;
-                }
-                backend.deviceDetached(device.getDeviceName());
-                if (active != null && active.deviceName.equals(device.getDeviceName())) active = null;
-                render("设备已拔出");
-            } else if (permissionAction.equals(intent.getAction()) && pending != null
+            if (device != null && !destroyed && permissionAction.equals(intent.getAction()) && pending != null
                     && intent.getLongExtra("generation", -1) == generation
                     && pending.equals(device)) {
                 pending = null;
@@ -50,6 +43,19 @@ public final class MainActivity extends Activity {
                         && manager.hasPermission(device)) startExport(device);
                 else { busy = false; render("未获得 USB 授权"); }
             }
+        }
+    };
+
+    private final BroadcastReceiver detachReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            if (device == null || destroyed) return;
+            if (pending != null && pending.equals(device)) {
+                generation++; pending = null; busy = false;
+            }
+            backend.deviceDetached(device.getDeviceName());
+            if (active != null && active.deviceName.equals(device.getDeviceName())) active = null;
+            render("设备已拔出");
         }
     };
 
@@ -62,10 +68,9 @@ public final class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(32, 48, 32, 32);
         setContentView(layout);
-        IntentFilter filter = new IntentFilter(permissionAction);
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED);
-        else registerReceiver(receiver, filter);
+        ContextCompat.registerReceiver(this, permissionReceiver, new IntentFilter(permissionAction),
+                ContextCompat.RECEIVER_NOT_EXPORTED);
+        registerReceiver(detachReceiver, new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED));
         render("仅用于开发验证：导出端口只监听本机，尚未接入串流隧道。\n请先关闭其他程序的 USB 驱动，再选择 OTG 设备。");
     }
 
@@ -159,7 +164,8 @@ public final class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         destroyed = true; generation++;
-        unregisterReceiver(receiver);
+        unregisterReceiver(permissionReceiver);
+        unregisterReceiver(detachReceiver);
         backend.close();
         waiter.shutdown();
         super.onDestroy();

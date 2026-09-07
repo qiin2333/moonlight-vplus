@@ -13,7 +13,7 @@ import java.util.concurrent.Future;
 
 /** Single-device prototype. No permissions are requested or devices claimed automatically.
  * The owner must release on detach/session end, and close when finished.
- * Loopback is a development endpoint, not an application authentication boundary.
+ * The loopback listener accepts only the source port reserved by the owning tunnel.
  */
 public final class UsbIpBackend implements AutoCloseable {
     private static final String TAG = "MoonlightUsbIp";
@@ -49,6 +49,9 @@ public final class UsbIpBackend implements AutoCloseable {
     public synchronized Future<Export> export(UsbDevice device) {
         if (closed) throw new IllegalStateException("Backend closed");
         return executor.submit(() -> {
+            synchronized (this) {
+                if (closed) throw new IllegalStateException("Backend closed");
+            }
             Log.i(TAG, "export requested for " + device.getDeviceName());
             if (!isSupported()) throw new UnsupportedOperationException("USB/IP requires Android 9+ ARM64");
             if (active != null) throw new IllegalStateException("Release the current device first");

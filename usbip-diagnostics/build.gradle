@@ -14,4 +14,7 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 }
-dependencies { implementation project(':usbip-backend') }
+dependencies {
+    implementation project(':usbip-backend')
+    implementation 'androidx.core:core:1.15.0'
+}

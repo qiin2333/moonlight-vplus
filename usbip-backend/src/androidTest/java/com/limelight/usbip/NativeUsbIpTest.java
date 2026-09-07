@@ -14,13 +14,20 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class NativeUsbIpTest {
+    private static Socket authorizedSocket(int port) throws Exception {
+        Socket socket = new Socket();
+        socket.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
+        NativeUsbIp.authorizeLocalConnection(socket.getLocalPort());
+        socket.connect(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 3000);
+        return socket;
+    }
+
     @Test public void repeatedStartProtocolAndStop() throws Exception {
         NativeUsbIp.load();
         for (int i = 0; i < 100; i++) {
             int port = NativeUsbIp.start();
-            try (Socket socket = new Socket()) {
+            try (Socket socket = authorizedSocket(port)) {
                 assertTrue(port > 0);
-                socket.connect(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 3000);
                 socket.setSoTimeout(3000);
                 DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 out.writeShort(0x0111); out.writeShort(0x8005); out.writeInt(0); out.flush();
@@ -31,6 +38,18 @@ public class NativeUsbIpTest {
                 assertEquals(0, in.readInt()); // No silently auto-exported devices.
             } finally { NativeUsbIp.stop(); }
         }
+    }
+
+    @Test public void unauthorizedLoopbackClientIsRejected() throws Exception {
+        NativeUsbIp.load();
+        int port = NativeUsbIp.start();
+        try (Socket unauthorized = new Socket("127.0.0.1", port)) {
+            unauthorized.setSoTimeout(3000);
+            try {
+                unauthorized.getOutputStream().write(new byte[]{0x01, 0x11, (byte) 0x80, 0x05, 0, 0, 0, 0});
+                assertEquals(-1, unauthorized.getInputStream().read());
+            } catch (java.net.SocketException reset) { /* rejection may reset instead of EOF */ }
+        } finally { NativeUsbIp.stop(); }
     }
 
     @Test public void invalidFdDoesNotPreventRestart() {
@@ -65,7 +84,7 @@ public class NativeUsbIpTest {
     @Test public void stopClosesIdleClient() throws Exception {
         NativeUsbIp.load();
         int port = NativeUsbIp.start();
-        try (Socket socket = new Socket("127.0.0.1", port)) {
+        try (Socket socket = authorizedSocket(port)) {
             socket.setSoTimeout(3000);
             // A partial request leaves the native receiver waiting for more bytes.
             socket.getOutputStream().write(1);

@@ -67,12 +67,17 @@ public final class UsbReverseTunnel implements AutoCloseable {
     /** API 28+ prototype; invoke once. Returned future completes when forwarding starts. */
     public CompletableFuture<Void> start(String host, int port, String token, UsbIpBackend.Export export,
             X509Certificate client, PrivateKey key, X509Certificate pinned) {
-        return start(host, port, token, export.busId, export.port, client, key, pinned);
+        return startInternal(host, port, token, export.busId, export.port, client, key, pinned, true);
     }
 
     // Package-visible endpoint form is used by transport tests without claiming a USB device.
     CompletableFuture<Void> start(String host, int port, String token, String busId, int localPort,
             X509Certificate client, PrivateKey key, X509Certificate pinned) {
+        return startInternal(host, port, token, busId, localPort, client, key, pinned, false);
+    }
+
+    private CompletableFuture<Void> startInternal(String host, int port, String token, String busId, int localPort,
+            X509Certificate client, PrivateKey key, X509Certificate pinned, boolean authorizeLocal) {
         if (host == null || host.isEmpty() || port < 1 || port > 65535 || localPort < 1 || localPort > 65535
                 || token == null || token.isEmpty() || busId == null || !busId.matches("[A-Za-z0-9.:-]{1,31}")
                 || client == null || key == null || pinned == null)
@@ -81,14 +86,14 @@ public final class UsbReverseTunnel implements AutoCloseable {
             if (started || closed) throw new IllegalStateException("Tunnel already started or closed");
             started = true;
         }
-        new Thread(() -> run(host, port, token, busId, localPort, client, key, pinned), "UsbTunnelConnect").start();
+        new Thread(() -> run(host, port, token, busId, localPort, client, key, pinned, authorizeLocal), "UsbTunnelConnect").start();
         return ready;
     }
 
     public CompletableFuture<Void> completion() { return completion; }
 
     private void run(String host, int port, String token, String busId, int localPort,
-            X509Certificate client, PrivateKey key, X509Certificate pinned) {
+            X509Certificate client, PrivateKey key, X509Certificate pinned, boolean authorizeLocal) {
         ScheduledExecutorService deadline = Executors.newSingleThreadScheduledExecutor();
         deadline.schedule(() -> finish(new IOException("USB tunnel startup timed out")), 15, TimeUnit.SECONDS);
         try {
@@ -112,6 +117,10 @@ public final class UsbReverseTunnel implements AutoCloseable {
             Socket backend = new Socket();
             register(backend, false);
             backend.setTcpNoDelay(true);
+            if (authorizeLocal) {
+                backend.bind(new InetSocketAddress("127.0.0.1", 0));
+                NativeUsbIp.authorizeLocalConnection(backend.getLocalPort());
+            }
             backend.connect(new InetSocketAddress("127.0.0.1", localPort), 5000);
             Log.i(TAG, "host ready; local exporter connected");
             tls.setSoTimeout(0);
