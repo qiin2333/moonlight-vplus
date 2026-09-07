@@ -1,0 +1,12 @@
+<resources>
+    <string name="usb_forward_title">USB 外设</string>
+    <string name="usb_forward_choose">选择要转发到当前主机的设备。</string>
+    <string name="usb_forward_release">恢复手机使用</string>
+    <string name="usb_forward_permission_denied">未获得 USB 授权。</string>
+    <string name="usb_forward_connecting">正在连接 USB 设备…</string>
+    <string name="usb_forward_connected">USB 通道已连接</string>
+    <string name="usb_forward_releasing">正在释放 USB 设备…</string>
+    <string name="usb_forward_failed">USB 转发已停止，请检查主机和网络。</string>
+    <string name="usb_forward_local_owner">该设备需要本地驱动交接，或暂时无法准确区分，目前不能转发。</string>
+    <string name="usb_forward_unconfigured">当前构建尚未配置 USB 转发，或主机未完成配对。</string>
+</resources>

@@ -176,6 +176,22 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     var displayedFailureDialog = false
     var connecting = false
     var connected = false
+    private var usbForwarding: UsbForwardingController? = null
+
+    fun showUsbForwarding() {
+        if (!connected || !com.limelight.usbip.UsbIpBackend.isSupported()) return
+        if (usbForwarding == null) {
+            val port = BuildConfig.USB_TUNNEL_PORT.toIntOrNull()
+            val cert = parseServerCert()
+            if (port == null || port !in 1..65535 || BuildConfig.USB_TUNNEL_TOKEN.isEmpty() || cert == null) {
+                Toast.makeText(this, R.string.usb_forward_unconfigured, Toast.LENGTH_LONG).show()
+                return
+            }
+            usbForwarding = UsbForwardingController(this, intent.getStringExtra(EXTRA_HOST) ?: "",
+                cert, PlatformBinding.getCryptoProvider(this), port, BuildConfig.USB_TUNNEL_TOKEN)
+        }
+        usbForwarding?.show()
+    }
     private var activeGameMenu: GameMenu? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
@@ -413,7 +429,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             streamView.setOnCapturedPointerListener { _, event ->
-                touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
+                usbForwarding?.consumes(event.device) == true ||
+                    touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
             }
         }
 
@@ -711,6 +728,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
      */
     private fun createConnectionAndHandler() {
+        usbForwarding?.close()
+        usbForwarding = null
         framegenEnabledToastShown = false
         if (::controllerHandler.isInitialized) {
             audioVibrationService?.controllerHandler = null
@@ -1491,6 +1510,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onDestroy() {
+        usbForwarding?.close()
+        usbForwarding = null
         if (isFinishing && !isChangingConfigurations) {
             cancelKeepAliveNotification()
         }
@@ -1633,6 +1654,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun onStop() {
         super.onStop()
+        usbForwarding?.stopForeground()
 
         if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing) {
             LimeLog.info("Extreme Resume: onStop intercepted.")
@@ -1794,6 +1816,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             controllerManager?.elementController?.cancelDirectConfigSwitch()
         }
@@ -1808,14 +1831,17 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return keyboardInputHandler.handleKeyDown(event) || super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return keyboardInputHandler.handleKeyUp(event) || super.onKeyUp(keyCode, event)
     }
 
     override fun onKeyMultiple(keyCode: Int, repeatCount: Int, event: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return keyboardInputHandler.handleKeyMultiple(event) || super.onKeyMultiple(keyCode, repeatCount, event)
     }
 
@@ -1868,15 +1894,18 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)
     }
 
     override fun onGenericMotion(view: View, event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(view, event)
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         if (event.action == MotionEvent.ACTION_DOWN) {
             if (!prefConfig.syncTouchEventWithDisplay && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 view.requestUnbufferedDispatch(event)
@@ -1898,6 +1927,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionTerminated(errorCode: Int) {
+        val forwarding = usbForwarding
+        runOnUiThread { forwarding?.stopForeground() }
         connectionCallbackHandler.connectionTerminated(errorCode)
     }
 
@@ -2877,6 +2908,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onKey(view: View, keyCode: Int, keyEvent: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(keyEvent.device) == true) return true
         return when (keyEvent.action) {
             KeyEvent.ACTION_DOWN -> keyboardInputHandler.handleKeyDown(keyEvent)
             KeyEvent.ACTION_UP -> keyboardInputHandler.handleKeyUp(keyEvent)
@@ -3002,6 +3034,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
 
     fun getHandleMotionEvent(streamView: StreamView, event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(streamView, event)
     }
 

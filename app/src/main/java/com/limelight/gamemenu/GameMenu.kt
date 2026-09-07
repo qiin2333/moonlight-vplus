@@ -2172,6 +2172,10 @@ class GameMenu(
      * 构建普通菜单选项
      */
     private fun buildNormalMenuOptions(normalOptions: MutableList<MenuOption>) {
+        if (com.limelight.usbip.UsbIpBackend.isSupported()) {
+            normalOptions.add(MenuOption(getString(R.string.usb_forward_title), false,
+                { game.showUsbForwarding() }, "mouse_mode", true))
+        }
         normalOptions.add(MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
             { game.toggleKeyboard() }, "game_menu_toggle_keyboard", true))
 

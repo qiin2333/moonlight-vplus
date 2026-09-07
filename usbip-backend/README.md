@@ -171,6 +171,33 @@ death handling, a private/authenticated backend transport, paired TLS lifecycle 
 Sunshine per-session credentials and attach status. No claim of support for cameras,
 audio devices or all composite devices is made by this phase.
 
+## Android stream integration in progress (2026-09-07)
+
+The main app now depends on this module and exposes USB devices in the existing
+Game menu. `UsbForwardingController` uses the current host address, paired server
+certificate and app client identity with the same `forward`/`ready` protocol as
+the PC client. No additional Sunshine status operation is required or retained.
+Debug builds accept `usbTunnelPort` / `usbTunnelToken` Gradle properties, falling
+back to the PC-compatible `MOONLIGHT_USB_TUNNEL_PORT` / `MOONLIGHT_USB_TUNNEL_TOKEN`
+environment variables. Release builds leave these fields empty. Never distribute
+a debug APK containing a real host's shared token.
+
+USB permissions use Game's existing permission-prompt notifications. Export and
+cleanup run off the UI thread, with operation generations invalidating late
+callbacks. Release closes TLS before draining the native export; foreground exit,
+device removal, stream termination and Activity destruction invoke cleanup.
+Android input paths, including pointer capture and external-display routing,
+filter the selected USB device's VID/PID while it is reserved for forwarding.
+Identical VID/PID devices and custom-driver/HCI devices are temporarily rejected;
+per-device custom-driver handoff remains unfinished, not a completed feature.
+
+Validation: `:app:compileNonRootDebugKotlin` passed after restoring the matching
+framegen sources. The original Sunshine TLS regression suite passed after removing
+the proposed status extension. This is compile validation only: installable APK,
+normal paired streaming, physical mouse reports, held-key handoff, disconnect and
+reconnect behavior still require main-app device validation before this integration
+can be called a closed loop.
+
 ## Dependency provenance
 
 - FD integration reference: yunsmall/Android-Usbipdcpp at
