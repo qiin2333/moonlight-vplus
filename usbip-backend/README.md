@@ -45,11 +45,17 @@ ARM64 artifacts, then builds and runs the same native tests in an API 34 x86_64 
   an incomplete client request.
 - After an installation retry, Meizu 17 / Android 13 ARM64 ran all four native tests:
   `OK (4 tests)` in 0.243 seconds, including the protocol and FD lifecycle checks above.
-  The separate diagnostic app still failed installation with
-  `INSTALL_FAILED_USER_RESTRICTED`. The USB host manager reported zero OTG devices;
-  the phone remained in USB device/sink mode, connected to the development computer.
-- Physical device export, USB permission UI on hardware, physical bidirectional
-  traffic, and Moonlight/Sunshine streaming integration are **not yet verified**.
+- A subsequent diagnostic APK installation succeeded over the phone's existing
+  paired wireless ADB connection. Android enumerated USB Serial `1a86:7523` and
+  granted the diagnostic app permission through the normal USB permission dialog.
+  The backend exported it as `1-9:0`. A desktop protocol probe through ADB forwarding
+  imported it twice and completed 100 GET_DESCRIPTOR control requests per connection
+  (200/200), checking the returned VID/PID. Release returned the diagnostic to its
+  device list and the old forwarded endpoint returned EOF; the forward was removed.
+- This verifies physical USB control transfers through the backend. Serial bulk
+  payloads, HID input, Windows VHCI attachment, sustained traffic and the production
+  Moonlight/Sunshine TLS tunnel are **not yet verified**. ADB forwarding was only the
+  development transport for this test.
 
 ## Resource ownership
 
