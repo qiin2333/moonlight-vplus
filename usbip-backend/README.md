@@ -1,4 +1,4 @@
-# Android USB/IP backend — phase 1
+# Android USB/IP backend and reverse tunnel prototype
 
 This is an opt-in development module, not a released USB forwarding feature.
 It wraps pinned usbipdcpp + libusb sources through JNI and exports at most one
@@ -67,9 +67,46 @@ duplicates the connection FD and retains it until the server and URB callbacks s
 Only then is the original UsbDeviceConnection closed. A failed native stop must not
 be followed by closing resources that callbacks may still use.
 
+## Reverse TLS transport
+
+`UsbReverseTunnel` is a one-shot Android 9+ transport component. Supply an active
+export, the existing paired client certificate/private key, the exact saved host
+certificate, host address/port and development token to `start`. Observe the returned
+future for **byte forwarding ready**, and `completion()` for termination. Neither
+future reports Windows attach success. Call `close()` before releasing the export;
+cancelling a Future is not a substitute for closing the tunnel. Future callbacks may
+run on I/O threads and must dispatch UI changes appropriately.
+
+The transport uses TLS 1.2 mutual authentication, exact leaf-certificate pinning,
+a 15-second startup deadline, a 4096-byte handshake bound and fixed 64 KiB buffers
+in each direction with blocking socket backpressure. It consumes only through the
+handshake newline, preserving coalesced binary data. EOF, cancellation and errors
+close both sockets. Tokens and certificates are not persisted by the component.
+
+Instrumented tests cover mutual TLS and 256 KiB bidirectional payload integrity,
+wrong-pin rejection before opening the backend, host rejection, handshake overflow
+and cancellation during stalled TLS. Test certificates/keys are synthetic fixtures
+under `src/androidTest/assets` and must never be trusted by a normal installation.
+
+The optional `sunshineProductionServiceInterop` test accepts instrumentation argument
+`sunshineProbePort`, reachable on Android loopback (for example using `adb reverse`).
+Run Sunshine's `reverse_tunnel_probe` with the matching test server/client PEMs,
+token `interop-test-only`, helper `synthetic`, and mode `ok`. It exchanges binary
+import/reply traffic with the real host tunnel service; its synthetic helper does
+not validate Windows VHCI or a physical USB device. Without the argument this test
+is skipped. Sunshine must accept Android's colon-containing bus IDs (`1-9:0`).
+
+Local validation on Meizu 17 / Android 13: `OK (9 tests)` in 2.372 seconds with the
+external probe enabled. Sunshine logged `IMPORT_EXCHANGED`, attachment of `1-9:0`,
+then `DETACHED`. The probe used the production host tunnel service and a synthetic
+importer over wireless ADB reverse forwarding. The host regression suite also passed
+after allowing colon-containing IDs. Full Moonlight session/UI wiring, real VHCI
+import through this TLS component, network failure recovery and sustained physical
+USB traffic remain pending.
+
 Before app integration: add per-device ownership coordination with UsbDriverService,
 normal Android input filtering, the existing permission-prompt coordinator, service
-death handling, a private/authenticated backend transport, paired TLS forwarding,
+death handling, a private/authenticated backend transport, paired TLS lifecycle wiring,
 Sunshine per-session credentials and attach status. No claim of support for cameras,
 audio devices or all composite devices is made by this phase.
 
