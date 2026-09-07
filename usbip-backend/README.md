@@ -133,6 +133,38 @@ checks must be collected separately; passing it alone is not functional device p
   port remained. The transport still used wireless ADB as its TCP carrier and test
   credentials, not the user's paired Moonlight streaming session.
 
+### After host reboot and driver upgrade (2026-09-07)
+
+usbip-win2 0.9.7.8 no longer reported ABI mismatch after reboot, but reported
+multiple VHCI interfaces: the upgrade had left `ROOT\USB\0000` and `0001` enabled.
+The older `0000` was disabled (reversible; not uninstalled), keeping `0001` enabled.
+`usbip port` then returned successfully. Use the upgraded tool and matching DLLs
+from the registered installation directory, not the older portable 0.9.7.7 bundle.
+
+CH340 `1a86:7523` was exported as `1-28:0` and imported through Android TLS into
+Windows hub port 1. Windows bound `oem107.inf` / WCH driver 3.9.2024.9 and exposed
+`USB-SERIAL CH340 (COM4)` with PnP problem code 0. The first 45-second instrumented
+run passed; its disconnect removed the imported port and live COM device. A second
+45-second run also passed, reused hub port 1 and restored COM4 with status OK.
+
+The user clarified that the phone has a USB hub with a mouse attached. CH340 is a
+separately enumerated serial interface, not an identification of the hub or mouse.
+No COM port was opened and no serial payload was sent. These PnP and lifecycle
+results must not be described as a serial send/receive test.
+
+The composite HID `046d:b34d`, exported as `1-29:0`, also imported successfully
+through Android TLS and the real Sunshine host service using usbip-win2 0.9.7.8.
+Windows enumerated its mouse, keyboard and other HID interfaces with status OK;
+the first 45-second test passed and disconnect removed the imported port and all
+matching live PnP devices. A subsequent import restored all 11 matching PnP nodes
+with problem code 0. The diagnostic export survived the HID configuration changes.
+That retry ended after 38.7 seconds when the shared probe reached its fixed
+120-second lifetime. A fresh probe then completed another full 45-second run;
+teardown again left no imported ports or matching live PnP devices. Test ADB
+forwards were removed and the diagnostic export released afterward.
+Physical mouse movement/click reports have not been independently captured, so
+this establishes device initialization, not an end-to-end mouse-input test.
+
 Before app integration: add per-device ownership coordination with UsbDriverService,
 normal Android input filtering, the existing permission-prompt coordinator, service
 death handling, a private/authenticated backend transport, paired TLS lifecycle wiring,
