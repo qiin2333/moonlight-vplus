@@ -84,11 +84,13 @@ class UsbForwardingController(
 
     private fun request(device: UsbDevice) {
         if (closed || busy || selected != null || !game.connected) return
+        LimeLog.info("USB forwarding selected ${device.deviceName} (${device.vendorId}:${device.productId})")
         // A controller/HCI adapter can already own custom-driver threads. Their
         // per-device handoff is separate from the validated Android HID path.
         if (UsbDriverService.shouldClaimDevice(device, true) || HciUsbDeviceProbe.probe(device) != null ||
             manager.deviceList.values.count { it.vendorId == device.vendorId && it.productId == device.productId } != 1) {
             Toast.makeText(game, R.string.usb_forward_local_owner, Toast.LENGTH_LONG).show()
+            LimeLog.warning("USB forwarding rejected because a local input driver owns the device")
             return
         }
         selected = device
@@ -125,7 +127,10 @@ class UsbForwardingController(
                             crypto.getClientPrivateKey(), pinned).whenComplete { _, error ->
                             game.runOnUiThread {
                                 if (!closed && generation == operation) {
-                                    if (error != null) release(R.string.usb_forward_failed)
+                                    if (error != null) {
+                                        LimeLog.severe("USB forwarding tunnel failed: ${error.cause ?: error}")
+                                        release(R.string.usb_forward_failed)
+                                    }
                                     else {
                                         busy = false
                                         message = R.string.usb_forward_connected
@@ -141,9 +146,13 @@ class UsbForwardingController(
                                 if (!closed && generation == operation) release(R.string.usb_forward_failed)
                             }
                         }
-                    } catch (_: Exception) { release(R.string.usb_forward_failed) }
+                    } catch (error: Exception) {
+                        LimeLog.severe("USB forwarding tunnel setup failed: $error")
+                        release(R.string.usb_forward_failed)
+                    }
                 }
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                LimeLog.severe("USB forwarding export failed: ${error.cause ?: error}")
                 game.runOnUiThread {
                     if (!closed && generation == operation) release(R.string.usb_forward_failed)
                 }

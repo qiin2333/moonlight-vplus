@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import android.util.Log;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -29,6 +30,7 @@ import javax.net.ssl.X509TrustManager;
  * this tunnel before releasing its export. No retries or persistent token storage.
  */
 public final class UsbReverseTunnel implements AutoCloseable {
+    private static final String TAG = "MoonlightUsbIp";
     private final Object lock = new Object();
     private Socket remote;
     private Socket local;
@@ -90,6 +92,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
         ScheduledExecutorService deadline = Executors.newSingleThreadScheduledExecutor();
         deadline.schedule(() -> finish(new IOException("USB tunnel startup timed out")), 15, TimeUnit.SECONDS);
         try {
+            Log.i(TAG, "tunnel connecting to " + host + ":" + port + " for busid=" + busId);
             byte[] request = (new JSONObject().put("op", "forward").put("token", token)
                     .put("busid", busId).toString() + "\n").getBytes(StandardCharsets.UTF_8);
             if (request.length > 4096) throw new IOException("USB tunnel handshake too large");
@@ -100,14 +103,17 @@ public final class UsbReverseTunnel implements AutoCloseable {
             tls.connect(new InetSocketAddress(host, port), 15000);
             tls.setSoTimeout(15000);
             tls.startHandshake();
+            Log.i(TAG, "tunnel TLS established");
             tls.getOutputStream().write(request);
             JSONObject response = new JSONObject(readLine(tls.getInputStream()));
+            Log.i(TAG, "tunnel host response=" + response);
             if (!"ready".equals(response.optString("op")))
                 throw new IOException("USB tunnel host rejected forwarding");
             Socket backend = new Socket();
             register(backend, false);
             backend.setTcpNoDelay(true);
             backend.connect(new InetSocketAddress("127.0.0.1", localPort), 5000);
+            Log.i(TAG, "host ready; local exporter connected");
             tls.setSoTimeout(0);
             // Cancel only after both sockets are usable. The deadline also closes blocked writes.
             deadline.shutdownNow();
@@ -120,6 +126,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
             pump(tls, backend);
             upstream.join();
         } catch (Exception error) {
+            Log.e(TAG, "reverse tunnel failed", error);
             finish(error);
         } finally {
             deadline.shutdownNow();

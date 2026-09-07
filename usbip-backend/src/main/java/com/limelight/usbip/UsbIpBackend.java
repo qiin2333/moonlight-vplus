@@ -5,6 +5,7 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
+import android.util.Log;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -15,6 +16,7 @@ import java.util.concurrent.Future;
  * Loopback is a development endpoint, not an application authentication boundary.
  */
 public final class UsbIpBackend implements AutoCloseable {
+    private static final String TAG = "MoonlightUsbIp";
     public static final class Export {
         public final String deviceName;
         public final String busId;
@@ -47,6 +49,7 @@ public final class UsbIpBackend implements AutoCloseable {
     public synchronized Future<Export> export(UsbDevice device) {
         if (closed) throw new IllegalStateException("Backend closed");
         return executor.submit(() -> {
+            Log.i(TAG, "export requested for " + device.getDeviceName());
             if (!isSupported()) throw new UnsupportedOperationException("USB/IP requires Android 9+ ARM64");
             if (active != null) throw new IllegalStateException("Release the current device first");
             if (usbManager == null || !usbManager.hasPermission(device))
@@ -57,13 +60,17 @@ public final class UsbIpBackend implements AutoCloseable {
             try {
                 connection = usbManager.openDevice(device);
                 if (connection == null) throw new IOException("Unable to open USB device");
+                Log.i(TAG, "USB device opened, fd=" + connection.getFileDescriptor());
                 NativeUsbIp.load();
                 int port = NativeUsbIp.start();
                 started = true;
+                Log.i(TAG, "native exporter listening on 127.0.0.1:" + port);
                 String busId = NativeUsbIp.bind(connection.getFileDescriptor());
+                Log.i(TAG, "native exporter bound busid=" + busId);
                 active = new Export(device.getDeviceName(), busId, port);
                 return active;
             } catch (Exception | Error error) {
+                Log.e(TAG, "USB export failed", error);
                 cleanup();
                 throw error;
             }
