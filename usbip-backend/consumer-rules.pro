@@ -1,0 +1,1 @@
+-keep class com.limelight.usbip.NativeUsbIp { *; }

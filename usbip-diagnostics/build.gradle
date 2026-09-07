@@ -1,0 +1,17 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.limelight.usbip.diagnostics'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.limelight.usbip.diagnostics'
+        minSdk 28
+        targetSdk 35
+        versionCode 1
+        versionName '0.1'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+dependencies { implementation project(':usbip-backend') }
