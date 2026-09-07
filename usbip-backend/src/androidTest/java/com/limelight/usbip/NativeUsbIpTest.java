@@ -52,6 +52,28 @@ public class NativeUsbIpTest {
         } finally { NativeUsbIp.stop(); }
     }
 
+    @Test public void revokedLocalPortCannotBeReused() throws Exception {
+        NativeUsbIp.load();
+        int port = NativeUsbIp.start();
+        Socket reservation = new Socket();
+        reservation.setReuseAddress(true);
+        reservation.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
+        int sourcePort = reservation.getLocalPort();
+        NativeUsbIp.authorizeLocalConnection(sourcePort);
+        NativeUsbIp.revokeLocalConnection(sourcePort);
+        reservation.close();
+        try (Socket reused = new Socket()) {
+            reused.setReuseAddress(true);
+            reused.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), sourcePort));
+            reused.connect(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 3000);
+            reused.setSoTimeout(3000);
+            try {
+                reused.getOutputStream().write(new byte[]{0x01, 0x11, (byte) 0x80, 0x05, 0, 0, 0, 0});
+                assertEquals(-1, reused.getInputStream().read());
+            } catch (java.net.SocketException reset) { /* rejection may reset instead of EOF */ }
+        } finally { NativeUsbIp.stop(); }
+    }
+
     @Test public void invalidFdDoesNotPreventRestart() {
         NativeUsbIp.load();
         NativeUsbIp.start();

@@ -34,6 +34,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
     private final Object lock = new Object();
     private Socket remote;
     private Socket local;
+    private int authorizedLocalPort;
     private boolean closed;
     private boolean started;
     private final CompletableFuture<Void> ready = new CompletableFuture<>();
@@ -119,7 +120,11 @@ public final class UsbReverseTunnel implements AutoCloseable {
             backend.setTcpNoDelay(true);
             if (authorizeLocal) {
                 backend.bind(new InetSocketAddress("127.0.0.1", 0));
-                NativeUsbIp.authorizeLocalConnection(backend.getLocalPort());
+                synchronized (lock) {
+                    if (closed) throw new IOException("USB tunnel closed");
+                    authorizedLocalPort = backend.getLocalPort();
+                    NativeUsbIp.authorizeLocalConnection(authorizedLocalPort);
+                }
             }
             backend.connect(new InetSocketAddress("127.0.0.1", localPort), 5000);
             Log.i(TAG, "host ready; local exporter connected");
@@ -176,6 +181,10 @@ public final class UsbReverseTunnel implements AutoCloseable {
         synchronized (lock) {
             if (closed) return;
             closed = true;
+            if (authorizedLocalPort != 0) {
+                NativeUsbIp.revokeLocalConnection(authorizedLocalPort);
+                authorizedLocalPort = 0;
+            }
             closeSocket(remote);
             closeSocket(local);
         }

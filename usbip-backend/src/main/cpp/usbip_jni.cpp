@@ -65,6 +65,13 @@ Java_com_limelight_usbip_NativeUsbIp_authorizeLocalConnection(JNIEnv* env, jclas
     authorizedSourcePort.store(static_cast<std::uint16_t>(sourcePort), std::memory_order_release);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_usbip_NativeUsbIp_revokeLocalConnection(JNIEnv*, jclass, jint sourcePort) {
+    if (sourcePort < 1 || sourcePort > 65535) return;
+    std::uint16_t expected = static_cast<std::uint16_t>(sourcePort);
+    authorizedSourcePort.compare_exchange_strong(expected, 0, std::memory_order_acq_rel);
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_limelight_usbip_NativeUsbIp_bind(JNIEnv* env, jclass, jint fd) {
     std::lock_guard lock(mutex);

@@ -26,6 +26,7 @@ public final class MainActivity extends Activity {
     private LinearLayout layout;
     private TextView status;
     private UsbDevice pending;
+    private String exportingDeviceName;
     private UsbIpBackend.Export active;
     private boolean busy;
     private boolean destroyed;
@@ -50,11 +51,13 @@ public final class MainActivity extends Activity {
         @Override public void onReceive(Context context, Intent intent) {
             UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
             if (device == null || destroyed) return;
-            if (pending != null && pending.equals(device)) {
-                generation++; pending = null; busy = false;
+            String deviceName = device.getDeviceName();
+            if ((pending != null && pending.equals(device))
+                    || deviceName.equals(exportingDeviceName)
+                    || (active != null && deviceName.equals(active.deviceName))) {
+                generation++; pending = null; exportingDeviceName = null; active = null; busy = false;
             }
-            backend.deviceDetached(device.getDeviceName());
-            if (active != null && active.deviceName.equals(device.getDeviceName())) active = null;
+            backend.deviceDetached(deviceName);
             render("设备已拔出");
         }
     };
@@ -119,6 +122,7 @@ public final class MainActivity extends Activity {
 
     private void startExport(UsbDevice device) {
         long operation = generation;
+        exportingDeviceName = device.getDeviceName();
         render("正在导出");
         waiter.execute(() -> {
             try {
@@ -126,13 +130,13 @@ public final class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     if (destroyed) return; // Backend close is already queued.
                     if (operation != generation) { backend.release(result); return; }
-                    active = result; busy = false;
+                    exportingDeviceName = null; active = result; busy = false;
                     render("已导出，尚未连接主机\nbusid=" + result.busId + "\n127.0.0.1:" + result.port);
                 });
             } catch (Exception error) {
                 runOnUiThread(() -> {
                     if (!destroyed && operation == generation) {
-                        busy = false; render("导出失败：" + error.getMessage());
+                        exportingDeviceName = null; busy = false; render("导出失败：" + error.getMessage());
                     }
                 });
             }
@@ -157,7 +161,7 @@ public final class MainActivity extends Activity {
         super.onStop();
         // This diagnostic has no background service and must not export while hidden.
         generation++;
-        pending = null;
+        pending = null; exportingDeviceName = null;
         busy = false;
         if (active != null) releaseActive();
     }
