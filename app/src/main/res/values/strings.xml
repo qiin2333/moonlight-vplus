@@ -1332,6 +1332,11 @@
     <string name="suffix_seekbar_output_buffer_queue_limit">frames</string>
     <string name="title_force_mtk_max_operating_rate">Force MediaTek decoder maximum rate (Experimental)</string>
     <string name="summary_force_mtk_max_operating_rate">Compatibility override for MediaTek decoders only. It may reduce latency on some devices, but can cause severe delay on others. Leave off unless testing a known MediaTek decoder issue.</string>
+    <string name="title_hevc_low_latency_mode">HEVC low-latency decoding</string>
+    <string name="summary_hevc_low_latency_mode">Auto uses compatibility settings for Amlogic HEVC decoders. On restores low-latency options; Off uses compatibility settings for all HEVC and Dolby Vision streams. Compatibility settings may increase decoding latency.</string>
+    <string name="hevc_low_latency_auto">Auto</string>
+    <string name="hevc_low_latency_on">On</string>
+    <string name="hevc_low_latency_off">Off</string>
 
     <!-- Frame Generation -->
     <string name="title_developer_unlock">Unlock developer features</string>
