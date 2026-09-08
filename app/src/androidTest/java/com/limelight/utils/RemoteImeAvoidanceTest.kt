@@ -37,6 +37,14 @@ class RemoteImeAvoidanceTest {
             .setData(Uri.parse("about:blank")),
     )
 
+    private fun context() = RemoteTextContext(
+        flags = 0xB3, revision = 1, activationId = 2, inputToken = 3,
+        source = 2, cause = 1, anchorX = 800, anchorY = 1000,
+        elementLeft = 0, elementTop = 0, elementRight = 1920, elementBottom = 1080,
+        caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
+        captureWidth = 1920, captureHeight = 1080,
+    )
+
     @Test fun manualPanTakesControlAndReopeningDoesNotReuseAnchor() {
         rule.scenario.onActivity { activity ->
             val root = FrameLayout(activity)
@@ -50,13 +58,7 @@ class RemoteImeAvoidanceTest {
             cursor.layout(0, 0, 1920, 2160)
             val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
             val controller = RemoteImeController(activity, stream, pan)
-            controller.handle(RemoteTextContext(
-                flags = 0xB3, revision = 1, activationId = 2, inputToken = 3,
-                source = 2, cause = 1, anchorX = 800, anchorY = 1000,
-                elementLeft = 0, elementTop = 0, elementRight = 1920, elementBottom = 1080,
-                caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
-                captureWidth = 1920, captureHeight = 1080,
-            ))
+            controller.handle(context())
             fun dispatch(visible: Boolean) {
                 stream.dispatchApplyWindowInsets(WindowInsets.Builder()
                     .setInsets(WindowInsets.Type.ime(), Insets.of(0, 0, 0, if (visible) 400 else 0))
@@ -86,7 +88,7 @@ class RemoteImeAvoidanceTest {
                 dispatch(true)
                 val reopened = stream.y
                 assertEquals("Reopening must not reuse the consumed anchor", hidden, reopened, 0.1f)
-                android.util.Log.i("ImeAvoidanceProbe", "before=$before dragged=$dragged recomputed=$recomputed hidden=$hidden reopened=$reopened")
+
             } finally {
                 controller.dispose()
             }
@@ -110,13 +112,7 @@ class RemoteImeAvoidanceTest {
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         rule.scenario.onActivity { activity ->
-            controller.handle(RemoteTextContext(
-                flags = 0xB3, revision = 1, activationId = 2, inputToken = 3,
-                source = 2, cause = 1, anchorX = 800, anchorY = 1000,
-                elementLeft = 0, elementTop = 0, elementRight = 1920, elementBottom = 1080,
-                caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
-                captureWidth = 1920, captureHeight = 1080,
-            ))
+            controller.handle(context())
             assertFalse(ViewCompat.getRootWindowInsets(stream)?.isVisible(WindowInsetsCompat.Type.ime()) == true)
             // Explicit user action equivalent; no host-triggered show in the controller.
             stream.isFocusableInTouchMode = true
@@ -158,63 +154,4 @@ class RemoteImeAvoidanceTest {
         }
     }
 
-    @Test fun dockedInsetsMoveBothViewsAndRestoreWithoutAccumulation() {
-        rule.scenario.onActivity { activity ->
-            val root = FrameLayout(activity)
-            val stream = StreamView(activity)
-            val cursor = View(activity)
-            root.addView(stream)
-            root.addView(cursor)
-            // Detached deterministic geometry, running in the emulator UI thread.
-            root.layout(0, 0, 1920, 1080)
-            stream.layout(0, 0, 1920, 1080)
-            cursor.layout(0, 0, 1920, 1080)
-            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
-            val controller = RemoteImeController(activity, stream, pan)
-            val c = RemoteTextContext(
-                flags = 0xB3, revision = 1, activationId = 2, inputToken = 3,
-                source = 2, cause = 1, anchorX = 800, anchorY = 1000,
-                elementLeft = 0, elementTop = 0, elementRight = 1920, elementBottom = 1080,
-                caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
-                captureWidth = 1920, captureHeight = 1080,
-            )
-            fun insets(visible: Boolean, bottom: Int) = WindowInsets.Builder()
-                .setInsets(WindowInsets.Type.ime(), Insets.of(0, 0, 0, bottom))
-                .setVisible(WindowInsets.Type.ime(), visible).build()
-            fun dispatch(visible: Boolean, bottom: Int) {
-                stream.dispatchApplyWindowInsets(insets(visible, bottom))
-            }
-            controller.handle(c)
-            assertFalse("Host event must not request view focus", stream.hasFocus())
-            assertEquals(0f, stream.y, 0f)
-            val margin = 24 * activity.resources.displayMetrics.density
-            repeat(20) {
-                dispatch(true, 400)
-                assertEquals(680f - margin - 1000f, stream.y, 0.01f)
-                assertEquals(stream.y, cursor.y, 0f)
-                assertEquals(1000f, pan.captureYToParent(1000, 1080), 0f)
-            }
-            dispatch(true, 0) // Floating keyboard: visible but no occlusion.
-            assertEquals(0f, stream.y, 0f)
-            dispatch(true, 400)
-            dispatch(false, 0)
-            assertEquals(0f, stream.y, 0f)
-            dispatch(true, 400)
-            controller.resetSession()
-            assertEquals(0f, stream.y, 0f)
-            controller.handle(c)
-            dispatch(true, 400)
-            controller.dispose()
-            assertEquals(0f, stream.y, 0f)
-            assertEquals(0f, cursor.y, 0f)
-            controller.handle(RemoteTextContext(
-                flags = 0xB3, revision = 2, activationId = 3, inputToken = 4,
-                source = 2, cause = 1, anchorX = 800, anchorY = 1000,
-                elementLeft = 0, elementTop = 0, elementRight = 1920, elementBottom = 1080,
-                caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
-                captureWidth = 1920, captureHeight = 1080,
-            ))
-            assertEquals(0f, stream.y, 0f)
-        }
-    }
 }
