@@ -27,6 +27,7 @@ class PanZoomHandler(
     private var childWidth = 0f
     private var childHeight = 0f
     private var imeOffsetY = 0f
+    var onUserTransform: (() -> Unit)? = null
 
     init {
         scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
@@ -129,6 +130,7 @@ class PanZoomHandler(
 
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
+            onUserTransform?.invoke()
             var newScaleFactor = scaleFactor * detector.scaleFactor
             newScaleFactor = maxOf(1f, minOf(newScaleFactor, MAX_SCALE)) // Apply minimum scale
 
@@ -160,6 +162,7 @@ class PanZoomHandler(
             distanceX: Float,
             distanceY: Float
         ): Boolean {
+            onUserTransform?.invoke()
             // View coordinates include the temporary IME offset. Gesture state
             // must remain in the persistent base transform or the IME offset is
             // folded into childY and applied twice on the next transform.

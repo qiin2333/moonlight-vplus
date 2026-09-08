@@ -43,14 +43,23 @@ object RemoteTextContextPolicy {
             !context.hasFlag(RemoteTextContext.FLAG_EDITABLE)
     }
 
-    fun focusY(context: RemoteTextContext): Int = when {
-        context.hasFlag(RemoteTextContext.FLAG_CARET_RECT) &&
-            isValidRect(context.caretLeft, context.caretTop, context.caretRight, context.caretBottom) ->
-            context.caretBottom
-        context.hasFlag(RemoteTextContext.FLAG_ELEMENT_RECT) &&
-            isValidRect(context.elementLeft, context.elementTop, context.elementRight, context.elementBottom) ->
-            context.elementBottom
-        else -> context.anchorY
+    fun focusY(context: RemoteTextContext): Int? {
+        if (context.captureWidth <= 0 || context.captureHeight <= 0) return null
+        val validCaret = context.hasFlag(RemoteTextContext.FLAG_CARET_RECT) &&
+            isValidRect(context.caretLeft, context.caretTop, context.caretRight, context.caretBottom) &&
+            context.caretLeft >= 0 && context.caretTop >= 0 &&
+            context.caretRight <= context.captureWidth && context.caretBottom <= context.captureHeight &&
+            context.hasFlag(RemoteTextContext.FLAG_ELEMENT_RECT) &&
+            context.caretLeft >= context.elementLeft && context.caretTop >= context.elementTop &&
+            context.caretRight <= context.elementRight && context.caretBottom <= context.elementBottom
+        if (validCaret) return context.caretBottom
+        // Document bounds may cover the whole page; never pan to its bottom.
+        return context.anchorY.takeIf {
+            context.hasFlag(RemoteTextContext.FLAG_INPUT_MATCHED) &&
+                context.hasFlag(RemoteTextContext.FLAG_ANCHOR_POINT) &&
+                context.anchorX in 0 until context.captureWidth &&
+                it in 0 until context.captureHeight
+        }
     }
 
     private fun isValidRect(left: Int, top: Int, right: Int, bottom: Int): Boolean =
