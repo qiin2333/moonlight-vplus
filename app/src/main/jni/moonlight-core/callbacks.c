@@ -48,6 +48,7 @@ static jmethodID BridgeClDs5HapticsPcmMethod;
 static jmethodID BridgeClResolutionChangedMethod;
 static jmethodID BridgeClClipboardDataMethod;
 static jmethodID BridgeClCursorUpdateMethod;
+static jmethodID BridgeClRemoteTextContextMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
 // Pre-allocated byte buffer for AC3/E-AC3 raw frame passthrough.
@@ -57,6 +58,8 @@ static jshortArray DecodedAudioBuffer;
 // 2.5 KB at 640 kbps so this is generous either way.
 #define ENCODED_AUDIO_BUFFER_SIZE 16384
 static jbyteArray EncodedAudioBuffer;
+
+void BridgeClRemoteTextContext(const LI_REMOTE_TEXT_CONTEXT* context);
 
 void DetachThread(void* context) {
     (*JVM)->DetachCurrentThread(JVM);
@@ -125,6 +128,8 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
     BridgeClClipboardDataMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClClipboardData", "([B)V");
     BridgeClCursorUpdateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClCursorUpdate", "(IIIIII[B)V");
+    BridgeClRemoteTextContextMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClRemoteTextContext", "([IJJ)V");
+    LiSetRemoteTextContextCallback(BridgeClRemoteTextContext);
 }
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -636,6 +641,44 @@ void BridgeClLogMessage(const char* format, ...) {
     va_start(va, format);
     __android_log_vprint(ANDROID_LOG_INFO, "moonlight-common-c", format, va);
     va_end(va);
+}
+
+void BridgeClRemoteTextContext(const LI_REMOTE_TEXT_CONTEXT* context) {
+    JNIEnv* env = GetThreadEnv();
+    jint values[] = {
+        context->flags,
+        context->revision,
+        context->source,
+        context->cause,
+        context->anchorX,
+        context->anchorY,
+        context->elementLeft,
+        context->elementTop,
+        context->elementRight,
+        context->elementBottom,
+        context->caretLeft,
+        context->caretTop,
+        context->caretRight,
+        context->caretBottom,
+        context->captureWidth,
+        context->captureHeight,
+    };
+    jintArray array = (*env)->NewIntArray(env, sizeof(values) / sizeof(values[0]));
+    if (array == NULL) {
+        if ((*env)->ExceptionCheck(env)) {
+            (*env)->ExceptionClear(env);
+        }
+        return;
+    }
+
+    (*env)->SetIntArrayRegion(env, array, 0, sizeof(values) / sizeof(values[0]), values);
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClRemoteTextContextMethod,
+                                 array, (jlong)context->activationId, (jlong)context->inputToken);
+    (*env)->DeleteLocalRef(env, array);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+    }
 }
 
 static DECODER_RENDERER_CALLBACKS BridgeVideoRendererCallbacks = {

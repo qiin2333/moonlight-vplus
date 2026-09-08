@@ -45,6 +45,7 @@ import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.nvstream.NvConnectionListener
+import com.limelight.nvstream.RemoteTextContext
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.input.ClipboardSyncManager
@@ -61,6 +62,7 @@ import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
 import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
+import com.limelight.utils.RemoteImeController
 import com.limelight.utils.FullscreenProgressOverlay
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
@@ -144,6 +146,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     lateinit var touchInputHandler: TouchInputHandler
     var virtualController: VirtualController? = null
     lateinit var panZoomHandler: PanZoomHandler
+    private lateinit var remoteImeController: RemoteImeController
+    @Volatile private var destroying = false
     private var audioVibrationService: AudioVibrationService? = null
     private var appliedAudioHapticsSettings: AudioHapticsSettings? = null
 
@@ -415,6 +419,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
         panZoomHandler = PanZoomHandler(this, this, streamView, cursorOverlayView, prefConfig)
+        remoteImeController = RemoteImeController(this, streamView, panZoomHandler)
 
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)
@@ -1533,12 +1538,20 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onDestroy() {
+        destroying = true
+        MoonBridge.detachConnectionListener(this)
+        if (::streamView.isInitialized) {
+            streamView.setInputCallbacks(null)
+        }
         usbForwarding?.close()
         usbForwarding = null
         if (isFinishing && !isChangingConfigurations) {
             cancelKeepAliveNotification()
         }
         micButtonPositionController?.dispose()
+        if (::remoteImeController.isInitialized) {
+            remoteImeController.dispose()
+        }
         micButtonPositionController = null
         if (::cursorServiceManager.isInitialized) {
             cursorServiceManager.destroy()
@@ -1876,6 +1889,25 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         return keyboardInputHandler.handleKeyUp(event)
     }
 
+    override fun handleText(text: String) {
+        conn?.sendUtf8Text(text)
+    }
+
+    override fun handleDelete() {
+        keyboardInputHandler.handleKeyDown(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+        keyboardInputHandler.handleKeyUp(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+    }
+
+    override fun handleForwardDelete() {
+        keyboardInputHandler.handleKeyDown(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL))
+        keyboardInputHandler.handleKeyUp(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_FORWARD_DEL))
+    }
+
+    override fun handleEnter() {
+        keyboardInputHandler.handleKeyDown(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+        keyboardInputHandler.handleKeyUp(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+    }
+
     val relativeTouchContextMap: Array<TouchContext?>
         get() = touchInputHandler.relativeTouchContextMap
 
@@ -1892,6 +1924,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         inputManager.toggleSoftInput(0, 0)
+    }
+
+    override fun onRemoteTextContext(context: RemoteTextContext) {
+        if (!destroying && ::remoteImeController.isInitialized) {
+            remoteImeController.handle(context)
+        }
     }
 
     fun enableNativeMousePointer(enable: Boolean) {
@@ -1950,6 +1988,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionTerminated(errorCode: Int) {
+        if (::remoteImeController.isInitialized) {
+            remoteImeController.resetSession()
+        }
         val forwarding = usbForwarding
         runOnUiThread { forwarding?.stopForeground() }
         connectionCallbackHandler.connectionTerminated(errorCode)
@@ -1960,6 +2001,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionStarted() {
+        remoteImeController.resetSession()
         connectionCallbackHandler.connectionStarted()
         screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
         controllerHandler.retryPendingControllerArrivals {

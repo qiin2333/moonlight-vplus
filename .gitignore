@@ -51,6 +51,7 @@ app/google-services.json
 # AI analysis docs & dev notes
 docs/*
 !docs/DUALSENSE_WIRELESS_BRIDGE_IMPLEMENTATION.md
+!docs/REMOTE_TEXT_FOCUS_DETECTION_IMPLEMENTATION.md
 
 # Kotlin build cache
 .kotlin/
