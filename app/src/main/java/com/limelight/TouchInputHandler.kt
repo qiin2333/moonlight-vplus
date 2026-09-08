@@ -107,6 +107,10 @@ class TouchInputHandler(private val game: Game) {
     private var screenDs5PressureClickFired = false
     private val screenDs5ClickHandler = Handler(Looper.getMainLooper())
     private var screenDs5ClickReleaseCallback: Runnable? = null
+    // Pan/zoom shares the first finger with the normal touch pipeline. Once a
+    // second finger arrives, the active touch contexts are cancelled and the
+    // rest of that pointer stream belongs exclusively to pan/zoom.
+    private var panZoomGestureActive = false
 
     // ---- 公共入口 ----
 
@@ -459,7 +463,11 @@ class TouchInputHandler(private val game: Game) {
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                     enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
-                } else if (enhancedTouchRouteOwner.ownsContinuation()) {
+                } else if (enhancedTouchRouteOwner.ownsContinuation() &&
+                    !(game.getisTouchOverrideEnabled() &&
+                        event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
+                        event.pointerCount >= 2)
+                ) {
                     trySendTouchEvent(view, event)
                     if (event.actionMasked == MotionEvent.ACTION_UP ||
                         event.actionMasked == MotionEvent.ACTION_CANCEL
@@ -473,9 +481,28 @@ class TouchInputHandler(private val game: Game) {
                     return true
                 }
 
-                if (game.getisTouchOverrideEnabled()) {
+                if (game.getisTouchOverrideEnabled() || panZoomGestureActive) {
                     game.panZoomHandler.handleTouchEvent(event)
-                    return true
+
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            panZoomGestureActive = false
+                        }
+                        MotionEvent.ACTION_POINTER_DOWN -> {
+                            if (event.pointerCount >= 2 && !panZoomGestureActive) {
+                                cancelTouchContextsForPanZoom()
+                                panZoomGestureActive = true
+                            }
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            if (panZoomGestureActive) {
+                                panZoomGestureActive = false
+                                return true
+                            }
+                        }
+                    }
+
+                    if (panZoomGestureActive) return true
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_DOWN &&
@@ -618,6 +645,24 @@ class TouchInputHandler(private val game: Game) {
             return true
         }
         return false
+    }
+
+    /** Stop any host touch that started before the second finger claimed the gesture. */
+    private fun cancelTouchContextsForPanZoom() {
+        val hadEnhancedTouch = enhancedTouchRouteOwner.ownsContinuation() || nativeTouchPointerMap.isNotEmpty()
+        if (hadEnhancedTouch) {
+            game.conn?.sendTouchEvent(
+                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
+                0f, 0f, 0f, 0f, 0f,
+                MoonBridge.LI_ROT_UNKNOWN
+            )
+        }
+        enhancedTouchRouteOwner.finish()
+        nativeTouchPointerMap.clear()
+        for (context in touchContextMap) {
+            context?.cancelTouch()
+            context?.setPointerCount(0)
+        }
     }
 
     private fun handleTouchInput(
