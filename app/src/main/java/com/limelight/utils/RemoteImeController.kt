@@ -1,19 +1,18 @@
 package com.limelight.utils
 
 import android.app.Activity
+import android.os.SystemClock
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewTreeObserver
-import android.view.inputmethod.InputMethodManager
-import androidx.core.content.getSystemService
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.limelight.nvstream.RemoteTextContext
 import com.limelight.nvstream.RemoteTextContextPolicy
+import com.limelight.nvstream.ImeAvoidanceSession
 import com.limelight.ui.StreamView
 
-/** Displays the local IME and keeps the host's focused field above it. */
+/** Avoids a manually opened IME. Host observations never request keyboard display. */
 class RemoteImeController(
     private val activity: Activity,
     private val streamView: StreamView,
@@ -24,8 +23,12 @@ class RemoteImeController(
     private var latestInsets: WindowInsetsCompat? = null
     @Volatile private var disposed = false
     private var generation = 0L
+    private val avoidanceSession = ImeAvoidanceSession()
 
     init {
+        // Freeze the temporary offset on a real pan/scale, without changing the
+        // rendered position. Dismissal still removes only this temporary offset.
+        panZoomHandler.onUserTransform = { avoidanceSession.takeControl() }
         streamView.rootView.viewTreeObserver.addOnGlobalLayoutListener(this)
         ViewCompat.setOnApplyWindowInsetsListener(streamView) { _, insets ->
             latestInsets = insets
@@ -45,7 +48,8 @@ class RemoteImeController(
                 latestRevision = revision
                 generation++
                 latestContext = null
-                panZoomHandler.setImeOffsetY(0f)
+                avoidanceSession.invalidateTarget()
+                if (!avoidanceSession.userControlled) panZoomHandler.setImeOffsetY(0f)
                 return@runOnUiThread
             }
             if (!RemoteTextContextPolicy.isTrustedActivation(context)) return@runOnUiThread
@@ -53,17 +57,13 @@ class RemoteImeController(
             generation++
             val acceptedGeneration = generation
             latestContext = context
+            avoidanceSession.offer(context, SystemClock.elapsedRealtime())
             streamView.setRemoteTextInputOptions(
                 context.hasFlag(RemoteTextContext.FLAG_PASSWORD),
                 context.hasFlag(RemoteTextContext.FLAG_MULTILINE),
             )
-            streamView.isFocusableInTouchMode = true
-            streamView.requestFocus()
-            activity.getSystemService<InputMethodManager>()?.restartInput(streamView)
-            WindowInsetsControllerCompat(activity.window, streamView)
-                .show(WindowInsetsCompat.Type.ime())
-            activity.getSystemService<InputMethodManager>()
-                ?.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
+            // UIA and InputPane are advisory geometry, not proof of editing intent.
+            // Do not steal focus or restart an ongoing manual IME composition.
             ViewCompat.requestApplyInsets(streamView)
             streamView.post {
                 if (!disposed && generation == acceptedGeneration) {
@@ -80,12 +80,6 @@ class RemoteImeController(
 
     private fun updateAvoidance(insets: WindowInsetsCompat?) {
         if (disposed) return
-        val context = latestContext
-        if (context == null) {
-            panZoomHandler.setImeOffsetY(0f)
-            return
-        }
-
         val root = streamView.rootView
         val rootLocation = IntArray(2)
         root.getLocationOnScreen(rootLocation)
@@ -96,17 +90,31 @@ class RemoteImeController(
             // Floating IMEs commonly report visible with a zero bottom inset. In
             // that case there is no trustworthy occlusion rectangle to avoid.
             RemoteTextContextPolicy.imeVisibleBottom(rootTop, root.height, imeBottomInset)
-        } else {
+        } else if (insets == null) {
             val visible = Rect()
             root.getWindowVisibleDisplayFrame(visible)
             RemoteTextContextPolicy.legacyVisibleBottom(rootTop, root.height, visible.bottom)
-        }
+        } else null
+        avoidanceSession.updateVisibility(
+            if (insets != null) imeVisible else visibleBottom != null,
+            SystemClock.elapsedRealtime(),
+        )
         if (visibleBottom == null) {
             panZoomHandler.setImeOffsetY(0f)
             return
         }
 
+        if (avoidanceSession.userControlled) return
+        val context = avoidanceSession.target
+        if (context == null) {
+            panZoomHandler.setImeOffsetY(0f)
+            return
+        }
         val focusY = RemoteTextContextPolicy.focusY(context)
+        if (focusY == null) {
+            panZoomHandler.setImeOffsetY(0f)
+            return
+        }
         val focusInParent = panZoomHandler.captureYToParent(focusY, context.captureHeight)
         val streamParentTop = (streamView.parent as? View)?.let { parent ->
             val location = IntArray(2)
@@ -128,6 +136,8 @@ class RemoteImeController(
         generation++
         latestContext = null
         latestInsets = null
+        avoidanceSession.reset()
+        panZoomHandler.onUserTransform = null
         val observer = streamView.rootView.viewTreeObserver
         if (observer.isAlive) observer.removeOnGlobalLayoutListener(this)
         ViewCompat.setOnApplyWindowInsetsListener(streamView, null)
@@ -142,6 +152,7 @@ class RemoteImeController(
             latestContext = null
             latestRevision = -1L
             latestInsets = null
+            avoidanceSession.reset()
             panZoomHandler.setImeOffsetY(0f)
         }
     }
