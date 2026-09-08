@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">گۆڕینی ڕاستەوخۆی ڕێکخستن</string>
+    <string name="crown_direct_config_target">گۆڕین بۆ %1$s</string>
+    <string name="crown_direct_config_unavailable">ڕێکخستن بەردەست نییە (کردار ناچالاکە)</string>
+    <string name="crown_direct_config_self">ئەمە ڕێکخستنی ئێستایە؛ پێویست بە گۆڕین نییە</string>
+    <string name="crown_direct_config_no_other">ڕێکخستنی دیکە بەردەست نییە</string>
+    <string name="game_menu_edit_mode">دەستکاریکردنی ڕیزبەندی دوگمەکان</string>
+    <string name="game_menu_configure_settings">گۆڕینی ڕێکخستن</string>
+</resources>

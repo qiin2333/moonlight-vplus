@@ -481,8 +481,8 @@
     <string name="toast_elements_hidden">Botão virtual oculto</string>
     <string name="toast_back_key_menu_switch_1">A configuração da função crown foi encerrada</string>
     <string name="toast_back_key_menu_switch_2">Entrou na configuração da função crown</string>
-    <string name="game_menu_edit_mode">Modo de edição do botão Crown</string>
-    <string name="game_menu_configure_settings">Modo de configuração do botão Crown</string>
+    <string name="game_menu_edit_mode">Editar disposição dos botões</string>
+    <string name="game_menu_configure_settings">Alternar configuração</string>
     
     <!-- External display -->
     <string name="title_use_external_display">Usar display externo</string>

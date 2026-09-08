@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Byt konfiguration direkt</string>
+    <string name="crown_direct_config_target">Byt till %1$s</string>
+    <string name="crown_direct_config_unavailable">Konfigurationen är inte tillgänglig (åtgärden inaktiverad)</string>
+    <string name="crown_direct_config_self">Aktuell konfiguration; inget byte behövs</string>
+    <string name="crown_direct_config_no_other">Inga andra konfigurationer tillgängliga</string>
+    <string name="game_menu_edit_mode">Redigera knapplayout</string>
+    <string name="game_menu_configure_settings">Byt konfiguration</string>
+</resources>

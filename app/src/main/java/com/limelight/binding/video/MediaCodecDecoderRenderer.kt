@@ -1051,6 +1051,8 @@ class MediaCodecDecoderRenderer(
                     dvDecoder,
                     tryNumber,
                     prefs.forceMtkMaxOperatingRate,
+                    mimeType,
+                    prefs.hevcLowLatencyMode,
                     hdr10PlusModeSelected = false,
                 )
 
@@ -1186,6 +1188,8 @@ class MediaCodecDecoderRenderer(
                         selectedDecoderInfo,
                         tryNumber,
                         prefs.forceMtkMaxOperatingRate,
+                        mimeType,
+                        prefs.hevcLowLatencyMode,
                         hdr10PlusModeSelected = HdrModePolicy.isHdr10PlusMode(prefs.hdrMode),
                     )
 

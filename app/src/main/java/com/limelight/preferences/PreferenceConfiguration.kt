@@ -183,6 +183,8 @@ class PreferenceConfiguration {
     /** When false, SmartAudioRenderer skips PCM/AC3 passthrough and always uses the software renderer. */
     var enableAudioPassthrough = false
     var forceMtkMaxOperatingRate = false
+    /** HEVC 解码器低延迟模式：AUTO 按 Amlogic 类规则跳过，OFF 全局跳过，ON 恢复旧行为。 */
+    var hevcLowLatencyMode = HEVC_LOW_LATENCY_AUTO
     var reduceRefreshRate = false
     var fullRange = false
     var gamepadMotionSensors = false
@@ -354,6 +356,14 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
+                .putString(
+                    HEVC_LOW_LATENCY_MODE_PREF_STRING,
+                    when (hevcLowLatencyMode) {
+                        HEVC_LOW_LATENCY_ON -> "on"
+                        HEVC_LOW_LATENCY_OFF -> "off"
+                        else -> DEFAULT_HEVC_LOW_LATENCY_MODE
+                    }
+                )
                 .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
                 .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
                 .putBoolean(OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING, optimizeHardwareTouchpad)
@@ -491,6 +501,7 @@ class PreferenceConfiguration {
         copy.enableStartKeyMenu = this.enableStartKeyMenu
         copy.enableNativeMousePointer = this.enableNativeMousePointer
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
+        copy.hevcLowLatencyMode = this.hevcLowLatencyMode
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
@@ -598,6 +609,11 @@ class PreferenceConfiguration {
         private const val DEFAULT_ENABLE_AUDIO_PASSTHROUGH = false
         private const val FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING = "checkbox_force_mtk_max_operating_rate"
         private const val DEFAULT_FORCE_MTK_MAX_OPERATING_RATE = false
+        const val HEVC_LOW_LATENCY_AUTO = 0
+        const val HEVC_LOW_LATENCY_ON = 1
+        const val HEVC_LOW_LATENCY_OFF = 2
+        private const val HEVC_LOW_LATENCY_MODE_PREF_STRING = "list_hevc_low_latency_mode"
+        private const val DEFAULT_HEVC_LOW_LATENCY_MODE = "auto"
         private const val REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate"
         internal const val FULL_RANGE_PREF_STRING = "checkbox_full_range"
         private const val GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse"
@@ -1465,6 +1481,13 @@ class PreferenceConfiguration {
                 FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING,
                 DEFAULT_FORCE_MTK_MAX_OPERATING_RATE
             )
+            config.hevcLowLatencyMode = when (
+                prefs.getString(HEVC_LOW_LATENCY_MODE_PREF_STRING, DEFAULT_HEVC_LOW_LATENCY_MODE)
+            ) {
+                "on" -> HEVC_LOW_LATENCY_ON
+                "off" -> HEVC_LOW_LATENCY_OFF
+                else -> HEVC_LOW_LATENCY_AUTO
+            }
             config.reduceRefreshRate = prefs.getBoolean(REDUCE_REFRESH_RATE_PREF_STRING, DEFAULT_REDUCE_REFRESH_RATE)
             config.fullRange = prefs.getBoolean(FULL_RANGE_PREF_STRING, DEFAULT_FULL_RANGE)
             config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE)

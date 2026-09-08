@@ -45,7 +45,7 @@ import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.BandwidthMeter
 import com.limelight.utils.MoonPhaseUtils
 import com.limelight.utils.UiHelper
-import com.limelight.utils.formatBandwidthMbps
+import com.limelight.utils.formatBandwidthSpeed
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -319,7 +319,7 @@ class PerformanceOverlayManager(
             MoonBridge.getRtpVideoBytesReceived(),
             SystemClock.elapsedRealtimeNanos()
         )
-        performanceInfo.bandWidth = bandwidthMbps?.let(::formatBandwidthMbps) ?: "N/A"
+        performanceInfo.bandWidth = bandwidthMbps?.let(::formatBandwidthSpeed) ?: "N/A"
     }
 
     private fun buildDecoderInfo(performanceInfo: PerformanceInfo): String {

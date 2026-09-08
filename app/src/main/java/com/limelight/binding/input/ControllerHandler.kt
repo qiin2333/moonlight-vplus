@@ -1357,13 +1357,13 @@ class ControllerHandler(
 
     // ========== Event Context Resolution ==========
 
-    fun getGameMenuNavigationAxisPairs(event: MotionEvent): List<Pair<Float, Float>>? {
+    fun getGameMenuNavigationAxisPairs(event: MotionEvent, includeRightStick: Boolean = true): List<Pair<Float, Float>>? {
         val context = getContextForEvent(event) ?: return null
         return readMenuNavigationAxisPairs(
             mapping = MenuNavigationAxisMapping(
                 hatAxes = axisPairOrNull(context.hatXAxis, context.hatYAxis),
                 leftStickAxes = axisPairOrNull(context.leftStickXAxis, context.leftStickYAxis),
-                rightStickAxes = axisPairOrNull(context.rightStickXAxis, context.rightStickYAxis)
+                rightStickAxes = if (includeRightStick) axisPairOrNull(context.rightStickXAxis, context.rightStickYAxis) else null
             ),
             axisValue = event::getAxisValue
         )
@@ -1371,6 +1371,11 @@ class ControllerHandler(
 
     private fun axisPairOrNull(xAxis: Int, yAxis: Int): Pair<Int, Int>? =
         if (xAxis != -1 && yAxis != -1) xAxis to yAxis else null
+
+    fun getMenuRightStickY(event: MotionEvent): Float {
+        val axis = getContextForEvent(event)?.rightStickYAxis ?: return 0f
+        return if (axis != -1) event.getAxisValue(axis) else 0f
+    }
 
     private fun getContextForEvent(event: InputEvent): InputDeviceContext? {
         // Don't return a context if we're stopped

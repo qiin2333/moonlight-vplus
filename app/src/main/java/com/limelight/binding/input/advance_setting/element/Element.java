@@ -252,6 +252,10 @@ public abstract class Element extends View {
         // Default implementation does nothing.
     }
 
+    /** Release input that outlives a touch before permanently removing this element. */
+    protected void releaseLatchedInput() {
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         // 忽略多点触控中的非主手指
@@ -266,8 +270,12 @@ public abstract class Element extends View {
 
         switch (elementController.getMode()) {
             case Normal:
-                // Normal 模式逻辑
-                return onElementTouchEvent(event);
+                elementController.beginElementEvent(this, event.getActionMasked());
+                try {
+                    return onElementTouchEvent(event);
+                } finally {
+                    elementController.endElementEvent(this, event.getActionMasked());
+                }
 
             case Edit:
                 // Edit 模式逻辑

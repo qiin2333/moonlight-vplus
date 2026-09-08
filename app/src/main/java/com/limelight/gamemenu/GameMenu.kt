@@ -1151,6 +1151,7 @@ class GameMenu(
                 gyro = gyroCardController.snapshot(),
                 touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
+                usbForwardingEnabled = game.isUsbForwardingEnabled(),
                 pageLayout = pageLayout
             )
         )
@@ -1175,6 +1176,9 @@ class GameMenu(
 
         val callbacks = GameMenuCallbacks(
             onDismiss = { handleDismissRequest(dialog) },
+            onUsbDevices = {
+                game.showUsbForwarding { childDialog -> registerChildDialog(childDialog) }
+            },
             onHapticFeedback = ::dispatchHapticFeedback,
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
@@ -2339,8 +2343,8 @@ class GameMenu(
             "crown_function_menu" to R.drawable.ic_super_crown,
             "crown_visibility" to R.drawable.ic_ui_settings,
             "crown_touch" to R.drawable.ic_touch_settings,
-            "crown_profiles" to R.drawable.ic_input_settings,
-            "crown_layout" to R.drawable.ic_gamepad_settings,
+            "crown_profiles" to R.drawable.ic_change,
+            "crown_layout" to R.drawable.phc_action_edit,
             "crown_back_key" to R.drawable.ic_keyboard_cute,
             "game_menu_test_local_rumble" to R.drawable.ic_rumble_cute
         )

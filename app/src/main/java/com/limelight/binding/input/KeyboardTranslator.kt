@@ -29,7 +29,8 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
 
             for (i in 0..maxKeyCode) {
                 val deviceKeyCode = device.getKeyCodeForKeyLocation(i)
-                if (deviceKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
+                // Vendor keyboard KCMs can map keys to keycodes beyond KeyEvent.getMaxKeyCode()
+                if (deviceKeyCode != KeyEvent.KEYCODE_UNKNOWN && deviceKeyCode in 0..maxKeyCode) {
                     deviceKeyCodeToQwertyKeyCode[deviceKeyCode] = i
                 }
             }

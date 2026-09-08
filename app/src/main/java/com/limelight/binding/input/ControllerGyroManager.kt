@@ -9,6 +9,13 @@ import android.view.Surface
 import com.limelight.LimeLog
 import com.limelight.nvstream.jni.MoonBridge
 
+/** Outcome of applying a device-gyro listener request. */
+internal enum class DeviceGyroRegistrationResult {
+    APPLIED,
+    UNAVAILABLE,
+    RETRYABLE_FAILURE,
+}
+
 /**
  * 陀螺仪相关功能管理器
  * 处理陀螺仪到鼠标映射、陀螺仪到右摇杆映射、传感器注册与保持激活逻辑
@@ -35,6 +42,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     private val controllerGyroDemand = ControllerGyroDemandState()
     @Volatile private var controllerGyroUsesDeviceFallback = false
     @Volatile private var controllerGyroSourceGeneration = 0L
+    @Volatile private var controllerGyroRegistrationRetryAvailable = true
 
     fun setVirtualControllerGyroCallbacks(suspend: Runnable?, resume: Runnable?) {
         virtualControllerGyroSuspendCallback = suspend
@@ -272,6 +280,35 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 return@post
             }
 
+            val fallbackRegistration = registerDeviceGyroForDefaultContext(
+                enable = true,
+                allowWhenControllerPresent = true,
+                reportRateHz = effectiveDeviceFallbackReportRateHz()
+            )
+            when (fallbackRegistration) {
+                DeviceGyroRegistrationResult.APPLIED -> Unit
+                DeviceGyroRegistrationResult.RETRYABLE_FAILURE -> {
+                    if (controllerGyroRegistrationRetryAvailable) {
+                        controllerGyroRegistrationRetryAvailable = false
+                        resetPendingControllerGyroFallback()
+                        LimeLog.warning(
+                            "Controller 0 gyroscope fallback registration failed; retrying once"
+                        )
+                    } else {
+                        LimeLog.warning(
+                            "Controller 0 gyroscope fallback retry failed; keeping controller gyroscope"
+                        )
+                    }
+                    return@post
+                }
+                DeviceGyroRegistrationResult.UNAVAILABLE -> {
+                    LimeLog.warning(
+                        "Controller 0 gyroscope fallback is unavailable; keeping controller gyroscope"
+                    )
+                    return@post
+                }
+            }
+
             LimeLog.warning(
                 "Controller 0 gyroscope is reporting only zero samples; using device gyroscope"
             )
@@ -287,12 +324,6 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                     context.gyroListener = null
                 }
             }
-
-            registerDeviceGyroForDefaultContext(
-                enable = true,
-                allowWhenControllerPresent = true,
-                reportRateHz = effectiveDeviceFallbackReportRateHz()
-            )
         }
     }
 
@@ -330,7 +361,14 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         )
     }
 
+    /** Starts a new source lifecycle with a fresh bounded registration retry. */
     private fun invalidatePendingControllerGyroFallback() {
+        controllerGyroRegistrationRetryAvailable = true
+        resetPendingControllerGyroFallback()
+    }
+
+    /** Reopens liveness detection without replenishing the current source's retry budget. */
+    private fun resetPendingControllerGyroFallback() {
         controllerGyroSourceGeneration++
         controllerGyroLivenessTracker.reset()
     }
@@ -416,12 +454,13 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
      * 注意：通常如果已有物理手柄（controllerNumber=0 的 InputDeviceContext 存在），
      * 则不注册，避免与手柄自身的传感器路径冲突产生双重输入。调用方确认手柄
      * 没有陀螺仪时，可以显式允许设备传感器回退。
+     * 启用请求会区分永久不可用和可重试的监听注册失败。
      */
-    fun registerDeviceGyroForDefaultContext(
+    internal fun registerDeviceGyroForDefaultContext(
         enable: Boolean,
         allowWhenControllerPresent: Boolean = false,
         reportRateHz: Short = 120
-    ) {
+    ): DeviceGyroRegistrationResult {
         if (enable) {
             // 如果已有物理手柄占据 controllerNumber=0，不在 defaultContext 上额外注册
             // 手柄的传感器由 handleSetMotionEventState 通过 inputDeviceContexts 管理
@@ -429,50 +468,50 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 for (i in 0 until handler.inputDeviceContexts.size()) {
                     if (handler.inputDeviceContexts.valueAt(i).controllerNumber.toInt() == 0) {
                         LimeLog.info("Physical controller present, skipping defaultContext gyro registration")
-                        return
+                        return DeviceGyroRegistrationResult.UNAVAILABLE
                     }
                 }
                 // 同样检查 USB 手柄
                 for (context in handler.driverControllerContexts.values) {
                     if (context.controllerNumber.toInt() == 0) {
                         LimeLog.info("USB controller present, skipping defaultContext gyro registration")
-                        return
+                        return DeviceGyroRegistrationResult.UNAVAILABLE
                     }
                 }
             }
             if (handler.defaultContext.sensorManager == null) {
                 if (handler.deviceSensorManager == null) {
                     LimeLog.warning("deviceSensorManager is null, cannot register gyro on defaultContext")
-                    return
+                    return DeviceGyroRegistrationResult.UNAVAILABLE
                 }
                 handler.defaultContext.sensorManager = handler.deviceSensorManager
             }
-            val gyroSensor = handler.defaultContext.sensorManager!!.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-            if (gyroSensor != null) {
-                if (handler.defaultContext.gyroListener != null) {
-                    handler.defaultContext.sensorManager!!.unregisterListener(handler.defaultContext.gyroListener)
-                    handler.defaultContext.gyroListener = null
-                }
-                handler.defaultContext.gyroReportRateHz = reportRateHz
-                handler.defaultContext.gyroListener = createSensorListener(
-                    handler.defaultContext.controllerNumber,
-                    MoonBridge.LI_MOTION_TYPE_GYRO,
-                    true /* needsDeviceOrientationCorrection */
-                )
-                val registered = handler.defaultContext.sensorManager!!.registerListener(
-                    handler.defaultContext.gyroListener, gyroSensor, 1000000 / reportRateHz
-                )
-                if (registered) {
-                    LimeLog.info("Gyro registered on defaultContext")
-                } else {
-                    handler.defaultContext.gyroListener = null
-                    handler.defaultContext.gyroReportRateHz = 0
-                    handler.defaultContext.sensorManager = null
-                    LimeLog.warning("Failed to register gyro on defaultContext")
-                }
-            } else {
+            val sensorManager = handler.defaultContext.sensorManager!!
+            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+            if (gyroSensor == null) {
                 LimeLog.warning("No gyroscope sensor available on this device")
+                return DeviceGyroRegistrationResult.UNAVAILABLE
             }
+
+            val oldListener = handler.defaultContext.gyroListener
+            val newListener = createSensorListener(
+                handler.defaultContext.controllerNumber,
+                MoonBridge.LI_MOTION_TYPE_GYRO,
+                true /* needsDeviceOrientationCorrection */
+            )
+            val registered = sensorManager.registerListener(
+                newListener, gyroSensor, 1000000 / reportRateHz
+            )
+            if (!registered) {
+                LimeLog.warning("Failed to register gyro on defaultContext")
+                return DeviceGyroRegistrationResult.RETRYABLE_FAILURE
+            }
+
+            oldListener?.let { sensorManager.unregisterListener(it) }
+            handler.defaultContext.gyroListener = newListener
+            handler.defaultContext.gyroReportRateHz = reportRateHz
+            LimeLog.info("Gyro registered on defaultContext")
+            return DeviceGyroRegistrationResult.APPLIED
         } else {
             if (handler.defaultContext.gyroListener != null && handler.defaultContext.sensorManager != null) {
                 handler.defaultContext.sensorManager!!.unregisterListener(handler.defaultContext.gyroListener)
@@ -482,6 +521,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 handler.defaultContext.sensorManager = null
                 LimeLog.info("Gyro unregistered from defaultContext")
             }
+            return DeviceGyroRegistrationResult.APPLIED
         }
     }
 

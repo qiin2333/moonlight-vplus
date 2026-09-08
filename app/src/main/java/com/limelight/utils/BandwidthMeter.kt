@@ -2,81 +2,70 @@ package com.limelight.utils
 
 import java.util.Locale
 
-internal fun formatBandwidthMbps(bandwidthMbps: Double): String {
+/** Formats a Mbps value as "N K/s" below 1 MiB/s, otherwise "N.NN M/s" (1024-based). */
+internal fun formatBandwidthSpeed(bandwidthMbps: Double): String {
     if (!bandwidthMbps.isFinite() || bandwidthMbps < 0.0) return "N/A"
-    return if (bandwidthMbps < 1.0) {
-        val kilobitsPerSecond = minOf(999.0, bandwidthMbps * 1000.0)
-        String.format(Locale.US, "%.0f Kbps", kilobitsPerSecond)
+    val kBps = bandwidthMbps * 125_000.0 / 1024.0
+    return if (kBps < 1024.0) {
+        String.format(Locale.US, "%.0f\u00A0K\u2060/\u2060s", kBps)
     } else {
-        String.format(Locale.US, "%.1f Mbps", bandwidthMbps)
+        String.format(Locale.US, "%.2f\u00A0M\u2060/\u2060s", kBps / 1024.0)
     }
 }
 
-/** Converts a monotonically increasing byte counter into a stable Mbps value. */
+/**
+ * Converts a monotonically increasing byte counter into an instantaneous Mbps value.
+ *
+ * No smoothing by design: the perf overlay must reflect real rate changes (e.g. the
+ * host switching to a static desktop) within one sampling window. Stability comes
+ * from the precise per-packet RTP byte counter, not from averaging here.
+ */
 internal class BandwidthMeter(
-    private val smoothingFactor: Double = 0.25,
-    private val idleHoldSamples: Int = 2,
     private val minIntervalNanos: Long = 250_000_000L,
     private val maxIntervalNanos: Long = 5_000_000_000L,
 ) {
     private var hasBaseline = false
     private var previousBytes = 0L
     private var previousTimeNanos = 0L
-    private var smoothedMbps: Double? = null
-    private var idleSamples = 0
+    private var lastMbps: Double? = null
 
+    /** Clears the baseline so the next update() starts a fresh measurement window. */
     fun reset() {
         hasBaseline = false
         previousBytes = 0L
         previousTimeNanos = 0L
-        smoothedMbps = null
-        idleSamples = 0
+        lastMbps = null
     }
 
     /** Returns null until a valid interval is available, otherwise Mbps. */
     fun update(totalBytes: Long, nowNanos: Long): Double? {
-        if (totalBytes < 0L || nowNanos < 0L) return smoothedMbps
+        if (totalBytes < 0L || nowNanos < 0L) return lastMbps
 
         if (!hasBaseline || totalBytes < previousBytes || nowNanos < previousTimeNanos) {
             if (hasBaseline && (totalBytes < previousBytes || nowNanos < previousTimeNanos)) {
-                smoothedMbps = null
+                lastMbps = null
             }
             previousBytes = totalBytes
             previousTimeNanos = nowNanos
             hasBaseline = true
-            idleSamples = 0
-            return smoothedMbps
+            return lastMbps
         }
 
         val intervalNanos = nowNanos - previousTimeNanos
         if (intervalNanos < minIntervalNanos) {
-            return smoothedMbps
+            return lastMbps
         }
         if (intervalNanos > maxIntervalNanos) {
             previousBytes = totalBytes
             previousTimeNanos = nowNanos
-            idleSamples = 0
-            return smoothedMbps
+            return lastMbps
         }
 
-        val deltaBytes = totalBytes - previousBytes
-        if (deltaBytes == 0L) {
-            idleSamples++
-            if (idleSamples > idleHoldSamples) {
-                smoothedMbps = 0.0
-            }
-        } else {
-            idleSamples = 0
-            // bytes * 8 bits/byte / seconds / 1_000_000 bits/Mb;
-            // with nanoseconds this reduces to bytes * 8_000 / nanos.
-            val instantMbps = deltaBytes.toDouble() * 8_000.0 / intervalNanos.toDouble()
-            smoothedMbps = smoothedMbps?.let {
-                it + smoothingFactor * (instantMbps - it)
-            } ?: instantMbps
-        }
-
+        // bytes * 8 bits/byte / seconds / 1_000_000 bits/Mb;
+        // with nanoseconds this reduces to bytes * 8_000 / nanos.
+        lastMbps = (totalBytes - previousBytes).toDouble() * 8_000.0 / intervalNanos.toDouble()
         previousBytes = totalBytes
         previousTimeNanos = nowNanos
-        return smoothedMbps
+        return lastMbps
     }
 }

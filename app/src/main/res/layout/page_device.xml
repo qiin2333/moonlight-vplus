@@ -93,6 +93,15 @@
 						style="@style/KeyboardKeyStyle"
 						android:text="@string/layout_page_device_text_34842"/>
                     <TextView
+                        android:id="@+id/direct_config_action"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="DCS"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="@string/crown_direct_config_action" />
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginVertical="5dp"

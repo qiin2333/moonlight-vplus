@@ -202,6 +202,25 @@ public class PageConfigController {
 
     }
 
+    public void switchDirectlyToConfig(long targetId) {
+        // A deleted binding disables only this action. Never select by name or fall back.
+        if (currentConfigId.equals(targetId)
+                || !controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds().contains(targetId)) {
+            return;
+        }
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+                .putLong(CURRENT_CONFIG_KEY, targetId).apply();
+        initConfig();
+    }
+
+    public List<Long> getDirectSwitchTargetIds() {
+        List<Long> targets = new ArrayList<>();
+        for (Long id : controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds()) {
+            if (id >= 0L && !id.equals(currentConfigId)) targets.add(id);
+        }
+        return targets;
+    }
+
     private void loadCurrentConfig(){
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         currentConfigId = sharedPreferences.getLong(CURRENT_CONFIG_KEY,0L);

@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -36,6 +37,8 @@ import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.DirectConfigAction;
+import com.limelight.binding.input.advance_setting.DirectConfigSwitchState;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
 import com.limelight.binding.input.advance_setting.config.PageConfigController;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
@@ -108,6 +111,8 @@ public class ElementController {
     private final Game game;
     private final Handler handler;
     private Toast currentToast;
+    private final DirectConfigSwitchState directConfigSwitch = new DirectConfigSwitchState();
+    private Element dispatchingElement;
 
     private final ControllerManager controllerManager;
     private final ControllerHandler controllerHandler;
@@ -422,8 +427,37 @@ public class ElementController {
         return handler;
     }
 
+    void beginElementEvent(Element element, int action) {
+        dispatchingElement = element;
+        if (action == MotionEvent.ACTION_DOWN) directConfigSwitch.begin(element);
+    }
+
+    void endElementEvent(Element element, int action) {
+        dispatchingElement = null;
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            directConfigSwitch.finish(element, action == MotionEvent.ACTION_CANCEL);
+        }
+    }
+
+    public void cancelDirectConfigSwitch() {
+        directConfigSwitch.reset();
+    }
+
+    public void finishStreamTouch(int action) {
+        if (action == MotionEvent.ACTION_CANCEL) {
+            directConfigSwitch.reset();
+        } else if (action == MotionEvent.ACTION_UP) {
+            Long target = directConfigSwitch.takeCompletedTarget();
+            if (target != null && !game.isFinishing() && !game.isDestroyed()
+                    && mode == Mode.Normal && elementsLayout.isAttachedToWindow()) {
+                controllerManager.getPageConfigController().switchDirectlyToConfig(target);
+            }
+        }
+    }
+
 
     public void loadAllElement(Long configId) {
+        directConfigSwitch.reset();
         currentConfigId = configId;
         removeAllElementsOnScreen();
         elementIds = controllerManager.getSuperConfigDatabaseHelper().queryAllElementIds(configId);
@@ -467,6 +501,7 @@ public class ElementController {
     protected void deleteElement(Element element) {
         controllerManager.getSuperConfigDatabaseHelper().deleteElement(currentConfigId, element.elementId);
         if (elements.contains(element)) {
+            element.releaseLatchedInput();
             elementsLayout.removeView(element);
             elements.remove(element);
         }
@@ -474,6 +509,7 @@ public class ElementController {
 
     private void removeAllElementsOnScreen() {
         for (Element element : elements) {
+            element.releaseLatchedInput();
             elementsLayout.removeView(element);
         }
         elements.clear();
@@ -1203,6 +1239,24 @@ public class ElementController {
 
 
     public SendEventHandler getSendEventHandler(String key) {
+        if (key != null && key.startsWith(DirectConfigAction.PREFIX)) {
+            Long target = DirectConfigAction.parse(key);
+            if (target == null) return createEmptyHandler();
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    // A toggle button also emits false on a click. The touch transaction,
+                    // not the logical button level, confirms this one-shot action.
+                    if (dispatchingElement != null && target != currentConfigId
+                            && controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds().contains(target)) {
+                        directConfigSwitch.request(dispatchingElement, target);
+                    }
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) { }
+            };
+        }
         if (key.matches("k\\d+")) {
 
             int keyCode = Integer.parseInt(key.substring(1));

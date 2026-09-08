@@ -336,12 +336,12 @@
     <string name="game_menu_bitrate_tip">Arrastra el deslizador para ajustar la tasa de bits en tiempo real. Valores más altos significan mejor calidad pero requieren mejor red.</string>
     <string name="game_menu_cancel">Cancelar</string>
     <string name="game_menu_configure_crown_function">Configurar Función Crown</string>
-    <string name="game_menu_configure_settings">Modo de configuración de botón Crown</string>
+    <string name="game_menu_configure_settings">Cambiar de configuración</string>
     <string name="game_menu_crown_function">Función Crown</string>
     <string name="game_menu_delete_custom_key">Eliminar botón personalizado</string>
     <string name="game_menu_disconnect">Desconectar</string>
     <string name="game_menu_disconnect_and_quit">Desconectar y Salir</string>
-    <string name="game_menu_edit_mode">Modo de edición de botón Crown</string>
+    <string name="game_menu_edit_mode">Editar distribución de botones</string>
     <string name="game_menu_ok">OK</string>
     <string name="game_menu_send_keys">Enviar tecla(s) especial(es)</string>
     <string name="game_menu_send_keys_alt_home">Enviar ALT + HOME (Alternar RTSS)</string>

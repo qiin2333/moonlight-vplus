@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">구성 바로 전환</string>
+    <string name="crown_direct_config_target">%1$s(으)로 전환</string>
+    <string name="crown_direct_config_unavailable">구성을 사용할 수 없음 (동작 비활성화됨)</string>
+    <string name="crown_direct_config_self">현재 구성입니다. 전환할 필요가 없습니다</string>
+    <string name="crown_direct_config_no_other">다른 구성이 없습니다</string>
+    <string name="game_menu_edit_mode">버튼 배치 편집</string>
+    <string name="game_menu_configure_settings">구성 전환</string>
+</resources>

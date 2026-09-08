@@ -1,8 +1,10 @@
 package com.limelight.binding.input.advance_setting
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.Rect
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -81,6 +83,8 @@ internal class KeyboardKeyPickerController(
         }
     }
 
+    // The touch listener delegates click/cancel handling to View by returning false.
+    @SuppressLint("ClickableViewAccessibility")
     private fun rebuildNavigation() {
         val nodes = buildList {
             addAll(externalViews)
@@ -92,6 +96,13 @@ internal class KeyboardKeyPickerController(
             if (view.id == View.NO_ID) view.id = View.generateViewId()
             view.isFocusable = true
             view.isFocusableInTouchMode = true
+            if (view !== editableView) {
+                view.setOnTouchListener { touched, event ->
+                    // Take focus before UP so View does not consume the first tap for focus only.
+                    if (event.actionMasked == MotionEvent.ACTION_DOWN) touched.requestFocus()
+                    false
+                }
+            }
         }
 
         val centers = nodes.associateWith(::centerInWindow)

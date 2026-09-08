@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Mudar diretamente de configuração</string>
+    <string name="crown_direct_config_target">Mudar para %1$s</string>
+    <string name="crown_direct_config_unavailable">Configuração indisponível (ação desativada)</string>
+    <string name="crown_direct_config_self">Configuração atual; não é necessário mudar</string>
+    <string name="crown_direct_config_no_other">Não há outras configurações disponíveis</string>
+</resources>

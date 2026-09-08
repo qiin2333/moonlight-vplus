@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Schimbă direct configurația</string>
+    <string name="crown_direct_config_target">Schimbă la %1$s</string>
+    <string name="crown_direct_config_unavailable">Configurație indisponibilă (acțiune dezactivată)</string>
+    <string name="crown_direct_config_self">Configurația curentă; nu este necesară schimbarea</string>
+    <string name="crown_direct_config_no_other">Nu există alte configurații disponibile</string>
+    <string name="game_menu_edit_mode">Editează dispunerea butoanelor</string>
+    <string name="game_menu_configure_settings">Schimbă configurația</string>
+</resources>

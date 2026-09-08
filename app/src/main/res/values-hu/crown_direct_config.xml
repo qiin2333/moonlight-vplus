@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Közvetlen konfigurációváltás</string>
+    <string name="crown_direct_config_target">Váltás erre: %1$s</string>
+    <string name="crown_direct_config_unavailable">A konfiguráció nem érhető el (művelet letiltva)</string>
+    <string name="crown_direct_config_self">Jelenlegi konfiguráció; nincs szükség váltásra</string>
+    <string name="crown_direct_config_no_other">Nincs másik elérhető konfiguráció</string>
+    <string name="game_menu_edit_mode">Gombkiosztás szerkesztése</string>
+    <string name="game_menu_configure_settings">Konfigurációváltás</string>
+</resources>
