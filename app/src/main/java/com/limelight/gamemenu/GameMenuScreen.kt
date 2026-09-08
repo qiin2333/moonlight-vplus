@@ -1236,6 +1236,24 @@ private fun GameMenuHeader(
                     .clickable(onClick = callbacks.onCrownToggle)
                     .padding(7.dp)
             )
+            if (state.usbForwardingEnabled) {
+                Spacer(Modifier.width(GameMenuDimens.tight))
+                Icon(
+                    painter = painterResource(R.drawable.ic_usb_devices),
+                    contentDescription = stringResource(R.string.usb_forward_title),
+                    tint = colorResource(R.color.game_menu_text_primary),
+                    modifier = Modifier
+                        .testTag("gameMenuUsbDevices")
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(colorResource(R.color.game_menu_card_background))
+                        .border(GameMenuDimens.surfaceStroke,
+                            colorResource(R.color.game_menu_button_border), CircleShape)
+                        .gamepadFocusOutline(CircleShape)
+                        .clickable(onClick = callbacks.onUsbDevices)
+                        .padding(8.dp)
+                )
+            }
         }
     }
 }

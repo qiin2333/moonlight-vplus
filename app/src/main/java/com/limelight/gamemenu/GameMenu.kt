@@ -1151,6 +1151,7 @@ class GameMenu(
                 gyro = gyroCardController.snapshot(),
                 touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
+                usbForwardingEnabled = game.isUsbForwardingEnabled(),
                 pageLayout = pageLayout
             )
         )
@@ -1175,6 +1176,9 @@ class GameMenu(
 
         val callbacks = GameMenuCallbacks(
             onDismiss = { handleDismissRequest(dialog) },
+            onUsbDevices = {
+                game.showUsbForwarding { childDialog -> registerChildDialog(childDialog) }
+            },
             onHapticFeedback = ::dispatchHapticFeedback,
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },

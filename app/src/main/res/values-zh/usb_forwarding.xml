@@ -1,0 +1,19 @@
+<resources>
+    <string name="usb_forward_title">USB 外设</string>
+    <string name="usb_forward_choose">选择要转发到当前主机的设备。</string>
+    <string name="usb_forward_release">停止共享</string>
+    <string name="usb_forward_permission_denied">未获得 USB 授权。</string>
+    <string name="usb_forward_connecting">正在连接 USB 设备…</string>
+    <string name="usb_forward_connected">连接已建立，请在电脑上确认设备是否可用。</string>
+    <string name="usb_forward_releasing">正在释放 USB 设备…</string>
+    <string name="usb_forward_failed">USB 转发已停止，请检查主机和网络。</string>
+    <string name="usb_forward_local_owner">该设备需要本地驱动交接，或暂时无法准确区分，目前不能转发。</string>
+    <string name="usb_forward_unconfigured">当前构建尚未配置 USB 转发，或主机未完成配对。</string>
+    <string name="usb_forward_target">共享到：%1$s</string>
+    <string name="usb_forward_usage">共享期间设备交由电脑使用，结束串流后自动恢复本机使用。一次可共享一个 USB 设备。</string>
+    <string name="usb_forward_empty">尚未发现 USB 设备，请直接连接外设或通过 USB 集线器接入。</string>
+    <string name="usb_forward_local">本机可用</string>
+    <string name="usb_forward_share">共享到电脑</string>
+    <string name="usb_forward_authorizing">等待 USB 授权…</string>
+    <string name="usb_forward_detached">设备已拔出，共享已停止。</string>
+</resources>

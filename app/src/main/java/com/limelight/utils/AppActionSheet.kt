@@ -70,12 +70,29 @@ object AppActionSheet {
     data class Action(
         val id: Int,
         val title: CharSequence,
+        val description: CharSequence? = null,
         val destructive: Boolean = false,
+        val enabled: Boolean = true,
         val checked: Boolean? = null,
         val sectionStart: Boolean = false,
         val opensSubmenu: Boolean = false,
         val trailingText: CharSequence? = null
     )
+
+    /** Hosts custom, live content in the same window, theme, and dismissal model as
+     * the standard action sheets. Custom content should be built from the shared
+     * action-sheet composables below so controller focus remains consistent. */
+    fun showCustom(context: Context, content: @Composable () -> Unit): Dialog {
+        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val composeView = ComposeView(context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                AppActionSheetTheme(content)
+            }
+        }
+        prepareDialog(dialog, composeView)
+        return dialog
+    }
 
     fun show(
         context: Context,
@@ -502,7 +519,7 @@ object AppActionSheet {
     }
 
     @Composable
-    private fun ActionSheetRow(
+    internal fun ActionSheetRow(
         action: Action,
         onAction: (Action) -> Unit,
         modifier: Modifier = Modifier
@@ -536,32 +553,49 @@ object AppActionSheet {
                     )
                     .onPreviewKeyEvent { event ->
                         val nativeEvent = event.nativeKeyEvent
-                        if (nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                        if (action.enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
                             if (nativeEvent.action == KeyEvent.ACTION_UP) onAction(action)
                             true
                         } else {
                             false
                         }
                     }
-                    .clickable { onAction(action) }
-                    .focusable()
+                    .clickable(enabled = action.enabled) { onAction(action) }
+                    .focusable(action.enabled)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = action.title.toString(),
-                    modifier = Modifier.weight(1f),
-                    color = if (action.destructive) colorResource(R.color.app_action_sheet_danger)
-                    else MaterialTheme.colorScheme.onSurface,
-                    fontSize = 14.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = action.title.toString(),
+                        color = when {
+                            !action.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            action.destructive -> colorResource(R.color.app_action_sheet_danger)
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
+                        fontSize = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!action.description.isNullOrEmpty()) {
+                        Text(
+                            text = action.description.toString(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = if (action.enabled) 1f else 0.38f
+                            ),
+                            fontSize = 12.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
                 if (!action.trailingText.isNullOrEmpty()) {
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = action.trailingText.toString(),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary.copy(
+                            alpha = if (action.enabled) 1f else 0.38f
+                        ),
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
