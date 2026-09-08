@@ -1,12 +1,19 @@
 <resources>
     <string name="usb_forward_title">USB devices</string>
     <string name="usb_forward_choose">Choose a device to forward to this host.</string>
-    <string name="usb_forward_release">Use on this phone</string>
+    <string name="usb_forward_release">Stop sharing</string>
     <string name="usb_forward_permission_denied">USB permission was not granted.</string>
     <string name="usb_forward_connecting">Connecting USB device…</string>
-    <string name="usb_forward_connected">USB tunnel connected</string>
+    <string name="usb_forward_connected">Connection established. Check the computer to confirm device availability.</string>
     <string name="usb_forward_releasing">Releasing USB device…</string>
     <string name="usb_forward_failed">USB forwarding stopped. Check the host and connection.</string>
     <string name="usb_forward_local_owner">This device needs a local-driver handoff or cannot be uniquely identified. It is not available for forwarding yet.</string>
     <string name="usb_forward_unconfigured">USB forwarding is not configured for this build or the host is not paired.</string>
+    <string name="usb_forward_target">Share with: %1$s</string>
+    <string name="usb_forward_usage">Shared devices are reserved for the computer. Ending the stream returns them to this device. One USB device can be shared at a time.</string>
+    <string name="usb_forward_empty">No USB devices found. Connect a device directly or through a USB hub.</string>
+    <string name="usb_forward_local">Available on this device</string>
+    <string name="usb_forward_share">Share with computer</string>
+    <string name="usb_forward_authorizing">Waiting for USB permission…</string>
+    <string name="usb_forward_detached">Device unplugged. Sharing has stopped.</string>
 </resources>

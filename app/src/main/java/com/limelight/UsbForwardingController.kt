@@ -12,6 +12,10 @@ import android.hardware.usb.UsbManager
 import android.os.Build
 import android.view.InputDevice
 import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.driver.wireless.hci.HciUsbDeviceProbe
@@ -56,21 +60,24 @@ class UsbForwardingController(
     private val closeCompletion = CompletableFuture<Void>()
     private val permissionAction = "${game.packageName}.USB_FORWARD_PERMISSION.${UUID.randomUUID()}"
     private var generation = 0L
-    private var selected: UsbDevice? = null
+    private var selected by mutableStateOf<UsbDevice?>(null)
+    private var devices by mutableStateOf<List<UsbDevice>>(emptyList())
     private var pendingPermission = false
-    private var busy = false
+    private var busy by mutableStateOf(false)
     @Volatile private var closed = false
     private var sheet: Dialog? = null
-    private var message = R.string.usb_forward_choose
+    private var message by mutableIntStateOf(R.string.usb_forward_choose)
     @Volatile private var export: UsbIpBackend.Export? = null
     @Volatile private var tunnel: UsbReverseTunnel? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            if (closed) return
             val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
-            if (closed || device != selected) return
+            refreshDevices()
+            if (device != selected) return
             if (intent.action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
-                release()
+                release(R.string.usb_forward_detached)
             } else if (intent.action == permissionAction && pendingPermission &&
                 intent.getLongExtra("generation", -1) == generation) {
                 completePermission()
@@ -82,24 +89,33 @@ class UsbForwardingController(
     }
 
     init {
-        val filter = IntentFilter(permissionAction).apply { addAction(UsbManager.ACTION_USB_DEVICE_DETACHED) }
+        val filter = IntentFilter(permissionAction).apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+        }
         ContextCompat.registerReceiver(game, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
-    fun show() {
-        if (closed) return
+    fun show(): Dialog? {
+        if (closed) return null
         sheet?.dismiss()
-        val devices = manager.deviceList.values.sortedBy { it.deviceName }
-        val actions = if (selected != null) {
-            listOf(AppActionSheet.Action(-1, game.getString(R.string.usb_forward_release)))
-        } else if (busy) emptyList() else devices.mapIndexed { index, device ->
-            AppActionSheet.Action(index, device.productName ?: "USB ${device.vendorId}:${device.productId}")
+        refreshDevices()
+        sheet = AppActionSheet.showCustom(game) {
+            UsbDevicePanel(
+                devices = devices,
+                selected = selected,
+                busy = busy,
+                message = message,
+                hostName = game.pcName ?: host,
+                onShare = ::request,
+                onRelease = { release() }
+            )
         }
-        sheet = AppActionSheet.show(game, game.getString(R.string.usb_forward_title),
-            subtitle = game.getString(message), actions = actions,
-            onAction = { action ->
-                if (action.id == -1) release() else devices.getOrNull(action.id)?.let(::request)
-            })
+        return sheet
+    }
+
+    private fun refreshDevices() {
+        devices = manager.deviceList.values.sortedBy { it.deviceName }
     }
 
     private fun request(device: UsbDevice) {
@@ -122,6 +138,7 @@ class UsbForwardingController(
             return
         }
         pendingPermission = true
+        message = R.string.usb_forward_authorizing
         game.onUsbPermissionPromptStarting()
         try {
             var flags = PendingIntent.FLAG_UPDATE_CURRENT
@@ -160,7 +177,6 @@ class UsbForwardingController(
                                     else {
                                         busy = false
                                         message = R.string.usb_forward_connected
-                                        Toast.makeText(game, message, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }

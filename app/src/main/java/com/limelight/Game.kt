@@ -179,9 +179,14 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
 
+    fun isUsbForwardingEnabled(): Boolean =
+        com.limelight.usbip.UsbIpBackend.isSupported() &&
+            (BuildConfig.USB_TUNNEL_PORT.toIntOrNull() ?: 0) in 1..65535 &&
+            BuildConfig.USB_TUNNEL_TOKEN.isNotEmpty()
+
     @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
-    fun showUsbForwarding() {
-        if (!connected || !com.limelight.usbip.UsbIpBackend.isSupported()) return
+    fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
+        if (!connected || !isUsbForwardingEnabled()) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
             if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
@@ -191,7 +196,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                         runOnUiThread {
                             usbForwardingCreationPending = false
                             if (!isDestroyed && connected) {
-                                if (error == null) showUsbForwarding()
+                                if (error == null) showUsbForwarding(onShown)
                                 else Toast.makeText(this, R.string.usb_forward_failed, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -208,7 +213,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             usbForwarding = UsbForwardingController(this, intent.getStringExtra(EXTRA_HOST) ?: "",
                 cert, PlatformBinding.getCryptoProvider(this), port, BuildConfig.USB_TUNNEL_TOKEN)
         }
-        usbForwarding?.show()
+        usbForwarding?.show()?.let { onShown?.invoke(it) }
     }
     private var activeGameMenu: GameMenu? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
