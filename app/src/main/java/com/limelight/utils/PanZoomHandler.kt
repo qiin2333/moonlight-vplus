@@ -130,7 +130,9 @@ class PanZoomHandler(
 
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            onUserTransform?.invoke()
+            val previousX = childX
+            val previousY = childY
+            val previousScale = scaleFactor
             var newScaleFactor = scaleFactor * detector.scaleFactor
             newScaleFactor = maxOf(1f, minOf(newScaleFactor, MAX_SCALE)) // Apply minimum scale
 
@@ -147,6 +149,9 @@ class PanZoomHandler(
             scaleFactor = newScaleFactor
 
             constrainToBounds()
+            if (childX != previousX || childY != previousY || scaleFactor != previousScale) {
+                onUserTransform?.invoke()
+            }
             return true
         }
 
@@ -162,7 +167,8 @@ class PanZoomHandler(
             distanceX: Float,
             distanceY: Float
         ): Boolean {
-            onUserTransform?.invoke()
+            val previousX = childX
+            val previousY = childY
             // View coordinates include the temporary IME offset. Gesture state
             // must remain in the persistent base transform or the IME offset is
             // folded into childY and applied twice on the next transform.
@@ -170,6 +176,9 @@ class PanZoomHandler(
             childY -= distanceY
 
             constrainToBounds()
+            if (childX != previousX || childY != previousY) {
+                onUserTransform?.invoke()
+            }
             return true
         }
     }

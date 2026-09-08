@@ -45,6 +45,64 @@ class RemoteImeAvoidanceTest {
         captureWidth = 1920, captureHeight = 1080,
     )
 
+    @Test fun boundaryDragAndMinimumPinchKeepAvoidanceActive() {
+        rule.scenario.onActivity { activity ->
+            val root = FrameLayout(activity)
+            val stream = StreamView(activity)
+            val cursor = View(activity)
+            root.addView(stream)
+            root.addView(cursor)
+            root.layout(0, 0, 1920, 1080)
+            stream.layout(0, 0, 1920, 1080)
+            cursor.layout(0, 0, 1920, 1080)
+            val prefs = PreferenceConfiguration().apply { enablePip = false }
+            val game = Game().apply { prefConfig = prefs }
+            val pan = PanZoomHandler(activity, game, stream, cursor, prefs)
+            val controller = RemoteImeController(activity, stream, pan)
+            controller.handle(context())
+            fun inset(bottom: Int) {
+                stream.dispatchApplyWindowInsets(WindowInsets.Builder()
+                    .setInsets(WindowInsets.Type.ime(), Insets.of(0, 0, 0, bottom))
+                    .setVisible(WindowInsets.Type.ime(), true).build())
+            }
+            val start = SystemClock.uptimeMillis()
+            fun event(action: Int, time: Long, vararg xs: Float) {
+                val properties = Array(xs.size) { i -> MotionEvent.PointerProperties().apply {
+                    id = i
+                    toolType = MotionEvent.TOOL_TYPE_FINGER
+                } }
+                val coordinates = Array(xs.size) { i -> MotionEvent.PointerCoords().apply {
+                    x = xs[i]; y = 500f; pressure = 1f; size = 1f
+                } }
+                val e = MotionEvent.obtain(start, start + time, action, xs.size,
+                    properties, coordinates, 0, 0, 1f, 1f, 0, 0, 0, 0)
+                pan.handleTouchEvent(e)
+                e.recycle()
+            }
+            try {
+                inset(300)
+                val initial = stream.y
+                event(MotionEvent.ACTION_DOWN, 0, 600f)
+                event(MotionEvent.ACTION_MOVE, 30, 800f) // Cannot pan a fitted viewport.
+                event(MotionEvent.ACTION_UP, 60, 800f)
+                inset(400)
+                assertEquals(initial - 100f, stream.y, 0.1f)
+                event(MotionEvent.ACTION_DOWN, 100, 500f)
+                event(MotionEvent.ACTION_POINTER_DOWN or (1 shl 8), 130, 500f, 1100f)
+                event(MotionEvent.ACTION_MOVE, 160, 600f, 1000f)
+                event(MotionEvent.ACTION_MOVE, 190, 650f, 950f)
+                event(MotionEvent.ACTION_MOVE, 220, 700f, 900f)
+                event(MotionEvent.ACTION_POINTER_UP or (1 shl 8), 250, 700f, 900f)
+                event(MotionEvent.ACTION_UP, 280, 700f)
+                assertEquals(1f, stream.scaleX, 0f)
+                inset(500)
+                assertEquals(initial - 200f, stream.y, 0.1f)
+            } finally {
+                controller.dispose()
+            }
+        }
+    }
+
     @Test fun manualPanTakesControlAndReopeningDoesNotReuseAnchor() {
         rule.scenario.onActivity { activity ->
             val root = FrameLayout(activity)
