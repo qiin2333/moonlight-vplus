@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.view.View
 import android.view.MotionEvent
+import android.view.Gravity
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
@@ -44,6 +45,101 @@ class RemoteImeAvoidanceTest {
         caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
         captureWidth = 1920, captureHeight = 1080,
     )
+
+    @Test fun sessionResetBeforeFirstSurfaceChangeKeepsStreamCentered() {
+        rule.scenario.onActivity { activity ->
+            val root = FrameLayout(activity)
+            val stream = StreamView(activity)
+            val cursor = View(activity)
+            root.addView(stream, FrameLayout.LayoutParams(800, 400, Gravity.CENTER))
+            root.addView(cursor, FrameLayout.LayoutParams(800, 400, Gravity.CENTER))
+            root.measure(
+                View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(600, View.MeasureSpec.EXACTLY),
+            )
+            root.layout(0, 0, 1000, 600)
+            assertEquals(100f, stream.x, 0f)
+            assertEquals(100f, stream.y, 0f)
+
+            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
+            pan.setImeOffsetY(0f)
+            pan.handleSurfaceChange()
+
+            assertEquals(100f, stream.x, 0f)
+            assertEquals(100f, stream.y, 0f)
+            assertEquals(stream.x, cursor.x, 0f)
+            assertEquals(stream.y, cursor.y, 0f)
+        }
+    }
+
+    @Test fun firstSurfaceChangePreservesConfiguredStreamPosition() {
+        rule.scenario.onActivity { activity ->
+            val root = FrameLayout(activity)
+            val stream = StreamView(activity)
+            val cursor = View(activity)
+            root.addView(
+                stream,
+                FrameLayout.LayoutParams(800, 400, Gravity.TOP or Gravity.END),
+            )
+            root.addView(
+                cursor,
+                FrameLayout.LayoutParams(800, 400, Gravity.TOP or Gravity.END),
+            )
+            root.measure(
+                View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(600, View.MeasureSpec.EXACTLY),
+            )
+            root.layout(0, 0, 1000, 600)
+            assertEquals(200f, stream.x, 0f)
+            assertEquals(0f, stream.y, 0f)
+
+            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
+            pan.setImeOffsetY(0f)
+            pan.handleSurfaceChange()
+
+            assertEquals(200f, stream.x, 0f)
+            assertEquals(0f, stream.y, 0f)
+            assertEquals(stream.x, cursor.x, 0f)
+            assertEquals(stream.y, cursor.y, 0f)
+        }
+    }
+
+    @Test fun surfaceChangesAdoptDisplayLayoutUntilUserTransforms() {
+        rule.scenario.onActivity { activity ->
+            val root = FrameLayout(activity)
+            val stream = StreamView(activity)
+            val cursor = View(activity)
+            val streamParams = FrameLayout.LayoutParams(800, 400, Gravity.TOP or Gravity.END)
+            val cursorParams = FrameLayout.LayoutParams(800, 400, Gravity.TOP or Gravity.END)
+            root.addView(stream, streamParams)
+            root.addView(cursor, cursorParams)
+            fun layoutRoot() {
+                root.measure(
+                    View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(600, View.MeasureSpec.EXACTLY),
+                )
+                root.layout(0, 0, 1000, 600)
+            }
+            layoutRoot()
+
+            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
+            pan.handleSurfaceChange()
+            assertEquals(200f, stream.x, 0f)
+            assertEquals(0f, stream.y, 0f)
+
+            streamParams.gravity = Gravity.BOTTOM or Gravity.START
+            cursorParams.gravity = Gravity.BOTTOM or Gravity.START
+            stream.layoutParams = streamParams
+            cursor.layoutParams = cursorParams
+            layoutRoot()
+            pan.handleSurfaceChange()
+
+            assertEquals(0f, stream.x, 0f)
+            assertEquals(200f, stream.y, 0f)
+            assertEquals(stream.x, cursor.x, 0f)
+            assertEquals(stream.y, cursor.y, 0f)
+        }
+    }
 
     @Test fun boundaryDragAndMinimumPinchKeepAvoidanceActive() {
         rule.scenario.onActivity { activity ->
@@ -137,6 +233,8 @@ class RemoteImeAvoidanceTest {
                 touch(MotionEvent.ACTION_UP, 90, 400f)
                 val dragged = stream.y
                 assertTrue("Gesture really moved the production transform", dragged < before)
+                pan.handleSurfaceChange()
+                assertEquals("Surface updates preserve user pan", dragged, stream.y, 0.1f)
                 dispatch(true)
                 val recomputed = stream.y
                 assertEquals("Avoidance must not cancel user pan", dragged, recomputed, 0.1f)
@@ -150,6 +248,51 @@ class RemoteImeAvoidanceTest {
             } finally {
                 controller.dispose()
             }
+        }
+    }
+
+    @Test fun pinchZoomSurvivesSurfaceUpdates() {
+        rule.scenario.onActivity { activity ->
+            val root = FrameLayout(activity)
+            val stream = StreamView(activity)
+            val cursor = View(activity)
+            root.addView(stream)
+            root.addView(cursor)
+            root.layout(0, 0, 1920, 1080)
+            stream.layout(0, 0, 1920, 1080)
+            cursor.layout(0, 0, 1920, 1080)
+            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
+            pan.handleSurfaceChange()
+
+            val start = SystemClock.uptimeMillis()
+            fun event(action: Int, time: Long, vararg xs: Float) {
+                val properties = Array(xs.size) { i -> MotionEvent.PointerProperties().apply {
+                    id = i
+                    toolType = MotionEvent.TOOL_TYPE_FINGER
+                } }
+                val coordinates = Array(xs.size) { i -> MotionEvent.PointerCoords().apply {
+                    x = xs[i]; y = 500f; pressure = 1f; size = 1f
+                } }
+                val motionEvent = MotionEvent.obtain(
+                    start, start + time, action, xs.size, properties, coordinates,
+                    0, 0, 1f, 1f, 0, 0, 0, 0,
+                )
+                pan.handleTouchEvent(motionEvent)
+                motionEvent.recycle()
+            }
+
+            event(MotionEvent.ACTION_DOWN, 0, 700f)
+            event(MotionEvent.ACTION_POINTER_DOWN or (1 shl 8), 30, 700f, 1100f)
+            event(MotionEvent.ACTION_MOVE, 60, 500f, 1300f)
+            event(MotionEvent.ACTION_POINTER_UP or (1 shl 8), 90, 500f, 1300f)
+            event(MotionEvent.ACTION_UP, 120, 500f)
+
+            val scale = stream.scaleX
+            assertTrue("Pinch must enlarge the stream", scale > 1f)
+            pan.handleSurfaceChange()
+            assertEquals("Surface updates preserve user zoom", scale, stream.scaleX, 0.001f)
+            assertEquals(stream.scaleX, cursor.scaleX, 0f)
+            assertEquals(stream.y, cursor.y, 0f)
         }
     }
 
