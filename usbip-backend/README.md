@@ -25,7 +25,9 @@ HTTPS connection; no build variables or manual tokens are needed. Older hosts,
 disabled hosts, and connection failures have visible status and retry controls.
 The capability request rejects redirects and has a 5-second total call timeout
 and a 4096-byte response limit; a CA-trusted but unpaired certificate is rejected.
-The host TCP port defaults to 47996; remote networks must also allow/forward that
+The host TCP port defaults to its main port + 7 (normally 47996); setting
+`usb_forwarding_port` to 0 selects this automatic mode, while 1024–65535 overrides it.
+Clients use the advertised port. Remote networks must also allow/forward that
 port. The feature does not configure router forwarding automatically.
 
 ## Ownership and transport
