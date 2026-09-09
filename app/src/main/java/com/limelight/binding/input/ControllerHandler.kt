@@ -3023,7 +3023,7 @@ class ControllerHandler(
             context.physRightStickY = denoisePhys(physY)
         }
 
-        if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+        if (gyroManager.isRightStickMode && context.gyroHoldActive) {
             // 融合策略：按轴叠加并限幅
             val gx = context.gyroRightStickX
             val gy = context.gyroRightStickY
