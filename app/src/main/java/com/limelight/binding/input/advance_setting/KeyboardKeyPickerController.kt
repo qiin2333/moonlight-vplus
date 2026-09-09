@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.limelight.R
+import com.limelight.ui.UiDismissKeyHandler
 import kotlin.math.abs
 
 internal class KeyboardKeyPickerController(
@@ -18,7 +19,8 @@ internal class KeyboardKeyPickerController(
     private val externalViews: List<View> = emptyList(),
     private val editableView: View? = null,
     private val isEditing: () -> Boolean = { false },
-    private val onEnterEditing: () -> Unit = {}
+    private val onEnterEditing: () -> Unit = {},
+    private val onDismiss: (() -> Unit)? = null
 ) {
     enum class Page {
         MAIN,
@@ -125,6 +127,10 @@ internal class KeyboardKeyPickerController(
     }
 
     private fun handleNodeKey(view: View, keyCode: Int, event: KeyEvent): Boolean {
+        if (onDismiss?.let { UiDismissKeyHandler.handle(event.action, keyCode, it) } == true) {
+            return true
+        }
+
         if (view === editableView && isEditing()) {
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                 return event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
