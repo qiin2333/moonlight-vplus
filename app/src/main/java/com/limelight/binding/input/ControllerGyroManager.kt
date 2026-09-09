@@ -67,8 +67,10 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     private val controllerGyroDemand = ControllerGyroDemandState()
 
     @Volatile private var activeSource = GyroSource.NONE
-    /** Sticky: controller 0's own sensor proved unusable, so never select it again. */
-    @Volatile private var controllerSensorRejected = false
+    /** Android input device IDs whose gyro proved unusable, kept until the device disappears. */
+    private val rejectedInputDeviceIds = mutableSetOf<Int>()
+    /** Set when controller 0's USB driver gyro proved unusable. */
+    private var driverGyroRejected = false
     /** Bumped when the controller-0 source changes, to drop stale async fallback work. */
     @Volatile private var sourceGeneration = 0L
     private var deviceGyroRetryAvailable = true
@@ -200,11 +202,17 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
     }
 
-    /** Controller 0's Android InputDevice contexts. */
+    /**
+     * Controller 0's Android InputDevice contexts. Enumerated-but-unassigned devices also
+     * report controller number 0, so they must not be mistaken for the real slot owner.
+     */
     private fun controller0InputContexts(): List<InputDeviceContext> =
         (0 until handler.inputDeviceContexts.size())
             .map { handler.inputDeviceContexts.valueAt(it) }
-            .filter { it.controllerNumber.toInt() == 0 }
+            .filter {
+                it.controllerNumber.toInt() == 0 &&
+                    (it.assignedControllerNumber || it.controllerGyroRoutingParticipated)
+            }
 
     /**
      * A gamepad often enumerates as several InputDevices sharing controller 0, and device IDs
@@ -212,7 +220,9 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
      */
     private fun controller0InputContextWithGyro(): InputDeviceContext? =
         controller0InputContexts().firstOrNull {
-            it.sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
+            val deviceId = it.inputDevice?.id
+            (deviceId == null || deviceId !in rejectedInputDeviceIds) &&
+                it.sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
         }
 
     private fun controller0DriverContext(): DriverControllerContext? =
@@ -221,7 +231,6 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     /** Decide which source should feed the assistant. Pure: performs no registration. */
     private fun resolveSource(): GyroSource {
         if (assistantMode == GyroAssistantMode.OFF) return GyroSource.NONE
-        if (controllerSensorRejected) return GyroSource.DEVICE
 
         if (controller0InputContexts().isNotEmpty()) {
             return if (controller0InputContextWithGyro() != null) {
@@ -233,7 +242,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
         val driverContext = controller0DriverContext()
         if (driverContext != null) {
-            val hasDriverGyro = driverContext.device?.let {
+            val hasDriverGyro = !driverGyroRejected && driverContext.device?.let {
                 (it.capabilities.toInt() and MoonBridge.LI_CCAP_GYRO.toInt()) != 0
             } == true
             return if (hasDriverGyro) GyroSource.DRIVER else GyroSource.DEVICE
@@ -339,7 +348,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         timestampNanos: Long
     ) {
         if (controllerNumber.toInt() != 0) return
-        if (activeSource == GyroSource.DEVICE || controllerSensorRejected) return
+        if (activeSource == GyroSource.DEVICE) return
         if (!isDeviceGyroFallbackAllowed()) return
 
         val generation = sourceGeneration
@@ -349,7 +358,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
         handler.mainThreadHandler.post {
             if (handler.stopped || generation != sourceGeneration) return@post
-            if (activeSource == GyroSource.DEVICE || controllerSensorRejected) return@post
+            if (activeSource == GyroSource.DEVICE) return@post
             if (!isDeviceGyroFallbackAllowed()) return@post
 
             rejectControllerSensor("is reporting only zero samples")
@@ -361,6 +370,9 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
      * a single retry when the device sensor merely refused this registration attempt.
      */
     private fun rejectControllerSensor(reason: String) {
+        val rejectedInputContext = controller0InputContextWithGyro()
+        val rejectedDriver = activeSource == GyroSource.DRIVER
+
         when (
             registerDeviceGyroForDefaultContext(
                 enable = true,
@@ -369,7 +381,10 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             )
         ) {
             DeviceGyroRegistrationResult.APPLIED -> {
-                controllerSensorRejected = true
+                rejectedInputContext?.inputDevice?.id?.let { rejectedInputDeviceIds.add(it) }
+                if (rejectedDriver) {
+                    driverGyroRejected = true
+                }
                 activeSource = GyroSource.DEVICE
                 unregisterController0InputListeners()
                 LimeLog.warning("Controller 0 gyroscope $reason; using device gyroscope")
@@ -395,7 +410,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
     /** Controller 0's own sensor refused registration, so move the demand to the device gyro. */
     internal fun onControllerGyroRegistrationFailed(controllerNumber: Short) {
-        if (controllerNumber.toInt() != 0 || controllerSensorRejected) return
+        if (controllerNumber.toInt() != 0 || activeSource == GyroSource.DEVICE) return
         if (!isDeviceGyroFallbackAllowed()) return
         rejectControllerSensor("could not be registered")
     }
@@ -422,12 +437,28 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun onControllerSourceChanged(controllerNumber: Short) {
         if (controllerNumber.toInt() != 0) return
 
+        // Each sibling InputDevice of one gamepad reaches this, so rejections may only be
+        // dropped when the rejected device itself is gone - not on any source notification.
+        pruneRejectedSources()
+
         if (activeSource == GyroSource.DEVICE) {
             registerDeviceGyroForDefaultContext(false)
         }
         activeSource = GyroSource.NONE
-        controllerSensorRejected = false
         beginNewSourceLifecycle()
+    }
+
+    /** A reconnected device deserves a fresh evaluation, a still-present one does not. */
+    private fun pruneRejectedSources() {
+        if (rejectedInputDeviceIds.isNotEmpty()) {
+            val presentIds = (0 until handler.inputDeviceContexts.size())
+                .mapNotNull { handler.inputDeviceContexts.valueAt(it).inputDevice?.id }
+                .toSet()
+            rejectedInputDeviceIds.retainAll(presentIds)
+        }
+        if (driverGyroRejected && controller0DriverContext() == null) {
+            driverGyroRejected = false
+        }
     }
 
     /** Route later host enable/disable requests away from a known phantom sensor. */
@@ -834,7 +865,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun onStreamStopped() {
         beginNewSourceLifecycle()
         activeSource = GyroSource.NONE
-        controllerSensorRejected = false
+        rejectedInputDeviceIds.clear()
+        driverGyroRejected = false
         controllerGyroDemand.clear()
     }
 }

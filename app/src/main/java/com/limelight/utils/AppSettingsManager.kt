@@ -373,6 +373,10 @@ class AppSettingsManager(private val context: Context) {
             prefConfig.gyroInvertXAxis = intent.getBooleanExtra(INTENT_LAST_SETTINGS_GYRO_INVERT_X, prefConfig.gyroInvertXAxis)
             prefConfig.gyroInvertYAxis = intent.getBooleanExtra(INTENT_LAST_SETTINGS_GYRO_INVERT_Y, prefConfig.gyroInvertYAxis)
             prefConfig.gyroActivationKeyCode = intent.getIntExtra(INTENT_LAST_SETTINGS_GYRO_ACTIVATION_KEY, prefConfig.gyroActivationKeyCode)
+            // Mouse mode wins, matching the persisted-preference normalization
+            prefConfig.gyroToMouse = intent.getBooleanExtra(INTENT_LAST_SETTINGS_GYRO_TO_MOUSE, prefConfig.gyroToMouse)
+            prefConfig.gyroToRightStick = !prefConfig.gyroToMouse &&
+                intent.getBooleanExtra(INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK, prefConfig.gyroToRightStick)
             prefConfig.showBitrateCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, prefConfig.showBitrateCard)
             prefConfig.showAudioHapticsCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, prefConfig.showAudioHapticsCard)
             prefConfig.showGyroCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, prefConfig.showGyroCard)
@@ -426,6 +430,8 @@ class AppSettingsManager(private val context: Context) {
         private const val INTENT_LAST_SETTINGS_GYRO_INVERT_X = "LastSettingsGyroInvertX"
         private const val INTENT_LAST_SETTINGS_GYRO_INVERT_Y = "LastSettingsGyroInvertY"
         private const val INTENT_LAST_SETTINGS_GYRO_ACTIVATION_KEY = "LastSettingsGyroActivationKey"
+        private const val INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK = "LastSettingsGyroToRightStick"
+        private const val INTENT_LAST_SETTINGS_GYRO_TO_MOUSE = "LastSettingsGyroToMouse"
         private const val INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD = "LastSettingsShowBitrateCard"
         private const val INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD = "LastSettingsShowAudioHapticsCard"
         private const val INTENT_LAST_SETTINGS_SHOW_GYRO_CARD = "LastSettingsShowGyroCard"
@@ -459,6 +465,8 @@ class AppSettingsManager(private val context: Context) {
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_INVERT_X, lastSettings.gyroInvertXAxis)
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_INVERT_Y, lastSettings.gyroInvertYAxis)
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_ACTIVATION_KEY, lastSettings.gyroActivationKeyCode)
+            intent.putExtra(INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK, lastSettings.gyroToRightStick)
+            intent.putExtra(INTENT_LAST_SETTINGS_GYRO_TO_MOUSE, lastSettings.gyroToMouse)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, lastSettings.showBitrateCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, lastSettings.showAudioHapticsCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, lastSettings.showGyroCard)

@@ -3339,11 +3339,13 @@ class ControllerHandler(
         }
 
         backgroundThreadHandler.removeCallbacks(target.enableSensorRunnable)
-        unregisterMotionListener(target, motionType)
 
         val sm = target.sensorManager ?: return
         val sensor = sm.getDefaultSensor(sensorType) ?: return
-        val samplingPeriodUs = 1000000 / effectiveReportRateHz
+        val previousListener = when (motionType) {
+            MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener
+            else -> target.gyroListener
+        }
         val listener = gyroManager.createSensorListener(
             controllerNumber, motionType, sm === deviceSensorManager
         )
@@ -3352,7 +3354,10 @@ class ControllerHandler(
             target.controllerGyroRoutingParticipated = true
         }
 
-        if (sm.registerListener(listener, sensor, samplingPeriodUs)) {
+        // Register before dropping the old listener so a refused registration leaves the
+        // working one in place instead of killing motion input outright.
+        if (sm.registerListener(listener, sensor, 1000000 / effectiveReportRateHz)) {
+            previousListener?.let { sm.unregisterListener(it) }
             when (motionType) {
                 MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
                 MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
