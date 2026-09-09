@@ -3325,17 +3325,11 @@ class ControllerHandler(
             matchingContexts.firstOrNull { it.sensorManager?.getDefaultSensor(sensorType) != null }
         }
 
-        // Exactly one context may hold a listener per motion type, otherwise siblings
-        // keep unregistering each other's listener.
-        for (deviceContext in matchingContexts) {
-            if (deviceContext === target) {
-                continue
-            }
-            backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
-            unregisterMotionListener(deviceContext, motionType)
-        }
-
         if (target == null) {
+            for (deviceContext in matchingContexts) {
+                backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
+                unregisterMotionListener(deviceContext, motionType)
+            }
             return
         }
 
@@ -3355,13 +3349,22 @@ class ControllerHandler(
             target.controllerGyroRoutingParticipated = true
         }
 
-        // Register before dropping the old listener so a refused registration leaves the
-        // working one in place instead of killing motion input outright.
+        // Register before dropping anything, so a refused registration leaves the working
+        // listener in place instead of killing motion input outright.
         if (sm.registerListener(listener, sensor, 1000000 / effectiveReportRateHz)) {
             previousListener?.let { sm.unregisterListener(it) }
             when (motionType) {
                 MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
                 MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
+            }
+            // Exactly one context may hold a listener per motion type, otherwise siblings
+            // keep unregistering each other's listener.
+            for (deviceContext in matchingContexts) {
+                if (deviceContext === target) {
+                    continue
+                }
+                backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
+                unregisterMotionListener(deviceContext, motionType)
             }
         } else if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
             // A refused registration never delivers samples, so the phantom-gyro
