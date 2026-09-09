@@ -183,14 +183,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
 
-    fun isUsbForwardingEnabled(): Boolean =
-        com.limelight.usbip.UsbIpBackend.isSupported() &&
-            (BuildConfig.USB_TUNNEL_PORT.toIntOrNull() ?: 0) in 1..65535 &&
-            BuildConfig.USB_TUNNEL_TOKEN.isNotEmpty()
 
     @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
     fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
-        if (!connected || !isUsbForwardingEnabled()) return
+        if (!connected) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
             if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
@@ -208,14 +204,14 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 }
                 return
             }
-            val port = BuildConfig.USB_TUNNEL_PORT.toIntOrNull()
             val cert = parseServerCert()
-            if (port == null || port !in 1..65535 || BuildConfig.USB_TUNNEL_TOKEN.isEmpty() || cert == null) {
+            val hostId = computerUuid
+            if (cert == null || hostId.isNullOrBlank()) {
                 Toast.makeText(this, R.string.usb_forward_unconfigured, Toast.LENGTH_LONG).show()
                 return
             }
             usbForwarding = UsbForwardingController(this, intent.getStringExtra(EXTRA_HOST) ?: "",
-                cert, PlatformBinding.getCryptoProvider(this), port, BuildConfig.USB_TUNNEL_TOKEN)
+                cert, PlatformBinding.getCryptoProvider(this), hostId) { conn?.createNvHttp() }
         }
         usbForwarding?.show()?.let { onShown?.invoke(it) }
     }

@@ -66,9 +66,6 @@ android {
         // then set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=...,
         // or set GITHUB_OAUTH_CLIENT_ID in the environment.
         buildConfigField "String", "GITHUB_OAUTH_CLIENT_ID", "\"${escapeBuildConfigString(githubOAuthClientId)}\""
-        // Match the existing PC tunnel configuration for development builds.
-        buildConfigField "String", "USB_TUNNEL_PORT", '""'
-        buildConfigField "String", "USB_TUNNEL_TOKEN", '""'
 
         externalNativeBuild {
             ndkBuild {
@@ -177,10 +174,6 @@ android {
 
     buildTypes {
         debug {
-            def usbPort = (project.findProperty('usbTunnelPort') ?: System.getenv('MOONLIGHT_USB_TUNNEL_PORT') ?: '').toString()
-            def usbToken = (project.findProperty('usbTunnelToken') ?: System.getenv('MOONLIGHT_USB_TUNNEL_TOKEN') ?: '').toString()
-            buildConfigField 'String', 'USB_TUNNEL_PORT', "\"${escapeBuildConfigString(usbPort)}\""
-            buildConfigField 'String', 'USB_TUNNEL_TOKEN', "\"${escapeBuildConfigString(usbToken)}\""
             applicationIdSuffix ".vplus_debug"
             resValue "string", "app_label", audioHapticsAppLabel
             resValue "string", "app_label_root", audioHapticsAppLabel

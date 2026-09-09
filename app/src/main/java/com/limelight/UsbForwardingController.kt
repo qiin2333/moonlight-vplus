@@ -20,6 +20,9 @@ import androidx.core.content.ContextCompat
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.driver.wireless.hci.HciUsbDeviceProbe
 import com.limelight.nvstream.http.LimelightCryptoProvider
+import com.limelight.nvstream.http.NvHTTP
+import com.limelight.nvstream.http.UsbForwardingCapability
+import java.io.FileNotFoundException
 import com.limelight.usbip.UsbIpBackend
 import com.limelight.usbip.UsbReverseTunnel
 import com.limelight.utils.AppActionSheet
@@ -36,8 +39,8 @@ class UsbForwardingController(
     private val host: String,
     private val pinned: X509Certificate,
     private val crypto: LimelightCryptoProvider,
-    private val port: Int,
-    private val token: String
+    hostId: String,
+    private val httpProvider: () -> NvHTTP?
 ) : AutoCloseable {
     companion object {
         private val cleanupLock = Any()
@@ -54,6 +57,10 @@ class UsbForwardingController(
 
     private val manager = game.getSystemService(Context.USB_SERVICE) as UsbManager
     private val backend = UsbIpBackend(game)
+    private val preferences = game.getSharedPreferences("usb_forwarding_hosts", Context.MODE_PRIVATE)
+    private val preferenceKey = "enabled_$hostId"
+    private var enabled by mutableStateOf(preferences.getBoolean(preferenceKey, false))
+    private var capability by mutableStateOf<UsbForwardingCapability?>(null)
     private val worker = Executors.newSingleThreadExecutor()
     private val lifecycleLock = Any()
     private val predecessorCleanup = previousCleanup()
@@ -100,6 +107,7 @@ class UsbForwardingController(
         if (closed) return null
         sheet?.dismiss()
         refreshDevices()
+        if (selected == null && !busy) refreshCapability()
         sheet = AppActionSheet.showCustom(game) {
             UsbDevicePanel(
                 devices = devices,
@@ -107,6 +115,10 @@ class UsbForwardingController(
                 busy = busy,
                 message = message,
                 hostName = game.pcName ?: host,
+                forwardingEnabled = enabled,
+                canShare = enabled && capability?.available == true,
+                onEnabledChange = ::changeEnabled,
+                onRetry = ::refreshCapability,
                 onShare = ::request,
                 onRelease = { release() }
             )
@@ -114,12 +126,48 @@ class UsbForwardingController(
         return sheet
     }
 
+    private fun changeEnabled(value: Boolean) {
+        if (closed || enabled == value) return
+        enabled = value
+        preferences.edit().putBoolean(preferenceKey, value).apply()
+        capability = null
+        if (value) refreshCapability() else release(R.string.usb_forward_disabled)
+    }
+
+    private fun refreshCapability() {
+        if (closed || busy || selected != null) return
+        capability = null
+        if (!enabled) { message = R.string.usb_forward_disabled; return }
+        if (!UsbIpBackend.isSupported()) { message = R.string.usb_forward_unsupported; return }
+        val operation = ++generation
+        busy = true
+        message = R.string.usb_forward_checking
+        enqueue {
+            val result = runCatching {
+                (httpProvider() ?: error("No active connection")).getUsbForwardingCapability()
+            }
+            game.runOnUiThread {
+                if (closed || generation != operation || !enabled) return@runOnUiThread
+                busy = false
+                capability = result.getOrNull()
+                message = when {
+                    result.exceptionOrNull() is FileNotFoundException -> R.string.usb_forward_host_update
+                    result.isFailure -> R.string.usb_forward_host_error
+                    capability?.available == true -> R.string.usb_forward_choose
+                    capability?.reason == "disabled" -> R.string.usb_forward_host_disabled
+                    else -> R.string.usb_forward_host_unavailable
+                }
+            }
+        }
+    }
+
     private fun refreshDevices() {
         devices = manager.deviceList.values.sortedBy { it.deviceName }
     }
 
     private fun request(device: UsbDevice) {
-        if (closed || busy || selected != null || !game.connected) return
+        if (closed || busy || selected != null || !game.connected ||
+            !enabled || capability?.available != true) return
         LimeLog.info("USB forwarding selected ${device.deviceName} (${device.vendorId}:${device.productId})")
         // A controller/HCI adapter can already own custom-driver threads. Their
         // per-device handoff is separate from the validated Android HID path.
@@ -153,6 +201,7 @@ class UsbForwardingController(
     // The app enables core library desugaring, which provides CompletableFuture
     // callbacks on API 22 and 23 even though the framework added them in API 24.
     private fun export(device: UsbDevice, operation: Long) {
+        val credentials = capability ?: return
         enqueue {
             try {
                 // Activity recreation publishes its cleanup before a replacement
@@ -166,7 +215,7 @@ class UsbForwardingController(
                     val transport = UsbReverseTunnel()
                     tunnel = transport
                     try {
-                        transport.start(host, port, token, handle, crypto.getClientCertificate(),
+                        transport.start(host, credentials.port, credentials.token, handle, crypto.getClientCertificate(),
                             crypto.getClientPrivateKey(), pinned).whenComplete { _, error ->
                             game.runOnUiThread {
                                 if (!closed && generation == operation) {

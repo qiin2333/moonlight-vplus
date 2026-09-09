@@ -1,4 +1,16 @@
 <resources>
+    <string name="usb_forward_enable">USB forwarding (experimental)</string>
+    <string name="usb_forward_enable_description">Enable for this computer only. Devices are shared only after you select them.</string>
+    <string name="usb_forward_on">On</string>
+    <string name="usb_forward_off">Off</string>
+    <string name="usb_forward_disabled">USB forwarding is off for this computer.</string>
+    <string name="usb_forward_unsupported">USB forwarding currently requires Android 9 or later on ARM64.</string>
+    <string name="usb_forward_checking">Checking paired host capability…</string>
+    <string name="usb_forward_host_update">This host does not support USB setup. Update Sunshine.</string>
+    <string name="usb_forward_host_error">Cannot verify the paired host. Check the connection and pairing, then retry.</string>
+    <string name="usb_forward_host_disabled">Enable USB forwarding in Sunshine Input settings, save and restart Sunshine.</string>
+    <string name="usb_forward_host_unavailable">Host USB forwarding is unavailable. Check its USB/IP driver, port and service.</string>
+    <string name="usb_forward_retry">Check host again</string>
     <string name="usb_forward_title">USB devices</string>
     <string name="usb_forward_choose">Choose a device to forward to this host.</string>
     <string name="usb_forward_release">Stop sharing</string>
@@ -8,7 +20,7 @@
     <string name="usb_forward_releasing">Releasing USB device…</string>
     <string name="usb_forward_failed">USB forwarding stopped. Check the host and connection.</string>
     <string name="usb_forward_local_owner">This device needs a local-driver handoff or cannot be uniquely identified. It is not available for forwarding yet.</string>
-    <string name="usb_forward_unconfigured">USB forwarding is not configured for this build or the host is not paired.</string>
+    <string name="usb_forward_unconfigured">Pair with this host before using USB forwarding.</string>
     <string name="usb_forward_target">Share with: %1$s</string>
     <string name="usb_forward_usage">Shared devices are reserved for the computer. Ending the stream returns them to this device. One USB device can be shared at a time.</string>
     <string name="usb_forward_empty">No USB devices found. Connect a device directly or through a USB hub.</string>

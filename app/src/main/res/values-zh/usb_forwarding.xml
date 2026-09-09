@@ -1,4 +1,16 @@
 <resources>
+    <string name="usb_forward_enable">USB 设备转发（实验性）</string>
+    <string name="usb_forward_enable_description">仅对此主机启用。选中设备并授权后才会共享。</string>
+    <string name="usb_forward_on">已开启</string>
+    <string name="usb_forward_off">已关闭</string>
+    <string name="usb_forward_disabled">已关闭对此主机的 USB 转发。</string>
+    <string name="usb_forward_unsupported">USB 转发目前需要 Android 9 或更高版本及 ARM64 设备。</string>
+    <string name="usb_forward_checking">正在检查已配对主机…</string>
+    <string name="usb_forward_host_update">主机不支持运行时 USB 配置，请更新 Sunshine。</string>
+    <string name="usb_forward_host_error">无法验证已配对主机，请检查连接和配对后重试。</string>
+    <string name="usb_forward_host_disabled">请在 Sunshine 输入设置中启用 USB 转发，保存并重启 Sunshine。</string>
+    <string name="usb_forward_host_unavailable">主机 USB 转发暂不可用，请检查 USB/IP 驱动、端口及服务。</string>
+    <string name="usb_forward_retry">重新检查主机</string>
     <string name="usb_forward_title">USB 外设</string>
     <string name="usb_forward_choose">选择要转发到当前主机的设备。</string>
     <string name="usb_forward_release">停止共享</string>
@@ -8,7 +20,7 @@
     <string name="usb_forward_releasing">正在释放 USB 设备…</string>
     <string name="usb_forward_failed">USB 转发已停止，请检查主机和网络。</string>
     <string name="usb_forward_local_owner">该设备需要本地驱动交接，或暂时无法准确区分，目前不能转发。</string>
-    <string name="usb_forward_unconfigured">当前构建尚未配置 USB 转发，或主机未完成配对。</string>
+    <string name="usb_forward_unconfigured">请先与此主机完成配对，再使用 USB 转发。</string>
     <string name="usb_forward_target">共享到：%1$s</string>
     <string name="usb_forward_usage">共享期间设备交由电脑使用，结束串流后自动恢复本机使用。一次可共享一个 USB 设备。</string>
     <string name="usb_forward_empty">尚未发现 USB 设备，请直接连接外设或通过 USB 集线器接入。</string>

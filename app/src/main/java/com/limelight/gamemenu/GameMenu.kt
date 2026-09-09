@@ -1151,7 +1151,7 @@ class GameMenu(
                 gyro = gyroCardController.snapshot(),
                 touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
-                usbForwardingEnabled = game.isUsbForwardingEnabled(),
+                usbForwardingEnabled = true, // Keep setup and unavailable reasons discoverable.
                 pageLayout = pageLayout
             )
         )

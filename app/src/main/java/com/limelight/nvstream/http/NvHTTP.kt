@@ -297,6 +297,34 @@ class NvHTTP(
     }
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
+    fun getUsbForwardingCapability(): UsbForwardingCapability {
+        val pinned = checkNotNull(serverCert) { "USB forwarding requires a paired host" }
+        // This credential request must not inherit legacy route encoding,
+        // redirects, CA-only trust, response logging, or an unbounded retry.
+        val url = getHttpsUrl(true).newBuilder().addPathSegments("api/v1/usb-forwarding").build()
+        val client = httpClientShortConnectTimeout.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .callTimeout(5, TimeUnit.SECONDS)
+            .hostnameVerifier { _, session -> session.peerCertificates.firstOrNull() == pinned }
+            .build()
+        return client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+            if (response.code == 404) throw FileNotFoundException("USB capability endpoint unavailable")
+            if (response.code != 200) throw HostHttpResponseException(response.code, "USB capability request failed")
+            val buffer = ByteArray(4097)
+            val input = response.body.byteStream()
+            var size = 0
+            while (size < buffer.size) {
+                val count = input.read(buffer, size, buffer.size - size)
+                if (count < 0) break
+                size += count
+            }
+            require(size <= 4096) { "USB capability response too large" }
+            UsbForwardingCapability.parse(String(buffer, 0, size, Charsets.UTF_8))
+        }
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun getServerInfo(likelyOnline: Boolean): String {
         val client = if (likelyOnline) httpClientLongConnectTimeout else httpClientShortConnectTimeout
         lastServerInfoTrustedByCert = false
