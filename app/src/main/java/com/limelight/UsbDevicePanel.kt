@@ -3,7 +3,7 @@ package com.limelight
 import android.hardware.usb.UsbDevice
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,14 +31,14 @@ internal fun UsbDevicePanel(
     busy: Boolean,
     message: Int,
     hostName: String,
+    forwardingEnabled: Boolean,
+    canShare: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onRetry: () -> Unit,
     onShare: (UsbDevice) -> Unit,
     onRelease: () -> Unit
 ) {
     val visibleDevices = (devices + listOfNotNull(selected)).distinctBy { it.deviceName }
-    val initialFocusIndex = visibleDevices.indexOfFirst { device ->
-        val active = device.deviceName == selected?.deviceName
-        if (active) message != R.string.usb_forward_releasing else !busy && selected == null
-    }
     val initialFocusRequester = remember { FocusRequester() }
     val initialFocusPlaced = remember { mutableStateOf(false) }
     val controllerFocusMode = AppActionSheet.isControllerFocusMode()
@@ -46,7 +46,7 @@ internal fun UsbDevicePanel(
     val maxListHeight = with(LocalDensity.current) {
         (LocalWindowInfo.current.containerSize.height * 0.75f).toDp()
     }
-    LaunchedEffect(controllerFocusMode, initialFocusPlaced.value, visibleDevices, selected, busy) {
+    LaunchedEffect(controllerFocusMode, initialFocusPlaced.value) {
         if (controllerFocusMode && initialFocusPlaced.value) {
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
@@ -59,6 +59,24 @@ internal fun UsbDevicePanel(
             subtitle = stringResource(R.string.usb_forward_target, hostName),
             activeStatus = selected != null
         )
+        AppActionSheet.ActionSheetRow(
+            action = AppActionSheet.Action(
+                id = -1,
+                title = stringResource(R.string.usb_forward_enable),
+                description = stringResource(R.string.usb_forward_enable_description),
+                enabled = !busy || forwardingEnabled,
+                trailingText = stringResource(if (forwardingEnabled) R.string.usb_forward_on else R.string.usb_forward_off),
+            ),
+            onAction = { onEnabledChange(!forwardingEnabled) },
+            modifier = Modifier.focusRequester(initialFocusRequester)
+                .onGloballyPositioned { initialFocusPlaced.value = true },
+        )
+        if (forwardingEnabled && !canShare && !busy) {
+            AppActionSheet.ActionSheetRow(
+                action = AppActionSheet.Action(id = -2, title = stringResource(R.string.usb_forward_retry)),
+                onAction = { onRetry() },
+            )
+        }
         Text(
             text = stringResource(R.string.usb_forward_usage),
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
@@ -88,10 +106,10 @@ internal fun UsbDevicePanel(
                     )
                 }
             }
-            itemsIndexed(visibleDevices, key = { _, device -> device.deviceName }) { index, device ->
+            items(visibleDevices, key = { device -> device.deviceName }) { device ->
                 val active = device.deviceName == selected?.deviceName
                 val enabled = if (active) message != R.string.usb_forward_releasing
-                    else !busy && selected == null
+                    else canShare && !busy && selected == null
                 AppActionSheet.ActionSheetRow(
                     action = AppActionSheet.Action(
                         id = device.deviceId,
@@ -106,11 +124,6 @@ internal fun UsbDevicePanel(
                         )
                     ),
                     onAction = { if (active) onRelease() else onShare(device) },
-                    modifier = if (index == initialFocusIndex) {
-                        Modifier
-                            .focusRequester(initialFocusRequester)
-                            .onGloballyPositioned { initialFocusPlaced.value = true }
-                    } else Modifier
                 )
             }
         }
