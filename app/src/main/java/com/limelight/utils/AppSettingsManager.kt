@@ -235,6 +235,8 @@ class AppSettingsManager(private val context: Context) {
             put("gyroInvertXAxis", settings.gyroInvertXAxis)
             put("gyroInvertYAxis", settings.gyroInvertYAxis)
             put("gyroActivationKeyCode", settings.gyroActivationKeyCode)
+            put("gyroToRightStick", settings.gyroToRightStick)
+            put("gyroToMouse", settings.gyroToMouse)
             put("showBitrateCard", settings.showBitrateCard)
             put("showAudioHapticsCard", settings.showAudioHapticsCard)
             put("showGyroCard", settings.showGyroCard)
@@ -292,6 +294,9 @@ class AppSettingsManager(private val context: Context) {
         settings.gyroInvertXAxis = settingsJson.optBoolean("gyroInvertXAxis", false)
         settings.gyroInvertYAxis = settingsJson.optBoolean("gyroInvertYAxis", false)
         settings.gyroActivationKeyCode = settingsJson.optInt("gyroActivationKeyCode", KeyEvent.KEYCODE_BUTTON_L2)
+        settings.gyroToMouse = settingsJson.optBoolean("gyroToMouse", false)
+        settings.gyroToRightStick = !settings.gyroToMouse &&
+            settingsJson.optBoolean("gyroToRightStick", false)
         settings.showBitrateCard = settingsJson.optBoolean("showBitrateCard", true)
         settings.showAudioHapticsCard = settingsJson.optBoolean("showAudioHapticsCard", false)
         settings.showGyroCard = settingsJson.optBoolean("showGyroCard", true)

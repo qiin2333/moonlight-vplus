@@ -917,7 +917,7 @@ class ControllerHandler(
         LimeLog.info("Assigned as controller " + context.controllerNumber)
         context.assignedControllerNumber = true
         if (context.controllerNumber.toInt() == 0) {
-            if ((prefConfig.gyroToMouse || prefConfig.gyroToRightStick) &&
+            if (gyroManager.isAssistantEnabled &&
                 defaultContext.gyroListener != null
             ) {
                 gyroManager.registerDeviceGyroForDefaultContext(false)
@@ -1987,12 +1987,10 @@ class ControllerHandler(
 
         // Handle gyro hold activation edge detection for analog triggers
         val wasHold = context.gyroHoldActive
-        if (prefConfig.gyroToRightStick || prefConfig.gyroToMouse) {
-            context.gyroHoldActive = gyroManager.computeAnalogActivation(lt, rt)
-        }
+        context.gyroHoldActive = gyroManager.computeHoldFromAnalog(lt, rt)
 
         // Apply gyro fusion to right stick if needed
-        if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+        if (gyroManager.isRightStickMode && context.gyroHoldActive) {
             // 融合策略：按轴叠加并限幅
             val gx = context.gyroRightStickX
             val gy = context.gyroRightStickY
@@ -2711,15 +2709,14 @@ class ControllerHandler(
         val wasHold = defaultContext.gyroHoldActive
         val leftTriggerFloat = (leftTrigger.toInt() and 0xFF) / 255.0f
         val rightTriggerFloat = (rightTrigger.toInt() and 0xFF) / 255.0f
-        if (prefConfig.gyroToRightStick || prefConfig.gyroToMouse) {
-            defaultContext.gyroHoldActive = gyroManager.computeAnalogActivation(leftTriggerFloat, rightTriggerFloat)
-        }
+        defaultContext.gyroHoldActive =
+            gyroManager.computeHoldFromAnalog(leftTriggerFloat, rightTriggerFloat)
 
         if (wasHold && !defaultContext.gyroHoldActive) {
             gyroManager.onGyroHoldDeactivatedInput(defaultContext)
         }
 
-        if (!prefConfig.gyroToRightStick || !defaultContext.gyroHoldActive) {
+        if (!gyroManager.isRightStickMode || !defaultContext.gyroHoldActive) {
             defaultContext.rightStickX = rightStickX
             defaultContext.rightStickY = rightStickY
         }
@@ -2998,7 +2995,7 @@ class ControllerHandler(
 
         // Gyro hold activation via analog LT/RT thresholds when mapped to L2/R2
         val wasHold = context.gyroHoldActive
-        context.gyroHoldActive = prefConfig.gyroToRightStick && gyroManager.computeAnalogActivation(leftTrigger, rightTrigger)
+        context.gyroHoldActive = gyroManager.computeHoldFromAnalog(leftTrigger, rightTrigger)
         if (wasHold && !context.gyroHoldActive) {
             // Ensure we immediately stop any residual gyro influence
             gyroManager.onGyroHoldDeactivated(context)
@@ -3146,12 +3143,12 @@ class ControllerHandler(
                 return
             }
 
-            if (prefConfig.gyroToMouse && context.gyroHoldActive) {
+            if (gyroManager.isMouseMode && context.gyroHoldActive) {
                 // x=pitch(deg/s), y=roll, z=yaw → 横屏下 z→mouseX, x→mouseY，转回 rad/s
                 gyroManager.applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime())
                 return
             }
-            if (prefConfig.gyroToRightStick && context.gyroHoldActive) {
+            if (gyroManager.isRightStickMode && context.gyroHoldActive) {
                 // x=pitch, y=roll, z=yaw — pass yaw as X and pitch as Y to match
                 // the same axis convention used in the device sensor listener (gz, gx)
                 gyroManager.applyGyroToRightStick(context.controllerNumber, z, x)
@@ -3260,6 +3257,15 @@ class ControllerHandler(
         reportRateHz: Short,
         isHostRequest: Boolean = true
     ) {
+        // Reached from the host control-stream thread, the battery/sensor background
+        // thread and the main thread. Listener bookkeeping below is main-thread owned.
+        if (Looper.myLooper() !== mainThreadHandler.looper) {
+            mainThreadHandler.post {
+                handleSetMotionEventState(controllerNumber, motionType, reportRateHz, isHostRequest)
+            }
+            return
+        }
+
         if (stopped) {
             return
         }
@@ -3281,79 +3287,110 @@ class ControllerHandler(
             requestedReportRateHz
         }
 
-        for (i in 0 until inputDeviceContexts.size()) {
-            val deviceContext = inputDeviceContexts.valueAt(i)
+        val sensorType = if (motionType == MoonBridge.LI_MOTION_TYPE_ACCEL) {
+            Sensor.TYPE_ACCELEROMETER
+        } else {
+            Sensor.TYPE_GYROSCOPE
+        }
 
-            if (deviceContext.controllerNumber == controllerNumber) {
-                // Store the desired report rate even if we don't have sensors. In some cases,
-                // input devices can be reconfigured at runtime which results in a change where
-                // sensors disappear and reappear. By storing the desired report rate, we can
-                // reapply the desired motion sensor configuration after they reappear.
-                when (motionType) {
-                    MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = effectiveReportRateHz
-                    MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = effectiveReportRateHz
-                }
+        // A gamepad often enumerates as several InputDevices sharing one controller number.
+        // Which device ID sorts first changes between connections, so select the context that
+        // actually owns the sensor rather than whichever one happens to come first.
+        val matchingContexts = (0 until inputDeviceContexts.size())
+            .map { inputDeviceContexts.valueAt(it) }
+            .filter { it.controllerNumber == controllerNumber }
+        if (matchingContexts.isEmpty()) {
+            return
+        }
 
-                if (fallbackHandled) {
-                    break
-                }
+        // Store the desired report rate even if we don't have sensors. In some cases,
+        // input devices can be reconfigured at runtime which results in a change where
+        // sensors disappear and reappear. By storing the desired report rate, we can
+        // reapply the desired motion sensor configuration after they reappear.
+        for (deviceContext in matchingContexts) {
+            when (motionType) {
+                MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = effectiveReportRateHz
+                MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = effectiveReportRateHz
+            }
+        }
 
-                backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
+        if (fallbackHandled) {
+            return
+        }
 
-                val sm = deviceContext.sensorManager ?: continue
+        val target = if (effectiveReportRateHz.toInt() == 0) {
+            null
+        } else {
+            matchingContexts.firstOrNull { it.sensorManager?.getDefaultSensor(sensorType) != null }
+        }
 
-                when (motionType) {
-                    MoonBridge.LI_MOTION_TYPE_ACCEL -> {
-                        if (deviceContext.accelListener != null) {
-                            sm.unregisterListener(deviceContext.accelListener)
-                            deviceContext.accelListener = null
-                        }
+        // Exactly one context may hold a listener per motion type, otherwise siblings
+        // keep unregistering each other's listener.
+        for (deviceContext in matchingContexts) {
+            if (deviceContext === target) {
+                continue
+            }
+            backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
+            unregisterMotionListener(deviceContext, motionType)
+        }
 
-                        // Enable the accelerometer if requested
-                        val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        if (effectiveReportRateHz.toInt() != 0 && accelSensor != null) {
-                            deviceContext.accelListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
-                            sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / effectiveReportRateHz)
-                        }
-                    }
-                    MoonBridge.LI_MOTION_TYPE_GYRO -> {
-                        if (deviceContext.gyroListener != null) {
-                            sm.unregisterListener(deviceContext.gyroListener)
-                            deviceContext.gyroListener = null
-                        }
+        if (target == null) {
+            return
+        }
 
-                        // Enable the gyroscope if requested
-                        val gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                        if (effectiveReportRateHz.toInt() != 0 && gyroSensor != null) {
-                            if (controllerNumber.toInt() == 0) {
-                                deviceContext.controllerGyroRoutingParticipated = true
-                            }
-                            deviceContext.gyroListener = gyroManager.createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
-                            sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / effectiveReportRateHz)
-                        }
-                    }
-                }
-                break
+        backgroundThreadHandler.removeCallbacks(target.enableSensorRunnable)
+        unregisterMotionListener(target, motionType)
+
+        val sm = target.sensorManager ?: return
+        val sensor = sm.getDefaultSensor(sensorType) ?: return
+        val samplingPeriodUs = 1000000 / effectiveReportRateHz
+        val listener = gyroManager.createSensorListener(
+            controllerNumber, motionType, sm === deviceSensorManager
+        )
+
+        if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && controllerNumber.toInt() == 0) {
+            target.controllerGyroRoutingParticipated = true
+        }
+
+        if (sm.registerListener(listener, sensor, samplingPeriodUs)) {
+            when (motionType) {
+                MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
+                MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
+            }
+        } else if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+            // A refused registration never delivers samples, so the phantom-gyro
+            // liveness detector can't rescue this one.
+            LimeLog.warning("Failed to register gyroscope for controller $controllerNumber")
+            gyroManager.onControllerGyroRegistrationFailed(controllerNumber)
+        } else {
+            LimeLog.warning("Failed to register accelerometer for controller $controllerNumber")
+        }
+    }
+
+    private fun unregisterMotionListener(context: InputDeviceContext, motionType: Byte) {
+        val sm = context.sensorManager ?: return
+        when (motionType) {
+            MoonBridge.LI_MOTION_TYPE_ACCEL -> context.accelListener?.let {
+                sm.unregisterListener(it)
+                context.accelListener = null
+            }
+            MoonBridge.LI_MOTION_TYPE_GYRO -> context.gyroListener?.let {
+                sm.unregisterListener(it)
+                context.gyroListener = null
             }
         }
     }
 
     // ========== Delegation to Managers ==========
 
-    fun setVirtualControllerGyroCallbacks(suspend: Runnable?, resume: Runnable?) =
-        gyroManager.setVirtualControllerGyroCallbacks(suspend, resume)
+    fun setGyroAssistantMode(mode: GyroAssistantMode) =
+        gyroManager.setAssistantMode(mode)
 
-    fun setGyroToRightStickEnabled(enabled: Boolean) =
-        gyroManager.setGyroToRightStickEnabled(enabled)
-
-    fun setGyroToMouseEnabled(enabled: Boolean) =
-        gyroManager.setGyroToMouseEnabled(enabled)
+    val gyroAssistantMode: GyroAssistantMode
+        get() = gyroManager.assistantMode
 
     fun onSensorsReenabled() =
         gyroManager.onSensorsReenabled()
-
-    fun reportVirtualControllerGyro(gx: Float, gy: Float, gz: Float) =
-        gyroManager.reportVirtualControllerGyro(gx, gy, gz)
 
     fun hasAnyController(): Boolean =
         gyroManager.hasAnyController()
