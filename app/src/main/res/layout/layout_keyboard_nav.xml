@@ -7,7 +7,7 @@
     android:orientation="vertical"
     android:padding="4dp">
 
-    <HorizontalScrollView
+    <com.limelight.binding.input.advance_setting.CrownKeyHorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="36dp"
         android:scrollbars="none">
@@ -34,9 +34,9 @@
             <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="46dp" android:layout_height="32dp" android:tag="k141" android:text="F11" android:textSize="12sp" />
             <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="46dp" android:layout_height="32dp" android:tag="k142" android:text="F12" android:textSize="12sp" />
         </LinearLayout>
-    </HorizontalScrollView>
+    </com.limelight.binding.input.advance_setting.CrownKeyHorizontalScrollView>
 
-    <HorizontalScrollView
+    <com.limelight.binding.input.advance_setting.CrownKeyHorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -109,5 +109,5 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </HorizontalScrollView>
+    </com.limelight.binding.input.advance_setting.CrownKeyHorizontalScrollView>
 </LinearLayout>

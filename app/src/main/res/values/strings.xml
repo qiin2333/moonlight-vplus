@@ -514,15 +514,15 @@
     <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
     <string name="suffix_fixed_x_velocity">pixels</string>
 
-    <string name="category_on_screen_controls_settings">On-screen controls</string>
+    <string name="category_on_screen_controls_settings">On-screen virtual gamepad buttons</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>
     <string name="summary_checkbox_vibrate_osc">Vibrates your device to emulate rumble for the on-screen controls</string>
     <string name="title_only_l3r3">Only show L3 and R3</string>
     <string name="summary_only_l3r3">Hide all virtual buttons except L3 and R3</string>
-    <string name="title_show_guide_button">Show Guide Button</string>
-    <string name="summary_show_guide_button">Show the guide button on screen</string>
+    <string name="title_show_guide_button">Show controller Guide/Home button</string>
+    <string name="summary_show_guide_button">Show the native controller Guide/Home button on the virtual gamepad. This is not the Win+G keyboard shortcut.</string>
     <string name="title_reset_osc">Clear saved on-screen controls layout</string>
     <string name="summary_reset_osc">Resets all on-screen controls to their default size and position</string>
     <string name="dialog_title_reset_osc">Reset Layout</string>
@@ -1164,6 +1164,19 @@
     <string name="keyboard_picker_num_description">Numeric keypad</string>
     <string name="keyboard_key_right_win" translatable="false">R-Win</string>
     <string name="keyboard_key_menu" translatable="false">Menu</string>
+    <string name="crown_key_mouse_left_short">L</string>
+    <string name="crown_key_mouse_middle_short">M</string>
+    <string name="crown_key_mouse_right_short">R</string>
+    <string name="crown_key_scroll_up_short">WU</string>
+    <string name="crown_key_scroll_down_short">WD</string>
+    <string name="crown_key_dpad_up_short">Up</string>
+    <string name="crown_key_dpad_down_short">Down</string>
+    <string name="crown_key_dpad_left_short">Left</string>
+    <string name="crown_key_dpad_right_short">Right</string>
+    <string name="crown_key_start_short">Start</string>
+    <string name="crown_key_guide_short">Guide</string>
+    <string name="crown_key_back_short">Back</string>
+    <string name="crown_key_guide_description">Native controller Guide/Home button</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select Custom Keys to Delete</string>

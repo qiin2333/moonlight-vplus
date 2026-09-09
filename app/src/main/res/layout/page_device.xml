@@ -181,7 +181,7 @@
                                 android:layout_height="150dp"
                                 android:gravity="center"
                                 android:tag="m1"
-                                android:text="ML"
+                                android:text="@string/crown_key_mouse_left_short"
                                 android:background="@drawable/mouse_left"/>
                             <LinearLayout
                                 android:orientation="vertical"
@@ -191,19 +191,19 @@
                                     android:layout_width="40dp"
                                     android:layout_height="50dp"
                                     android:tag="SU"
-                                    android:text="SU"
+                                    android:text="@string/crown_key_scroll_up_short"
                                     style="@style/KeyboardKeyStyle"/>
                                 <TextView
                                     android:layout_width="40dp"
                                     android:layout_height="50dp"
                                     android:tag="m2"
-                                    android:text="MM"
+                                    android:text="@string/crown_key_mouse_middle_short"
                                     style="@style/KeyboardKeyStyle"/>
                                 <TextView
                                     android:layout_width="40dp"
                                     android:layout_height="50dp"
                                     android:tag="SD"
-                                    android:text="SD"
+                                    android:text="@string/crown_key_scroll_down_short"
                                     style="@style/KeyboardKeyStyle"/>
                             </LinearLayout>
                             <TextView
@@ -211,7 +211,7 @@
                                 android:layout_height="150dp"
                                 android:gravity="center"
                                 android:tag="m3"
-                                android:text="MR"
+                                android:text="@string/crown_key_mouse_right_short"
                                 android:background="@drawable/mouse_right"/>
                         </LinearLayout>
                         <View
@@ -289,7 +289,7 @@
                                         android:layout_width="40dp"
                                         android:layout_height="40dp"
                                         android:tag="g1"
-                                        android:text="up"
+                                        android:text="@string/crown_key_dpad_up_short"
                                         style="@style/KeyboardKeyStyle"/>
                                     <View
                                         android:layout_width="40dp"
@@ -303,7 +303,7 @@
                                         android:layout_width="40dp"
                                         android:layout_height="40dp"
                                         android:tag="g4"
-                                        android:text="left"
+                                        android:text="@string/crown_key_dpad_left_short"
                                         style="@style/KeyboardKeyStyle"/>
                                     <View
                                         android:layout_width="40dp"
@@ -312,7 +312,7 @@
                                         android:layout_width="40dp"
                                         android:layout_height="40dp"
                                         android:tag="g8"
-                                        android:text="right"
+                                        android:text="@string/crown_key_dpad_right_short"
                                         style="@style/KeyboardKeyStyle"/>
                                 </LinearLayout>
                                 <LinearLayout
@@ -326,7 +326,7 @@
                                         android:layout_width="40dp"
                                         android:layout_height="40dp"
                                         android:tag="g2"
-                                        android:text="down"
+                                        android:text="@string/crown_key_dpad_down_short"
                                         style="@style/KeyboardKeyStyle"/>
                                     <View
                                         android:layout_width="40dp"
@@ -351,7 +351,7 @@
                                     android:layout_height="40dp"
                                     android:gravity="center"
                                     android:tag="g32768"
-                                    android:text="GY"
+                                    android:text="Y"
                                     android:background="@drawable/circle_border"/>
                                 <View
                                     android:layout_width="40dp"
@@ -366,7 +366,7 @@
                                     android:layout_height="40dp"
                                     android:gravity="center"
                                     android:tag="g16384"
-                                    android:text="GX"
+                                    android:text="X"
                                     android:background="@drawable/circle_border"/>
                                 <View
                                     android:layout_width="40dp"
@@ -376,7 +376,7 @@
                                     android:layout_height="40dp"
                                     android:gravity="center"
                                     android:tag="g8192"
-                                    android:text="GB"
+                                    android:text="B"
                                     android:background="@drawable/circle_border"/>
                             </LinearLayout>
                             <LinearLayout
@@ -391,7 +391,7 @@
                                     android:layout_height="40dp"
                                     android:gravity="center"
                                     android:tag="g4096"
-                                    android:text="GA"
+                                    android:text="A"
                                     android:background="@drawable/circle_border"/>
                                 <View
                                     android:layout_width="40dp"
@@ -410,28 +410,36 @@
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g64"
-                            android:text="LSB"
+                            android:text="L3"
                             android:background="@drawable/circle_border"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g16"
-                            android:text="start"
+                            android:text="@string/crown_key_start_short"
+                            android:background="@drawable/circle_border"/>
+                        <TextView
+                            android:layout_width="60dp"
+                            android:layout_height="40dp"
+                            android:gravity="center"
+                            android:tag="g1024"
+                            android:text="@string/crown_key_guide_short"
+                            android:contentDescription="@string/crown_key_guide_description"
                             android:background="@drawable/circle_border"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g32"
-                            android:text="back"
+                            android:text="@string/crown_key_back_short"
                             android:background="@drawable/circle_border"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g128"
-                            android:text="RSB"
+                            android:text="R3"
                             android:background="@drawable/circle_border"/>
                     </LinearLayout>
                 </LinearLayout>
