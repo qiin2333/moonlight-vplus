@@ -298,17 +298,26 @@ class NvHTTP(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun getUsbForwardingCapability(): UsbForwardingCapability {
+        val deadline = HttpRequestDeadline(5, TimeUnit.SECONDS)
         val pinned = checkNotNull(serverCert) { "USB forwarding requires a paired host" }
         // This credential request must not inherit legacy route encoding,
         // redirects, CA-only trust, response logging, or an unbounded retry.
-        val url = getHttpsUrl(true).newBuilder().addPathSegments("api/v1/usb-forwarding").build()
         val client = httpClientShortConnectTimeout.newBuilder()
             .followRedirects(false)
             .followSslRedirects(false)
             .callTimeout(5, TimeUnit.SECONDS)
             .hostnameVerifier { _, session -> session.peerCertificates.firstOrNull() == pinned }
             .build()
-        return client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+        if (httpsPort == 0) {
+            val discoveryUrl = getCompleteUrl(baseUrlHttp, "serverinfo", null)
+            httpsPort = deadline.execute(client.newCall(Request.Builder().url(discoveryUrl).get().build())).use { response ->
+                if (!response.isSuccessful) throw HostHttpResponseException(response.code, "HTTPS port discovery failed")
+                getHttpsPort(response.body.string())
+            }
+        }
+        val url = HttpUrl.Builder().scheme("https").host(baseUrlHttp.host).port(httpsPort)
+            .addPathSegments("api/v1/usb-forwarding").build()
+        return deadline.execute(client.newCall(Request.Builder().url(url).get().build())).use { response ->
             if (response.code == 404) throw FileNotFoundException("USB capability endpoint unavailable")
             if (response.code != 200) throw HostHttpResponseException(response.code, "USB capability request failed")
             val buffer = ByteArray(4097)
