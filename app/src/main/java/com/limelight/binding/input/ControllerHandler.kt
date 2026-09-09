@@ -917,18 +917,10 @@ class ControllerHandler(
         LimeLog.info("Assigned as controller " + context.controllerNumber)
         context.assignedControllerNumber = true
         if (context.controllerNumber.toInt() == 0) {
-            if (gyroManager.isAssistantEnabled &&
-                defaultContext.gyroListener != null
-            ) {
-                gyroManager.registerDeviceGyroForDefaultContext(false)
-                LimeLog.info("Physical controller connected, released defaultContext gyro")
-            }
-            gyroManager.onControllerSourceChanged(context.controllerNumber)
-            gyroManager.onSensorsReenabled()
+            gyroManager.onController0OwnerChanged(releaseDeviceGyro = true)
         } else if (wasUnassignedController0GyroSource) {
             context.controllerGyroRoutingParticipated = false
-            gyroManager.onControllerSourceChanged(0.toShort())
-            gyroManager.onSensorsReenabled()
+            gyroManager.onController0OwnerChanged(releaseDeviceGyro = false)
         }
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
@@ -3296,9 +3288,14 @@ class ControllerHandler(
         // A gamepad often enumerates as several InputDevices sharing one controller number.
         // Which device ID sorts first changes between connections, so select the context that
         // actually owns the sensor rather than whichever one happens to come first.
+        // Unassigned contexts still report controller number 0, so they must be excluded there.
         val matchingContexts = (0 until inputDeviceContexts.size())
             .map { inputDeviceContexts.valueAt(it) }
-            .filter { it.controllerNumber == controllerNumber }
+            .filter {
+                it.controllerNumber == controllerNumber &&
+                    (controllerNumber.toInt() != 0 ||
+                        it.assignedControllerNumber || it.controllerGyroRoutingParticipated)
+            }
         if (matchingContexts.isEmpty()) {
             return
         }

@@ -3,6 +3,7 @@ package com.limelight.binding.input
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.Surface
 
@@ -184,6 +185,12 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         get() = assistantMode == GyroAssistantMode.MOUSE
 
     fun setAssistantMode(mode: GyroAssistantMode) {
+        val previousMode = assistantMode
+        if (previousMode == GyroAssistantMode.RIGHT_STICK && mode != previousMode) {
+            // Otherwise the host keeps the last fused deflection until some other axis event.
+            flushRightStickFusion()
+        }
+
         beginNewSourceLifecycle()
         // Storing the mode as two flags keeps the persisted format, but only here.
         handler.prefConfig.gyroToMouse = mode == GyroAssistantMode.MOUSE
@@ -199,6 +206,21 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             clearAllGyroStates()
         } else {
             recomputeGyroHoldForAllContexts()
+        }
+    }
+
+    /** Publish physical-only right-stick state for every context that was fusing gyro. */
+    private fun flushRightStickFusion() {
+        for (c in allGyroContexts()) {
+            val wasFusing = c.gyroHoldActive
+            c.gyroRightStickX = 0
+            c.gyroRightStickY = 0
+            c.gyroHoldActive = false
+            if (wasFusing) {
+                c.rightStickX = c.physRightStickX
+                c.rightStickY = c.physRightStickY
+                handler.sendControllerInputPacket(c)
+            }
         }
     }
 
@@ -434,18 +456,46 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun isUsingDeviceGyroFallback(controllerNumber: Short): Boolean =
         controllerNumber.toInt() == 0 && activeSource == GyroSource.DEVICE
 
+    /** Gyro state is main-thread owned, but USB driver threads reach these entry points. */
+    private fun runOnMainThread(block: () -> Unit) {
+        if (Looper.myLooper() === handler.mainThreadHandler.looper) {
+            block()
+        } else {
+            handler.mainThreadHandler.post(block)
+        }
+    }
+
+    /**
+     * Controller 0's owner changed, so the source must be re-resolved. Reachable from a USB
+     * driver thread via reportControllerState -> assignControllerNumberIfNeeded.
+     */
+    fun onController0OwnerChanged(releaseDeviceGyro: Boolean) {
+        runOnMainThread {
+            if (handler.stopped) return@runOnMainThread
+            if (releaseDeviceGyro && isAssistantEnabled &&
+                handler.defaultContext.gyroListener != null
+            ) {
+                registerDeviceGyroForDefaultContext(false)
+                LimeLog.info("Physical controller connected, released defaultContext gyro")
+            }
+            onControllerSourceChanged(0.toShort())
+            onSensorsReenabled()
+        }
+    }
+
     fun onControllerSourceChanged(controllerNumber: Short) {
         if (controllerNumber.toInt() != 0) return
+        runOnMainThread {
+            // Each sibling InputDevice of one gamepad reaches this, so rejections may only be
+            // dropped when the rejected device itself is gone - not on any source notification.
+            pruneRejectedSources()
 
-        // Each sibling InputDevice of one gamepad reaches this, so rejections may only be
-        // dropped when the rejected device itself is gone - not on any source notification.
-        pruneRejectedSources()
-
-        if (activeSource == GyroSource.DEVICE) {
-            registerDeviceGyroForDefaultContext(false)
+            if (activeSource == GyroSource.DEVICE) {
+                registerDeviceGyroForDefaultContext(false)
+            }
+            activeSource = GyroSource.NONE
+            beginNewSourceLifecycle()
         }
-        activeSource = GyroSource.NONE
-        beginNewSourceLifecycle()
     }
 
     /** A reconnected device deserves a fresh evaluation, a still-present one does not. */
@@ -500,26 +550,29 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
 
     // 在系统重新启用传感器时，检查并恢复陀螺仪功能
     fun onSensorsReenabled() {
-        // Contexts created or migrated after the assistant was turned on start with a
-        // cleared hold flag, so demand and hold must be rebuilt on every restore.
-        updateAssistantDemand()
+        runOnMainThread {
+            if (handler.stopped) return@runOnMainThread
+            // Contexts created or migrated after the assistant was turned on start with a
+            // cleared hold flag, so demand and hold must be rebuilt on every restore.
+            updateAssistantDemand()
 
-        val mode = assistantMode
-        if (mode != GyroAssistantMode.OFF) {
-            LimeLog.info("Sensors re-enabled, restoring gyro assistant: $mode")
-            recomputeGyroHoldForAllContexts()
-            applySource(resolveSource())
-            return
-        }
+            val mode = assistantMode
+            if (mode != GyroAssistantMode.OFF) {
+                LimeLog.info("Sensors re-enabled, restoring gyro assistant: $mode")
+                recomputeGyroHoldForAllContexts()
+                applySource(resolveSource())
+                return@runOnMainThread
+            }
 
-        if (controllerGyroDemand.hostReportRateHz.toInt() != 0) {
-            LimeLog.info("Sensors re-enabled, restoring host gyroscope request")
-            handler.handleSetMotionEventState(
-                0.toShort(),
-                MoonBridge.LI_MOTION_TYPE_GYRO,
-                controllerGyroDemand.hostReportRateHz,
-                isHostRequest = false
-            )
+            if (controllerGyroDemand.hostReportRateHz.toInt() != 0) {
+                LimeLog.info("Sensors re-enabled, restoring host gyroscope request")
+                handler.handleSetMotionEventState(
+                    0.toShort(),
+                    MoonBridge.LI_MOTION_TYPE_GYRO,
+                    controllerGyroDemand.hostReportRateHz,
+                    isHostRequest = false
+                )
+            }
         }
     }
 
