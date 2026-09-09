@@ -2025,7 +2025,7 @@ class ControllerHandler(
             handleSystemStartWheelAxes(context)
         }
         if (wasHold && !context.gyroHoldActive) {
-            gyroManager.onGyroHoldDeactivatedInput(context)
+            gyroManager.onGyroHoldDeactivated(context, restorePhysicalStick = false)
         }
         if (context.isLocalInputCaptureActive()) {
             updateSystemStartReleaseState(context)
@@ -2713,7 +2713,7 @@ class ControllerHandler(
             gyroManager.computeHoldFromAnalog(leftTriggerFloat, rightTriggerFloat)
 
         if (wasHold && !defaultContext.gyroHoldActive) {
-            gyroManager.onGyroHoldDeactivatedInput(defaultContext)
+            gyroManager.onGyroHoldDeactivated(defaultContext, restorePhysicalStick = false)
         }
 
         if (!gyroManager.isRightStickMode || !defaultContext.gyroHoldActive) {
@@ -3390,9 +3390,6 @@ class ControllerHandler(
 
     fun setGyroAssistantMode(mode: GyroAssistantMode) =
         gyroManager.setAssistantMode(mode)
-
-    val gyroAssistantMode: GyroAssistantMode
-        get() = gyroManager.assistantMode
 
     fun onSensorsReenabled() =
         gyroManager.onSensorsReenabled()

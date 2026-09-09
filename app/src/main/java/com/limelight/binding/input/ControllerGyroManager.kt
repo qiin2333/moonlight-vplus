@@ -188,7 +188,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         // Storing the mode as two flags keeps the persisted format, but only here.
         handler.prefConfig.gyroToMouse = mode == GyroAssistantMode.MOUSE
         handler.prefConfig.gyroToRightStick = mode == GyroAssistantMode.RIGHT_STICK
-        controllerGyroDemand.updateAssistantEnabled(mode != GyroAssistantMode.OFF)
+        updateAssistantDemand()
         gyroMouseRemainX = 0f
         gyroMouseRemainY = 0f
         gyroMouseLastTimestamp = 0
@@ -602,22 +602,23 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
     }
 
-    fun clearAllGyroStates() {
-        // 清除所有控制器的陀螺仪摇杆数据和保持状态
-        for (c in handler.driverControllerContexts.values) {
-            c.gyroRightStickX = 0
-            c.gyroRightStickY = 0
-            c.gyroHoldActive = false
-        }
+    /** Every context that can carry gyro state, including the default/on-screen one. */
+    private fun allGyroContexts(): List<GenericControllerContext> {
+        val contexts = mutableListOf<GenericControllerContext>()
+        contexts.addAll(handler.driverControllerContexts.values)
         for (i in 0 until handler.inputDeviceContexts.size()) {
-            val c = handler.inputDeviceContexts.valueAt(i)
+            contexts.add(handler.inputDeviceContexts.valueAt(i))
+        }
+        contexts.add(handler.defaultContext)
+        return contexts
+    }
+
+    fun clearAllGyroStates() {
+        for (c in allGyroContexts()) {
             c.gyroRightStickX = 0
             c.gyroRightStickY = 0
             c.gyroHoldActive = false
         }
-        handler.defaultContext.gyroRightStickX = 0
-        handler.defaultContext.gyroRightStickY = 0
-        handler.defaultContext.gyroHoldActive = false
     }
 
     /**
@@ -643,39 +644,15 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     }
 
     fun recomputeGyroHoldForAllContexts() {
-        val alwaysOn = handler.prefConfig.gyroActivationKeyCode == GYRO_ACTIVATION_ALWAYS
-        val useL2 = handler.prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_L2
-        val useR2 = handler.prefConfig.gyroActivationKeyCode == KeyEvent.KEYCODE_BUTTON_R2
-
-        for (c in handler.driverControllerContexts.values) {
-            c.gyroHoldActive = when {
-                alwaysOn -> true
-                useL2 -> (c.leftTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
-                useR2 -> (c.rightTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
-                else -> false
-            }
-        }
-
-        for (i in 0 until handler.inputDeviceContexts.size()) {
-            val c = handler.inputDeviceContexts.valueAt(i)
-            c.gyroHoldActive = when {
-                alwaysOn -> true
-                useL2 -> (c.leftTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
-                useR2 -> (c.rightTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
-                else -> false
-            }
-        }
-
-        handler.defaultContext.gyroHoldActive = when {
-            alwaysOn -> true
-            useL2 -> (handler.defaultContext.leftTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
-            useR2 -> (handler.defaultContext.rightTrigger.toInt() and 0xFF) / 255.0f >= TRIGGER_ACTIVATE_THRESHOLD
-            else -> false
+        for (c in allGyroContexts()) {
+            c.gyroHoldActive = computeHoldFromAnalog(
+                (c.leftTrigger.toInt() and 0xFF) / 255.0f,
+                (c.rightTrigger.toInt() and 0xFF) / 255.0f
+            )
         }
     }
 
-    // Future-proof activation handling helpers
-    fun computeAnalogActivation(leftTrigger: Float, rightTrigger: Float): Boolean {
+    private fun computeAnalogActivation(leftTrigger: Float, rightTrigger: Float): Boolean {
         return when (handler.prefConfig.gyroActivationKeyCode) {
             GYRO_ACTIVATION_ALWAYS -> true
             KeyEvent.KEYCODE_BUTTON_L2 -> leftTrigger >= TRIGGER_ACTIVATE_THRESHOLD
@@ -691,25 +668,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun computeHoldFromAnalog(leftTrigger: Float, rightTrigger: Float): Boolean =
         isAssistantEnabled && computeAnalogActivation(leftTrigger, rightTrigger)
 
-    fun updateGyroHoldFromDigital(context: InputDeviceContext, keyCode: Int, isDown: Boolean) {
-        if (!isAssistantEnabled) {
-            context.gyroHoldActive = false
-            return
-        }
-        if (handler.prefConfig.gyroActivationKeyCode == GYRO_ACTIVATION_ALWAYS) {
-            context.gyroHoldActive = true
-            return
-        }
-        if (keyCode == handler.prefConfig.gyroActivationKeyCode) {
-            val was = context.gyroHoldActive
-            context.gyroHoldActive = isDown
-            if (was && !isDown) {
-                onGyroHoldDeactivated(context as GenericControllerContext)
-            }
-        }
-    }
-
-    fun updateGyroHoldFromDigitalGeneric(context: GenericControllerContext, keyCode: Int, isDown: Boolean) {
+    fun updateGyroHoldFromDigital(context: GenericControllerContext, keyCode: Int, isDown: Boolean) {
         if (!isAssistantEnabled) {
             context.gyroHoldActive = false
             return
@@ -727,37 +686,27 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
     }
 
-    fun onGyroHoldDeactivated(context: GenericControllerContext) {
+    /**
+     * Flush residual gyro influence. Pass [restorePhysicalStick] = false when the caller has
+     * already written the physical stick values into [context].
+     */
+    fun onGyroHoldDeactivated(
+        context: GenericControllerContext,
+        restorePhysicalStick: Boolean = true
+    ) {
         context.gyroRightStickX = 0
         context.gyroRightStickY = 0
         // In mouse mode there's no right-stick data to flush; skip the controller packet
         if (isMouseMode) return
-        // 恢复为纯物理值并立即发送
-        context.rightStickX = context.physRightStickX
-        context.rightStickY = context.physRightStickY
+        if (restorePhysicalStick) {
+            context.rightStickX = context.physRightStickX
+            context.rightStickY = context.physRightStickY
+        }
         handler.sendControllerInputPacket(context)
     }
 
-    fun onGyroHoldDeactivatedInput(context: InputDeviceContext) {
-        context.gyroRightStickX = 0
-        context.gyroRightStickY = 0
-        // In mouse mode there's no right-stick data to flush; skip the controller packet
-        if (isMouseMode) return
-        // 立即发送仅物理摇杆的状态，确保停止模拟
-        handler.sendControllerInputPacket(context)
-    }
-
-    fun isGyroHoldActiveFor(controllerNumber: Short): Boolean {
-        for (c in handler.driverControllerContexts.values) {
-            if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
-        }
-        for (i in 0 until handler.inputDeviceContexts.size()) {
-            val c = handler.inputDeviceContexts.valueAt(i)
-            if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
-        }
-        if (handler.defaultContext.controllerNumber == controllerNumber && handler.defaultContext.gyroHoldActive) return true
-        return false
-    }
+    fun isGyroHoldActiveFor(controllerNumber: Short): Boolean =
+        allGyroContexts().any { it.controllerNumber == controllerNumber && it.gyroHoldActive }
 
     fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean): SensorEventListener {
         return object : SensorEventListener {

@@ -196,8 +196,6 @@ class PreferenceConfiguration {
     var gyroToRightStick = false
     // Persistent: enable mapping gyroscope motion to relative mouse movement
     var gyroToMouse = false
-    // Runtime-only: sensitivity in deg/s for full stick deflection
-    var gyroFullDeflectionDps = 0f
     // Persistent: sensitivity multiplier (higher -> faster)
     var gyroSensitivityMultiplier = 0f
     // Persistent: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
@@ -509,7 +507,6 @@ class PreferenceConfiguration {
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
-        copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode
         copy.gyroInvertXAxis = this.gyroInvertXAxis
@@ -1609,9 +1606,6 @@ class PreferenceConfiguration {
             config.floatBallSwipeDownAction = prefs.getString(FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION
             config.floatBallSwipeLeftAction = prefs.getString(FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION
             config.floatBallSwipeRightAction = prefs.getString(FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION
-
-            // Runtime-only default; controlled via in-stream GameMenu
-            config.gyroFullDeflectionDps = 180.0f
 
             return config
         }
