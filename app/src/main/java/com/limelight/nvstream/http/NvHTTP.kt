@@ -312,7 +312,9 @@ class NvHTTP(
             val discoveryUrl = getCompleteUrl(baseUrlHttp, "serverinfo", null)
             httpsPort = deadline.execute(client.newCall(Request.Builder().url(discoveryUrl).get().build())).use { response ->
                 if (!response.isSuccessful) throw HostHttpResponseException(response.code, "HTTPS port discovery failed")
-                getHttpsPort(response.body.string())
+                val discoveryBody = response.peekBody(65537)
+                require(discoveryBody.contentLength() <= 65536) { "HTTPS port discovery response too large" }
+                getHttpsPort(discoveryBody.string())
             }
         }
         val url = HttpUrl.Builder().scheme("https").host(baseUrlHttp.host).port(httpsPort)

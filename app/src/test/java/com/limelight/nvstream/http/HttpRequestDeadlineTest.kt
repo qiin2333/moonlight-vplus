@@ -40,7 +40,7 @@ class HttpRequestDeadlineTest {
             val budget = HttpRequestDeadline(150, TimeUnit.MILLISECONDS)
             val start = System.nanoTime()
             assertThrows(IOException::class.java) { budget.execute(request).close() }
-            assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(2))
+            assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(1))
         }
     }
 }
