@@ -50,6 +50,13 @@ public class VirtualController implements SensorEventListener {
     private final SensorManager sensorManager;
     private boolean gyroEnabled = false;
 
+    private final Runnable refreshLayoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            refreshLayoutNow();
+        }
+    };
+
     private final Runnable delayedRetransmitRunnable = new Runnable() {
         @Override
         public void run() {
@@ -161,11 +168,21 @@ public class VirtualController implements SensorEventListener {
     }
 
     public void refreshLayout() {
+        frame_layout.removeCallbacks(refreshLayoutRunnable);
+        frame_layout.post(refreshLayoutRunnable);
+    }
+
+    private void refreshLayoutNow() {
         removeElements();
 
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
+        VirtualControllerLayoutSize layoutSize = VirtualControllerLayoutSize.resolve(
+                frame_layout.getWidth(),
+                frame_layout.getHeight(),
+                screen.widthPixels,
+                screen.heightPixels);
 
-        int buttonSize = (int)(screen.heightPixels*0.06f);
+        int buttonSize = (int)(layoutSize.height * 0.06f);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(buttonSize, buttonSize);
         params.leftMargin = 15;
         params.topMargin = 15;
@@ -173,7 +190,11 @@ public class VirtualController implements SensorEventListener {
 
 
         // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context);
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+                this,
+                context,
+                layoutSize.width,
+                layoutSize.height);
 
         // Apply user preferences onto the default layout
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context);
@@ -283,6 +304,7 @@ public class VirtualController implements SensorEventListener {
      * 清理资源，取消传感器监听
      */
     public void cleanup() {
+        frame_layout.removeCallbacks(refreshLayoutRunnable);
         if (gyroEnabled) {
             sensorManager.unregisterListener(this);
             gyroEnabled = false;
