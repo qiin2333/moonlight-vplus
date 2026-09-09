@@ -264,6 +264,32 @@ class KeyboardKeyPickerControllerTest {
     }
 
     @Test
+    fun navigationPageFitsNarrowAndShortPickerBounds() {
+        for ((width, height) in listOf(370 to 220, 280 to 220, 600 to 180)) {
+            val controller = installPicker(width, height) {}
+            activityRule.scenario.onActivity {
+                controller.showPage(KeyboardKeyPickerController.Page.NAV, requestContentFocus = false)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            activityRule.scenario.onActivity { activity ->
+                val picker = activity.findViewById<ViewGroup>(R.id.keyboard_drawing)
+                val navigationPage = picker.findViewById<ViewGroup>(R.id.keyboard_picker_nav)
+                val codes = mutableSetOf<Int>()
+                collectKeyCodes(navigationPage, codes)
+                assertEquals(28, codes.size)
+                codes.forEach { code ->
+                    val key = navigationPage.findViewWithTag<TextView>("k$code")
+                    val visible = Rect()
+                    assertTrue("k$code visible in $width x $height", key.getLocalVisibleRect(visible))
+                    assertEquals("k$code width in $width x $height", key.width, visible.width())
+                    assertEquals("k$code height in $width x $height", key.height, visible.height())
+                    assertTrue(key.width > 0 && key.height > 0)
+                }
+            }
+        }
+    }
+
+    @Test
     fun touchThenControllerNavigationAndConfirmStillWork() {
         val count = AtomicInteger()
         val selected = AtomicReference<String?>()

@@ -406,18 +406,18 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content">
                         <TextView
-                            android:layout_width="60dp"
+                            android:layout_width="42dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g64"
                             android:text="L3"
                             android:background="@drawable/circle_border"/>
                         <TextView
-                            android:layout_width="60dp"
+                            android:layout_width="48dp"
                             android:layout_height="40dp"
                             android:gravity="center"
-                            android:tag="g16"
-                            android:text="@string/crown_key_start_short"
+                            android:tag="g32"
+                            android:text="@string/crown_key_back_short"
                             android:background="@drawable/circle_border"/>
                         <TextView
                             android:layout_width="60dp"
@@ -428,14 +428,14 @@
                             android:contentDescription="@string/crown_key_guide_description"
                             android:background="@drawable/circle_border"/>
                         <TextView
-                            android:layout_width="60dp"
+                            android:layout_width="48dp"
                             android:layout_height="40dp"
                             android:gravity="center"
-                            android:tag="g32"
-                            android:text="@string/crown_key_back_short"
+                            android:tag="g16"
+                            android:text="@string/crown_key_start_short"
                             android:background="@drawable/circle_border"/>
                         <TextView
-                            android:layout_width="60dp"
+                            android:layout_width="42dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g128"
