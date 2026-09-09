@@ -62,7 +62,7 @@ open class GenericControllerContext(
     var leftStickX: Short = 0x0000
     var leftStickY: Short = 0x0000
 
-    var gyroHoldActive: Boolean = false
+    @Volatile var gyroHoldActive: Boolean = false
 
     var startDownTime: Long = 0
 

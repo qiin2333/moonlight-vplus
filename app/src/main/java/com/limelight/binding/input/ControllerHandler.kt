@@ -3135,16 +3135,20 @@ class ControllerHandler(
                 return
             }
 
-            if (gyroManager.isMouseMode && context.gyroHoldActive) {
-                // x=pitch(deg/s), y=roll, z=yaw → 横屏下 z→mouseX, x→mouseY，转回 rad/s
-                gyroManager.applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime())
-                return
-            }
-            if (gyroManager.isRightStickMode && context.gyroHoldActive) {
-                // x=pitch, y=roll, z=yaw — pass yaw as X and pitch as Y to match
-                // the same axis convention used in the device sensor listener (gz, gx)
-                gyroManager.applyGyroToRightStick(context.controllerNumber, z, x)
-                return
+            // Without this an Android gamepad owning controller 0 would be fought by a USB
+            // driver reporting the same slot; host forwarding below still runs.
+            if (gyroManager.isAssistantSourceFor(context.controllerNumber)) {
+                if (gyroManager.isMouseMode && context.gyroHoldActive) {
+                    // x=pitch(deg/s), y=roll, z=yaw → 横屏下 z→mouseX, x→mouseY，转回 rad/s
+                    gyroManager.applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime())
+                    return
+                }
+                if (gyroManager.isRightStickMode && context.gyroHoldActive) {
+                    // x=pitch, y=roll, z=yaw — pass yaw as X and pitch as Y to match
+                    // the same axis convention used in the device sensor listener (gz, gx)
+                    gyroManager.applyGyroToRightStick(context.controllerNumber, z, x)
+                    return
+                }
             }
         }
 

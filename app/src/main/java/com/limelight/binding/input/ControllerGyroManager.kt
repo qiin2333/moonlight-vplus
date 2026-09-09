@@ -456,6 +456,10 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun isUsingDeviceGyroFallback(controllerNumber: Short): Boolean =
         controllerNumber.toInt() == 0 && activeSource == GyroSource.DEVICE
 
+    /** Controller 0 has exactly one resolved source; other controllers own their own gyro. */
+    fun isAssistantSourceFor(controllerNumber: Short): Boolean =
+        controllerNumber.toInt() != 0 || activeSource == GyroSource.DRIVER
+
     /** Gyro state is main-thread owned, but USB driver threads reach these entry points. */
     private fun runOnMainThread(block: () -> Unit) {
         if (Looper.myLooper() === handler.mainThreadHandler.looper) {
