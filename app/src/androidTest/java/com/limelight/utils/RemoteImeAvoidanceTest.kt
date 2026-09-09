@@ -46,13 +46,17 @@ class RemoteImeAvoidanceTest {
         captureWidth = 1920, captureHeight = 1080,
     )
 
-    @Test fun sessionResetBeforeFirstSurfaceChangeKeepsStreamCentered() {
+    @Test fun imeOffsetBeforeFirstSurfaceChangeIsDeferredAndRestored() {
         rule.scenario.onActivity { activity ->
             val root = FrameLayout(activity)
             val stream = StreamView(activity)
             val cursor = View(activity)
             root.addView(stream, FrameLayout.LayoutParams(800, 400, Gravity.CENTER))
             root.addView(cursor, FrameLayout.LayoutParams(800, 400, Gravity.CENTER))
+
+            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
+            pan.setImeOffsetY(-80f)
+
             root.measure(
                 View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(600, View.MeasureSpec.EXACTLY),
@@ -61,13 +65,15 @@ class RemoteImeAvoidanceTest {
             assertEquals(100f, stream.x, 0f)
             assertEquals(100f, stream.y, 0f)
 
-            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
-            pan.setImeOffsetY(0f)
             pan.handleSurfaceChange()
 
             assertEquals(100f, stream.x, 0f)
-            assertEquals(100f, stream.y, 0f)
+            assertEquals(20f, stream.y, 0f)
             assertEquals(stream.x, cursor.x, 0f)
+            assertEquals(stream.y, cursor.y, 0f)
+
+            pan.setImeOffsetY(0f)
+            assertEquals(100f, stream.y, 0f)
             assertEquals(stream.y, cursor.y, 0f)
         }
     }
@@ -289,9 +295,22 @@ class RemoteImeAvoidanceTest {
 
             val scale = stream.scaleX
             assertTrue("Pinch must enlarge the stream", scale > 1f)
+            val previousX = stream.x
+            val previousY = stream.y
+            val resizeRatio = 1600f / 1920f
+            val expectedX = (previousX - 1920f / 2f) * resizeRatio + 1600f / 2f
+            val expectedY = (previousY - 1080f / 2f) * resizeRatio + 900f / 2f
+
+            root.layout(0, 0, 1600, 900)
+            stream.layout(0, 0, 1600, 900)
+            cursor.layout(0, 0, 1600, 900)
             pan.handleSurfaceChange()
+
             assertEquals("Surface updates preserve user zoom", scale, stream.scaleX, 0.001f)
+            assertEquals("Surface resize reprojects user pan on X", expectedX, stream.x, 0.1f)
+            assertEquals("Surface resize reprojects user pan on Y", expectedY, stream.y, 0.1f)
             assertEquals(stream.scaleX, cursor.scaleX, 0f)
+            assertEquals(stream.x, cursor.x, 0f)
             assertEquals(stream.y, cursor.y, 0f)
         }
     }
