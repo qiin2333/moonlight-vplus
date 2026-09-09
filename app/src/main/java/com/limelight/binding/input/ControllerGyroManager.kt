@@ -111,29 +111,35 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     }
 
     fun applyGyroToRightStick(controllerNumber: Short, gyroXDegPerSec: Float, gyroYDegPerSec: Float) {
-        // 计算陀螺仪映射到摇杆的值
+        val targetContext = findControllerContext(controllerNumber) ?: return
+        applyGyroToRightStick(targetContext, gyroXDegPerSec, gyroYDegPerSec)
+    }
+
+    /**
+     * Driver callbacks already own their context. Taking it directly keeps this off
+     * inputDeviceContexts, which is a SparseArray owned by the main thread.
+     */
+    fun applyGyroToRightStick(
+        context: GenericControllerContext,
+        gyroXDegPerSec: Float,
+        gyroYDegPerSec: Float
+    ) {
         val effectiveSensitivity = 180.0f / handler.prefConfig.gyroSensitivityMultiplier
         var scaledX = -ControllerHandler.clampFloat(gyroXDegPerSec / effectiveSensitivity, -1.0f, 1.0f)
         var scaledY = ControllerHandler.clampFloat(gyroYDegPerSec / effectiveSensitivity, -1.0f, 1.0f)
 
-        // 应用X轴反转设置
         if (handler.prefConfig.gyroInvertXAxis) {
             scaledX = -scaledX
         }
-
-        // 应用Y轴反转设置
         if (handler.prefConfig.gyroInvertYAxis) {
             scaledY = -scaledY
         }
 
-        val mappedX = (scaledX * 0x7FFE).toInt().toShort()
-        val mappedY = (scaledY * 0x7FFE).toInt().toShort()
-
-        // 更新对应控制器上下文的陀螺仪摇杆值
-        val targetContext = findControllerContext(controllerNumber)
-        if (targetContext != null) {
-            updateContextWithGyroData(targetContext, mappedX, mappedY)
-        }
+        updateContextWithGyroData(
+            context,
+            (scaledX * 0x7FFE).toInt().toShort(),
+            (scaledY * 0x7FFE).toInt().toShort()
+        )
     }
 
     private fun findControllerContext(controllerNumber: Short): GenericControllerContext? {
@@ -165,7 +171,10 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         context.gyroRightStickY = mappedY
 
         // 如果陀螺仪到右摇杆映射启用且hold状态激活，则应用融合
-        if (isRightStickMode && isGyroHoldActiveFor(context.controllerNumber)) {
+        // The own-flag check short-circuits the cross-context scan on the common path.
+        if (isRightStickMode &&
+            (context.gyroHoldActive || isGyroHoldActiveFor(context.controllerNumber))
+        ) {
             // 按轴叠加并限幅（物理值应用EPS去噪）
             val px = ControllerHandler.denoisePhys(context.physRightStickX)
             val py = ControllerHandler.denoisePhys(context.physRightStickY)
@@ -762,8 +771,18 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         handler.sendControllerInputPacket(context)
     }
 
-    fun isGyroHoldActiveFor(controllerNumber: Short): Boolean =
-        allGyroContexts().any { it.controllerNumber == controllerNumber && it.gyroHoldActive }
+    /** Hand-rolled rather than using [allGyroContexts]: this runs once per gyro sample. */
+    fun isGyroHoldActiveFor(controllerNumber: Short): Boolean {
+        for (c in handler.driverControllerContexts.values) {
+            if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
+        }
+        for (i in 0 until handler.inputDeviceContexts.size()) {
+            val c = handler.inputDeviceContexts.valueAt(i)
+            if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
+        }
+        return handler.defaultContext.controllerNumber == controllerNumber &&
+            handler.defaultContext.gyroHoldActive
+    }
 
     fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean): SensorEventListener {
         return object : SensorEventListener {

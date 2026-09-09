@@ -3146,7 +3146,7 @@ class ControllerHandler(
                 if (gyroManager.isRightStickMode && context.gyroHoldActive) {
                     // x=pitch, y=roll, z=yaw — pass yaw as X and pitch as Y to match
                     // the same axis convention used in the device sensor listener (gz, gx)
-                    gyroManager.applyGyroToRightStick(context.controllerNumber, z, x)
+                    gyroManager.applyGyroToRightStick(context, z, x)
                     return
                 }
             }
