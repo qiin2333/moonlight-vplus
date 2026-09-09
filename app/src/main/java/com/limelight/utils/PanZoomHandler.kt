@@ -27,7 +27,6 @@ class PanZoomHandler(
     private var childWidth = 0f
     private var childHeight = 0f
     private var imeOffsetY = 0f
-    private var userTransformActive = false
     var onUserTransform: (() -> Unit)? = null
 
     init {
@@ -91,7 +90,6 @@ class PanZoomHandler(
 
     fun setImeOffsetY(offsetY: Float) {
         imeOffsetY = offsetY.coerceAtMost(0f)
-        if (childWidth == 0f || childHeight == 0f || parent == null) return
         applyTransform()
     }
 
@@ -102,19 +100,11 @@ class PanZoomHandler(
     }
 
     fun handleSurfaceChange() {
-        if (!userTransformActive) {
-            // DisplayPositionManager owns the base placement until the user pans or zooms.
-            // View.left/top exclude our temporary translation and therefore preserve every
-            // gravity, offset, stretch, rotation, and resolution-driven layout update.
+        if (childWidth == 0f || parent == null) {
+            // Retrieve parent, should handle both built-in display and external display
             parent = streamView.parent as? View
-            if (!updateDimensions()) return
-            childX = streamView.left.toFloat()
-            childY = streamView.top.toFloat()
-            applyTransform()
             return
         }
-
-        if (childWidth == 0f || parent == null) return
 
         val prevChildWidth = childWidth
         val prevChildHeight = childHeight
@@ -160,7 +150,6 @@ class PanZoomHandler(
 
             constrainToBounds()
             if (childX != previousX || childY != previousY || scaleFactor != previousScale) {
-                userTransformActive = true
                 onUserTransform?.invoke()
             }
             return true
@@ -188,7 +177,6 @@ class PanZoomHandler(
 
             constrainToBounds()
             if (childX != previousX || childY != previousY) {
-                userTransformActive = true
                 onUserTransform?.invoke()
             }
             return true
