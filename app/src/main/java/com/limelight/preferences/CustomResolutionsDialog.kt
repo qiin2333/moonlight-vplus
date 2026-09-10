@@ -53,16 +53,23 @@ import com.limelight.utils.AppDialogStyler
 object CustomResolutionsDialog {
 
     fun show(context: Context, onClosed: () -> Unit): Dialog {
+        val initial = CustomResolutionsStore.load(context)
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
+        // 取消(返回/点外部/取消按钮)丢弃本次会话的全部改动,恢复进入时的快照
+        var cancelled = false
         val composeView = ComposeView(context).apply {
             isFocusable = true
             isFocusableInTouchMode = true
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 CustomResolutionsDialogContent(
-                    initial = CustomResolutionsStore.load(context),
+                    initial = initial,
                     onCommit = { CustomResolutionsStore.save(context, it) },
-                    onClose = dialog::cancel
+                    onCancel = {
+                        cancelled = true
+                        dialog.cancel()
+                    },
+                    onConfirm = dialog::dismiss
                 )
             }
         }
@@ -79,7 +86,13 @@ object CustomResolutionsDialog {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
-        dialog.setOnDismissListener { onClosed() }
+        dialog.setOnCancelListener { cancelled = true }
+        dialog.setOnDismissListener {
+            if (cancelled) {
+                CustomResolutionsStore.save(context, initial)
+            }
+            onClosed()
+        }
         dialog.show()
         applyDialogWidth(dialog, context)
         return dialog
@@ -102,7 +115,8 @@ object CustomResolutionsDialog {
 private fun CustomResolutionsDialogContent(
     initial: List<Resolution>,
     onCommit: (List<Resolution>) -> Unit,
-    onClose: () -> Unit
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
 ) {
     var resolutions by remember { mutableStateOf(initial) }
     var widthText by remember { mutableStateOf("") }
@@ -125,11 +139,21 @@ private fun CustomResolutionsDialogContent(
     }
     val firstRowFocus = rowFocus[resolutions.firstOrNull()?.let(::keyOf)]
 
-    // 删除行后把焦点还给相邻行;行节点在重组后才存在,经 pending key 延迟请求
+    // 删除行后把焦点还给相邻行;行节点在 LazyColumn 组合后才存在,未挂载时
+    // FocusRequester.requestFocus 会抛 IllegalStateException,需短暂重试
     var pendingRowFocusKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(pendingRowFocusKey, resolutions) {
         val key = pendingRowFocusKey ?: return@LaunchedEffect
-        rowFocus[key]?.requestFocus()
+        repeat(10) {
+            val focused = rowFocus[key]?.let { requester ->
+                runCatching { requester.requestFocus() }.isSuccess
+            } == true
+            if (focused) {
+                pendingRowFocusKey = null
+                return@LaunchedEffect
+            }
+            kotlinx.coroutines.delay(16)
+        }
         pendingRowFocusKey = null
     }
 
@@ -281,8 +305,8 @@ private fun CustomResolutionsDialogContent(
             }
 
             FooterRow(
-                onCancel = onClose,
-                onConfirm = onClose
+                onCancel = onCancel,
+                onConfirm = onConfirm
             )
         }
     }

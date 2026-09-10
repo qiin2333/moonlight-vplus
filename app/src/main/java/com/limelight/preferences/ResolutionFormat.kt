@@ -40,8 +40,19 @@ val resolutionOrder: Comparator<Resolution> = compareBy({ it.width }, { it.heigh
 
 private fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
 
-/** "16:9";无法干净化简的比例(3440×1440 → 43:18)显示为相对 9 的形式。 */
+/** 常见比例的行业惯用写法;gcd 归约会把它们约成 8:5、7:3 这类陌生形式。 */
+private val CANONICAL_RATIOS = listOf(
+    5 to 4, 4 to 3, 3 to 2, 16 to 10, 16 to 9, 2 to 1, 21 to 9, 32 to 9,
+    4 to 5, 3 to 4, 2 to 3, 10 to 16, 9 to 16, 1 to 2, 9 to 21, 9 to 32
+)
+
+/** "16:9";先匹配惯用比例,无法干净化简的(3440×1440 → 43:18)显示为相对 9 的形式。 */
 fun ratioText(width: Int, height: Int): String {
+    for ((num, den) in CANONICAL_RATIOS) {
+        if (width * den == height * num) {
+            return "$num:$den"
+        }
+    }
     val g = gcd(width, height)
     val a = width / g
     val b = height / g
@@ -50,7 +61,8 @@ fun ratioText(width: Int, height: Int): String {
         if (scaled % 10 == 0) {
             return "${scaled / 10}:9"
         }
-        return String.format("%.1f:9", scaled / 10f)
+        // 固定 Locale.US,避免部分地区把小数点渲染成逗号
+        return String.format(java.util.Locale.US, "%.1f:9", scaled / 10f)
     }
     return "$a:$b"
 }

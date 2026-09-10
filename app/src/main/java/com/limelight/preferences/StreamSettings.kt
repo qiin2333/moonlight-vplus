@@ -1008,6 +1008,7 @@ class StreamSettings : AppCompatActivity() {
         @Volatile
         private var developerForegroundPollRunning = false
         private var developerDeviceCodeDialog: AlertDialog? = null
+        private var customResolutionsDialog: android.app.Dialog? = null
 
         /**
          * 获取目标显示器（优先使用外接显示器）
@@ -2902,6 +2903,8 @@ class StreamSettings : AppCompatActivity() {
             cancelExpandFocusRestore()
             unregisterConfigSyncPreferenceListener()
             configSyncSnapshotHandler.removeCallbacks(configSyncSnapshotRunnable)
+            customResolutionsDialog?.dismiss()
+            customResolutionsDialog = null
             // 注销 adapter observer，避免泄漏
             val obs = adapterDataObserver
             if (obs != null) {
@@ -3808,7 +3811,9 @@ class StreamSettings : AppCompatActivity() {
                     f.show(parentFragmentManager, "SeekBarPreference")
                 }
                 is CustomResolutionsPreference -> {
-                    CustomResolutionsDialog.show(requireContext()) {
+                    customResolutionsDialog?.dismiss()
+                    customResolutionsDialog = CustomResolutionsDialog.show(requireContext()) {
+                        customResolutionsDialog = null
                         (activity as? StreamSettings)?.reloadSettings()
                     }
                 }
