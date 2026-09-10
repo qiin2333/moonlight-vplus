@@ -119,8 +119,12 @@ class UsbForwardingController(
         if (selected == null && !busy) refreshCapability()
         sheet = AppActionSheet.showCustom(game) {
             UsbDevicePanel(
-                devices = devices,
-                selected = selected,
+                devices = (devices + listOfNotNull(selected)).distinctBy { it.deviceName }.map {
+                    UsbPanelDevice(it.deviceName,
+                        it.productName ?: "USB %04x:%04x".format(it.vendorId, it.productId),
+                        UsbDeviceType.from(it))
+                },
+                selected = selected?.deviceName,
                 busy = busy,
                 message = message,
                 hostName = game.pcName ?: host,
@@ -128,8 +132,10 @@ class UsbForwardingController(
                 canShare = enabled && capability?.available == true,
                 onEnabledChange = ::changeEnabled,
                 onRetry = ::refreshCapability,
-                onShare = ::request,
-                onRelease = { release() }
+                onShare = { path -> manager.deviceList[path]?.let(::request) },
+                onRelease = { release() },
+                onRefresh = { refreshDevices() },
+                onDismiss = { sheet?.dismiss() }
             )
         }
         return sheet

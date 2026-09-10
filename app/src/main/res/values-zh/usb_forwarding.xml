@@ -30,4 +30,25 @@
     <string name="usb_forward_handoff">正在释放本地手柄驱动…</string>
     <string name="usb_forward_wireless_adapter">暂不支持转发蓝牙 USB 适配器。</string>
     <string name="usb_forward_duplicate_device">存在厂商和产品 ID 相同的 USB 设备，请拔掉重复设备后再共享。</string>
+    <string name="usb_forward_experimental">实验性</string>
+    <string name="usb_forward_toggle_title">USB 共享</string>
+    <string name="usb_forward_toggle_hint">仅对此电脑启用</string>
+    <string name="usb_forward_devices_count">已连接设备 · %1$d 台</string>
+    <string name="usb_forward_refresh">刷新</string>
+    <string name="usb_forward_close">关闭</string>
+    <string name="usb_forward_sharing">正在共享</string>
+    <string name="usb_forward_usage_short">共享期间由电脑使用，结束串流后恢复本机。</string>
+    <string name="usb_forward_confirm_hint">确认</string>
+    <string name="usb_forward_back_hint">返回</string>
+    <string name="usb_type_keyboard">键盘</string>
+    <string name="usb_type_mouse">鼠标</string>
+    <string name="usb_type_gamepad">手柄</string>
+    <string name="usb_type_input">输入设备</string>
+    <string name="usb_type_network">USB 网卡</string>
+    <string name="usb_type_storage">USB 存储</string>
+    <string name="usb_type_audio">音频设备</string>
+    <string name="usb_type_camera">摄像头</string>
+    <string name="usb_type_printer">打印机</string>
+    <string name="usb_type_hub">USB 集线器</string>
+    <string name="usb_type_generic">USB 设备</string>
 </resources>

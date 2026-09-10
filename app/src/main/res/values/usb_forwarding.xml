@@ -30,4 +30,25 @@
     <string name="usb_forward_handoff">Releasing the local controller driver…</string>
     <string name="usb_forward_wireless_adapter">Bluetooth USB adapter forwarding is not supported yet.</string>
     <string name="usb_forward_duplicate_device">Multiple USB devices have the same vendor and product IDs. Disconnect the duplicate device before sharing.</string>
+    <string name="usb_forward_experimental">Experimental</string>
+    <string name="usb_forward_toggle_title">USB sharing</string>
+    <string name="usb_forward_toggle_hint">Only for this computer</string>
+    <string name="usb_forward_devices_count">Connected devices · %1$d</string>
+    <string name="usb_forward_refresh">Refresh</string>
+    <string name="usb_forward_close">Close</string>
+    <string name="usb_forward_sharing">Sharing</string>
+    <string name="usb_forward_usage_short">Shared devices are used by the computer and return here when streaming ends.</string>
+    <string name="usb_forward_confirm_hint">Confirm</string>
+    <string name="usb_forward_back_hint">Back</string>
+    <string name="usb_type_keyboard">Keyboard</string>
+    <string name="usb_type_mouse">Mouse</string>
+    <string name="usb_type_gamepad">Gamepad</string>
+    <string name="usb_type_input">Input device</string>
+    <string name="usb_type_network">USB Ethernet</string>
+    <string name="usb_type_storage">USB storage</string>
+    <string name="usb_type_audio">Audio device</string>
+    <string name="usb_type_camera">Camera</string>
+    <string name="usb_type_printer">Printer</string>
+    <string name="usb_type_hub">USB hub</string>
+    <string name="usb_type_generic">USB device</string>
 </resources>
