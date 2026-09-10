@@ -19,7 +19,6 @@
     <string name="usb_forward_connected">Connection established. Check the computer to confirm device availability.</string>
     <string name="usb_forward_releasing">Releasing USB device…</string>
     <string name="usb_forward_failed">USB forwarding stopped. Check the host and connection.</string>
-    <string name="usb_forward_local_owner">This device needs a local-driver handoff or cannot be uniquely identified. It is not available for forwarding yet.</string>
     <string name="usb_forward_unconfigured">Pair with this host before using USB forwarding.</string>
     <string name="usb_forward_target">Share with: %1$s</string>
     <string name="usb_forward_usage">Shared devices are reserved for the computer. Ending the stream returns them to this device. One USB device can be shared at a time.</string>
@@ -28,4 +27,7 @@
     <string name="usb_forward_share">Share with computer</string>
     <string name="usb_forward_authorizing">Waiting for USB permission…</string>
     <string name="usb_forward_detached">Device unplugged. Sharing has stopped.</string>
+    <string name="usb_forward_handoff">Releasing the local controller driver…</string>
+    <string name="usb_forward_wireless_adapter">Bluetooth USB adapter forwarding is not supported yet.</string>
+    <string name="usb_forward_duplicate_device">Multiple USB devices have the same vendor and product IDs. Disconnect the duplicate device before sharing.</string>
 </resources>

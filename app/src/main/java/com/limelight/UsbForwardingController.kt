@@ -30,6 +30,7 @@ import java.security.cert.X509Certificate
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** One foreground stream owns one export. Permission and UI state stay on the main
  * thread; blocking native cleanup is serialized behind export on the worker. */
@@ -75,6 +76,7 @@ class UsbForwardingController(
     private var sheet: Dialog? = null
     private var message by mutableIntStateOf(R.string.usb_forward_choose)
     @Volatile private var export: UsbIpBackend.Export? = null
+    private var localReservation: UsbDriverService.Companion.ForwardingReservation? = null
     @Volatile private var tunnel: UsbReverseTunnel? = null
 
     private val receiver = object : BroadcastReceiver() {
@@ -169,12 +171,17 @@ class UsbForwardingController(
         if (closed || busy || selected != null || !game.connected ||
             !enabled || capability?.available != true) return
         LimeLog.info("USB forwarding selected ${device.deviceName} (${device.vendorId}:${device.productId})")
-        // A controller/HCI adapter can already own custom-driver threads. Their
-        // per-device handoff is separate from the validated Android HID path.
-        if (UsbDriverService.shouldClaimDevice(device, true) || HciUsbDeviceProbe.probe(device) != null ||
-            manager.deviceList.values.count { it.vendorId == device.vendorId && it.productId == device.productId } != 1) {
-            Toast.makeText(game, R.string.usb_forward_local_owner, Toast.LENGTH_LONG).show()
-            LimeLog.warning("USB forwarding rejected because a local input driver owns the device")
+        // Wireless adapter handoff needs a separate whole-bridge lifecycle.
+        val unavailableReason = when {
+            HciUsbDeviceProbe.probe(device) != null -> R.string.usb_forward_wireless_adapter
+            manager.deviceList.values.count {
+                it.vendorId == device.vendorId && it.productId == device.productId
+            } != 1 -> R.string.usb_forward_duplicate_device
+            else -> null
+        }
+        if (unavailableReason != null) {
+            Toast.makeText(game, unavailableReason, Toast.LENGTH_LONG).show()
+            LimeLog.warning("USB forwarding unavailable: ${game.getString(unavailableReason)}")
             return
         }
         selected = device
@@ -207,6 +214,12 @@ class UsbForwardingController(
                 // Activity recreation publishes its cleanup before a replacement
                 // controller can enqueue native work.
                 predecessorCleanup.get()
+                if (closed) return@enqueue
+                game.runOnUiThread {
+                    if (!closed && generation == operation) message = R.string.usb_forward_handoff
+                }
+                localReservation = UsbDriverService.reserveForForwarding(device)
+                localReservation!!.ready.get(10, TimeUnit.SECONDS)
                 if (closed) return@enqueue
                 val handle = backend.export(device).get()
                 export = handle
@@ -280,6 +293,11 @@ class UsbForwardingController(
                 activeTunnel?.close()
                 export?.let { backend.release(it).get() }
                 export = null
+                localReservation?.let {
+                    it.ready.get(10, TimeUnit.SECONDS)
+                    it.restore()
+                    localReservation = null
+                }
             }.isSuccess
             game.runOnUiThread {
                 if (!closed && generation == operation) {
@@ -319,6 +337,10 @@ class UsbForwardingController(
                 cleanup { activeTunnel?.close() }
                 cleanup { backend.closeAsync().get() }
                 export = null
+                if (failure == null) cleanup {
+                    localReservation?.let { it.ready.get(10, TimeUnit.SECONDS); it.restore() }
+                    localReservation = null
+                }
                 try {
                     if (failure == null) closeCompletion.complete(null)
                     else closeCompletion.completeExceptionally(failure!!)
