@@ -43,7 +43,8 @@ import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.preferences.AddComputerManually
 import com.limelight.preferences.BackgroundSource
-import com.limelight.preferences.CustomResolutionsConsts
+import com.limelight.preferences.CustomResolutionsStore
+import com.limelight.preferences.ResolutionValidator
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.StreamSettings
@@ -2985,18 +2986,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val resolution = "${recommendation.width}x${recommendation.height}"
         if (PreferenceConfiguration.RESOLUTIONS.contains(resolution)) return
 
-        val preferences = getSharedPreferences(
-            CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE,
-            MODE_PRIVATE
-        )
-        val resolutions = preferences.getStringSet(
-            CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY,
-            emptySet()
-        ).orEmpty().toMutableSet()
-        if (resolutions.add(resolution)) {
-            preferences.edit {
-                putStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, resolutions)
-            }
+        ResolutionValidator.parseResolution(resolution)?.let {
+            CustomResolutionsStore.add(this, it)
         }
     }
 

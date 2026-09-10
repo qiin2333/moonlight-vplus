@@ -1008,6 +1008,7 @@ class StreamSettings : AppCompatActivity() {
         @Volatile
         private var developerForegroundPollRunning = false
         private var developerDeviceCodeDialog: AlertDialog? = null
+        private var customResolutionsDialog: android.app.Dialog? = null
 
         /**
          * 获取目标显示器（优先使用外接显示器）
@@ -1106,46 +1107,16 @@ class StreamSettings : AppCompatActivity() {
         }
 
         private fun addCustomResolutionsEntries() {
-            val storage = requireActivity().getSharedPreferences(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE,
-                MODE_PRIVATE
-            )
-            val stored = storage.getStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, null)
             val pref = findPreference<ListPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
-
             val preferencesList = listOf(*pref.entryValues)
 
-            if (stored.isNullOrEmpty()) {
-                return
-            }
-
-            val lengthComparator = Comparator<String> { s1, s2 ->
-                val s1Size = s1.split("x")
-                val s2Size = s2.split("x")
-
-                val w1 = s1Size[0].toInt()
-                val w2 = s2Size[0].toInt()
-
-                val h1 = s1Size[1].toInt()
-                val h2 = s2Size[1].toInt()
-
-                if (w1 == w2) {
-                    h1.compareTo(h2)
-                } else {
-                    w1.compareTo(w2)
-                }
-            }
-
-            val list = ArrayList(stored)
-            Collections.sort(list, lengthComparator)
-
-            for (storedResolution in list) {
+            for (resolution in CustomResolutionsStore.load(requireActivity())) {
+                val storedResolution = resolution.toString()
                 if (preferencesList.contains(storedResolution)) {
                     continue
                 }
-                val resolution = storedResolution.split("x")
-                val width = resolution[0].toInt()
-                val height = resolution[1].toInt()
-                val aspectRatio = AspectRatioConverter.getAspectRatio(width, height)
+
+                val aspectRatio = AspectRatioConverter.getAspectRatio(resolution.width, resolution.height)
                 var displayText = "Custom "
 
                 if (aspectRatio != null) {
@@ -2932,6 +2903,8 @@ class StreamSettings : AppCompatActivity() {
             cancelExpandFocusRestore()
             unregisterConfigSyncPreferenceListener()
             configSyncSnapshotHandler.removeCallbacks(configSyncSnapshotRunnable)
+            customResolutionsDialog?.dismiss()
+            customResolutionsDialog = null
             // 注销 adapter observer，避免泄漏
             val obs = adapterDataObserver
             if (obs != null) {
@@ -3838,10 +3811,11 @@ class StreamSettings : AppCompatActivity() {
                     f.show(parentFragmentManager, "SeekBarPreference")
                 }
                 is CustomResolutionsPreference -> {
-                    val f = CustomResolutionsPreferenceDialogFragment.newInstance(preference.key)
-                    @Suppress("DEPRECATION")
-                    f.setTargetFragment(this, 0)
-                    f.show(parentFragmentManager, "CustomResolutionsPreference")
+                    customResolutionsDialog?.dismiss()
+                    customResolutionsDialog = CustomResolutionsDialog.show(requireContext()) {
+                        customResolutionsDialog = null
+                        (activity as? StreamSettings)?.reloadSettings()
+                    }
                 }
                 is ConfirmDeleteOscPreference -> {
                     val f = ConfirmDeleteOscDialogFragment.newInstance(preference.key)

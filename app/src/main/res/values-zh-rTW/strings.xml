@@ -753,6 +753,25 @@
     <!-- Complete coverage for every label referenced by the settings screen. -->
     <string name="category_backup_restore">備份與同步</string>
     <string name="title_custom_resolutions">自訂解析度</string>
+    <string name="custom_resolution_add_short">新增</string>
+    <string name="custom_resolution_info_contentdesc">使用提示</string>
+    <string name="custom_resolution_info_tooltip">非必要請勿使用此功能，僅限於需要避讓的特殊場景。</string>
+    <string name="custom_resolution_field_width">寬</string>
+    <string name="custom_resolution_field_height">高</string>
+    <string name="custom_resolution_readout_hint">輸入後自動顯示畫面比例</string>
+    <!-- 參數按語言進位(見 resolutionPixelsText):中文傳「萬像素」(px/10000),其他語言傳 MP(px/1000000)。翻譯時保持單位與進位一致。 -->
+    <string name="custom_resolution_pixels_format">%1$.0f 萬像素</string>
+    <string name="custom_resolution_error_empty_width">請輸入寬度</string>
+    <string name="custom_resolution_error_empty_height">請輸入高度</string>
+    <string name="custom_resolution_error_range_width">寬度需在 320–7680 之間</string>
+    <string name="custom_resolution_error_range_height">高度需在 240–4320 之間</string>
+    <string name="custom_resolution_error_even_width">寬度必須為偶數</string>
+    <string name="custom_resolution_error_even_height">高度必須為偶數</string>
+    <string name="custom_resolution_empty_title">還沒有自訂解析度</string>
+    <string name="custom_resolution_empty_hint">在上方輸入寬和高，或點一個預設快速填入</string>
+    <string name="custom_resolution_tag_ultrawide">超寬螢幕</string>
+    <string name="custom_resolution_tag_portrait">直向</string>
+    <string name="custom_resolution_delete_contentdesc">刪除 %1$d×%2$d</string>
     <string name="title_adaptive_bitrate">自適應位元率</string>
     <string name="summary_adaptive_bitrate">依照封包遺失與延遲自動調整位元率；主機不支援伺服器端控制時，改用本機控制器。</string>
     <string name="title_abr_mode">自適應位元率模式</string>
