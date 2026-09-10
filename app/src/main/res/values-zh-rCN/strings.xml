@@ -199,6 +199,7 @@
     <string name="custom_resolution_field_width">宽</string>
     <string name="custom_resolution_field_height">高</string>
     <string name="custom_resolution_readout_hint">输入后自动显示画面比例</string>
+    <!-- 参数按语言进位(见 resolutionPixelsText):中文传「万像素」(px/10000),其他语言传 MP(px/1000000)。翻译时保持单位与进位一致。 -->
     <string name="custom_resolution_pixels_format">%1$.0f 万像素</string>
     <string name="custom_resolution_error_empty_width">请输入宽度</string>
     <string name="custom_resolution_error_empty_height">请输入高度</string>
