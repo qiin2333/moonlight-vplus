@@ -28,72 +28,249 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#60000000" />
+        android:background="#6B000000" />
 
-    <!-- 主要内容容器 -->
-    <LinearLayout
+    <!-- 海报机检取景框（四角角标 + 开机扫描线，bounds 由代码按海报实际显示区域设置） -->
+    <com.limelight.utils.PosterViewfinderView
+        android:id="@+id/posterViewfinder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:visibility="invisible" />
+
+    <!-- 座舱四角括号 -->
+    <View
+        android:id="@+id/cbA"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="12dp" />
+
+    <View
+        android:id="@+id/cbB"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="12dp" />
+
+    <View
+        android:id="@+id/cbC"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="50dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="12dp" />
+
+    <View
+        android:id="@+id/cbD"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- 左上 meta 行 -->
+    <TextView
+        android:id="@+id/diagMeta"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="42dp"
+        android:layout_marginTop="19dp"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.12"
+        android:textColor="#80FFFFFF"
+        android:textSize="9sp"
+        android:text="MOONLIGHT//FRAME-DIAG" />
+
+    <!-- 机体诊断控制台（宽度在代码中按屏宽 58% 设置） -->
+    <LinearLayout
+        android:id="@+id/diagConsole"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="14dp"
+        android:minWidth="280dp"
         android:orientation="vertical"
-        android:gravity="bottom"
-        android:padding="32dp">
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="9dp"
+        android:paddingBottom="7dp">
 
-        <!-- 状态文字 -->
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textColor="#FFFFFF"
-            android:gravity="center"
-            android:layout_marginBottom="24dp"
-            android:fontFamily="sans-serif-medium" />
-
-        <!-- 进度条容器 -->
+        <!-- 标题栏 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="24dp">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="6dp">
 
-            <!-- 进度条 -->
-            <ProgressBar
-                android:id="@+id/progressBar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:progressTint="@color/theme_pink_primary"
-                android:progressBackgroundTint="#33FFFFFF"
-                android:indeterminate="true"
-                android:indeterminateTint="@color/theme_pink_primary" />
-
-            <!-- 进度文字 -->
             <TextView
-                android:id="@+id/progressText"
+                android:id="@+id/diagTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginTop="8dp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.08"
+                android:text="@string/frame_diag_title"
+                android:textColor="#FFFFFF"
                 android:textSize="12sp"
-                android:textColor="#CCCCCC"
-                android:fontFamily="sans-serif-light" />
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/diagTitleSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.2"
+                android:text="@string/frame_diag_title_sub"
+                android:textColor="#73FFFFFF"
+                android:textSize="9sp" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/diagTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.06"
+                android:text="T+00:00.0"
+                android:textColor="#99FFFFFF"
+                android:textSize="10sp" />
 
         </LinearLayout>
 
-        <!-- 随机提示 -->
-        <TextView
-            android:id="@+id/randomTip"
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#2EFFFFFF" />
+
+        <!-- 检查行区（行视图由 FrameDiagnosticController 动态构建） -->
+        <LinearLayout
+            android:id="@+id/diagLines"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="#BBBBBB"
-            android:gravity="center"
-            android:fontFamily="sans-serif-light"
-            android:lineSpacingExtra="2dp"
-            android:maxLines="3"
-            android:ellipsize="end" />
+            android:orientation="vertical"
+            android:paddingTop="5dp"
+            android:paddingBottom="4dp"
+            android:minHeight="30dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#2EFFFFFF" />
+
+        <!-- SYNC 仪表行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="7dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:id="@+id/diagSync"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.1"
+                android:text="@string/frame_diag_sync"
+                android:textColor="#B3FFFFFF"
+                android:textSize="10sp" />
+
+            <LinearLayout
+                android:id="@+id/diagBlocks"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                android:id="@+id/diagPct"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:fontFamily="monospace"
+                android:text="--%"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/diagRank"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.08"
+                android:text="RANK -"
+                android:textColor="#FF6B9D"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/diagMsTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.1"
+                android:text="@string/frame_diag_max_sync"
+                android:textColor="#F5A623"
+                android:textSize="7.5sp"
+                android:visibility="invisible" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1FFFFFFF" />
+
+        <!-- 日志行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="5dp">
+
+            <TextView
+                android:id="@+id/diagLog"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="monospace"
+                android:maxLines="1"
+                android:textColor="#80FFFFFF"
+                android:textSize="10sp"
+                android:text="@string/frame_diag_standby" />
+
+            <TextView
+                android:id="@+id/diagCursor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="monospace"
+                android:text="▮"
+                android:textColor="#FF6B9D"
+                android:textSize="10sp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

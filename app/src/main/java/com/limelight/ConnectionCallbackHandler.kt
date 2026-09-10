@@ -168,6 +168,9 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     fun connectionStarted() {
         game.runOnUiThread {
+            // 机体诊断台：HOST LINK → ESTABLISHED，进入 READY 态
+            game.progressOverlay?.onConnectionEstablished()
+
             // 不在此处 dismiss progressOverlay：connectionStarted 是连接级回调，
             // 视频首帧通常还没解码出来。dismiss 已交由 decoderRenderer.firstFrameCallback
             // 在首帧到达瞬间触发，避免 "loading 消失 → 黑屏 → 闪出画面" 的割裂感。
