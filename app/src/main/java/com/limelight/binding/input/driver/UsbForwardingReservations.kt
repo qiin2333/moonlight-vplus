@@ -1,10 +1,12 @@
 package com.limelight.binding.input.driver
 
+import android.annotation.SuppressLint
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /** Process-wide ownership, including service replacement and late permission callbacks. */
+@SuppressLint("NewApi") // CompletableFuture is supplied by core library desugaring on API 22/23.
 internal class UsbForwardingReservations {
     val lock = ReentrantLock()
     private val owners = mutableMapOf<String, Lease>()

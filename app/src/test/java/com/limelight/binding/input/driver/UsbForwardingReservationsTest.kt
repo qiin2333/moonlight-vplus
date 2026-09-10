@@ -9,6 +9,31 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 class UsbForwardingReservationsTest {
+    @Test fun reservationDuringServiceStopRetainsFailureUntilStopFinishes() {
+        val registry = UsbForwardingReservations()
+        val stop = UsbDriverStopResult()
+        val lease = registry.reserve("usb/a")
+        lease.awaitStops(listOf(stop.completion))
+        stop.failed(IllegalStateException("driver release failed"))
+        assertFalse(lease.ready.isDone)
+        stop.finish()
+        assertTrue(lease.ready.isCompletedExceptionally)
+        assertThrows(IllegalStateException::class.java) { lease.restore {} }
+        assertTrue(registry.contains("usb/a"))
+    }
+
+    @Test fun reservationDuringCleanServiceStopBecomesReady() {
+        val registry = UsbForwardingReservations()
+        val stop = UsbDriverStopResult()
+        val lease = registry.reserve("usb/a")
+        lease.awaitStops(listOf(stop.completion))
+        assertFalse(lease.ready.isDone)
+        stop.finish()
+        lease.ready.join()
+        lease.restore {}
+        assertFalse(registry.contains("usb/a"))
+    }
+
     @Test fun waitsForEveryLocalDriverAndRestoresOnlyOnce() {
         val registry = UsbForwardingReservations()
         val lease = registry.reserve("usb/a")
