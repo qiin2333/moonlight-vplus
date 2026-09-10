@@ -40,6 +40,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalView
@@ -116,6 +117,20 @@ private fun focusIndicationVisible(focused: Boolean): Boolean {
     return focused && !touchMode
 }
 
+/**
+ * 焦点/激活态高亮:粉色软底 + 1.5dp 强调描边。
+ * 非高亮时用各组件自己的 fallback(如静态描边)。ResolutionRow 因带颜色动画未使用此封装。
+ */
+@Composable
+private fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifier = Modifier): Modifier =
+    if (highlighted) {
+        Modifier
+            .background(colorResource(R.color.app_dialog_accent_soft), shape)
+            .border(1.5.dp, colorResource(R.color.app_dialog_accent_color), shape)
+    } else {
+        fallback
+    }
+
 @Composable
 internal fun DialogHeader(infoExpanded: Boolean, onToggleInfo: () -> Unit) {
     val accent = colorResource(R.color.app_dialog_accent_color)
@@ -161,15 +176,7 @@ private fun InfoToggleButton(expanded: Boolean, onToggle: () -> Unit) {
         modifier = Modifier
             .size(32.dp)
             .clip(CircleShape)
-            .then(
-                if (showFocus || expanded) {
-                    Modifier
-                        .background(colorResource(R.color.app_dialog_accent_soft))
-                        .border(1.5.dp, accent, CircleShape)
-                } else {
-                    Modifier
-                }
-            )
+            .then(focusHighlight(showFocus || expanded, CircleShape))
             .handleGamepadConfirm(onToggle)
             .clickable(onClick = onToggle)
             .focusable(interactionSource = interaction),
@@ -492,13 +499,11 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
         modifier = Modifier
             .clip(CircleShape)
             .then(
-                if (showFocus) {
-                    Modifier
-                        .background(colorResource(R.color.app_dialog_accent_soft))
-                        .border(1.5.dp, accent, CircleShape)
-                } else {
-                    Modifier.border(1.dp, outline, CircleShape)
-                }
+                focusHighlight(
+                    highlighted = showFocus,
+                    shape = CircleShape,
+                    fallback = Modifier.border(1.dp, outline, CircleShape)
+                )
             )
             .handleGamepadConfirm(onClick)
             .clickable(onClick = onClick)
@@ -669,15 +674,7 @@ private fun DeleteButton(
             .focusProperties { right = rightNeighbor ?: FocusRequester.Default }
             .size(if (compact) 30.dp else 34.dp)
             .clip(CircleShape)
-            .then(
-                if (showFocus) {
-                    Modifier
-                        .background(colorResource(R.color.app_dialog_accent_soft))
-                        .border(1.5.dp, accent, CircleShape)
-                } else {
-                    Modifier
-                }
-            )
+            .then(focusHighlight(showFocus, CircleShape))
             .handleGamepadConfirm { onDelete(resolution) }
             .clickable { onDelete(resolution) }
             .focusable(interactionSource = interaction),
@@ -771,15 +768,7 @@ private fun FooterButton(
     Box(
         modifier = Modifier
             .clip(AppShapes.small)
-            .then(
-                if (showFocus) {
-                    Modifier
-                        .background(colorResource(R.color.app_dialog_accent_soft))
-                        .border(1.5.dp, accent, AppShapes.small)
-                } else {
-                    Modifier
-                }
-            )
+            .then(focusHighlight(showFocus, AppShapes.small))
             .handleGamepadConfirm(onClick)
             .clickable(onClick = onClick)
             .focusable(interactionSource = interaction)
