@@ -42,7 +42,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -91,20 +90,6 @@ internal fun ResolutionInputError.text(): String = stringResource(
         ResolutionInputReason.DUPLICATE -> R.string.resolution_already_exists
     }
 )
-
-/**
- * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
- * 其他语言以 MP 为单位(传 像素数/1000000)。
- * locale 必须取自 resources.configuration(与 stringResource 的资源解析同源),
- * 不能用 LocalConfiguration.locales——后者在部分场景与实际资源配置不同步。
- */
-@Composable
-private fun resolutionPixelsText(pixelCount: Int): String {
-    val locale = LocalContext.current.resources.configuration.locales[0]
-    val useWan = locale.language.equals("zh", ignoreCase = true)
-    val scaled = if (useWan) pixelCount / 10_000f else pixelCount / 1_000_000f
-    return stringResource(R.string.custom_resolution_pixels_format, scaled)
-}
 
 private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
     onPreviewKeyEvent { event ->
@@ -234,6 +219,7 @@ internal fun Composer(
     heightText: String,
     onHeightChange: (String) -> Unit,
     error: ResolutionInputError?,
+    pixelsText: (Int) -> String,
     widthFocus: FocusRequester,
     heightFocus: FocusRequester,
     addFocus: FocusRequester,
@@ -322,7 +308,7 @@ internal fun Composer(
                     }
                     width != null && height != null && width > 0 && height > 0 -> {
                         {
-                            val pixels = resolutionPixelsText(width * height)
+                            val pixels = pixelsText(width * height)
                             Text(
                                 text = "≈ ${ratioText(width, height)}",
                                 color = accent,
@@ -549,6 +535,7 @@ internal fun ResolutionList(
     resolutions: List<Resolution>,
     justAdded: Resolution?,
     compact: Boolean,
+    pixelsText: (Int) -> String,
     focusFor: (Resolution) -> FocusRequester,
     rightNeighbor: FocusRequester?,
     onDelete: (Resolution) -> Unit,
@@ -567,6 +554,7 @@ internal fun ResolutionList(
                 resolution = resolution,
                 isJustAdded = justAdded == resolution,
                 compact = compact,
+                pixelsText = pixelsText,
                 focusRequester = focusFor(resolution),
                 rightNeighbor = rightNeighbor,
                 onDelete = onDelete
@@ -580,6 +568,7 @@ private fun ResolutionRow(
     resolution: Resolution,
     isJustAdded: Boolean,
     compact: Boolean,
+    pixelsText: (Int) -> String,
     focusRequester: FocusRequester,
     rightNeighbor: FocusRequester?,
     onDelete: (Resolution) -> Unit
@@ -629,7 +618,7 @@ private fun ResolutionRow(
                 fontWeight = FontWeight.Bold
             )
             if (!compact) {
-                val pixels = resolutionPixelsText(resolution.width * resolution.height)
+                val pixels = pixelsText(resolution.width * resolution.height)
                 Text(
                     text = "${ratioText(resolution.width, resolution.height)} · $pixels",
                     color = colorResource(R.color.app_dialog_text_secondary),

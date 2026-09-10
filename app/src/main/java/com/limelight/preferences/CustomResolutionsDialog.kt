@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppDialogStyler
@@ -54,6 +55,7 @@ object CustomResolutionsDialog {
 
     fun show(context: Context, onClosed: () -> Unit): Dialog {
         val initial = CustomResolutionsStore.load(context)
+        val pixelsText = pixelsTextFactory(context)
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
         // 取消(返回/点外部/取消按钮)丢弃本次会话的全部改动,恢复进入时的快照
         var cancelled = false
@@ -64,6 +66,7 @@ object CustomResolutionsDialog {
             setContent {
                 CustomResolutionsDialogContent(
                     initial = initial,
+                    pixelsText = pixelsText,
                     onCommit = { CustomResolutionsStore.save(context, it) },
                     onCancel = {
                         cancelled = true
@@ -109,11 +112,30 @@ object CustomResolutionsDialog {
             WindowManager.LayoutParams.WRAP_CONTENT
         )
     }
+
+    /**
+     * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
+     * 其他语言以 MP 为单位(传 像素数/1000000)。
+     *
+     * 单位判断必须在 Composable 之外完成:LocalConfiguration.locales 与资源解析
+     * 使用的配置可能不同步,而读 resources.configuration 又会触发 Compose lint。
+     * 这里模板与进位取自同一个 context 配置,天然一致。
+     */
+    private fun pixelsTextFactory(context: Context): (Int) -> String {
+        val locale = ConfigurationCompat.getLocales(context.resources.configuration)[0]
+        val useWan = locale?.language.equals("zh", ignoreCase = true)
+        val template = context.getString(R.string.custom_resolution_pixels_format)
+        return { pixelCount ->
+            val scaled = if (useWan) pixelCount / 10_000f else pixelCount / 1_000_000f
+            String.format(locale, template, scaled)
+        }
+    }
 }
 
 @Composable
 private fun CustomResolutionsDialogContent(
     initial: List<Resolution>,
+    pixelsText: (Int) -> String,
     onCommit: (List<Resolution>) -> Unit,
     onCancel: () -> Unit,
     onConfirm: () -> Unit
@@ -255,6 +277,7 @@ private fun CustomResolutionsDialogContent(
                         inputError = null
                     },
                     error = inputError,
+                    pixelsText = pixelsText,
                     widthFocus = widthFocus,
                     heightFocus = heightFocus,
                     addFocus = addFocus,
@@ -277,6 +300,7 @@ private fun CustomResolutionsDialogContent(
                             resolutions = resolutions,
                             justAdded = justAdded,
                             compact = true,
+                            pixelsText = pixelsText,
                             focusFor = { rowFocus.getValue(keyOf(it)) },
                             rightNeighbor = widthFocus,
                             onDelete = ::deleteResolution
@@ -297,6 +321,7 @@ private fun CustomResolutionsDialogContent(
                     resolutions = resolutions,
                     justAdded = justAdded,
                     compact = false,
+                    pixelsText = pixelsText,
                     focusFor = { rowFocus.getValue(keyOf(it)) },
                     rightNeighbor = null,
                     onDelete = ::deleteResolution,
