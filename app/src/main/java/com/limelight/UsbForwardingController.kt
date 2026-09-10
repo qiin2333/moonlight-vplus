@@ -31,6 +31,7 @@ import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /** One foreground stream owns one export. Permission and UI state stay on the main
  * thread; blocking native cleanup is serialized behind export on the worker. */
@@ -303,9 +304,19 @@ class UsbForwardingController(
                 activeTunnel?.close()
                 export?.let { backend.release(it).get() }
                 export = null
-                localReservation?.let {
-                    it.ready.get(10, TimeUnit.SECONDS)
-                    it.restore()
+                localReservation?.let { reservation ->
+                    val stopped = try {
+                        reservation.ready.get(10, TimeUnit.SECONDS)
+                        true
+                    } catch (_: TimeoutException) {
+                        // Native cleanup already succeeded. A slow local stop keeps
+                        // only this path reserved until its completion callback restores it.
+                        reservation.restoreWhenReady {
+                            LimeLog.warning("Unable to restore local USB driver: $it")
+                        }
+                        false
+                    }
+                    if (stopped) reservation.restore()
                     localReservation = null
                 }
             }.isSuccess

@@ -5,6 +5,7 @@ import org.junit.Test
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
@@ -14,6 +15,7 @@ class UsbForwardingReservationsTest {
         val lease = registry.reserve("usb/a")
         val stop = CompletableFuture<Void>()
         lease.awaitStops(listOf(stop))
+        assertThrows(TimeoutException::class.java) { lease.ready.get(0, TimeUnit.MILLISECONDS) }
         var restores = 0
         lease.restoreWhenReady({ restores++ }, { throw AssertionError(it) })
         assertTrue(registry.contains("usb/a"))
@@ -29,6 +31,7 @@ class UsbForwardingReservationsTest {
         val lease = registry.reserve("usb/a")
         val stop = CompletableFuture<Void>()
         lease.awaitStops(listOf(stop))
+        assertThrows(TimeoutException::class.java) { lease.ready.get(0, TimeUnit.MILLISECONDS) }
         var restored = false
         lease.restoreWhenReady({ restored = true }, { throw AssertionError(it) })
         stop.completeExceptionally(IllegalStateException("release failed"))
