@@ -395,21 +395,15 @@ class SwitchProController(
         if (ifaces.isNotEmpty()) {
             synchronized(ifaces) {
                 for (iface in ifaces) {
-                    try {
-                        connection.releaseInterface(iface)
-                    } catch (e: Exception) {
-                        LimeLog.warning("SwitchPro: Failed to release interface")
+                    releaseUsbResource {
+                        check(connection.releaseInterface(iface)) { "USB interface release failed" }
                     }
                 }
                 ifaces.clear()
             }
         }
 
-        try {
-            connection.close()
-        } catch (e: Exception) {
-            LimeLog.warning("SwitchPro: Failed to close connection")
-        }
+        releaseUsbResource { connection.close() }
 
         notifyDeviceRemoved()
     }

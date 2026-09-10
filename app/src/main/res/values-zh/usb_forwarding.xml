@@ -19,7 +19,6 @@
     <string name="usb_forward_connected">连接已建立，请在电脑上确认设备是否可用。</string>
     <string name="usb_forward_releasing">正在释放 USB 设备…</string>
     <string name="usb_forward_failed">USB 转发已停止，请检查主机和网络。</string>
-    <string name="usb_forward_local_owner">该设备需要本地驱动交接，或暂时无法准确区分，目前不能转发。</string>
     <string name="usb_forward_unconfigured">请先与此主机完成配对，再使用 USB 转发。</string>
     <string name="usb_forward_target">共享到：%1$s</string>
     <string name="usb_forward_usage">共享期间设备交由电脑使用，结束串流后自动恢复本机使用。一次可共享一个 USB 设备。</string>
@@ -28,4 +27,28 @@
     <string name="usb_forward_share">共享到电脑</string>
     <string name="usb_forward_authorizing">等待 USB 授权…</string>
     <string name="usb_forward_detached">设备已拔出，共享已停止。</string>
+    <string name="usb_forward_handoff">正在释放本地手柄驱动…</string>
+    <string name="usb_forward_wireless_adapter">暂不支持转发蓝牙 USB 适配器。</string>
+    <string name="usb_forward_duplicate_device">存在厂商和产品 ID 相同的 USB 设备，请拔掉重复设备后再共享。</string>
+    <string name="usb_forward_experimental">实验性</string>
+    <string name="usb_forward_toggle_title">USB 共享</string>
+    <string name="usb_forward_toggle_hint">仅对此电脑启用</string>
+    <string name="usb_forward_devices_count">已连接设备 · %1$d 台</string>
+    <string name="usb_forward_refresh">刷新</string>
+    <string name="usb_forward_close">关闭</string>
+    <string name="usb_forward_sharing">正在共享</string>
+    <string name="usb_forward_usage_short">共享期间由电脑使用，结束串流后恢复本机。</string>
+    <string name="usb_forward_confirm_hint">确认</string>
+    <string name="usb_forward_back_hint">返回</string>
+    <string name="usb_type_keyboard">键盘</string>
+    <string name="usb_type_mouse">鼠标</string>
+    <string name="usb_type_gamepad">手柄</string>
+    <string name="usb_type_input">输入设备</string>
+    <string name="usb_type_network">USB 网卡</string>
+    <string name="usb_type_storage">USB 存储</string>
+    <string name="usb_type_audio">音频设备</string>
+    <string name="usb_type_camera">摄像头</string>
+    <string name="usb_type_printer">打印机</string>
+    <string name="usb_type_hub">USB 集线器</string>
+    <string name="usb_type_generic">USB 设备</string>
 </resources>

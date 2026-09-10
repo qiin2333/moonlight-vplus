@@ -30,6 +30,8 @@ import java.security.cert.X509Certificate
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /** One foreground stream owns one export. Permission and UI state stay on the main
  * thread; blocking native cleanup is serialized behind export on the worker. */
@@ -75,6 +77,7 @@ class UsbForwardingController(
     private var sheet: Dialog? = null
     private var message by mutableIntStateOf(R.string.usb_forward_choose)
     @Volatile private var export: UsbIpBackend.Export? = null
+    private var localReservation: UsbDriverService.Companion.ForwardingReservation? = null
     @Volatile private var tunnel: UsbReverseTunnel? = null
 
     private val receiver = object : BroadcastReceiver() {
@@ -82,6 +85,12 @@ class UsbForwardingController(
             if (closed) return
             val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
             refreshDevices()
+            val active = selected
+            if (intent.action == UsbManager.ACTION_USB_DEVICE_ATTACHED && active != null &&
+                !hasUniqueIdentity(active)) {
+                release(R.string.usb_forward_duplicate_device)
+                return
+            }
             if (device != selected) return
             if (intent.action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
                 release(R.string.usb_forward_detached)
@@ -110,8 +119,12 @@ class UsbForwardingController(
         if (selected == null && !busy) refreshCapability()
         sheet = AppActionSheet.showCustom(game) {
             UsbDevicePanel(
-                devices = devices,
-                selected = selected,
+                devices = (devices + listOfNotNull(selected)).distinctBy { it.deviceName }.map {
+                    UsbPanelDevice(it.deviceName,
+                        it.productName ?: "USB %04x:%04x".format(it.vendorId, it.productId),
+                        UsbDeviceType.from(it))
+                },
+                selected = selected?.deviceName,
                 busy = busy,
                 message = message,
                 hostName = game.pcName ?: host,
@@ -119,8 +132,10 @@ class UsbForwardingController(
                 canShare = enabled && capability?.available == true,
                 onEnabledChange = ::changeEnabled,
                 onRetry = ::refreshCapability,
-                onShare = ::request,
-                onRelease = { release() }
+                onShare = { path -> manager.deviceList[path]?.let(::request) },
+                onRelease = { release() },
+                onRefresh = { refreshDevices() },
+                onDismiss = { sheet?.dismiss() }
             )
         }
         return sheet
@@ -165,16 +180,24 @@ class UsbForwardingController(
         devices = manager.deviceList.values.sortedBy { it.deviceName }
     }
 
+    private fun hasUniqueIdentity(device: UsbDevice): Boolean =
+        manager.deviceList.values.count {
+            it.vendorId == device.vendorId && it.productId == device.productId
+        } == 1
+
     private fun request(device: UsbDevice) {
         if (closed || busy || selected != null || !game.connected ||
             !enabled || capability?.available != true) return
         LimeLog.info("USB forwarding selected ${device.deviceName} (${device.vendorId}:${device.productId})")
-        // A controller/HCI adapter can already own custom-driver threads. Their
-        // per-device handoff is separate from the validated Android HID path.
-        if (UsbDriverService.shouldClaimDevice(device, true) || HciUsbDeviceProbe.probe(device) != null ||
-            manager.deviceList.values.count { it.vendorId == device.vendorId && it.productId == device.productId } != 1) {
-            Toast.makeText(game, R.string.usb_forward_local_owner, Toast.LENGTH_LONG).show()
-            LimeLog.warning("USB forwarding rejected because a local input driver owns the device")
+        // Wireless adapter handoff needs a separate whole-bridge lifecycle.
+        val unavailableReason = when {
+            HciUsbDeviceProbe.probe(device) != null -> R.string.usb_forward_wireless_adapter
+            !hasUniqueIdentity(device) -> R.string.usb_forward_duplicate_device
+            else -> null
+        }
+        if (unavailableReason != null) {
+            Toast.makeText(game, unavailableReason, Toast.LENGTH_LONG).show()
+            LimeLog.warning("USB forwarding unavailable: ${game.getString(unavailableReason)}")
             return
         }
         selected = device
@@ -208,6 +231,13 @@ class UsbForwardingController(
                 // controller can enqueue native work.
                 predecessorCleanup.get()
                 if (closed) return@enqueue
+                game.runOnUiThread {
+                    if (!closed && generation == operation) message = R.string.usb_forward_handoff
+                }
+                localReservation = UsbDriverService.reserveForForwarding(device)
+                localReservation!!.ready.get(10, TimeUnit.SECONDS)
+                if (closed) return@enqueue
+                check(hasUniqueIdentity(device)) { "USB identity changed during local driver handoff" }
                 val handle = backend.export(device).get()
                 export = handle
                 game.runOnUiThread {
@@ -280,6 +310,21 @@ class UsbForwardingController(
                 activeTunnel?.close()
                 export?.let { backend.release(it).get() }
                 export = null
+                localReservation?.let { reservation ->
+                    val stopped = try {
+                        reservation.ready.get(10, TimeUnit.SECONDS)
+                        true
+                    } catch (_: TimeoutException) {
+                        // Native cleanup already succeeded. A slow local stop keeps
+                        // only this path reserved until its completion callback restores it.
+                        reservation.restoreWhenReady {
+                            LimeLog.warning("Unable to restore local USB driver: $it")
+                        }
+                        false
+                    }
+                    if (stopped) reservation.restore()
+                    localReservation = null
+                }
             }.isSuccess
             game.runOnUiThread {
                 if (!closed && generation == operation) {
@@ -319,6 +364,14 @@ class UsbForwardingController(
                 cleanup { activeTunnel?.close() }
                 cleanup { backend.closeAsync().get() }
                 export = null
+                if (failure == null) {
+                    // A local driver failure reserves only its USB path. Native cleanup
+                    // succeeded, so unrelated devices may use the next exporter.
+                    localReservation?.restoreWhenReady {
+                        LimeLog.warning("Unable to restore local USB driver: $it")
+                    }
+                    localReservation = null
+                }
                 try {
                     if (failure == null) closeCompletion.complete(null)
                     else closeCompletion.completeExceptionally(failure!!)

@@ -162,9 +162,7 @@ abstract class AbstractXboxController(
         releaseClaimedInterfaces()
 
         // Close the USB connection
-        runCatching { connection.close() }.onFailure {
-            LimeLog.warning("Failed to close Xbox controller USB connection")
-        }
+        releaseUsbResource { connection.close() }
 
         // Report the device removed
         notifyDeviceRemoved()
@@ -172,8 +170,8 @@ abstract class AbstractXboxController(
 
     private fun releaseClaimedInterfaces() {
         for (i in claimedInterfaces.indices.reversed()) {
-            runCatching { connection.releaseInterface(claimedInterfaces[i]) }.onFailure {
-                LimeLog.warning("Failed to release Xbox controller USB interface")
+            releaseUsbResource {
+                check(connection.releaseInterface(claimedInterfaces[i])) { "Xbox USB interface release failed" }
             }
         }
         claimedInterfaces.clear()

@@ -249,10 +249,8 @@ abstract class AbstractPlayStationUsbController(
         if (ifaces.isNotEmpty()) {
             synchronized(ifaces) {
                 for (iface in ifaces) {
-                    try {
-                        connection.releaseInterface(iface)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to release interface", e)
+                    releaseUsbResource {
+                        check(connection.releaseInterface(iface)) { "USB interface release failed" }
                     }
                 }
                 ifaces.clear()
@@ -260,11 +258,7 @@ abstract class AbstractPlayStationUsbController(
         }
 
         synchronized(outputLock) {
-            try {
-                connection.close()
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to close connection", e)
-            }
+            releaseUsbResource { connection.close() }
         }
 
         try {
