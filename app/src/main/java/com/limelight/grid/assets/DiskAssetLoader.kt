@@ -31,7 +31,8 @@ class DiskAssetLoader(context: Context) {
     }
 
     fun loadBitmapFromCache(tuple: CachedAppAssetLoader.LoaderTuple, sampleSize: Int): ScaledBitmap? {
-        val file = getFile(tuple.computer.uuid!!, tuple.app.appId) ?: return null
+        val computerUuid = tuple.computer.uuid ?: return null
+        val file = getFile(computerUuid, tuple.app.appId) ?: return null
 
         if (!file.exists()) {
             return null
