@@ -3838,10 +3838,9 @@ class StreamSettings : AppCompatActivity() {
                     f.show(parentFragmentManager, "SeekBarPreference")
                 }
                 is CustomResolutionsPreference -> {
-                    val f = CustomResolutionsPreferenceDialogFragment.newInstance(preference.key)
-                    @Suppress("DEPRECATION")
-                    f.setTargetFragment(this, 0)
-                    f.show(parentFragmentManager, "CustomResolutionsPreference")
+                    CustomResolutionsDialog.show(requireContext()) {
+                        (activity as? StreamSettings)?.reloadSettings()
+                    }
                 }
                 is ConfirmDeleteOscPreference -> {
                     val f = ConfirmDeleteOscDialogFragment.newInstance(preference.key)

@@ -303,15 +303,9 @@
     <string name="title_native_fps_dialog">Aviso de FPS nativo</string>
     <string name="title_custom_resolutions">Resoluções personalizadas</string>
     <string name="summary_custom_resolutions">Crie suas próprias resoluções personalizadas</string>
-    <string name="custom_resolution_input_title">Inserir resolução personalizada</string>
-    <string name="width_label">Largura:</string>
-    <string name="height_label">Altura:</string>
     <string name="width_hint">ex: 1920</string>
     <string name="height_hint">ex: 1080</string>
-    <string name="add_resolution">Adicionar resolução</string>
-    <string name="invalid_resolution_format">Formato de resolução inválido, use o formato largura x altura</string>
     <string name="resolution_already_exists">Esta resolução já existe</string>
-    <string name="resolution_added_successfully">Resolução adicionada com sucesso</string>
     <string name="fps_144">144 FPS</string>
     <string name="fps_165">165 FPS</string>
     
