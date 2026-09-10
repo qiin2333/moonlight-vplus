@@ -37,7 +37,7 @@ class PosterContentProvider : ContentProvider() {
         }
         val appId = segments[APP_ID_PATH_INDEX]
         val uuid = segments[COMPUTER_UUID_PATH_INDEX]
-        val file = diskAssetLoader.getFile(uuid, appId.toInt())
+        val file = diskAssetLoader.getFile(uuid, appId.toInt()) ?: throw FileNotFoundException()
         if (file.exists()) {
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         }

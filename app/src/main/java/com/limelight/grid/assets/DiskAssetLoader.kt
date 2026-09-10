@@ -10,6 +10,7 @@ import android.os.Build
 
 import com.limelight.LimeLog
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 
 import java.io.File
 import java.io.IOException
@@ -25,11 +26,12 @@ class DiskAssetLoader(context: Context) {
     private val cacheDir: File = context.cacheDir
 
     fun checkCacheExists(tuple: CachedAppAssetLoader.LoaderTuple): Boolean {
-        return CacheHelper.cacheFileExists(cacheDir, "boxart", tuple.computer.uuid!!, "${tuple.app.appId}.png")
+        val cacheKey = HostCacheKey.fromUuid(tuple.computer.uuid) ?: return false
+        return CacheHelper.cacheFileExists(cacheDir, "boxart", cacheKey, "${tuple.app.appId}.png")
     }
 
     fun loadBitmapFromCache(tuple: CachedAppAssetLoader.LoaderTuple, sampleSize: Int): ScaledBitmap? {
-        val file = getFile(tuple.computer.uuid!!, tuple.app.appId)
+        val file = getFile(tuple.computer.uuid!!, tuple.app.appId) ?: return null
 
         if (!file.exists()) {
             return null
@@ -117,7 +119,7 @@ class DiskAssetLoader(context: Context) {
      *                     避免低内存设备 OOM（典型 4K TV/低端机 SDK 23）。
      */
     fun loadFullBitmapFromCache(computerUuid: String, appId: Int, maxDimension: Int = 0): Bitmap? {
-        val file = getFile(computerUuid, appId)
+        val file = getFile(computerUuid, appId) ?: return null
         if (!file.exists() || file.length() > MAX_ASSET_SIZE) {
             return null
         }
@@ -197,20 +199,27 @@ class DiskAssetLoader(context: Context) {
         return original
     }
 
-    fun getFile(computerUuid: String, appId: Int): File {
-        return CacheHelper.openPath(false, cacheDir, "boxart", computerUuid, "$appId.png")
+    fun getFile(computerUuid: String, appId: Int): File? {
+        val cacheKey = HostCacheKey.fromUuid(computerUuid) ?: return null
+        return CacheHelper.openPath(false, cacheDir, "boxart", cacheKey, "$appId.png")
     }
 
     fun deleteAssetsForComputer(computerUuid: String) {
-        val dir = CacheHelper.openPath(false, cacheDir, "boxart", computerUuid)
+        val cacheKey = HostCacheKey.fromUuid(computerUuid) ?: return
+        val dir = CacheHelper.openPath(false, cacheDir, "boxart", cacheKey)
         dir.listFiles()?.forEach { it.delete() }
     }
 
     fun populateCacheWithStream(tuple: CachedAppAssetLoader.LoaderTuple, input: InputStream) {
+        val cacheKey = HostCacheKey.fromUuid(tuple.computer.uuid)
+        if (cacheKey == null) {
+            LimeLog.warning("Skipping box art cache for host without an identifier")
+            return
+        }
         var success = false
         try {
             CacheHelper.openCacheFileForOutput(
-                cacheDir, "boxart", tuple.computer.uuid!!, "${tuple.app.appId}.png"
+                cacheDir, "boxart", cacheKey, "${tuple.app.appId}.png"
             ).use { out ->
                 CacheHelper.writeInputStreamToOutputStream(input, out, MAX_ASSET_SIZE)
                 success = true
@@ -220,7 +229,7 @@ class DiskAssetLoader(context: Context) {
         } finally {
             if (!success) {
                 LimeLog.warning("Unable to populate cache with tuple: $tuple")
-                CacheHelper.deleteCacheFile(cacheDir, "boxart", tuple.computer.uuid!!, "${tuple.app.appId}.png")
+                CacheHelper.deleteCacheFile(cacheDir, "boxart", cacheKey, "${tuple.app.appId}.png")
             }
         }
     }

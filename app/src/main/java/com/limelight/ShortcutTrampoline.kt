@@ -17,6 +17,7 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.Dialog
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.SpinnerDialog
@@ -260,7 +261,9 @@ class ShortcutTrampoline : Activity() {
 
     private fun getNvAppById(appId: Int, uuidString: String): NvApp? {
         try {
-            val rawAppList = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString))
+            val cacheKey = HostCacheKey.fromUuid(uuidString)
+                ?: return getLastNvAppFromPreferences(appId, uuidString)
+            val rawAppList = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(cacheDir, "applist", cacheKey))
             if (rawAppList.isEmpty()) {
                 return getLastNvAppFromPreferences(appId, uuidString)
             }
@@ -337,7 +340,9 @@ class ShortcutTrampoline : Activity() {
         } else if (appNameString != null && appNameString.isNotEmpty()) {
             try {
                 var appId = -1
-                val rawAppList = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString!!))
+                val cacheKey = HostCacheKey.fromUuid(uuidString)
+                    ?: throw IOException("Host cache identifier is unavailable")
+                val rawAppList = CacheHelper.readInputStreamToString(CacheHelper.openCacheFileForInput(cacheDir, "applist", cacheKey))
 
                 if (rawAppList.isEmpty()) {
                     Dialog.displayDialog(this@ShortcutTrampoline,
