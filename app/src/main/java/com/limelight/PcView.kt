@@ -60,6 +60,7 @@ import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.easytier.EasyTierController
@@ -2553,8 +2554,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun getAppListFromCache(uuid: String): List<NvApp>? {
         try {
+            val cacheKey = HostCacheKey.fromUuid(uuid) ?: return null
             val rawAppList = CacheHelper.readInputStreamToString(
-                    CacheHelper.openCacheFileForInput(cacheDir, "applist", uuid))
+                    CacheHelper.openCacheFileForInput(cacheDir, "applist", cacheKey))
             return if (rawAppList.isEmpty()) null else NvHTTP.getAppListByReader(StringReader(rawAppList))
         } catch (e: IOException) {
             LimeLog.warning("Failed to read app list from cache: " + e.message)

@@ -74,6 +74,7 @@ import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppBackgroundMode
 import com.limelight.utils.BackgroundImageManager
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.Dialog
 import com.limelight.utils.FrameMetricsLogger
 import com.limelight.utils.ServerHelper
@@ -1342,8 +1343,10 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun populateAppGridWithCache() {
         try {
             // Try to load from cache
+            val cacheKey = HostCacheKey.fromUuid(uuidString)
+                ?: throw IOException("Host cache identifier is unavailable")
             val cachedRawAppList = CacheHelper.readInputStreamToString(
-                CacheHelper.openCacheFileForInput(cacheDir, "applist", uuidString)
+                CacheHelper.openCacheFileForInput(cacheDir, "applist", cacheKey)
             )
             val applist = NvHTTP.getAppListByReader(StringReader(cachedRawAppList))
             updateUiWithAppList(applist)

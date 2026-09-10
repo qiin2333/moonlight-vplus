@@ -27,6 +27,7 @@ import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.MdnsDiscoveryListener
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.NetHelper
 import com.limelight.utils.ServerHelper
 
@@ -605,9 +606,11 @@ class ComputerManagerService : Service() {
             recentPollResults.remove(key)
             activePollFlights.remove(key)
         }
-        uuid?.let {
-            CacheHelper.deleteCacheFile(cacheDir, "applist", it)
-            sendAppListWidgetRefresh(it)
+        uuid?.let { rawUuid ->
+            HostCacheKey.fromUuid(rawUuid)?.let { cacheKey ->
+                CacheHelper.deleteCacheFile(cacheDir, "applist", cacheKey)
+            }
+            sendAppListWidgetRefresh(rawUuid)
         }
 
         if (getLocalDatabaseReference()) {
@@ -1240,12 +1243,17 @@ class ComputerManagerService : Service() {
                             if (appList.isNotEmpty() &&
                                 (list.isNotEmpty() || emptyAppListResponses >= EMPTY_LIST_THRESHOLD)
                             ) {
-                                try {
-                                    CacheHelper.openCacheFileForOutput(cacheDir, "applist", computer.uuid!!).use { cacheOut ->
-                                        CacheHelper.writeStringToOutputStream(cacheOut, appList)
+                                val cacheKey = HostCacheKey.fromUuid(computer.uuid)
+                                if (cacheKey != null) {
+                                    try {
+                                        CacheHelper.openCacheFileForOutput(cacheDir, "applist", cacheKey).use { cacheOut ->
+                                            CacheHelper.writeStringToOutputStream(cacheOut, appList)
+                                        }
+                                    } catch (e: IOException) {
+                                        e.printStackTrace()
                                     }
-                                } catch (e: IOException) {
-                                    e.printStackTrace()
+                                } else {
+                                    LimeLog.warning("Skipping app list cache for host without an identifier")
                                 }
 
                                 sendAppListWidgetRefresh(computer.uuid!!)
