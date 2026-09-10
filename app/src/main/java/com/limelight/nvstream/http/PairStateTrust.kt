@@ -40,10 +40,10 @@ internal object PairStateTrust {
     }
 
     fun resolvePairState(
-        reportedState: PairingManager.PairState?,
+        reportedState: PairingManager.PairState,
         serverInfoTrustedByCert: Boolean,
         pairStateTrusted: Boolean
-    ): PairingManager.PairState? {
+    ): PairingManager.PairState {
         return if (pairStateTrusted && !serverInfoTrustedByCert) {
             PairingManager.PairState.NOT_PAIRED
         } else {

@@ -353,8 +353,9 @@ class NvHTTP(
         lastPairStateTrusted = false
 
         if (serverCert != null) {
+            val httpsUrl = getHttpsUrl(likelyOnline)
             try {
-                val resp = openHttpConnectionToString(client, getHttpsUrl(likelyOnline), "serverinfo")
+                val resp = openHttpConnectionToString(client, httpsUrl, "serverinfo")
                 getServerVersion(resp)
                 lastServerInfoTrustedByCert = true
                 lastPairStateTrusted = true
@@ -362,8 +363,9 @@ class NvHTTP(
             } catch (e: HostHttpResponseException) {
                 if (e.getErrorCode() == 401) {
                     // The pinned HTTPS response authenticates NOT_PAIRED; HTTP only supplies details.
+                    val resp = openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
                     lastPairStateTrusted = true
-                    return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
+                    return resp
                 }
                 throw e
             }
@@ -555,7 +557,12 @@ class NvHTTP(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun getPairState(): PairState {
-        return getPairState(getServerInfo(true))
+        val serverInfo = getServerInfo(true)
+        return PairStateTrust.resolvePairState(
+            getPairState(serverInfo),
+            lastServerInfoTrustedByCert,
+            lastPairStateTrusted
+        )
     }
 
     @Throws(IOException::class, XmlPullParserException::class)

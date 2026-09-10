@@ -9,6 +9,7 @@ import mockwebserver3.MockWebServer
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.HeldCertificate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -60,6 +61,73 @@ class NvHttpPairStateTrustTest {
     }
 
     @Test
+    fun httpPortDiscovery401IsNotAuthenticated() {
+        val pinned = certificate("pinned")
+        MockWebServer().use { httpServer ->
+            MockWebServer().use { unusedHttpsServer ->
+                httpServer.start()
+                unusedHttpsServer.start()
+                httpServer.enqueue(MockResponse.Builder().code(401).build())
+                httpServer.enqueue(serverInfoResponse(unusedHttpsServer.port, pairStatus = 0))
+
+                val http = client(httpServer, unusedHttpsServer, pinned, httpsPort = 0)
+                val error = assertThrows(HostHttpResponseException::class.java) {
+                    http.getServerInfo(true)
+                }
+
+                assertEquals(401, error.getErrorCode())
+                assertFalse(http.lastPairStateTrusted)
+                assertEquals(1, httpServer.requestCount)
+                assertEquals(0, unusedHttpsServer.requestCount)
+            }
+        }
+    }
+
+    @Test
+    fun failedCompatibilityFallbackDoesNotRetainPairStateTrust() {
+        val pinned = certificate("pinned")
+        MockWebServer().use { httpServer ->
+            MockWebServer().use { httpsServer ->
+                configureHttps(httpsServer, pinned)
+                httpServer.start()
+                httpsServer.start()
+                httpsServer.enqueue(MockResponse.Builder().code(401).build())
+                httpServer.enqueue(MockResponse.Builder().code(500).build())
+
+                val http = client(httpServer, httpsServer, pinned)
+                val error = assertThrows(HostHttpResponseException::class.java) {
+                    http.getServerInfo(true)
+                }
+
+                assertEquals(500, error.getErrorCode())
+                assertFalse(http.lastPairStateTrusted)
+                assertEquals(1, httpServer.requestCount)
+                assertEquals(1, httpsServer.requestCount)
+            }
+        }
+    }
+
+    @Test
+    fun directPairStateUsesAuthenticatedHttps401() {
+        val pinned = certificate("pinned")
+        MockWebServer().use { httpServer ->
+            MockWebServer().use { httpsServer ->
+                configureHttps(httpsServer, pinned)
+                httpServer.start()
+                httpsServer.start()
+                httpsServer.enqueue(MockResponse.Builder().code(401).build())
+                httpServer.enqueue(serverInfoResponse(httpsServer.port, pairStatus = 1))
+
+                val pairState = client(httpServer, httpsServer, pinned).getPairState()
+
+                assertEquals(PairingManager.PairState.NOT_PAIRED, pairState)
+                assertEquals(1, httpServer.requestCount)
+                assertEquals(1, httpsServer.requestCount)
+            }
+        }
+    }
+
+    @Test
     fun pinnedHttpsResponseTrustsBodyAndPairState() {
         val pinned = certificate("pinned")
         MockWebServer().use { httpServer ->
@@ -103,12 +171,13 @@ class NvHttpPairStateTrustTest {
     private fun client(
         httpServer: MockWebServer,
         httpsServer: MockWebServer,
-        pinned: HeldCertificate?
+        pinned: HeldCertificate?,
+        httpsPort: Int = httpsServer.port
     ): NvHTTP {
         val clientIdentity = certificate("client")
         return NvHTTP(
             ComputerDetails.AddressTuple(httpServer.hostName, httpServer.port),
-            httpsServer.port,
+            httpsPort,
             "test-client-id",
             "test-client",
             pinned?.certificate,
