@@ -637,7 +637,7 @@ class ComputerManagerService : Service() {
                     markComputerVerifiedPaired(computer, polled)
                     PairStateVerificationResult.VERIFIED_PAIRED
                 }
-                polled.pairState == PairingManager.PairState.NOT_PAIRED -> {
+                PairStateTrust.isTrustedNotPaired(polled) -> {
                     markComputerNotPaired(computer, source)
                     PairStateVerificationResult.NOT_PAIRED
                 }
@@ -647,13 +647,8 @@ class ComputerManagerService : Service() {
                 }
             }
         } catch (e: HostHttpResponseException) {
-            if (e.getErrorCode() == 401) {
-                markComputerNotPaired(computer, source)
-                PairStateVerificationResult.NOT_PAIRED
-            } else {
-                LimeLog.warning("$source pair-state verification failed for ${computer.name}: ${e.message}")
-                PairStateVerificationResult.UNKNOWN
-            }
+            LimeLog.warning("$source pair-state verification failed for ${computer.name}: ${e.message}")
+            PairStateVerificationResult.UNKNOWN
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             LimeLog.warning("$source pair-state verification interrupted for ${computer.name}")
@@ -694,6 +689,7 @@ class ComputerManagerService : Service() {
         computer.serverCert = null
         computer.rawAppList = null
         computer.serverInfoTrustedByCert = false
+        computer.pairStateTrusted = false
     }
 
     private fun sendAppListWidgetRefresh(computerUuid: String) {

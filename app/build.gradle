@@ -287,6 +287,9 @@ dependencies {
 
     testImplementation libs.junit
     testImplementation libs.json
+    testImplementation libs.okhttp.tls
+    testImplementation libs.okhttp.mockwebserver
+    testImplementation libs.kxml2
     androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.compose.ui.test.junit4
     androidTestImplementation libs.androidx.test.ext.junit

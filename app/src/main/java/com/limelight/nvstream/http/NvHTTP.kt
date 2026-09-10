@@ -83,6 +83,8 @@ class NvHTTP(
     private lateinit var keyManager: X509KeyManager
     internal var serverCert: X509Certificate? = null
     private var lastServerInfoTrustedByCert = false
+    internal var lastPairStateTrusted = false
+        private set
 
     data class TimeoutConfig(
         val connectTimeoutMs: Int,
@@ -212,28 +214,27 @@ class NvHTTP(
                 throw IllegalStateException("Should never be called")
             }
             override fun checkServerTrusted(certs: Array<X509Certificate>, authType: String) {
-                try {
-                    defaultTrustManager.checkServerTrusted(certs, authType)
-                } catch (e: CertificateException) {
-                    if (certs.size == 1 && this@NvHTTP.serverCert != null) {
-                        if (certs[0] != this@NvHTTP.serverCert) {
-                            throw CertificateException("Certificate mismatch")
-                        }
-                    } else {
-                        throw e
+                val pinnedCert = this@NvHTTP.serverCert
+                if (pinnedCert != null) {
+                    if (certs.firstOrNull() != pinnedCert) {
+                        throw CertificateException("Certificate mismatch")
                     }
+                    return
                 }
+
+                defaultTrustManager.checkServerTrusted(certs, authType)
             }
         }
 
         val hv = HostnameVerifier { hostname, session ->
+            val pinnedCert = this@NvHTTP.serverCert
             try {
                 val certificates = session.peerCertificates
-                if (certificates.size == 1 && certificates[0] == this@NvHTTP.serverCert) {
-                    return@HostnameVerifier true
+                if (pinnedCert != null) {
+                    return@HostnameVerifier certificates.firstOrNull() == pinnedCert
                 }
             } catch (e: SSLPeerUnverifiedException) {
-                e.printStackTrace()
+                return@HostnameVerifier false
             }
             HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, session)
         }
@@ -280,7 +281,17 @@ class NvHTTP(
     }
 
     private fun shouldRetryTlsHandshake(e: SSLHandshakeException): Boolean {
-        return e.cause !is CertificateException
+        val pending = ArrayDeque<Throwable>()
+        val visited = HashSet<Throwable>()
+        pending.add(e)
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (!visited.add(current)) continue
+            if (current is CertificateException) return false
+            current.cause?.let(pending::addLast)
+            current.suppressed.forEach(pending::addLast)
+        }
+        return true
     }
 
     @Throws(IOException::class, InterruptedException::class)
@@ -339,25 +350,22 @@ class NvHTTP(
     fun getServerInfo(likelyOnline: Boolean): String {
         val client = if (likelyOnline) httpClientLongConnectTimeout else httpClientShortConnectTimeout
         lastServerInfoTrustedByCert = false
+        lastPairStateTrusted = false
 
         if (serverCert != null) {
+            val httpsUrl = getHttpsUrl(likelyOnline)
             try {
-                val resp: String
-                try {
-                    resp = openHttpConnectionToString(client, getHttpsUrl(likelyOnline), "serverinfo")
-                } catch (e: SSLHandshakeException) {
-                    if (e.cause is CertificateException) {
-                        throw HostHttpResponseException(401, "Server certificate mismatch")
-                    } else {
-                        throw e
-                    }
-                }
+                val resp = openHttpConnectionToString(client, httpsUrl, "serverinfo")
                 getServerVersion(resp)
                 lastServerInfoTrustedByCert = true
+                lastPairStateTrusted = true
                 return resp
             } catch (e: HostHttpResponseException) {
                 if (e.getErrorCode() == 401) {
-                    return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
+                    // The pinned HTTPS response authenticates NOT_PAIRED; HTTP only supplies details.
+                    val resp = openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
+                    lastPairStateTrusted = true
+                    return resp
                 }
                 throw e
             }
@@ -386,8 +394,13 @@ class NvHTTP(
         details.externalPort = getExternalPort(serverInfo)
         details.remoteAddress = makeTuple(getXmlString(serverInfo, "ExternalIP", false), details.externalPort)
 
-        details.pairState = getPairState(serverInfo)
+        details.pairState = PairStateTrust.resolvePairState(
+            getPairState(serverInfo),
+            lastServerInfoTrustedByCert,
+            lastPairStateTrusted
+        )
         details.serverInfoTrustedByCert = lastServerInfoTrustedByCert
+        details.pairStateTrusted = lastPairStateTrusted
         details.runningGameId = getCurrentGame(serverInfo)
 
         details.nvidiaServer = getXmlString(serverInfo, "state", true)!!.contains("MJOLNIR")
@@ -544,7 +557,12 @@ class NvHTTP(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun getPairState(): PairState {
-        return getPairState(getServerInfo(true))
+        val serverInfo = getServerInfo(true)
+        return PairStateTrust.resolvePairState(
+            getPairState(serverInfo),
+            lastServerInfoTrustedByCert,
+            lastPairStateTrusted
+        )
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
