@@ -192,12 +192,10 @@ class PreferenceConfiguration {
     var gamepadMotionSensorsFallbackToDevice = false
     var reverseResolution = false
     var rotableScreen = false
-    // Runtime-only: enable mapping gyroscope motion to right analog stick
+    // Persistent: enable mapping gyroscope motion to right analog stick
     var gyroToRightStick = false
-    // Runtime-only: enable mapping gyroscope motion to relative mouse movement
+    // Persistent: enable mapping gyroscope motion to relative mouse movement
     var gyroToMouse = false
-    // Runtime-only: sensitivity in deg/s for full stick deflection
-    var gyroFullDeflectionDps = 0f
     // Persistent: sensitivity multiplier (higher -> faster)
     var gyroSensitivityMultiplier = 0f
     // Persistent: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
@@ -371,6 +369,8 @@ class PreferenceConfiguration {
                 .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                 .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
                 .putInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, gyroActivationKeyCode)
+                .putBoolean(GYRO_TO_RIGHT_STICK_PREF_STRING, gyroToRightStick)
+                .putBoolean(GYRO_TO_MOUSE_PREF_STRING, gyroToMouse)
 
             if (synchronous) {
                 editor.commit()
@@ -507,7 +507,6 @@ class PreferenceConfiguration {
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
-        copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode
         copy.gyroInvertXAxis = this.gyroInvertXAxis
@@ -625,6 +624,8 @@ class PreferenceConfiguration {
         private const val GYRO_INVERT_X_AXIS_PREF_STRING = "gyro_invert_x_axis"
         private const val GYRO_INVERT_Y_AXIS_PREF_STRING = "gyro_invert_y_axis"
         private const val GYRO_ACTIVATION_KEY_CODE_PREF_STRING = "gyro_activation_key_code"
+        private const val GYRO_TO_RIGHT_STICK_PREF_STRING = "gyro_to_right_stick"
+        private const val GYRO_TO_MOUSE_PREF_STRING = "gyro_to_mouse"
 
         // 麦克风设置
         private const val ENABLE_MIC_PREF_STRING = "checkbox_enable_mic"
@@ -1500,6 +1501,10 @@ class PreferenceConfiguration {
             config.gyroInvertXAxis = prefs.getBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_X_AXIS)
             config.gyroInvertYAxis = prefs.getBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_Y_AXIS)
             config.gyroActivationKeyCode = prefs.getInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, DEFAULT_GYRO_ACTIVATION_KEY_CODE)
+            // Mouse mode wins if both flags somehow ended up persisted together
+            config.gyroToMouse = prefs.getBoolean(GYRO_TO_MOUSE_PREF_STRING, false)
+            config.gyroToRightStick = !config.gyroToMouse &&
+                prefs.getBoolean(GYRO_TO_RIGHT_STICK_PREF_STRING, false)
 
             // Cards visibility (defaults to true)
             config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true)
@@ -1601,11 +1606,6 @@ class PreferenceConfiguration {
             config.floatBallSwipeDownAction = prefs.getString(FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION
             config.floatBallSwipeLeftAction = prefs.getString(FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION
             config.floatBallSwipeRightAction = prefs.getString(FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION
-
-            // Runtime-only defaults; controlled via in-stream GameMenu
-            config.gyroToRightStick = false
-            config.gyroToMouse = false
-            config.gyroFullDeflectionDps = 180.0f
 
             return config
         }
