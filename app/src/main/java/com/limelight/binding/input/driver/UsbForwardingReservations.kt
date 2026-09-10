@@ -28,6 +28,15 @@ internal class UsbForwardingReservations {
             }
         }
 
+        /** Register only after native exporter cleanup; never block the global cleanup chain. */
+        fun restoreWhenReady(onRestored: (String) -> Unit, onFailure: (Throwable) -> Unit) {
+            ready.whenComplete { _, error ->
+                if (error == null) {
+                    runCatching { restore(onRestored) }.onFailure(onFailure)
+                }
+            }
+        }
+
         fun canRestore(): Boolean = ready.isDone && !ready.isCompletedExceptionally && !ready.isCancelled
 
         /** A failed or unfinished local release must never allow a new driver owner. */

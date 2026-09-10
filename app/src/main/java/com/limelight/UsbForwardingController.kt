@@ -84,6 +84,12 @@ class UsbForwardingController(
             if (closed) return
             val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
             refreshDevices()
+            val active = selected
+            if (intent.action == UsbManager.ACTION_USB_DEVICE_ATTACHED && active != null &&
+                !hasUniqueIdentity(active)) {
+                release(R.string.usb_forward_duplicate_device)
+                return
+            }
             if (device != selected) return
             if (intent.action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
                 release(R.string.usb_forward_detached)
@@ -167,6 +173,11 @@ class UsbForwardingController(
         devices = manager.deviceList.values.sortedBy { it.deviceName }
     }
 
+    private fun hasUniqueIdentity(device: UsbDevice): Boolean =
+        manager.deviceList.values.count {
+            it.vendorId == device.vendorId && it.productId == device.productId
+        } == 1
+
     private fun request(device: UsbDevice) {
         if (closed || busy || selected != null || !game.connected ||
             !enabled || capability?.available != true) return
@@ -174,9 +185,7 @@ class UsbForwardingController(
         // Wireless adapter handoff needs a separate whole-bridge lifecycle.
         val unavailableReason = when {
             HciUsbDeviceProbe.probe(device) != null -> R.string.usb_forward_wireless_adapter
-            manager.deviceList.values.count {
-                it.vendorId == device.vendorId && it.productId == device.productId
-            } != 1 -> R.string.usb_forward_duplicate_device
+            !hasUniqueIdentity(device) -> R.string.usb_forward_duplicate_device
             else -> null
         }
         if (unavailableReason != null) {
@@ -221,6 +230,7 @@ class UsbForwardingController(
                 localReservation = UsbDriverService.reserveForForwarding(device)
                 localReservation!!.ready.get(10, TimeUnit.SECONDS)
                 if (closed) return@enqueue
+                check(hasUniqueIdentity(device)) { "USB identity changed during local driver handoff" }
                 val handle = backend.export(device).get()
                 export = handle
                 game.runOnUiThread {
@@ -340,7 +350,7 @@ class UsbForwardingController(
                 if (failure == null) {
                     // A local driver failure reserves only its USB path. Native cleanup
                     // succeeded, so unrelated devices may use the next exporter.
-                    runCatching { localReservation?.restoreIfReady() }.onFailure {
+                    localReservation?.restoreWhenReady {
                         LimeLog.warning("Unable to restore local USB driver: $it")
                     }
                     localReservation = null

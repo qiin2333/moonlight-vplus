@@ -9,6 +9,34 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 class UsbForwardingReservationsTest {
+    @Test fun deferredRestoreReleasesOnlyAfterLateSuccessfulStop() {
+        val registry = UsbForwardingReservations()
+        val lease = registry.reserve("usb/a")
+        val stop = CompletableFuture<Void>()
+        lease.awaitStops(listOf(stop))
+        var restores = 0
+        lease.restoreWhenReady({ restores++ }, { throw AssertionError(it) })
+        assertTrue(registry.contains("usb/a"))
+        assertEquals(0, restores)
+        stop.complete(null)
+        assertEquals(1, restores)
+        assertFalse(registry.contains("usb/a"))
+        registry.reserve("usb/a")
+    }
+
+    @Test fun deferredRestoreRetainsLateFailedStop() {
+        val registry = UsbForwardingReservations()
+        val lease = registry.reserve("usb/a")
+        val stop = CompletableFuture<Void>()
+        lease.awaitStops(listOf(stop))
+        var restored = false
+        lease.restoreWhenReady({ restored = true }, { throw AssertionError(it) })
+        stop.completeExceptionally(IllegalStateException("release failed"))
+        assertFalse(restored)
+        assertTrue(registry.contains("usb/a"))
+        registry.reserve("usb/other")
+    }
+
     @Test fun failedOrPendingDeviceDoesNotBlockAnotherPath() {
         val registry = UsbForwardingReservations()
         for (fail in listOf(false, true)) {

@@ -758,19 +758,17 @@ class UsbDriverService : Service(), UsbDriverListener {
         ) {
             val ready get() = lease.ready
 
-            fun restoreIfReady(): Boolean {
-                if (!lease.canRestore()) return false
-                restore()
-                return true
+            fun restoreWhenReady(onFailure: (Throwable) -> Unit) {
+                lease.restoreWhenReady(::restoreDrivers, onFailure)
             }
 
-            fun restore() {
-                lease.restore { path ->
-                    forwardingServices.forEach { service ->
-                        service.mainHandler.post {
-                            service.usbManager?.deviceList?.get(path)?.let {
-                                service.handleUsbDeviceStateSafely(it)
-                            }
+            fun restore() = lease.restore(::restoreDrivers)
+
+            private fun restoreDrivers(path: String) {
+                forwardingServices.forEach { service ->
+                    service.mainHandler.post {
+                        service.usbManager?.deviceList?.get(path)?.let {
+                            service.handleUsbDeviceStateSafely(it)
                         }
                     }
                 }
