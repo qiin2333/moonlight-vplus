@@ -28,9 +28,11 @@ internal class UsbForwardingReservations {
             }
         }
 
+        fun canRestore(): Boolean = ready.isDone && !ready.isCompletedExceptionally && !ready.isCancelled
+
         /** A failed or unfinished local release must never allow a new driver owner. */
         fun restore(onRestored: (String) -> Unit) = lock.withLock {
-            check(ready.isDone && !ready.isCompletedExceptionally && !ready.isCancelled) {
+            check(canRestore()) {
                 "Local USB driver release has not completed successfully"
             }
             if (owners[path] === this) {

@@ -684,8 +684,8 @@ class UsbDriverService : Service(), UsbDriverListener {
         for (controller in controllersToStop) {
             val controllerId = controller.getControllerId()
             runCatching {
-                controller.stopAndThen {
-                    onControllerStopCompleted(generation, controllerId)
+                controller.stopWithResult { result ->
+                    onControllerStopCompleted(generation, controllerId, result.exceptionOrNull())
                 }
             }.onFailure {
                 LimeLog.warning("Unable to stop USB controller: ${it.message}")
@@ -758,6 +758,12 @@ class UsbDriverService : Service(), UsbDriverListener {
         ) {
             val ready get() = lease.ready
 
+            fun restoreIfReady(): Boolean {
+                if (!lease.canRestore()) return false
+                restore()
+                return true
+            }
+
             fun restore() {
                 lease.restore { path ->
                     forwardingServices.forEach { service ->
@@ -799,7 +805,9 @@ class UsbDriverService : Service(), UsbDriverListener {
                 val stopped = CompletableFuture<Void>()
                 stops.add(stopped)
                 try {
-                    controller.stopAndThen { stopped.complete(null) }
+                    controller.stopWithResult { result ->
+                        result.fold({ stopped.complete(null) }, { stopped.completeExceptionally(it) })
+                    }
                 } catch (error: Exception) {
                     stopped.completeExceptionally(error)
                 }

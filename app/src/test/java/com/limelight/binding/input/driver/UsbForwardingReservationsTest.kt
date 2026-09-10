@@ -9,6 +9,22 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 class UsbForwardingReservationsTest {
+    @Test fun failedOrPendingDeviceDoesNotBlockAnotherPath() {
+        val registry = UsbForwardingReservations()
+        for (fail in listOf(false, true)) {
+            val lease = registry.reserve("usb/blocked/$fail")
+            val stopping = CompletableFuture<Void>()
+            lease.awaitStops(listOf(stopping))
+            if (fail) stopping.completeExceptionally(IllegalStateException("release failed"))
+            assertFalse(lease.canRestore())
+            assertTrue(registry.contains("usb/blocked/$fail"))
+        }
+        val other = registry.reserve("usb/other")
+        other.awaitStops(emptyList())
+        assertTrue(other.canRestore())
+        other.restore {}
+    }
+
     @Test fun reservationDuringServiceStopRetainsFailureUntilStopFinishes() {
         val registry = UsbForwardingReservations()
         val stop = UsbDriverStopResult()

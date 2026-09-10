@@ -41,10 +41,36 @@ abstract class AbstractController(
         )
     }
 
+    @Volatile private var transportReleaseFailure: Throwable? = null
+
+    /** Keep teardown best-effort while retaining failures for exclusive USB handoff. */
+    protected fun releaseUsbResource(release: () -> Unit) {
+        try { release() } catch (error: Exception) {
+            synchronized(this) {
+                if (transportReleaseFailure == null) transportReleaseFailure = error
+            }
+        }
+    }
+
+    fun stopWithResult(onStopped: (Result<Unit>) -> Unit) {
+        val delivered = java.util.concurrent.atomic.AtomicBoolean()
+        fun complete(result: Result<Unit>) {
+            if (delivered.compareAndSet(false, true)) onStopped(result)
+        }
+        try {
+            stopAndThen {
+                val error = transportReleaseFailure
+                complete(if (error == null) Result.success(Unit) else Result.failure(error))
+            }
+        } catch (error: Exception) {
+            complete(Result.failure(error))
+        }
+    }
+
     abstract fun start(): Boolean
     abstract fun stop()
 
-    /** Runs [onStopped] after this controller has released all transport resources. */
+    /** Runs [onStopped] after transport teardown finishes. Use stopWithResult to verify release succeeded. */
     open fun stopAndThen(onStopped: () -> Unit) {
         stop()
         onStopped()

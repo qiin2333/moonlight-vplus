@@ -337,8 +337,12 @@ class UsbForwardingController(
                 cleanup { activeTunnel?.close() }
                 cleanup { backend.closeAsync().get() }
                 export = null
-                if (failure == null) cleanup {
-                    localReservation?.let { it.ready.get(10, TimeUnit.SECONDS); it.restore() }
+                if (failure == null) {
+                    // A local driver failure reserves only its USB path. Native cleanup
+                    // succeeded, so unrelated devices may use the next exporter.
+                    runCatching { localReservation?.restoreIfReady() }.onFailure {
+                        LimeLog.warning("Unable to restore local USB driver: $it")
+                    }
                     localReservation = null
                 }
                 try {
