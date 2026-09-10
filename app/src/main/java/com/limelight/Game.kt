@@ -568,7 +568,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 streamView.parent as FrameLayout,
                 this
             )
-            setupVirtualControllerGyro()
+            refreshVirtualControllerLayout()
         }
 
         if (prefConfig.enableCrownFeatures) {
@@ -721,16 +721,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
     }
 
-    /** Set up gyro callbacks on the virtual controller. */
-    private fun setupVirtualControllerGyro() {
+    /** Refresh the on-screen controller layout after (re)creating the stream. */
+    private fun refreshVirtualControllerLayout() {
         val vc = virtualController ?: return
         vc.refreshLayout()
         vc.show()
-        vc.setGyroEnabled(!prefConfig.gyroToMouse)
-        controllerHandler.setVirtualControllerGyroCallbacks(
-            { vc.setGyroEnabled(false) },
-            { vc.setGyroEnabled(true) }
-        )
     }
 
     /** Whether the resume-stream preference is enabled. */
@@ -793,6 +788,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
+        // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
+        // re-runs this path once it claims controller 0.
+        controllerHandler.onSensorsReenabled()
     }
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
@@ -1198,7 +1196,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
         if (virtualController != null && prefConfig.onscreenController) {
-            setupVirtualControllerGyro()
+            refreshVirtualControllerLayout()
         }
 
         if (controllerManager != null) {
@@ -1719,7 +1717,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (virtualController != null) {
             virtualController?.hide()
-            virtualController?.cleanup()
         }
 
         val decoderMessage = getDecoderFormatLabel()
