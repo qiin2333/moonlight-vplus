@@ -23,7 +23,18 @@ internal enum class DeviceHapticsTier {
     AMPLITUDE,
 
     /** Composition primitives confirmed: crisp short transients are plausible. */
-    COMPOSITION
+    COMPOSITION;
+
+    /**
+     * Graded amplitude output: distinct non-zero levels survive the trip to the motor.
+     * Routing decisions must use these predicates instead of comparing enum order.
+     */
+    val supportsGradedOutput: Boolean
+        get() = this == AMPLITUDE || this == COMPOSITION
+
+    /** Composition primitives positively confirmed. */
+    val supportsComposition: Boolean
+        get() = this == COMPOSITION
 }
 
 /**

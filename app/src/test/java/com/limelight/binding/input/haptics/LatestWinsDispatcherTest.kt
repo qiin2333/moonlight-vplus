@@ -95,6 +95,36 @@ class LatestWinsDispatcherTest {
     }
 
     @Test
+    fun urgentValuePreemptsAParkedIntervalWait() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val firstDelivered = CountDownLatch(1)
+        val urgentDelivered = CountDownLatch(1)
+        val delivered = Collections.synchronizedList(mutableListOf<Int>())
+        val dispatcher = LatestWinsDispatcher<Int>(
+            // A minute-long interval: the parked non-urgent task would never fire during the test.
+            minimumIntervalMs = 60_000,
+            executor = executor,
+            dispatch = { value: Int ->
+                delivered += value
+                if (value == 1) firstDelivered.countDown()
+                if (value == 3) urgentDelivered.countDown()
+            },
+            isUrgent = { it == 3 }
+        )
+
+        dispatcher.submit(1)
+        assertTrue(firstDelivered.await(2, TimeUnit.SECONDS))
+        // A non-urgent value parks a task far in the future; the urgent value that replaces
+        // it must cancel that task and dispatch immediately instead of waiting it out.
+        dispatcher.submit(2)
+        dispatcher.submit(3)
+        assertTrue(urgentDelivered.await(2, TimeUnit.SECONDS))
+        assertEquals(listOf(1, 3), delivered)
+        dispatcher.close()
+        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun clearingPendingWorkDoesNotWaitForBlockedSink() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val firstStarted = CountDownLatch(1)

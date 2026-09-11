@@ -589,7 +589,7 @@ internal class ControllerHapticsCoordinator(
         // eligibility for coordinated compensation: a body that can only switch on/off would
         // add PWM noise on top of a full-strength controller.
         val hasDevice = controllerNumber.toInt() == 0 && deviceCapabilities.hasVibrator
-        val bodyEligible = hasDevice && deviceCapabilities.tier > DeviceHapticsTier.BINARY
+        val bodyEligible = hasDevice && deviceCapabilities.tier.supportsGradedOutput
         val coordinated = hasController && bodyEligible &&
             handler.prefConfig.gameRumbleMode == GameRumbleMode.COORDINATED
 

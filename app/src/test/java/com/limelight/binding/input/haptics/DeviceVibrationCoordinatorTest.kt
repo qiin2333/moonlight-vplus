@@ -279,6 +279,61 @@ class DeviceVibrationCoordinatorTest {
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
     }
 
+    @Test
+    fun audioReleaseResubmitsAnUnchangedGameLevel() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock)
+
+        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+        clock.advance(60)
+        await { vibrations.size == 1 }
+
+        coordinator.claimForAudio()
+        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+        val barrier = executor.submit {}
+        barrier.get(2, TimeUnit.SECONDS)
+        assertEquals(1, vibrations.size)
+
+        // The motor stopped with the audio session: releasing must reprogram the same level
+        // immediately even though its amplitude never changed.
+        coordinator.releaseFromAudio()
+        await { vibrations.size == 2 }
+        assertEquals(Vibration(160, 500), vibrations.last())
+
+        coordinator.stop()
+        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun touchCompletionResubmitsAnUnchangedGameLevel() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock)
+
+        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+        clock.advance(60)
+        await { vibrations.size == 1 }
+
+        coordinator.playTouchHaptic(2_000, 2_000, 50)
+        await { vibrations.size == 2 }
+        assertEquals(Vibration(7, 50), vibrations.last())
+
+        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+        val barrier = executor.submit {}
+        barrier.get(2, TimeUnit.SECONDS)
+        assertEquals(2, vibrations.size)
+
+        clock.advance(50)
+        await { vibrations.size == 3 }
+        assertEquals(Vibration(160, 500), vibrations.last())
+
+        coordinator.stop()
+        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
     private fun coordinator(
         executor: ScheduledExecutorService,
         vibrations: MutableList<Vibration>,

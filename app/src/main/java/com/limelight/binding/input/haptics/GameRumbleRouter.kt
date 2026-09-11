@@ -63,12 +63,10 @@ internal object GameRumbleRouter {
         decomposition: RumbleDecomposition? = null
     ): GameRumbleRoute = when (mode) {
         GameRumbleMode.COORDINATED -> when {
-            hasController && hasDevice && deviceTier <= DeviceHapticsTier.BINARY ->
+            hasController && hasDevice && !deviceTier.supportsGradedOutput ->
                 GameRumbleRoute(controller = input, device = null)
             hasController && hasDevice -> GameRumbleRoute(
-                controller = if (deviceTier == DeviceHapticsTier.COMPOSITION &&
-                    decomposition != null
-                ) {
+                controller = if (deviceTier.supportsComposition && decomposition != null) {
                     yieldedControllerChannels(input, decomposition)
                 } else {
                     input

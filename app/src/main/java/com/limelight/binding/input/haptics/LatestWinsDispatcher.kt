@@ -1,6 +1,7 @@
 package com.limelight.binding.input.haptics
 
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
@@ -31,12 +32,17 @@ internal class LatestWinsDispatcher<T>(
     private var closed = false
     private var lastDelivered: T? = null
     private var lastAttemptNanos: Long? = null
+    private var scheduledFuture: ScheduledFuture<*>? = null
 
     fun submit(value: T) {
         synchronized(lock) {
             if (closed || pending == value || (!active && lastDelivered == value)) return
             pending = value
-            scheduleIfIdleLocked()
+            if (active && isUrgent(value)) {
+                promoteUrgentLocked()
+            } else {
+                scheduleIfIdleLocked()
+            }
         }
     }
 
@@ -79,17 +85,33 @@ internal class LatestWinsDispatcher<T>(
         }
         active = true
         try {
-            executor.schedule(::dispatchLatest, delayNanos, TimeUnit.NANOSECONDS)
+            scheduledFuture = executor.schedule(::dispatchLatest, delayNanos, TimeUnit.NANOSECONDS)
         } catch (error: Exception) {
             active = false
+            scheduledFuture = null
             pending = null
             onError(error)
             shutdownIfDrainedLocked()
         }
     }
 
+    /**
+     * An urgent value must not sit behind the pacing wait of an already-scheduled task:
+     * cancel the parked task and redispatch at zero delay. A task that already started
+     * executing cannot be cancelled - it picks up the urgent pending value itself.
+     */
+    private fun promoteUrgentLocked() {
+        val future = scheduledFuture ?: return
+        if (future.cancel(false)) {
+            active = false
+            scheduledFuture = null
+            scheduleIfIdleLocked()
+        }
+    }
+
     private fun dispatchLatest() {
         val value = synchronized(lock) {
+            scheduledFuture = null
             pending.also { pending = null }
         }
         var delivered = false

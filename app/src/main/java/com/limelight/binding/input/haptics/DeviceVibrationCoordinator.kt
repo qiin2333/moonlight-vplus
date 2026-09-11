@@ -165,7 +165,7 @@ internal class DeviceVibrationCoordinator(
             if (closed || !audioOwned) return
             audioOwned = false
             generation++
-            gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked())
+            gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked(), forceWrite = true)
         }
         command?.let(dispatcher::submit)
     }
@@ -201,7 +201,7 @@ internal class DeviceVibrationCoordinator(
             touchActive = false
             touchCompletion = null
             generation++
-            gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked())
+            gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked(), forceWrite = true)
         }
         command?.let(dispatcher::submit)
     }
@@ -218,8 +218,15 @@ internal class DeviceVibrationCoordinator(
      * Maps a mixed game amplitude to the next command, or null when no write is due yet:
      * onsets from silence are observed for a short window before committing as a level, and a
      * pulse measured inside that window is returned as an urgent one-shot.
+     *
+     * [forceWrite] is set by ownership-release paths: audio or touch stopped the motor
+     * underneath, so an unchanged nonzero level must be reprogrammed, not suppressed.
      */
-    private fun gameAmplitudeCommandLocked(nowMs: Long, amplitude: Int): VibrationCommand? {
+    private fun gameAmplitudeCommandLocked(
+        nowMs: Long,
+        amplitude: Int,
+        forceWrite: Boolean = false
+    ): VibrationCommand? {
         if (amplitude == 0) {
             val pulse = stopObservationLocked(nowMs)
             clearGameRefreshLocked()
@@ -239,8 +246,11 @@ internal class DeviceVibrationCoordinator(
             return null
         }
         if (levelAmplitude == amplitude) {
-            scheduleGameRefreshLocked(amplitude)
-            return null
+            if (!forceWrite) {
+                scheduleGameRefreshLocked(amplitude)
+                return null
+            }
+            return levelCommandLocked(amplitude, forceResubmit = true)
         }
         if (levelAmplitude > 0) {
             // The motor is already running; rewrite the level without observing.
