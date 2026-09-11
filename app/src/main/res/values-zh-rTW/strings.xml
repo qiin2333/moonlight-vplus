@@ -120,7 +120,7 @@
     <string name="summary_unlock_fps">以 90 或 120 畫面更新率串流可能會減少在高效能裝置上的網路延時，但在不支援的裝置上會卡頓或不穩定的狀況</string>
     <string name="title_checkbox_stretch_video">將畫面延展至全螢幕</string>
     <string name="summary_checkbox_stretch_video">改變串流畫面長寬比以填滿螢幕，可能造成畫面變形。</string>
-    <string name="title_checkbox_disable_warnings">隱藏串流連線警告</string>
+    <string name="title_checkbox_disable_warnings">隱藏串流警告通知彈窗</string>
     <string name="summary_checkbox_disable_warnings">串流期間隱藏連線品質警告浮層。</string>
     <string name="title_checkbox_enable_pip">子母畫面（僅觀看）</string>
     <string name="summary_checkbox_enable_pip">允許多工時檢視串流畫面 (但無法控制)</string>

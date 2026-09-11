@@ -231,7 +231,7 @@
     <string name="summary_show_low_resolution_presets">在分辨率列表中添加 360p 和 480p，供极慢网络或低性能设备兼容使用。</string>
     <string name="title_checkbox_stretch_video">将画面拉伸至全屏</string>
     <string name="summary_checkbox_stretch_video">改变串流画面宽高比以铺满屏幕，可能造成画面变形。</string>
-    <string name="title_checkbox_disable_warnings">隐藏串流连接警告</string>
+    <string name="title_checkbox_disable_warnings">隐藏串流警告通知弹窗</string>
     <string name="summary_checkbox_disable_warnings">串流期间隐藏连接质量警告浮层。</string>
     <string name="title_checkbox_enable_pip">画中画（仅观看）</string>
     <string name="summary_checkbox_enable_pip">允许多任务时观看串流画面，但是不能操作。</string>
