@@ -20,7 +20,13 @@ internal object DecoderInputBufferSizing {
     private const val MIN_HEVC_INPUT_SIZE = 2 * 1024 * 1024
     private const val MIN_COMPRESSION_RATIO = 2L
 
-    fun recommendedInputSize(mimeType: String, width: Int, height: Int): Int? {
+    fun recommendedInputSize(
+        mimeType: String,
+        width: Int,
+        height: Int,
+        bitrateKbps: Int = 0,
+        frameRate: Int = 0,
+    ): Int? {
         val minimumSize = when (mimeType) {
             MIME_AVC, MIME_AV1 -> MIN_AV1_INPUT_SIZE
             MIME_HEVC, MIME_DOLBY_VISION -> MIN_HEVC_INPUT_SIZE
@@ -36,6 +42,17 @@ internal object DecoderInputBufferSizing {
             width.toLong() * height
         }
         val inferredSize = pixelCount * 3L / (2L * MIN_COMPRESSION_RATIO)
+
+        // At extreme bitrates a single intra frame can exceed what resolution-based
+        // estimation assumes. Cap the estimate using a worst-case single frame at
+        // the configured bitrate (bits/s -> bytes/frame), keeping a 2:1 safety margin
+        // for header overhead and rate-control spikes on top of the target rate.
+        if (bitrateKbps > 0 && frameRate > 0) {
+            val bitrateFloor = bitrateKbps.toLong() * 1000L / frameRate.toLong() * 2L
+            if (bitrateFloor > inferredSize) {
+                return bitrateFloor.coerceIn(minimumSize.toLong(), Int.MAX_VALUE.toLong()).toInt()
+            }
+        }
         return inferredSize.coerceIn(minimumSize.toLong(), Int.MAX_VALUE.toLong()).toInt()
     }
 
@@ -44,10 +61,12 @@ internal object DecoderInputBufferSizing {
         mimeType: String,
         width: Int,
         height: Int,
-        decoderDefaultSize: Int?,
+        bitrateKbps: Int = 0,
+        frameRate: Int = 0,
+        decoderDefaultSize: Int? = null,
     ): Int? {
         if (mode == DecoderInputBufferMode.FORCE_DISABLED) return null
-        val recommended = recommendedInputSize(mimeType, width, height) ?: return null
+        val recommended = recommendedInputSize(mimeType, width, height, bitrateKbps, frameRate) ?: return null
         return when (mode) {
             DecoderInputBufferMode.AUTO ->
                 if (decoderDefaultSize != null && decoderDefaultSize >= recommended) null else recommended

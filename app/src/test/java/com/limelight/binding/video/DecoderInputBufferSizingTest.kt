@@ -44,22 +44,52 @@ class DecoderInputBufferSizingTest {
     }
 
     @Test
+    fun extremeBitrateRaisesSingleFrameEstimate() {
+        // 800 Mbps @ 120fps: worst-case single frame = 800_000_000 / 120 * 2 = 13_333_332 bytes,
+        // above the resolution-only 6_220_800 estimate for 4K.
+        assertEquals(
+            13_333_332,
+            DecoderInputBufferSizing.recommendedInputSize("video/av01", 3840, 2160, 800_000, 120)
+        )
+    }
+
+    @Test
+    fun moderateBitrateKeepsResolutionEstimate() {
+        // 150 Mbps @ 120fps floor = 2_500_000 < 6_220_800 resolution estimate.
+        assertEquals(
+            6_220_800,
+            DecoderInputBufferSizing.recommendedInputSize("video/av01", 3840, 2160, 150_000, 120)
+        )
+    }
+
+    @Test
+    fun bitrateFloorRespectsFormatMinimum() {
+        // 10 Mbps @ 240fps floor = 83_333, below the 2 MiB HEVC minimum.
+        assertEquals(
+            2_097_152,
+            DecoderInputBufferSizing.recommendedInputSize("video/hevc", 1920, 1080, 10_000, 240)
+        )
+    }
+
+    @Test
     fun automaticModeOnlyOverridesMissingOrUndersizedDefaults() {
         assertEquals(
             2_764_800,
             DecoderInputBufferSizing.requestedInputSize(
-                DecoderInputBufferMode.AUTO, "video/av01", 2560, 1440, null
+                DecoderInputBufferMode.AUTO, "video/av01", 2560, 1440
             )
         )
         assertEquals(
             2_764_800,
             DecoderInputBufferSizing.requestedInputSize(
-                DecoderInputBufferMode.AUTO, "video/av01", 2560, 1440, 1_048_576
+                DecoderInputBufferMode.AUTO, "video/av01", 2560, 1440,
+                decoderDefaultSize = 1_048_576
             )
         )
         assertNull(
             DecoderInputBufferSizing.requestedInputSize(
-                DecoderInputBufferMode.AUTO, "video/av01", 2560, 1440, 4_194_304
+                DecoderInputBufferMode.AUTO, "video/av01", 2560, 1440,
+                decoderDefaultSize = 4_194_304
             )
         )
     }
@@ -69,12 +99,13 @@ class DecoderInputBufferSizingTest {
         assertEquals(
             8_388_608,
             DecoderInputBufferSizing.requestedInputSize(
-                DecoderInputBufferMode.FORCE_ENABLED, "video/hevc", 2560, 1440, 8_388_608
+                DecoderInputBufferMode.FORCE_ENABLED, "video/hevc", 2560, 1440,
+                decoderDefaultSize = 8_388_608
             )
         )
         assertNull(
             DecoderInputBufferSizing.requestedInputSize(
-                DecoderInputBufferMode.FORCE_DISABLED, "video/hevc", 2560, 1440, null
+                DecoderInputBufferMode.FORCE_DISABLED, "video/hevc", 2560, 1440
             )
         )
     }

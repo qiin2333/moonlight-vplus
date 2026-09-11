@@ -761,6 +761,8 @@ class MediaCodecDecoderRenderer(
             mimeType,
             configuration.width,
             configuration.height,
+            prefs.bitrate,
+            if (refreshRate > 0) refreshRate else prefs.fps,
             decoderDefaultInputSize(decoderInfo, mimeType),
         )
         return InputSizingPlan(
