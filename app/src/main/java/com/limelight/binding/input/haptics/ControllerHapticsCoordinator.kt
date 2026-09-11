@@ -593,9 +593,13 @@ internal class ControllerHapticsCoordinator(
         val coordinated = hasController && bodyEligible &&
             handler.prefConfig.gameRumbleMode == GameRumbleMode.COORDINATED
 
-        // The body leg only tracks player one's signal. The envelope stays warm across
+        // The body leg only tracks player one's HOST signal. The envelope stays warm across
         // controller presence changes so onsets after a reconnect still read correctly.
-        val decomposition = if (bodyEligible) {
+        // Diagnostic (TEST) input must never advance this shared state: the game-menu rumble
+        // test runs mid-stream, and its trailing zero would reset the envelope so the next
+        // ticker replay of a held host level reads as a fresh onset and fires a spurious
+        // body pulse. TEST stays on the direct routing path instead.
+        val decomposition = if (bodyEligible && source == RumbleSource.HOST) {
             deviceEnvelope.decompose(input).also { result ->
                 if (coordinated && result.hasUnsettledTransients) {
                     scheduleEnvelopeTicker()
