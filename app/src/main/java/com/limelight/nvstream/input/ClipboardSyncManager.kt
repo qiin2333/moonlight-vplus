@@ -132,8 +132,11 @@ class ClipboardSyncManager(
         val item = clip.getItemAt(0)
         val desc = clip.description ?: return
 
-        // Image takes precedence — Android may attach a text label alongside the URI.
-        if (syncImage && desc.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
+        // Image takes precedence — typed content URIs normally advertise image/*,
+        // while raw and legacy URI clips use text/uri-list.
+        val hasImageMime = desc.hasMimeType(MIME_IMAGE_WILDCARD) ||
+            desc.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)
+        if (syncImage && hasImageMime) {
             item.uri?.let { if (trySendImage(it)) return }
         }
         if (syncText && desc.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
@@ -465,6 +468,7 @@ class ClipboardSyncManager(
         private const val BLOB_RETRY_DELAY_MS = 500L
         private const val MIME_TEXT = "text/plain;charset=utf-8"
         private const val MIME_PNG = "image/png"
+        private const val MIME_IMAGE_WILDCARD = "image/*"
         private val TEXT_CHARSET_REGEX = Regex(""";\s*charset=([^;\s]+)""")
     }
 }
