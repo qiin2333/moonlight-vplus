@@ -62,7 +62,7 @@ open class GenericControllerContext(
     var leftStickX: Short = 0x0000
     var leftStickY: Short = 0x0000
 
-    var gyroHoldActive: Boolean = false
+    @Volatile var gyroHoldActive: Boolean = false
 
     var startDownTime: Long = 0
 
@@ -231,19 +231,33 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
     }
 
     val enableSensorRunnable: Runnable = Runnable {
-        // Turn back on any sensors that should be reporting but are currently unregistered
-        if (accelReportRateHz.toInt() != 0 && accelListener == null) {
-            handler.handleSetMotionEventState(controllerNumber, MoonBridge.LI_MOTION_TYPE_ACCEL, accelReportRateHz)
-        }
-        if (gyroReportRateHz.toInt() != 0 && gyroListener == null) {
-            // This replays an existing effective sampling rate. It is not a new host
-            // request and must not overwrite the separately tracked host demand.
-            handler.handleSetMotionEventState(
-                controllerNumber,
-                MoonBridge.LI_MOTION_TYPE_GYRO,
-                gyroReportRateHz,
-                isHostRequest = false
-            )
+        // Re-read the rates on the main thread: a host disable may have landed while this
+        // was queued, and replaying the captured value would resurrect the sensor.
+        handler.mainThreadHandler.post {
+            // A gamepad often enumerates as several InputDevices that all share controller 0.
+            // Only the one that actually owns the sensor may re-drive registration, otherwise
+            // the sensorless sibling keeps tearing down its neighbour's listener.
+            val sm = sensorManager ?: return@post
+            if (accelReportRateHz.toInt() != 0 && accelListener == null &&
+                sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
+            ) {
+                handler.handleSetMotionEventState(
+                    controllerNumber,
+                    MoonBridge.LI_MOTION_TYPE_ACCEL,
+                    accelReportRateHz,
+                    isHostRequest = false
+                )
+            }
+            if (gyroReportRateHz.toInt() != 0 && gyroListener == null &&
+                sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
+            ) {
+                handler.handleSetMotionEventState(
+                    controllerNumber,
+                    MoonBridge.LI_MOTION_TYPE_GYRO,
+                    gyroReportRateHz,
+                    isHostRequest = false
+                )
+            }
         }
     }
 
@@ -437,6 +451,7 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
         }
         this.controllerNumber = oldContext.controllerNumber
         this.controllerGyroRoutingParticipated = oldContext.controllerGyroRoutingParticipated
+        this.gyroHoldActive = oldContext.gyroHoldActive
 
         // We may have set this device to use the built-in sensor manager. If so, do that again.
         if (oldContext.sensorManager === handler.deviceSensorManager) {

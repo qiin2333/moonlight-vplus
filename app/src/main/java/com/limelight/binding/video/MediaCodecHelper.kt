@@ -514,11 +514,15 @@ object MediaCodecHelper {
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
         allowMtkMaxOperatingRate: Boolean,
+        mimeType: String?,
+        hevcLowLatencyMode: Int,
     ): Boolean = setDecoderLowLatencyOptions(
         videoFormat,
         decoderInfo,
         tryNumber,
         allowMtkMaxOperatingRate,
+        mimeType,
+        hevcLowLatencyMode,
         hdr10PlusModeSelected = false,
     )
 
@@ -528,8 +532,20 @@ object MediaCodecHelper {
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
         allowMtkMaxOperatingRate: Boolean,
+        mimeType: String?,
+        hevcLowLatencyMode: Int,
         hdr10PlusModeSelected: Boolean,
     ): Boolean {
+        // Skipping returns false at try 0, so the caller's option-sweep loop runs
+        // a single bare-format configure attempt (see HevcLowLatencyPolicy).
+        if (HevcLowLatencyPolicy.shouldSkipLowLatencyOptions(mimeType, decoderInfo.name, hevcLowLatencyMode)) {
+            LimeLog.info(
+                "Skipping low-latency decoder options for $mimeType on ${decoderInfo.name} " +
+                    "(mode=$hevcLowLatencyMode)"
+            )
+            return false
+        }
+
         // Options are tried in order of most to least risky. The decoder will use
         // the first MediaFormat that doesn't fail in configure().
         var setNewOption = false

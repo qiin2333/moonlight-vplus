@@ -113,6 +113,13 @@
             android:title="@string/title_force_mtk_max_operating_rate"
             android:summary="@string/summary_force_mtk_max_operating_rate"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_hevc_low_latency_mode"
+            android:title="@string/title_hevc_low_latency_mode"
+            android:summary="@string/summary_hevc_low_latency_mode"
+            android:entries="@array/hevc_low_latency_mode_names"
+            android:entryValues="@array/hevc_low_latency_mode_values"
+            android:defaultValue="auto" />
     </PreferenceCategory>
     <!-- Runtime gating is enforced again in Game before capture starts. -->
     <PreferenceCategory android:title="@string/category_framegen_settings"
@@ -405,6 +412,11 @@
             android:entryValues="@array/language_values"
             android:summary="@string/summary_language_list"
             android:defaultValue="default" />
+        <CheckBoxPreference
+            android:key="checkbox_disable_warnings"
+            android:title="@string/title_checkbox_disable_warnings"
+            android:summary="@string/summary_checkbox_disable_warnings"
+            android:defaultValue="false" />
         <com.limelight.preferences.SmallIconCheckboxPreference
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
@@ -490,11 +502,6 @@
             android:title="@string/title_enable_analytics"
             android:summary="@string/summary_enable_analytics"
             android:defaultValue="true" />
-        <CheckBoxPreference
-            android:key="checkbox_disable_warnings"
-            android:title="@string/title_checkbox_disable_warnings"
-            android:summary="@string/summary_checkbox_disable_warnings"
-            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_enable_perf_overlay"
             android:title="@string/title_enable_perf_overlay"

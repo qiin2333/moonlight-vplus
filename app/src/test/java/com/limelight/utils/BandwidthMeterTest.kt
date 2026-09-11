@@ -7,10 +7,10 @@ import org.junit.Test
 class BandwidthMeterTest {
     @Test
     fun bandwidthFormattingSwitchesUnitsAtOneMegabytePerSecond() {
-        assertEquals("104\u00A0K\u2060/\u2060s", formatBandwidthSpeed(0.85))
-        assertEquals("977\u00A0K\u2060/\u2060s", formatBandwidthSpeed(8.0))
-        assertEquals("1.00\u00A0M\u2060/\u2060s", formatBandwidthSpeed(8.388608))
-        assertEquals("1.47\u00A0M\u2060/\u2060s", formatBandwidthSpeed(12.34))
+        assertEquals("106\u00A0KB\u2060/\u2060s", formatBandwidthSpeed(0.85))
+        assertEquals("999\u00A0KB\u2060/\u2060s", formatBandwidthSpeed(7.99))
+        assertEquals("1.00\u00A0MB\u2060/\u2060s", formatBandwidthSpeed(8.0))
+        assertEquals("1.54\u00A0MB\u2060/\u2060s", formatBandwidthSpeed(12.34))
     }
 
     @Test

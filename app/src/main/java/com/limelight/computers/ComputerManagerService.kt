@@ -27,6 +27,7 @@ import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.MdnsDiscoveryListener
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.NetHelper
 import com.limelight.utils.ServerHelper
 
@@ -605,9 +606,11 @@ class ComputerManagerService : Service() {
             recentPollResults.remove(key)
             activePollFlights.remove(key)
         }
-        uuid?.let {
-            CacheHelper.deleteCacheFile(cacheDir, "applist", it)
-            sendAppListWidgetRefresh(it)
+        uuid?.let { rawUuid ->
+            HostCacheKey.fromUuid(rawUuid)?.let { cacheKey ->
+                CacheHelper.deleteCacheFile(cacheDir, "applist", cacheKey)
+            }
+            sendAppListWidgetRefresh(rawUuid)
         }
 
         if (getLocalDatabaseReference()) {
@@ -637,7 +640,7 @@ class ComputerManagerService : Service() {
                     markComputerVerifiedPaired(computer, polled)
                     PairStateVerificationResult.VERIFIED_PAIRED
                 }
-                polled.pairState == PairingManager.PairState.NOT_PAIRED -> {
+                PairStateTrust.isTrustedNotPaired(polled) -> {
                     markComputerNotPaired(computer, source)
                     PairStateVerificationResult.NOT_PAIRED
                 }
@@ -647,13 +650,8 @@ class ComputerManagerService : Service() {
                 }
             }
         } catch (e: HostHttpResponseException) {
-            if (e.getErrorCode() == 401) {
-                markComputerNotPaired(computer, source)
-                PairStateVerificationResult.NOT_PAIRED
-            } else {
-                LimeLog.warning("$source pair-state verification failed for ${computer.name}: ${e.message}")
-                PairStateVerificationResult.UNKNOWN
-            }
+            LimeLog.warning("$source pair-state verification failed for ${computer.name}: ${e.message}")
+            PairStateVerificationResult.UNKNOWN
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             LimeLog.warning("$source pair-state verification interrupted for ${computer.name}")
@@ -694,6 +692,7 @@ class ComputerManagerService : Service() {
         computer.serverCert = null
         computer.rawAppList = null
         computer.serverInfoTrustedByCert = false
+        computer.pairStateTrusted = false
     }
 
     private fun sendAppListWidgetRefresh(computerUuid: String) {
@@ -1244,12 +1243,17 @@ class ComputerManagerService : Service() {
                             if (appList.isNotEmpty() &&
                                 (list.isNotEmpty() || emptyAppListResponses >= EMPTY_LIST_THRESHOLD)
                             ) {
-                                try {
-                                    CacheHelper.openCacheFileForOutput(cacheDir, "applist", computer.uuid!!).use { cacheOut ->
-                                        CacheHelper.writeStringToOutputStream(cacheOut, appList)
+                                val cacheKey = HostCacheKey.fromUuid(computer.uuid)
+                                if (cacheKey != null) {
+                                    try {
+                                        CacheHelper.openCacheFileForOutput(cacheDir, "applist", cacheKey).use { cacheOut ->
+                                            CacheHelper.writeStringToOutputStream(cacheOut, appList)
+                                        }
+                                    } catch (e: IOException) {
+                                        e.printStackTrace()
                                     }
-                                } catch (e: IOException) {
-                                    e.printStackTrace()
+                                } else {
+                                    LimeLog.warning("Skipping app list cache for host without an identifier")
                                 }
 
                                 sendAppListWidgetRefresh(computer.uuid!!)

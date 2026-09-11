@@ -275,15 +275,32 @@
     <string name="title_native_fps_dialog">Native FPS Warning</string>
     <string name="title_custom_resolutions">Custom resolutions</string>
     <string name="summary_custom_resolutions">Add or remove resolutions offered by the stream resolution list</string>
-    <string name="custom_resolution_input_title">Enter Custom Resolution</string>
-    <string name="width_label">Width:</string>
-    <string name="height_label">Height:</string>
     <string name="width_hint">e.g. 1920</string>
     <string name="height_hint">e.g. 1080</string>
-    <string name="add_resolution">Add Resolution</string>
-    <string name="invalid_resolution_format">Invalid resolution format, please use width x height format</string>
     <string name="resolution_already_exists">This resolution already exists</string>
-    <string name="resolution_added_successfully">Resolution added successfully</string>
+    <string name="custom_resolution_add_short">Add</string>
+    <string name="custom_resolution_info_contentdesc">Usage note</string>
+    <string name="custom_resolution_info_tooltip">Do not use this feature unless necessary — it is only meant for special cases that require avoiding the standard resolution list.</string>
+    <string name="custom_resolution_field_width">Width</string>
+    <string name="custom_resolution_field_height">Height</string>
+    <string name="custom_resolution_readout_hint">Aspect ratio appears as you type</string>
+    <!-- Arg is locale-scaled (see resolutionPixelsText): zh receives 万 (px/10000), others receive MP (px/1000000). Keep the unit consistent with the scale. -->
+    <string name="custom_resolution_pixels_format">%1$.1f MP</string>
+    <string name="custom_resolution_error_empty_width">Enter a width</string>
+    <string name="custom_resolution_error_empty_height">Enter a height</string>
+    <string name="custom_resolution_error_range_width">Width must be between 320 and 7680</string>
+    <string name="custom_resolution_error_range_height">Height must be between 240 and 4320</string>
+    <string name="custom_resolution_error_even_width">Width must be an even number</string>
+    <string name="custom_resolution_error_even_height">Height must be an even number</string>
+    <string name="custom_resolution_empty_title">No custom resolutions yet</string>
+    <string name="custom_resolution_empty_hint">Enter width and height above, or tap a preset</string>
+    <string name="custom_resolution_tag_8k">8K</string>
+    <string name="custom_resolution_tag_4k">4K</string>
+    <string name="custom_resolution_tag_2k">2K</string>
+    <string name="custom_resolution_tag_1080p">1080p</string>
+    <string name="custom_resolution_tag_ultrawide">Ultrawide</string>
+    <string name="custom_resolution_tag_portrait">Portrait</string>
+    <string name="custom_resolution_delete_contentdesc">Delete %1$d×%2$d</string>
 
     <string name="category_audio_settings">Audio</string>
     <string name="category_microphone_settings">Microphone</string>
@@ -514,15 +531,15 @@
     <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
     <string name="suffix_fixed_x_velocity">pixels</string>
 
-    <string name="category_on_screen_controls_settings">On-screen controls</string>
+    <string name="category_on_screen_controls_settings">On-screen virtual gamepad buttons</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>
     <string name="summary_checkbox_vibrate_osc">Vibrates your device to emulate rumble for the on-screen controls</string>
     <string name="title_only_l3r3">Only show L3 and R3</string>
     <string name="summary_only_l3r3">Hide all virtual buttons except L3 and R3</string>
-    <string name="title_show_guide_button">Show Guide Button</string>
-    <string name="summary_show_guide_button">Show the guide button on screen</string>
+    <string name="title_show_guide_button">Show controller Guide/Home button</string>
+    <string name="summary_show_guide_button">Show the native controller Guide/Home button on the virtual gamepad. This is not the Win+G keyboard shortcut.</string>
     <string name="title_reset_osc">Clear saved on-screen controls layout</string>
     <string name="summary_reset_osc">Resets all on-screen controls to their default size and position</string>
     <string name="dialog_title_reset_osc">Reset Layout</string>
@@ -662,7 +679,7 @@
     <string name="category_advanced_settings">Advanced Settings</string>
     <string name="title_unlock_fps">Show high frame-rate options</string>
     <string name="summary_unlock_fps">Streaming at 90 or 120 FPS may reduce latency on high-end devices but can cause lag or instability on devices that can\'t support it</string>
-    <string name="title_checkbox_disable_warnings">Hide stream connection warnings</string>
+    <string name="title_checkbox_disable_warnings">Hide stream warning notifications</string>
     <string name="summary_checkbox_disable_warnings">Hide connection-quality warning overlays during a stream</string>
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
@@ -1164,6 +1181,19 @@
     <string name="keyboard_picker_num_description">Numeric keypad</string>
     <string name="keyboard_key_right_win" translatable="false">R-Win</string>
     <string name="keyboard_key_menu" translatable="false">Menu</string>
+    <string name="crown_key_mouse_left_short">L</string>
+    <string name="crown_key_mouse_middle_short">M</string>
+    <string name="crown_key_mouse_right_short">R</string>
+    <string name="crown_key_scroll_up_short">WU</string>
+    <string name="crown_key_scroll_down_short">WD</string>
+    <string name="crown_key_dpad_up_short">Up</string>
+    <string name="crown_key_dpad_down_short">Down</string>
+    <string name="crown_key_dpad_left_short">Left</string>
+    <string name="crown_key_dpad_right_short">Right</string>
+    <string name="crown_key_start_short">Start</string>
+    <string name="crown_key_guide_short">Guide</string>
+    <string name="crown_key_back_short">Back</string>
+    <string name="crown_key_guide_description">Native controller Guide/Home button</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select Custom Keys to Delete</string>
@@ -1332,6 +1362,11 @@
     <string name="suffix_seekbar_output_buffer_queue_limit">frames</string>
     <string name="title_force_mtk_max_operating_rate">Force MediaTek decoder maximum rate (Experimental)</string>
     <string name="summary_force_mtk_max_operating_rate">Compatibility override for MediaTek decoders only. It may reduce latency on some devices, but can cause severe delay on others. Leave off unless testing a known MediaTek decoder issue.</string>
+    <string name="title_hevc_low_latency_mode">HEVC low-latency decoding</string>
+    <string name="summary_hevc_low_latency_mode">Amlogic-based TV boxes can turn HEVC video into a slideshow when decoder low-latency mode is enabled. Auto skips low-latency options on Amlogic HEVC decoders (adds 1–2 frames of latency on those devices only). Off disables them for all HEVC and Dolby Vision streams; On restores the previous behavior.</string>
+    <string name="hevc_low_latency_auto">Auto</string>
+    <string name="hevc_low_latency_on">On</string>
+    <string name="hevc_low_latency_off">Off</string>
 
     <!-- Frame Generation -->
     <string name="title_developer_unlock">Unlock developer features</string>

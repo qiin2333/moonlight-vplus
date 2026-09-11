@@ -45,10 +45,11 @@ internal object DecoderInputBufferSizing {
 
         // At extreme bitrates a single intra frame can exceed what resolution-based
         // estimation assumes. Cap the estimate using a worst-case single frame at
-        // the configured bitrate (bits/s -> bytes/frame), keeping a 2:1 safety margin
-        // for header overhead and rate-control spikes on top of the target rate.
+        // the configured bitrate. bitrateKbps is kilobits/s, so convert to bytes
+        // per frame (/1000 for kbits->bits, /8 for bits->bytes) and keep a 2:1
+        // safety margin for header overhead and rate-control spikes.
         if (bitrateKbps > 0 && frameRate > 0) {
-            val bitrateFloor = bitrateKbps.toLong() * 1000L / frameRate.toLong() * 2L
+            val bitrateFloor = bitrateKbps.toLong() * 1000L / 8L / frameRate.toLong() * 2L
             if (bitrateFloor > inferredSize) {
                 return bitrateFloor.coerceIn(minimumSize.toLong(), Int.MAX_VALUE.toLong()).toInt()
             }

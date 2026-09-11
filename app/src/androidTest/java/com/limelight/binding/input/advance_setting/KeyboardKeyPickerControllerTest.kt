@@ -95,6 +95,51 @@ class KeyboardKeyPickerControllerTest {
     }
 
     @Test
+    fun gamepadPickerExposesNativeGuideButton() {
+        activityRule.scenario.onActivity { activity ->
+            val page = LayoutInflater.from(activity).inflate(
+                R.layout.page_device,
+                null,
+                false
+            ) as ViewGroup
+            activity.setContentView(page)
+
+            val guide = page.findViewWithTag<TextView>("g1024")
+            assertNotNull(guide)
+            assertEquals(activity.getString(R.string.crown_key_guide_short), guide.text.toString())
+        }
+    }
+
+    @Test
+    fun buttonBDismissesPickerOnceWithoutSelectingAKey() {
+        val dismissCount = AtomicInteger()
+        val selectionCount = AtomicInteger()
+
+        activityRule.scenario.onActivity { activity ->
+            val page = LayoutInflater.from(activity).inflate(
+                R.layout.page_device,
+                null,
+                false
+            ) as ViewGroup
+            val picker = page.findViewById<ViewGroup>(R.id.keyboard_drawing)
+            activity.setContentView(page)
+            KeyboardKeyPickerController(
+                root = picker,
+                onKeySelected = { selectionCount.incrementAndGet() },
+                onDismiss = { dismissCount.incrementAndGet() }
+            ).requestInitialFocus()
+        }
+
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.waitForIdleSync()
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_B)
+        instrumentation.waitForIdleSync()
+
+        assertEquals(1, dismissCount.get())
+        assertEquals(0, selectionCount.get())
+    }
+
+    @Test
     fun tabDownMovesFocusIntoVisibleKeyboardPage() {
         activityRule.scenario.onActivity { activity ->
             val page = LayoutInflater.from(activity).inflate(
@@ -208,6 +253,32 @@ class KeyboardKeyPickerControllerTest {
                 assertEquals(17, codes.size)
                 codes.forEach { code ->
                     val key = numpad.findViewWithTag<TextView>("k$code")
+                    val visible = Rect()
+                    assertTrue("k$code visible in $width x $height", key.getLocalVisibleRect(visible))
+                    assertEquals("k$code width in $width x $height", key.width, visible.width())
+                    assertEquals("k$code height in $width x $height", key.height, visible.height())
+                    assertTrue(key.width > 0 && key.height > 0)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun navigationPageFitsNarrowAndShortPickerBounds() {
+        for ((width, height) in listOf(370 to 220, 280 to 220, 600 to 180)) {
+            val controller = installPicker(width, height) {}
+            activityRule.scenario.onActivity {
+                controller.showPage(KeyboardKeyPickerController.Page.NAV, requestContentFocus = false)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            activityRule.scenario.onActivity { activity ->
+                val picker = activity.findViewById<ViewGroup>(R.id.keyboard_drawing)
+                val navigationPage = picker.findViewById<ViewGroup>(R.id.keyboard_picker_nav)
+                val codes = mutableSetOf<Int>()
+                collectKeyCodes(navigationPage, codes)
+                assertEquals(28, codes.size)
+                codes.forEach { code ->
+                    val key = navigationPage.findViewWithTag<TextView>("k$code")
                     val visible = Rect()
                     assertTrue("k$code visible in $width x $height", key.getLocalVisibleRect(visible))
                     assertEquals("k$code width in $width x $height", key.width, visible.width())

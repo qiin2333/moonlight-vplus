@@ -43,7 +43,8 @@ import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.preferences.AddComputerManually
 import com.limelight.preferences.BackgroundSource
-import com.limelight.preferences.CustomResolutionsConsts
+import com.limelight.preferences.CustomResolutionsStore
+import com.limelight.preferences.ResolutionValidator
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.StreamSettings
@@ -60,6 +61,7 @@ import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.easytier.EasyTierController
@@ -2553,8 +2555,9 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun getAppListFromCache(uuid: String): List<NvApp>? {
         try {
+            val cacheKey = HostCacheKey.fromUuid(uuid) ?: return null
             val rawAppList = CacheHelper.readInputStreamToString(
-                    CacheHelper.openCacheFileForInput(cacheDir, "applist", uuid))
+                    CacheHelper.openCacheFileForInput(cacheDir, "applist", cacheKey))
             return if (rawAppList.isEmpty()) null else NvHTTP.getAppListByReader(StringReader(rawAppList))
         } catch (e: IOException) {
             LimeLog.warning("Failed to read app list from cache: " + e.message)
@@ -2983,18 +2986,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val resolution = "${recommendation.width}x${recommendation.height}"
         if (PreferenceConfiguration.RESOLUTIONS.contains(resolution)) return
 
-        val preferences = getSharedPreferences(
-            CustomResolutionsConsts.CUSTOM_RESOLUTIONS_FILE,
-            MODE_PRIVATE
-        )
-        val resolutions = preferences.getStringSet(
-            CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY,
-            emptySet()
-        ).orEmpty().toMutableSet()
-        if (resolutions.add(resolution)) {
-            preferences.edit {
-                putStringSet(CustomResolutionsConsts.CUSTOM_RESOLUTIONS_KEY, resolutions)
-            }
+        ResolutionValidator.parseResolution(resolution)?.let {
+            CustomResolutionsStore.add(this, it)
         }
     }
 

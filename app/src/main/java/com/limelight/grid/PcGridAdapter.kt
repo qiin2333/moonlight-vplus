@@ -30,6 +30,7 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 
 import java.io.StringReader
 import java.lang.ref.WeakReference
@@ -428,10 +429,11 @@ class PcGridAdapter(
 
         private fun loadBoxArtFromDisk(ctx: Context?, uuid: String?, useAdaptiveSampleSize: Boolean): Bitmap? {
             if (ctx == null || uuid == null) return null
+            val cacheKey = HostCacheKey.fromUuid(uuid) ?: return null
 
             try {
                 val rawAppList = CacheHelper.readInputStreamToString(
-                    CacheHelper.openCacheFileForInput(ctx.cacheDir, "applist", uuid)
+                    CacheHelper.openCacheFileForInput(ctx.cacheDir, "applist", cacheKey)
                 )
 
                 if (rawAppList.isEmpty()) return null
@@ -441,7 +443,7 @@ class PcGridAdapter(
 
                 val cacheDir = ctx.cacheDir
                 for (app in appList) {
-                    val boxArtFile = CacheHelper.openPath(false, cacheDir, "boxart", uuid, "${app.appId}.png")
+                    val boxArtFile = CacheHelper.openPath(false, cacheDir, "boxart", cacheKey, "${app.appId}.png")
                     if (!boxArtFile.exists() || boxArtFile.length() == 0L) continue
 
                     val options = BitmapFactory.Options()

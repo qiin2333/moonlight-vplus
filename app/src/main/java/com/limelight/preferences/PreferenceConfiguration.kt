@@ -185,6 +185,8 @@ class PreferenceConfiguration {
     /** When false, SmartAudioRenderer skips PCM/AC3 passthrough and always uses the software renderer. */
     var enableAudioPassthrough = false
     var forceMtkMaxOperatingRate = false
+    /** HEVC 解码器低延迟模式：AUTO 按 Amlogic 类规则跳过，OFF 全局跳过，ON 恢复旧行为。 */
+    var hevcLowLatencyMode = HEVC_LOW_LATENCY_AUTO
     var reduceRefreshRate = false
     var fullRange = false
     var gamepadMotionSensors = false
@@ -192,12 +194,10 @@ class PreferenceConfiguration {
     var gamepadMotionSensorsFallbackToDevice = false
     var reverseResolution = false
     var rotableScreen = false
-    // Runtime-only: enable mapping gyroscope motion to right analog stick
+    // Persistent: enable mapping gyroscope motion to right analog stick
     var gyroToRightStick = false
-    // Runtime-only: enable mapping gyroscope motion to relative mouse movement
+    // Persistent: enable mapping gyroscope motion to relative mouse movement
     var gyroToMouse = false
-    // Runtime-only: sensitivity in deg/s for full stick deflection
-    var gyroFullDeflectionDps = 0f
     // Persistent: sensitivity multiplier (higher -> faster)
     var gyroSensitivityMultiplier = 0f
     // Persistent: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
@@ -357,6 +357,14 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
+                .putString(
+                    HEVC_LOW_LATENCY_MODE_PREF_STRING,
+                    when (hevcLowLatencyMode) {
+                        HEVC_LOW_LATENCY_ON -> "on"
+                        HEVC_LOW_LATENCY_OFF -> "off"
+                        else -> DEFAULT_HEVC_LOW_LATENCY_MODE
+                    }
+                )
                 .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
                 .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
                 .putBoolean(OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING, optimizeHardwareTouchpad)
@@ -364,6 +372,8 @@ class PreferenceConfiguration {
                 .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                 .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
                 .putInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, gyroActivationKeyCode)
+                .putBoolean(GYRO_TO_RIGHT_STICK_PREF_STRING, gyroToRightStick)
+                .putBoolean(GYRO_TO_MOUSE_PREF_STRING, gyroToMouse)
 
             if (synchronous) {
                 editor.commit()
@@ -495,12 +505,12 @@ class PreferenceConfiguration {
         copy.enableStartKeyMenu = this.enableStartKeyMenu
         copy.enableNativeMousePointer = this.enableNativeMousePointer
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
+        copy.hevcLowLatencyMode = this.hevcLowLatencyMode
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
-        copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode
         copy.gyroInvertXAxis = this.gyroInvertXAxis
@@ -603,6 +613,11 @@ class PreferenceConfiguration {
         private const val DEFAULT_ENABLE_AUDIO_PASSTHROUGH = false
         private const val FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING = "checkbox_force_mtk_max_operating_rate"
         private const val DEFAULT_FORCE_MTK_MAX_OPERATING_RATE = false
+        const val HEVC_LOW_LATENCY_AUTO = 0
+        const val HEVC_LOW_LATENCY_ON = 1
+        const val HEVC_LOW_LATENCY_OFF = 2
+        private const val HEVC_LOW_LATENCY_MODE_PREF_STRING = "list_hevc_low_latency_mode"
+        private const val DEFAULT_HEVC_LOW_LATENCY_MODE = "auto"
         private const val REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate"
         internal const val FULL_RANGE_PREF_STRING = "checkbox_full_range"
         private const val GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse"
@@ -614,6 +629,8 @@ class PreferenceConfiguration {
         private const val GYRO_INVERT_X_AXIS_PREF_STRING = "gyro_invert_x_axis"
         private const val GYRO_INVERT_Y_AXIS_PREF_STRING = "gyro_invert_y_axis"
         private const val GYRO_ACTIVATION_KEY_CODE_PREF_STRING = "gyro_activation_key_code"
+        private const val GYRO_TO_RIGHT_STICK_PREF_STRING = "gyro_to_right_stick"
+        private const val GYRO_TO_MOUSE_PREF_STRING = "gyro_to_mouse"
 
         // 麦克风设置
         private const val ENABLE_MIC_PREF_STRING = "checkbox_enable_mic"
@@ -1474,6 +1491,13 @@ class PreferenceConfiguration {
                 FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING,
                 DEFAULT_FORCE_MTK_MAX_OPERATING_RATE
             )
+            config.hevcLowLatencyMode = when (
+                prefs.getString(HEVC_LOW_LATENCY_MODE_PREF_STRING, DEFAULT_HEVC_LOW_LATENCY_MODE)
+            ) {
+                "on" -> HEVC_LOW_LATENCY_ON
+                "off" -> HEVC_LOW_LATENCY_OFF
+                else -> HEVC_LOW_LATENCY_AUTO
+            }
             config.reduceRefreshRate = prefs.getBoolean(REDUCE_REFRESH_RATE_PREF_STRING, DEFAULT_REDUCE_REFRESH_RATE)
             config.fullRange = prefs.getBoolean(FULL_RANGE_PREF_STRING, DEFAULT_FULL_RANGE)
             config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE)
@@ -1486,6 +1510,10 @@ class PreferenceConfiguration {
             config.gyroInvertXAxis = prefs.getBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_X_AXIS)
             config.gyroInvertYAxis = prefs.getBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_Y_AXIS)
             config.gyroActivationKeyCode = prefs.getInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, DEFAULT_GYRO_ACTIVATION_KEY_CODE)
+            // Mouse mode wins if both flags somehow ended up persisted together
+            config.gyroToMouse = prefs.getBoolean(GYRO_TO_MOUSE_PREF_STRING, false)
+            config.gyroToRightStick = !config.gyroToMouse &&
+                prefs.getBoolean(GYRO_TO_RIGHT_STICK_PREF_STRING, false)
 
             // Cards visibility (defaults to true)
             config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true)
@@ -1587,11 +1615,6 @@ class PreferenceConfiguration {
             config.floatBallSwipeDownAction = prefs.getString(FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION
             config.floatBallSwipeLeftAction = prefs.getString(FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION
             config.floatBallSwipeRightAction = prefs.getString(FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION
-
-            // Runtime-only defaults; controlled via in-stream GameMenu
-            config.gyroToRightStick = false
-            config.gyroToMouse = false
-            config.gyroFullDeflectionDps = 180.0f
 
             return config
         }

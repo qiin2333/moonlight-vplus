@@ -45,17 +45,20 @@ class DecoderInputBufferSizingTest {
 
     @Test
     fun extremeBitrateRaisesSingleFrameEstimate() {
-        // 800 Mbps @ 120fps: worst-case single frame = 800_000_000 / 120 * 2 = 13_333_332 bytes,
-        // above the resolution-only 6_220_800 estimate for 4K.
+        // 800 Mbps @ 120fps on 1080p: worst-case single frame with 2x margin =
+        // 800_000 kbps * 1000 / 8 / 120 * 2 = 1_666_666 bytes... still below the
+        // resolution estimate for 1080p (2_097_152 minimum), so use a resolution
+        // whose estimate the floor actually exceeds. 720p min is 1 MiB:
+        // 1_666_666 > 1_048_576, floor wins.
         assertEquals(
-            13_333_332,
-            DecoderInputBufferSizing.recommendedInputSize("video/av01", 3840, 2160, 800_000, 120)
+            1_666_666,
+            DecoderInputBufferSizing.recommendedInputSize("video/av01", 1280, 720, 800_000, 120)
         )
     }
 
     @Test
     fun moderateBitrateKeepsResolutionEstimate() {
-        // 150 Mbps @ 120fps floor = 2_500_000 < 6_220_800 resolution estimate.
+        // 150 Mbps @ 120fps floor = 312_500 < 6_220_800 resolution estimate.
         assertEquals(
             6_220_800,
             DecoderInputBufferSizing.recommendedInputSize("video/av01", 3840, 2160, 150_000, 120)
@@ -64,7 +67,7 @@ class DecoderInputBufferSizingTest {
 
     @Test
     fun bitrateFloorRespectsFormatMinimum() {
-        // 10 Mbps @ 240fps floor = 83_333, below the 2 MiB HEVC minimum.
+        // 10 Mbps @ 240fps floor = 10_416, below the 2 MiB HEVC minimum.
         assertEquals(
             2_097_152,
             DecoderInputBufferSizing.recommendedInputSize("video/hevc", 1920, 1080, 10_000, 240)

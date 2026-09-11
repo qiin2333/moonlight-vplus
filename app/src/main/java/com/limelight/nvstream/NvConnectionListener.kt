@@ -42,4 +42,6 @@ interface NvConnectionListener {
         hotspotY: Int,
         bgraPixels: ByteArray?
     )
+
+    fun onRemoteTextContext(context: RemoteTextContext)
 }

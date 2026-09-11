@@ -55,6 +55,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
@@ -1074,34 +1075,17 @@ class GameMenu(
         }
 
         // 自定义分辨率
-        val customPrefs = game.getSharedPreferences("custom_resolutions", Context.MODE_PRIVATE)
-        val customResolutions = customPrefs.getStringSet("custom_resolutions", null)
+        for (resolution in CustomResolutionsStore.load(game)) {
+            val res = resolution.toString()
+            if (PreferenceConfiguration.RESOLUTIONS.contains(res)) continue
 
-        if (!customResolutions.isNullOrEmpty()) {
-            val sortedCustom = customResolutions.sortedWith(Comparator { s1, s2 ->
-                val parts1 = s1.split("x")
-                val parts2 = s2.split("x")
-                if (parts1.size != 2 || parts2.size != 2) return@Comparator s1.compareTo(s2)
-                try {
-                    val w1 = parts1[0].toInt(); val h1 = parts1[1].toInt()
-                    val w2 = parts2[0].toInt(); val h2 = parts2[1].toInt()
-                    if (w1 != w2) w1.compareTo(w2) else h1.compareTo(h2)
-                } catch (_: NumberFormatException) {
-                    s1.compareTo(s2)
-                }
-            })
-
-            for (res in sortedCustom) {
-                if (PreferenceConfiguration.RESOLUTIONS.contains(res)) continue
-
-                val label = if (res == currentResStr) {
-                    game.getString(R.string.game_menu_resolution_custom_current, res)
-                } else {
-                    game.getString(R.string.game_menu_resolution_custom, res)
-                }
-
-                options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
+            val label = if (res == currentResStr) {
+                game.getString(R.string.game_menu_resolution_custom_current, res)
+            } else {
+                game.getString(R.string.game_menu_resolution_custom, res)
             }
+
+            options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
         }
 
         showSubMenu(getString(R.string.game_menu_change_resolution), options.toTypedArray())
@@ -1151,6 +1135,7 @@ class GameMenu(
                 gyro = gyroCardController.snapshot(),
                 touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
+                usbForwardingEnabled = true, // Keep setup and unavailable reasons discoverable.
                 pageLayout = pageLayout
             )
         )
@@ -1175,6 +1160,9 @@ class GameMenu(
 
         val callbacks = GameMenuCallbacks(
             onDismiss = { handleDismissRequest(dialog) },
+            onUsbDevices = {
+                game.showUsbForwarding { childDialog -> registerChildDialog(childDialog) }
+            },
             onHapticFeedback = ::dispatchHapticFeedback,
             iconForOption = ::getIconForMenuOption,
             onBack = { navigateBack() },
