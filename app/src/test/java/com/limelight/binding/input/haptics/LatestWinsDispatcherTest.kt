@@ -68,6 +68,33 @@ class LatestWinsDispatcherTest {
     }
 
     @Test
+    fun urgentValueBypassesTheMinimumInterval() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val firstDelivered = CountDownLatch(1)
+        val twoDelivered = CountDownLatch(2)
+        val delivered = Collections.synchronizedList(mutableListOf<Int>())
+        val dispatcher = LatestWinsDispatcher<Int>(
+            // A minute-long interval: a non-urgent second value would never arrive in time.
+            minimumIntervalMs = 60_000,
+            executor = executor,
+            dispatch = { value: Int ->
+                delivered += value
+                firstDelivered.countDown()
+                twoDelivered.countDown()
+            },
+            isUrgent = { it == 2 }
+        )
+
+        dispatcher.submit(1)
+        assertTrue(firstDelivered.await(2, TimeUnit.SECONDS))
+        dispatcher.submit(2)
+        assertTrue(twoDelivered.await(2, TimeUnit.SECONDS))
+        assertEquals(listOf(1, 2), delivered)
+        dispatcher.close()
+        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun clearingPendingWorkDoesNotWaitForBlockedSink() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val firstStarted = CountDownLatch(1)

@@ -7,12 +7,95 @@ import org.junit.Test
 class GameRumbleRouterTest {
     private val input = ControllerRumbleState(lowFrequency = 0.8f, highFrequency = 0.6f)
 
+    private val decomposition = RumbleDecomposition(
+        sustainedLow = 0.5f,
+        transientLow = 0.3f,
+        sustainedHigh = 0.2f,
+        transientHigh = 0.4f
+    )
+
     @Test
-    fun coordinatedModeSplitsFrequencyBandsWhenBothSinksAreAvailable() {
+    fun coordinatedModeGivesTheControllerTheFullSignalAndTheBodyTransientCompensation() {
+        val route = route(
+            GameRumbleMode.COORDINATED,
+            hasController = true,
+            hasDevice = true,
+            decomposition = decomposition
+        )
+
+        // The controller is never attenuated in coordinated mode: the body supplements, it
+        // does not take over.
+        assertState(route.controller, low = 0.8f, high = 0.6f)
+        // 0.25 * transientLow = 0.075; 1.0 * transientHigh + 0.30 * sustainedHigh = 0.46.
+        // Sustained low is intentionally absent.
+        assertState(route.device, low = 0.075f, high = 0.46f)
+    }
+
+    @Test
+    fun coordinatedModeWithoutTemporalContextKeepsTheBodySilent() {
         val route = route(GameRumbleMode.COORDINATED, hasController = true, hasDevice = true)
 
-        assertState(route.controller, low = 0.8f, high = 0.27f)
-        assertState(route.device, low = 0.16f, high = 0.6f)
+        assertState(route.controller, low = 0.8f, high = 0.6f)
+        assertNull(route.device)
+    }
+
+    @Test
+    fun coordinatedModeKeepsTheBodySilentOnBinaryTierDevices() {
+        val route = route(
+            GameRumbleMode.COORDINATED,
+            hasController = true,
+            hasDevice = true,
+            deviceTier = DeviceHapticsTier.BINARY,
+            decomposition = decomposition
+        )
+
+        // A body that can only switch on/off cannot carry compensated detail: the controller
+        // keeps the full signal and the body gets nothing.
+        assertState(route.controller, low = 0.8f, high = 0.6f)
+        assertNull(route.device)
+    }
+
+    @Test
+    fun coordinatedModeYieldsHighTransientsOnlyOnCompositionTierDevices() {
+        val route = route(
+            GameRumbleMode.COORDINATED,
+            hasController = true,
+            hasDevice = true,
+            deviceTier = DeviceHapticsTier.COMPOSITION,
+            decomposition = decomposition
+        )
+
+        // Low channel never yields; high cedes 0.25 * 0.4 = 0.1 of its transient residual.
+        assertState(route.controller, low = 0.8f, high = 0.5f)
+        // Body compensation is identical regardless of tier.
+        assertState(route.device, low = 0.075f, high = 0.46f)
+    }
+
+    @Test
+    fun compositionTierWithoutTemporalContextYieldsNothing() {
+        val route = route(
+            GameRumbleMode.COORDINATED,
+            hasController = true,
+            hasDevice = true,
+            deviceTier = DeviceHapticsTier.COMPOSITION
+        )
+
+        assertState(route.controller, low = 0.8f, high = 0.6f)
+        assertNull(route.device)
+    }
+
+    @Test
+    fun coordinatedModeWithOnlyDeviceKeepsFullSignalEvenOnBinaryTier() {
+        val route = route(
+            GameRumbleMode.COORDINATED,
+            hasController = false,
+            hasDevice = true,
+            deviceTier = DeviceHapticsTier.BINARY
+        )
+
+        // Without a controller the body is the only sink; PWM full rumble beats silence.
+        assertNull(route.controller)
+        assertState(route.device, low = 0.8f, high = 0.6f)
     }
 
     @Test
@@ -75,11 +158,44 @@ class GameRumbleRouterTest {
         assertEquals(GameRumbleMode.CONTROLLER, GameRumbleMode.fromLegacyFallback(false))
     }
 
+    @Test
+    fun coordinatedDeviceEffectiveGainIsFoldedExactlyOnce() {
+        val route = route(
+            GameRumbleMode.COORDINATED,
+            hasController = true,
+            hasDevice = true,
+            decomposition = decomposition
+        )
+
+        // Policy gains applied once in the router, single-motor fold applied once downstream:
+        // 0.25*0.3*0.80 + (1.0*0.4 + 0.30*0.2)*0.33 = 0.06 + 0.1518 = 0.2118 -> 54/255.
+        // This pins the end-to-end device gain so no layer can silently re-weight it.
+        val target = SingleMotorRumbleFold.amplitude(
+            route.device!!.lowFrequency,
+            route.device!!.highFrequency
+        )
+        assertEquals(54, target)
+    }
+
+    @Test
+    fun singleMotorFoldSaturatesAndAcceptsMotorShorts() {
+        assertEquals(204, SingleMotorRumbleFold.amplitude(lowFrequency = 1f, highFrequency = 0f))
+        assertEquals(84, SingleMotorRumbleFold.amplitude(lowFrequency = 0f, highFrequency = 1f))
+        assertEquals(255, SingleMotorRumbleFold.amplitude(lowFrequency = 1f, highFrequency = 1f))
+        assertEquals(
+            204,
+            SingleMotorRumbleFold.amplitude((-0x0100).toShort(), 0.toShort())
+        )
+    }
+
     private fun route(
         mode: GameRumbleMode,
         hasController: Boolean,
-        hasDevice: Boolean
-    ): GameRumbleRoute = GameRumbleRouter.route(mode, input, hasController, hasDevice)
+        hasDevice: Boolean,
+        deviceTier: DeviceHapticsTier = DeviceHapticsTier.AMPLITUDE,
+        decomposition: RumbleDecomposition? = null
+    ): GameRumbleRoute =
+        GameRumbleRouter.route(mode, input, hasController, hasDevice, deviceTier, decomposition)
 
     private fun assertState(
         actual: ControllerRumbleState?,

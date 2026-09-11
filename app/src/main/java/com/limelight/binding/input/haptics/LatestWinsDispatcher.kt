@@ -9,13 +9,19 @@ import java.util.concurrent.TimeUnit
  * At most one task is scheduled or executing. While that task is in flight, newer values replace
  * the single pending value. This is important for vendor services that may block indefinitely:
  * callers remain responsive and memory use remains bounded even when the sink stops responding.
+ *
+ * The minimum interval spaces out reprogramming of long-running effects, which some vendor
+ * vibrator services cannot tolerate at packet rate. Values reported by [isUrgent] skip that
+ * spacing: they are short self-terminating one-shots, not reprogramming, and must not sit behind
+ * the interval or their timing information is destroyed.
  */
 internal class LatestWinsDispatcher<T>(
     minimumIntervalMs: Long,
     private val executor: ScheduledExecutorService,
     private val clockNanos: () -> Long = System::nanoTime,
     private val dispatch: (T) -> Unit,
-    private val onError: (Exception) -> Unit = {}
+    private val onError: (Exception) -> Unit = {},
+    private val isUrgent: (T) -> Boolean = { false }
 ) {
     private val minimumIntervalNanos = TimeUnit.MILLISECONDS.toNanos(minimumIntervalMs)
     private val lock = Any()
@@ -64,9 +70,13 @@ internal class LatestWinsDispatcher<T>(
         }
 
         val now = clockNanos()
-        val delayNanos = lastAttemptNanos?.let { previous ->
-            (minimumIntervalNanos - (now - previous)).coerceAtLeast(0L)
-        } ?: 0L
+        val delayNanos = if (pending?.let(isUrgent) == true) {
+            0L
+        } else {
+            lastAttemptNanos?.let { previous ->
+                (minimumIntervalNanos - (now - previous)).coerceAtLeast(0L)
+            } ?: 0L
+        }
         active = true
         try {
             executor.schedule(::dispatchLatest, delayNanos, TimeUnit.NANOSECONDS)
