@@ -270,6 +270,10 @@
             <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
         </activity>
         <activity
+            android:name=".preferences.StickCalibrationActivity"
+            android:exported="false"
+            android:label="@string/stick_calibration_title" />
+        <activity
             android:name=".preferences.ControllerDiagnosticActivity"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"

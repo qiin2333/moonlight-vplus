@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stick_calibration_title">Stick center calibration</string>
+    <string name="stick_calibration_summary">Use the current stick position as neutral for this controller</string>
+    <string name="stick_calibration_help">Move both sticks once, release them, then tap Save current center on the touchscreen or click it with a mouse. The last controller moved is shown below. Keep both sticks released while saving. Values are saved for this Android controller; restart the stream after calibration. This screen supports Android system input (Bluetooth or system USB). The built-in USB driver and USB/IP bypass this calibration.</string>
+    <string name="stick_calibration_waiting">Waiting for joystick input…</string>
+    <string name="stick_calibration_save">Save current center</string>
+    <string name="stick_calibration_reset">Reset this controller</string>
+    <string name="stick_calibration_close">Close</string>
+    <string name="stick_calibration_saved">Stick centers saved. Restart the stream.</string>
+    <string name="stick_calibration_reset_done">Original stick centers restored. Restart the stream.</string>
+    <string name="stick_calibration_columns">Axis: raw / saved center / corrected (before deadzone)</string>
+</resources>
