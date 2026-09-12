@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_ac3_iec61937">AC3 IEC61937 compatibility output</string>
+    <string name="summary_ac3_iec61937">Wrap 48 kHz AC3 for receivers that get PCM from raw passthrough. Requires Android 7+. Enable audio passthrough and select AC3; other codecs are unchanged. Restart the client after changing. Disable to restore raw AC3.</string>
+</resources>
