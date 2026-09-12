@@ -742,6 +742,10 @@
             android:summary="@string/summary_seekbar_deadzone"
             android:text="@string/suffix_seekbar_deadzone"
             android:title="@string/title_seekbar_deadzone"/>
+        <Preference
+            android:key="stick_calibration"
+            android:title="@string/stick_calibration_title"
+            android:summary="@string/stick_calibration_summary" />
         <CheckBoxPreference
             android:key="checkbox_multi_controller"
             android:title="@string/title_checkbox_multi_controller"

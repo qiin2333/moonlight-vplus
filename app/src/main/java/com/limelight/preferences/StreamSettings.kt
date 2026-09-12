@@ -3742,6 +3742,12 @@ class StreamSettings : AppCompatActivity() {
                         true
                     }
 
+            findPreference<Preference>("stick_calibration")!!.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        startActivity(Intent(requireActivity(), StickCalibrationActivity::class.java))
+                        true
+                    }
+
             refreshSettingsPresentation()
         }
 

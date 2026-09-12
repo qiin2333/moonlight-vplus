@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stick_calibration_title">Калибровка центра стиков</string>
+    <string name="stick_calibration_summary">Считать текущее положение стиков нейтральным для этого контроллера</string>
+    <string name="stick_calibration_help">Подвигайте оба стика, отпустите их и нажмите «Сохранить текущий центр» на сенсорном экране или мышью. Ниже показан контроллер, который двигали последним. Во время сохранения не трогайте стики. Центры сохраняются для этого Android-контроллера; после калибровки перезапустите трансляцию. Поддерживается системный ввод Android (Bluetooth или системный USB). Встроенный USB-драйвер и USB/IP обходят эту калибровку.</string>
+    <string name="stick_calibration_waiting">Ожидание движения стиков…</string>
+    <string name="stick_calibration_save">Сохранить текущий центр</string>
+    <string name="stick_calibration_reset">Сбросить для этого контроллера</string>
+    <string name="stick_calibration_close">Закрыть</string>
+    <string name="stick_calibration_saved">Центры сохранены. Перезапустите трансляцию.</string>
+    <string name="stick_calibration_reset_done">Исходные центры восстановлены. Перезапустите трансляцию.</string>
+    <string name="stick_calibration_columns">Ось: исходное / центр / исправленное (до мёртвой зоны)</string>
+</resources>
