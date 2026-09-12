@@ -1,7 +1,6 @@
 package com.limelight.binding.input.haptics
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -27,9 +26,9 @@ class GameRumbleRouterTest {
         // The controller is never attenuated in coordinated mode: the body supplements, it
         // does not take over.
         assertState(route.controller, low = 0.8f, high = 0.6f)
-        // 0.25 * transientLow = 0.075; 1.0 * transientHigh = 0.4.
-        // Both sustained channels are intentionally absent.
-        assertState(route.device, low = 0.075f, high = 0.4f)
+        // 0.25 * transientLow = 0.075; 1.0 * transientHigh + 0.30 * sustainedHigh = 0.46.
+        // Sustained low is intentionally absent.
+        assertState(route.device, low = 0.075f, high = 0.46f)
     }
 
     @Test
@@ -69,7 +68,7 @@ class GameRumbleRouterTest {
         // Primitive support does not establish equivalent physical compensation.
         assertState(route.controller, low = 0.8f, high = 0.6f)
         // Body compensation is identical regardless of tier.
-        assertState(route.device, low = 0.075f, high = 0.4f)
+        assertState(route.device, low = 0.075f, high = 0.46f)
     }
 
     @Test
@@ -169,13 +168,13 @@ class GameRumbleRouterTest {
         )
 
         // Policy gains applied once in the router, single-motor fold applied once downstream:
-        // 0.25*0.3*0.80 + 1.0*0.4*0.33 = 0.06 + 0.132 = 0.192 -> 48/255.
+        // 0.25*0.3*0.80 + (1.0*0.4 + 0.30*0.2)*0.33 = 0.06 + 0.1518 = 0.2118 -> 54/255.
         // This pins the end-to-end device gain so no layer can silently re-weight it.
         val target = SingleMotorRumbleFold.amplitude(
             route.device!!.lowFrequency,
             route.device!!.highFrequency
         )
-        assertEquals(48, target)
+        assertEquals(54, target)
     }
 
     @Test
@@ -187,51 +186,6 @@ class GameRumbleRouterTest {
             204,
             SingleMotorRumbleFold.amplitude((-0x0100).toShort(), 0.toShort())
         )
-    }
-
-    @Test
-    fun settledBackgroundIsSilentOnBodyButPreservedOnController() {
-        for (tier in listOf(DeviceHapticsTier.AMPLITUDE, DeviceHapticsTier.COMPOSITION)) {
-            val result = route(GameRumbleMode.COORDINATED, true, true, tier,
-                RumbleDecomposition(0.8f, 0f, 0.6f, 0f))
-            assertState(result.controller, 0.8f, 0.6f)
-            assertState(result.device, 0f, 0f)
-        }
-    }
-
-    @Test
-    fun repeatedHitsOnNonzeroBackgroundEachReturnTheBodyToSilence() {
-        var nowMs = 0L
-        val analyzer = RumbleEnvelopeAnalyzer(clockMs = { nowMs })
-        val background = ControllerRumbleState(0.3f, 0.2f)
-        val hit = ControllerRumbleState(0.3f, 0.8f)
-        fun render(input: ControllerRumbleState): ControllerRumbleState {
-            val result = GameRumbleRouter.route(GameRumbleMode.COORDINATED, input,
-                true, true, DeviceHapticsTier.COMPOSITION, analyzer.decompose(input))
-            assertEquals(input, result.controller)
-            return result.device!!
-        }
-        render(background)
-        // Settle the initial background, then simulate three distinct 40ms rises. HOST
-        // never reaches zero; the body must still stop between beats and restart each time.
-        for (time in 20L..400L step 20L) {
-            nowMs = time
-            render(background)
-        }
-        assertTrue(render(background).isZero)
-        repeat(3) {
-            nowMs += 100
-            val onset = render(hit)
-            assertTrue(SingleMotorRumbleFold.amplitude(onset.lowFrequency, onset.highFrequency) > 0)
-            nowMs += 20
-            render(hit)
-            nowMs += 20
-            assertTrue(render(background).isZero)
-            for (tick in 1..15) {
-                nowMs += 20
-                assertTrue(render(background).isZero)
-            }
-        }
     }
 
     private fun route(

@@ -27,10 +27,10 @@ internal data class GameRumbleRoute(
  * A null output means that sink must not receive game rumble. Audio-derived haptics are not an
  * input to this router, which keeps that feature independent from device game rumble.
  *
- * COORDINATED keeps the full authored signal on the controller and adds only transient
- * compensation on the body. Neither sustained channel is copied: even a small high-channel
- * background can keep the body running between hits and turn later onsets into paced level
- * changes. The temporal split must come from RumbleEnvelopeAnalyzer; without it the body
+ * COORDINATED is compensation-first: the controller always carries the full sustained signal
+ * (weight and continuity), while the body only adds what it can render more clearly - onset
+ * transients plus a small share of sustained high. Sustained low is deliberately not copied to
+ * the body. The temporal split must come from RumbleEnvelopeAnalyzer; without it the body
  * stays silent rather than guessing from the instantaneous level.
  *
  * Bodies without amplitude control receive no coordinated compensation. Primitive support
@@ -39,9 +39,10 @@ internal data class GameRumbleRoute(
 internal object GameRumbleRouter {
     // Policy gains applied to the decomposition BEFORE the single-motor fold; the fold then
     // maps the two channels to one motor. End-to-end effective gains (pinned by tests):
-    // transient high 0.33, transient low 0.20, sustained high 0, sustained low 0.
+    // transient high 0.33, transient low 0.20, sustained high 0.099, sustained low 0.
     private const val LOW_TRANSIENT_GAIN = 0.25f
     private const val HIGH_TRANSIENT_GAIN = 1.0f
+    private const val HIGH_SUSTAINED_GAIN = 0.30f
 
     fun route(
         mode: GameRumbleMode,
@@ -75,7 +76,8 @@ internal object GameRumbleRouter {
     private fun transientCompensationChannels(d: RumbleDecomposition): ControllerRumbleState =
         ControllerRumbleState(
             lowFrequency = LOW_TRANSIENT_GAIN * d.transientLow,
-            highFrequency = HIGH_TRANSIENT_GAIN * d.transientHigh
+            highFrequency = HIGH_TRANSIENT_GAIN * d.transientHigh +
+                HIGH_SUSTAINED_GAIN * d.sustainedHigh
         )
 
 }
