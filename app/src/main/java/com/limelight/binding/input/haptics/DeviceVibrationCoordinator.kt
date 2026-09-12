@@ -1,6 +1,5 @@
 package com.limelight.binding.input.haptics
 
-import android.os.SystemClock
 import com.limelight.LimeLog
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -13,12 +12,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * the actuator exclusively. Native vibrator calls run on a dedicated latest-wins worker so a
  * blocked vendor Binder cannot stall the UI thread or create an unbounded executor queue.
  *
- * Game amplitude follows a pulse/level state machine. An onset from silence is observed for
- * [OBSERVATION_WINDOW_MS] before it is committed as a sustained level write. If the signal
- * returns to zero inside the window, the measured pulse is emitted once as an urgent short
- * one-shot which bypasses the level pacing - collapsing it into the latest-wins level path is
- * how short pulses used to disappear entirely. Zero input produces zero output: a pulse ends
- * by finishing its one-shot and no synthetic tail is appended.
+ * Start and stop edges are submitted without observing or replaying completed pulses. Held
+ * level replacements remain paced for vendor safety. A blocked native call cannot be preempted;
+ * newer state replaces pending work rather than accumulating late haptic events.
  */
 internal class DeviceVibrationCoordinator(
     private val postDelayed: (Runnable, Long) -> Unit,
@@ -26,7 +22,7 @@ internal class DeviceVibrationCoordinator(
     private val vibrateDevice: (Int, Long) -> Unit,
     private val cancelDeviceVibration: () -> Unit,
     executor: ScheduledExecutorService = newWorker(),
-    private val clockMs: () -> Long = SystemClock::elapsedRealtime
+    minimumIntervalMs: Long = MINIMUM_DEVICE_INTERVAL_MS
 ) {
     enum class GameSource {
         ROUTED_GAME,
@@ -50,7 +46,7 @@ internal class DeviceVibrationCoordinator(
     private val lock = Any()
     private val gameSources = mutableMapOf<GameSource, MotorState>()
     private val dispatcher = LatestWinsDispatcher(
-        minimumIntervalMs = MINIMUM_DEVICE_INTERVAL_MS,
+        minimumIntervalMs = minimumIntervalMs,
         executor = executor,
         dispatch = ::dispatch,
         onError = { error ->
@@ -71,11 +67,6 @@ internal class DeviceVibrationCoordinator(
     private var lastGameCommandAmplitude = -1
     private var outputWriteInFlight = false
 
-    private var observationActive = false
-    private var observationStartMs = 0L
-    private var observationPeak = 0
-    private var observationLatest = 0
-    private var observationDeadline: Runnable? = null
     private var levelAmplitude = 0
 
     /**
@@ -105,7 +96,7 @@ internal class DeviceVibrationCoordinator(
             if (audioOwned || touchActive) {
                 null
             } else {
-                gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked())
+                gameAmplitudeCommandLocked(mixedGameAmplitudeLocked())
             }
         }
         command?.let(dispatcher::submit)
@@ -117,7 +108,6 @@ internal class DeviceVibrationCoordinator(
         val completion: Runnable
         synchronized(lock) {
             if (closed || audioOwned) return
-            discardObservationLocked()
             touchCompletion?.let(removeCallback)
             clearGameRefreshLocked()
             touchActive = true
@@ -149,7 +139,6 @@ internal class DeviceVibrationCoordinator(
                 touchEpoch++
                 touchCompletion?.let(removeCallback)
                 touchCompletion = null
-                discardObservationLocked()
                 clearGameRefreshLocked()
                 ownershipChanged = true
             }
@@ -165,7 +154,7 @@ internal class DeviceVibrationCoordinator(
             if (closed || !audioOwned) return
             audioOwned = false
             generation++
-            gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked(), forceWrite = true)
+            gameAmplitudeCommandLocked(mixedGameAmplitudeLocked(), forceWrite = true)
         }
         command?.let(dispatcher::submit)
     }
@@ -180,7 +169,6 @@ internal class DeviceVibrationCoordinator(
             touchEpoch++
             touchCompletion?.let(removeCallback)
             touchCompletion = null
-            discardObservationLocked()
             clearGameRefreshLocked()
             gameSources.clear()
             VibrationCommand(
@@ -188,6 +176,7 @@ internal class DeviceVibrationCoordinator(
                 durationMs = GAME_SOURCE_LEASE_MS,
                 generation = ++generation,
                 sequence = ++outputSequence,
+                urgent = true,
                 terminal = true
             )
         }
@@ -201,7 +190,7 @@ internal class DeviceVibrationCoordinator(
             touchActive = false
             touchCompletion = null
             generation++
-            gameAmplitudeCommandLocked(clockMs(), mixedGameAmplitudeLocked(), forceWrite = true)
+            gameAmplitudeCommandLocked(mixedGameAmplitudeLocked(), forceWrite = true)
         }
         command?.let(dispatcher::submit)
     }
@@ -214,56 +203,29 @@ internal class DeviceVibrationCoordinator(
         return amplitude
     }
 
-    /**
-     * Maps a mixed game amplitude to the next command, or null when no write is due yet:
-     * onsets from silence are observed for a short window before committing as a level, and a
-     * pulse measured inside that window is returned as an urgent one-shot.
-     *
-     * [forceWrite] is set by ownership-release paths: audio or touch stopped the motor
-     * underneath, so an unchanged nonzero level must be reprogrammed, not suppressed.
-     */
+    /** Restores ownership explicitly; equal levels otherwise only renew their finite lease. */
     private fun gameAmplitudeCommandLocked(
-        nowMs: Long,
         amplitude: Int,
         forceWrite: Boolean = false
     ): VibrationCommand? {
-        if (amplitude == 0) {
-            val pulse = stopObservationLocked(nowMs)
-            clearGameRefreshLocked()
-            levelAmplitude = 0
-            if (pulse != null) {
-                return pulse
-            }
-            if (lastGameCommandAmplitude == 0) {
-                return null
-            }
-            return levelCommandLocked(0)
-        }
-
-        if (observationActive) {
-            observationPeak = maxOf(observationPeak, amplitude)
-            observationLatest = amplitude
+        val boundary = (levelAmplitude == 0) != (amplitude == 0)
+        levelAmplitude = amplitude
+        if (amplitude == 0) clearGameRefreshLocked()
+        if (!forceWrite && lastGameCommandAmplitude == amplitude) {
+            if (amplitude > 0) scheduleGameRefreshLocked(amplitude)
             return null
         }
-        if (levelAmplitude == amplitude) {
-            if (!forceWrite) {
-                scheduleGameRefreshLocked(amplitude)
-                return null
-            }
-            return levelCommandLocked(amplitude, forceResubmit = true)
-        }
-        if (levelAmplitude > 0) {
-            // The motor is already running; rewrite the level without observing.
-            levelAmplitude = amplitude
-            return levelCommandLocked(amplitude)
-        }
-        startObservationLocked(nowMs, amplitude)
-        return null
+        return levelCommandLocked(
+            amplitude,
+            forceResubmit = forceWrite,
+            urgent = boundary || amplitude == 0
+        )
     }
 
     private fun levelCommandLocked(
         amplitude: Int,
-        forceResubmit: Boolean = false
+        forceResubmit: Boolean = false,
+        urgent: Boolean = false
     ): VibrationCommand {
         if (forceResubmit || amplitude != lastGameCommandAmplitude) {
             outputSequence++
@@ -276,55 +238,9 @@ internal class DeviceVibrationCoordinator(
             amplitude = amplitude,
             durationMs = GAME_SOURCE_LEASE_MS,
             generation = generation,
-            sequence = outputSequence
-        )
-    }
-
-    private fun startObservationLocked(nowMs: Long, amplitude: Int) {
-        observationActive = true
-        observationStartMs = nowMs
-        observationPeak = amplitude
-        observationLatest = amplitude
-        val deadline = Runnable { commitObservation() }
-        observationDeadline = deadline
-        postDelayed(deadline, OBSERVATION_WINDOW_MS)
-    }
-
-    /** Ends the observation, returning the measured pulse, or null when it was too short to feel. */
-    private fun stopObservationLocked(nowMs: Long): VibrationCommand? {
-        val deadline = observationDeadline ?: return null
-        removeCallback(deadline)
-        observationDeadline = null
-        observationActive = false
-        val measuredMs = nowMs - observationStartMs
-        if (measuredMs < MINIMUM_PULSE_MS) {
-            return null
-        }
-        outputSequence++
-        return VibrationCommand(
-            amplitude = observationPeak,
-            durationMs = measuredMs.coerceAtMost(OBSERVATION_WINDOW_MS),
-            generation = generation,
             sequence = outputSequence,
-            urgent = true
+            urgent = urgent
         )
-    }
-
-    private fun discardObservationLocked() {
-        observationDeadline?.let(removeCallback)
-        observationDeadline = null
-        observationActive = false
-    }
-
-    private fun commitObservation() {
-        val command = synchronized(lock) {
-            if (closed || !observationActive) return
-            observationActive = false
-            observationDeadline = null
-            levelAmplitude = observationLatest
-            levelCommandLocked(levelAmplitude)
-        }
-        dispatcher.submit(command)
     }
 
     private fun scheduleGameRefreshLocked(amplitude: Int) {
@@ -347,7 +263,7 @@ internal class DeviceVibrationCoordinator(
     private fun refreshGameLease() {
         val command = synchronized(lock) {
             gameRefreshCallback = null
-            if (closed || audioOwned || touchActive || observationActive) return
+            if (closed || audioOwned || touchActive) return
             if (levelAmplitude == 0) return
             levelCommandLocked(levelAmplitude, forceResubmit = true).takeUnless { it.isZero }
         }
@@ -397,16 +313,14 @@ internal class DeviceVibrationCoordinator(
         val THREAD_NUMBER = AtomicInteger()
         // Long one-shot effects are reprogrammed only four times per second. Some vendor
         // vibrator services deadlock when effects are replaced at controller packet rate.
-        // Measured pulses bypass this via the dispatcher's urgent path: they are separate
-        // short one-shots, not reprogramming of a running effect.
+        // Start/stop edges bypass level pacing. Native writes stay serialized; hardware
+        // validation is still required for repeated edges on affected vendor services.
         const val MINIMUM_DEVICE_INTERVAL_MS = 250L
         const val GAME_SOURCE_LEASE_MS = 500L
         const val GAME_SOURCE_REFRESH_MS = 375L
         const val MAXIMUM_TOUCH_DURATION_MS = 1_000L
         const val GAME_AMPLITUDE_STEP = 16
         const val GAME_AMPLITUDE_HYSTERESIS = 12
-        const val OBSERVATION_WINDOW_MS = 60L
-        const val MINIMUM_PULSE_MS = 10L
 
         fun newWorker(): ScheduledExecutorService {
             val threadNumber = THREAD_NUMBER.incrementAndGet()

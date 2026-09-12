@@ -56,7 +56,7 @@ class GameRumbleRouterTest {
     }
 
     @Test
-    fun coordinatedModeYieldsHighTransientsOnlyOnCompositionTierDevices() {
+    fun compositionSupportDoesNotAttenuateTheController() {
         val route = route(
             GameRumbleMode.COORDINATED,
             hasController = true,
@@ -65,8 +65,8 @@ class GameRumbleRouterTest {
             decomposition = decomposition
         )
 
-        // Low channel never yields; high cedes 0.25 * 0.4 = 0.1 of its transient residual.
-        assertState(route.controller, low = 0.8f, high = 0.5f)
+        // Primitive support does not establish equivalent physical compensation.
+        assertState(route.controller, low = 0.8f, high = 0.6f)
         // Body compensation is identical regardless of tier.
         assertState(route.device, low = 0.075f, high = 0.46f)
     }

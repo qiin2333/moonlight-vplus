@@ -20,33 +20,28 @@ internal class RumbleEnvelopeAnalyzer(
     private val clockMs: () -> Long = SystemClock::elapsedRealtime
 ) {
     private var lastSampleMs: Long? = null
+    private var previousInput = ControllerRumbleState.ZERO
     private var lowEnvelope = 0f
     private var highEnvelope = 0f
 
     fun decompose(input: ControllerRumbleState): RumbleDecomposition {
         val nowMs = clockMs()
-        val dtMs = lastSampleMs
-            ?.let { (nowMs - it).coerceIn(0L, MAX_TRACKING_GAP_MS).toFloat() }
-            ?: 0f
+        val dtMs = lastSampleMs?.let { (nowMs - it).coerceAtLeast(0L).toFloat() } ?: 0f
         lastSampleMs = nowMs
-        val alpha = 1f - exp(-dtMs / timeConstantMs)
+        val decay = exp(-dtMs / timeConstantMs)
 
-        // Residuals are read before the envelope update: a step onset must read as a full
-        // transient first and only then bleed into the envelope over ~tau.
-        val transientLow = positiveResidual(input.lowFrequency, lowEnvelope)
-        val transientHigh = positiveResidual(input.highFrequency, highEnvelope)
+        // The previous level occupied the elapsed interval, not the newly arrived sample.
+        // Updating before reading the residual also makes same-time duplicate events idempotent.
+        lowEnvelope = previousInput.lowFrequency +
+            (lowEnvelope - previousInput.lowFrequency) * decay
+        highEnvelope = previousInput.highFrequency +
+            (highEnvelope - previousInput.highFrequency) * decay
+        if (input.lowFrequency == 0f) lowEnvelope = 0f
+        if (input.highFrequency == 0f) highEnvelope = 0f
+        previousInput = input
 
-        if (input.isZero) {
-            // An explicit zero is authoritative silence: drop the tracked history so the next
-            // onset reads at full transient strength. The second hit of a double-tap must not
-            // be softened by the first hit's residual envelope.
-            lowEnvelope = 0f
-            highEnvelope = 0f
-        } else {
-            lowEnvelope += alpha * (input.lowFrequency - lowEnvelope)
-            highEnvelope += alpha * (input.highFrequency - highEnvelope)
-        }
-
+        val transientLow = settledResidual(input.lowFrequency, lowEnvelope)
+        val transientHigh = settledResidual(input.highFrequency, highEnvelope)
         return RumbleDecomposition(
             sustainedLow = input.lowFrequency - transientLow,
             transientLow = transientLow,
@@ -55,15 +50,18 @@ internal class RumbleEnvelopeAnalyzer(
         )
     }
 
-    private fun positiveResidual(value: Float, envelope: Float): Float =
-        (value - envelope).coerceAtLeast(0f)
+    // Emit the exact terminal state before the ticker stops. Otherwise a tiny residual can
+    // survive forever and downstream minimum-amplitude quantization turns it into a held buzz.
+    private fun settledResidual(value: Float, envelope: Float): Float =
+        (value - envelope).coerceAtLeast(0f).takeIf {
+            it > RumbleDecomposition.TRANSIENT_EPSILON
+        } ?: 0f
 
     companion object {
         // Experimental starting point from the coordinated-vibration design notes: it
         // separates "sharp onset" from "slow swell" and is a tuning knob, not a hardware
         // constant.
         const val DEFAULT_TIME_CONSTANT_MS = 40f
-        private const val MAX_TRACKING_GAP_MS = 500L
     }
 }
 

@@ -56,41 +56,51 @@ class RumbleOutputSlotTest {
     }
 
     @Test
-    fun shortPulseBetweenTicksIsNotDropped() {
+    fun shortPulseStartsAtTheEdgeDeadlineAndStopsAtItsOriginalEnd() {
         val scheduler = ManualScheduler()
         val slot = slot(scheduler)
-
-        slot.submit(Frame(5))
-        scheduler.advance(0)
-        assertEquals(listOf(5), scheduler.dispatched)
-
-        scheduler.advance(5)
-        slot.submit(Frame(1))
-        scheduler.advance(10)
         slot.submit(Frame(0))
-        // The on-edge had to be flushed before the zero overwrote it.
-        assertEquals(listOf(5, 1), scheduler.dispatched)
-
-        scheduler.advance(18)
-        assertEquals(listOf(5, 1, 0), scheduler.dispatched)
+        scheduler.advance(0)
+        scheduler.advance(5)
+        slot.submit(Frame(160))
+        scheduler.advance(5)
+        assertEquals(listOf(0, 160), scheduler.dispatched)
+        scheduler.advance(22)
+        slot.submit(Frame(0))
+        scheduler.advance(0)
+        assertEquals(listOf(0, 160, 0), scheduler.dispatched)
+        scheduler.advance(100)
+        assertEquals(listOf(0, 160, 0), scheduler.dispatched)
     }
 
     @Test
-    fun boundaryFlushIsRateLimitedByTheEdgeFloor() {
+    fun expiredPendingPulseIsNotReplayedAtItsFallingEdge() {
         val scheduler = ManualScheduler()
         val slot = slot(scheduler)
-
-        slot.submit(Frame(5))
+        slot.submit(Frame(0))
         scheduler.advance(0)
-        scheduler.advance(5)
-        slot.submit(Frame(1))
-        // Only 3ms after the previous write: the flush is suppressed and Frame(1) is lost.
-        // This bounds write amplification for pathologically fast boundary alternation.
+        scheduler.advance(2)
+        slot.submit(Frame(160))
         scheduler.advance(3)
         slot.submit(Frame(0))
-        scheduler.advance(25)
+        scheduler.advance(30)
+        assertEquals(listOf(0), scheduler.dispatched)
+    }
 
-        assertEquals(listOf(5, 0), scheduler.dispatched)
+    @Test
+    fun stopSupersedesAPendingLevelInsideTheEdgeFloor() {
+        val scheduler = ManualScheduler()
+        val slot = slot(scheduler)
+        slot.submit(Frame(160))
+        scheduler.advance(0)
+        scheduler.advance(2)
+        slot.submit(Frame(200))
+        scheduler.advance(1)
+        slot.submit(Frame(0))
+        scheduler.advance(0)
+        assertEquals(listOf(160, 0), scheduler.dispatched)
+        scheduler.advance(100)
+        assertEquals(listOf(160, 0), scheduler.dispatched)
     }
 
     @Test

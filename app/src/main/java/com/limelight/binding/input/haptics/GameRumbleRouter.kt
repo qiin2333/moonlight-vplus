@@ -33,11 +33,8 @@ internal data class GameRumbleRoute(
  * the body. The temporal split must come from RumbleEnvelopeAnalyzer; without it the body
  * stays silent rather than guessing from the instantaneous level.
  *
- * Capability gating: a body without amplitude control (BINARY tier) cannot render compensated
- * detail - distinct amplitudes degrade to on/off - so it receives nothing in coordinated mode
- * and the controller keeps the full signal. A COMPOSITION-tier body has positively confirmed
- * primitive-grade transient rendering, so the controller additionally cedes a small share of
- * high-channel transients to it; low-channel transients are never yielded.
+ * Bodies without amplitude control receive no coordinated compensation. Primitive support
+ * alone does not prove equivalent output, so the controller never yields its authored signal.
  */
 internal object GameRumbleRouter {
     // Policy gains applied to the decomposition BEFORE the single-motor fold; the fold then
@@ -46,13 +43,6 @@ internal object GameRumbleRouter {
     private const val LOW_TRANSIENT_GAIN = 0.25f
     private const val HIGH_TRANSIENT_GAIN = 1.0f
     private const val HIGH_SUSTAINED_GAIN = 0.30f
-
-    // Share of each channel's TRANSIENT that the controller cedes to the body once the body
-    // has positively confirmed composition-grade rendering. Applies only on COMPOSITION-tier
-    // bodies and only to the transient residual, never to the sustained signal. Kept small
-    // until on-device verification; LOW_TRANSIENT_YIELD stays at zero.
-    private const val HIGH_TRANSIENT_YIELD = 0.25f
-    private const val LOW_TRANSIENT_YIELD = 0f
 
     fun route(
         mode: GameRumbleMode,
@@ -66,11 +56,7 @@ internal object GameRumbleRouter {
             hasController && hasDevice && !deviceTier.supportsGradedOutput ->
                 GameRumbleRoute(controller = input, device = null)
             hasController && hasDevice -> GameRumbleRoute(
-                controller = if (deviceTier.supportsComposition && decomposition != null) {
-                    yieldedControllerChannels(input, decomposition)
-                } else {
-                    input
-                },
+                controller = input,
                 device = decomposition?.let(::transientCompensationChannels)
             )
             hasController -> GameRumbleRoute(controller = input, device = null)
@@ -94,14 +80,4 @@ internal object GameRumbleRouter {
                 HIGH_SUSTAINED_GAIN * d.sustainedHigh
         )
 
-    private fun yieldedControllerChannels(
-        input: ControllerRumbleState,
-        d: RumbleDecomposition
-    ): ControllerRumbleState = ControllerRumbleState(
-        // input == B + T, so input - yield * T == B + (1 - yield) * T.
-        lowFrequency = (input.lowFrequency - LOW_TRANSIENT_YIELD * d.transientLow)
-            .coerceAtLeast(0f),
-        highFrequency = (input.highFrequency - HIGH_TRANSIENT_YIELD * d.transientHigh)
-            .coerceAtLeast(0f)
-    )
 }

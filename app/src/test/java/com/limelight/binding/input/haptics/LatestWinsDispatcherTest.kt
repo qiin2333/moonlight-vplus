@@ -153,4 +153,34 @@ class LatestWinsDispatcherTest {
         dispatcher.close()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
     }
+    @Test
+    fun terminalStopPreemptsAParkedLevel() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val firstDelivered = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val delivered = Collections.synchronizedList(mutableListOf<Int>())
+        val dispatcher = LatestWinsDispatcher<Int>(
+            minimumIntervalMs = 60_000,
+            executor = executor,
+            dispatch = {
+                delivered += it
+                if (it == 1) firstDelivered.countDown()
+                if (it == 0) stopped.countDown()
+            },
+            isUrgent = { it == 0 }
+        )
+        try {
+            dispatcher.submit(1)
+            assertTrue(firstDelivered.await(2, TimeUnit.SECONDS))
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            dispatcher.submit(2)
+            dispatcher.close(0)
+            assertTrue(stopped.await(2, TimeUnit.SECONDS))
+            assertEquals(listOf(1, 0), delivered)
+        } finally {
+            executor.shutdownNow()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
+    }
+
 }

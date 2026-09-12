@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class DeviceVibrationCoordinatorTest {
     private data class Vibration(val amplitude: Int, val durationMs: Long)
 
-    /** Manual clock + delayed-callback queue so observation windows and leases stay deterministic. */
+    /** Manual clock + delayed-callback queue so leases stay deterministic. */
     private class FakeClock {
         var nowMs = 0L
         private val queue = mutableListOf<Pair<Runnable, Long>>()
@@ -47,7 +47,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
         assertEquals(Vibration(160, 500), vibrations.single())
 
@@ -79,12 +78,10 @@ class DeviceVibrationCoordinatorTest {
                 releaseGameWrite.await(2, TimeUnit.SECONDS)
             },
             cancelDeviceVibration = {},
-            executor = executor,
-            clockMs = { clock.nowMs }
+            executor = executor
         )
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         assertTrue(gameWriteStarted.await(2, TimeUnit.SECONDS))
 
         assertFalse(coordinator.claimForAudio())
@@ -104,7 +101,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
 
         coordinator.playTouchHaptic(2_000, 2_000, 50)
@@ -117,12 +113,6 @@ class DeviceVibrationCoordinatorTest {
         assertEquals(2, vibrations.size)
 
         clock.advance(50)
-        // Touch finished, but the game onset is under observation: nothing may be written yet.
-        val drained = executor.submit {}
-        drained.get(2, TimeUnit.SECONDS)
-        assertEquals(2, vibrations.size)
-
-        clock.advance(60)
         await { vibrations.size == 3 }
         assertEquals(Vibration(176, 500), vibrations.last())
 
@@ -138,7 +128,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
 
         coordinator.submitGameRumble(LEGACY_OVERLAY, 208, 100)
@@ -161,7 +150,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
 
         // Quantizes back to 160: no write, but the level lease must stay scheduled.
@@ -186,7 +174,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 128, 200)
-        clock.advance(60)
         await { vibrations.size == 1 }
         assertEquals(Vibration(255, 500), vibrations.last())
 
@@ -195,63 +182,55 @@ class DeviceVibrationCoordinatorTest {
     }
 
     @Test
-    fun shortPulseIsEmittedAsAMeasuredOneShotInsteadOfALevel() {
+    fun shortPulseStartsBeforeItsFallingEdgeAndIsNeverReplayed() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val cancels = AtomicInteger()
         val clock = FakeClock()
-        val coordinator = coordinator(executor, vibrations, clock)
-
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(25)
-        coordinator.submitGameRumble(ROUTED_GAME, 0, 100)
-        await { vibrations.size == 1 }
-        assertEquals(Vibration(160, 25), vibrations.single())
-
-        // No trailing level rewrite or cancel may follow the pulse.
-        val barrier = executor.submit {}
-        barrier.get(2, TimeUnit.SECONDS)
-        assertEquals(1, vibrations.size)
-
-        coordinator.stop()
-        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        val coordinator = coordinator(executor, vibrations, clock) { cancels.incrementAndGet() }
+        try {
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            await { vibrations.size == 1 }
+            assertEquals(Vibration(160, 500), vibrations.single())
+            clock.advance(25)
+            coordinator.submitGameRumble(ROUTED_GAME, 0, 100)
+            await { cancels.get() == 1 }
+            clock.advance(1000)
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            assertEquals(1, vibrations.size)
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
     }
 
     @Test
-    fun subMinimumBlipProducesNoWrite() {
+    fun stopReplacesAParkedLevelWithoutWaitingForItsCooldown() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val cancels = AtomicInteger()
         val clock = FakeClock()
-        val coordinator = coordinator(executor, vibrations, clock)
-
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(4)
-        coordinator.submitGameRumble(ROUTED_GAME, 0, 100)
-
-        val barrier = executor.submit {}
-        barrier.get(2, TimeUnit.SECONDS)
-        assertTrue(vibrations.isEmpty())
-
-        coordinator.stop()
-        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
-    }
-
-    @Test
-    fun pulsePeakHoldsTheStrongestValueSeenInsideTheWindow() {
-        val executor = Executors.newSingleThreadScheduledExecutor()
-        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
-        val clock = FakeClock()
-        val coordinator = coordinator(executor, vibrations, clock)
-
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(10)
-        coordinator.submitGameRumble(ROUTED_GAME, 208, 100)
-        clock.advance(20)
-        coordinator.submitGameRumble(ROUTED_GAME, 0, 100)
-        await { vibrations.size == 1 }
-        assertEquals(Vibration(208, 30), vibrations.single())
-
-        coordinator.stop()
-        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        val coordinator = DeviceVibrationCoordinator(
+            postDelayed = clock::post, removeCallback = clock::remove,
+            vibrateDevice = { amplitude, duration -> vibrations += Vibration(amplitude, duration) },
+            cancelDeviceVibration = { cancels.incrementAndGet() }, executor = executor,
+            minimumIntervalMs = 60_000L
+        )
+        try {
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            await { vibrations.size == 1 }
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            coordinator.submitGameRumble(ROUTED_GAME, 208, 100)
+            coordinator.submitGameRumble(ROUTED_GAME, 0, 100)
+            await { cancels.get() == 1 }
+            assertEquals(1, vibrations.size)
+            // A new climbing beat also bypasses the held-level cooldown.
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            await { vibrations.size == 2 }
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
     }
 
     @Test
@@ -263,7 +242,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock) { cancels.incrementAndGet() }
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
 
         coordinator.submitGameRumble(ROUTED_GAME, 0, 100)
@@ -287,7 +265,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
 
         coordinator.claimForAudio()
@@ -314,7 +291,6 @@ class DeviceVibrationCoordinatorTest {
         val coordinator = coordinator(executor, vibrations, clock)
 
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        clock.advance(60)
         await { vibrations.size == 1 }
 
         coordinator.playTouchHaptic(2_000, 2_000, 50)
@@ -346,8 +322,7 @@ class DeviceVibrationCoordinatorTest {
             vibrations += Vibration(amplitude, duration)
         },
         cancelDeviceVibration = cancelDeviceVibration,
-        executor = executor,
-        clockMs = { clock.nowMs }
+        executor = executor
     )
 
     private fun await(condition: () -> Boolean) {

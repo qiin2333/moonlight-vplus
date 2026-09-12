@@ -808,8 +808,7 @@ internal class ControllerHapticsCoordinator(
         const val USB_RUMBLE_INTERVAL_MS = 20L
         const val AUDIO_CONTINUOUS_WATCHDOG_MS = 5_000L
 
-        // Bound on immediate boundary flushes in RumbleOutputSlot: alternating zero/non-zero
-        // inputs cannot produce sink writes faster than this.
+        // Starts respect this floor. Stops may bypass it to avoid extending a finished pulse.
         const val EDGE_DISPATCH_FLOOR_MS = 10L
 
         // Half the envelope time constant: fast enough to trace the transient decay into the

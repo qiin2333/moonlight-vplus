@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit
  *
  * The minimum interval spaces out reprogramming of long-running effects, which some vendor
  * vibrator services cannot tolerate at packet rate. Values reported by [isUrgent] skip that
- * spacing: they are short self-terminating one-shots, not reprogramming, and must not sit behind
- * the interval or their timing information is destroyed.
+ * spacing for start/stop boundaries that must not sit behind ordinary level replacements.
+ * Urgency does not preempt a native call already in progress.
  */
 internal class LatestWinsDispatcher<T>(
     minimumIntervalMs: Long,
@@ -62,7 +62,8 @@ internal class LatestWinsDispatcher<T>(
             closed = true
             pending = finalValue
             if (finalValue != null) lastDelivered = null
-            scheduleIfIdleLocked()
+            if (active && finalValue?.let(isUrgent) == true) promoteUrgentLocked()
+            else scheduleIfIdleLocked()
             shutdownIfDrainedLocked()
         }
     }

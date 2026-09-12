@@ -1,14 +1,9 @@
 package com.limelight.binding.input.haptics
 
 /**
- * Paces a rumble sink while preserving zero <-> non-zero boundaries.
- *
- * Values submitted faster than the pacing interval merge latest-wins, except that a value which
- * would overwrite a not-yet-dispatched boundary (zero <-> non-zero) is flushed immediately,
- * rate-bounded by [edgeFloorMs]. Without the flush, a pulse shorter than the pacing interval -
- * on and off both arriving between dispatch ticks - would never reach the sink.
- *
- * Not synchronized: all calls must arrive on the thread that owns [postDelayed]'s queue.
+ * Coalesces level changes while prioritizing start/stop boundaries. Starts obey [edgeFloorMs];
+ * stops cancel pending levels immediately, even inside the floor. Expired pulses are not replayed.
+ * All calls run on the thread that owns [postDelayed]'s queue.
  */
 internal class RumbleOutputSlot<T : Any>(
     private val pacingMs: () -> Long,
@@ -25,44 +20,33 @@ internal class RumbleOutputSlot<T : Any>(
     private var lastWritten: T? = null
 
     fun submit(value: T) {
-        val previous = pending
         pending = value
-        if (runnable == null) {
-            scheduleNextDispatch()
-            return
+        // Compare with what the sink actually received, never flush an obsolete pending value
+        // at its falling edge. Stops take priority; starts respect the edge floor.
+        val boundary = lastWritten?.let { isZero(it) != isZero(value) } ?: true
+        val interval = when {
+            isZero(value) -> 0L
+            boundary -> edgeFloorMs
+            else -> pacingMs()
         }
-
-        // A dispatch is already scheduled and would have taken `previous`. If that overwrite
-        // crosses a zero boundary, the boundary must reach the sink now, not at the next tick.
-        if (previous != null && isZero(previous) != isZero(value)) {
-            val lastWrite = lastWriteMs
-            if (lastWrite == null || clockMs() - lastWrite >= edgeFloorMs) {
-                write(previous)
-            }
+        runnable?.let(removeCallbacks)
+        val delay = lastWriteMs?.let {
+            (interval - (clockMs() - it)).coerceAtLeast(0L)
+        } ?: 0L
+        val scheduled = Runnable {
+            runnable = null
+            val latest = pending ?: return@Runnable
+            pending = null
+            write(latest)
         }
+        runnable = scheduled
+        postDelayed(scheduled, delay)
     }
 
     fun cancel() {
         runnable?.let(removeCallbacks)
         runnable = null
         pending = null
-    }
-
-    private fun scheduleNextDispatch() {
-        val now = clockMs()
-        val pacing = pacingMs()
-        val delay = lastWriteMs
-            ?.let { lastWrite -> (pacing - (now - lastWrite)).coerceAtLeast(0L) }
-            ?: 0L
-        val scheduled = Runnable {
-            runnable = null
-            val latest = pending ?: return@Runnable
-            pending = null
-            write(latest)
-            if (pending != null && runnable == null) scheduleNextDispatch()
-        }
-        runnable = scheduled
-        postDelayed(scheduled, delay)
     }
 
     private fun write(value: T) {

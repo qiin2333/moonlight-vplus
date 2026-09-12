@@ -64,20 +64,13 @@ class RumbleEnvelopeAnalyzerTest {
             clock.decompose(analyzer, 0.9f, 0.6f)
         )
 
-        // 20ms later nothing has bled into the envelope yet (alpha(20ms) applies after).
         clock.nowMs = 20
-        assertEquals(
-            RumbleDecomposition(0f, 0.9f, 0f, 0.6f),
-            clock.decompose(analyzer, 0.9f, 0.6f)
-        )
-
-        // 40ms: envelope holds 0.9 * (1 - e^-0.5) = 0.354 / 0.6 * ... = 0.236.
+        val at20 = clock.decompose(analyzer, 0.9f, 0.6f)
+        assertEquals(0.9f * kotlin.math.exp(-0.5f), at20.transientLow, 0.0001f)
+        assertEquals(0.6f * kotlin.math.exp(-0.5f), at20.transientHigh, 0.0001f)
         clock.nowMs = 40
-        val settling = clock.decompose(analyzer, 0.9f, 0.6f)
-        assertEquals(0.354f, settling.sustainedLow, 0.01f)
-        assertEquals(0.546f, settling.transientLow, 0.01f)
-        assertEquals(0.236f, settling.sustainedHigh, 0.01f)
-        assertEquals(0.364f, settling.transientHigh, 0.01f)
+        val at40 = clock.decompose(analyzer, 0.9f, 0.6f)
+        assertEquals(0.9f * kotlin.math.exp(-1f), at40.transientLow, 0.0001f)
 
         // After ~8 time constants held, the step is entirely sustained.
         var timeMs = 60L
@@ -172,4 +165,60 @@ class RumbleEnvelopeAnalyzerTest {
         assertTrue(RumbleDecomposition(0.5f, 0.03f, 0.5f, 0.0f).hasUnsettledTransients)
         assertTrue(RumbleDecomposition(0.5f, 0.0f, 0.5f, 0.5f).hasUnsettledTransients)
     }
+    @Test
+    fun duplicatePacketsAndExtraTicksDoNotChangeTheEnvelope() {
+        val clock = ManualClock()
+        val sparse = analyzer(clock)
+        val dense = analyzer(clock)
+        clock.decompose(sparse, 0f, 1f)
+        clock.decompose(dense, 0f, 1f)
+        clock.nowMs = 10
+        clock.decompose(dense, 0f, 1f)
+        clock.nowMs = 20
+        val expected = clock.decompose(sparse, 0f, 1f)
+        val actual = clock.decompose(dense, 0f, 1f)
+        assertEquals(expected.transientHigh, actual.transientHigh, 0.0001f)
+        assertEquals(actual, clock.decompose(dense, 0f, 1f))
+    }
+
+    @Test
+    fun silenceDoesNotAdvanceAFutureOnset() {
+        val clock = ManualClock()
+        val analyzer = analyzer(clock)
+        clock.decompose(analyzer, 0f, 0f)
+        clock.nowMs = 1000
+        assertEquals(1f, clock.decompose(analyzer, 0f, 1f).transientHigh, 0f)
+        clock.nowMs = 1020
+        assertEquals(0.60653f, clock.decompose(analyzer, 0f, 1f).transientHigh, 0.0001f)
+    }
+
+    @Test
+    fun lowOnlyCompensationIsExactlySilentWhenTickerSettles() {
+        val clock = ManualClock()
+        val analyzer = analyzer(clock)
+        val input = ControllerRumbleState(0.4f, 0f)
+        var d = analyzer.decompose(input)
+        while (d.hasUnsettledTransients && clock.nowMs < 1000) {
+            clock.nowMs += 20
+            d = analyzer.decompose(input)
+        }
+        assertFalse(d.hasUnsettledTransients)
+        assertEquals(0f, d.transientLow, 0f)
+        assertEquals(0.4f, d.sustainedLow, 0f)
+        val body = GameRumbleRouter.route(GameRumbleMode.COORDINATED, input,
+            true, true, DeviceHapticsTier.AMPLITUDE, d).device!!
+        assertEquals(0, SingleMotorRumbleFold.amplitude(body.lowFrequency, body.highFrequency))
+    }
+
+    @Test
+    fun highChannelCanRetriggerWhileLowChannelRemainsHeld() {
+        val clock = ManualClock()
+        val analyzer = analyzer(clock)
+        clock.decompose(analyzer, 0.5f, 1f)
+        clock.nowMs = 40
+        clock.decompose(analyzer, 0.5f, 0f)
+        clock.nowMs = 50
+        assertEquals(1f, clock.decompose(analyzer, 0.5f, 1f).transientHigh, 0f)
+    }
+
 }
