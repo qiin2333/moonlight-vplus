@@ -21,28 +21,39 @@ internal data class GameRumbleRoute(
     val device: ControllerRumbleState?
 )
 
-/**
- * Platform-neutral game-rumble routing policy.
- *
- * A null output means that sink must not receive game rumble. Audio-derived haptics are not an
- * input to this router, which keeps that feature independent from device game rumble.
- *
- * COORDINATED is compensation-first: the controller always carries the full sustained signal
- * (weight and continuity), while the body only adds what it can render more clearly - onset
- * transients plus a small share of sustained high. Sustained low is deliberately not copied to
- * the body. The temporal split must come from RumbleEnvelopeAnalyzer; without it the body
- * stays silent rather than guessing from the instantaneous level.
- *
- * Bodies without amplitude control receive no coordinated compensation. Primitive support
- * alone does not prove equivalent output, so the controller never yields its authored signal.
- */
-internal object GameRumbleRouter {
-    // Policy gains applied to the decomposition BEFORE the single-motor fold; the fold then
-    // maps the two channels to one motor. End-to-end effective gains (pinned by tests):
-    // transient high 0.33, transient low 0.20, sustained high 0.099, sustained low 0.
-    private const val LOW_TRANSIENT_GAIN = 0.25f
-    private const val HIGH_TRANSIENT_GAIN = 1.0f
-    private const val HIGH_SUSTAINED_GAIN = 0.30f
+/** Actual output capabilities, kept separate from measured signal features. */
+internal data class GameRumbleContext(
+    val mode: GameRumbleMode,
+    val hasController: Boolean,
+    val hasDevice: Boolean,
+    val deviceTier: DeviceHapticsTier = DeviceHapticsTier.AMPLITUDE
+)
+
+/** Component gains before the single-motor fold. No primitive ownership is inferred here. */
+internal data class RumbleAllocationPolicy(
+    val deviceLowTransient: Float = 0.25f,
+    val deviceHighTransient: Float = 1f,
+    val deviceHighSustained: Float = 0.30f
+) {
+    init {
+        require(listOf(deviceLowTransient, deviceHighTransient, deviceHighSustained)
+            .all { it.isFinite() && it in 0f..1f })
+    }
+}
+
+/** Pure allocation stage. The compatibility policy is explicit, pending actuator calibration. */
+internal object GameRumbleAllocator {
+    private val compatibilityPolicy = RumbleAllocationPolicy()
+
+    fun allocate(
+        context: GameRumbleContext,
+        input: ControllerRumbleState,
+        features: RumbleSignalFeatures?,
+        policy: RumbleAllocationPolicy = compatibilityPolicy
+    ): GameRumbleRoute = route(
+        context.mode, input, context.hasController, context.hasDevice,
+        context.deviceTier, features?.decomposition, policy
+    )
 
     fun route(
         mode: GameRumbleMode,
@@ -50,14 +61,15 @@ internal object GameRumbleRouter {
         hasController: Boolean,
         hasDevice: Boolean,
         deviceTier: DeviceHapticsTier = DeviceHapticsTier.AMPLITUDE,
-        decomposition: RumbleDecomposition? = null
+        decomposition: RumbleDecomposition? = null,
+        policy: RumbleAllocationPolicy = compatibilityPolicy
     ): GameRumbleRoute = when (mode) {
         GameRumbleMode.COORDINATED -> when {
             hasController && hasDevice && !deviceTier.supportsGradedOutput ->
                 GameRumbleRoute(controller = input, device = null)
             hasController && hasDevice -> GameRumbleRoute(
                 controller = input,
-                device = decomposition?.let(::transientCompensationChannels)
+                device = decomposition?.let { transientCompensationChannels(it, policy) }
             )
             hasController -> GameRumbleRoute(controller = input, device = null)
             hasDevice -> GameRumbleRoute(controller = null, device = input)
@@ -73,11 +85,11 @@ internal object GameRumbleRouter {
         )
     }
 
-    private fun transientCompensationChannels(d: RumbleDecomposition): ControllerRumbleState =
+    private fun transientCompensationChannels(d: RumbleDecomposition, policy: RumbleAllocationPolicy): ControllerRumbleState =
         ControllerRumbleState(
-            lowFrequency = LOW_TRANSIENT_GAIN * d.transientLow,
-            highFrequency = HIGH_TRANSIENT_GAIN * d.transientHigh +
-                HIGH_SUSTAINED_GAIN * d.sustainedHigh
+            lowFrequency = policy.deviceLowTransient * d.transientLow,
+            highFrequency = policy.deviceHighTransient * d.transientHigh +
+                policy.deviceHighSustained * d.sustainedHigh
         )
 
 }

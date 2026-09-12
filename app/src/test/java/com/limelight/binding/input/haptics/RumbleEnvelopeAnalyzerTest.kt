@@ -205,7 +205,7 @@ class RumbleEnvelopeAnalyzerTest {
         assertFalse(d.hasUnsettledTransients)
         assertEquals(0f, d.transientLow, 0f)
         assertEquals(0.4f, d.sustainedLow, 0f)
-        val body = GameRumbleRouter.route(GameRumbleMode.COORDINATED, input,
+        val body = GameRumbleAllocator.route(GameRumbleMode.COORDINATED, input,
             true, true, DeviceHapticsTier.AMPLITUDE, d).device!!
         assertEquals(0, SingleMotorRumbleFold.amplitude(body.lowFrequency, body.highFrequency))
     }

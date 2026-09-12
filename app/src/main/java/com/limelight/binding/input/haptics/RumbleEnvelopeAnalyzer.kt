@@ -1,6 +1,5 @@
 package com.limelight.binding.input.haptics
 
-import android.os.SystemClock
 import kotlin.math.exp
 
 /**
@@ -17,7 +16,7 @@ import kotlin.math.exp
  */
 internal class RumbleEnvelopeAnalyzer(
     private val timeConstantMs: Float = DEFAULT_TIME_CONSTANT_MS,
-    private val clockMs: () -> Long = SystemClock::elapsedRealtime
+    private val clockMs: () -> Long
 ) {
     private var lastSampleMs: Long? = null
     private var previousInput = ControllerRumbleState.ZERO

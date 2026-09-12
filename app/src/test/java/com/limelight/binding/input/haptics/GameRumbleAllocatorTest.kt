@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class GameRumbleRouterTest {
+class GameRumbleAllocatorTest {
     private val input = ControllerRumbleState(lowFrequency = 0.8f, highFrequency = 0.6f)
 
     private val decomposition = RumbleDecomposition(
@@ -195,7 +195,7 @@ class GameRumbleRouterTest {
         deviceTier: DeviceHapticsTier = DeviceHapticsTier.AMPLITUDE,
         decomposition: RumbleDecomposition? = null
     ): GameRumbleRoute =
-        GameRumbleRouter.route(mode, input, hasController, hasDevice, deviceTier, decomposition)
+        GameRumbleAllocator.route(mode, input, hasController, hasDevice, deviceTier, decomposition)
 
     private fun assertState(
         actual: ControllerRumbleState?,
