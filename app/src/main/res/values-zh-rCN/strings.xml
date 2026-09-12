@@ -2144,4 +2144,6 @@
     <string name="summary_seekbar_bitrate_baseline">智能码率从此数值开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">启用音频直通时不可用，因为直通会绕过系统音频效果。</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">启用音频直通时不可用，因为直通会绕过 Android 空间音频。</string>
+    <string name="title_ac3_iec61937">AC3 IEC61937 兼容输出</string>
+    <string name="summary_ac3_iec61937">将 48 kHz AC3 封装输出，适用于原始直通被转成 PCM 的设备。需要 Android 7+，并开启音频直通、选择 AC3；其他编码不变。修改后请彻底重启客户端。关闭可恢复原始 AC3。</string>
 </resources>

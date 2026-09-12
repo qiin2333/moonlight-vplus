@@ -17,7 +17,8 @@ class Ac3Iec61937Renderer(private val encodedBufferBytes: Int) : AudioRenderer {
         val output = track ?: throw IllegalStateException("IEC61937 track is closed")
         var offset = 0
         while (offset < words.size) {
-            val written = output.write(words, offset, words.size - offset, AudioTrack.WRITE_BLOCKING)
+            // The API 1 short[] overload is blocking, matching WRITE_BLOCKING.
+            val written = output.write(words, offset, words.size - offset)
             check(written > 0) { "IEC61937 AudioTrack.write returned $written" }
             offset += written
         }
