@@ -10,6 +10,8 @@ import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -308,6 +310,55 @@ class DeviceVibrationCoordinatorTest {
 
         coordinator.stop()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun audioRestorationIsScheduledWithZeroDelay() = assertRestorationDelay(audio = true)
+
+    @Test
+    fun touchRestorationIsScheduledWithZeroDelay() = assertRestorationDelay(audio = false)
+
+    private fun assertRestorationDelay(audio: Boolean) {
+        val delays = Collections.synchronizedList(mutableListOf<Long>())
+        val executor = object : ScheduledThreadPoolExecutor(1) {
+            override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
+                // Record the requested delay but execute immediately, so the test does not
+                // depend on wall-clock scheduling or wait a minute for the touch write.
+                delays += unit.toNanos(delay)
+                return super.schedule(command, 0L, TimeUnit.NANOSECONDS)
+            }
+        }
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = DeviceVibrationCoordinator(
+            postDelayed = clock::post,
+            removeCallback = clock::remove,
+            vibrateDevice = { amplitude, duration -> vibrations += Vibration(amplitude, duration) },
+            cancelDeviceVibration = {},
+            executor = executor,
+            minimumIntervalMs = 60_000L
+        )
+        try {
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            await { vibrations.size == 1 }
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            if (audio) {
+                assertTrue(coordinator.claimForAudio())
+            } else {
+                coordinator.playTouchHaptic(2_000, 2_000, 50)
+                await { vibrations.size == 2 }
+                executor.submit {}.get(2, TimeUnit.SECONDS)
+            }
+            delays.clear()
+            val beforeRestore = vibrations.size
+            if (audio) coordinator.releaseFromAudio() else clock.advance(50)
+            await { vibrations.size == beforeRestore + 1 }
+            assertEquals(listOf(0L), delays.toList())
+            assertEquals(Vibration(160, 500), vibrations.last())
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
     }
 
     private fun coordinator(

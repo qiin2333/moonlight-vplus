@@ -218,7 +218,7 @@ internal class DeviceVibrationCoordinator(
         return levelCommandLocked(
             amplitude,
             forceResubmit = forceWrite,
-            urgent = boundary || amplitude == 0
+            urgent = forceWrite || boundary || amplitude == 0
         )
     }
 
