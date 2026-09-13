@@ -21,24 +21,6 @@ import java.util.concurrent.ConcurrentHashMap
 internal class ControllerHapticsCoordinator(
     private val handler: ControllerHandler
 ) {
-    private class OutputSlot {
-        var pending: MixedRumbleState? = null
-        var runnable: Runnable? = null
-        var lastDispatchMs: Long? = null
-        var lastOutput: ControllerRumbleState? = null
-    }
-
-    private data class DeviceOutput(
-        val controllerNumber: Short,
-        val output: ControllerRumbleState
-    )
-
-    private class DeviceOutputSlot {
-        var pending: DeviceOutput? = null
-        var runnable: Runnable? = null
-        var lastDispatchMs: Long? = null
-    }
-
     private data class NativeHapticsBinding(
         val controllerNumber: Short,
         val sink: DualSenseNativeHapticsSink
@@ -50,9 +32,9 @@ internal class ControllerHapticsCoordinator(
     private val ds5LifecycleLock = Any()
     private var ds5LifecycleGeneration = 0L
     private val ds5RequestedGenerations = mutableMapOf<Int, Long>()
-    private val outputSlots = mutableMapOf<Short, OutputSlot>()
-    private val hostStates = mutableMapOf<Short, ControllerRumbleState>()
-    private val deviceOutputSlot = DeviceOutputSlot()
+    private val deviceCapabilities: DeviceHapticsCapabilities by lazy {
+        DeviceHapticsCapabilities.probe(handler.deviceVibrator)
+    }
     private val deviceVibrationCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         DeviceVibrationCoordinator(
             postDelayed = { callback, delayMs ->
@@ -69,6 +51,42 @@ internal class ControllerHapticsCoordinator(
         )
     }
 
+    private val renderer by lazy {
+        RumbleOutputRenderer(
+            controllerMixer = mixer, deviceMixer = deviceMixer,
+            clockMs = SystemClock::elapsedRealtime,
+            postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
+            removeCallbacks = handler.mainThreadHandler::removeCallbacks,
+            controllerAvailable = ::controllerHasRumble,
+            controllerIntervalMs = ::dispatchIntervalMs,
+            writeController = { mixed ->
+                handler.rumbleManager.handleRumble(
+                    mixed.controllerNumber, mixed.output.lowFrequency.toMotorShort(),
+                    mixed.output.highFrequency.toMotorShort()
+                )
+            },
+            writeDeviceAmplitude = { amplitude ->
+                deviceVibrationCoordinator.submitGameRumble(
+                    DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
+                    amplitude, handler.prefConfig.deviceRumbleStrength
+                )
+            },
+            enabled = { !isStoppingOrStopped() }
+        )
+    }
+    private val gamePipeline by lazy {
+        GameRumblePipeline(
+            renderer = renderer,
+            context = { number -> GameRumbleContext(
+                handler.prefConfig.gameRumbleMode, controllerHasRumble(number),
+                deviceCapabilities.hasVibrator, deviceCapabilities.tier
+            ) },
+            clockMs = SystemClock::elapsedRealtime,
+            postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
+            removeCallbacks = handler.mainThreadHandler::removeCallbacks
+        )
+    }
+
     @Volatile
     private var primaryControllerNumber = NO_CONTROLLER
     private var audioController: Short? = null
@@ -80,10 +98,8 @@ internal class ControllerHapticsCoordinator(
     private val expiryRunnable = Runnable {
         if (stopped || stopping || handler.stopped) return@Runnable
         val nowMs = SystemClock.elapsedRealtime()
-        mixer.pruneExpired(nowMs).forEach(::queue)
-        deviceMixer.pruneExpired(nowMs).forEach { mixed ->
-            queueDevice(DeviceOutput(mixed.controllerNumber, mixed.output))
-        }
+        mixer.pruneExpired(nowMs).forEach(renderer::queueController)
+        deviceMixer.pruneExpired(nowMs).forEach(renderer::queueDevice)
         scheduleNextExpiry(nowMs)
     }
 
@@ -93,8 +109,7 @@ internal class ControllerHapticsCoordinator(
     fun submitLegacyDeviceRumble(lowFrequency: Short, highFrequency: Short) {
         deviceVibrationCoordinator.submitGameRumble(
             DeviceVibrationCoordinator.GameSource.LEGACY_OVERLAY,
-            lowFrequency,
-            highFrequency,
+            SingleMotorRumbleFold.amplitude(lowFrequency, highFrequency),
             handler.prefConfig.deviceRumbleStrength
         )
     }
@@ -216,12 +231,7 @@ internal class ControllerHapticsCoordinator(
                 lowFrequency = lowFrequency.toNormalizedRumble(),
                 highFrequency = highFrequency.toNormalizedRumble()
             )
-            if (state.isZero) {
-                hostStates.remove(controllerNumber)
-            } else {
-                hostStates[controllerNumber] = state
-            }
-            routeGameRumble(controllerNumber, RumbleSource.HOST, state, nowMs)
+            gamePipeline.submitHost(controllerNumber, state)
             scheduleNextExpiry(nowMs)
         }
     }
@@ -230,14 +240,12 @@ internal class ControllerHapticsCoordinator(
     fun submitTest(controllerNumber: Short, lowFrequency: Short, highFrequency: Short) {
         runOnOutputThread {
             if (isStoppingOrStopped()) return@runOnOutputThread
-            routeGameRumble(
+            gamePipeline.submitTest(
                 controllerNumber,
-                RumbleSource.TEST,
                 ControllerRumbleState(
                     lowFrequency = lowFrequency.toNormalizedRumble(),
                     highFrequency = highFrequency.toNormalizedRumble()
-                ),
-                SystemClock.elapsedRealtime()
+                )
             )
         }
     }
@@ -290,7 +298,7 @@ internal class ControllerHapticsCoordinator(
                     nowMs + transientLifetimeMs
                 )
             }
-            queue(mixed)
+            renderer.queueController(mixed)
             scheduleNextExpiry(nowMs)
         }
     }
@@ -327,7 +335,7 @@ internal class ControllerHapticsCoordinator(
             } else {
                 mixer.submitAudioTransient(target, state, nowMs, expiresAtMs)
             }
-            queue(mixed)
+            renderer.queueController(mixed)
             scheduleNextExpiry(nowMs)
         }
     }
@@ -346,7 +354,7 @@ internal class ControllerHapticsCoordinator(
 
             val nowMs = SystemClock.elapsedRealtime()
             lastAudioContinuousExpiresAtMs = nowMs + AUDIO_CONTINUOUS_WATCHDOG_MS
-            queue(
+            renderer.queueController(
                 mixer.submitAudioContinuous(
                     target,
                     lastAudioContinuousState,
@@ -497,14 +505,9 @@ internal class ControllerHapticsCoordinator(
         runOnOutputThread {
             if (stopped || controllerHasRumble(controllerNumber)) return@runOnOutputThread
 
-            resetOutputSlot(controllerNumber)
+            renderer.resetController(controllerNumber)
             val nowMs = SystemClock.elapsedRealtime()
-            routeGameRumble(
-                controllerNumber,
-                RumbleSource.HOST,
-                hostStates[controllerNumber] ?: ControllerRumbleState.ZERO,
-                nowMs
-            )
+            gamePipeline.replay(controllerNumber)
             scheduleNextExpiry(nowMs)
         }
     }
@@ -514,15 +517,10 @@ internal class ControllerHapticsCoordinator(
         runOnOutputThread {
             if (isStoppingOrStopped()) return@runOnOutputThread
 
-            resetOutputSlot(controllerNumber)
+            renderer.resetController(controllerNumber)
 
             val nowMs = SystemClock.elapsedRealtime()
-            routeGameRumble(
-                controllerNumber,
-                RumbleSource.HOST,
-                hostStates[controllerNumber] ?: ControllerRumbleState.ZERO,
-                nowMs
-            )
+            gamePipeline.replay(controllerNumber)
             scheduleNextExpiry(nowMs)
         }
     }
@@ -554,10 +552,10 @@ internal class ControllerHapticsCoordinator(
             lastAudioContinuousExpiresAtMs = null
         }
         if (previous != null) {
-            queue(mixer.clearSource(previous, RumbleSource.AUDIO, nowMs))
+            renderer.queueController(mixer.clearSource(previous, RumbleSource.AUDIO, nowMs))
         }
         audioController = target
-        queue(
+        renderer.queueController(
             mixer.submitAudioContinuous(
                 target,
                 lastAudioContinuousState,
@@ -572,45 +570,8 @@ internal class ControllerHapticsCoordinator(
         lastAudioContinuousExpiresAtMs = null
         val target = audioController ?: return
         audioController = null
-        queue(mixer.clearSource(target, RumbleSource.AUDIO, SystemClock.elapsedRealtime()))
+        renderer.queueController(mixer.clearSource(target, RumbleSource.AUDIO, SystemClock.elapsedRealtime()))
         scheduleNextExpiry()
-    }
-
-    private fun routeGameRumble(
-        controllerNumber: Short,
-        source: RumbleSource,
-        input: ControllerRumbleState,
-        nowMs: Long
-    ) {
-        val hasController = controllerHasRumble(controllerNumber)
-        val hasDevice = controllerNumber.toInt() == 0 && handler.deviceVibrator.hasVibrator()
-        val route = GameRumbleRouter.route(
-            mode = handler.prefConfig.gameRumbleMode,
-            input = input,
-            hasController = hasController,
-            hasDevice = hasDevice
-        )
-
-        val controllerOutput = route.controller?.let { routedState ->
-            mixer.submit(controllerNumber, source, routedState, nowMs)
-        } ?: mixer.clearSource(controllerNumber, source, nowMs)
-        if (hasController) {
-            queue(controllerOutput)
-        }
-
-        // The Android device is a single shared game-rumble sink, so only player one may own it.
-        // Audio haptics never enter this path and retain their existing renderer and preferences.
-        if (controllerNumber.toInt() == 0) {
-            val deviceOutput = route.device?.let { routedState ->
-                deviceMixer.submit(controllerNumber, source, routedState, nowMs)
-            } ?: deviceMixer.clearSource(controllerNumber, source, nowMs)
-            queueDevice(
-                DeviceOutput(
-                    controllerNumber = controllerNumber,
-                    output = deviceOutput.output
-                )
-            )
-        }
     }
 
     private fun controllerHasRumble(controllerNumber: Short): Boolean {
@@ -634,81 +595,6 @@ internal class ControllerHapticsCoordinator(
         } else {
             handler.mainThreadHandler.post(action)
         }
-    }
-
-    private fun resetOutputSlot(controllerNumber: Short) {
-        outputSlots.remove(controllerNumber)?.runnable?.let(handler.mainThreadHandler::removeCallbacks)
-    }
-
-    private fun queue(mixed: MixedRumbleState) {
-        if (isStoppingOrStopped()) return
-        val controllerNumber = mixed.controllerNumber
-        val slot = outputSlots.getOrPut(controllerNumber, ::OutputSlot)
-        slot.pending = mixed
-        if (slot.runnable != null) return
-
-        val nowMs = SystemClock.elapsedRealtime()
-        val intervalMs = dispatchIntervalMs(controllerNumber)
-        val previousDispatchMs = slot.lastDispatchMs ?: (nowMs - intervalMs)
-        val delayMs = (intervalMs - (nowMs - previousDispatchMs)).coerceAtLeast(0L)
-        val runnable = Runnable {
-            val currentSlot = outputSlots[controllerNumber] ?: return@Runnable
-            currentSlot.runnable = null
-            val latest = currentSlot.pending ?: return@Runnable
-            currentSlot.pending = null
-            dispatch(latest, currentSlot)
-        }
-        slot.runnable = runnable
-        handler.mainThreadHandler.postDelayed(runnable, delayMs)
-    }
-
-    private fun dispatch(mixed: MixedRumbleState, slot: OutputSlot) {
-        if (isStoppingOrStopped()) return
-        val controllerNumber = mixed.controllerNumber
-        val output = mixed.output
-        if (slot.lastOutput == output) return
-
-        if (controllerHasRumble(controllerNumber)) {
-            handler.rumbleManager.handleRumble(
-                controllerNumber,
-                output.lowFrequency.toMotorShort(),
-                output.highFrequency.toMotorShort()
-            )
-            slot.lastOutput = output
-            slot.lastDispatchMs = SystemClock.elapsedRealtime()
-        }
-    }
-
-    private fun queueDevice(output: DeviceOutput) {
-        if (isStoppingOrStopped()) return
-        deviceOutputSlot.pending = output
-        if (deviceOutputSlot.runnable != null) return
-
-        val nowMs = SystemClock.elapsedRealtime()
-        val previousDispatchMs = deviceOutputSlot.lastDispatchMs
-            ?: (nowMs - ANDROID_RUMBLE_INTERVAL_MS)
-        val delayMs = (
-            ANDROID_RUMBLE_INTERVAL_MS - (nowMs - previousDispatchMs)
-        ).coerceAtLeast(0L)
-        val runnable = Runnable {
-            deviceOutputSlot.runnable = null
-            val latest = deviceOutputSlot.pending ?: return@Runnable
-            deviceOutputSlot.pending = null
-            dispatchDevice(latest)
-        }
-        deviceOutputSlot.runnable = runnable
-        handler.mainThreadHandler.postDelayed(runnable, delayMs)
-    }
-
-    private fun dispatchDevice(output: DeviceOutput) {
-        if (isStoppingOrStopped()) return
-        deviceVibrationCoordinator.submitGameRumble(
-            DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
-            output.output.lowFrequency.toMotorShort(),
-            output.output.highFrequency.toMotorShort(),
-            handler.prefConfig.deviceRumbleStrength
-        )
-        deviceOutputSlot.lastDispatchMs = SystemClock.elapsedRealtime()
     }
 
     private fun dispatchIntervalMs(controllerNumber: Short): Long {
@@ -735,22 +621,12 @@ internal class ControllerHapticsCoordinator(
 
     private fun stopAllNow() {
         handler.mainThreadHandler.removeCallbacks(expiryRunnable)
-        outputSlots.values.mapNotNull { it.runnable }.forEach(handler.mainThreadHandler::removeCallbacks)
-        deviceOutputSlot.runnable?.let(handler.mainThreadHandler::removeCallbacks)
-
-        val controllerNumbers = linkedSetOf<Short>()
-        controllerNumbers.addAll(outputSlots.keys)
-        controllerNumbers.addAll(mixer.clearAll().map { it.controllerNumber })
-        controllerNumbers.addAll(deviceMixer.clearAll().map { it.controllerNumber })
+        gamePipeline.stop()
+        val controllerNumbers = renderer.stop().toMutableSet()
         for (controllerNumber in 0 until ControllerHandler.MAX_GAMEPADS.toInt()) {
             controllerNumbers.add(controllerNumber.toShort())
         }
 
-        outputSlots.clear()
-        hostStates.clear()
-        deviceOutputSlot.pending = null
-        deviceOutputSlot.runnable = null
-        deviceOutputSlot.lastDispatchMs = null
         audioController = null
         lastAudioContinuousState = ControllerRumbleState.ZERO
         lastAudioContinuousExpiresAtMs = null
@@ -781,5 +657,6 @@ internal class ControllerHapticsCoordinator(
         const val ANDROID_RUMBLE_INTERVAL_MS = 33L
         const val USB_RUMBLE_INTERVAL_MS = 20L
         const val AUDIO_CONTINUOUS_WATCHDOG_MS = 5_000L
+
     }
 }
