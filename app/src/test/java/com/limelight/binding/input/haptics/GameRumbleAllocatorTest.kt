@@ -195,7 +195,10 @@ class GameRumbleAllocatorTest {
         deviceTier: DeviceHapticsTier = DeviceHapticsTier.AMPLITUDE,
         decomposition: RumbleDecomposition? = null
     ): GameRumbleRoute =
-        GameRumbleAllocator.route(mode, input, hasController, hasDevice, deviceTier, decomposition)
+        GameRumbleAllocator.allocate(
+            GameRumbleContext(mode, hasController, hasDevice, deviceTier),
+            RumbleSignalFeatures(input, decomposition)
+        )
 
     private fun assertState(
         actual: ControllerRumbleState?,

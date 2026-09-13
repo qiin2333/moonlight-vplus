@@ -20,35 +20,32 @@ internal class GameRumblePipeline(
         if (stopped) return
         val now = clockMs()
         val features = trackers.getOrPut(number) { RumbleSignalTracker() }.sample(state, now)
-        route(number, RumbleSource.HOST, state, features, now)
+        route(number, RumbleSource.HOST, features, now)
     }
 
     fun submitTest(number: Short, state: ControllerRumbleState) {
-        if (!stopped) route(number, RumbleSource.TEST, state, null, clockMs())
+        if (!stopped) route(number, RumbleSource.TEST, RumbleSignalFeatures(state), clockMs())
     }
 
     fun replay(number: Short) {
         if (stopped) return
         val now = clockMs()
-        val features = trackers[number]?.advance(now)
-        route(number, RumbleSource.HOST, features?.input ?: ControllerRumbleState.ZERO, features, now)
+        val features = trackers[number]?.advance(now) ?: RumbleSignalFeatures(ControllerRumbleState.ZERO)
+        route(number, RumbleSource.HOST, features, now)
     }
 
     private fun route(
-        number: Short, source: RumbleSource, input: ControllerRumbleState,
-        features: RumbleSignalFeatures?, now: Long
+        number: Short, source: RumbleSource, features: RumbleSignalFeatures, now: Long
     ) {
         // Enforce body ownership here as well as at output, independent of the adapter's probe.
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
-        renderer.render(number, source, GameRumbleAllocator.allocate(targets, input, features), now)
+        val plan = GameRumbleAllocator.allocate(targets, features)
+        renderer.render(number, source, plan, now)
         if (source == RumbleSource.HOST && number.toInt() == 0) {
-            val needsTick = targets.mode == GameRumbleMode.COORDINATED && targets.hasController &&
-                targets.hasDevice && targets.deviceTier.supportsGradedOutput &&
-                features?.decomposition?.hasUnsettledTransients == true
-            if (needsTick && !tickScheduled) {
+            if (plan.needsAdvance && !tickScheduled) {
                 tickScheduled = true
                 postDelayed(ticker, 20L)
-            } else if (!needsTick && tickScheduled) {
+            } else if (!plan.needsAdvance && tickScheduled) {
                 removeCallbacks(ticker)
                 tickScheduled = false
             }

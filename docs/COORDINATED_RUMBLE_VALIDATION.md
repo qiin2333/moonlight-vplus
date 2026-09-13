@@ -5,10 +5,11 @@
 生产链为 `GameRumblePipeline` 串联以下三层，Android 协调器只接入设备发现、线程、
 偏好与传输；原生 DS PCM 和扳机通道继续独立。
 
-1. `RumbleSignalTracker`：按主机流维护电平、因果包络、正向残差、最近变化的时间、
-   有符号增量与 revision。`sample` 接收主机输入，`advance` 仅推进时间；重复电平、
-   ticker 与重连回放不创建新 revision。TEST 不进入 HOST 历史。
-2. `GameRumbleAllocator`：纯函数把特征和可用输出能力变成两端计划。当前兼容策略集中
+1. `RumbleSignalTracker`：按主机流维护电平、因果包络与正向残差。`sample` 接收主机
+   输入，`advance` 仅推进时间；重复电平、ticker 与重连回放保持因果积分。TEST 不进入
+   HOST 历史。信号对象统一携带电平及可选分解，不再另外传递一份电平。
+2. `GameRumbleAllocator`：唯一入口 `allocate` 把信号和可用输出能力变成两端计划，
+   并返回是否需要继续推进；Pipeline 不重复判断分配策略。当前兼容增益集中
    在分配器：机身低通道瞬态 0.25、高通道瞬态 1、高通道持续 0.30，手柄保留 HOST。
    这些是折叠前增益，不代表物理能量比例，也不把支持 CLICK 等同于能可靠接管瞬态。
 3. `RumbleOutputRenderer`：执行计划，负责来源混合、输出槽限频、去重与单马达折叠；

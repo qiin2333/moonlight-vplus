@@ -155,18 +155,30 @@ class GameRumblePipelineTest {
         assertEquals(0, r.deviceWrites.last())
     }
 
-    @Test fun advanceAndDuplicateSamplesDoNotCreateSignalChanges() {
+    @Test fun modeChangesCancelAndResumeOnlyNeededAdvancement() = Rig().use { r ->
+        r.host(1f, 0f)
+        r.targets = r.targets.copy(mode = GameRumbleMode.CONTROLLER)
+        r.pipeline.replay(0)
+        r.advance(40)
+        assertTrue(r.tasks.isEmpty())
+        r.targets = r.targets.copy(mode = GameRumbleMode.COORDINATED)
+        r.pipeline.replay(0)
+        r.advance(0)
+        assertTrue(r.tasks.isNotEmpty())
+        r.advance(250)
+        assertEquals(0, r.deviceWrites.last())
+        assertTrue(r.tasks.isEmpty())
+    }
+
+    @Test fun advanceAndDuplicateSamplesPreserveCausalDecomposition() {
         val tracker = RumbleSignalTracker()
         val start = tracker.sample(ControllerRumbleState(0f, 1f), 0)
         val tick = tracker.advance(20)
         val duplicate = tracker.sample(ControllerRumbleState(0f, 1f), 20)
-        assertEquals(start.revision, tick.revision)
         assertEquals(tick, duplicate)
-        assertEquals(0L, tick.changedAtMs)
-        assertTrue(tick.decomposition.transientHigh < start.decomposition.transientHigh)
+        assertTrue(tick.decomposition!!.transientHigh < start.decomposition!!.transientHigh)
         val stop = tracker.sample(ControllerRumbleState.ZERO, 25)
-        assertEquals(start.revision + 1, stop.revision)
-        assertEquals(-1f, stop.highDelta, 0f)
-        assertFalse(stop.decomposition.hasUnsettledTransients)
+        assertEquals(ControllerRumbleState.ZERO, stop.input)
+        assertFalse(stop.decomposition!!.hasUnsettledTransients)
     }
 }
