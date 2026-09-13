@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Kod çözücü giriş arabelleği</string>
+    <string name="summary_decoder_input_buffer_mode">Eksik veya çok küçük kod çözücü arabelleklerini otomatik olarak tamamlar. Zorlamalı modları yalnızca uyumluluk testi için kullanın.</string>
+    <string name="decoder_input_buffer_mode_auto">Otomatik (önerilen)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Etkinleştirmeyi zorla</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Devre dışı bırakmayı zorla</string>
+</resources>

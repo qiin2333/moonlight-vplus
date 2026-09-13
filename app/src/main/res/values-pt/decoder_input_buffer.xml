@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Buffer de entrada do descodificador</string>
+    <string name="summary_decoder_input_buffer_mode">Completa automaticamente buffers ausentes ou demasiado pequenos. Use os modos forçados apenas para testar a compatibilidade.</string>
+    <string name="decoder_input_buffer_mode_auto">Automático (recomendado)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Forçar ativação</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Forçar desativação</string>
+</resources>

@@ -71,6 +71,7 @@ class SettingsResourceHygieneTest {
             "background_stream_behavior_names",
             "quit_behavior_names",
             "dualsense_output_mode_names",
+            "decoder_input_buffer_mode_names",
             "float_ball_action_names",
             "hdr_mode_entries",
             "mic_menu_action_mode_entries",

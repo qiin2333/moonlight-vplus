@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Memorie tampon de intrare a decodorului</string>
+    <string name="summary_decoder_input_buffer_mode">Completează automat bufferele lipsă sau prea mici. Folosiți modurile forțate numai pentru testarea compatibilității.</string>
+    <string name="decoder_input_buffer_mode_auto">Automat (recomandat)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Forțează activarea</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Forțează dezactivarea</string>
+</resources>

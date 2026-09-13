@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Vstupní vyrovnávací paměť dekodéru</string>
+    <string name="summary_decoder_input_buffer_mode">Automaticky doplní chybějící nebo příliš malé vyrovnávací paměti. Vynucené režimy používejte jen při řešení kompatibility.</string>
+    <string name="decoder_input_buffer_mode_auto">Automaticky (doporučeno)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Vynutit zapnutí</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Vynutit vypnutí</string>
+</resources>

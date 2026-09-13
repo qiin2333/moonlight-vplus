@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Tampon d’entrée du décodeur</string>
+    <string name="summary_decoder_input_buffer_mode">Complète automatiquement les tampons absents ou trop petits. Utilisez les modes forcés uniquement pour tester la compatibilité.</string>
+    <string name="decoder_input_buffer_mode_auto">Automatique (recommandé)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Forcer l’activation</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Forcer la désactivation</string>
+</resources>
