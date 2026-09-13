@@ -2494,6 +2494,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 enableAudioFx = prefConfig.enableAudioFx,
                 enableSpatializer = prefConfig.enableSpatializer,
                 passthroughBufferBytes = prefConfig.audioPassthroughBufferBytes,
+                useAc3Iec61937 = prefConfig.useAc3Iec61937,
                 enableSystemAudioHaptics = enableSystemAudioHaptics,
                 onSystemAudioHapticsActiveChanged = { active ->
                     audioVibrationService?.setSystemAudioCoupledDeviceActive(active)

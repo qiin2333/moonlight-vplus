@@ -581,6 +581,12 @@
             android:entries="@array/audio_passthrough_buffer_names"
             android:entryValues="@array/audio_passthrough_buffer_values"
             android:defaultValue="normal" />
+        <CheckBoxPreference
+            android:key="checkbox_ac3_iec61937"
+            android:dependency="checkbox_enable_audio_passthrough"
+            android:title="@string/title_ac3_iec61937"
+            android:summary="@string/summary_ac3_iec61937"
+            android:defaultValue="false" />
         <!-- 以下为原“音频振动”分类合并进来的项目 -->
         <CheckBoxPreference
             android:key="checkbox_audio_vibration"

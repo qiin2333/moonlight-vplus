@@ -2228,4 +2228,6 @@ Tap again to replace it.</string>
     <string name="summary_seekbar_bitrate_baseline">Adaptive bitrate starts here and adjusts around this value. The selected ABR mode controls the minimum and maximum range.</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses system audio effects.</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses Android spatial audio.</string>
+    <string name="title_ac3_iec61937">AC3 IEC61937 compatibility output</string>
+    <string name="summary_ac3_iec61937">Wrap 48 kHz AC3 for receivers that get PCM from raw passthrough. Requires Android 7+. Enable audio passthrough and select AC3; other codecs are unchanged. Restart the client after changing. Disable to restore raw AC3.</string>
 </resources>
