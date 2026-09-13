@@ -21,7 +21,8 @@ class SmartAudioRenderer(
     private val passthroughBufferBytes: Int = 16 * 1024,
     private val enableSystemAudioHaptics: Boolean = false,
     private val onSystemAudioHapticsActiveChanged: (Boolean) -> Unit = {},
-    private val onAudioPresentationClock: (framePosition: Long, systemNanoTime: Long, sampleRate: Int) -> Unit = { _, _, _ -> }
+    private val onAudioPresentationClock: (framePosition: Long, systemNanoTime: Long, sampleRate: Int) -> Unit = { _, _, _ -> },
+    private val useAc3Iec61937: Boolean = false
 ) : AudioRenderer {
 
     private var delegate: AudioRenderer? = null
@@ -61,6 +62,12 @@ class SmartAudioRenderer(
         }
 
         if (codec != MoonBridge.AUDIO_CODEC_OPUS) {
+            if (useAc3Iec61937 && codec == MoonBridge.AUDIO_CODEC_AC3) {
+                val iec = Ac3Iec61937Renderer(passthroughBufferBytes)
+                val res = iec.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
+                if (res == 0) delegate = iec else iec.cleanup()
+                return res
+            }
             val passthrough = Ac3PassthroughRenderer(context, passthroughBufferBytes)
             val res = passthrough.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
             if (res == 0) {
