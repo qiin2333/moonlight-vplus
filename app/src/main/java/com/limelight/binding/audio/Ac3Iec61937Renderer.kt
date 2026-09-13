@@ -39,7 +39,7 @@ class Ac3Iec61937Renderer(private val encodedBufferBytes: Int) : AudioRenderer {
             val min = AudioTrack.getMinBufferSize(sampleRate, mask, AudioFormat.ENCODING_IEC61937)
             check(min > 0) { "IEC61937 unsupported on this route (min=$min)" }
             // Preferences are encoded bytes. Convert to whole 32 ms carrier bursts.
-            val frameBytes = if (bitrate > 0) (bitrate.toLong() * 1536 / sampleRate / 8).coerceIn(128, 2560).toInt() else 2560
+            val frameBytes = if (bitrate > 0) (bitrate.toLong() * Ac3Iec61937Packetizer.SAMPLES_PER_FRAME / sampleRate / 8).coerceIn(128, 2560).toInt() else 2560
             val preferredBursts = ((encodedBufferBytes.coerceAtLeast(0).toLong() + frameBytes - 1) / frameBytes).coerceIn(4, 16).toInt()
             val minBursts = (min.toLong() + Ac3Iec61937Packetizer.BURST_BYTES - 1) / Ac3Iec61937Packetizer.BURST_BYTES
             val buffer = maxOf(preferredBursts.toLong(), minBursts) * Ac3Iec61937Packetizer.BURST_BYTES
