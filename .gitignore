@@ -38,7 +38,11 @@ build/
 *.iml
 
 # Compiled JNI libraries folder
-**/jniLibs
+**/jniLibs/*
+!app/src/main/jniLibs/x86_64/
+!app/src/main/jniLibs/x86_64/libeasytier_android_jni.so
+!app/src/main/jniLibs/x86_64/libeasytier_ffi.so
+!app/src/main/jniLibs/x86_64/README.md
 app/.externalNativeBuild/
 
 # NDK stuff

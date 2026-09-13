@@ -1,6 +1,6 @@
 package com.easytier.jni
 
-import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
@@ -11,10 +11,12 @@ import org.json.JSONObject
 import java.util.Objects
 
 class EasyTierManager(
-    private val activity: Activity,
+    context: Context,
     private val instanceName: String,
-    private val networkConfig: String
+    internal val networkConfig: String,
+    internal val allowedRemoteHost: String? = null
 ) {
+    private val appContext = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
 
     @Volatile
@@ -126,7 +128,7 @@ class EasyTierManager(
                         }
 
                         val proxyCidrsArray = route.optJSONArray("proxy_cidrs")
-                        if (proxyCidrsArray != null) {
+                        if (allowedRemoteHost == null && proxyCidrsArray != null) {
                             for (j in 0 until proxyCidrsArray.length()) {
                                 newProxyCidrs.add(proxyCidrsArray.getString(j))
                             }
@@ -177,17 +179,19 @@ class EasyTierManager(
     }
 
     private fun startVpnService(ipv4: String, proxyCidrs: List<String>) {
-        val intent = Intent(activity, EasyTierVpnService::class.java)
+        val intent = Intent(appContext, EasyTierVpnService::class.java)
         intent.putExtra("ipv4_address", ipv4)
         intent.putStringArrayListExtra("proxy_cidrs", ArrayList(proxyCidrs))
+        intent.putExtra("allowed_remote_host", allowedRemoteHost)
         intent.putExtra("instance_name", instanceName)
-        activity.startService(intent)
+        appContext.startService(intent)
         vpnServiceIntent = intent
     }
 
     private fun stopVpnService() {
         val stopIntent = Intent(EasyTierVpnService.ACTION_STOP_VPN)
-        activity.sendBroadcast(stopIntent)
+        stopIntent.setPackage(appContext.packageName)
+        appContext.sendBroadcast(stopIntent)
         Log.i(TAG, "停止发送VPN广播。")
         vpnServiceIntent = null
     }
@@ -216,5 +220,27 @@ class EasyTierManager(
     companion object {
         private const val TAG = "EasyTierManager"
         private const val MONITOR_INTERVAL = 3000L
+    }
+}
+
+/** Keeps the active mesh alive across activity recreation and streaming UI transitions. */
+object EasyTierRuntime {
+    @Volatile
+    private var manager: EasyTierManager? = null
+
+    @Synchronized
+    fun getOrCreate(
+        context: Context,
+        instanceName: String,
+        networkConfig: String,
+        allowedRemoteHost: String? = null
+    ): EasyTierManager {
+        val current = manager
+        if (current != null &&
+            current.networkConfig == networkConfig &&
+            current.allowedRemoteHost == allowedRemoteHost
+        ) return current
+        current?.stop()
+        return EasyTierManager(context, instanceName, networkConfig, allowedRemoteHost).also { manager = it }
     }
 }
