@@ -60,17 +60,44 @@ class PairStateTrustTest {
     fun trustedPairStateRequiresTrustedServerInfo() {
         val trusted = pairedComputer(hasServerCert = true).apply {
             serverInfoTrustedByCert = true
+            pairStateTrusted = true
         }
         val untrusted = pairedComputer(hasServerCert = true).apply {
             serverInfoTrustedByCert = false
+            pairStateTrusted = false
         }
         val missingCert = pairedComputer(hasServerCert = false).apply {
             serverInfoTrustedByCert = true
+            pairStateTrusted = true
         }
 
         assertEquals(true, PairStateTrust.isTrustedPaired(trusted))
         assertEquals(false, PairStateTrust.isTrustedPaired(untrusted))
         assertEquals(false, PairStateTrust.isTrustedPaired(missingCert))
+    }
+
+    @Test
+    fun onlyAuthenticatedNotPairedStateCanClearLocalPairing() {
+        val trusted = notPairedPoll(trustedByCert = true)
+        val untrusted = notPairedPoll(trustedByCert = false)
+        val authenticated401 = notPairedPoll(trustedByCert = false).apply {
+            pairStateTrusted = true
+        }
+
+        assertEquals(true, PairStateTrust.isTrustedNotPaired(trusted))
+        assertEquals(false, PairStateTrust.isTrustedNotPaired(untrusted))
+        assertEquals(true, PairStateTrust.isTrustedNotPaired(authenticated401))
+    }
+
+    @Test
+    fun authenticated401CannotBeOverriddenByUntrustedHttpBody() {
+        val resolved = PairStateTrust.resolvePairState(
+            PairingManager.PairState.PAIRED,
+            serverInfoTrustedByCert = false,
+            pairStateTrusted = true
+        )
+
+        assertEquals(PairingManager.PairState.NOT_PAIRED, resolved)
     }
 
     @Test
@@ -98,6 +125,7 @@ class PairStateTrustTest {
             state = ComputerDetails.State.ONLINE
             pairState = PairingManager.PairState.NOT_PAIRED
             serverInfoTrustedByCert = trustedByCert
+            pairStateTrusted = trustedByCert
         }
     }
 }

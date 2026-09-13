@@ -3363,6 +3363,8 @@ class ConfigurationSyncManager(private val context: Context) {
             "gyro_invert_x_axis",
             "gyro_invert_y_axis",
             "gyro_sensitivity_multiplier",
+            "gyro_to_mouse",
+            "gyro_to_right_stick",
             "list_abr_mode",
             "list_audio_codec",
             "list_audio_config",

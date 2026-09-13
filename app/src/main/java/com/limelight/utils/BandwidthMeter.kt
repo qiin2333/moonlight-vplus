@@ -2,14 +2,14 @@ package com.limelight.utils
 
 import java.util.Locale
 
-/** Formats a Mbps value as "N K/s" below 1 MiB/s, otherwise "N.NN M/s" (1024-based). */
+/** Formats a Mbps value as "N KB/s" below 1 MB/s, otherwise "N.NN MB/s" (1000-based). */
 internal fun formatBandwidthSpeed(bandwidthMbps: Double): String {
     if (!bandwidthMbps.isFinite() || bandwidthMbps < 0.0) return "N/A"
-    val kBps = bandwidthMbps * 125_000.0 / 1024.0
-    return if (kBps < 1024.0) {
-        String.format(Locale.US, "%.0f\u00A0K\u2060/\u2060s", kBps)
+    val kBps = bandwidthMbps * 125.0
+    return if (kBps < 1000.0) {
+        String.format(Locale.US, "%.0f\u00A0KB\u2060/\u2060s", kBps)
     } else {
-        String.format(Locale.US, "%.2f\u00A0M\u2060/\u2060s", kBps / 1024.0)
+        String.format(Locale.US, "%.2f\u00A0MB\u2060/\u2060s", kBps / 1000.0)
     }
 }
 

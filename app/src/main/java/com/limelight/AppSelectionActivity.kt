@@ -21,6 +21,7 @@ import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.AdapterRecyclerBridge
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
@@ -236,8 +237,9 @@ class AppSelectionActivity : Activity() {
 
     private fun getAppListFromCache(uuid: String): List<NvApp>? {
         return try {
+            val cacheKey = HostCacheKey.fromUuid(uuid) ?: return null
             val rawAppList = CacheHelper.readInputStreamToString(
-                CacheHelper.openCacheFileForInput(cacheDir, "applist", uuid)
+                CacheHelper.openCacheFileForInput(cacheDir, "applist", cacheKey)
             )
             if (rawAppList.isEmpty()) null else NvHTTP.getAppListByReader(StringReader(rawAppList))
         } catch (e: IOException) {

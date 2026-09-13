@@ -14,6 +14,7 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.CacheHelper
+import com.limelight.utils.HostCacheKey
 
 import java.io.StringReader
 
@@ -42,9 +43,14 @@ class GameListRemoteViewsFactory(
         }
 
         val uuid = computerUuid ?: return
+        val cacheKey = HostCacheKey.fromUuid(uuid)
+        if (cacheKey == null) {
+            appList.clear()
+            return
+        }
         try {
             val rawAppList = CacheHelper.readInputStreamToString(
-                CacheHelper.openCacheFileForInput(context.cacheDir, "applist", uuid)
+                CacheHelper.openCacheFileForInput(context.cacheDir, "applist", cacheKey)
             )
 
             if (rawAppList.isNotEmpty()) {
@@ -108,7 +114,8 @@ class GameListRemoteViewsFactory(
 
     private fun loadBoxArt(appId: Int): Bitmap? {
         val uuid = computerUuid ?: return null
-        val file = CacheHelper.openPath(false, context.cacheDir, "boxart", uuid, "$appId.png")
+        val cacheKey = HostCacheKey.fromUuid(uuid) ?: return null
+        val file = CacheHelper.openPath(false, context.cacheDir, "boxart", cacheKey, "$appId.png")
         if (!file.exists()) return null
 
         return try {

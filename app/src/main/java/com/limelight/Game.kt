@@ -183,14 +183,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
 
-    fun isUsbForwardingEnabled(): Boolean =
-        com.limelight.usbip.UsbIpBackend.isSupported() &&
-            (BuildConfig.USB_TUNNEL_PORT.toIntOrNull() ?: 0) in 1..65535 &&
-            BuildConfig.USB_TUNNEL_TOKEN.isNotEmpty()
 
     @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
     fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
-        if (!connected || !isUsbForwardingEnabled()) return
+        if (!connected) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
             if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
@@ -208,14 +204,14 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 }
                 return
             }
-            val port = BuildConfig.USB_TUNNEL_PORT.toIntOrNull()
             val cert = parseServerCert()
-            if (port == null || port !in 1..65535 || BuildConfig.USB_TUNNEL_TOKEN.isEmpty() || cert == null) {
+            val hostId = computerUuid
+            if (cert == null || hostId.isNullOrBlank()) {
                 Toast.makeText(this, R.string.usb_forward_unconfigured, Toast.LENGTH_LONG).show()
                 return
             }
             usbForwarding = UsbForwardingController(this, intent.getStringExtra(EXTRA_HOST) ?: "",
-                cert, PlatformBinding.getCryptoProvider(this), port, BuildConfig.USB_TUNNEL_TOKEN)
+                cert, PlatformBinding.getCryptoProvider(this), hostId) { conn?.createNvHttp() }
         }
         usbForwarding?.show()?.let { onShown?.invoke(it) }
     }
@@ -572,7 +568,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 streamView.parent as FrameLayout,
                 this
             )
-            setupVirtualControllerGyro()
+            refreshVirtualControllerLayout()
         }
 
         if (prefConfig.enableCrownFeatures) {
@@ -725,16 +721,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
     }
 
-    /** Set up gyro callbacks on the virtual controller. */
-    private fun setupVirtualControllerGyro() {
+    /** Refresh the on-screen controller layout after (re)creating the stream. */
+    private fun refreshVirtualControllerLayout() {
         val vc = virtualController ?: return
         vc.refreshLayout()
         vc.show()
-        vc.setGyroEnabled(!prefConfig.gyroToMouse)
-        controllerHandler.setVirtualControllerGyroCallbacks(
-            { vc.setGyroEnabled(false) },
-            { vc.setGyroEnabled(true) }
-        )
     }
 
     /** Whether the resume-stream preference is enabled. */
@@ -797,6 +788,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
+        // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
+        // re-runs this path once it claims controller 0.
+        controllerHandler.onSensorsReenabled()
     }
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
@@ -1202,7 +1196,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
         if (virtualController != null && prefConfig.onscreenController) {
-            setupVirtualControllerGyro()
+            refreshVirtualControllerLayout()
         }
 
         if (controllerManager != null) {
@@ -1723,7 +1717,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (virtualController != null) {
             virtualController?.hide()
-            virtualController?.cleanup()
         }
 
         val decoderMessage = getDecoderFormatLabel()

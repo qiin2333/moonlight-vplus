@@ -4,20 +4,47 @@ import java.io.*
 
 object CacheHelper {
     fun openPath(createPath: Boolean, root: File, vararg path: String): File {
-        var f = root
-        for (i in path.indices) {
-            val component = path[i]
+        require(path.isNotEmpty()) { "Cache path must contain at least one component" }
 
-            if (i == path.size - 1) {
-                // This is the file component so now we create parent directories
-                if (createPath) {
-                    f.mkdirs()
-                }
-            }
-
-            f = File(f, component)
+        val canonicalRoot = root.canonicalFile
+        var candidate = canonicalRoot
+        for (component in path) {
+            validatePathComponent(component)
+            candidate = File(candidate, component)
         }
-        return f
+
+        val canonicalCandidate = candidate.canonicalFile
+        require(isPathWithinRoot(canonicalRoot, canonicalCandidate)) {
+            "Cache path escapes its root"
+        }
+
+        if (createPath) {
+            val parent = canonicalCandidate.parentFile
+                ?: throw IOException("Cache path has no parent")
+            if (!parent.isDirectory && !parent.mkdirs() && !parent.isDirectory) {
+                throw IOException("Unable to create cache directory")
+            }
+        }
+        return canonicalCandidate
+    }
+
+    private fun validatePathComponent(component: String) {
+        require(component.isNotEmpty()) { "Cache path component must not be empty" }
+        require(component != "." && component != "..") { "Invalid cache path component" }
+        require('/' !in component && '\\' !in component && '\u0000' !in component) {
+            "Cache path component contains a separator"
+        }
+        require(!File(component).isAbsolute) { "Cache path component must be relative" }
+    }
+
+    internal fun isPathWithinRoot(canonicalRoot: File, canonicalCandidate: File): Boolean {
+        val rootPath = canonicalRoot.path
+        val rootPrefix = if (rootPath.endsWith(File.separator)) {
+            rootPath
+        } else {
+            rootPath + File.separator
+        }
+        return canonicalCandidate != canonicalRoot && canonicalCandidate.path.startsWith(rootPrefix)
     }
 
     fun getFileSize(root: File, vararg path: String): Long {

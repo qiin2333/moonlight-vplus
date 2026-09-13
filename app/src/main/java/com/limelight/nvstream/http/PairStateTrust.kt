@@ -29,13 +29,32 @@ internal object PairStateTrust {
     fun isTrustedPaired(details: ComputerDetails): Boolean {
         return details.pairState == PairingManager.PairState.PAIRED &&
                 details.serverInfoTrustedByCert &&
+                details.pairStateTrusted &&
                 details.serverCert != null
+    }
+
+    fun isTrustedNotPaired(details: ComputerDetails): Boolean {
+        return details.state == ComputerDetails.State.ONLINE &&
+                details.pairState == PairingManager.PairState.NOT_PAIRED &&
+                details.pairStateTrusted
+    }
+
+    fun resolvePairState(
+        reportedState: PairingManager.PairState,
+        serverInfoTrustedByCert: Boolean,
+        pairStateTrusted: Boolean
+    ): PairingManager.PairState {
+        return if (pairStateTrusted && !serverInfoTrustedByCert) {
+            PairingManager.PairState.NOT_PAIRED
+        } else {
+            reportedState
+        }
     }
 
     private fun isUntrustedNotPaired(details: ComputerDetails): Boolean {
         return details.state == ComputerDetails.State.ONLINE &&
                 details.pairState == PairingManager.PairState.NOT_PAIRED &&
-                !details.serverInfoTrustedByCert
+                !details.pairStateTrusted
     }
 
     private fun hasLocalPairing(details: ComputerDetails): Boolean {

@@ -294,7 +294,6 @@
     <string name="about_dialog_thanks">¡Gracias por usar Moonlight V+! Si te gusta, por favor danos una estrella en GitHub.</string>
     <string name="accessibility_service_label">Servicio de Teclado Moonlight</string>
     <string name="accessibility_service_description">Para proporcionar una experiencia completa de juegos de PC con tu teclado externo, este servicio necesita capturar todas las teclas del teclado.\n\nUna vez habilitado, podrás usar todos los atajos del sistema como las teclas Win/Command, Alt+Tab, etc., igual que en tu computadora.\n\nTen la seguridad de que este servicio solo se usa para enviar operaciones de teclas directamente a tu computadora, y no grabaremos ni subiremos ningún contenido de tu entrada.</string>
-    <string name="add_resolution">Agregar Resolución</string>
     <string name="applist_menu_start_with_vdd"> Iniciar Con Pantalla Virtual </string>
     <string name="category_crown_features">Área de Características Crown</string>
     <string name="category_enhanced_touch_settings">👆 Toque Multi-Punto Mejorado</string>
@@ -308,7 +307,6 @@
     <string name="crown_switch_to_crown">Cambiar a Modo Crown</string>
     <string name="crown_switch_to_normal">Cambiar a Modo Normal</string>
     <string name="crown_toggle_button">Crown</string>
-    <string name="custom_resolution_input_title">Ingresar Resolución Personalizada</string>
     <string name="dialog_button_cancel">CANCELAR</string>
     <string name="dialog_button_clear">LIMPIAR</string>
     <string name="dialog_button_delete">ELIMINAR</string>
@@ -394,8 +392,6 @@
     <string name="gyro_sensitivity">Sensibilidad</string>
     <string name="gyro_sensitivity_format">Sensibilidad %.1fx</string>
     <string name="height_hint">ej. 1080</string>
-    <string name="height_label">Alto:</string>
-    <string name="invalid_resolution_format">Formato de resolución inválido, por favor usa el formato ancho x alto</string>
     <string name="mic_button">Micrófono</string>
     <string name="mic_disabled">Micrófono deshabilitado</string>
     <string name="mic_enabled">Micrófono habilitado</string>
@@ -424,7 +420,6 @@
     <string name="perf_battery_status_low">El nivel de batería es bajo, se recomienda cargar</string>
     <string name="perf_battery_status_critical">El nivel de batería es críticamente bajo, por favor carga pronto</string>
     <string name="perf_battery_info_content">Batería Actual: %1$d%%\nEstado: %2$s\n\nConsejo: Un nivel bajo de batería puede afectar la experiencia de juego, se recomienda conectar el cargador</string>
-    <string name="resolution_added_successfully">Resolución agregada exitosamente</string>
     <string name="resolution_already_exists">Esta resolución ya existe</string>
     <string name="suffix_enhanced_touch_zone_divider">%</string>
     <string name="suffix_fixed_x_velocity">píxeles</string>
@@ -533,7 +528,6 @@
     <string name="toast_touch_mode_native_mouse_on">Puntero de ratón nativo habilitado</string>
     <string name="toast_touch_mode_trackpad_on">Modo panel táctil habilitado</string>
     <string name="width_hint">ej. 1920</string>
-    <string name="width_label">Ancho:</string>
 
     <string name="title_screen_combination_mode">Configuración de combinación de pantallas</string>
     <string name="summary_screen_combination_mode">Control de pantallas de Sunshine Foundation</string>

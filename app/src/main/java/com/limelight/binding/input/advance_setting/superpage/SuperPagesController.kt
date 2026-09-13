@@ -64,6 +64,24 @@ class SuperPagesController(
     }
 
     fun openNewPage(pageNew: SuperPageLayout) {
+        openNewPage(pageNew, fitToViewport = false)
+    }
+
+    fun openNewPage(pageNew: SuperPageLayout, fitToViewport: Boolean) {
+        openPage(pageNew, fitToViewport, rememberCurrentPage = true)
+    }
+
+    fun returnToPreviousPage(page: SuperPageLayout) {
+        if (page !== pageNow) return
+        val previousPage = page.lastPage ?: return
+        openPage(previousPage, fitToViewport = false, rememberCurrentPage = false)
+    }
+
+    private fun openPage(
+        pageNew: SuperPageLayout,
+        fitToViewport: Boolean,
+        rememberCurrentPage: Boolean
+    ) {
         if (pageNew === pageNow) return
 
         closingPage?.endAnimator()
@@ -82,7 +100,7 @@ class SuperPagesController(
 
         openingPage = pageNew
         val layoutParams = FrameLayout.LayoutParams(
-            dpToPx(openingPage!!.tag.toString().toInt()),
+            resolvePageWidth(openingPage!!, fitToViewport),
             ViewGroup.LayoutParams.MATCH_PARENT
         ).apply {
             topMargin = dpToPx(20)
@@ -101,7 +119,9 @@ class SuperPagesController(
             }
         })
 
-        pageNew.lastPage = pageNow
+        if (rememberCurrentPage) {
+            pageNew.lastPage = pageNow
+        }
         pageNow = pageNew
     }
 
@@ -113,19 +133,39 @@ class SuperPagesController(
         return if (boxPosition == BoxPosition.Right) {
             superPagesBox.width
         } else {
-            -dpToPx(page.tag.toString().toInt())
+            -pageWidth(page)
         }
     }
 
     private fun getVisiblePosition(page: SuperPageLayout): Int {
         return if (boxPosition == BoxPosition.Right) {
-            superPagesBox.width - dpToPx(20) - dpToPx(page.tag.toString().toInt())
+            superPagesBox.width - dpToPx(PAGE_EDGE_MARGIN_DP) - pageWidth(page)
         } else {
-            dpToPx(20)
+            dpToPx(PAGE_EDGE_MARGIN_DP)
         }
     }
 
+    private fun resolvePageWidth(page: SuperPageLayout, fitToViewport: Boolean): Int {
+        val requestedWidth = requestedPageWidth(page)
+        if (!fitToViewport || superPagesBox.width <= 0) return requestedWidth
+
+        val availableWidth = superPagesBox.width - dpToPx(PAGE_EDGE_MARGIN_DP * 2)
+        return requestedWidth.coerceAtMost(availableWidth.coerceAtLeast(1))
+    }
+
+    private fun pageWidth(page: SuperPageLayout): Int {
+        val layoutWidth = page.layoutParams?.width ?: 0
+        return layoutWidth.takeIf { it > 0 } ?: requestedPageWidth(page)
+    }
+
+    private fun requestedPageWidth(page: SuperPageLayout): Int =
+        dpToPx(page.tag.toString().toInt())
+
     private fun dpToPx(dp: Int): Int {
         return (dp * context.resources.displayMetrics.density).toInt()
+    }
+
+    companion object {
+        private const val PAGE_EDGE_MARGIN_DP = 20
     }
 }

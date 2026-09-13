@@ -44,18 +44,24 @@ class PageDeviceController(
             }
         }
         setListenersForDevice(devicePage, onClickListener)
+        val externalPickerViews = mutableListOf<View>()
+        collectSelectableViews(devicePage, externalPickerViews)
         keyboardPickerController = KeyboardKeyPickerController(
             root = keyboardDrawing,
             onKeySelected = { key ->
                 deviceCallBack?.OnKeyClick(key)
                 close()
             },
-            externalViews = listOf(devicePage.findViewById(R.id.direct_config_action))
+            externalViews = externalPickerViews,
+            onDismiss = ::close
         )
 
         devicePage.findViewById<View>(R.id.device_cancel).setOnClickListener {
             close()
         }
+        devicePage.setPageReturnListener(object : SuperPageLayout.ReturnListener {
+            override fun returnCallBack() = close()
+        })
     }
 
     fun open(deviceCallBack: DeviceCallBack, keyboardVisible: Int, mouseVisible: Int, gamepadVisible: Int) {
@@ -71,7 +77,7 @@ class PageDeviceController(
             )
             keyboardPickerController.requestInitialFocus()
         }
-        controllerManager.superPagesController?.openNewPage(devicePage)
+        controllerManager.superPagesController?.openNewPage(devicePage, fitToViewport = true)
     }
 
     private fun setListenersForDevice(viewGroup: ViewGroup, listener: View.OnClickListener) {
@@ -84,6 +90,21 @@ class PageDeviceController(
             } else if (child is ViewGroup) {
                 setListenersForDevice(child, listener)
             }
+        }
+    }
+
+    private fun collectSelectableViews(viewGroup: ViewGroup, output: MutableList<View>) {
+        for (i in 0 until viewGroup.childCount) {
+            val child = viewGroup.getChildAt(i)
+            if (child === keyboardDrawing) continue
+            if (child is TextView && child.tag != null) {
+                output += child
+            } else if (child is ViewGroup) {
+                collectSelectableViews(child, output)
+            }
+        }
+        if (viewGroup === devicePage) {
+            output += devicePage.findViewById<View>(R.id.device_cancel)
         }
     }
 
@@ -158,7 +179,7 @@ class PageDeviceController(
     }
 
     fun close() {
-        devicePage.lastPage?.let { controllerManager.superPagesController?.openNewPage(it) }
+        controllerManager.superPagesController?.returnToPreviousPage(devicePage)
         returnFocus?.let { view -> view.post { if (view.isShown) view.requestFocus() } }
     }
 }

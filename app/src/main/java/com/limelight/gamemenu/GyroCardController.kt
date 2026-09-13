@@ -6,6 +6,7 @@ import android.widget.Toast
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.GyroAssistantMode
 import com.limelight.utils.AppDialogStyler
 
 internal data class GyroCardState(
@@ -31,15 +32,14 @@ internal class GyroCardController(private val game: Game) {
     }
 
     fun setEnabled(enabled: Boolean) {
-        val handler = game.controllerHandler
-        if (enabled) {
-            if (state.mouseMode) handler.setGyroToMouseEnabled(true)
-            else handler.setGyroToRightStickEnabled(true)
-        } else {
-            handler.setGyroToRightStickEnabled(false)
-            handler.setGyroToMouseEnabled(false)
+        val mode = when {
+            !enabled -> GyroAssistantMode.OFF
+            state.mouseMode -> GyroAssistantMode.MOUSE
+            else -> GyroAssistantMode.RIGHT_STICK
         }
+        game.controllerHandler.setGyroAssistantMode(mode)
         state = state.copy(enabled = enabled)
+        game.prefConfig.writePreferences(game)
         emitState()
     }
 
@@ -51,18 +51,22 @@ internal class GyroCardController(private val game: Game) {
         }
 
         val handler = game.controllerHandler
-        if (enabled) {
-            handler.setGyroToMouseEnabled(true)
-            state = state.copy(mouseMode = true)
-        } else if (handler.hasAnyController()) {
-            handler.setGyroToRightStickEnabled(true)
-            state = state.copy(mouseMode = false)
-        } else {
-            handler.setGyroToRightStickEnabled(false)
-            handler.setGyroToMouseEnabled(false)
-            state = state.copy(enabled = false, mouseMode = false)
-            Toast.makeText(game, game.getString(R.string.gyro_no_controller_detected), Toast.LENGTH_SHORT).show()
+        when {
+            enabled -> {
+                handler.setGyroAssistantMode(GyroAssistantMode.MOUSE)
+                state = state.copy(mouseMode = true)
+            }
+            handler.hasAnyController() -> {
+                handler.setGyroAssistantMode(GyroAssistantMode.RIGHT_STICK)
+                state = state.copy(mouseMode = false)
+            }
+            else -> {
+                handler.setGyroAssistantMode(GyroAssistantMode.OFF)
+                state = state.copy(enabled = false, mouseMode = false)
+                Toast.makeText(game, game.getString(R.string.gyro_no_controller_detected), Toast.LENGTH_SHORT).show()
+            }
         }
+        game.prefConfig.writePreferences(game)
         emitState()
     }
 
@@ -128,9 +132,10 @@ internal class GyroCardController(private val game: Game) {
 
     private fun readState(): GyroCardState {
         val prefs = game.prefConfig
+        val mode = GyroAssistantMode.from(prefs)
         return GyroCardState(
-            enabled = prefs.gyroToRightStick || prefs.gyroToMouse,
-            mouseMode = prefs.gyroToMouse,
+            enabled = mode != GyroAssistantMode.OFF,
+            mouseMode = mode == GyroAssistantMode.MOUSE,
             activationKeyLabel = when (prefs.gyroActivationKeyCode) {
                 ControllerHandler.GYRO_ACTIVATION_ALWAYS -> game.getString(R.string.gyro_activation_always)
                 KeyEvent.KEYCODE_BUTTON_R2 -> game.getString(R.string.gyro_activation_right_trigger)
