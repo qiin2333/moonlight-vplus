@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="stick_calibration_title">摇杆中心校准</string>
-    <string name="stick_calibration_summary">将摇杆当前位置设为此控制器的中立位置</string>
     <string name="stick_calibration_help">先移动两个摇杆一次，然后松开，再通过触摸屏或鼠标点击“保存当前中心”。下方显示最后移动摇杆的控制器。保存时请勿触碰摇杆。校准值将保存到此 Android 控制器；校准后请重新启动串流。此页面支持 Android 系统输入（蓝牙或系统 USB）。内置 USB 驱动和 USB/IP 不使用此校准。</string>
     <string name="stick_calibration_waiting">等待摇杆输入…</string>
     <string name="stick_calibration_save">保存当前中心</string>

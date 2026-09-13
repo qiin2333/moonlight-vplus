@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="stick_calibration_title">搖桿中心校正</string>
-    <string name="stick_calibration_summary">將搖桿目前位置設為此控制器的中立位置</string>
     <string name="stick_calibration_help">先移動兩個搖桿一次，然後放開，再透過觸控螢幕或滑鼠點選「儲存目前中心」。下方顯示最後移動搖桿的控制器。儲存時請勿觸碰搖桿。校正值將儲存至此 Android 控制器；校正後請重新啟動串流。此頁面支援 Android 系統輸入（藍牙或系統 USB）。內建 USB 驅動程式和 USB/IP 不使用此校正。</string>
     <string name="stick_calibration_waiting">等待搖桿輸入…</string>
     <string name="stick_calibration_save">儲存目前中心</string>

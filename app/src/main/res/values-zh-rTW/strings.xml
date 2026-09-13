@@ -921,4 +921,7 @@
     <string name="game_menu_configure_settings">切換配置</string>
     <string name="title_ac3_iec61937">AC3 IEC61937 相容輸出</string>
     <string name="summary_ac3_iec61937">將 48 kHz AC3 封裝輸出，適用於原始直通被轉成 PCM 的裝置。需要 Android 7+，並開啟音訊直通、選擇 AC3；其他編碼不變。修改後請完全重新啟動用戶端。關閉可恢復原始 AC3。</string>
+    <string name="stick_calibration_title">搖桿中心校正</string>
+    <string name="stick_calibration_summary">將搖桿目前位置設為此控制器的中立位置</string>
+
 </resources>
