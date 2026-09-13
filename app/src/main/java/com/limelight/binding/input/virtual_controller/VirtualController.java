@@ -7,12 +7,13 @@ package com.limelight.binding.input.virtual_controller;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.DisplayMetrics;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+
+import androidx.core.view.OneShotPreDrawListener;
 
 import com.limelight.LimeLog;
 import com.limelight.R;
@@ -43,6 +44,21 @@ public class VirtualController {
     private final ControllerHandler controllerHandler;
     private final Context context;
     private final Handler handler;
+    private OneShotPreDrawListener pendingLayoutRefresh;
+
+    private final Runnable refreshLayoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            pendingLayoutRefresh = null;
+            int layoutWidth = frame_layout.getWidth();
+            int layoutHeight = frame_layout.getHeight();
+            if (layoutWidth <= 0 || layoutHeight <= 0) {
+                return;
+            }
+
+            refreshLayoutNow(layoutWidth, layoutHeight);
+        }
+    };
 
     private final Runnable delayedRetransmitRunnable = new Runnable() {
         @Override
@@ -154,11 +170,16 @@ public class VirtualController {
     }
 
     public void refreshLayout() {
+        if (pendingLayoutRefresh != null) {
+            pendingLayoutRefresh.removeListener();
+        }
+        pendingLayoutRefresh = OneShotPreDrawListener.add(frame_layout, refreshLayoutRunnable);
+    }
+
+    private void refreshLayoutNow(int layoutWidth, int layoutHeight) {
         removeElements();
 
-        DisplayMetrics screen = context.getResources().getDisplayMetrics();
-
-        int buttonSize = (int)(screen.heightPixels*0.06f);
+        int buttonSize = (int)(layoutHeight * 0.06f);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(buttonSize, buttonSize);
         params.leftMargin = 15;
         params.topMargin = 15;
@@ -166,7 +187,11 @@ public class VirtualController {
 
 
         // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context);
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+                this,
+                context,
+                layoutWidth,
+                layoutHeight);
 
         // Apply user preferences onto the default layout
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context);
@@ -215,4 +240,11 @@ public class VirtualController {
         handler.postDelayed(delayedRetransmitRunnable, 75);
     }
 
+    /** Removes a pending layout callback when the virtual controller is discarded. */
+    public void cleanup() {
+        if (pendingLayoutRefresh != null) {
+            pendingLayoutRefresh.removeListener();
+            pendingLayoutRefresh = null;
+        }
+    }
 }
