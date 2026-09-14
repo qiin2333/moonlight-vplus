@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Безпосереднє перемикання конфігурації</string>
+    <string name="crown_direct_config_target">Перемкнути на %1$s</string>
+    <string name="crown_direct_config_unavailable">Конфігурація недоступна (дію вимкнено)</string>
+    <string name="crown_direct_config_self">Поточна конфігурація; перемикання не потрібне</string>
+    <string name="crown_direct_config_no_other">Інших конфігурацій немає</string>
+    <string name="game_menu_edit_mode">Редагувати розкладку кнопок</string>
+    <string name="game_menu_configure_settings">Перемкнути конфігурацію</string>
+</resources>

@@ -1,0 +1,38 @@
+plugins { id 'com.android.library' }
+
+android {
+    namespace 'com.limelight.usbip'
+    compileSdk 36
+    ndkVersion '28.2.13676358'
+    defaultConfig {
+        minSdk 22
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        consumerProguardFiles 'consumer-rules.pro'
+        ndk {
+            def nativeAbi = providers.gradleProperty('usbipTestAbi').getOrElse('arm64-v8a')
+            if (!(nativeAbi in ['arm64-v8a', 'x86_64'])) throw new GradleException('Unsupported USB/IP ABI')
+            abiFilters nativeAbi
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared'
+                // Optional pre-fetched source directories for offline/developer builds.
+                ['USBIPDCPP', 'LIBUSB', 'ASIO', 'SPDLOG'].each { dependency ->
+                    def sourceDir = providers.gradleProperty("usbipSource${dependency}").orNull
+                    if (sourceDir) arguments "-DFETCHCONTENT_SOURCE_DIR_${dependency}=${file(sourceDir).absolutePath.replace('\\', '/')}"
+                }
+            }
+        }
+    }
+    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

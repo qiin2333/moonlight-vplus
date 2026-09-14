@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Changer directement de configuration</string>
+    <string name="crown_direct_config_target">Passer à %1$s</string>
+    <string name="crown_direct_config_unavailable">Configuration indisponible (action désactivée)</string>
+    <string name="crown_direct_config_self">Configuration actuelle ; aucun changement nécessaire</string>
+    <string name="crown_direct_config_no_other">Aucune autre configuration disponible</string>
+    <string name="game_menu_edit_mode">Modifier la disposition des boutons</string>
+    <string name="game_menu_configure_settings">Changer de configuration</string>
+</resources>

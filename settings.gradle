@@ -44,5 +44,6 @@ if (!audioHapticsAndroidDir.isDirectory()) {
 
 include ':app'
 include ':framegen'
+include ':usbip-backend'
 include ':moonlight-haptics-android'
 project(':moonlight-haptics-android').projectDir = audioHapticsAndroidDir

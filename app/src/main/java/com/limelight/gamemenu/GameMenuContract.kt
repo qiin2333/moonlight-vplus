@@ -32,6 +32,7 @@ internal data class GameMenuComposeUiState(
     val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
     val quickEditMode: Boolean = false,
+    val usbForwardingEnabled: Boolean = false,
     val isSubmenu: Boolean = false,
     val pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
 )
@@ -87,6 +88,7 @@ internal data class GameMenuVisibleCards(
 
 internal data class GameMenuCallbacks(
     val onDismiss: () -> Unit,
+    val onUsbDevices: () -> Unit = {},
     val onHapticFeedback: (Int) -> Unit,
     val iconForOption: (String?) -> Int,
     val onBack: () -> Unit,

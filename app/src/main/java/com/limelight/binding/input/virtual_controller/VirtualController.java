@@ -5,18 +5,15 @@
 package com.limelight.binding.input.virtual_controller;
 
 import android.content.Context;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.DisplayMetrics;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+
+import androidx.core.view.OneShotPreDrawListener;
 
 import com.limelight.LimeLog;
 import com.limelight.R;
@@ -25,7 +22,7 @@ import com.limelight.binding.input.ControllerHandler;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VirtualController implements SensorEventListener {
+public class VirtualController {
     public static class ControllerInputContext {
         public short inputMap = 0x0000;
         public byte leftTrigger = 0x00;
@@ -47,8 +44,21 @@ public class VirtualController implements SensorEventListener {
     private final ControllerHandler controllerHandler;
     private final Context context;
     private final Handler handler;
-    private final SensorManager sensorManager;
-    private boolean gyroEnabled = false;
+    private OneShotPreDrawListener pendingLayoutRefresh;
+
+    private final Runnable refreshLayoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            pendingLayoutRefresh = null;
+            int layoutWidth = frame_layout.getWidth();
+            int layoutHeight = frame_layout.getHeight();
+            if (layoutWidth <= 0 || layoutHeight <= 0) {
+                return;
+            }
+
+            refreshLayoutNow(layoutWidth, layoutHeight);
+        }
+    };
 
     private final Runnable delayedRetransmitRunnable = new Runnable() {
         @Override
@@ -71,7 +81,6 @@ public class VirtualController implements SensorEventListener {
         this.frame_layout = layout;
         this.context = context;
         this.handler = new Handler(Looper.getMainLooper());
-        this.sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
 
         buttonConfigure = new Button(context);
         buttonConfigure.setAlpha(0.25f);
@@ -161,11 +170,16 @@ public class VirtualController implements SensorEventListener {
     }
 
     public void refreshLayout() {
+        if (pendingLayoutRefresh != null) {
+            pendingLayoutRefresh.removeListener();
+        }
+        pendingLayoutRefresh = OneShotPreDrawListener.add(frame_layout, refreshLayoutRunnable);
+    }
+
+    private void refreshLayoutNow(int layoutWidth, int layoutHeight) {
         removeElements();
 
-        DisplayMetrics screen = context.getResources().getDisplayMetrics();
-
-        int buttonSize = (int)(screen.heightPixels*0.06f);
+        int buttonSize = (int)(layoutHeight * 0.06f);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(buttonSize, buttonSize);
         params.leftMargin = 15;
         params.topMargin = 15;
@@ -173,7 +187,11 @@ public class VirtualController implements SensorEventListener {
 
 
         // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context);
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+                this,
+                context,
+                layoutWidth,
+                layoutHeight);
 
         // Apply user preferences onto the default layout
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context);
@@ -222,70 +240,11 @@ public class VirtualController implements SensorEventListener {
         handler.postDelayed(delayedRetransmitRunnable, 75);
     }
 
-    /**
-     * 启用或禁用虚拟控制器的陀螺仪功能
-     */
-    public void setGyroEnabled(boolean enabled) {
-        if (gyroEnabled == enabled) {
-            return;
-        }
-        
-        gyroEnabled = enabled;
-        
-        if (enabled) {
-            // 注册陀螺仪传感器监听器
-            Sensor gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-            if (gyroSensor != null) {
-                sensorManager.registerListener(this, gyroSensor, SensorManager.SENSOR_DELAY_GAME);
-                LimeLog.info("VirtualController: Gyroscope enabled");
-            } else {
-                LimeLog.warning("VirtualController: No gyroscope sensor available");
-                gyroEnabled = false;
-            }
-        } else {
-            // 取消注册陀螺仪传感器监听器
-            sensorManager.unregisterListener(this);
-            LimeLog.info("VirtualController: Gyroscope disabled");
-        }
-    }
-
-    /**
-     * 检查陀螺仪是否已启用
-     */
-    public boolean isGyroEnabled() {
-        return gyroEnabled;
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE && gyroEnabled) {
-            // 将陀螺仪数据转换为度/秒
-            float gx = event.values[0] * 57.2957795f; // rad/s to deg/s
-            float gy = event.values[1] * 57.2957795f;
-            float gz = event.values[2] * 57.2957795f;
-            
-            // 通过ControllerHandler报告陀螺仪数据
-            // 使用控制器ID 0（虚拟控制器默认使用控制器0）
-            if (controllerHandler != null) {
-                // 直接调用ControllerHandler的陀螺仪处理方法
-                // 这里需要访问ControllerHandler的私有方法，我们需要添加一个公共方法
-                controllerHandler.reportVirtualControllerGyro(gx, gy, gz);
-            }
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // 不需要处理精度变化
-    }
-
-    /**
-     * 清理资源，取消传感器监听
-     */
+    /** Removes a pending layout callback when the virtual controller is discarded. */
     public void cleanup() {
-        if (gyroEnabled) {
-            sensorManager.unregisterListener(this);
-            gyroEnabled = false;
+        if (pendingLayoutRefresh != null) {
+            pendingLayoutRefresh.removeListener();
+            pendingLayoutRefresh = null;
         }
     }
 }

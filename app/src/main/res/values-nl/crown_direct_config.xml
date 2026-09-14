@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Direct naar configuratie schakelen</string>
+    <string name="crown_direct_config_target">Schakel naar %1$s</string>
+    <string name="crown_direct_config_unavailable">Configuratie niet beschikbaar (actie uitgeschakeld)</string>
+    <string name="crown_direct_config_self">Huidige configuratie; omschakelen niet nodig</string>
+    <string name="crown_direct_config_no_other">Geen andere configuraties beschikbaar</string>
+    <string name="game_menu_edit_mode">Knopindeling bewerken</string>
+    <string name="game_menu_configure_settings">Configuratie wisselen</string>
+</resources>

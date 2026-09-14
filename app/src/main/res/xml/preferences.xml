@@ -405,6 +405,11 @@
             android:entryValues="@array/language_values"
             android:summary="@string/summary_language_list"
             android:defaultValue="default" />
+        <CheckBoxPreference
+            android:key="checkbox_disable_warnings"
+            android:title="@string/title_checkbox_disable_warnings"
+            android:summary="@string/summary_checkbox_disable_warnings"
+            android:defaultValue="false" />
         <com.limelight.preferences.SmallIconCheckboxPreference
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
@@ -491,11 +496,6 @@
             android:summary="@string/summary_enable_analytics"
             android:defaultValue="true" />
         <CheckBoxPreference
-            android:key="checkbox_disable_warnings"
-            android:title="@string/title_checkbox_disable_warnings"
-            android:summary="@string/summary_checkbox_disable_warnings"
-            android:defaultValue="false" />
-        <CheckBoxPreference
             android:key="checkbox_enable_perf_overlay"
             android:title="@string/title_enable_perf_overlay"
             android:summary="@string/summary_enable_perf_overlay"
@@ -581,6 +581,12 @@
             android:entries="@array/audio_passthrough_buffer_names"
             android:entryValues="@array/audio_passthrough_buffer_values"
             android:defaultValue="normal" />
+        <CheckBoxPreference
+            android:key="checkbox_ac3_iec61937"
+            android:dependency="checkbox_enable_audio_passthrough"
+            android:title="@string/title_ac3_iec61937"
+            android:summary="@string/summary_ac3_iec61937"
+            android:defaultValue="false" />
         <!-- 以下为原“音频振动”分类合并进来的项目 -->
         <CheckBoxPreference
             android:key="checkbox_audio_vibration"
@@ -742,6 +748,10 @@
             android:summary="@string/summary_seekbar_deadzone"
             android:text="@string/suffix_seekbar_deadzone"
             android:title="@string/title_seekbar_deadzone"/>
+        <Preference
+            android:key="stick_calibration"
+            android:title="@string/stick_calibration_title"
+            android:summary="@string/stick_calibration_summary" />
         <CheckBoxPreference
             android:key="checkbox_multi_controller"
             android:title="@string/title_checkbox_multi_controller"

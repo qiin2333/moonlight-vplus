@@ -14,6 +14,7 @@ import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.StartWheelAction
 import com.limelight.binding.input.advance_setting.ControllerManager
+import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog
 import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
@@ -44,6 +45,7 @@ import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.nvstream.NvConnectionListener
+import com.limelight.nvstream.RemoteTextContext
 import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.input.ClipboardSyncManager
@@ -60,6 +62,7 @@ import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
 import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
+import com.limelight.utils.RemoteImeController
 import com.limelight.utils.FullscreenProgressOverlay
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
@@ -143,6 +146,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     lateinit var touchInputHandler: TouchInputHandler
     var virtualController: VirtualController? = null
     lateinit var panZoomHandler: PanZoomHandler
+    private lateinit var remoteImeController: RemoteImeController
+    @Volatile private var destroying = false
     private var audioVibrationService: AudioVibrationService? = null
     private var appliedAudioHapticsSettings: AudioHapticsSettings? = null
 
@@ -175,7 +180,43 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     var displayedFailureDialog = false
     var connecting = false
     var connected = false
+    private var usbForwarding: UsbForwardingController? = null
+    private var usbForwardingCreationPending = false
+
+
+    @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
+    fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
+        if (!connected) return
+        if (usbForwarding == null) {
+            val previousCleanup = UsbForwardingController.previousCleanup()
+            if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
+                if (!usbForwardingCreationPending) {
+                    usbForwardingCreationPending = true
+                    previousCleanup.whenComplete { _, error ->
+                        runOnUiThread {
+                            usbForwardingCreationPending = false
+                            if (!isDestroyed && connected) {
+                                if (error == null) showUsbForwarding(onShown)
+                                else Toast.makeText(this, R.string.usb_forward_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+                return
+            }
+            val cert = parseServerCert()
+            val hostId = computerUuid
+            if (cert == null || hostId.isNullOrBlank()) {
+                Toast.makeText(this, R.string.usb_forward_unconfigured, Toast.LENGTH_LONG).show()
+                return
+            }
+            usbForwarding = UsbForwardingController(this, intent.getStringExtra(EXTRA_HOST) ?: "",
+                cert, PlatformBinding.getCryptoProvider(this), hostId) { conn?.createNvHttp() }
+        }
+        usbForwarding?.show()?.let { onShown?.invoke(it) }
+    }
     private var activeGameMenu: GameMenu? = null
+    private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
     private var startHoldWheelView: ComposeView? = null
     private val startHoldWheelVisible = mutableStateOf(false)
@@ -374,6 +415,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
         panZoomHandler = PanZoomHandler(this, this, streamView, cursorOverlayView, prefConfig)
+        remoteImeController = RemoteImeController(this, streamView, panZoomHandler)
 
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)
@@ -411,7 +453,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             streamView.setOnCapturedPointerListener { _, event ->
-                touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
+                usbForwarding?.consumes(event.device) == true ||
+                    touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
             }
         }
 
@@ -525,7 +568,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 streamView.parent as FrameLayout,
                 this
             )
-            setupVirtualControllerGyro()
+            refreshVirtualControllerLayout()
         }
 
         if (prefConfig.enableCrownFeatures) {
@@ -678,16 +721,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
     }
 
-    /** Set up gyro callbacks on the virtual controller. */
-    private fun setupVirtualControllerGyro() {
+    /** Refresh the on-screen controller layout after (re)creating the stream. */
+    private fun refreshVirtualControllerLayout() {
         val vc = virtualController ?: return
         vc.refreshLayout()
         vc.show()
-        vc.setGyroEnabled(!prefConfig.gyroToMouse)
-        controllerHandler.setVirtualControllerGyroCallbacks(
-            { vc.setGyroEnabled(false) },
-            { vc.setGyroEnabled(true) }
-        )
     }
 
     /** Whether the resume-stream preference is enabled. */
@@ -709,6 +747,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
      */
     private fun createConnectionAndHandler() {
+        usbForwarding?.close()
+        usbForwarding = null
         framegenEnabledToastShown = false
         if (::controllerHandler.isInitialized) {
             audioVibrationService?.controllerHandler = null
@@ -748,6 +788,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
+        // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
+        // re-runs this path once it claims controller 0.
+        controllerHandler.onSensorsReenabled()
     }
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
@@ -1153,7 +1196,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
         if (virtualController != null && prefConfig.onscreenController) {
-            setupVirtualControllerGyro()
+            refreshVirtualControllerLayout()
         }
 
         if (controllerManager != null) {
@@ -1489,10 +1532,20 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onDestroy() {
+        destroying = true
+        MoonBridge.detachConnectionListener(this)
+        if (::streamView.isInitialized) {
+            streamView.setInputCallbacks(null)
+        }
+        usbForwarding?.close()
+        usbForwarding = null
         if (isFinishing && !isChangingConfigurations) {
             cancelKeepAliveNotification()
         }
         micButtonPositionController?.dispose()
+        if (::remoteImeController.isInitialized) {
+            remoteImeController.dispose()
+        }
         micButtonPositionController = null
         if (::cursorServiceManager.isInitialized) {
             cursorServiceManager.destroy()
@@ -1544,6 +1597,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onPause() {
+        crownConfigPicker?.dismiss()
+        controllerManager?.elementController?.cancelDirectConfigSwitch()
         updateAudioHapticsRuntimeEnabled(false)
         audioVibrationService?.stop()
         if (::floatBallHandler.isInitialized) {
@@ -1629,6 +1684,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun onStop() {
         super.onStop()
+        usbForwarding?.stopForeground()
 
         if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing) {
             LimeLog.info("Extreme Resume: onStop intercepted.")
@@ -1661,7 +1717,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (virtualController != null) {
             virtualController?.hide()
-            virtualController?.cleanup()
         }
 
         val decoderMessage = getDecoderFormatLabel()
@@ -1681,7 +1736,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         reportStreamAnalytics(decoderMessage)
 
-        if (shouldResumeSession && isResumeStreamEnabled) {
+        if (StreamKeepAlivePolicy.shouldStartForResume(
+                isFinishing = isFinishing,
+                shouldResumeSession = shouldResumeSession,
+                isResumeStreamEnabled = isResumeStreamEnabled,
+            )
+        ) {
             showKeepAliveNotification()
             LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。")
         } else {
@@ -1784,15 +1844,33 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         grabbedInput = grab
     }
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            controllerManager?.elementController?.cancelDirectConfigSwitch()
+        }
+        return try {
+            super.dispatchTouchEvent(event)
+        } finally {
+            // The final UP reaches all old input receivers before a Crown layout is replaced.
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                controllerManager?.elementController?.finishStreamTouch(event.actionMasked)
+            }
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return keyboardInputHandler.handleKeyDown(event) || super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return keyboardInputHandler.handleKeyUp(event) || super.onKeyUp(keyCode, event)
     }
 
     override fun onKeyMultiple(keyCode: Int, repeatCount: Int, event: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return keyboardInputHandler.handleKeyMultiple(event) || super.onKeyMultiple(keyCode, repeatCount, event)
     }
 
@@ -1802,6 +1880,25 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun handleKeyUp(event: KeyEvent): Boolean {
         return keyboardInputHandler.handleKeyUp(event)
+    }
+
+    override fun handleText(text: String) {
+        conn?.sendUtf8Text(text)
+    }
+
+    override fun handleDelete() {
+        keyboardInputHandler.handleKeyDown(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+        keyboardInputHandler.handleKeyUp(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+    }
+
+    override fun handleForwardDelete() {
+        keyboardInputHandler.handleKeyDown(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL))
+        keyboardInputHandler.handleKeyUp(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_FORWARD_DEL))
+    }
+
+    override fun handleEnter() {
+        keyboardInputHandler.handleKeyDown(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+        keyboardInputHandler.handleKeyUp(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
     }
 
     val relativeTouchContextMap: Array<TouchContext?>
@@ -1820,6 +1917,12 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         inputManager.toggleSoftInput(0, 0)
+    }
+
+    override fun onRemoteTextContext(context: RemoteTextContext) {
+        if (!destroying && ::remoteImeController.isInitialized) {
+            remoteImeController.handle(context)
+        }
     }
 
     fun enableNativeMousePointer(enable: Boolean) {
@@ -1845,15 +1948,18 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)
     }
 
     override fun onGenericMotion(view: View, event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(view, event)
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         if (event.action == MotionEvent.ACTION_DOWN) {
             if (!prefConfig.syncTouchEventWithDisplay && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 view.requestUnbufferedDispatch(event)
@@ -1875,6 +1981,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionTerminated(errorCode: Int) {
+        if (::remoteImeController.isInitialized) {
+            remoteImeController.resetSession()
+        }
+        val forwarding = usbForwarding
+        runOnUiThread { forwarding?.stopForeground() }
         connectionCallbackHandler.connectionTerminated(errorCode)
     }
 
@@ -1883,6 +1994,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionStarted() {
+        remoteImeController.resetSession()
         connectionCallbackHandler.connectionStarted()
         screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
         controllerHandler.retryPendingControllerArrivals {
@@ -1999,6 +2111,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (isExtremeResumeEnabled && connected) {
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.")
+            shouldResumeSession = false
             if (progressOverlay != null) {
                 progressOverlay?.dismiss()
                 progressOverlay = null
@@ -2381,6 +2494,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 enableAudioFx = prefConfig.enableAudioFx,
                 enableSpatializer = prefConfig.enableSpatializer,
                 passthroughBufferBytes = prefConfig.audioPassthroughBufferBytes,
+                useAc3Iec61937 = prefConfig.useAc3Iec61937,
                 enableSystemAudioHaptics = enableSystemAudioHaptics,
                 onSystemAudioHapticsActiveChanged = { active ->
                     audioVibrationService?.setSystemAudioCoupledDeviceActive(active)
@@ -2724,6 +2838,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
+        crownConfigPicker?.takeIf { it.isShowing }?.let {
+            it.dispatchKeyEvent(event)
+            return true
+        }
         val menu = activeGameMenu ?: return false
         if (!menu.dispatchControllerKeyEvent(event)) return false
         return activeGameMenu === menu && menu.isShowing()
@@ -2736,6 +2854,13 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         rightStickX: Float,
         rightStickY: Float
     ): Boolean {
+        crownConfigPicker?.takeIf { it.isShowing }?.let {
+            it.dispatchAxes(
+                ControllerHandler.usbGameMenuAxisSourceId(controllerId),
+                listOf(leftStickX to leftStickY), rightStickY
+            )
+            return true
+        }
         val menu = activeGameMenu ?: return false
         if (!menu.dispatchControllerAxes(
                 sourceId = ControllerHandler.usbGameMenuAxisSourceId(controllerId),
@@ -2751,7 +2876,35 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun releaseControllerMenuAxisSource(sourceId: Int) {
+        crownConfigPicker?.releaseSource(sourceId)
         activeGameMenu?.releaseControllerAxisSource(sourceId)
+    }
+
+    fun showCrownConfigPicker(names: List<String>, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
+        if (isFinishing || isDestroyed || names.isEmpty() || crownConfigPicker != null) return
+        val picker = CrownConfigPickerDialog(
+            this, names,
+            readAxes = { event ->
+                (controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = false)
+                    ?: emptyList()) to controllerHandler.getMenuRightStickY(event)
+            },
+            onSelected = onSelected
+        )
+        crownConfigPicker = picker
+        picker.setOnDismissListener {
+            if (crownConfigPicker === picker) {
+                crownConfigPicker = null
+                controllerHandler.onExternalGameMenuDismissed()
+                onDismiss()
+            }
+        }
+        try {
+            picker.show()
+            controllerHandler.onExternalGameMenuOpened()
+        } catch (exception: android.view.WindowManager.BadTokenException) {
+            crownConfigPicker = null
+            onDismiss()
+        }
     }
 
     override fun showUsbControllerShortcutHint() {
@@ -2814,6 +2967,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onKey(view: View, keyCode: Int, keyEvent: KeyEvent): Boolean {
+        if (usbForwarding?.consumes(keyEvent.device) == true) return true
         return when (keyEvent.action) {
             KeyEvent.ACTION_DOWN -> keyboardInputHandler.handleKeyDown(keyEvent)
             KeyEvent.ACTION_UP -> keyboardInputHandler.handleKeyUp(keyEvent)
@@ -2939,6 +3093,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         }
 
     fun getHandleMotionEvent(streamView: StreamView, event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(streamView, event)
     }
 

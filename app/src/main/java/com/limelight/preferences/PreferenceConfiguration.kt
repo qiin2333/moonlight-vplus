@@ -174,6 +174,7 @@ class PreferenceConfiguration {
     var audioCodecBitrate: Int = 0
     /** AC3 passthrough AudioTrack buffer size in bytes — trade jitter resilience for latency. */
     var audioPassthroughBufferBytes: Int = 16 * 1024
+    var useAc3Iec61937: Boolean = false
     var framePacing = 0
     var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
@@ -192,12 +193,10 @@ class PreferenceConfiguration {
     var gamepadMotionSensorsFallbackToDevice = false
     var reverseResolution = false
     var rotableScreen = false
-    // Runtime-only: enable mapping gyroscope motion to right analog stick
+    // Persistent: enable mapping gyroscope motion to right analog stick
     var gyroToRightStick = false
-    // Runtime-only: enable mapping gyroscope motion to relative mouse movement
+    // Persistent: enable mapping gyroscope motion to relative mouse movement
     var gyroToMouse = false
-    // Runtime-only: sensitivity in deg/s for full stick deflection
-    var gyroFullDeflectionDps = 0f
     // Persistent: sensitivity multiplier (higher -> faster)
     var gyroSensitivityMultiplier = 0f
     // Persistent: activation keycode to hold (Android keycode); 0 means LT analog, 1 means RT analog, otherwise Android key
@@ -371,6 +370,8 @@ class PreferenceConfiguration {
                 .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                 .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
                 .putInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, gyroActivationKeyCode)
+                .putBoolean(GYRO_TO_RIGHT_STICK_PREF_STRING, gyroToRightStick)
+                .putBoolean(GYRO_TO_MOUSE_PREF_STRING, gyroToMouse)
 
             if (synchronous) {
                 editor.commit()
@@ -507,7 +508,6 @@ class PreferenceConfiguration {
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
-        copy.gyroFullDeflectionDps = this.gyroFullDeflectionDps
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier
         copy.gyroActivationKeyCode = this.gyroActivationKeyCode
         copy.gyroInvertXAxis = this.gyroInvertXAxis
@@ -606,6 +606,7 @@ class PreferenceConfiguration {
         private const val ENABLE_AUDIO_FX_PREF_STRING = "checkbox_enable_audiofx"
         private const val ENABLE_SPATIALIZER_PREF_STRING = "checkbox_enable_spatializer"
         private const val ENABLE_AUDIO_PASSTHROUGH_PREF_STRING = "checkbox_enable_audio_passthrough"
+        private const val AC3_IEC61937_PREF_STRING = "checkbox_ac3_iec61937"
         private const val DEFAULT_ENABLE_AUDIO_PASSTHROUGH = false
         private const val FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING = "checkbox_force_mtk_max_operating_rate"
         private const val DEFAULT_FORCE_MTK_MAX_OPERATING_RATE = false
@@ -625,6 +626,8 @@ class PreferenceConfiguration {
         private const val GYRO_INVERT_X_AXIS_PREF_STRING = "gyro_invert_x_axis"
         private const val GYRO_INVERT_Y_AXIS_PREF_STRING = "gyro_invert_y_axis"
         private const val GYRO_ACTIVATION_KEY_CODE_PREF_STRING = "gyro_activation_key_code"
+        private const val GYRO_TO_RIGHT_STICK_PREF_STRING = "gyro_to_right_stick"
+        private const val GYRO_TO_MOUSE_PREF_STRING = "gyro_to_mouse"
 
         // 麦克风设置
         private const val ENABLE_MIC_PREF_STRING = "checkbox_enable_mic"
@@ -1310,6 +1313,7 @@ class PreferenceConfiguration {
 
             val enableAudioPassthrough = prefs.getBoolean(ENABLE_AUDIO_PASSTHROUGH_PREF_STRING, DEFAULT_ENABLE_AUDIO_PASSTHROUGH)
             config.enableAudioPassthrough = enableAudioPassthrough
+            config.useAc3Iec61937 = prefs.getBoolean(AC3_IEC61937_PREF_STRING, false)
 
             val audioConfig = prefs.getString(AUDIO_CONFIG_PREF_STRING, DEFAULT_AUDIO_CONFIG) ?: DEFAULT_AUDIO_CONFIG
             config.audioConfiguration = when (audioConfig) {
@@ -1500,6 +1504,10 @@ class PreferenceConfiguration {
             config.gyroInvertXAxis = prefs.getBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_X_AXIS)
             config.gyroInvertYAxis = prefs.getBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, DEFAULT_GYRO_INVERT_Y_AXIS)
             config.gyroActivationKeyCode = prefs.getInt(GYRO_ACTIVATION_KEY_CODE_PREF_STRING, DEFAULT_GYRO_ACTIVATION_KEY_CODE)
+            // Mouse mode wins if both flags somehow ended up persisted together
+            config.gyroToMouse = prefs.getBoolean(GYRO_TO_MOUSE_PREF_STRING, false)
+            config.gyroToRightStick = !config.gyroToMouse &&
+                prefs.getBoolean(GYRO_TO_RIGHT_STICK_PREF_STRING, false)
 
             // Cards visibility (defaults to true)
             config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true)
@@ -1601,11 +1609,6 @@ class PreferenceConfiguration {
             config.floatBallSwipeDownAction = prefs.getString(FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION
             config.floatBallSwipeLeftAction = prefs.getString(FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION
             config.floatBallSwipeRightAction = prefs.getString(FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING, DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION) ?: DEFAULT_FLOAT_BALL_SWIPE_RIGHT_ACTION
-
-            // Runtime-only defaults; controlled via in-stream GameMenu
-            config.gyroToRightStick = false
-            config.gyroToMouse = false
-            config.gyroFullDeflectionDps = 180.0f
 
             return config
         }

@@ -1,0 +1,65 @@
+name: Android USB/IP backend
+on:
+  push:
+    paths: ['usbip-backend/**', 'usbip-diagnostics/**', '.github/workflows/usbip-backend.yml']
+  pull_request:
+    paths: ['usbip-backend/**', 'usbip-diagnostics/**', '.github/workflows/usbip-backend.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-arm64:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install native toolchain
+        run: sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1' 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build standalone diagnostics, AAR and device tests
+        run: bash gradlew -p usbip-diagnostics assembleDebug :usbip-backend:assembleDebug :usbip-backend:assembleDebugAndroidTest --max-workers=2
+      - name: Upload development artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-usbip-arm64-development
+          path: |
+            usbip-diagnostics/build/outputs/apk/debug/*.apk
+            usbip-backend/build/outputs/aar/*.aar
+            usbip-backend/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+      - name: Install emulator image
+        run: |
+          sdkmanager 'system-images;android-34;google_apis;x86_64'
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd --name usbip-ci --package 'system-images;android-34;google_apis;x86_64' --device pixel_2
+          test -f "$ANDROID_AVD_HOME/usbip-ci.ini"
+          sudo chmod 666 /dev/kvm
+      - name: Run native lifecycle tests on Android x86_64
+        timeout-minutes: 15
+        env:
+          ANDROID_SERIAL: emulator-5554
+        run: |
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          test -f "$ANDROID_AVD_HOME/usbip-ci.ini"
+          "$ANDROID_HOME/emulator/emulator" -avd usbip-ci -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > emulator.log 2>&1 &
+          for attempt in $(seq 1 120); do
+            if [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; then break; fi
+            sleep 2
+          done
+          test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
+          bash gradlew -p usbip-diagnostics :usbip-backend:connectedDebugAndroidTest -PusbipTestAbi=x86_64 --max-workers=2
+      - name: Upload emulator test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-usbip-test-results
+          path: |
+            usbip-backend/build/outputs/androidTest-results/
+            emulator.log

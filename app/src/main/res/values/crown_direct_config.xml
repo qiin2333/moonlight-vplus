@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">Switch directly to config</string>
+    <string name="crown_direct_config_target">Switch to %1$s</string>
+    <string name="crown_direct_config_unavailable">Config unavailable (disabled)</string>
+    <string name="crown_direct_config_self">Current config; no switch needed</string>
+    <string name="crown_direct_config_no_other">No other configs available</string>
+</resources>

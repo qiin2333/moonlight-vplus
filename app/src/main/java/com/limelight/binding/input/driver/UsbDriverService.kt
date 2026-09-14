@@ -16,7 +16,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.view.InputDevice
 import android.widget.Toast
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.withLock
 
 import com.limelight.LimeLog
@@ -56,11 +56,13 @@ class UsbDriverService : Service(), UsbDriverListener {
 
     private val controllers = ArrayList<AbstractController>()
     private val controllersLock = Any()
-    private val sessionLock = ReentrantLock()
+    private val sessionLock = forwardingLock
+    private val controllerDevices = mutableMapOf<AbstractController, String>()
     private val sessionOwner = UsbDriverSessionOwner()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val sessionHandoff = UsbDriverSessionHandoff<StartRequest>()
     private val stopCallbacks = mutableListOf<() -> Unit>()
+    private var stopResult = UsbDriverStopResult().apply { finish() }
 
     @Volatile private var listener: ControllerDriverListener? = null
     @Volatile private var stateListener: UsbDriverStateListener? = null
@@ -118,6 +120,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         val suppressCallback = sessionLock.withLock {
             synchronized(controllersLock) {
                 controllers.remove(controller)
+                controllerDevices.remove(controller)
             }
             sessionHandoff.isStoppingController(controller.getControllerId())
         }
@@ -303,6 +306,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     private fun handleUsbDeviceState(device: UsbDevice) {
+        if (forwardingReservations.contains(device.deviceName)) return
         val mgr = usbManager ?: return
         val config = prefConfig ?: return
 
@@ -381,6 +385,7 @@ class UsbDriverService : Service(), UsbDriverListener {
             val retained = synchronized(controllersLock) {
                 if (started) {
                     controllers.add(controller)
+                    controllerDevices[controller] = device.deviceName
                     true
                 } else {
                     false
@@ -650,6 +655,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         stopCallbacks += onStopped
+        stopResult = UsbDriverStopResult()
 
         started = false
 
@@ -678,24 +684,26 @@ class UsbDriverService : Service(), UsbDriverListener {
         for (controller in controllersToStop) {
             val controllerId = controller.getControllerId()
             runCatching {
-                controller.stopAndThen {
-                    onControllerStopCompleted(generation, controllerId)
+                controller.stopWithResult { result ->
+                    onControllerStopCompleted(generation, controllerId, result.exceptionOrNull())
                 }
             }.onFailure {
                 LimeLog.warning("Unable to stop USB controller: ${it.message}")
-                onControllerStopCompleted(generation, controllerId)
+                onControllerStopCompleted(generation, controllerId, it)
             }
         }
     }
 
-    private fun onControllerStopCompleted(generation: Long, controllerId: Int) {
+    private fun onControllerStopCompleted(generation: Long, controllerId: Int, error: Throwable? = null) {
         sessionLock.withLock {
+            if (error != null) stopResult.failed(error)
             val completion = sessionHandoff.completeController(generation, controllerId)
             if (completion.finished) finishStopLocked(completion.pendingStart)
         }
     }
 
     private fun finishStopLocked(restart: StartRequest?) {
+        stopResult.finish()
         if (restart != null) startNow(restart)
 
         val callbacks = stopCallbacks.toList()
@@ -710,6 +718,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun onCreate() {
+        sessionLock.withLock { forwardingServices.add(this) }
         this.usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         this.prefConfig = PreferenceConfiguration.readPreferences(this)
     }
@@ -720,7 +729,9 @@ class UsbDriverService : Service(), UsbDriverListener {
             sessionHandoff.cancelPendingStart()
             listener = null
             stateListener = null
-            stop()
+            // Remain discoverable until old connections are closed, even if a new
+            // service instance has already been created for the next Activity.
+            stop { forwardingLock.withLock { forwardingServices.remove(this) } }
         }
     }
 
@@ -736,6 +747,73 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     companion object {
+        // Shared with session startup so a late permission callback or a replacement
+        // service cannot reclaim a device while its exporter owns it.
+        private val forwardingReservations = UsbForwardingReservations()
+        private val forwardingLock = forwardingReservations.lock
+        private val forwardingServices = mutableSetOf<UsbDriverService>()
+
+        class ForwardingReservation internal constructor(
+            private val lease: UsbForwardingReservations.Lease
+        ) {
+            val ready get() = lease.ready
+
+            fun restoreWhenReady(onFailure: (Throwable) -> Unit) {
+                lease.restoreWhenReady(::restoreDrivers, onFailure)
+            }
+
+            fun restore() = lease.restore(::restoreDrivers)
+
+            private fun restoreDrivers(path: String) {
+                forwardingServices.forEach { service ->
+                    service.mainHandler.post {
+                        service.usbManager?.deviceList?.get(path)?.let {
+                            service.handleUsbDeviceStateSafely(it)
+                        }
+                    }
+                }
+            }
+        }
+
+        /** Called on the export worker; ready completes only after local USB release. */
+        @SuppressLint("NewApi") // CompletableFuture is supplied by core library desugaring.
+        fun reserveForForwarding(device: UsbDevice): ForwardingReservation {
+            val lease: UsbForwardingReservations.Lease
+            val stops = mutableListOf<CompletableFuture<Void>>()
+            val controllersToStop = mutableListOf<AbstractController>()
+            forwardingLock.withLock {
+                lease = forwardingReservations.reserve(device.deviceName)
+                forwardingServices.forEach { service ->
+                    if (service.sessionHandoff.isStopping) {
+                        stops.add(service.stopResult.completion)
+                    } else {
+                        synchronized(service.controllersLock) {
+                            val matches = service.controllers.filter {
+                                service.controllerDevices[it] == device.deviceName
+                            }
+                            controllersToStop.addAll(matches)
+                            service.controllers.removeAll(matches.toSet())
+                        }
+                    }
+                }
+            }
+            // Drivers may join threads which call back into the service. Never stop
+            // them under the session lock.
+            controllersToStop.forEach { controller ->
+                val stopped = CompletableFuture<Void>()
+                stops.add(stopped)
+                try {
+                    controller.stopWithResult { result ->
+                        result.fold({ stopped.complete(null) }, { stopped.completeExceptionally(it) })
+                    }
+                } catch (error: Exception) {
+                    stopped.completeExceptionally(error)
+                }
+            }
+            lease.awaitStops(stops)
+            return ForwardingReservation(lease)
+        }
+
         private const val ACTION_USB_PERMISSION = "com.limelight.USB_PERMISSION"
         private const val USB_SESSION_RETRY_DELAY_MS = 50L
 

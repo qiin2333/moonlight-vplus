@@ -2,6 +2,7 @@ package com.limelight.nvstream.jni;
 
 import com.limelight.nvstream.Ds5HapticsPcmFrame;
 import com.limelight.nvstream.NvConnectionListener;
+import com.limelight.nvstream.RemoteTextContext;
 import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
 
@@ -217,7 +218,7 @@ public class MoonBridge {
 
     private static AudioRenderer audioRenderer;
     private static VideoDecoderRenderer videoRenderer;
-    private static NvConnectionListener connectionListener;
+    private static volatile NvConnectionListener connectionListener;
 
     static {
         System.loadLibrary("moonlight-core");
@@ -487,6 +488,17 @@ public class MoonBridge {
         }
     }
 
+    public static void bridgeClRemoteTextContext(int[] values, long activationId, long inputToken) {
+        NvConnectionListener listener = connectionListener;
+        if (listener == null || values == null || values.length != 16) return;
+        listener.onRemoteTextContext(new RemoteTextContext(
+                values[0], values[1], activationId, inputToken,
+                values[2], values[3], values[4], values[5],
+                values[6], values[7], values[8], values[9],
+                values[10], values[11], values[12], values[13],
+                values[14], values[15]));
+    }
+
     /**
      * Encode a v1 clipboard frame and send it to the host. Returns 0 on success;
      * negative on failure (-1 invalid args, -2 unsupported by host, -3 transport).
@@ -516,6 +528,12 @@ public class MoonBridge {
         MoonBridge.videoRenderer = videoRenderer;
         MoonBridge.audioRenderer = audioRenderer;
         MoonBridge.connectionListener = connectionListener;
+    }
+
+    public static synchronized void detachConnectionListener(NvConnectionListener listener) {
+        if (MoonBridge.connectionListener == listener) {
+            MoonBridge.connectionListener = null;
+        }
     }
 
     public static void cleanupBridge() {

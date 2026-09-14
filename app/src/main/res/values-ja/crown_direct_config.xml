@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_direct_config_action">構成を直接切り替え</string>
+    <string name="crown_direct_config_target">%1$s に切り替え</string>
+    <string name="crown_direct_config_unavailable">構成が利用できません（操作は無効）</string>
+    <string name="crown_direct_config_self">現在の構成のため、切り替えは不要です</string>
+    <string name="crown_direct_config_no_other">ほかの構成はありません</string>
+    <string name="game_menu_edit_mode">ボタン配置を編集</string>
+    <string name="game_menu_configure_settings">構成を切り替え</string>
+</resources>

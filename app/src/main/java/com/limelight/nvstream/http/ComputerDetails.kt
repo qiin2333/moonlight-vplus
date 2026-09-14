@@ -60,6 +60,8 @@ class ComputerDetails {
     var externalPort = 0
     var pairState: PairingManager.PairState? = null
     var serverInfoTrustedByCert = false
+    // Legacy HTTPS 401 authenticates NOT_PAIRED even when details come from HTTP.
+    var pairStateTrusted = false
     var runningGameId = 0
     var rawAppList: String? = null
     var nvidiaServer = false
@@ -116,6 +118,7 @@ class ComputerDetails {
         this.httpsPort = details.httpsPort
         this.pairState = details.pairState
         this.serverInfoTrustedByCert = details.serverInfoTrustedByCert
+        this.pairStateTrusted = details.pairStateTrusted
         this.runningGameId = details.runningGameId
         this.nvidiaServer = details.nvidiaServer
         this.useVdd = details.useVdd
