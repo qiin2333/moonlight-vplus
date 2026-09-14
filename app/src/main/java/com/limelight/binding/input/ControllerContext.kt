@@ -389,13 +389,12 @@ class InputDeviceContext internal constructor(
 
         val emulatingMotionSensors = type != MoonBridge.LI_CTYPE_PS &&
             (sensorManager != null || joyConContribution.peerHasSensors)
+        // Recompute the Select+LB clickpad combo when peer sensor capabilities change.
+        needsClickpadEmulation = emulatingMotionSensors
         val reportedType: Byte
         if (emulatingMotionSensors) {
             // Override the detected controller type if we're emulating motion sensors on an Xbox controller
             reportedType = MoonBridge.LI_CTYPE_UNKNOWN
-
-            // Remember that we should enable the clickpad emulation combo (Select+LB) for this device
-            needsClickpadEmulation = true
         } else {
             // Report the true type to the host PC if we're not emulating motion sensors
             reportedType = type
