@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="title_combine_joycons">合并 Joy-Con 左右手柄</string>
+    <string name="joycon_system_capabilities">系统振动：%1$s · 陀螺仪：%2$s</string>
+    <string name="joycon_capability_available">可用</string>
+    <string name="joycon_capability_missing">安卓未暴露</string>
+    <string name="joycon_capability_unchecked">未检测</string>
+    <string name="summary_combine_joycons">将一代左右 Joy-Con 竖握合并为一个玩家。仅在左右各有一只未配对手柄时自动配对，下次串流生效。</string>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc"> 电脑已删除 </string>
     <string name="scut_not_paired"> 电脑未配对 </string>

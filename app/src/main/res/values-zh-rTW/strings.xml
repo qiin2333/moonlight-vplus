@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="title_combine_joycons">合併 Joy-Con 左右控制器</string>
+    <string name="joycon_system_capabilities">系統震動：%1$s · 陀螺儀：%2$s</string>
+    <string name="joycon_capability_available">可用</string>
+    <string name="joycon_capability_missing">Android 未提供</string>
+    <string name="joycon_capability_unchecked">未檢測</string>
+    <string name="summary_combine_joycons">將一代左右 Joy-Con 直握合併為一位玩家。僅在左右各有一隻未配對控制器時自動配對，下次串流生效。</string>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc"> 電腦已刪除 </string>
     <string name="scut_not_paired"> 電腦未配對 </string>

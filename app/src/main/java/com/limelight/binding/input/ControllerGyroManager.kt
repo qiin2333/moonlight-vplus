@@ -250,7 +250,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
      * are reassigned on every reconnect, so pick by capability rather than by ordering.
      */
     private fun controller0InputContextWithGyro(): InputDeviceContext? =
-        controller0InputContexts().firstOrNull {
+        controller0InputContexts().sortedBy { if (it.joyCon?.preferMotionSource == true) 0 else 1 }.firstOrNull {
             val deviceId = it.inputDevice?.id
             (deviceId == null || deviceId !in rejectedInputDeviceIds) &&
                 it.sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
