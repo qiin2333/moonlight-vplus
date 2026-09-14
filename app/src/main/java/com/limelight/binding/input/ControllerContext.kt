@@ -459,6 +459,11 @@ class InputDeviceContext internal constructor(
         this.leftTriggerMotor = oldContext.leftTriggerMotor
         this.rightTriggerMotor = oldContext.rightTriggerMotor
 
+        // destroy() clears the old mode; preserve it and schedule this Joy-Con's mouse loop first.
+        if (joyCon != null) {
+            setMouseEmulation(oldContext.mouseEmulationActive)
+        }
+
         // Don't release the controller number, because we will carry it over if it is present.
         // We also want to make sure the change is invisible to the host PC to avoid an add/remove
         // cycle for the gamepad which may break some games.

@@ -86,13 +86,15 @@ internal class JoyConControllerSupport(
             capabilities = capabilities or MoonBridge.LI_CCAP_RUMBLE.toInt()
         }
         val sensors = peer?.sensorManager
-        if (sensors?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null) {
+        val hasGyroscope = sensors?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
+        val hasAccelerometer = sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
+        if (hasGyroscope) {
             capabilities = capabilities or MoonBridge.LI_CCAP_GYRO.toInt()
         }
-        if (sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+        if (hasAccelerometer) {
             capabilities = capabilities or MoonBridge.LI_CCAP_ACCEL.toInt()
         }
-        return ArrivalContribution(buttons, capabilities.toShort(), sensors != null)
+        return ArrivalContribution(buttons, capabilities.toShort(), hasGyroscope || hasAccelerometer)
     }
 
     private companion object {
