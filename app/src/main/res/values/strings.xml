@@ -353,6 +353,12 @@
     <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced frame pacing. A lower matching refresh rate can save power but may add video latency.</string>
 
     <string name="category_gamepad_settings">Gamepad</string>
+    <string name="title_combine_joycons">Combine Joy-Con controllers</string>
+    <string name="joycon_system_capabilities">System rumble: %1$s · Gyroscope: %2$s</string>
+    <string name="joycon_capability_available">Available</string>
+    <string name="joycon_capability_missing">Not exposed by Android</string>
+    <string name="joycon_capability_unchecked">Not checked</string>
+    <string name="summary_combine_joycons">Use a first-generation left and right Joy-Con as one player, held vertically. Automatically pairs only when one unpaired controller of each side is connected. Applies to the next stream.</string>
     <string name="title_checkbox_multi_controller">Separate controllers and players</string>
     <string name="summary_checkbox_multi_controller">Expose each connected controller as a separate controller on the host. Turn off to combine them as one.</string>
     <string name="title_list_game_rumble_mode">Host game rumble output</string>

@@ -7,6 +7,9 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.hardware.usb.UsbDevice
+import android.hardware.Sensor
+import com.limelight.binding.input.joyConSide
+import com.limelight.binding.input.InputDeviceSensorPolicy
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Bundle
@@ -1319,7 +1322,8 @@ private object ControllerDiagnostics {
         val shortcutSupport: ShortcutSupport,
         val vendorId: Int,
         val productId: Int,
-        val note: Note
+        val note: Note,
+        val joyConCapabilities: String? = null
     )
 
     data class Snapshot(val devices: List<Device>)
@@ -1388,6 +1392,22 @@ private object ControllerDiagnostics {
                 shortcutSupport = shortcutSupport(InputPath.SYSTEM, prefs.enableStartKeyMenu),
                 vendorId = inputDevice.vendorId,
                 productId = inputDevice.productId,
+                joyConCapabilities = if (joyConSide(inputDevice.vendorId, inputDevice.productId) != null) {
+                    fun capabilityLabel(value: Boolean?): String = context.getString(when (value) {
+                        true -> R.string.joycon_capability_available
+                        false -> R.string.joycon_capability_missing
+                        null -> R.string.joycon_capability_unchecked
+                    })
+                    val rumble = runCatching { inputDevice.vibrator.hasVibrator() }.getOrNull()
+                    val gyro = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
+                        runCatching {
+                            inputDevice.sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
+                        }.getOrNull()
+                    } else null
+                    context.getString(R.string.joycon_system_capabilities,
+                        capabilityLabel(rumble), capabilityLabel(gyro))
+                } else null,
                 note = when (connectionType) {
                     ConnectionType.BUILT_IN -> Note.SYSTEM_BUILT_IN
                     else -> Note.SYSTEM_WIRELESS
@@ -3929,6 +3949,14 @@ private fun ControllerCard(device: ControllerDiagnostics.Device) {
                 lineHeight = 18.sp,
                 modifier = Modifier.padding(top = 2.dp)
             )
+            device.joyConCapabilities?.let { capabilities ->
+                Text(
+                    text = capabilities,
+                    color = colorResource(R.color.game_menu_text_secondary),
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
+                )
+            }
         }
     }
 }

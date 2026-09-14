@@ -158,9 +158,13 @@ class ControllerHandler(
 
         @JvmStatic
         fun hasJoystickAxes(device: InputDevice): Boolean {
-            return (device.sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK &&
-                    getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_X) != null &&
-                    getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Y) != null
+            if ((device.sources and InputDevice.SOURCE_JOYSTICK) != InputDevice.SOURCE_JOYSTICK) return false
+            if (getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_X) != null &&
+                getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Y) != null) return true
+            return joyConSide(device.vendorId, device.productId) == JoyConSide.RIGHT &&
+                JoyConMapping.stickAxes(JoyConSide.RIGHT, device.motionRanges.filter {
+                    getMotionRangeForJoystickAxis(device, it.axis) != null
+                }.map { it.axis }.toSet()) != null
         }
 
         @JvmStatic
@@ -208,6 +212,8 @@ class ControllerHandler(
         ): Short {
             var count = 0
             var mask: Short = 0
+            val preferences = PreferenceConfiguration.readPreferences(context)
+            val joyCons = mutableMapOf<Int, JoyConSide>()
 
             // Count all input devices that are gamepads
             val im = context.getSystemService(Context.INPUT_SERVICE) as InputManager
@@ -215,9 +221,16 @@ class ControllerHandler(
                 val dev = im.getInputDevice(id) ?: continue
 
                 if (hasJoystickAxes(dev)) {
+                    joyConSide(dev.vendorId, dev.productId)?.let { joyCons[id] = it }
                     LimeLog.info("Counting InputDevice: " + dev.name)
                     mask = (mask.toInt() or (1 shl count++)).toShort()
                 }
+            }
+
+            if (preferences.combineJoyCons) {
+                val pairing = JoyConPairing().apply { update(joyCons) }
+                count -= pairing.pairCount
+                mask = ((1 shl count.coerceAtMost(MAX_GAMEPADS.toInt())) - 1).toShort()
             }
 
             // Count all USB devices that match our drivers
@@ -237,7 +250,6 @@ class ControllerHandler(
                 }
             }
 
-            val preferences = PreferenceConfiguration.readPreferences(context)
             if (preferences.onscreenController ||
                 (includeScreenDs5Touchpad && preferences.screenDs5Touchpad)
             ) {
@@ -341,6 +353,7 @@ class ControllerHandler(
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
+    internal val joyConSupport = JoyConControllerSupport { inputDeviceContexts.get(it) }
     private val startWheelOwnerGate = StartWheelOwnerGate()
 
     internal data class ControllerArrivalMetadata(
@@ -490,14 +503,15 @@ class ControllerHandler(
         ) {
             return
         }
-        if (getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_X) == null ||
-            getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Y) == null
+        if ((getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_X) == null ||
+                getMotionRangeForJoystickAxis(device, MotionEvent.AXIS_Y) == null) &&
+            !(joyConSide(device.vendorId, device.productId) == JoyConSide.RIGHT && hasJoystickAxes(device))
         ) {
             return
         }
 
         val context = createInputDeviceContextForDevice(device)
-        if (hapticsCoordinator.hasRumbleCapability(context)) {
+        if (hapticsCoordinator.hasRumbleCapability(context) || context.joyCon?.combineEnabled == true) {
             inputDeviceContexts.put(deviceId, context)
             hapticsCoordinator.onSinkChanged(context.controllerNumber)
         }
@@ -514,6 +528,12 @@ class ControllerHandler(
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
+            joyConSupport.peer(context)?.takeIf { it.assignedControllerNumber }?.let {
+                refreshControllerArrival(it)
+                // Destroying the removed half may release a local menu capture.
+                sendControllerInputPacket(it)
+                it.enableSensors()
+            }
             if (wasController0GyroSource) {
                 gyroManager.onControllerSourceChanged(context.controllerNumber)
                 gyroManager.onSensorsReenabled()
@@ -751,6 +771,21 @@ class ControllerHandler(
     // ========== Controller Number Management ==========
 
     private fun releaseControllerNumber(context: GenericControllerContext) {
+        // A split controller owns one reservation. Keep the surviving half and its held
+        // inputs alive, while excluding all state belonging to the disconnected half.
+        val peer = (context as? InputDeviceContext)?.let { joyConSupport.peer(it) }
+        if (peer != null && peer.assignedControllerNumber && context.assignedControllerNumber &&
+            peer.controllerNumber == context.controllerNumber
+        ) {
+            peer.reservedControllerNumber = peer.reservedControllerNumber || context.reservedControllerNumber
+            context.reservedControllerNumber = false
+            context.assignedControllerNumber = false
+            synchronized(arrivalMetadataLock) {
+                sendControllerInputPacketLocked(peer,
+                    forceNeutral = isControllerLocallyCaptured(peer.controllerNumber))
+            }
+            return
+        }
         // If we reserved a controller number, remove that reservation
         if (context.reservedControllerNumber) {
             LimeLog.info("Controller number " + context.controllerNumber + " is now available")
@@ -823,8 +858,17 @@ class ControllerHandler(
             context.controllerNumber.toInt() == 0 && context.controllerGyroRoutingParticipated
 
         if (context is InputDeviceContext) {
+            joyConSupport.refreshPairing(context)
+            val peer = joyConSupport.peer(context)
             LimeLog.info(context.name + " (" + context.id + ") needs a controller number assigned")
-            if (!context.external) {
+            if (peer != null && peer.assignedControllerNumber) {
+                context.controllerNumber = peer.controllerNumber
+                context.setMouseEmulation(peer.mouseEmulationActive)
+                context.gyroReportRateHz = peer.gyroReportRateHz
+                context.accelReportRateHz = peer.accelReportRateHz
+                context.enableSensors()
+                LimeLog.info("Joined Joy-Con ${context.id} with ${peer.id} as controller ${peer.controllerNumber}")
+            } else if (!context.external) {
                 LimeLog.info("Built-in buttons hardcoded as controller 0")
                 context.controllerNumber = 0
             } else if (prefConfig.multiController && context.hasJoystickAxes) {
@@ -927,6 +971,11 @@ class ControllerHandler(
 
         // Report attributes of this new controller to the host
         reportControllerArrival(context)
+        if (context is InputDeviceContext) {
+            joyConSupport.peer(context)?.takeUnless { it.assignedControllerNumber }?.let {
+                assignControllerNumberIfNeeded(it)
+            }
+        }
         return true
     }
 
@@ -938,6 +987,13 @@ class ControllerHandler(
 
             context.controllerArrival.recordAttempt(context.sendControllerArrival())
         }
+
+    /** Recompute capabilities after a paired half disappears, even if arrival was reported. */
+    private fun refreshControllerArrival(context: InputDeviceContext) {
+        synchronized(context.controllerArrival) {
+            context.controllerArrival.recordAttempt(context.sendControllerArrival())
+        }
+    }
 
     internal fun retryPendingControllerArrivals(afterRetry: (() -> Unit)? = null) {
         mainThreadHandler.post {
@@ -1045,7 +1101,8 @@ class ControllerHandler(
     }
 
     private fun createInputDeviceContextForDevice(dev: InputDevice): InputDeviceContext {
-        val context = InputDeviceContext(this)
+        val context = InputDeviceContext(this,
+            JoyConDeviceState.create(dev.vendorId, dev.productId, prefConfig.combineJoyCons))
         val devName = dev.name
 
         LimeLog.info("Creating controller context for device: $devName")
@@ -1147,8 +1204,9 @@ class ControllerHandler(
 
         context.leftStickXAxis = MotionEvent.AXIS_X
         context.leftStickYAxis = MotionEvent.AXIS_Y
-        if (getMotionRangeForJoystickAxis(dev, context.leftStickXAxis) != null &&
-            getMotionRangeForJoystickAxis(dev, context.leftStickYAxis) != null
+        if ((getMotionRangeForJoystickAxis(dev, context.leftStickXAxis) != null &&
+            getMotionRangeForJoystickAxis(dev, context.leftStickYAxis) != null) ||
+            (joyConSide(dev.vendorId, dev.productId) == JoyConSide.RIGHT && hasJoystickAxes(dev))
         ) {
             // This is a gamepad
             hasGameController = true
@@ -1249,6 +1307,8 @@ class ControllerHandler(
             context.hatXAxis = MotionEvent.AXIS_HAT_X
             context.hatYAxis = MotionEvent.AXIS_HAT_Y
         }
+
+        if (joyConSupport.configureInput(context, dev)) hasGameController = true
 
         if (context.leftStickXAxis != -1 && context.leftStickYAxis != -1) {
             context.leftStickDeadzoneRadius = stickDeadzone.toFloat()
@@ -1704,6 +1764,10 @@ class ControllerHandler(
     // Return a valid keycode, -2 to consume, or -1 to not consume the event
     // Device MAY BE NULL
     private fun handleRemapping(context: InputDeviceContext, event: KeyEvent): Int {
+        context.joyCon?.let { joyCon ->
+            val mapped = joyCon.remapKey(event.keyCode, event.scanCode)
+            if (mapped != event.keyCode) return mapped
+        }
         // Don't capture the back button if configured
         if (context.ignoreBack) {
             if (event.keyCode == KeyEvent.KEYCODE_BACK) {
@@ -1993,7 +2057,14 @@ class ControllerHandler(
             context.rightStickY = physY
         }
 
-        if (context.hatXAxis != -1 && context.hatYAxis != -1) {
+        val joyConDpad = context.joyCon?.dpad
+        if (joyConDpad != null) {
+            joyConDpad.hat(
+                if (context.hatXAxis != -1) hatX else 0f,
+                if (context.hatYAxis != -1) hatY else 0f
+            )
+            context.inputMap = joyConDpad.applyTo(context.inputMap)
+        } else if (context.hatXAxis != -1 && context.hatYAxis != -1) {
             context.inputMap = context.inputMap and (ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG).inv()
             if (hatX < -0.5) {
                 context.inputMap = context.inputMap or ControllerPacket.LEFT_FLAG
@@ -2292,12 +2363,21 @@ class ControllerHandler(
 
     // ========== Button Handling ==========
 
+    private fun updateJoyConDpadKey(context: InputDeviceContext, keyCode: Int, pressed: Boolean): Boolean {
+        val dpad = context.joyCon?.dpad ?: return false
+        val flags = (ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and ControllerDpadState.MASK
+        if (flags == 0) return false
+        dpad.key(keyCode, flags, pressed)
+        context.inputMap = dpad.applyTo(context.inputMap)
+        return true
+    }
+
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
         val captureAtEntry = context.isLocalInputCaptureActive()
         if (!captureAtEntry) {
-            updatePerformanceShortcut(context, event.keyCode, pressed = false)
+            updatePerformanceShortcut(context, event, pressed = false)
         }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
@@ -2329,7 +2409,7 @@ class ControllerHandler(
             }
         }
 
-        when (keyCode) {
+        if (!updateJoyConDpadKey(context, keyCode, pressed = false)) when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_MODE ->
                 context.inputMap = context.inputMap and ControllerPacket.SPECIAL_BUTTON_FLAG.inv()
             KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU -> {
@@ -2500,7 +2580,7 @@ class ControllerHandler(
 
         val captureAtEntry = context.isLocalInputCaptureActive()
         if (!captureAtEntry) {
-            updatePerformanceShortcut(context, event.keyCode, pressed = true)
+            updatePerformanceShortcut(context, event, pressed = true)
         }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
@@ -2513,7 +2593,7 @@ class ControllerHandler(
 
         val isStartKey = keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU
 
-        when (keyCode) {
+        if (!updateJoyConDpadKey(context, keyCode, pressed = true)) when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_MODE -> {
                 context.hasMode = true
                 context.inputMap = context.inputMap or ControllerPacket.SPECIAL_BUTTON_FLAG
@@ -3051,10 +3131,11 @@ class ControllerHandler(
     }
 
     private fun updatePerformanceShortcut(
-        context: GenericControllerContext,
-        keyCode: Int,
+        context: InputDeviceContext,
+        event: KeyEvent,
         pressed: Boolean
     ) {
+        val keyCode = context.joyCon?.remapKey(event.keyCode, event.scanCode) ?: event.keyCode
         val flag = when (keyCode) {
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_BUTTON_SELECT -> ControllerPacket.BACK_FLAG
@@ -3330,7 +3411,8 @@ class ControllerHandler(
         val target = if (effectiveReportRateHz.toInt() == 0) {
             null
         } else {
-            matchingContexts.firstOrNull { it.sensorManager?.getDefaultSensor(sensorType) != null }
+            matchingContexts.sortedBy { if (joyConSupport.preferMotionSource(it)) 0 else 1 }
+                .firstOrNull { it.sensorManager?.getDefaultSensor(sensorType) != null }
         }
 
         if (target == null) {

@@ -117,6 +117,7 @@ class PreferenceConfiguration {
     var language: String = ""
     var smallIconMode = false
     var multiController = false
+    var combineJoyCons = true
     var usbDriver = false
     var dualSenseWirelessBridge = false
     var dualSenseDirectBluetooth = false
@@ -1381,6 +1382,7 @@ class PreferenceConfiguration {
             config.playHostAudio = prefs.getBoolean(HOST_AUDIO_PREF_STRING, DEFAULT_HOST_AUDIO)
             config.smallIconMode = prefs.getBoolean(SMALL_ICONS_PREF_STRING, getDefaultSmallMode(context))
             config.multiController = prefs.getBoolean(MULTI_CONTROLLER_PREF_STRING, DEFAULT_MULTI_CONTROLLER)
+            config.combineJoyCons = prefs.getBoolean("checkbox_combine_joycons", true)
             config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER)
             config.dualSenseWirelessBridge = prefs.getBoolean(
                 DUALSENSE_WIRELESS_BRIDGE_PREF_STRING,

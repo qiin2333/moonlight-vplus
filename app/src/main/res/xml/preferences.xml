@@ -753,6 +753,11 @@
             android:title="@string/stick_calibration_title"
             android:summary="@string/stick_calibration_summary" />
         <CheckBoxPreference
+            android:key="checkbox_combine_joycons"
+            android:title="@string/title_combine_joycons"
+            android:summary="@string/summary_combine_joycons"
+            android:defaultValue="true" />
+        <CheckBoxPreference
             android:key="checkbox_multi_controller"
             android:title="@string/title_checkbox_multi_controller"
             android:summary="@string/summary_checkbox_multi_controller"

@@ -113,17 +113,23 @@ open class GenericControllerContext(
     }
 
     fun toggleMouseEmulation() {
-        handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
-        mouseEmulationActive = !mouseEmulationActive
+        setMouseEmulation(!mouseEmulationActive)
+        onMouseEmulationChanged()
 
         val messageResId = if (mouseEmulationActive)
             R.string.game_menu_toggle_mouse_on else R.string.game_menu_toggle_mouse_off
         Toast.makeText(handler.activityContext, messageResId, Toast.LENGTH_SHORT).show()
+    }
 
-        if (mouseEmulationActive) {
+    internal fun setMouseEmulation(enabled: Boolean) {
+        handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
+        mouseEmulationActive = enabled
+        if (enabled) {
             handler.mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod.toLong())
         }
     }
+
+    protected open fun onMouseEmulationChanged() = Unit
 
     open fun destroy() {
         mouseEmulationActive = false
@@ -139,7 +145,14 @@ open class GenericControllerContext(
 // InputDeviceContext
 // =================================================================================
 
-class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(handler) {
+class InputDeviceContext internal constructor(
+    handler: ControllerHandler,
+    internal val joyCon: JoyConDeviceState? = null
+) : GenericControllerContext(handler) {
+    override fun onMouseEmulationChanged() {
+        handler.joyConSupport.peer(this)?.setMouseEmulation(mouseEmulationActive)
+    }
+
     internal val startGesture = StartGestureReducer()
     internal val startLongPressRunnable = Runnable {
         handler.onSystemStartLongPress(this)
@@ -301,7 +314,8 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
             else -> MoonBridge.guessControllerType(inputDev.vendorId, inputDev.productId)
         }
 
-        var supportedButtonFlags = 0
+        val joyConContribution = handler.joyConSupport.arrivalContribution(this)
+        var supportedButtonFlags = joyConContribution.supportedButtonFlags
         for ((key, value) in ControllerHandler.ANDROID_TO_LI_BUTTON_MAP) {
             if (inputDev.hasKeys(key)[0]) {
                 supportedButtonFlags = supportedButtonFlags or value
@@ -373,14 +387,14 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
             capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_GYRO.toInt()).toShort()
         }
 
-        val emulatingMotionSensors = type != MoonBridge.LI_CTYPE_PS && sensorManager != null
+        val emulatingMotionSensors = type != MoonBridge.LI_CTYPE_PS &&
+            (sensorManager != null || joyConContribution.peerHasSensors)
+        // Recompute the Select+LB clickpad combo when peer sensor capabilities change.
+        needsClickpadEmulation = emulatingMotionSensors
         val reportedType: Byte
         if (emulatingMotionSensors) {
             // Override the detected controller type if we're emulating motion sensors on an Xbox controller
             reportedType = MoonBridge.LI_CTYPE_UNKNOWN
-
-            // Remember that we should enable the clickpad emulation combo (Select+LB) for this device
-            needsClickpadEmulation = true
         } else {
             // Report the true type to the host PC if we're not emulating motion sensors
             reportedType = type
@@ -405,10 +419,17 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
             }
         }
 
+        capabilities = (capabilities.toInt() or joyConContribution.capabilities.toInt()).toShort()
+
         val result = handler.sendControllerArrivalEvent(
             controllerNumber.toByte(), reportedType, supportedButtonFlags, capabilities
         )
         if (result != 0) {
+            return result
+        }
+
+        // Metadata refreshes must not repeat first-arrival side effects or start another poller.
+        if (controllerArrival.isReported) {
             return result
         }
 
@@ -437,6 +458,11 @@ class InputDeviceContext(handler: ControllerHandler) : GenericControllerContext(
         this.highFreqMotor = oldContext.highFreqMotor
         this.leftTriggerMotor = oldContext.leftTriggerMotor
         this.rightTriggerMotor = oldContext.rightTriggerMotor
+
+        // destroy() clears the old mode; preserve it and schedule this Joy-Con's mouse loop first.
+        if (joyCon != null) {
+            setMouseEmulation(oldContext.mouseEmulationActive)
+        }
 
         // Don't release the controller number, because we will carry it over if it is present.
         // We also want to make sure the change is invisible to the host PC to avoid an add/remove
