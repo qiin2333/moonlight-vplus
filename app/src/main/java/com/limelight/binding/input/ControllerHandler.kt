@@ -2219,6 +2219,8 @@ class ControllerHandler(
 
     // ========== Motion Event Handling ==========
 
+    private val stickCenterStore = StickCenterStore(activityContext)
+
     fun handleMotionEvent(event: MotionEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
 
@@ -2229,13 +2231,13 @@ class ControllerHandler(
         // the controller feel sluggish for some users.
 
         if (context.leftStickXAxis != -1 && context.leftStickYAxis != -1) {
-            lsX = event.getAxisValue(context.leftStickXAxis)
-            lsY = event.getAxisValue(context.leftStickYAxis)
+            lsX = calibratedStickAxis(event, context.leftStickXAxis)
+            lsY = calibratedStickAxis(event, context.leftStickYAxis)
         }
 
         if (context.rightStickXAxis != -1 && context.rightStickYAxis != -1) {
-            rsX = event.getAxisValue(context.rightStickXAxis)
-            rsY = event.getAxisValue(context.rightStickYAxis)
+            rsX = calibratedStickAxis(event, context.rightStickXAxis)
+            rsY = calibratedStickAxis(event, context.rightStickYAxis)
         }
 
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
@@ -2254,6 +2256,12 @@ class ControllerHandler(
     }
 
     // ========== Mouse Emulation ==========
+
+    private fun calibratedStickAxis(event: MotionEvent, axis: Int): Float {
+        val value = event.getAxisValue(axis)
+        val device = event.device ?: return value
+        return stickCenterStore.correct(device, axis, value)
+    }
 
     private fun convertRawStickAxisToPixelMovement(stickX: Short, stickY: Short): Vector2d {
         val vector = Vector2d()
