@@ -8,6 +8,13 @@ import org.junit.Test
 class HevcLowLatencyPolicyTest {
 
     @Test
+    fun unrecognizedModeUsesAutomaticCompatibilityWithoutAffectingOtherCodecs() {
+        assertTrue(HevcLowLatencyPolicy.shouldSkipLowLatencyOptions("video/hevc", "c2.amlogic.hevc.decoder", -1))
+        assertFalse(HevcLowLatencyPolicy.shouldSkipLowLatencyOptions("video/av01", "c2.amlogic.av1.decoder", -1))
+        assertFalse(HevcLowLatencyPolicy.shouldSkipLowLatencyOptions("video/hevc", "c2.qti.hevc.decoder", -1))
+    }
+
+    @Test
     fun autoSkipsAmlogicHevcDecoders() {
         assertTrue(
             HevcLowLatencyPolicy.shouldSkipLowLatencyOptions(
