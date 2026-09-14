@@ -529,6 +529,7 @@ class ControllerHandler(
             context.destroy()
             inputDeviceContexts.remove(deviceId)
             joyConSupport.peer(context)?.takeIf { it.assignedControllerNumber }?.let {
+                refreshControllerArrival(it)
                 // Destroying the removed half may release a local menu capture.
                 sendControllerInputPacket(it)
                 it.enableSensors()
@@ -986,6 +987,13 @@ class ControllerHandler(
 
             context.controllerArrival.recordAttempt(context.sendControllerArrival())
         }
+
+    /** Recompute capabilities after a paired half disappears, even if arrival was reported. */
+    private fun refreshControllerArrival(context: InputDeviceContext) {
+        synchronized(context.controllerArrival) {
+            context.controllerArrival.recordAttempt(context.sendControllerArrival())
+        }
+    }
 
     internal fun retryPendingControllerArrivals(afterRetry: (() -> Unit)? = null) {
         mainThreadHandler.post {

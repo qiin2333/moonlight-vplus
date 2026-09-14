@@ -429,6 +429,11 @@ class InputDeviceContext internal constructor(
             return result
         }
 
+        // Metadata refreshes must not repeat first-arrival side effects or start another poller.
+        if (controllerArrival.isReported) {
+            return result
+        }
+
         if (emulatingMotionSensors) {
             Toast.makeText(
                 handler.activityContext,
