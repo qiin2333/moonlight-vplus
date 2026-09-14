@@ -2369,7 +2369,7 @@ class ControllerHandler(
 
         val captureAtEntry = context.isLocalInputCaptureActive()
         if (!captureAtEntry) {
-            updatePerformanceShortcut(context, event.keyCode, pressed = false)
+            updatePerformanceShortcut(context, event, pressed = false)
         }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
@@ -2572,7 +2572,7 @@ class ControllerHandler(
 
         val captureAtEntry = context.isLocalInputCaptureActive()
         if (!captureAtEntry) {
-            updatePerformanceShortcut(context, event.keyCode, pressed = true)
+            updatePerformanceShortcut(context, event, pressed = true)
         }
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
@@ -3123,10 +3123,11 @@ class ControllerHandler(
     }
 
     private fun updatePerformanceShortcut(
-        context: GenericControllerContext,
-        keyCode: Int,
+        context: InputDeviceContext,
+        event: KeyEvent,
         pressed: Boolean
     ) {
+        val keyCode = context.joyCon?.remapKey(event.keyCode, event.scanCode) ?: event.keyCode
         val flag = when (keyCode) {
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_BUTTON_SELECT -> ControllerPacket.BACK_FLAG
@@ -3402,7 +3403,7 @@ class ControllerHandler(
         val target = if (effectiveReportRateHz.toInt() == 0) {
             null
         } else {
-            matchingContexts.sortedBy { if (it.joyCon?.preferMotionSource == true) 0 else 1 }
+            matchingContexts.sortedBy { if (joyConSupport.preferMotionSource(it)) 0 else 1 }
                 .firstOrNull { it.sensorManager?.getDefaultSensor(sensorType) != null }
         }
 

@@ -32,6 +32,14 @@ internal class JoyConControllerSupport(
         }
     }
 
+    /** Resolve the live peer each time so a disconnected half cannot retain priority. */
+    fun preferMotionSource(context: InputDeviceContext): Boolean {
+        val peer = peer(context)
+        val hasActivePeer = peer != null && peer.assignedControllerNumber &&
+            context.assignedControllerNumber && peer.controllerNumber == context.controllerNumber
+        return context.joyCon?.preferMotionSource(hasActivePeer) == true
+    }
+
     /** Returns true if this configuration has usable joystick axes. */
     fun configureInput(context: InputDeviceContext, device: InputDevice): Boolean {
         val joyCon = context.joyCon?.takeIf { it.combineEnabled } ?: return false

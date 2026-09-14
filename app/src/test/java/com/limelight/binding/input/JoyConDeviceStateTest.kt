@@ -30,7 +30,7 @@ class JoyConDeviceStateTest {
             assertEquals(combine, state.combineEnabled)
             assertNotNull(state.dpad)
             assertEquals(KeyEvent.KEYCODE_DPAD_UP, state.remapKey(KeyEvent.KEYCODE_UNKNOWN, 0x220))
-            assertFalse(state.preferMotionSource)
+            assertFalse(state.preferMotionSource(hasActivePeer = true))
         }
     }
 
@@ -42,8 +42,48 @@ class JoyConDeviceStateTest {
         assertNull(combined.dpad)
         assertEquals(KeyEvent.KEYCODE_BUTTON_X, independent.remapKey(KeyEvent.KEYCODE_BUTTON_X, 0))
         assertEquals(KeyEvent.KEYCODE_BUTTON_Y, combined.remapKey(KeyEvent.KEYCODE_BUTTON_X, 0))
-        assertFalse(independent.preferMotionSource)
-        assertTrue(combined.preferMotionSource)
+        assertFalse(independent.preferMotionSource(hasActivePeer = true))
+        assertTrue(combined.preferMotionSource(hasActivePeer = true))
+    }
+
+    @Test fun rightMotionPriorityFollowsPairConnectionAndDisconnection() {
+        val right = JoyConDeviceState.create(0x057e, 0x2007, true)!!
+        val pairing = JoyConPairing()
+        fun preferred() = right.preferMotionSource(pairing.partner(2) != null)
+
+        pairing.update(mapOf(2 to JoyConSide.RIGHT))
+        assertFalse(preferred())
+        pairing.update(mapOf(1 to JoyConSide.LEFT, 2 to JoyConSide.RIGHT))
+        assertTrue(preferred())
+        pairing.update(mapOf(2 to JoyConSide.RIGHT))
+        assertFalse(preferred())
+        pairing.update(mapOf(3 to JoyConSide.LEFT, 2 to JoyConSide.RIGHT))
+        assertTrue(preferred())
+    }
+
+    @Test fun shortcutChordUsesLogicalXForBothPressAndRelease() {
+        for (combine in listOf(false, true)) {
+            val right = JoyConDeviceState.create(0x057e, 0x2007, combine)!!
+            val modifiers = ControllerPacket.BACK_FLAG or ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG
+            val chord = ControllerButtonChordState(modifiers or ControllerPacket.X_FLAG)
+            fun update(rawKey: Int, pressed: Boolean): Boolean {
+                val flag = when (right.remapKey(rawKey, 0)) {
+                    KeyEvent.KEYCODE_BUTTON_X -> ControllerPacket.X_FLAG
+                    else -> return false
+                }
+                return chord.updateButton(flag, pressed)
+            }
+            val logicalX = if (combine) KeyEvent.KEYCODE_BUTTON_Y else KeyEvent.KEYCODE_BUTTON_X
+            val logicalY = if (combine) KeyEvent.KEYCODE_BUTTON_X else KeyEvent.KEYCODE_BUTTON_Y
+            assertFalse(chord.updateSnapshot(modifiers))
+            assertFalse(update(logicalY, true))
+            assertTrue(update(logicalX, true))
+            assertFalse(update(logicalX, true))
+            assertFalse(update(logicalY, false))
+            assertFalse(update(logicalX, true))
+            assertFalse(update(logicalX, false))
+            assertTrue(update(logicalX, true))
+        }
     }
 
     @Test fun separateDevicesAndReconnectionsDoNotShareHeldDirections() {

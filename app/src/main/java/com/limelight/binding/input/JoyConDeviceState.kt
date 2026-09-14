@@ -6,7 +6,8 @@ internal class JoyConDeviceState private constructor(
     val combineEnabled: Boolean
 ) {
     val dpad: ControllerDpadState? = if (side == JoyConSide.LEFT) ControllerDpadState() else null
-    val preferMotionSource: Boolean get() = combineEnabled && side == JoyConSide.RIGHT
+    fun preferMotionSource(hasActivePeer: Boolean): Boolean =
+        combineEnabled && side == JoyConSide.RIGHT && hasActivePeer
 
     fun remapKey(keyCode: Int, scanCode: Int): Int {
         // The left scan-code workaround is needed even when pairing is disabled.

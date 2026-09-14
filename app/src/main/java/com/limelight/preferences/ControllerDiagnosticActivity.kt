@@ -1399,7 +1399,8 @@ private object ControllerDiagnostics {
                         null -> R.string.joycon_capability_unchecked
                     })
                     val rumble = runCatching { inputDevice.vibrator.hasVibrator() }.getOrNull()
-                    val gyro = if (InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
+                    val gyro = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
                         runCatching {
                             inputDevice.sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
                         }.getOrNull()
