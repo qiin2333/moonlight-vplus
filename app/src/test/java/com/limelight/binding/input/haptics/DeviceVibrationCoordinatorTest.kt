@@ -154,8 +154,8 @@ class DeviceVibrationCoordinatorTest {
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
         await { vibrations.size == 1 }
 
-        // Quantizes back to 160: no write, but the level lease must stay scheduled.
-        coordinator.submitGameRumble(ROUTED_GAME, 161, 100)
+        // An identical level needs no write, but its lease must stay scheduled.
+        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
         val barrier = executor.submit {}
         barrier.get(2, TimeUnit.SECONDS)
         assertEquals(1, vibrations.size)
@@ -166,6 +166,48 @@ class DeviceVibrationCoordinatorTest {
 
         coordinator.stop()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun weakLevelsAndSmallChangesSurviveTheDefaultPacedWorker() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock)
+        try {
+            // Includes a one-unit change and the same target approached from both directions.
+            val levels = listOf(1, 8, 9, 21, 32, 21, 1)
+            levels.forEachIndexed { index, amplitude ->
+                coordinator.submitGameRumble(ROUTED_GAME, amplitude, 100)
+                await { vibrations.size == index + 1 }
+                assertEquals(Vibration(amplitude, 500), vibrations.last())
+            }
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun strengthScalingDoesNotRaiseWeakLevelsAndZeroStillCancels() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val cancels = AtomicInteger()
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock) { cancels.incrementAndGet() }
+        try {
+            coordinator.submitGameRumble(ROUTED_GAME, 10, 50)
+            await { vibrations.size == 1 }
+            assertEquals(Vibration(5, 500), vibrations.last())
+            coordinator.submitGameRumble(ROUTED_GAME, 10, 0)
+            await { cancels.get() == 1 }
+            coordinator.submitGameRumble(ROUTED_GAME, 1, 200)
+            await { vibrations.size == 2 }
+            assertEquals(Vibration(2, 500), vibrations.last())
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
     }
 
     @Test

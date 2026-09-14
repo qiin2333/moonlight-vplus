@@ -136,7 +136,7 @@ class GameRumblePipelineTest {
         assertEquals(writes, r.deviceWrites.size)
         r.device.releaseFromAudio()
         r.flush()
-        assertTrue(r.deviceWrites.last() in 16..48)
+        assertEquals(25, r.deviceWrites.last())
         r.host(0f, 0f)
         assertEquals(0, r.deviceWrites.last())
     }
@@ -152,6 +152,15 @@ class GameRumblePipelineTest {
         r.pipeline.submitHost(0, ControllerRumbleState(1f, 1f))
         r.pipeline.replay(0)
         assertEquals(count, r.controllerWrites.size)
+        assertEquals(0, r.deviceWrites.last())
+    }
+
+    @Test fun weakHighChannelDetailReachesTheBodyWithoutAMinimumFloor() = Rig().use { r ->
+        r.host(0f, 0.1f)
+        assertEquals(8, r.deviceWrites.last())
+        r.advance(250)
+        assertEquals(2, r.deviceWrites.last())
+        r.host(0f, 0f)
         assertEquals(0, r.deviceWrites.last())
     }
 

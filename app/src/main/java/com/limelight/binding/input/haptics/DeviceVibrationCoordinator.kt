@@ -80,13 +80,11 @@ internal class DeviceVibrationCoordinator(
     ) {
         val command = synchronized(lock) {
             if (closed) return
-            val previousAmplitude = gameSources[source]?.amplitude
+            // Keep the API's full amplitude range. Transport pacing belongs to the dispatcher,
+            // not a minimum level or history-dependent quantization of the authored signal.
             val state = MotorState(
-                quantizeGameAmplitude(
-                    (targetAmplitude.coerceIn(0, 255) *
-                        strengthPercent.coerceIn(0, 200) / 100.0).toInt(),
-                    previousAmplitude
-                )
+                (targetAmplitude.coerceIn(0, 255) *
+                    strengthPercent.coerceIn(0, 200) / 100.0).toInt().coerceIn(0, 255)
             )
             if (state.amplitude == 0) {
                 gameSources.remove(source)
@@ -296,19 +294,6 @@ internal class DeviceVibrationCoordinator(
         }
     }
 
-    private fun quantizeGameAmplitude(rawAmplitude: Int, previousAmplitude: Int?): Int {
-        if (rawAmplitude == 0) return 0
-        if (previousAmplitude != null &&
-            kotlin.math.abs(rawAmplitude - previousAmplitude) < GAME_AMPLITUDE_HYSTERESIS
-        ) {
-            return previousAmplitude
-        }
-        return (
-            (rawAmplitude + GAME_AMPLITUDE_STEP / 2) / GAME_AMPLITUDE_STEP *
-                GAME_AMPLITUDE_STEP
-            ).coerceIn(GAME_AMPLITUDE_STEP, 255)
-    }
-
     private companion object {
         val THREAD_NUMBER = AtomicInteger()
         // Long one-shot effects are reprogrammed only four times per second. Some vendor
@@ -319,8 +304,6 @@ internal class DeviceVibrationCoordinator(
         const val GAME_SOURCE_LEASE_MS = 500L
         const val GAME_SOURCE_REFRESH_MS = 375L
         const val MAXIMUM_TOUCH_DURATION_MS = 1_000L
-        const val GAME_AMPLITUDE_STEP = 16
-        const val GAME_AMPLITUDE_HYSTERESIS = 12
 
         fun newWorker(): ScheduledExecutorService {
             val threadNumber = THREAD_NUMBER.incrementAndGet()
