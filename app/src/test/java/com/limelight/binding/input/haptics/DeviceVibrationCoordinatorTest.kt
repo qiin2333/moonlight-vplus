@@ -145,7 +145,7 @@ class DeviceVibrationCoordinatorTest {
     }
 
     @Test
-    fun imperceptibleChangesAreDeduplicatedAndConstantStateRefreshesItsLease() {
+    fun identicalLevelsAreDeduplicatedAndRefreshTheirLease() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
         val clock = FakeClock()
@@ -204,25 +204,13 @@ class DeviceVibrationCoordinatorTest {
             coordinator.submitGameRumble(ROUTED_GAME, 1, 200)
             await { vibrations.size == 2 }
             assertEquals(Vibration(2, 500), vibrations.last())
+            coordinator.submitGameRumble(ROUTED_GAME, 128, 200)
+            await { vibrations.size == 3 }
+            assertEquals(Vibration(255, 500), vibrations.last())
         } finally {
             coordinator.stop()
             assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
         }
-    }
-
-    @Test
-    fun strengthBoostIsAppliedToTheTargetAmplitude() {
-        val executor = Executors.newSingleThreadScheduledExecutor()
-        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
-        val clock = FakeClock()
-        val coordinator = coordinator(executor, vibrations, clock)
-
-        coordinator.submitGameRumble(ROUTED_GAME, 128, 200)
-        await { vibrations.size == 1 }
-        assertEquals(Vibration(255, 500), vibrations.last())
-
-        coordinator.stop()
-        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
     }
 
     @Test
