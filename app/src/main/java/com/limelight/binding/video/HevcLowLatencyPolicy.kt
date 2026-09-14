@@ -8,14 +8,17 @@ import com.limelight.preferences.PreferenceConfiguration
  * Amlogic C2 HEVC decoders stall the display pipeline when low-latency mode is
  * active (issue #499, moonlight-android#1584): the codec reports 60 FPS while
  * the surface refreshes around once per second, and configure() succeeds, so
- * the caller's option-sweep retry never triggers. Skipping low-latency options
- * may increase latency; the tradeoff depends on the decoder and firmware.
+ * a configuration-failure fallback cannot detect the runtime stall. Skipping
+ * low-latency options may increase latency; the tradeoff depends on the decoder
+ * and firmware.
  *
  * AUTO skips for every Amlogic HEVC decoder; OFF skips for all HEVC/Dolby
  * Vision streams; ON skips nothing (previous behavior). H.264 and AV1 are
- * never touched. Realtime priority is an independent scheduling hint: the
- * compatibility path tries it on API 23+, then retries without optional tuning.
- * HEVC reference-frame invalidation remains governed by its existing policy.
+ * never touched. Realtime priority is an independent scheduling hint: on API
+ * 23+, the compatibility path tries it first and retries with a fresh format
+ * without optional tuning only if codec configuration fails. API 22 uses one
+ * bare-format attempt. HEVC reference-frame invalidation remains governed by
+ * its existing policy.
  */
 object HevcLowLatencyPolicy {
 
