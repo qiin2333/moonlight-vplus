@@ -10,6 +10,9 @@ import android.graphics.drawable.StateListDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.provider.Settings
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -58,6 +61,23 @@ class VirtualController(
         if (pressed) buttonSources[source] = flags else buttonSources.remove(source)
         controllerInputContext.inputMap = buttonSources.values.fold(0) { bits, value -> bits or value }.toShort()
         sendControllerInputContext()
+    }
+
+    private val deviceVibrator by lazy { context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
+
+    @Suppress("DEPRECATION")
+    internal fun performClickHaptic() {
+        if (controllerMode != ControllerMode.Active ||
+            Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
+        val vibrator = deviceVibrator ?: return
+        if (!vibrator.hasVibrator()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            vibrator.vibrate(10)
+        }
     }
 
     private var hidden = false

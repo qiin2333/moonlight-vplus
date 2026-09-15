@@ -56,6 +56,7 @@ open class DigitalButton(controller: VirtualController, elementId: Int, private 
         isPressed = owners.isNotEmpty()
         if (previous == isPressed) return
         if (isPressed) {
+            virtualController.performClickHaptic()
             listeners.forEach { it.onClick() }
             virtualController.handler.postDelayed(longClick, 3000)
         } else {

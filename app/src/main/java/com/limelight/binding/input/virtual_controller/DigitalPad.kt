@@ -111,6 +111,7 @@ class DigitalPad(controller: VirtualController, context: Context) : VirtualContr
     }
 
     override fun onElementTouchEvent(event: MotionEvent): Boolean {
+        val previousDirection = direction
         direction = when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                 var result = 0
@@ -123,6 +124,7 @@ class DigitalPad(controller: VirtualController, context: Context) : VirtualContr
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> 0
             else -> return true
         }
+        if (direction != 0 && direction != previousDirection) virtualController.performClickHaptic()
         listeners.forEach { it.onDirectionChange(direction) }
         invalidate()
         return true
