@@ -8,7 +8,11 @@ package com.easytier.jni
 object EasyTierJNI {
 
     init {
-        // 加载本地库 (libeasytier_android_jni.so)
+        // The JNI bridge calls symbols exported by libeasytier_ffi.so. Load the
+        // dependency explicitly as well as retaining the ELF DT_NEEDED link used
+        // by release builds, so test ABIs and vendor-packaged builds initialize in
+        // the same deterministic order.
+        System.loadLibrary("easytier_ffi")
         System.loadLibrary("easytier_android_jni")
     }
 

@@ -1,9 +1,12 @@
 package com.limelight.utils.easytier
 
+import com.limelight.utils.remoteconnect.EasyTierConnectionProfile
+
 internal data class EasyTierConfigUiState(
         val networkName: String = "",
         val networkSecret: String = "",
         val ipv4: String = "",
+        val dhcp: Boolean = false,
         val listeners: String = "",
         val peers: String = "",
         val useSmoltcp: Boolean = false,
@@ -38,6 +41,7 @@ internal object EasyTierTomlCodec {
                 networkName = extractValue(toml, "network_name", ""),
                 networkSecret = extractValue(toml, "network_secret", ""),
                 ipv4 = ipv4,
+                dhcp = extractValue(toml, "dhcp", "false").toBoolean(),
                 listeners = extractListAsString(toml, "listeners"),
                 peers = extractListAsString(toml, "uri"),
                 useSmoltcp = extractValue(toml, "use_smoltcp", "false").toBoolean(),
@@ -58,10 +62,12 @@ internal object EasyTierTomlCodec {
 
     fun build(config: EasyTierConfigUiState): String {
         val sb = StringBuilder()
-        appendTomlString(sb, "hostname", "moonlight-V+")
+        appendTomlString(sb, "hostname", "moonlight-remote")
         appendTomlString(sb, "instance_name", "Default")
-        sb.append("dhcp = false\n")
-        appendTomlString(sb, "ipv4", "${config.ipv4.ifBlank { DEFAULT_IPV4 }}/24", writeEmpty = true)
+        sb.append("dhcp = ${config.dhcp}\n")
+        if (!config.dhcp) {
+            appendTomlString(sb, "ipv4", "${config.ipv4.ifBlank { DEFAULT_IPV4 }}/24", writeEmpty = true)
+        }
 
         appendTomlStringArray(sb, "listeners", nonBlankLines(config.listeners))
 
@@ -90,6 +96,36 @@ internal object EasyTierTomlCodec {
         appendFlagIfNotDefault(sb, "disable_udp_hole_punching", config.disableUdpHolePunching, false)
         appendFlagIfNotDefault(sb, "disable_sym_hole_punching", config.disableSymHolePunching, false)
 
+        return sb.toString()
+    }
+
+    fun buildConnectionProfile(profile: EasyTierConnectionProfile): String {
+        val sb = StringBuilder()
+        appendTomlString(sb, "hostname", "moonlight-remote")
+        appendTomlString(sb, "instance_name", "Default")
+        sb.append("dhcp = true\n")
+        appendTomlStringArray(sb, "listeners", listOf("tcp://0.0.0.0:0", "udp://0.0.0.0:0"))
+        appendTomlString(sb, "rpc_portal", "127.0.0.1:0")
+
+        // Host-issued profiles must never accept peer-advertised subnet, DNS, or exit-node routes.
+        sb.append("exit_nodes = []\n")
+        sb.append("routes = []\n")
+        sb.append("proxy_network = []\n")
+        sb.append("\n[network_identity]\n")
+        appendTomlString(sb, "network_name", profile.networkName)
+        appendTomlString(sb, "network_secret", profile.networkSecret, writeEmpty = true)
+
+        for (peer in profile.peers) {
+            appendTomlPeer(sb, peer)
+        }
+
+        sb.append("\n[flags]\n")
+        sb.append("latency_first = true\n")
+        sb.append("enable_ipv6 = false\n")
+        sb.append("enable_exit_node = false\n")
+        sb.append("proxy_forward_by_system = false\n")
+        sb.append("accept_dns = false\n")
+        sb.append("relay_network_whitelist = \"\"\n")
         return sb.toString()
     }
 
