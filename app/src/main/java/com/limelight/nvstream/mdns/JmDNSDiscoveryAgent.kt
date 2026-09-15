@@ -95,7 +95,11 @@ class JmDNSDiscoveryAgent(
     }
 
     override fun stopDiscovery() {
-        multicastLock.release()
+        // startDiscovery() 先调本方法再 acquire；首次调用时锁尚未持有，
+        // 直接 release 会抛 IllegalStateException（"MulticastLock under-locked"）
+        if (multicastLock.isHeld) {
+            multicastLock.release()
+        }
 
         synchronized(listeners) {
             listeners.remove(this)

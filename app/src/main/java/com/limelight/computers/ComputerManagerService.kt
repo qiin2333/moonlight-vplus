@@ -111,6 +111,14 @@ class ComputerManagerService : Service() {
                 val privateBinder = binder as DiscoveryService.DiscoveryBinder
                 privateBinder.setListener(createDiscoveryListener())
                 discoveryBinder = privateBinder
+                // startPollingInternal() 在 DiscoveryService 连接完成前运行时（首次冷启动的常态，
+                // PcView 为加速首帧不再等 waitForReady），那里的 discoveryBinder?.startDiscovery()
+                // 会静默跳过。binder 到达时轮询已在进行，就必须在这里补上，否则整个会话
+                // 都不会触发 mDNS 自动发现（onResume 的 startPolling 因 polling 已激活而早退）。
+                if (pollingActive) {
+                    LimeLog.info("DiscoveryService connected after polling active; starting deferred discovery")
+                    privateBinder.startDiscovery(MDNS_QUERY_PERIOD_MS)
+                }
                 (this as Object).notifyAll()
             }
         }
