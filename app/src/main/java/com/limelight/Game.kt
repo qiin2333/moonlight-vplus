@@ -699,6 +699,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         computer.name = pcName
         computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
         progressOverlay?.computer = computer
+        // 机体诊断台数据源：本局串流配置快照
+        progressOverlay?.preferenceConfiguration = prefConfig
         progressOverlay?.show(
             resources.getString(R.string.conn_establishing_title),
             resources.getString(R.string.conn_establishing_msg)
