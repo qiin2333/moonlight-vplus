@@ -930,4 +930,5 @@
     <string name="stick_calibration_title">搖桿中心校正</string>
     <string name="stick_calibration_summary">將搖桿目前位置設為此控制器的中立位置</string>
 
+    <string name="osc_layout_title">虛擬手把配置</string>
 </resources>

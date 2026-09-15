@@ -4,6 +4,7 @@
 package com.limelight.binding.input.virtual_controller
 
 import android.content.Context
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement.Companion.EID_LT
 
 class LeftTrigger(controller: VirtualController, layer: Int, context: Context) :
     DigitalButton(controller, EID_LT, layer, context) {
