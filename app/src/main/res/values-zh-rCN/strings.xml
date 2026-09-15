@@ -2155,4 +2155,5 @@
     <string name="stick_calibration_title">摇杆中心校准</string>
     <string name="stick_calibration_summary">将摇杆当前位置设为此控制器的中立位置</string>
 
+    <string name="osc_layout_title">虚拟手柄布局</string>
 </resources>

@@ -2239,4 +2239,5 @@ Tap again to replace it.</string>
     <string name="stick_calibration_title">Stick center calibration</string>
     <string name="stick_calibration_summary">Use the current stick position as neutral for this controller</string>
 
+    <string name="osc_layout_title">Virtual controller layout</string>
 </resources>

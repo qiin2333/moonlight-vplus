@@ -3336,6 +3336,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_mouse_wheel",
             "checkbox_multi_controller",
             "checkbox_only_show_L3R3",
+            "list_osc_layout",
             "checkbox_reduce_refresh_rate",
             "checkbox_reverse_resolution",
             "checkbox_resume_stream",

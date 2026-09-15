@@ -21,3 +21,6 @@
 -keep class com.limelight.UsbPanelDevice { *; }
 -keep class com.limelight.UsbDeviceType** { *; }
 -keep class com.limelight.utils.AppActionSheet** { *; }
+
+# Virtual-controller instrumentation calls across the target/test APK boundary.
+-keep class com.limelight.binding.input.virtual_controller.** { *; }

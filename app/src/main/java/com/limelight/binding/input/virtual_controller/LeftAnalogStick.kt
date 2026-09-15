@@ -4,6 +4,7 @@
 package com.limelight.binding.input.virtual_controller
 
 import android.content.Context
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement.Companion.EID_LS
 import com.limelight.nvstream.input.ControllerPacket
 
 class LeftAnalogStick(controller: VirtualController, context: Context) :
@@ -21,15 +22,11 @@ class LeftAnalogStick(controller: VirtualController, context: Context) :
             override fun onClick() {}
 
             override fun onDoubleClick() {
-                val inputContext = controller.controllerInputContext
-                inputContext.inputMap = (inputContext.inputMap.toInt() or ControllerPacket.LS_CLK_FLAG).toShort()
-                controller.sendControllerInputContext()
+                controller.setButtonState(this, ControllerPacket.LS_CLK_FLAG, true)
             }
 
             override fun onRevoke() {
-                val inputContext = controller.controllerInputContext
-                inputContext.inputMap = (inputContext.inputMap.toInt() and ControllerPacket.LS_CLK_FLAG.inv()).toShort()
-                controller.sendControllerInputContext()
+                controller.setButtonState(this, ControllerPacket.LS_CLK_FLAG, false)
             }
         })
     }

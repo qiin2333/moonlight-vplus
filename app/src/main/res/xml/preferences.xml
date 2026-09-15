@@ -1003,6 +1003,14 @@
             android:key="checkbox_show_onscreen_controls"
             android:summary="@string/summary_checkbox_show_onscreen_controls"
             android:title="@string/title_checkbox_show_onscreen_controls" />
+        <ListPreference
+            android:key="list_osc_layout"
+            android:defaultValue="xbox"
+            android:dependency="checkbox_show_onscreen_controls"
+            android:title="@string/osc_layout_title"
+            android:summary="%s"
+            android:entries="@array/osc_layout_names"
+            android:entryValues="@array/osc_layout_values" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:dependency="checkbox_show_onscreen_controls"
