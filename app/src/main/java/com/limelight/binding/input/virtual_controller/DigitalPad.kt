@@ -62,14 +62,18 @@ class DigitalPad(controller: VirtualController, context: Context) : VirtualContr
             paint.color = if (active) pressedColor else defaultColor
             paint.style = Paint.Style.STROKE
             rect.set(width * bounds[0], height * bounds[1], width * bounds[2], height * bounds[3])
-            if (virtualController.layoutStyle == VirtualControllerLayout.NS) canvas.drawOval(rect, paint)
-            else canvas.drawRoundRect(rect, correctWidth * .045f, correctWidth * .045f, paint)
+            drawSegment(canvas)
             if (active) {
                 paint.style = Paint.Style.FILL
                 paint.alpha = paint.alpha / 5
-                canvas.drawRoundRect(rect, correctWidth * .045f, correctWidth * .045f, paint)
+                drawSegment(canvas)
             }
         }
+    }
+
+    private fun drawSegment(canvas: Canvas) {
+        if (virtualController.layoutStyle == VirtualControllerLayout.NS) canvas.drawOval(rect, paint)
+        else canvas.drawRoundRect(rect, correctWidth * .045f, correctWidth * .045f, paint)
     }
 
     private fun drawClassic(canvas: Canvas) {
