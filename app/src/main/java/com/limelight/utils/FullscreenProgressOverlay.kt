@@ -2,17 +2,17 @@ package com.limelight.utils
 
 import android.app.Activity
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
+import com.limelight.preferences.PreferenceConfiguration
 import java.util.Random
 
 class FullscreenProgressOverlay(
@@ -20,12 +20,10 @@ class FullscreenProgressOverlay(
     private val app: NvApp?
 ) {
     private val overlayView: View
-    private val statusText: TextView
-    private val progressText: TextView
-    private val randomTip: TextView
     private val appPosterBackgroundBlur: ImageView
     private val appPosterBackgroundClear: ImageView
-    private val progressBar: ProgressBar
+    private val viewfinder: PosterViewfinderView
+    private val diagnostic: FrameDiagnosticController
     private val rootView: ViewGroup
     private val tips: Array<String>
     private val random = Random()
@@ -33,6 +31,9 @@ class FullscreenProgressOverlay(
     private var isShowing = false
     private var posterRequestSerial = 0
     var computer: ComputerDetails? = null
+
+    /** 机体诊断数据源；show() 之前由 Game 注入本局串流配置快照。 */
+    var preferenceConfiguration: PreferenceConfiguration? = null
 
     init {
         tips = arrayOf(
@@ -60,12 +61,10 @@ class FullscreenProgressOverlay(
         val inflater = LayoutInflater.from(activity)
         overlayView = inflater.inflate(R.layout.fullscreen_progress_overlay, rootView, false)
 
-        statusText = overlayView.findViewById(R.id.statusText)
-        progressText = overlayView.findViewById(R.id.progressText)
-        randomTip = overlayView.findViewById(R.id.randomTip)
         appPosterBackgroundBlur = overlayView.findViewById(R.id.appPosterBackgroundBlur)
         appPosterBackgroundClear = overlayView.findViewById(R.id.appPosterBackgroundClear)
-        progressBar = overlayView.findViewById(R.id.progressBar)
+        viewfinder = overlayView.findViewById(R.id.posterViewfinder)
+        diagnostic = FrameDiagnosticController(activity, overlayView)
 
         overlayView.visibility = View.GONE
     }
@@ -75,11 +74,10 @@ class FullscreenProgressOverlay(
 
         activity.runOnUiThread {
             if (!isShowing) {
-                statusText.text = title
-                progressText.text = message
-
-                val tip = tips[random.nextInt(tips.size)]
-                randomTip.text = tip
+                // title/message 参数保留以兼容旧调用；诊断台用随机提示作为待机日志行
+                diagnostic.setHostLabel(computer?.name)
+                diagnostic.start(preferenceConfiguration)
+                diagnostic.setLog("> " + tips[random.nextInt(tips.size)])
 
                 if (overlayView.parent == null) {
                     rootView.addView(overlayView)
@@ -94,12 +92,13 @@ class FullscreenProgressOverlay(
         }
     }
 
+    /** 连接 stage 推进（ConnectionCallbackHandler.stageStarting）。 */
     fun setMessage(message: String) {
         if (activity.isFinishing) return
 
         activity.runOnUiThread {
             if (isShowing) {
-                progressText.text = message
+                diagnostic.onStage(message)
             }
         }
     }
@@ -109,7 +108,18 @@ class FullscreenProgressOverlay(
 
         activity.runOnUiThread {
             if (isShowing) {
-                statusText.text = status
+                diagnostic.setLog(status)
+            }
+        }
+    }
+
+    /** 连接已建立（connectionStarted）：HOST LINK 翻 OK 并进入 READY 态。 */
+    fun onConnectionEstablished() {
+        if (activity.isFinishing) return
+
+        activity.runOnUiThread {
+            if (isShowing) {
+                diagnostic.onConnectionEstablished()
             }
         }
     }
@@ -138,24 +148,11 @@ class FullscreenProgressOverlay(
     }
 
     fun setProgress(progress: Int) {
-        if (activity.isFinishing) return
-
-        activity.runOnUiThread {
-            if (isShowing) {
-                progressBar.isIndeterminate = false
-                progressBar.progress = progress
-            }
-        }
+        // 诊断台用 STAGE 计数替代连续进度条，此接口保留为兼容空实现
     }
 
     fun setIndeterminate(indeterminate: Boolean) {
-        if (activity.isFinishing) return
-
-        activity.runOnUiThread {
-            if (isShowing) {
-                progressBar.isIndeterminate = indeterminate
-            }
-        }
+        // 同上
     }
 
     fun dismiss() {
@@ -165,6 +162,7 @@ class FullscreenProgressOverlay(
             if (isShowing) {
                 isShowing = false
                 posterRequestSerial++
+                diagnostic.cancel()
                 overlayView.animate().cancel()
                 overlayView.animate()
                     .alpha(0f)
@@ -241,6 +239,7 @@ class FullscreenProgressOverlay(
         )
         appPosterBackgroundClear.setImageBitmap(bitmap)
         appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
+        updateViewfinder()
     }
 
     /** 亚克力：全屏模糊底图 + 绘制阶段合成的中央半透明完整封面。 */
@@ -293,6 +292,7 @@ class FullscreenProgressOverlay(
         clearRenderEffect(appPosterBackgroundBlur)
         appPosterBackgroundBlur.setImageDrawable(android.graphics.drawable.ColorDrawable(color))
         appPosterBackgroundBlur.imageAlpha = 255
+        viewfinder.setPosterRect(null)
     }
 
     private fun applyDrawablePoster(drawable: Drawable) {
@@ -340,6 +340,29 @@ class FullscreenProgressOverlay(
         appPosterBackgroundBlur.visibility = View.VISIBLE
         appPosterBackgroundClear.visibility = View.GONE
         appPosterBackgroundBlur.setImageResource(R.drawable.no_app_image)
+        viewfinder.setPosterRect(null)
+    }
+
+    /** 按海报 fitCenter 的实际显示区域更新取景框，并播放一次开机扫描。 */
+    private fun updateViewfinder() {
+        val iv = appPosterBackgroundClear
+        iv.post {
+            val d = iv.drawable ?: return@post
+            val dw = d.intrinsicWidth
+            val dh = d.intrinsicHeight
+            if (dw <= 0 || dh <= 0 || iv.width <= 0 || iv.height <= 0) return@post
+            val scale = minOf(iv.width.toFloat() / dw, iv.height.toFloat() / dh)
+            val w = dw * scale
+            val h = dh * scale
+            val rect = RectF(
+                (iv.width - w) / 2f,
+                (iv.height - h) / 2f,
+                (iv.width + w) / 2f,
+                (iv.height + h) / 2f
+            )
+            viewfinder.setPosterRect(rect)
+            viewfinder.playSweep()
+        }
     }
 
     private fun setAcrylicBitmap(bitmap: Bitmap) {
@@ -353,6 +376,7 @@ class FullscreenProgressOverlay(
             appPosterBackgroundClear.setImageBitmap(bitmap)
             appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
         }
+        updateViewfinder()
     }
 
     private fun setAcrylicDrawable(drawable: Drawable) {
@@ -366,6 +390,7 @@ class FullscreenProgressOverlay(
             appPosterBackgroundClear.setImageDrawable(drawable)
             appPosterBackgroundClear.imageAlpha = BackgroundImageManager.OVERLAY_IMAGE_ALPHA
         }
+        updateViewfinder()
     }
 
     private fun clearAcrylicMode() {
