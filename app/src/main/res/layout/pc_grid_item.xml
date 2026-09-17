@@ -35,7 +35,7 @@
                 android:layout_height="180dp"
                 android:layout_centerInParent="true"
                 android:background="@drawable/pc_icon_glow"
-                android:alpha="0.5" />
+                android:alpha="0.85" />
 
             <!-- 图标背景装饰 -->
             <View

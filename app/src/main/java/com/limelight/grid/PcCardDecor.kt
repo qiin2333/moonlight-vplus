@@ -10,6 +10,7 @@ import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.StateListDrawable
 import androidx.core.content.ContextCompat
 import com.limelight.R
+import com.limelight.utils.UiHelper
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -36,6 +37,27 @@ object PcCardDecor {
     private const val CHROMA_SCALE = 0.8
 
     private val cache = HashMap<String, Drawable>()
+    private var decorContext: Context? = null
+    private var decorContextNight = false
+
+    /**
+     * 返回与"期望日夜"一致的 Context：跟随壁纸模式锁定浅色时，即使系统
+     * 配置还是夜间，也用昼间配置解析调色板（不受 ROM 异步切换的迟滞影响）。
+     */
+    private fun decorContextOf(context: Context): Context {
+        val night = UiHelper.wantedNight(context)
+        val cur = (context.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (cur == night) return context
+        if (decorContext != null && decorContextNight == night) return decorContext!!
+        val conf = android.content.res.Configuration(context.resources.configuration)
+        conf.uiMode = (conf.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                if (night) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
+        val ctx = context.createConfigurationContext(conf)
+        decorContext = ctx
+        decorContextNight = night
+        return ctx
+    }
 
     // ---------- 对外 API ----------
 
@@ -47,15 +69,15 @@ object PcCardDecor {
     fun multiSelector(context: Context, bucket: Int): Drawable =
         cached(context, "multi", bucket) { ctx, b -> buildMultiSelector(ctx, b) }
 
-    /** 图标光晕（径向渐变椭圆）。 */
+    /** 图标光晕（径向渐变椭圆，色度增强版）。 */
     fun glow(context: Context, bucket: Int): Drawable =
         cached(context, "glow", bucket) { ctx, b ->
             buildRadialOval(
                 ctx,
                 intArrayOf(
-                    themed(ctx, b, R.color.pc_item_icon_glow_start),
-                    themed(ctx, b, R.color.pc_item_icon_glow_center),
-                    themed(ctx, b, R.color.pc_item_icon_glow_end),
+                    boostAlpha(boostChroma(themed(ctx, b, R.color.pc_item_icon_glow_start), 3.0), 2.0),
+                    boostAlpha(boostChroma(themed(ctx, b, R.color.pc_item_icon_glow_center), 3.0), 2.0),
+                    boostAlpha(boostChroma(themed(ctx, b, R.color.pc_item_icon_glow_end), 3.0), 2.0),
                 ),
                 95f,
                 null,
@@ -65,16 +87,15 @@ object PcCardDecor {
     /** 图标背景（径向渐变椭圆 + 1dp 描边）。 */
     fun iconBg(context: Context, bucket: Int): Drawable =
         cached(context, "iconbg", bucket) { ctx, b ->
-            buildRadialOval(
-                ctx,
-                intArrayOf(
-                    themed(ctx, b, R.color.pc_item_icon_bg_start),
-                    themed(ctx, b, R.color.pc_item_icon_bg_center),
-                    themed(ctx, b, R.color.pc_item_icon_bg_end),
-                ),
-                80f,
-                themed(ctx, b, R.color.pc_item_icon_bg_stroke) to dp(ctx, 1f),
+            val stops = intArrayOf(
+                themed(ctx, b, R.color.pc_item_icon_bg_start),
+                themed(ctx, b, R.color.pc_item_icon_bg_center),
+                themed(ctx, b, R.color.pc_item_icon_bg_end),
             )
+            com.limelight.LimeLog.info(
+                "DECOR iconbg bucket=$b stops=" + stops.joinToString(" ") { String.format("#%08X", it) }
+            )
+            buildRadialOval(ctx, stops, 80f, themed(ctx, b, R.color.pc_item_icon_bg_stroke) to dp(ctx, 1f))
         }
 
     /** 跟随壁纸模式下卡片表面文字的 on-color（表面锁定浅色，文字恒为深色）。 */
@@ -84,20 +105,47 @@ object PcCardDecor {
     // ---------- 缓存与回退 ----------
 
     private fun cached(context: Context, kind: String, bucket: Int, build: (Context, Int) -> Drawable): Drawable {
-        val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
+        val night = UiHelper.wantedNight(context)
+        val ctx = decorContextOf(context)
         val key = "$kind:${if (bucket in 0..MAX_BUCKET) bucket else -1}:$night"
+
         return cache.getOrPut(key) {
-            if (bucket in 0..MAX_BUCKET) build(context, bucket)
+            if (bucket in 0..MAX_BUCKET) build(ctx, bucket)
             else fallback(context, kind)
         }
     }
 
     private fun fallback(context: Context, kind: String): Drawable = when (kind) {
-        "sel" -> ContextCompat.getDrawable(context, R.drawable.pc_item_selector)!!
+        "sel" -> brandPinkSelector(context)
         "multi" -> ContextCompat.getDrawable(context, R.drawable.pc_item_multiple_addresses_selector)!!
         "glow" -> ContextCompat.getDrawable(context, R.drawable.pc_icon_glow)!!
         else -> ContextCompat.getDrawable(context, R.drawable.pc_item_icon_bg)!!
+    }
+
+    /**
+     * 提取失败（NO_BUCKET）时的兜底：品牌粉浅色 tonal ramp（恒定浅色，
+     * 与跟随壁纸模式的锁定形态一致——不再回退到夜间的深色选择器）。
+     */
+    private fun brandPinkSelector(context: Context): Drawable {
+        val accent = 0xFFE3F2.toInt()   // 品牌粉中心色 #FFE3F2
+        fun tone(chromaMult: Double, alphaHex: String): Int = toneOf(accent, chromaMult, alphaHex)
+        fun shape(stops: IntArray, strokeWidthDp: Float?, strokeColor: Int?): GradientDrawable {
+            val gd = GradientDrawable(Orientation.TL_BR, stops)
+            gd.shape = GradientDrawable.RECTANGLE
+            gd.cornerRadius = dim(context, R.dimen.corner_radius_large)
+            strokeColor?.let { gd.setStroke(dp(context, strokeWidthDp!!), it) }
+            return gd
+        }
+        val defaultStops = intArrayOf(tone(0.6, "F5"), tone(1.0, "E6"), tone(0.5, "CC"))
+        val pressedStops = surfaceStops(context, -1, "pressed")
+        val focusedStops = surfaceStops(context, -1, "focused")
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed),
+                    shape(pressedStops, 2f, themed(context, -1, R.color.pc_item_outline_focused)))
+            addState(intArrayOf(android.R.attr.state_focused), shape(focusedStops, null, null))
+            addState(intArrayOf(android.R.attr.state_selected), shape(focusedStops, null, null))
+            addState(intArrayOf(), shape(defaultStops, null, null))
+        }
     }
 
     // ---------- 颜色 ----------
@@ -284,6 +332,12 @@ object PcCardDecor {
         }
     }
 
+    /** alpha 增益（饱和前上限 FF）。 */
+    private fun boostAlpha(color: Int, mult: Double): Int {
+        val a = ((color ushr 24) * mult).toInt().coerceAtMost(255)
+        return (a shl 24) or (color and 0x00FFFFFF)
+    }
+
     /** LAB 色度增益：保 L* 与色相，只放大色度（用于静息表面中心的可见桶色）。 */
     private fun boostChroma(color: Int, mult: Double): Int {
         fun lin(c: Int): Double {
@@ -387,7 +441,7 @@ object PcCardDecor {
         gd.setColors(stops)
         gd.setGradientCenter(0.5f, 0.5f)
         gd.setGradientRadius(dp(context, radiusDp).toFloat())
-        stroke?.let { gd.setStroke(it.first, it.second) }
+        stroke?.let { gd.setStroke(it.second, it.first) }   // (宽度, 颜色)——注意参数序
         return gd
     }
 }

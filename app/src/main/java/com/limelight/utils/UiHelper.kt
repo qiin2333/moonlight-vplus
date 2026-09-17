@@ -88,6 +88,20 @@ object UiHelper {
     // ---------- 强调色模式 ----------
 
     private const val ACCENT_MODE_KEY = "accent_mode"
+
+    /**
+     * 主题偏好推导出的"期望日夜"（同步、即时）：
+     * dark → 夜；light → 昼；system → 跟随当前配置。
+     * 装饰层用它而不是读系统配置——ROM 的 per-app 夜间切换是异步的，
+     * 读配置会慢一拍（Flyme 上尤其明显）。
+     */
+    fun wantedNight(context: Context): Boolean = when (getAppThemeMode(context)) {
+        THEME_MODE_DARK -> true
+        THEME_MODE_LIGHT -> false
+        else -> (context.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
     const val ACCENT_MODE_PINK = "pink"
     const val ACCENT_MODE_BG = "bg"
 
