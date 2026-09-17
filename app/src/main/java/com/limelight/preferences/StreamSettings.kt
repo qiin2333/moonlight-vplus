@@ -41,7 +41,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
@@ -70,6 +69,8 @@ import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
+import com.limelight.ui.ThemedAppCompatActivity
+import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
@@ -116,7 +117,7 @@ import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-class StreamSettings : AppCompatActivity() {
+class StreamSettings : ThemedAppCompatActivity() {
 
     private lateinit var previousPrefs: PreferenceConfiguration
     private var previousDisplayPixelCount = 0
@@ -191,10 +192,7 @@ class StreamSettings : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 应用带阴影的主题
-        theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
-        // PreferenceThemeWithShadow 继承链会重新声明 appAccent=品牌粉，
-        // 覆盖掉 preCreated 阶段的取色 overlay —— 必须在其后重新叠加
-        UiHelper.applyAccentOverlay(this)
+        AppTheme.applyStyle(this, R.style.PreferenceThemeWithShadow)
 
         super.onCreate(savedInstanceState)
         ConfigurationSyncScheduler.runNow(this)
@@ -752,8 +750,7 @@ class StreamSettings : AppCompatActivity() {
         loadBackgroundImage()
         var shouldReloadSettings = nightModeChanged
         if (nightModeChanged) {
-            theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
-            UiHelper.applyAccentOverlay(this)
+            AppTheme.applyStyle(this, R.style.PreferenceThemeWithShadow)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -3202,8 +3199,7 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             // 添加阴影主题
-            requireActivity().theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
-            UiHelper.applyAccentOverlay(requireActivity())
+            AppTheme.applyStyle(requireActivity(), R.style.PreferenceThemeWithShadow)
 
             MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             initializeTouchModeDefaultsIfNeeded()

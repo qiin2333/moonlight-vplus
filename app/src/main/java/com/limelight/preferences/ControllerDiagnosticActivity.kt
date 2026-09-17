@@ -8,6 +8,7 @@ import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.hardware.usb.UsbDevice
 import android.hardware.Sensor
+import com.limelight.ui.ThemedComponentActivity
 import com.limelight.binding.input.joyConSide
 import com.limelight.binding.input.InputDeviceSensorPolicy
 import android.hardware.usb.UsbManager
@@ -22,7 +23,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.Window
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -139,7 +139,7 @@ import kotlinx.coroutines.launch
 import com.limelight.utils.appAccentSoftColor
 import com.limelight.utils.appAccentColor
 
-class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
+class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListener,
     UsbDriverService.UsbDriverStateListener {
     private var snapshot by mutableStateOf(ControllerDiagnostics.Snapshot(emptyList()))
     private val simulatorHandler = Handler(Looper.getMainLooper())

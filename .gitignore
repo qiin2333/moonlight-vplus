@@ -62,6 +62,7 @@ gradle/gradle-daemon-jvm.properties
 # Dev utility scripts (keep the reproducible accent palette generator)
 scripts/*
 !scripts/generate_accent_variants.py
+!scripts/test_accent_palette.py
 
 # Local mock server generated certs/logs
 tools/mock-sunshine/.generated/

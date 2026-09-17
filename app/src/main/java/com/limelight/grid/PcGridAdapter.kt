@@ -18,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.preference.PreferenceManager
 
+import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
@@ -28,8 +29,6 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.utils.BgAccent
-import com.limelight.utils.UiHelper
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.HostCacheKey
 
@@ -310,12 +309,7 @@ class PcGridAdapter(
 
     @SuppressLint("SetTextI18n")
     override fun populateView(parentView: View, imgView: ImageView?, spinnerView: View?, txtView: TextView?, overlayView: ImageView?, obj: PcView.ComputerObject) {
-        // 仅"跟随首页背景"模式用桶位变体；品牌粉模式（含 MIN_VALUE 兜底）用原版装饰
-        val accentBucket = if (UiHelper.getAccentMode(context) == UiHelper.ACCENT_MODE_BG) {
-            BgAccent.bucket(context)
-        } else {
-            Int.MIN_VALUE
-        }
+        val accentBucket = AppTheme.activeBucket(context)
         // 装饰层按色相桶换装（光晕/图标底；表面渐变在 populate* 里设置）
         parentView.findViewById<View>(R.id.pcIconGlow)?.background = PcCardDecor.glow(context, accentBucket)
         parentView.findViewById<View>(R.id.pcIconBg)?.background = PcCardDecor.iconBg(context, accentBucket)

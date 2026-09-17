@@ -4,9 +4,9 @@
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="@color/pc_item_surface_pressed_start"
-                android:centerColor="@color/pc_item_surface_pressed_center"
-                android:endColor="@color/pc_item_surface_pressed_end"
+                android:startColor="?attr/pcDecorSurfacePressedStart"
+                android:centerColor="?attr/pcDecorSurfacePressedCenter"
+                android:endColor="?attr/pcDecorSurfacePressedEnd"
                 android:angle="135" />
             <corners android:radius="@dimen/corner_radius_large"/>
             <stroke android:width="2dp" android:color="@color/pc_item_outline_focused"/>
@@ -17,9 +17,9 @@
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="@color/pc_item_surface_focused_start"
-                android:centerColor="@color/pc_item_surface_focused_center"
-                android:endColor="@color/pc_item_surface_focused_end"
+                android:startColor="?attr/pcDecorSurfaceFocusedStart"
+                android:centerColor="?attr/pcDecorSurfaceFocusedCenter"
+                android:endColor="?attr/pcDecorSurfaceFocusedEnd"
                 android:angle="135" />
             <corners android:radius="@dimen/corner_radius_large"/>
         </shape>
@@ -29,9 +29,9 @@
     <item android:state_selected="true">
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="@color/pc_item_surface_focused_start"
-                android:centerColor="@color/pc_item_surface_focused_center"
-                android:endColor="@color/pc_item_surface_focused_end"
+                android:startColor="?attr/pcDecorSurfaceFocusedStart"
+                android:centerColor="?attr/pcDecorSurfaceFocusedCenter"
+                android:endColor="?attr/pcDecorSurfaceFocusedEnd"
                 android:angle="135" />
             <corners android:radius="@dimen/corner_radius_large"/>
         </shape>
@@ -41,9 +41,9 @@
     <item>
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="@color/pc_item_surface_default_start"
-                android:centerColor="@color/pc_item_surface_default_center"
-                android:endColor="@color/pc_item_surface_default_end"
+                android:startColor="?attr/pcDecorSurfaceDefaultStart"
+                android:centerColor="?attr/pcDecorSurfaceDefaultCenter"
+                android:endColor="?attr/pcDecorSurfaceDefaultEnd"
                 android:angle="135" />
             <corners android:radius="@dimen/corner_radius_large"/>
         </shape>

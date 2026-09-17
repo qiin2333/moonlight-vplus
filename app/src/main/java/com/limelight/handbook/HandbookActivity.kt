@@ -26,7 +26,6 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
-import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -34,6 +33,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import com.limelight.ui.ThemedComponentActivity
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.utils.BrowserOnlyLauncher
@@ -66,7 +66,7 @@ internal class HandbookControllerHatState {
     }
 }
 
-class HandbookActivity : ComponentActivity() {
+class HandbookActivity : ThemedComponentActivity() {
     private val repository by lazy { HandbookRepository(applicationContext) }
 
     private val navigationHistory = mutableListOf<HandbookPageRef>()

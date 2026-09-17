@@ -4,9 +4,9 @@
         <shape android:shape="rectangle">
             <gradient
                 android:angle="-45"
-                android:centerColor="@color/pc_item_stack_state_back_center"
-                android:endColor="@color/pc_item_stack_state_back_end"
-                android:startColor="@color/pc_item_stack_state_back_start" />
+                android:centerColor="?attr/pcDecorStackStateBackCenter"
+                android:endColor="?attr/pcDecorStackStateBackEnd"
+                android:startColor="?attr/pcDecorStackStateBackStart" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>
@@ -15,9 +15,9 @@
         <shape android:shape="rectangle">
             <gradient
                 android:angle="-45"
-                android:centerColor="@color/pc_item_stack_state_mid_center"
-                android:endColor="@color/pc_item_stack_state_mid_end"
-                android:startColor="@color/pc_item_stack_state_mid_start" />
+                android:centerColor="?attr/pcDecorStackStateMidCenter"
+                android:endColor="?attr/pcDecorStackStateMidEnd"
+                android:startColor="?attr/pcDecorStackStateMidStart" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>
@@ -26,9 +26,9 @@
         <shape android:shape="rectangle">
             <gradient
                 android:angle="-45"
-                android:centerColor="@color/pc_item_stack_state_front_center"
-                android:endColor="@color/pc_item_stack_state_front_end"
-                android:startColor="@color/pc_item_stack_state_front_start" />
+                android:centerColor="?attr/pcDecorStackStateFrontCenter"
+                android:endColor="?attr/pcDecorStackStateFrontEnd"
+                android:startColor="?attr/pcDecorStackStateFrontStart" />
             <corners android:radius="@dimen/corner_radius_medium" />
             <stroke
                 android:width="2dp"

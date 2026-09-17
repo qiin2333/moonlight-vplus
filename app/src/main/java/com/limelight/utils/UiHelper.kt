@@ -5,8 +5,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.GameManager
 import android.app.GameState
-import android.app.LocaleManager
 import android.app.UiModeManager
+import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -18,7 +18,6 @@ import android.os.Build
 import android.os.LocaleList
 import android.view.View
 import android.view.WindowManager
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
@@ -32,113 +31,7 @@ object UiHelper {
 
     private const val TV_VERTICAL_PADDING_DP = 15
     private const val TV_HORIZONTAL_PADDING_DP = 15
-    private const val APP_THEME_PREFS = "AppTheme"
-    private const val APP_THEME_MODE_KEY = "theme_mode"
-
-    const val THEME_MODE_SYSTEM = "system"
-    const val THEME_MODE_LIGHT = "light"
-    const val THEME_MODE_DARK = "dark"
-
     private var sGameManagerAvailable: Boolean? = null
-
-    fun applyStoredAppTheme(context: Context) {
-        applyAppThemeMode(context, getAppThemeMode(context))
-    }
-
-    fun getAppThemeMode(context: Context): String {
-        val storedMode = context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(APP_THEME_MODE_KEY, THEME_MODE_SYSTEM)
-            ?: THEME_MODE_SYSTEM
-        return normalizeThemeMode(storedMode)
-    }
-
-    fun setAppThemeMode(context: Context, mode: String) {
-        val normalizedMode = normalizeThemeMode(mode)
-        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .edit { putString(APP_THEME_MODE_KEY, normalizedMode) }
-        applyAppThemeMode(context, normalizedMode)
-    }
-
-    private fun normalizeThemeMode(mode: String): String {
-        return when (mode) {
-            THEME_MODE_LIGHT, THEME_MODE_DARK -> mode
-            else -> THEME_MODE_SYSTEM
-        }
-    }
-
-    private fun applyAppThemeMode(context: Context, mode: String) {
-        val appCompatMode = when (mode) {
-            THEME_MODE_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-            THEME_MODE_DARK -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        }
-        AppCompatDelegate.setDefaultNightMode(appCompatMode)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val platformMode = when (mode) {
-                THEME_MODE_LIGHT -> UiModeManager.MODE_NIGHT_NO
-                THEME_MODE_DARK -> UiModeManager.MODE_NIGHT_YES
-                else -> UiModeManager.MODE_NIGHT_AUTO
-            }
-            context.getSystemService(UiModeManager::class.java)
-                ?.setApplicationNightMode(platformMode)
-        }
-    }
-
-    // ---------- 强调色模式 ----------
-
-    private const val ACCENT_MODE_KEY = "accent_mode"
-
-    /**
-     * 主题偏好推导出的"期望日夜"（同步、即时）：
-     * dark → 夜；light → 昼；system → 跟随当前配置。
-     * 装饰层用它而不是读系统配置——ROM 的 per-app 夜间切换是异步的，
-     * 读配置会慢一拍（Flyme 上尤其明显）。
-     */
-    fun wantedNight(context: Context): Boolean = when (getAppThemeMode(context)) {
-        THEME_MODE_DARK -> true
-        THEME_MODE_LIGHT -> false
-        else -> (context.resources.configuration.uiMode and
-                Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
-    }
-    const val ACCENT_MODE_PINK = "pink"
-    const val ACCENT_MODE_BG = "bg"
-
-    /** 首页背景取色的 12 个色相桶对应的 overlay（由 BgAccent 选中其一）。 */
-    private val BG_OVERLAY_STYLES = intArrayOf(
-        R.style.YouAccentOverlayBg0, R.style.YouAccentOverlayBg1,
-        R.style.YouAccentOverlayBg2, R.style.YouAccentOverlayBg3,
-        R.style.YouAccentOverlayBg4, R.style.YouAccentOverlayBg5,
-        R.style.YouAccentOverlayBg6, R.style.YouAccentOverlayBg7,
-        R.style.YouAccentOverlayBg8, R.style.YouAccentOverlayBg9,
-        R.style.YouAccentOverlayBg10, R.style.YouAccentOverlayBg11,
-    )
-
-    /** 当前强调色模式：品牌粉 / 跟随首页背景。 */
-    fun getAccentMode(context: Context): String =
-        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(ACCENT_MODE_KEY, ACCENT_MODE_BG) ?: ACCENT_MODE_BG
-
-    fun setAccentMode(context: Context, mode: String) {
-        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .edit { putString(ACCENT_MODE_KEY, mode) }
-    }
-
-    /**
-     * 叠加首页背景强调色 overlay。
-     * 由 LimelightApplication 的 ActivityLifecycleCallbacks 调用；PcView 因
-     * splash 主题切换会抹掉 preCreated 阶段的叠加，需在其后重新调用一次。
-     * 品牌粉模式不做任何事。
-     */
-    fun applyAccentOverlay(activity: Activity) {
-        if (getAccentMode(activity) == ACCENT_MODE_BG) {
-            val bucket = BgAccent.bucket(activity)
-            if (bucket in BG_OVERLAY_STYLES.indices) {
-                activity.theme.applyStyle(BG_OVERLAY_STYLES[bucket], true)
-            }
-        }
-    }
 
     /**
      * 解析强调色主题属性（?attr/appAccent*）。

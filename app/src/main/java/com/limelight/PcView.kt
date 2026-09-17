@@ -25,6 +25,8 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
+import com.limelight.ui.ThemedActivity
+import com.limelight.utils.AppTheme
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.computers.ComputerManagerService
@@ -99,7 +101,6 @@ import org.json.JSONObject
 import org.xmlpull.v1.XmlPullParserException
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.BroadcastReceiver
@@ -182,7 +183,7 @@ internal class PcViewExitGate(private val timeoutMillis: Long = 2_000L) {
     }
 }
 
-class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, EasyTierController.VpnPermissionCallback {
+class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listener, EasyTierController.VpnPermissionCallback {
 
     // Constants
     companion object {
@@ -318,10 +319,6 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         // androidx core-splashscreen backport shows the static icon over splash_bg and then
         // hands control to postSplashScreenTheme (AppTheme).
         val splashScreen = installSplashScreen()
-        // installSplashScreen 会把主题从 Theme.App.Starting 切到 postSplashScreenTheme(AppTheme)，
-        // 这一步 setTheme 会重建 Theme 对象、抹掉 Application 端 preCreated 阶段叠的
-        // 背景强调色 overlay —— 所以必须在 splash 切换之后重新叠一次。
-        UiHelper.applyAccentOverlay(this)
         themedBgAccentBucket = BgAccent.bucket(this)
         // Hold the splash on screen until PcView's real content view is inflated
         // (completeOnCreate -> initializeViews -> setContentView(activity_pc_view)).
@@ -727,7 +724,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             menu,
             R.drawable.ic_theme_mode,
             getString(R.string.pcview_toolbar_theme),
-            getThemeModeLabel(UiHelper.getAppThemeMode(this)),
+            getThemeSummary(),
             accent = true
         ) {
             popup.dismiss()
@@ -831,45 +828,38 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         })
     }
 
-    private fun showThemeModeDialog() {
-        val modes = arrayOf(
-            UiHelper.THEME_MODE_SYSTEM,
-            UiHelper.THEME_MODE_LIGHT,
-            UiHelper.THEME_MODE_DARK
-        )
-        // 第四项"跟随壁纸"：使用浅色主题，并从首页背景提取强调色。
-        // 背景图刷新时强调色自动变化（见 loadBackgroundImage 的桶位比对）。
-        val labels = arrayOf(
-            getThemeModeLabel(UiHelper.THEME_MODE_SYSTEM),
-            getThemeModeLabel(UiHelper.THEME_MODE_LIGHT),
-            getThemeModeLabel(UiHelper.THEME_MODE_DARK),
-            getString(R.string.pcview_accent_follow_wallpaper)
-        )
-        val checked = if (UiHelper.getAccentMode(this) == UiHelper.ACCENT_MODE_BG) {
-            3
-        } else {
-            modes.indexOf(UiHelper.getAppThemeMode(this)).coerceAtLeast(0)
-        }
+    private fun getThemeSummary(): String = getString(
+        R.string.theme_summary,
+        getThemeModeLabel(AppTheme.getAppThemeMode(this)),
+        getString(if (AppTheme.getAccentMode(this) == AppTheme.ACCENT_MODE_BG)
+            R.string.theme_accent_background else R.string.theme_accent_pink),
+    )
 
+    private fun showThemeModeDialog() {
+        val content = layoutInflater.inflate(R.layout.dialog_app_theme, null)
+        val modeGroup = content.findViewById<android.widget.RadioGroup>(R.id.themeModeGroup)
+        val accentGroup = content.findViewById<android.widget.RadioGroup>(R.id.themeAccentGroup)
+        val modeIds = mapOf(
+            R.id.themeSystem to AppTheme.THEME_MODE_SYSTEM,
+            R.id.themeLight to AppTheme.THEME_MODE_LIGHT,
+            R.id.themeDark to AppTheme.THEME_MODE_DARK,
+        )
+        modeGroup.check(modeIds.entries.first { it.value == AppTheme.getAppThemeMode(this) }.key)
+        accentGroup.check(if (AppTheme.getAccentMode(this) == AppTheme.ACCENT_MODE_BG)
+            R.id.themeBackgroundAccent else R.id.themePinkAccent)
         val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle(R.string.pcview_theme_dialog_title)
-            .setSingleChoiceItems(labels, checked) { dialogInterface, which ->
-                if (which == 3) {
-                    // 跟随壁纸是浅色主题选项；先保存强调色来源，再触发日夜切换。
-                    UiHelper.setAccentMode(this, UiHelper.ACCENT_MODE_BG)
-                    UiHelper.setAppThemeMode(this, UiHelper.THEME_MODE_LIGHT)
-                } else {
-                    UiHelper.setAccentMode(this, UiHelper.ACCENT_MODE_PINK)
-                    UiHelper.setAppThemeMode(this, modes[which])
-                }
-                showToast(getString(R.string.pcview_theme_applied, labels[which]))
-                dialogInterface.dismiss()
+            .setView(content)
+            .setPositiveButton(R.string.dialog_button_ok) { _, _ ->
+                AppTheme.save(this, modeIds.getValue(modeGroup.checkedRadioButtonId),
+                    if (accentGroup.checkedRadioButtonId == R.id.themeBackgroundAccent)
+                        AppTheme.ACCENT_MODE_BG else AppTheme.ACCENT_MODE_PINK)
                 recreate()
             }
-            .setNegativeButton(R.string.dialog_button_close, null)
+            .setNegativeButton(R.string.dialog_button_cancel, null)
             .create()
         dialog.show()
-        AppDialogStyler.applySystemChoiceList(dialog, this)
+        AppDialogStyler.apply(dialog, this)
     }
 
     /**
@@ -884,8 +874,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
     private fun getThemeModeLabel(mode: String): String {
         return when (mode) {
-            UiHelper.THEME_MODE_LIGHT -> getString(R.string.pcview_theme_light)
-            UiHelper.THEME_MODE_DARK -> getString(R.string.pcview_theme_dark)
+            AppTheme.THEME_MODE_LIGHT -> getString(R.string.pcview_theme_light)
+            AppTheme.THEME_MODE_DARK -> getString(R.string.pcview_theme_dark)
             else -> getString(R.string.pcview_theme_follow_system)
         }
     }
@@ -944,16 +934,14 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             // "none" or self-demoted bad state → leave the view empty.
             backgroundImageView?.setImageDrawable(null)
             BgAccent.clear(this)
+            refreshBackgroundAccent(BgAccent.NO_BUCKET)
             return
         }
 
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    val bmp = decodeBackgroundBitmap(resolved, loadGeneration)
-                    // 主导色相提取在 IO 线程完成（约 10~30ms 的逐像素采样）
-                    BgAccent.updateFromBitmap(this@PcView, bmp)
-                    bmp
+                    decodeBackgroundBitmap(resolved, loadGeneration)
                 }
                 if (isActive) {
                     applyNewBackgroundAndAccent(bitmap, loadGeneration)
@@ -1064,17 +1052,21 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
      * 所有背景加载路径（loadBackgroundImage / refreshBackgroundImage）都必须走这里，
      * 否则强调色会落后背景一次刷新。
      */
-    private fun applyNewBackgroundAndAccent(bitmap: Bitmap, loadGeneration: Int) {
+    private suspend fun applyNewBackgroundAndAccent(bitmap: Bitmap, loadGeneration: Int) {
         // 先于模糊处理提取主导色相（源头图信息量最大）
-        val bucket = BgAccent.updateFromBitmap(this, bitmap)
-        if (bucket != themedBgAccentBucket) {
-            themedBgAccentBucket = bucket
-            UiHelper.applyAccentOverlay(this)
-            pcGridAdapter.notifyDataSetChanged()
-            // 已膨胀的 ?attr 矢量图标不会自动重解析，需显式重染
-            refreshAccentTintedToolbarIcons()
-        }
+        val bucket = withContext(Dispatchers.Default) { BgAccent.extractHueBucket(bitmap) }
+        if (loadGeneration != backgroundLoadGeneration) return
+        BgAccent.saveBucket(this, bucket)
+        refreshBackgroundAccent(bucket)
         applyBlurredBackground(bitmap, loadGeneration)
+    }
+
+    private fun refreshBackgroundAccent(bucket: Int) {
+        if (bucket == themedBgAccentBucket) return
+        themedBgAccentBucket = bucket
+        AppTheme.applyTo(this)
+        pcGridAdapter.notifyDataSetChanged()
+        refreshAccentTintedToolbarIcons()
     }
 
     private fun applyBlurredBackground(bitmap: Bitmap, loadGeneration: Int) {
@@ -1264,14 +1256,13 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (target == null) {
             backgroundImageView?.setImageDrawable(null)
             BgAccent.clear(this)
+            refreshBackgroundAccent(BgAccent.NO_BUCKET)
             return
         }
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    val bmp = decodeBackgroundBitmap(resolved, loadGeneration)
-                    BgAccent.updateFromBitmap(this@PcView, bmp)
-                    bmp
+                    decodeBackgroundBitmap(resolved, loadGeneration)
                 }
                 if (isActive) {
                     applyNewBackgroundAndAccent(bitmap, loadGeneration)

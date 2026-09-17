@@ -9,6 +9,7 @@ import java.net.URISyntaxException
 import java.util.Collections
 import java.util.concurrent.LinkedBlockingQueue
 
+import com.limelight.ui.ThemedActivity
 import com.limelight.R
 import com.limelight.computers.ComputerManagerService
 import com.limelight.nvstream.http.ComputerDetails
@@ -55,7 +56,7 @@ internal class AddComputerWorkerGenerationGate {
     fun isCurrent(candidate: Long): Boolean = candidate == generation
 }
 
-class AddComputerManually : Activity() {
+class AddComputerManually : ThemedActivity() {
     companion object {
         const val EXTRA_ADDED_COMPUTER_UUID = "com.limelight.extra.ADDED_COMPUTER_UUID"
         private const val CONNECTING_BUTTON_ALPHA = 0.55f

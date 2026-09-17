@@ -5,7 +5,6 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.R
 import com.limelight.binding.input.StickCenterStore
 import com.limelight.utils.UiHelper
@@ -42,7 +42,7 @@ import java.util.Locale
 import com.limelight.utils.appAccentColor
 
 /** Captures raw Android joystick axes, before deadzone and host Y inversion. */
-class StickCalibrationActivity : AppCompatActivity() {
+class StickCalibrationActivity : ThemedAppCompatActivity() {
     private lateinit var store: StickCenterStore
     private var coordinates by mutableStateOf("")
     private var canSave by mutableStateOf(false)

@@ -20,7 +20,6 @@ import android.view.MotionEvent
 import android.view.Window
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -95,6 +94,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.limelight.ui.ThemedComponentActivity
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.ControllerPageScrollState
@@ -111,7 +111,7 @@ import com.limelight.utils.appAccentColor
  *
  * 检测逻辑生成结构化数据，Compose 只负责渲染，方便后续继续统一页面风格。
  */
-class CapabilityDiagnosticActivity : ComponentActivity() {
+class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
     private lateinit var plainTextReport: StringBuilder
     private val controllerPageScrollState = ControllerPageScrollState()

@@ -554,7 +554,7 @@
     <string name="pcview_theme_light">浅色</string>
     <string name="pcview_theme_dark">深色</string>
     <string name="pcview_theme_applied">主题已切换为%1$s</string>
-    <string name="pcview_accent_follow_wallpaper">跟随壁纸</string>
+
     <string name="pcview_press_back_again_to_exit">再按一次返回键退出</string>
     <string name="title_enable_host_cadence_precise_sync">精确同步更顺滑</string>
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
@@ -2157,4 +2157,9 @@
     <string name="stick_calibration_summary">将摇杆当前位置设为此控制器的中立位置</string>
 
     <string name="osc_layout_title">虚拟手柄布局</string>
+    <string name="theme_appearance">明暗模式</string>
+    <string name="theme_accent_source">强调色来源</string>
+    <string name="theme_accent_pink">品牌粉</string>
+    <string name="theme_accent_background">跟随首页背景</string>
+    <string name="theme_summary">%1$s · %2$s</string>
 </resources>

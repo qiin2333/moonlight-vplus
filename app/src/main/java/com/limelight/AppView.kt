@@ -38,13 +38,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 import org.xmlpull.v1.XmlPullParserException
 
+import com.limelight.ui.ThemedComponentActivity
 import com.limelight.binding.PlatformBinding
 import com.limelight.computers.ComputerManagerService
 import com.limelight.computers.PairStatePreflight
@@ -106,7 +106,7 @@ internal fun shouldScheduleAppViewFeatureGuide(
 
 internal fun shouldEnableAppViewResumeTitle(runningAppId: Int): Boolean = runningAppId != 0
 
-class AppView : ComponentActivity(), AdapterFragmentCallbacks {
+class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

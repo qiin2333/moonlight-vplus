@@ -9,7 +9,7 @@ import androidx.core.content.edit
  * 首页背景取色（"强调色跟随首页背景"模式）。
  *
  * 从首页背景位图提取主导色相，量化为 12 个 30° 色相桶并持久化；
- * UiHelper.applyAccentOverlay 据此叠加对应的 YouAccentOverlayBg* 主题，
+ * AppTheme.applyTo 据此叠加对应的 YouAccentOverlayBg* 主题，
  * 让所有 ?attr/appAccent* 消费端换上背景同族强调色。
  *
  * 刻意不用系统 Monet/WallpaperColors：背景图是我们自己的资源，
@@ -20,18 +20,15 @@ object BgAccent {
     private const val KEY = "you_bg_accent_bucket"
     const val NO_BUCKET = -1
 
-    /** 背景加载成功后调用：提取主导色相桶并持久化，返回桶位（无主导色相时 [NO_BUCKET]）。 */
-    fun updateFromBitmap(context: Context, bitmap: Bitmap): Int {
-        val bucket = extractHueBucket(bitmap)
+    /** 仅在对应背景仍有效时提交，避免已取消的后台加载覆盖当前主题。 */
+    fun saveBucket(context: Context, bucket: Int) {
         context.getSharedPreferences("AppTheme", Context.MODE_PRIVATE)
             .edit { putInt(KEY, bucket) }
-        return bucket
     }
 
     /** 背景被移除（None）或加载失败时调用：回到品牌粉。 */
     fun clear(context: Context) {
-        context.getSharedPreferences("AppTheme", Context.MODE_PRIVATE)
-            .edit { putInt(KEY, NO_BUCKET) }
+        saveBucket(context, NO_BUCKET)
     }
 
     fun bucket(context: Context): Int =
@@ -42,7 +39,7 @@ object BgAccent {
      * 主导色相提取：降采样遍历像素，HSV 里丢弃近灰/过暗/过亮像素，
      * 按饱和度加权投票到 12 个色相桶，取权重最高者。
      */
-    private fun extractHueBucket(bitmap: Bitmap): Int {
+    fun extractHueBucket(bitmap: Bitmap): Int {
         val w = bitmap.width
         val h = bitmap.height
         if (w <= 0 || h <= 0) return NO_BUCKET

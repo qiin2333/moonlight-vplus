@@ -933,5 +933,10 @@
     <string name="osc_layout_title">虛擬手把配置</string>
 
     <!-- Material You 强调色 -->
-    <string name="pcview_accent_follow_wallpaper">跟隨桌布</string>
+
+    <string name="theme_appearance">明暗模式</string>
+    <string name="theme_accent_source">強調色來源</string>
+    <string name="theme_accent_pink">品牌粉</string>
+    <string name="theme_accent_background">跟隨首頁背景</string>
+    <string name="theme_summary">%1$s · %2$s</string>
 </resources>

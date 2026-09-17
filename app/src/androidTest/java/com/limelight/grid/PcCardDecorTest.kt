@@ -9,7 +9,6 @@ import androidx.core.content.ContextCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
-import com.limelight.R
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -22,6 +21,10 @@ class PcCardDecorTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val preferences = context.getSharedPreferences("AppTheme", Context.MODE_PRIVATE)
     private var savedMode: String? = null
+
+    // XML-only resource fields can be removed from R by debug R8; resolve their stable resource names.
+    private fun resource(name: String, type: String): Int =
+        context.resources.getIdentifier(name, type, context.packageName).also { check(it != 0) { name } }
 
     @Before fun saveMode() { savedMode = preferences.getString("theme_mode", null) }
     @After fun restoreMode() { preferences.edit().putString("theme_mode", savedMode).commit() }
@@ -44,13 +47,13 @@ class PcCardDecorTest {
                 val staleCard = PcCardDecor.selector(stale, bucket).current as GradientDrawable
                 val currentCard = PcCardDecor.selector(expected, bucket).current as GradientDrawable
                 assertArrayEquals(currentCard.colors, staleCard.colors)
-                assertEquals(ContextCompat.getColor(expected, R.color.pc_item_text_primary), PcCardDecor.textColor(stale))
-                assertEquals(ContextCompat.getColor(expected, R.color.pc_item_text_disabled), PcCardDecor.textColor(stale, true))
+                assertEquals(ContextCompat.getColor(expected, resource("pc_item_text_primary", "color")), PcCardDecor.textColor(stale))
+                assertEquals(ContextCompat.getColor(expected, resource("pc_item_text_disabled", "color")), PcCardDecor.textColor(stale, true))
             }
             val brandCard = PcCardDecor.selector(stale, -1).current as GradientDrawable
-            assertEquals(ContextCompat.getColor(expected, R.color.pc_item_surface_default_center), brandCard.colors!![1])
+            assertEquals(ContextCompat.getColor(expected, resource("pc_item_surface_default_center", "color")), brandCard.colors!![1])
             val glow = PcCardDecor.glow(stale, -1) as GradientDrawable
-            assertEquals(ContextCompat.getColor(expected, R.color.pc_item_icon_glow_start), glow.colors!![0])
+            assertEquals(ContextCompat.getColor(expected, resource("pc_item_icon_glow_start", "color")), glow.colors!![0])
         }
     }
 

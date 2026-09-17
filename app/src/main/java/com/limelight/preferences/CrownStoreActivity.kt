@@ -24,7 +24,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -88,6 +87,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.R
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
@@ -115,7 +115,7 @@ import com.limelight.utils.appAccentFocusColor
 import com.limelight.utils.appAccentColor
 import com.limelight.utils.UiHelper
 
-class CrownStoreActivity : AppCompatActivity() {
+class CrownStoreActivity : ThemedAppCompatActivity() {
     private enum class CrownTab {
         STORE,
         MINE

@@ -1,15 +1,13 @@
 package com.limelight
 
-import android.app.Activity
 import android.app.Application
-import android.os.Bundle
 import android.util.Log
 
 import com.google.firebase.FirebaseApp
+import com.limelight.utils.AppTheme
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.crash.CrashReporter
 import com.limelight.utils.ConfigurationSyncScheduler
-import com.limelight.utils.UiHelper
 
 /**
  * Custom Application that wires up crash diagnostics as early as possible.
@@ -30,33 +28,11 @@ class LimelightApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        UiHelper.applyStoredAppTheme(this)
+        AppTheme.applyStoredAppTheme(this)
         initializeFirebaseSafely()
         CrashReporter.install(this)
         ConfigurationSyncScheduler.runNow(this)
         warmUpClientCertificate()
-        registerBackgroundAccentOverlay()
-    }
-
-    /**
-     * API 29+ 在 Activity.onCreate 前叠加首页背景强调色。
-     * PcView 和 StreamSettings 还会在各自主题初始化后显式应用，
-     * 以兼容更低 API，并避免 splash / applyStyle 覆盖强调色。
-     */
-    private fun registerBackgroundAccentOverlay() {
-        registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
-                UiHelper.applyAccentOverlay(activity)
-            }
-
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-            override fun onActivityStarted(activity: Activity) {}
-            override fun onActivityResumed(activity: Activity) {}
-            override fun onActivityPaused(activity: Activity) {}
-            override fun onActivityStopped(activity: Activity) {}
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {}
-        })
     }
 
     /**
