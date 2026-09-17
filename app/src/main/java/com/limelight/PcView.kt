@@ -320,7 +320,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         val splashScreen = installSplashScreen()
         // installSplashScreen 会把主题从 Theme.App.Starting 切到 postSplashScreenTheme(AppTheme)，
         // 这一步 setTheme 会重建 Theme 对象、抹掉 Application 端 preCreated 阶段叠的
-        // Material You overlay —— 所以必须在 splash 切换之后重新叠一次。
+        // 背景强调色 overlay —— 所以必须在 splash 切换之后重新叠一次。
         UiHelper.applyAccentOverlay(this)
         themedBgAccentBucket = BgAccent.bucket(this)
         // Hold the splash on screen until PcView's real content view is inflated
@@ -837,7 +837,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             UiHelper.THEME_MODE_LIGHT,
             UiHelper.THEME_MODE_DARK
         )
-        // 第四项"跟随壁纸"：仅切换强调色来源为首页背景（日夜模式保持当前选择），
+        // 第四项"跟随壁纸"：使用浅色主题，并从首页背景提取强调色。
         // 背景图刷新时强调色自动变化（见 loadBackgroundImage 的桶位比对）。
         val labels = arrayOf(
             getThemeModeLabel(UiHelper.THEME_MODE_SYSTEM),
@@ -855,14 +855,12 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             .setTitle(R.string.pcview_theme_dialog_title)
             .setSingleChoiceItems(labels, checked) { dialogInterface, which ->
                 if (which == 3) {
-                    // 跟随壁纸：自动锁定浅色主题 + 强调色来源切为首页背景。
-                    // 锁浅色后 per-app 夜间=NO，挡住 ROM 深夜的自动压暗，
-                    // 卡片 24 小时保持稳定的浅色+壁纸强调色形态。
-                    UiHelper.setAppThemeMode(this, UiHelper.THEME_MODE_LIGHT)
+                    // 跟随壁纸是浅色主题选项；先保存强调色来源，再触发日夜切换。
                     UiHelper.setAccentMode(this, UiHelper.ACCENT_MODE_BG)
+                    UiHelper.setAppThemeMode(this, UiHelper.THEME_MODE_LIGHT)
                 } else {
-                    UiHelper.setAppThemeMode(this, modes[which])
                     UiHelper.setAccentMode(this, UiHelper.ACCENT_MODE_PINK)
+                    UiHelper.setAppThemeMode(this, modes[which])
                 }
                 showToast(getString(R.string.pcview_theme_applied, labels[which]))
                 dialogInterface.dismiss()

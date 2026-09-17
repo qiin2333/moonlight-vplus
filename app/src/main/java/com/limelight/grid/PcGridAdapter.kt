@@ -16,7 +16,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 
 import com.limelight.LimeLog
@@ -340,10 +339,7 @@ class PcGridAdapter(
 
         txtView.text = context.getString(R.string.title_add_pc)
         txtView.alpha = 0.7f
-        txtView.setTextColor(
-            if (accentBucket >= 0) PcCardDecor.TEXT_ON_SURFACE
-            else ContextCompat.getColor(context, R.color.pc_item_text_primary)
-        )
+        txtView.setTextColor(PcCardDecor.textColor(context))
     }
 
     private fun populateComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, details: ComputerDetails, accentBucket: Int) {
@@ -373,16 +369,7 @@ class PcGridAdapter(
         }
         txtView.text = displayName
         txtView.alpha = if (isOffline) 0.5f else 1.0f
-        txtView.setTextColor(
-            if (accentBucket >= 0) {
-                if (isOffline) PcCardDecor.TEXT_DISABLED_ON_SURFACE else PcCardDecor.TEXT_ON_SURFACE
-            } else {
-                ContextCompat.getColor(
-                    context,
-                    if (isOffline) R.color.pc_item_text_disabled else R.color.pc_item_text_primary
-                )
-            }
-        )
+        txtView.setTextColor(PcCardDecor.textColor(context, disabled = isOffline))
 
         updateOverlay(overlayView, details, isOnline, isOffline)
     }

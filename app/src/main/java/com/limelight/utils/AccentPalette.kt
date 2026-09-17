@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * Compose 侧 Material You 强调色取值。
+ * Compose 侧首页背景强调色取值。
  *
  * 与 UiHelper.accentColor 同源：解析主题里的 ?attr/appAccent*，在开启
  * "强调色跟随壁纸"后返回壁纸动态色，否则是品牌粉。原代码里

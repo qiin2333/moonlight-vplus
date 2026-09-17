@@ -35,15 +35,15 @@ class LimelightApplication : Application() {
         CrashReporter.install(this)
         ConfigurationSyncScheduler.runNow(this)
         warmUpClientCertificate()
-        registerMaterialYouAccent()
+        registerBackgroundAccentOverlay()
     }
 
     /**
-     * Material You 强调色：在每个 Activity 进入 onCreate 之前把壁纸取色 overlay
-     * 叠进主题。onActivityPreCreated 只在 API 29+ 被回调，而 overlay 本身只在
-     * Android 12+ 生效（见 UiHelper.applyAccentOverlay），低版本设备完全不受影响。
+     * API 29+ 在 Activity.onCreate 前叠加首页背景强调色。
+     * PcView 和 StreamSettings 还会在各自主题初始化后显式应用，
+     * 以兼容更低 API，并避免 splash / applyStyle 覆盖强调色。
      */
-    private fun registerMaterialYouAccent() {
+    private fun registerBackgroundAccentOverlay() {
         registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
                 UiHelper.applyAccentOverlay(activity)

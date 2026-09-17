@@ -13,7 +13,7 @@
             backward-compatibility can go here.
 
         -->
-        <!-- Material You 强调色槽位默认值：品牌粉；v31 overlay 开启后跟随壁纸 -->
+        <!-- 强调色槽位默认值：品牌粉；首页背景 overlay 启用后跟随背景取色 -->
         <item name="appAccent">@color/ui_shell_accent</item>
         <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
         <item name="appAccentFocus">@color/ui_shell_accent_focus</item>

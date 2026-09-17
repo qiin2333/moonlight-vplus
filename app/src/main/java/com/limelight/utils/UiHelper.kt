@@ -99,8 +99,8 @@ object UiHelper {
         THEME_MODE_DARK -> true
         THEME_MODE_LIGHT -> false
         else -> (context.resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+                Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
     }
     const val ACCENT_MODE_PINK = "pink"
     const val ACCENT_MODE_BG = "bg"
@@ -126,7 +126,7 @@ object UiHelper {
     }
 
     /**
-     * 对每个 Activity 在 onCreate 之前叠加强调色 overlay。
+     * 叠加首页背景强调色 overlay。
      * 由 LimelightApplication 的 ActivityLifecycleCallbacks 调用；PcView 因
      * splash 主题切换会抹掉 preCreated 阶段的叠加，需在其后重新调用一次。
      * 品牌粉模式不做任何事。
@@ -143,7 +143,7 @@ object UiHelper {
     /**
      * 解析强调色主题属性（?attr/appAccent*）。
      * 代码里原本直接读 @color/ui_shell_accent 系静态色的位置改用这里，
-     * 使其在开启 Material You 后跟随壁纸取色。解析失败回退到品牌粉静态色。
+     * 使其在选择跟随壁纸后使用首页背景取色。解析失败回退到品牌粉静态色。
      */
     private fun resolveThemeColor(context: Context, attr: Int, fallback: Int): Int {
         val tv = TypedValue()
