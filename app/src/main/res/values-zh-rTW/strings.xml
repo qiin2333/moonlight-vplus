@@ -931,4 +931,12 @@
     <string name="stick_calibration_summary">將搖桿目前位置設為此控制器的中立位置</string>
 
     <string name="osc_layout_title">虛擬手把配置</string>
+
+    <!-- Material You 强调色 -->
+
+    <string name="theme_appearance">明暗模式</string>
+    <string name="theme_accent_source">強調色來源</string>
+    <string name="theme_accent_pink">品牌粉</string>
+    <string name="theme_accent_background">跟隨首頁背景</string>
+    <string name="theme_summary">%1$s · %2$s</string>
 </resources>

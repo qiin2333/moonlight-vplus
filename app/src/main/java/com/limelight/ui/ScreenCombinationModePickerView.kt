@@ -16,10 +16,12 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
+import com.limelight.utils.UiHelper
 
 class ScreenCombinationModePickerView(
     context: Context,
@@ -41,7 +43,7 @@ class ScreenCombinationModePickerView(
 
         val primaryTextColor = ContextCompat.getColor(context, R.color.appview_text_primary)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.appview_text_secondary)
-        val accentColor = ContextCompat.getColor(context, R.color.theme_pink_primary)
+        val accentColor = UiHelper.accentColor(context)
         val topSafePadding = resources.getDimensionPixelSize(R.dimen.activity_safearea_top)
 
         val root = LinearLayout(context).apply {
@@ -327,8 +329,8 @@ class ScreenCombinationModePickerView(
     private fun optionBackground(selected: Boolean, focused: Boolean): GradientDrawable {
         return if (selected) {
             roundedBackground(
-                Color.argb(if (focused) 64 else 42, 255, 107, 157),
-                Color.argb(if (focused) 230 else 185, 255, 107, 157),
+                ColorUtils.setAlphaComponent(UiHelper.accentColor(context), if (focused) 64 else 42),
+                ColorUtils.setAlphaComponent(UiHelper.accentColor(context), if (focused) 230 else 185),
                 dp(20)
             )
         } else {
@@ -360,9 +362,9 @@ class ScreenCombinationModePickerView(
     ) : View(context) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val rect = RectF()
-        private val accentColor = ContextCompat.getColor(context, R.color.theme_pink_primary)
-        private val activeFill = Color.argb(if (selected) 235 else 205, 255, 107, 157)
-        private val activeStroke = Color.argb(235, 255, 180, 210)
+        private val accentColor = UiHelper.accentColor(context)
+        private val activeFill = ColorUtils.setAlphaComponent(accentColor, if (selected) 235 else 205)
+        private val activeStroke = ColorUtils.setAlphaComponent(ColorUtils.blendARGB(accentColor, Color.WHITE, 0.45f), 235)
         private val idleFill = Color.argb(36, 255, 255, 255)
         private val idleStroke = Color.argb(115, 255, 255, 255)
         private val mutedStroke = Color.argb(70, 255, 255, 255)
@@ -402,8 +404,8 @@ class ScreenCombinationModePickerView(
                 4 -> {
                     drawDisplay(canvas, left, Color.argb(58, 255, 255, 255), Color.argb(160, 255, 255, 255))
                     drawPrimaryBadge(canvas, left.centerX(), left.top - h * 0.02f, Color.argb(220, 255, 255, 255))
-                    drawConnection(canvas, left, right, Color.argb(135, 255, 107, 157))
-                    drawDisplay(canvas, right, Color.argb(60, 255, 107, 157), activeStroke)
+                    drawConnection(canvas, left, right, ColorUtils.setAlphaComponent(accentColor, 135))
+                    drawDisplay(canvas, right, ColorUtils.setAlphaComponent(accentColor, 60), activeStroke)
                 }
                 3 -> {
                     val faintLeft = RectF(w * 0.05f, h * 0.28f, w * 0.28f, h * 0.63f)
@@ -494,7 +496,7 @@ class ScreenCombinationModePickerView(
         private fun drawDisabledSlash(canvas: Canvas, bounds: RectF) {
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = dp(2).toFloat()
-            paint.color = Color.argb(120, 255, 107, 157)
+            paint.color = ColorUtils.setAlphaComponent(accentColor, 120)
             canvas.drawLine(bounds.left + dp(5), bounds.bottom - dp(5), bounds.right - dp(5), bounds.top + dp(5), paint)
         }
     }

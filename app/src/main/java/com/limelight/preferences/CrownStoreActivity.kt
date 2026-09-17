@@ -24,7 +24,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -88,6 +87,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.R
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
@@ -111,8 +111,11 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.concurrent.thread
 import kotlin.math.abs
+import com.limelight.utils.appAccentFocusColor
+import com.limelight.utils.appAccentColor
+import com.limelight.utils.UiHelper
 
-class CrownStoreActivity : AppCompatActivity() {
+class CrownStoreActivity : ThemedAppCompatActivity() {
     private enum class CrownTab {
         STORE,
         MINE
@@ -391,7 +394,7 @@ class CrownStoreActivity : AppCompatActivity() {
     @Composable
     private fun CrownStoreBottomBar(selectedTab: CrownTab) {
         val container = colorResource(R.color.crown_panel_background)
-        val selected = colorResource(R.color.crown_accent)
+        val selected = appAccentColor()
         val unselected = colorResource(R.color.crown_text_secondary)
         NavigationBar(
             containerColor = container,
@@ -413,7 +416,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     selectedTextColor = selected,
                     unselectedIconColor = unselected,
                     unselectedTextColor = unselected,
-                    indicatorColor = colorResource(R.color.crown_accent_pressed)
+                    indicatorColor = appAccentFocusColor()
                 )
             )
             NavigationBarItem(
@@ -431,7 +434,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     selectedTextColor = selected,
                     unselectedIconColor = unselected,
                     unselectedTextColor = unselected,
-                    indicatorColor = colorResource(R.color.crown_accent_pressed)
+                    indicatorColor = appAccentFocusColor()
                 )
             )
         }
@@ -554,7 +557,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     modifier = Modifier
                         .size(52.dp)
                         .background(
-                            color = colorResource(R.color.crown_accent_pressed),
+                            color = appAccentFocusColor(),
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -562,7 +565,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     Icon(
                         painter = painterResource(R.drawable.phc_crown),
                         contentDescription = null,
-                        tint = colorResource(R.color.crown_accent),
+                        tint = appAccentColor(),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -590,7 +593,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = profileCount.toString(),
-                            color = colorResource(R.color.crown_accent),
+                            color = appAccentColor(),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -637,7 +640,7 @@ class CrownStoreActivity : AppCompatActivity() {
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = colorResource(R.color.crown_accent),
+                tint = appAccentColor(),
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -921,7 +924,7 @@ class CrownStoreActivity : AppCompatActivity() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                color = colorResource(R.color.crown_accent),
+                color = appAccentColor(),
                 strokeWidth = 3.dp
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1111,7 +1114,7 @@ class CrownStoreActivity : AppCompatActivity() {
         Row(
             modifier = Modifier
                 .background(
-                    color = colorResource(R.color.crown_accent_pressed),
+                    color = appAccentFocusColor(),
                     shape = RoundedCornerShape(50)
                 )
                 .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -1120,12 +1123,12 @@ class CrownStoreActivity : AppCompatActivity() {
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .background(colorResource(R.color.crown_accent), CircleShape)
+                    .background(appAccentColor(), CircleShape)
             )
             Spacer(modifier = Modifier.width(5.dp))
             Text(
                 text = text,
-                color = colorResource(R.color.crown_accent),
+                color = appAccentColor(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -1141,7 +1144,7 @@ class CrownStoreActivity : AppCompatActivity() {
         compact: Boolean = false,
         onClick: () -> Unit
     ) {
-        val container = if (primary) colorResource(R.color.crown_accent) else colorResource(R.color.crown_input_background)
+        val container = if (primary) appAccentColor() else colorResource(R.color.crown_input_background)
         val content = if (primary) colorResource(R.color.app_dialog_title_color) else colorResource(R.color.crown_text_primary)
         ComposeButton(
             onClick = onClick,
@@ -1154,7 +1157,7 @@ class CrownStoreActivity : AppCompatActivity() {
             border = BorderStroke(
                 width = 1.dp,
                 color = if (primary) {
-                    colorResource(R.color.crown_accent).copy(alpha = 0.75f)
+                    appAccentColor().copy(alpha = 0.75f)
                 } else {
                     colorResource(R.color.crown_input_border)
                 }
@@ -1343,7 +1346,7 @@ class CrownStoreActivity : AppCompatActivity() {
             includeFontPadding = true
             setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
             buttonTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_accent_color)
+                UiHelper.accentColor(this@CrownStoreActivity)
             )
         }
 
@@ -1518,7 +1521,7 @@ class CrownStoreActivity : AppCompatActivity() {
                     intArrayOf()
                 ),
                 intArrayOf(
-                    ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_accent_color),
+                    UiHelper.accentColor(this@CrownStoreActivity),
                     ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_subtitle_color)
                 )
             )

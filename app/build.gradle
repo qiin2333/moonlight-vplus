@@ -57,6 +57,11 @@ android {
         targetSdk 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+        // minSdk 22 ≥ 21：系统原生支持 VectorDrawable，禁用为 API<21 设备生成位图
+        // 回退的老管线（其栅格化器无法解析矢量里的 ?attr 主题色，Material You
+        // 强调色会让它直接构建失败；这些 PNG 在 22+ 设备上本来也永远不会被用到）。
+        vectorDrawables.useSupportLibrary = true
+
         // 记录最近一次发布的版本。发版时由 CI 依据 tag 和发布历史覆写
         // （见 .github/release/version-code.sh）。
         versionName "12.12.8-beta.1"

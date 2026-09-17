@@ -4,6 +4,6 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="@color/theme_pink_primary"
+        android:fillColor="?attr/appAccent"
         android:pathData="M7,11v2h10v-2z" />
 </vector>

@@ -10,6 +10,7 @@ import androidx.core.view.setPadding
 import androidx.preference.EditTextPreferenceDialogFragmentCompat
 import com.limelight.R
 import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.UiHelper
 
 class StyledEditTextPreferenceDialogFragment : EditTextPreferenceDialogFragmentCompat() {
 
@@ -37,7 +38,7 @@ class StyledEditTextPreferenceDialogFragment : EditTextPreferenceDialogFragmentC
     }
 
     private fun tintDialogButtons(dialog: AlertDialog) {
-        val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
+        val accentColor = UiHelper.accentColor(requireContext())
         listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
             .forEach { buttonId ->
                 dialog.getButton(buttonId)?.setTextColor(accentColor)

@@ -38,13 +38,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 import org.xmlpull.v1.XmlPullParserException
 
+import com.limelight.ui.ThemedComponentActivity
 import com.limelight.binding.PlatformBinding
 import com.limelight.computers.ComputerManagerService
 import com.limelight.computers.PairStatePreflight
@@ -82,6 +82,7 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.SoftBackgroundColorExtractor
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
+import com.limelight.utils.AppTheme
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,7 +107,7 @@ internal fun shouldScheduleAppViewFeatureGuide(
 
 internal fun shouldEnableAppViewResumeTitle(runningAppId: Int): Boolean = runningAppId != 0
 
-class AppView : ComponentActivity(), AdapterFragmentCallbacks {
+class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -563,6 +564,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
         topPanelToggle.contentDescription = getString(R.string.appview_quick_settings_title)
         topPanelHandleController = TopPanelHandleController(topPanelToggle)
+        AppTheme.observeAccent(this, this) { topPanelHandleController.refreshAccentColor() }
         topPanelToggle.setOnClickListener { toggleTopPanel() }
         topPanelToggle.setOnKeyListener { _, keyCode, event ->
             when (keyCode) {

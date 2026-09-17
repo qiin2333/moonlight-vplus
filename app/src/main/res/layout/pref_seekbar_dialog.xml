@@ -58,7 +58,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="22sp"
-                    android:textColor="@color/app_dialog_accent_color"
+                    android:textColor="?attr/appAccent"
                     android:textStyle="bold"
                     android:text="0"
                     android:minWidth="60dp"

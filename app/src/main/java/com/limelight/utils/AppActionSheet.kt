@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 object AppActionSheet {
     data class Action(
@@ -226,7 +228,7 @@ object AppActionSheet {
 
     @Composable
     internal fun AppActionSheetTheme(content: @Composable () -> Unit) {
-        val accent = colorResource(R.color.ui_shell_accent)
+        val accent = appAccentColor()
         val surface = colorResource(R.color.app_dialog_surface)
         val primary = colorResource(R.color.app_dialog_text_primary)
         val secondary = colorResource(R.color.app_dialog_text_secondary)
@@ -433,7 +435,7 @@ object AppActionSheet {
                 .then(
                     when {
                         primary -> Modifier.background(MaterialTheme.colorScheme.primary)
-                        focused -> Modifier.background(colorResource(R.color.app_dialog_surface_focused))
+                        focused -> Modifier.background(appAccentSoftColor())
                         else -> Modifier
                     }
                 )
@@ -541,7 +543,7 @@ object AppActionSheet {
                     .onFocusChanged { focused = it.isFocused }
                     .clip(rowShape)
                     .then(
-                        if (focused) Modifier.background(colorResource(R.color.app_dialog_surface_focused))
+                        if (focused) Modifier.background(appAccentSoftColor())
                         else Modifier
                     )
                     .then(

@@ -1338,6 +1338,7 @@
     <string name="pcview_theme_light">Light</string>
     <string name="pcview_theme_dark">Dark</string>
     <string name="pcview_theme_applied">Theme set to %1$s</string>
+
     <string name="pcview_press_back_again_to_exit">Press Back again to exit</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
     <string name="overwrite_current_config">Overwrite current configuration?</string>
@@ -2240,4 +2241,9 @@ Tap again to replace it.</string>
     <string name="stick_calibration_summary">Use the current stick position as neutral for this controller</string>
 
     <string name="osc_layout_title">Virtual controller layout</string>
+    <string name="theme_appearance">Appearance</string>
+    <string name="theme_accent_source">Accent color</string>
+    <string name="theme_accent_pink">Brand pink</string>
+    <string name="theme_accent_background">Follow home background</string>
+    <string name="theme_summary">%1$s · %2$s</string>
 </resources>

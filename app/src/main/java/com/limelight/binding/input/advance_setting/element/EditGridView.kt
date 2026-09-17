@@ -5,8 +5,8 @@ import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.view.View
-import androidx.core.content.ContextCompat
 import com.limelight.R
+import com.limelight.utils.UiHelper
 
 class EditGridView(context: Context) : View(context) {
 
@@ -15,7 +15,7 @@ class EditGridView(context: Context) : View(context) {
         strokeWidth = 2f
     }
     private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.crown_alignment_guide)
+        color = UiHelper.accentColor(context)
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
     }

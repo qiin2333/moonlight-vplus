@@ -9,14 +9,14 @@
 
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/app_dialog_surface_focused" />
+            <solid android:color="?attr/appAccent10" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>
 
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/app_dialog_accent_soft" />
+            <solid android:color="?attr/appAccentSoft" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>

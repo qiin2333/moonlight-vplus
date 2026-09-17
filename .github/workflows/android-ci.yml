@@ -84,6 +84,11 @@ jobs:
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
 
+      - name: Verify generated accent palettes
+        run: |
+          python3 scripts/test_accent_palette.py
+          python3 scripts/generate_accent_variants.py --check
+
       - name: Run lint and unit tests
         run: ./gradlew :app:lintNonRootDebug :app:testNonRootDebugUnitTest --no-daemon --stacktrace
 

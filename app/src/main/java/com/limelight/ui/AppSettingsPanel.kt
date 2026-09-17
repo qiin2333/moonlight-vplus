@@ -79,6 +79,7 @@ import com.limelight.ui.theme.AppCornerRadii
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppBackgroundMode
 import kotlin.math.min
+import com.limelight.utils.appAccentColor
 
 data class AppDisplayOption(
     val id: Int,
@@ -230,7 +231,7 @@ fun AppSettingsPanel(
     val panelSurface = colorResource(R.color.appview_quick_menu_background)
     val colorScheme = if (isDarkTheme) {
         darkColorScheme(
-            primary = colorResource(R.color.ui_shell_accent),
+            primary = appAccentColor(),
             onPrimary = colorResource(R.color.ui_shell_text_primary),
             surface = panelSurface,
             surfaceVariant = colorResource(R.color.ui_shell_surface_pressed),
@@ -240,7 +241,7 @@ fun AppSettingsPanel(
         )
     } else {
         lightColorScheme(
-            primary = colorResource(R.color.ui_shell_accent),
+            primary = appAccentColor(),
             onPrimary = colorResource(R.color.ui_shell_text_primary),
             surface = panelSurface,
             surfaceVariant = colorResource(R.color.ui_shell_surface_pressed),

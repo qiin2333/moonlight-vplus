@@ -16,7 +16,7 @@
         android:clipToOutline="true"
         android:background="@drawable/pc_grid_item_clip_bg"
         android:outlineProvider="background">
-        
+
         <!-- 图标容器 - 右侧（先定义，在底层） -->
         <RelativeLayout
             android:layout_width="140dp"
@@ -26,17 +26,19 @@
             android:layout_marginEnd="-18dp"
             android:layout_marginTop="-18dp"
             android:layout_marginBottom="-18dp">
-            
+
             <!-- 外层光晕效果 -->
             <View
+                android:id="@+id/pcIconGlow"
                 android:layout_width="180dp"
                 android:layout_height="180dp"
                 android:layout_centerInParent="true"
                 android:background="@drawable/pc_icon_glow"
                 android:alpha="0.5" />
-            
+
             <!-- 图标背景装饰 -->
             <View
+                android:id="@+id/pcIconBg"
                 android:layout_width="160dp"
                 android:layout_height="160dp"
                 android:layout_centerInParent="true"
@@ -125,11 +127,12 @@
             android:visibility="gone">
 
             <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/grid_network_quality_icon"
                 android:layout_width="13dp"
                 android:layout_height="13dp"
                 android:contentDescription="@null"
                 android:src="@drawable/phc_perf_wifi"
-                app:tint="@color/ui_shell_accent" />
+                app:tint="?attr/appAccent" />
 
             <TextView
                 android:id="@+id/grid_network_quality_text"

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -41,7 +42,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
@@ -70,6 +70,8 @@ import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
+import com.limelight.ui.ThemedAppCompatActivity
+import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
@@ -116,7 +118,7 @@ import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-class StreamSettings : AppCompatActivity() {
+class StreamSettings : ThemedAppCompatActivity() {
 
     private lateinit var previousPrefs: PreferenceConfiguration
     private var previousDisplayPixelCount = 0
@@ -191,9 +193,10 @@ class StreamSettings : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 应用带阴影的主题
-        theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+        AppTheme.applyStyle(this, R.style.PreferenceThemeWithShadow)
 
         super.onCreate(savedInstanceState)
+        AppTheme.observeAccent(this, this) { refreshAccentColors() }
         ConfigurationSyncScheduler.runNow(this)
 
         previousPrefs = PreferenceConfiguration.readPreferences(this)
@@ -283,6 +286,17 @@ class StreamSettings : AppCompatActivity() {
     private fun isNightMode(): Boolean {
         return (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun refreshAccentColors() {
+        categoryAdapter?.notifyDataSetChanged()
+        val fragment = supportFragmentManager.findFragmentById(R.id.preference_container) as? SettingsFragment
+        fragment?.view?.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
+            ?.adapter?.notifyDataSetChanged()
+        val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
+        findViewById<ImageView>(R.id.settings_search_toggle)?.imageTintList = accent
+        findViewById<TextView>(R.id.drawer_version)?.setTextColor(
+            androidx.core.graphics.ColorUtils.setAlphaComponent(UiHelper.accentColor(this), 69))
     }
 
     private fun applySettingsThemeSurfaces() {
@@ -553,6 +567,8 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = categories[position]
+            holder.root.background = ContextCompat.getDrawable(this@StreamSettings, R.drawable.category_item_background)
+            holder.indicator.background = ContextCompat.getDrawable(this@StreamSettings, R.drawable.category_indicator_shape)
             // Phosphor 矢量图标 + 文本（图标颜色随选中态在 updateItemAppearance 中切换）
             holder.icon.setImageResource(item.iconRes)
             holder.title.text = item.title
@@ -576,7 +592,7 @@ class StreamSettings : AppCompatActivity() {
          */
         private fun updateItemAppearance(holder: ViewHolder, isSelected: Boolean, hasFocus: Boolean) {
             // 使用项目公共粉色主题
-            val accentColor = androidx.core.content.ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_accent)
+            val accentColor = UiHelper.accentColor(this@StreamSettings)
             val primaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_primary)
             val secondaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary)
             val subtleText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_outline_strong)
@@ -749,7 +765,7 @@ class StreamSettings : AppCompatActivity() {
         loadBackgroundImage()
         var shouldReloadSettings = nightModeChanged
         if (nightModeChanged) {
-            theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+            AppTheme.applyStyle(this, R.style.PreferenceThemeWithShadow)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1389,30 +1405,28 @@ class StreamSettings : AppCompatActivity() {
          * SummaryProvider 是按需调用的，所以即便后续动态 setEntries() 也能拿到最新值。
          */
         private fun applyListPreferenceCurrentValueSummary(group: PreferenceGroup) {
-            val accent = ContextCompat.getColor(group.context, R.color.ui_shell_accent)
             val valueText = ContextCompat.getColor(group.context, R.color.ui_shell_text_primary)
             val disabledAccent = ContextCompat.getColor(group.context, R.color.ui_shell_text_disabled_primary)
-            applyHighlightedSummariesRecursively(group, accent, valueText, disabledAccent)
+            applyHighlightedSummariesRecursively(group, valueText, disabledAccent)
         }
 
         private fun applyHighlightedSummariesRecursively(
                 group: PreferenceGroup,
-                accent: Int,
                 valueText: Int,
                 disabledAccent: Int
         ) {
             for (i in 0 until group.preferenceCount) {
                 val child = group.getPreference(i)
                 when {
-                    child is PreferenceGroup -> applyHighlightedSummariesRecursively(child, accent, valueText, disabledAccent)
+                    child is PreferenceGroup -> applyHighlightedSummariesRecursively(child, valueText, disabledAccent)
                     // IconListPreference 自己重写 setSummary 维护 "(当前：xxx)"，
                     // 装 SummaryProvider 会与其 super.setSummary 调用互斥，跳过。
                     child is IconListPreference -> Unit
-                    child is ListPreference -> applyHighlightedSummary(child, accent, valueText, disabledAccent) {
+                    child is ListPreference -> applyHighlightedSummary(child, valueText, disabledAccent) {
                         val entry = it.entry?.toString()
                         if (entry.isNullOrBlank()) "—" else entry
                     }
-                    child is SeekBarPreference -> applyHighlightedSummary(child, accent, valueText, disabledAccent) {
+                    child is SeekBarPreference -> applyHighlightedSummary(child, valueText, disabledAccent) {
                         val display = it.formatDisplayValue(it.currentValue)
                         val suffix = it.suffix?.takeIf { s -> s.isNotBlank() }
                         if (suffix != null) "$display $suffix" else display
@@ -1428,7 +1442,6 @@ class StreamSettings : AppCompatActivity() {
          */
         private inline fun <reified T : Preference> applyHighlightedSummary(
                 pref: T,
-                accent: Int,
                 valueText: Int,
                 disabledAccent: Int,
                 crossinline currentValueProvider: (T) -> String
@@ -1436,7 +1449,6 @@ class StreamSettings : AppCompatActivity() {
             val originalSummary = pref.summary?.toString()?.takeIf { it.isNotBlank() }
             applyHighlightedSummary(
                 pref,
-                accent,
                 valueText,
                 disabledAccent,
                 currentValueProvider,
@@ -1445,7 +1457,6 @@ class StreamSettings : AppCompatActivity() {
 
         private inline fun <reified T : Preference> applyHighlightedSummary(
                 pref: T,
-                accent: Int,
                 valueText: Int,
                 disabledAccent: Int,
                 crossinline currentValueProvider: (T) -> String,
@@ -1457,7 +1468,7 @@ class StreamSettings : AppCompatActivity() {
                 val markerStart = builder.length
                 builder.append('●')
                 builder.setSpan(
-                        ForegroundColorSpan(if (p.isEnabled) accent else disabledAccent),
+                        ForegroundColorSpan(if (p.isEnabled) UiHelper.accentColor(requireActivity()) else disabledAccent),
                         markerStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 builder.append(' ')
                 val valueStart = builder.length
@@ -3198,7 +3209,7 @@ class StreamSettings : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             // 添加阴影主题
-            requireActivity().theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+            AppTheme.applyStyle(requireActivity(), R.style.PreferenceThemeWithShadow)
 
             MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             initializeTouchModeDefaultsIfNeeded()
@@ -4394,14 +4405,12 @@ class StreamSettings : AppCompatActivity() {
                 ?: return
             val bitrate = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
                 ?: return
-            val accent = ContextCompat.getColor(bitrate.context, R.color.ui_shell_accent)
             val valueText = ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_primary)
             val disabledAccent =
                 ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_disabled_primary)
 
             applyHighlightedSummary(
                 bitrate,
-                accent,
                 valueText,
                 disabledAccent,
                 currentValueProvider = {

@@ -23,7 +23,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_info"
-                android:tint="@color/app_dialog_accent_color"
+                android:tint="?attr/appAccent"
                 android:layout_marginEnd="8dp" />
 
             <TextView
@@ -42,7 +42,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_copy"
-                android:tint="@color/app_dialog_accent_color"
+                android:tint="?attr/appAccent"
                 android:background="@drawable/details_copy_button_bg"
                 android:padding="6dp"
                 android:scaleType="fitCenter"

@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.limelight.R
 import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.UiHelper
 
 internal class SponsorQrDialog(
     private val context: Context,
@@ -145,7 +146,7 @@ internal class SponsorQrDialog(
                     text = HEART_GLYPH
                     textSize = if (index == 1) 28f else 23f
                     gravity = Gravity.CENTER
-                    setTextColor(ContextCompat.getColor(context, R.color.theme_pink_primary))
+                    setTextColor(UiHelper.accentColor(context))
                     alpha = 0f
                 }, FrameLayout.LayoutParams(dpToPx(42), layerHeight).apply {
                     leftMargin = (width * position).toInt() - dpToPx(21)

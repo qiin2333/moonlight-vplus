@@ -6,16 +6,16 @@
         <shape android:shape="rectangle">
             <solid android:color="@color/game_menu_super_list_item_pressed" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="2dp" android:color="@color/game_menu_super_list_item_border_pressed" />
+            <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     
     <!-- 选中状态 -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/game_menu_super_list_item_selected" />
+            <solid android:color="?attr/appAccent10" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="2dp" android:color="@color/game_menu_super_list_item_border_pressed" />
+            <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     
@@ -24,7 +24,7 @@
         <shape android:shape="rectangle">
             <solid android:color="@color/game_menu_super_list_item_focused" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="2dp" android:color="@color/game_menu_super_list_item_border_pressed" />
+            <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     

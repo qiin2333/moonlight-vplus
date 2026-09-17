@@ -79,6 +79,8 @@ import com.limelight.binding.audio.AudioVibrationService
 import com.limelight.ui.theme.AppShapes
 import java.util.Locale
 import kotlin.math.abs
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 
 @Composable
@@ -144,7 +146,7 @@ internal fun GameMenuCard(
     Surface(
         color = colorResource(R.color.game_menu_card_background),
         shape = GameMenuCardShape,
-        border = BorderStroke(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_button_border)),
+        border = BorderStroke(GameMenuDimens.surfaceStroke, appAccentSoftColor()),
         modifier = modifier
             .fillMaxWidth()
             // Keep long-press configuration on the card without making the whole
@@ -177,7 +179,7 @@ internal fun GameMenuCard(
                 } else status?.let {
                     Text(
                         text = it,
-                        color = colorResource(R.color.game_menu_accent),
+                        color = appAccentColor(),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -298,7 +300,7 @@ internal fun TouchPointerSensitivityControl(
                     R.string.game_menu_touch_pointer_speed_value,
                     state.percent
                 ),
-                color = colorResource(R.color.game_menu_accent),
+                color = appAccentColor(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -505,7 +507,7 @@ private fun SensitivityPresetButton(
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = GameMenuControlShape
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val inactiveBorder = colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.28f)
     Box(
         modifier = modifier
@@ -552,7 +554,7 @@ private fun SensitivityPresetActionButton(
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = CircleShape
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Box(
         modifier = modifier
             .size(32.dp)
@@ -615,7 +617,7 @@ private fun BitrateCard(
         )
         Text(
             text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
-            color = colorResource(R.color.game_menu_accent),
+            color = appAccentColor(),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -663,7 +665,7 @@ private fun BitrateHelpButton(
     onDismissTip: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val helpDescription = stringResource(R.string.game_menu_bitrate_tip)
     Box(
         modifier = Modifier
@@ -786,7 +788,7 @@ private fun AudioHapticsCard(
                         R.string.game_menu_audio_haptics_strength_value,
                         state.strength
                     ),
-                    color = colorResource(R.color.game_menu_accent),
+                    color = appAccentColor(),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -834,7 +836,7 @@ private fun AudioHapticsCard(
         if (state.pendingRestart) {
             Text(
                 text = stringResource(R.string.game_menu_audio_haptics_pending_restart),
-                color = colorResource(R.color.game_menu_accent),
+                color = appAccentColor(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -876,7 +878,7 @@ private fun AudioHapticsChoiceRow(
     onChoice: (String) -> Unit
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -953,7 +955,7 @@ private fun GyroCard(
         trailing = {
             Text(
                 text = if (state.enabled) "ON" else "OFF",
-                color = colorResource(R.color.game_menu_accent),
+                color = appAccentColor(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -988,7 +990,7 @@ private fun GyroCard(
                 )
                 Text(
                     text = String.format(Locale.US, "%.1fx", state.sensitivity),
-                    color = colorResource(R.color.game_menu_accent),
+                    color = appAccentColor(),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1084,7 +1086,7 @@ internal fun Modifier.lockParentScrollDuringGesture(
 @Composable
 internal fun Modifier.gamepadFocusOutline(shape: Shape): Modifier {
     var focused by remember { mutableStateOf(false) }
-    val focusColor = colorResource(R.color.game_menu_accent)
+    val focusColor = appAccentColor()
     return onFocusChanged { focused = it.isFocused }
         .then(if (focused) Modifier.border(2.dp, focusColor, shape) else Modifier)
 }
@@ -1153,7 +1155,7 @@ private fun SettingValueRow(label: String, value: String, onClick: () -> Unit) {
     ) {
         Text(label, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
         Spacer(Modifier.weight(1f))
-        Text(value, color = colorResource(R.color.game_menu_accent), fontSize = 10.sp)
+        Text(value, color = appAccentColor(), fontSize = 10.sp)
         Spacer(Modifier.width(GameMenuDimens.tight))
         Text("›", color = colorResource(R.color.game_menu_text_secondary), fontSize = 14.sp)
     }
@@ -1194,7 +1196,7 @@ private fun ShortcutCard(
                     Modifier
                         .fillMaxWidth()
                         .height(1.dp)
-                        .background(colorResource(R.color.game_menu_button_border))
+                        .background(appAccentSoftColor())
                 )
             }
         }

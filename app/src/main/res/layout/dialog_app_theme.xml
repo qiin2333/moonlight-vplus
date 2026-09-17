@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/theme_appearance" android:textSize="14sp" android:textStyle="bold"
+            android:textColor="@color/app_dialog_text_primary" android:paddingTop="8dp" android:paddingBottom="4dp" />
+        <RadioGroup android:id="@+id/themeModeGroup" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="vertical">
+            <RadioButton android:id="@+id/themeSystem" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:minHeight="48dp"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:textSize="16sp"
+                android:button="@drawable/app_dialog_radio_button"
+                android:textColor="@color/app_dialog_text_primary" android:text="@string/pcview_theme_follow_system" />
+            <RadioButton android:id="@+id/themeLight" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:minHeight="48dp"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:textSize="16sp"
+                android:button="@drawable/app_dialog_radio_button"
+                android:textColor="@color/app_dialog_text_primary" android:text="@string/pcview_theme_light" />
+            <RadioButton android:id="@+id/themeDark" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:minHeight="48dp"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:textSize="16sp"
+                android:button="@drawable/app_dialog_radio_button"
+                android:textColor="@color/app_dialog_text_primary" android:text="@string/pcview_theme_dark" />
+        </RadioGroup>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/theme_accent_source" android:textSize="14sp" android:textStyle="bold"
+            android:textColor="@color/app_dialog_text_primary" android:paddingTop="8dp" android:paddingBottom="4dp" />
+        <RadioGroup android:id="@+id/themeAccentGroup" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="vertical">
+            <RadioButton android:id="@+id/themePinkAccent" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:minHeight="48dp"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:textSize="16sp"
+                android:button="@drawable/app_dialog_radio_button"
+                android:textColor="@color/app_dialog_text_primary" android:text="@string/theme_accent_pink" />
+            <RadioButton android:id="@+id/themeBackgroundAccent" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:minHeight="48dp"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:textSize="16sp"
+                android:button="@drawable/app_dialog_radio_button"
+                android:textColor="@color/app_dialog_text_primary" android:text="@string/theme_accent_background" />
+        </RadioGroup>
+    </LinearLayout>
+</ScrollView>

@@ -1,6 +1,5 @@
 package com.limelight
 
-import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -10,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.limelight.ui.ThemedActivity
 import com.limelight.computers.ComputerManagerService
 import com.limelight.computers.PairStatePreflight
 import com.limelight.grid.AppGridAdapter
@@ -37,7 +37,7 @@ import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.io.StringReader
 
-class AppSelectionActivity : Activity() {
+class AppSelectionActivity : ThemedActivity() {
 
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var pollingCollectJob: Job? = null

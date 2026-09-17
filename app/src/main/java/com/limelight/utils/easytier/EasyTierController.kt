@@ -70,6 +70,7 @@ import com.limelight.utils.AppDialogStyler
 
 import org.json.JSONArray
 import org.json.JSONObject
+import com.limelight.utils.appAccentColor
 
 private fun Modifier.handleGamepadConfirm(onClick: () -> Unit): Modifier =
         onPreviewKeyEvent { event ->
@@ -253,7 +254,7 @@ class EasyTierController(
             focusRequestGeneration: Int,
             onAction: (EasyTierDialogAction) -> Unit
     ) {
-        val accent = colorResource(R.color.crown_accent)
+        val accent = appAccentColor()
         val panel = colorResource(R.color.crown_panel_background)
         val card = colorResource(R.color.crown_section_background)
         val input = colorResource(R.color.crown_input_background)
@@ -425,7 +426,7 @@ class EasyTierController(
 
     @Composable
     private fun EasyTierStatusPill(isRunning: Boolean) {
-        val accent = colorResource(if (isRunning) R.color.crown_accent else R.color.crown_text_secondary)
+        val accent = if (isRunning) appAccentColor() else colorResource(R.color.crown_text_secondary)
         val textColor = colorResource(R.color.crown_text_primary)
         Box(
                 modifier = Modifier

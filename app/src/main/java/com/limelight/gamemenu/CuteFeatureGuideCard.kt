@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.appAccentColor
 
 internal const val FEATURE_GUIDE_CARD_TAG = "featureGuideCard"
 internal const val FEATURE_GUIDE_BODY_TAG = "featureGuideBody"
@@ -157,7 +157,7 @@ internal fun CuteFeatureGuideCard(
     onSkip: () -> Unit,
     hardwareFocusRequestToken: Int = 0
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val ink = Color(0xFF4C4346)
     val mutedInk = Color(0xFF6C6063)
     val paper = Color(0xFFFFF8E8)

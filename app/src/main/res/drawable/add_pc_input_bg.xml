@@ -6,7 +6,7 @@
             <corners android:radius="@dimen/corner_radius_small" />
             <stroke
                 android:width="1.5dp"
-                android:color="@color/add_pc_accent" />
+                android:color="?attr/appAccent" />
         </shape>
     </item>
     <item>
