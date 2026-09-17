@@ -1498,7 +1498,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         }
 
         val filter = IntentFilter(BackgroundSource.ACTION_REFRESH)
-        filter.addAction(Intent.ACTION_WALLPAPER_CHANGED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(backgroundImageRefreshReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
