@@ -2187,7 +2187,7 @@ class GameMenu(
                     Toast.LENGTH_SHORT).show()
                 game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled())
             },
-            iconKey = "game_menu_mouse_emulation",
+            iconKey = "game_menu_pan_zoom",
             isShowIcon = true,
             isKeepDialog = true,
             inlineControl = InlineControl.Toggle(game.getisTouchOverrideEnabled())
@@ -2314,22 +2314,23 @@ class GameMenu(
 
         private val ICON_MAP = mapOf(
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
-            "game_menu_toggle_keyboard" to R.drawable.ic_keyboard_cute,
-            "game_menu_toggle_performance_overlay" to R.drawable.ic_performance_cute,
-            "game_menu_toggle_virtual_controller" to R.drawable.ic_controller_cute,
+            "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,
+            "game_menu_toggle_performance_overlay" to R.drawable.ic_candy_performance,
+            "game_menu_toggle_virtual_controller" to R.drawable.ic_candy_controller,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
-            "game_menu_send_keys" to R.drawable.ic_send_keys_cute,
+            "game_menu_send_keys" to R.drawable.ic_candy_send_keys,
             "game_menu_toggle_host_keyboard" to R.drawable.ic_host_keyboard,
-            "game_menu_disconnect_and_quit" to R.drawable.ic_btn_quit,
+            "game_menu_disconnect_and_quit" to R.drawable.ic_candy_quit,
             "game_menu_cancel" to R.drawable.ic_cancel_cute,
-            "mouse_mode" to R.drawable.ic_mouse_cute,
+            "mouse_mode" to R.drawable.ic_candy_mouse,
             "game_menu_mouse_emulation" to R.drawable.ic_mouse_emulation_cute,
+            "game_menu_pan_zoom" to R.drawable.ic_pan_zoom_cute,
             "crown_function_menu" to R.drawable.ic_super_crown,
             "crown_visibility" to R.drawable.ic_ui_settings,
             "crown_touch" to R.drawable.ic_touch_settings,
             "crown_profiles" to R.drawable.ic_change,
             "crown_layout" to R.drawable.phc_action_edit,
-            "crown_back_key" to R.drawable.ic_keyboard_cute,
+            "crown_back_key" to R.drawable.ic_candy_keyboard,
             "game_menu_test_local_rumble" to R.drawable.ic_rumble_cute
         )
 
