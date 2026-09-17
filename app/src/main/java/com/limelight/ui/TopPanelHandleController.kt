@@ -32,9 +32,9 @@ internal class TopPanelHandleController(
     private val backgroundColor = color(R.color.settings_drawer_background)
     private val primaryColor = color(R.color.ui_shell_text_primary)
     private val secondaryColor = withAlpha(color(R.color.ui_shell_text_secondary), 0.78f)
-    private val accentColor = UiHelper.accentColor(context)
+    private var accentColor = UiHelper.accentColor(context)
     private val outlineColor = color(R.color.ui_shell_outline)
-    private val focusColor = UiHelper.accentColor(context)
+    private var focusColor = UiHelper.accentColor(context)
     private val cornerRadii = FloatArray(8)
     private val moonWheel = MoonWheelDrawable(
         density = density,
@@ -98,6 +98,12 @@ internal class TopPanelHandleController(
         toggle.animate().cancel()
         toggle.onFocusChangeListener = null
         if (!useStaticFallback) toggle.foreground = null
+    }
+
+    fun refreshAccentColor() {
+        accentColor = UiHelper.accentColor(context)
+        focusColor = accentColor
+        updateAppearance(progress)
     }
 
     private fun updateAppearance(value: Float) {

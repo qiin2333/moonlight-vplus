@@ -15,6 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RES = os.path.join(ROOT, 'app', 'src', 'main', 'res')
 BRAND_H = 345.0           # 品牌粉色相锚点
 CHROMA_SCALE = 0.8        # 色度缩放：等 C 下暖橙/蓝紫感知更艳，缩 0.8 对齐品牌粉的柔和感
+ACCENT_ALPHAS = (10, 20, 27, 40, 50, 80)
 
 
 # ---------- sRGB <-> CIELAB (D65) ----------
@@ -88,22 +89,31 @@ def generated_resources():
     outputs = {}
     day = card_palette('values')
     attrs = [f'    <attr name="{attr_name(name)}" format="color" />' for name in day]
+    attrs += [f'    <attr name="appAccent{alpha}" format="color" />' for alpha in ACCENT_ALPHAS]
     brand = ['    <style name="AppAccentBrand" parent="">',
         '        <item name="appAccent">@color/ui_shell_accent</item>',
         '        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>',
         '        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>']
     brand += [f'        <item name="{attr_name(name)}">@color/{name}</item>' for name in day]
+    brand += [f'        <item name="appAccent{alpha}">@color/you_accent_{alpha}</item>' for alpha in ACCENT_ALPHAS]
     brand += ['    </style>']
     for qualifier in ('values', 'values-night'):
         lines = []
         if qualifier == 'values':
             lines += attrs + brand
+        brand_color = next(node.text for node in ET.parse(
+            Path(RES) / qualifier / 'advance_setting_colors.xml').getroot()
+            if node.attrib.get('name') == 'ui_shell_accent')[-6:]
+        lines += [f'    <color name="you_accent_{alpha}">#{round(255 * alpha / 100):02X}{brand_color}</color>'
+            for alpha in ACCENT_ALPHAS]
         for bucket in range(12):
             if qualifier == 'values':
                 base = rotate_hue('#FFFF6B9D', bucket * 30 + 15)
                 lines += [f'    <color name="you_bg_accent_{bucket}">{base}</color>',
                     f'    <color name="you_bg_accent_{bucket}_soft">#1A{base[3:]}</color>',
                     f'    <color name="you_bg_accent_{bucket}_focus">#33{base[3:]}</color>']
+                lines += [f'    <color name="you_bg_accent_{bucket}_a{alpha}">#{round(255 * alpha / 100):02X}{base[3:]}</color>'
+                    for alpha in ACCENT_ALPHAS]
             palette = card_palette(qualifier)
             lines += [f'    <color name="{name}_b{bucket}">{rotate_hue(value, bucket * 30 + 15)}</color>'
                 for name, value in palette.items()]
@@ -113,6 +123,8 @@ def generated_resources():
                     f'        <item name="appAccentSoft">@color/you_bg_accent_{bucket}_soft</item>',
                     f'        <item name="appAccentFocus">@color/you_bg_accent_{bucket}_focus</item>']
                 lines += [f'        <item name="{attr_name(name)}">@color/{name}_b{bucket}</item>' for name in day]
+                lines += [f'        <item name="appAccent{alpha}">@color/you_bg_accent_{bucket}_a{alpha}</item>'
+                    for alpha in ACCENT_ALPHAS]
                 lines += ['    </style>']
         outputs[Path(RES) / qualifier / 'you_bg_accent.xml'] = (
             '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'

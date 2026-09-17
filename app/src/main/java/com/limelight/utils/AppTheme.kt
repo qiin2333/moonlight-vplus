@@ -2,10 +2,13 @@ package com.limelight.utils
 
 import android.app.UiModeManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.limelight.R
 
 /** Persistent theme choices and their application; independent of Activity lifecycle variants. */
@@ -97,7 +100,35 @@ object AppTheme {
     /** 当前强调色模式：品牌粉 / 跟随首页背景。 */
     fun getAccentMode(context: Context): String =
         context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(ACCENT_MODE_KEY, ACCENT_MODE_BG) ?: ACCENT_MODE_BG
+            .getString(ACCENT_MODE_KEY, ACCENT_MODE_PINK)
+            .let { if (it == ACCENT_MODE_BG) ACCENT_MODE_BG else ACCENT_MODE_PINK }
+
+    /** Refresh live views on a bucket change, including changes made while the page was stopped. */
+    fun observeAccent(context: Context, owner: LifecycleOwner, onChanged: () -> Unit) {
+        val prefs = context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
+        owner.lifecycle.addObserver(object : DefaultLifecycleObserver, SharedPreferences.OnSharedPreferenceChangeListener {
+            private var lastBucket = activeBucket(context)
+
+            private fun refresh() {
+                val bucket = activeBucket(context)
+                if (bucket == lastBucket) return
+                lastBucket = bucket
+                applyTo(context)
+                onChanged()
+            }
+
+            override fun onStart(owner: LifecycleOwner) {
+                prefs.registerOnSharedPreferenceChangeListener(this)
+                refresh()
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                prefs.unregisterOnSharedPreferenceChangeListener(this)
+            }
+
+            override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) = refresh()
+        })
+    }
 
     fun activeBucket(context: Context): Int =
         if (getAccentMode(context) == ACCENT_MODE_BG) BgAccent.bucket(context) else BgAccent.NO_BUCKET

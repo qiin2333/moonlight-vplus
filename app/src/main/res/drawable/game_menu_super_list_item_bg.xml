@@ -13,7 +13,7 @@
     <!-- 选中状态 -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/you_accent_10" />
+            <solid android:color="?attr/appAccent10" />
             <corners android:radius="@dimen/corner_radius_small" />
             <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>

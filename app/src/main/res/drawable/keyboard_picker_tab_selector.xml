@@ -2,7 +2,7 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape>
-            <solid android:color="@color/you_accent_27" />
+            <solid android:color="?attr/appAccent27" />
             <corners android:radius="@dimen/corner_radius_small" />
             <stroke android:width="1dp" android:color="?attr/appAccent" />
         </shape>
@@ -16,9 +16,9 @@
     </item>
     <item android:state_selected="true">
         <shape>
-            <solid android:color="@color/you_accent_27" />
+            <solid android:color="?attr/appAccent27" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="1dp" android:color="@color/you_accent_50" />
+            <stroke android:width="1dp" android:color="?attr/appAccent50" />
         </shape>
     </item>
     <item>

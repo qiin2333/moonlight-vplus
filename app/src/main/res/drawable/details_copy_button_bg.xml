@@ -9,7 +9,7 @@
 
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/you_accent_10" />
+            <solid android:color="?attr/appAccent10" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>

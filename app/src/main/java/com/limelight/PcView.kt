@@ -1067,6 +1067,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         AppTheme.applyTo(this)
         pcGridAdapter.notifyDataSetChanged()
         refreshAccentTintedToolbarIcons()
+        findViewById<com.limelight.ui.HostSearchRadarView>(R.id.host_search_radar)?.refreshAccentColor()
     }
 
     private fun applyBlurredBackground(bitmap: Bitmap, loadGeneration: Int) {

@@ -127,6 +127,7 @@
             android:visibility="gone">
 
             <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/grid_network_quality_icon"
                 android:layout_width="13dp"
                 android:layout_height="13dp"
                 android:contentDescription="@null"

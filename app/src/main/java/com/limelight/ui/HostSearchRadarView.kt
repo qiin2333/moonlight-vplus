@@ -59,6 +59,13 @@ class HostSearchRadarView @JvmOverloads constructor(
     private var phase = 0f
     private var animator: ValueAnimator? = null
 
+    fun refreshAccentColor() {
+        val accent = UiHelper.accentColor(context)
+        ringPaint.color = accent
+        moonOutlinePaint.color = accent
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 

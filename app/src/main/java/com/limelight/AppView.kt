@@ -82,6 +82,7 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.SoftBackgroundColorExtractor
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
+import com.limelight.utils.AppTheme
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -563,6 +564,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
         topPanelToggle.contentDescription = getString(R.string.appview_quick_settings_title)
         topPanelHandleController = TopPanelHandleController(topPanelToggle)
+        AppTheme.observeAccent(this, this) { topPanelHandleController.refreshAccentColor() }
         topPanelToggle.setOnClickListener { toggleTopPanel() }
         topPanelToggle.setOnKeyListener { _, keyCode, event ->
             when (keyCode) {

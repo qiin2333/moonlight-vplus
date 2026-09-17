@@ -64,7 +64,7 @@
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:src="@drawable/ic_chevron_right"
-            android:tint="@color/you_accent_27" />
+            android:tint="?attr/appAccent27" />
 
     </LinearLayout>
 

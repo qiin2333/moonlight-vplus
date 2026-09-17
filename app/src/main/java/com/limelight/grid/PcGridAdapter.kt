@@ -19,6 +19,7 @@ import android.widget.TextView
 import androidx.preference.PreferenceManager
 
 import com.limelight.utils.AppTheme
+import com.limelight.utils.UiHelper
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
@@ -310,6 +311,8 @@ class PcGridAdapter(
     @SuppressLint("SetTextI18n")
     override fun populateView(parentView: View, imgView: ImageView?, spinnerView: View?, txtView: TextView?, overlayView: ImageView?, obj: PcView.ComputerObject) {
         val accentBucket = AppTheme.activeBucket(context)
+        parentView.findViewById<ImageView>(R.id.grid_network_quality_icon)?.imageTintList =
+            android.content.res.ColorStateList.valueOf(UiHelper.accentColor(context))
         // 装饰层按色相桶换装（光晕/图标底；表面渐变在 populate* 里设置）
         parentView.findViewById<View>(R.id.pcIconGlow)?.background = PcCardDecor.glow(context, accentBucket)
         parentView.findViewById<View>(R.id.pcIconBg)?.background = PcCardDecor.iconBg(context, accentBucket)

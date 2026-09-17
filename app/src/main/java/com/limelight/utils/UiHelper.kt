@@ -43,7 +43,7 @@ object UiHelper {
         if (context.theme.resolveAttribute(attr, tv, true)) {
             return when (tv.type) {
                 TypedValue.TYPE_REFERENCE ->
-                    // @color 引用：带着 theme 解析，you_accent_* CSL 里的 ?attr 才能展开
+                    // @color 引用也需带着 theme 解析，以支持主题化 ColorStateList。
                     ContextCompat.getColor(context, tv.resourceId)
                 TypedValue.TYPE_ATTRIBUTE -> {
                     // 属性套属性的情况极少出现；递归解析一层

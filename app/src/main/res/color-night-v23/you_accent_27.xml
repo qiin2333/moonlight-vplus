@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Material You 动态 0.27 洗色（夜间） -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:alpha="0.27" android:color="?attr/appAccent" />
-</selector>

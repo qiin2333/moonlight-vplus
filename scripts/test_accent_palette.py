@@ -51,6 +51,16 @@ class AccentPaletteTest(unittest.TestCase):
                 for bucket in range(12):
                     self.assertIn(f'{name}_b{bucket}', colors)
 
+    def test_alpha_slots_are_consistent_for_brand_and_background(self):
+        for content in generated_resources().values():
+            root = ET.fromstring(content)
+            for node in root.findall('color'):
+                name = node.attrib['name']
+                suffix = name.rsplit('_', 1)[1]
+                if name.startswith('you_accent_') or suffix.startswith('a') and suffix[1:].isdigit():
+                    percent = int(name.rsplit('_', 1)[1].removeprefix('a'))
+                    self.assertEqual(round(255 * percent / 100), int(node.text[1:3], 16))
+
 
 if __name__ == '__main__':
     unittest.main()

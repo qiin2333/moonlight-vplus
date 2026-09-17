@@ -50,12 +50,13 @@ object BgAccent {
         while (y < h) {
             var x = 0
             while (x < w) {
-                Color.colorToHSV(bitmap.getPixel(x, y), hsv)
+                val pixel = bitmap.getPixel(x, y)
+                Color.colorToHSV(pixel, hsv)
                 val s = hsv[1]
                 val v = hsv[2]
                 // 排除近灰与极端明暗，避免中性背景/纯白边缘污染投票
                 if (s >= 0.10f && v in 0.06f..0.98f) {
-                    weights[((hsv[0] / 30f).toInt()) % 12] += s
+                    weights[((hsv[0] / 30f).toInt()) % 12] += s * (Color.alpha(pixel) / 255f)
                 }
                 x += step
             }
