@@ -5,9 +5,9 @@
     android:viewportWidth="8"
     android:viewportHeight="18">
     <path
-        android:fillColor="@color/add_pc_accent"
+        android:fillColor="?attr/appAccent"
         android:pathData="M4,4m-3,0a3,3 0,1 0,6 0a3,3 0,1 0,-6 0" />
     <path
-        android:fillColor="@color/add_pc_accent"
+        android:fillColor="?attr/appAccent"
         android:pathData="M4,14m-3,0a3,3 0,1 0,6 0a3,3 0,1 0,-6 0" />
 </vector>

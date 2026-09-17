@@ -8,7 +8,7 @@
     <!-- 左侧震动线条，整体向左移远离中心 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FF6B9D"
+        android:strokeColor="?attr/appAccent"
         android:strokeWidth="3"
         android:strokeLineJoin="round"
         android:strokeLineCap="round"
@@ -16,14 +16,14 @@
     <!-- 右侧震动线条，整体向右移远离中心 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FF6B9D"
+        android:strokeColor="?attr/appAccent"
         android:strokeWidth="3"
         android:strokeLineJoin="round"
         android:strokeLineCap="round"
         android:pathData="M45 14L42 17.5L45 21L42 24.5L45 28L42 31.5L45 35" />
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FF6B9D"
+        android:strokeColor="?attr/appAccent"
         android:strokeWidth="4"
         android:strokeLineJoin="round"
         android:pathData="M24,10
@@ -34,7 +34,7 @@
             Z" />
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FF6B9D"
+        android:strokeColor="?attr/appAccent"
         android:strokeWidth="2"
         android:strokeLineJoin="round"
         android:strokeLineCap="round"

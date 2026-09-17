@@ -13,6 +13,10 @@
             backward-compatibility can go here.
 
         -->
+        <!-- Material You 强调色槽位默认值：品牌粉；v31 overlay 开启后跟随壁纸 -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 
     <!-- Application theme. -->
@@ -147,11 +151,15 @@
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:textColorPrimary">@color/theme_pink_primary</item>
+        <item name="android:textColorPrimary">?attr/appAccent</item>
         <item name="android:textColorSecondary">@color/game_menu_text_secondary</item>
-        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="android:colorAccent">?attr/appAccent</item>
         <item name="android:windowCloseOnTouchOutside">true</item>
         <item name="android:fitsSystemWindows">false</item>
+        <!-- 独立主题链（parent 是 AppCompat），需要自己声明强调色槽位默认值 -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 
     <style name="VirtualKeyboardDialogStyle" parent="VirtualKeyboardDialogStyleBase" />
@@ -172,19 +180,23 @@
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:colorAccent">@color/ui_shell_accent</item>
-        <item name="colorAccent">@color/ui_shell_accent</item>
-        <item name="android:colorControlActivated">@color/ui_shell_accent</item>
-        <item name="colorControlActivated">@color/ui_shell_accent</item>
+        <item name="android:colorAccent">?attr/appAccent</item>
+        <item name="colorAccent">?attr/appAccent</item>
+        <item name="android:colorControlActivated">?attr/appAccent</item>
+        <item name="colorControlActivated">?attr/appAccent</item>
         <item name="android:colorControlNormal">@color/ui_shell_text_secondary</item>
         <item name="colorControlNormal">@color/ui_shell_text_secondary</item>
-        <item name="android:colorControlHighlight">@color/ui_shell_accent_soft</item>
-        <item name="colorControlHighlight">@color/ui_shell_accent_soft</item>
+        <item name="android:colorControlHighlight">?attr/appAccentSoft</item>
+        <item name="colorControlHighlight">?attr/appAccentSoft</item>
         <item name="android:textColorPrimary">@color/settings_preference_title_text</item>
         <item name="android:textColorSecondary">@color/settings_preference_summary_text</item>
         <item name="preferenceTheme">@style/MyPreferenceThemeOverlay</item>
         <item name="android:buttonStyle">@style/AppButtonStyle</item>
         <item name="buttonStyle">@style/AppButtonStyle</item>
+        <!-- 独立主题链（parent 是 AppCompat），需要自己声明强调色槽位默认值 -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 
     <!-- 自定义 Preference 主题：紧凑左缩进 (无 icon 不预留空间) -->
@@ -235,7 +247,7 @@
         <!-- 某些系统的 Preference 列表项 summary 会走 list item 的 secondary textAppearance -->
         <item name="android:textAppearanceListItemSecondary">@style/PreferenceSummaryWithShadow</item>
         <item name="android:textAppearanceListItemSmall">@style/PreferenceSummaryWithShadow</item>
-        <item name="android:colorAccent">@color/ui_shell_accent</item>
+        <item name="android:colorAccent">?attr/appAccent</item>
         <item name="android:textColorPrimary">@color/settings_preference_title_text</item>
         <item name="android:textColorSecondary">@color/settings_preference_summary_text</item>
         <item name="android:listDivider">@color/ui_shell_outline</item>
@@ -264,7 +276,7 @@
     <style name="PreferenceCategoryWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/ui_shell_accent</item>
+        <item name="android:textColor">?attr/appAccent</item>
         <item name="android:shadowColor">@color/ui_shell_text_shadow_strong</item>
         <item name="android:shadowRadius">5</item>
     </style>
@@ -333,14 +345,14 @@
         <!-- 专业标题颜色设置 -->
         <item name="android:textColorPrimary">@color/app_dialog_title_color</item>
         <item name="android:textColorSecondary">@color/app_dialog_subtitle_color</item>
-        <item name="android:colorAccent">@color/app_dialog_accent_color</item>
-        <item name="colorAccent">@color/app_dialog_accent_color</item>
-        <item name="android:colorControlActivated">@color/app_dialog_accent_color</item>
-        <item name="colorControlActivated">@color/app_dialog_accent_color</item>
+        <item name="android:colorAccent">?attr/appAccent</item>
+        <item name="colorAccent">?attr/appAccent</item>
+        <item name="android:colorControlActivated">?attr/appAccent</item>
+        <item name="colorControlActivated">?attr/appAccent</item>
         <item name="android:colorControlNormal">@color/app_dialog_text_secondary</item>
         <item name="colorControlNormal">@color/app_dialog_text_secondary</item>
-        <item name="android:colorControlHighlight">@color/app_dialog_accent_soft</item>
-        <item name="colorControlHighlight">@color/app_dialog_accent_soft</item>
+        <item name="android:colorControlHighlight">?attr/appAccentSoft</item>
+        <item name="colorControlHighlight">?attr/appAccentSoft</item>
         <item name="android:listDivider">@color/app_dialog_outline</item>
         <!-- 标题样式 -->
         <item name="android:windowTitleStyle">@style/AppDialogTitleStyle</item>
@@ -349,6 +361,10 @@
         <item name="buttonBarPositiveButtonStyle">@style/AppDialogButtonStyle</item>
         <item name="buttonBarNegativeButtonStyle">@style/AppDialogButtonStyle</item>
         <item name="buttonBarNeutralButtonStyle">@style/AppDialogButtonStyle</item>
+        <!-- 独立主题链（parent 是 AppCompat），需要自己声明强调色槽位默认值 -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 
     <style name="AppActionSheetAnimation">
@@ -418,10 +434,14 @@
         <item name="android:windowIsFloating">true</item>
         <item name="android:windowAnimationStyle">@style/AppDialogAnimation</item>
         <item name="android:textColorPrimary">@color/app_dialog_text_primary</item>
-        <item name="android:colorAccent">@color/app_dialog_accent_color</item>
-        <item name="android:progressTint">@color/app_dialog_accent_color</item>
-        <item name="android:indeterminateTint">@color/app_dialog_accent_color</item>
+        <item name="android:colorAccent">?attr/appAccent</item>
+        <item name="android:progressTint">?attr/appAccent</item>
+        <item name="android:indeterminateTint">?attr/appAccent</item>
         <item name="android:indeterminateDrawable">@drawable/app_progress_indeterminate</item>
+        <!-- 独立主题链（parent 是 AppCompat），需要自己声明强调色槽位默认值 -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 
     <!-- 专门用于 iPerf3 对话框的样式 -->
@@ -442,10 +462,14 @@
         <item name="buttonBarNegativeButtonStyle">@style/Iperf3DialogButton</item>
         <item name="buttonBarNeutralButtonStyle">@style/Iperf3DialogButton</item>
         <!-- 按钮颜色 (这是控制按钮文字颜色的关键属性) -->
-        <item name="android:colorAccent">@color/app_dialog_accent_color</item>
-        <item name="colorAccent">@color/app_dialog_accent_color</item>
-        <item name="android:colorControlActivated">@color/app_dialog_accent_color</item>
-        <item name="colorControlActivated">@color/app_dialog_accent_color</item>
+        <item name="android:colorAccent">?attr/appAccent</item>
+        <item name="colorAccent">?attr/appAccent</item>
+        <item name="android:colorControlActivated">?attr/appAccent</item>
+        <item name="colorControlActivated">?attr/appAccent</item>
+        <!-- 独立主题链（parent 是 AppCompat），需要自己声明强调色槽位默认值 -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
     <!-- 自定义标题文字样式 -->
     <style name="Iperf3DialogTitleText" parent="@style/RtlOverlay.DialogWindowTitle.AppCompat">
@@ -455,7 +479,7 @@
     <!-- 自定义按钮样式 (可以进一步定制，比如背景等) -->
     <style name="Iperf3DialogButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
         <!-- 按钮文字颜色会继承自上面定义的 colorAccent -->
-        <item name="android:textColor">@color/app_dialog_accent_color</item>
+        <item name="android:textColor">?attr/appAccent</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:textStyle">bold</item>
     </style>

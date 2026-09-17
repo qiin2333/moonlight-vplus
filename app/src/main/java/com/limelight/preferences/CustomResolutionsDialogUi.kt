@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 internal data class Preset(val width: Int, val height: Int, val labelRes: Int)
 
@@ -125,16 +127,16 @@ private fun focusIndicationVisible(focused: Boolean): Boolean {
 private fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifier = Modifier): Modifier =
     if (highlighted) {
         Modifier
-            .background(colorResource(R.color.app_dialog_accent_soft), shape)
-            .border(1.5.dp, colorResource(R.color.app_dialog_accent_color), shape)
+            .background(appAccentSoftColor(), shape)
+            .border(1.5.dp, appAccentColor(), shape)
     } else {
         fallback
     }
 
 @Composable
 internal fun DialogHeader(infoExpanded: Boolean, onToggleInfo: () -> Unit) {
-    val accent = colorResource(R.color.app_dialog_accent_color)
-    val accentSoft = colorResource(R.color.app_dialog_accent_soft)
+    val accent = appAccentColor()
+    val accentSoft = appAccentSoftColor()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Box(
             modifier = Modifier
@@ -171,7 +173,7 @@ private fun InfoToggleButton(expanded: Boolean, onToggle: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -193,12 +195,12 @@ private fun InfoToggleButton(expanded: Boolean, onToggle: () -> Unit) {
 
 @Composable
 internal fun InfoTooltip() {
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppShapes.medium)
-            .background(colorResource(R.color.app_dialog_accent_soft))
+            .background(appAccentSoftColor())
             .border(1.dp, colorResource(R.color.app_dialog_outline), AppShapes.medium)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top,
@@ -235,8 +237,8 @@ internal fun Composer(
     onAdd: () -> Unit,
     onHeightDone: () -> Unit
 ) {
-    val accent = colorResource(R.color.app_dialog_accent_color)
-    val accentSoft = colorResource(R.color.app_dialog_accent_soft)
+    val accent = appAccentColor()
+    val accentSoft = appAccentSoftColor()
     val secondary = colorResource(R.color.app_dialog_text_secondary)
     val danger = colorResource(R.color.app_action_sheet_danger)
 
@@ -364,7 +366,7 @@ private fun NumberField(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val outline = colorResource(R.color.app_dialog_outline)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     val danger = colorResource(R.color.app_action_sheet_danger)
     val borderSpec = when {
         invalid -> 1.5.dp to danger
@@ -437,11 +439,12 @@ private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusR
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
     val ink = colorResource(R.color.add_pc_on_accent)
+    val accent = appAccentColor()
     val gradient = Brush.linearGradient(
         listOf(
-            colorResource(R.color.theme_pink_gradient_start),
-            colorResource(R.color.theme_pink_gradient_center),
-            colorResource(R.color.theme_pink_gradient_end)
+            accent,
+            accent.copy(alpha = 0.7f),
+            accent.copy(alpha = 0.45f)
         )
     )
     Row(
@@ -454,7 +457,7 @@ private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusR
                 if (showFocus) {
                     Modifier.border(2.dp, colorResource(R.color.theme_blue_primary), CircleShape)
                 } else {
-                    Modifier.border(1.dp, colorResource(R.color.theme_pink_dark), CircleShape)
+                    Modifier.border(1.dp, appAccentColor(), CircleShape)
                 }
             )
             .handleGamepadConfirm(onAdd)
@@ -494,7 +497,7 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
     val outline = colorResource(R.color.app_dialog_outline)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Box(
         modifier = Modifier
             .clip(CircleShape)
@@ -524,12 +527,12 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
 @Composable
 private fun RatioGlyph(width: Int, height: Int, modifier: Modifier = Modifier) {
     val (glyphWidth, glyphHeight) = ratioGlyphSize(width, height)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Box(modifier = modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
                 .size(width = glyphWidth.dp, height = glyphHeight.dp)
-                .background(colorResource(R.color.app_dialog_accent_soft), AppShapes.extraSmall)
+                .background(appAccentSoftColor(), AppShapes.extraSmall)
                 .border(1.5.dp, accent, AppShapes.extraSmall)
         )
     }
@@ -580,14 +583,14 @@ private fun ResolutionRow(
 ) {
     val rowShape = AppShapes.medium
     val outline = colorResource(R.color.app_dialog_outline)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     val deleteFocus = remember { FocusRequester() }
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
 
     val targetBg = when {
-        showFocus || isJustAdded -> colorResource(R.color.app_dialog_accent_soft)
+        showFocus || isJustAdded -> appAccentSoftColor()
         else -> colorResource(R.color.app_dialog_surface_elevated)
     }
     val bg by animateColorAsState(targetValue = targetBg, label = "rowBg")
@@ -635,7 +638,7 @@ private fun ResolutionRow(
             Box(
                 modifier = Modifier
                     .clip(AppShapes.extraSmall)
-                    .background(colorResource(R.color.app_dialog_accent_soft))
+                    .background(appAccentSoftColor())
                     .padding(horizontal = 7.dp, vertical = 3.dp)
             ) {
                 Text(
@@ -667,7 +670,7 @@ private fun DeleteButton(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Box(
         modifier = Modifier
             .focusRequester(focus)
@@ -695,7 +698,7 @@ private fun DeleteButton(
 
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -707,7 +710,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(62.dp)
                 .clip(CircleShape)
-                .background(colorResource(R.color.app_dialog_accent_soft)),
+                .background(appAccentSoftColor()),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -764,7 +767,7 @@ private fun FooterButton(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
-    val accent = colorResource(R.color.app_dialog_accent_color)
+    val accent = appAccentColor()
     Box(
         modifier = Modifier
             .clip(AppShapes.small)

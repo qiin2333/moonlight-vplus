@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material You 动态版：开启后轨道选中色跟随壁纸 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:alpha="0.70" android:color="?attr/appAccent" />
+    <item android:color="#668C98A8" />
+</selector>

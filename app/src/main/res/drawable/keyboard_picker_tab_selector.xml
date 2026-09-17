@@ -2,23 +2,23 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape>
-            <solid android:color="#554A303B" />
+            <solid android:color="@color/you_accent_27" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="1dp" android:color="@color/game_menu_accent" />
+            <stroke android:width="1dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape>
             <solid android:color="#664A303B" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="2dp" android:color="@color/game_menu_accent" />
+            <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     <item android:state_selected="true">
         <shape>
-            <solid android:color="#3DE881A8" />
+            <solid android:color="@color/you_accent_27" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="1dp" android:color="#99E881A8" />
+            <stroke android:width="1dp" android:color="@color/you_accent_50" />
         </shape>
     </item>
     <item>

@@ -7,6 +7,10 @@
     -->
     <style name="AppBaseTheme" parent="android:Theme.Holo">
         <!-- API 14 theme customizations can go here. -->
+        <!-- 强调色槽位默认值（vXX 的 AppBaseTheme 是整包替换，默认值必须逐份声明） -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 
 </resources>

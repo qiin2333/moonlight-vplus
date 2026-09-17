@@ -1338,6 +1338,7 @@
     <string name="pcview_theme_light">Light</string>
     <string name="pcview_theme_dark">Dark</string>
     <string name="pcview_theme_applied">Theme set to %1$s</string>
+    <string name="pcview_accent_follow_wallpaper">Follow Wallpaper</string>
     <string name="pcview_press_back_again_to_exit">Press Back again to exit</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
     <string name="overwrite_current_config">Overwrite current configuration?</string>

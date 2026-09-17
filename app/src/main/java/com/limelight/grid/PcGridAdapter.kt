@@ -29,6 +29,8 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.utils.BgAccent
+import com.limelight.utils.UiHelper
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.HostCacheKey
 
@@ -309,29 +311,42 @@ class PcGridAdapter(
 
     @SuppressLint("SetTextI18n")
     override fun populateView(parentView: View, imgView: ImageView?, spinnerView: View?, txtView: TextView?, overlayView: ImageView?, obj: PcView.ComputerObject) {
+        // 仅"跟随首页背景"模式用桶位变体；品牌粉模式（含 MIN_VALUE 兜底）用原版装饰
+        val accentBucket = if (UiHelper.getAccentMode(context) == UiHelper.ACCENT_MODE_BG) {
+            BgAccent.bucket(context)
+        } else {
+            Int.MIN_VALUE
+        }
+        // 装饰层按色相桶换装（光晕/图标底；表面渐变在 populate* 里设置）
+        parentView.findViewById<View>(R.id.pcIconGlow)?.background = PcCardDecor.glow(context, accentBucket)
+        parentView.findViewById<View>(R.id.pcIconBg)?.background = PcCardDecor.iconBg(context, accentBucket)
+
         if (isAddComputerCard(obj)) {
-            populateAddComputerCard(parentView, imgView!!, spinnerView!!, txtView!!, overlayView!!)
+            populateAddComputerCard(parentView, imgView!!, spinnerView!!, txtView!!, overlayView!!, accentBucket)
             return
         }
 
-        populateComputerCard(parentView, imgView!!, spinnerView!!, txtView!!, overlayView!!, obj.details)
+        populateComputerCard(parentView, imgView!!, spinnerView!!, txtView!!, overlayView!!, obj.details, accentBucket)
     }
 
-    private fun populateAddComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView) {
+    private fun populateAddComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, accentBucket: Int) {
         imgView.setImageResource(R.drawable.ic_add)
         imgView.scaleType = ImageView.ScaleType.FIT_CENTER
         imgView.alpha = 0.7f
 
-        parentView.setBackgroundResource(R.drawable.pc_item_selector)
+        parentView.background = PcCardDecor.selector(context, accentBucket)
         spinnerView.visibility = View.INVISIBLE
         overlayView.visibility = View.GONE
 
         txtView.text = context.getString(R.string.title_add_pc)
         txtView.alpha = 0.7f
-        txtView.setTextColor(ContextCompat.getColor(context, R.color.pc_item_text_primary))
+        txtView.setTextColor(
+            if (accentBucket >= 0) PcCardDecor.TEXT_ON_SURFACE
+            else ContextCompat.getColor(context, R.color.pc_item_text_primary)
+        )
     }
 
-    private fun populateComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, details: ComputerDetails) {
+    private fun populateComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, details: ComputerDetails, accentBucket: Int) {
         val isOnline = details.state == ComputerDetails.State.ONLINE
         val isUnknown = details.state == ComputerDetails.State.UNKNOWN
         val isOffline = details.state == ComputerDetails.State.OFFLINE
@@ -343,12 +358,11 @@ class PcGridAdapter(
         }
         imgView.alpha = if (isOnline) ONLINE_ALPHA else OFFLINE_ALPHA
 
-        parentView.setBackgroundResource(
-            if (isOnline && details.hasMultipleAddresses())
-                R.drawable.pc_item_multiple_addresses_selector
-            else
-                R.drawable.pc_item_selector
-        )
+        parentView.background = if (isOnline && details.hasMultipleAddresses()) {
+            PcCardDecor.multiSelector(context, accentBucket)
+        } else {
+            PcCardDecor.selector(context, accentBucket)
+        }
 
         val isLoadingBoxArt = details.uuid != null && details.uuid in loadingUuids
         updateSpinner(spinnerView as ImageView, isUnknown || isLoadingBoxArt)
@@ -360,10 +374,14 @@ class PcGridAdapter(
         txtView.text = displayName
         txtView.alpha = if (isOffline) 0.5f else 1.0f
         txtView.setTextColor(
-            ContextCompat.getColor(
-                context,
-                if (isOffline) R.color.pc_item_text_disabled else R.color.pc_item_text_primary
-            )
+            if (accentBucket >= 0) {
+                if (isOffline) PcCardDecor.TEXT_DISABLED_ON_SURFACE else PcCardDecor.TEXT_ON_SURFACE
+            } else {
+                ContextCompat.getColor(
+                    context,
+                    if (isOffline) R.color.pc_item_text_disabled else R.color.pc_item_text_primary
+                )
+            }
         )
 
         updateOverlay(overlayView, details, isOnline, isOffline)

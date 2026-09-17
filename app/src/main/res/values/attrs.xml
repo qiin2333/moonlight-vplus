@@ -10,4 +10,14 @@
     <declare-styleable name="IconListPreference">
         <attr name="entryIcons" format="reference" />
     </declare-styleable>
+
+    <!--
+        Material You 强调色槽位。
+        默认值在各主题里指向品牌粉（ui_shell_accent 系）；开启"跟随壁纸"后，
+        values-v31 的 YouAccentOverlay 会把 appAccent 重定向到框架的
+        system_accent1 动态色，所有 ?attr/appAccent* 消费端随之换色。
+    -->
+    <attr name="appAccent" format="color" />
+    <attr name="appAccentSoft" format="color" />
+    <attr name="appAccentFocus" format="color" />
 </resources>

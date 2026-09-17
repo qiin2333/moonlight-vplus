@@ -1,6 +1,8 @@
 package com.limelight
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import android.util.Log
 
 import com.google.firebase.FirebaseApp
@@ -33,6 +35,28 @@ class LimelightApplication : Application() {
         CrashReporter.install(this)
         ConfigurationSyncScheduler.runNow(this)
         warmUpClientCertificate()
+        registerMaterialYouAccent()
+    }
+
+    /**
+     * Material You 强调色：在每个 Activity 进入 onCreate 之前把壁纸取色 overlay
+     * 叠进主题。onActivityPreCreated 只在 API 29+ 被回调，而 overlay 本身只在
+     * Android 12+ 生效（见 UiHelper.applyAccentOverlay），低版本设备完全不受影响。
+     */
+    private fun registerMaterialYouAccent() {
+        registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
+                UiHelper.applyAccentOverlay(activity)
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
     }
 
     /**

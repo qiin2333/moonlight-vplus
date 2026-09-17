@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 品牌粉 0.80 洗色（静态，API22/overlay关闭时使用） -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#CCFF6B9D" />
+</selector>

@@ -136,6 +136,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 class ControllerDiagnosticActivity : ComponentActivity(), UsbDriverListener,
     UsbDriverService.UsbDriverStateListener {
@@ -1496,7 +1498,7 @@ private fun ControllerDiagnosticScreen(
     val background = colorResource(R.color.game_menu_dialog_background)
     val primary = colorResource(R.color.game_menu_text_primary)
     val secondary = colorResource(R.color.game_menu_text_secondary)
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val baseColorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
     val listState = rememberLazyListState()
     val controllerScrollStep = with(LocalDensity.current) { 64.dp.toPx() }
@@ -1854,7 +1856,7 @@ private fun ControllerTestStatus(
     testPhase: ShortcutTestPhase,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Surface(
         color = if (state.hintVisible) {
             accent.copy(alpha = 0.14f)
@@ -1865,7 +1867,7 @@ private fun ControllerTestStatus(
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
             if (state.hintVisible) accent.copy(alpha = 0.42f)
-            else colorResource(R.color.game_menu_button_border)
+            else appAccentSoftColor()
         ),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -1883,7 +1885,7 @@ private fun ControllerTestStatus(
                             ShortcutTestPhase.STARTING,
                             ShortcutTestPhase.STOPPING -> Color(0xFFFFB36B)
                             ShortcutTestPhase.IDLE ->
-                                colorResource(R.color.game_menu_button_border)
+                                appAccentSoftColor()
                         },
                         CircleShape
                     )
@@ -1935,7 +1937,7 @@ private fun ShortcutAttemptPopup(
     compactLandscape: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val statusColor = when (state) {
         ShortcutAttemptState.SUCCEEDED -> accent
         ShortcutAttemptState.TIMED_OUT -> Color(0xFFE34F63)
@@ -2009,7 +2011,7 @@ private fun ShortcutTestToggle(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val actionEnabled = enabled && testPhase != ShortcutTestPhase.STOPPING
     var focused by remember { mutableStateOf(false) }
     val actionColor = when (testPhase) {
@@ -2033,7 +2035,7 @@ private fun ShortcutTestToggle(
         border = BorderStroke(
             if (focused) 2.dp else GameMenuDimens.surfaceStroke,
             if (actionEnabled) actionColor
-            else colorResource(R.color.game_menu_button_border).copy(alpha = 0.55f)
+            else appAccentSoftColor().copy(alpha = 0.55f)
         ),
         modifier = modifier
             .heightIn(min = 44.dp)
@@ -2077,7 +2079,7 @@ private fun TestPhaseTimeTag(
     testPhase: ShortcutTestPhase,
     remainingSeconds: Int
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Row(
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2122,7 +2124,7 @@ private fun TestDurationSelector(
             .clip(GameMenuCardShape)
             .border(
                 GameMenuDimens.surfaceStroke,
-                colorResource(R.color.game_menu_button_border),
+                appAccentSoftColor(),
                 GameMenuCardShape
             )
     ) {
@@ -2136,7 +2138,7 @@ private fun TestDurationSelector(
             modifier = Modifier
                 .width(GameMenuDimens.surfaceStroke)
                 .fillMaxSize()
-                .background(colorResource(R.color.game_menu_button_border))
+                .background(appAccentSoftColor())
         )
         TestDurationSegment(
             label = stringResource(R.string.controller_diag_duration_one_minute),
@@ -2148,7 +2150,7 @@ private fun TestDurationSelector(
             modifier = Modifier
                 .width(GameMenuDimens.surfaceStroke)
                 .fillMaxSize()
-                .background(colorResource(R.color.game_menu_button_border))
+                .background(appAccentSoftColor())
         )
         TestDurationSegment(
             label = stringResource(R.string.controller_diag_duration_three_minutes),
@@ -2166,7 +2168,7 @@ private fun TestDurationSegment(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -2249,7 +2251,7 @@ private fun ControllerTestTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Column(
         modifier = modifier
             .gamepadFocusOutline(GameMenuCardShape)
@@ -2378,7 +2380,7 @@ private fun ControllerSidebarTab(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2705,7 +2707,7 @@ private fun ControllerDiagramKey(
     pressed: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Box(
         modifier = modifier
@@ -2739,7 +2741,7 @@ private fun ControllerCompactKey(
     modifier: Modifier = Modifier,
     fontSize: androidx.compose.ui.unit.TextUnit = 10.sp
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Box(
         modifier = modifier
@@ -2774,7 +2776,7 @@ private fun ControllerAxisIndicator(
     y: Float,
     pressed: Boolean
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val idleOutline = colorResource(R.color.controller_diag_outline).copy(
         alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
     )
@@ -3053,7 +3055,7 @@ private fun ControllerShortcutCard(
     onToggleTest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
@@ -3136,7 +3138,7 @@ private fun ControllerShortcutCard(
 
 @Composable
 private fun ShortcutKeyChip(label: String, active: Boolean) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Text(
         text = label,
         color = if (active) Color.White else colorResource(R.color.game_menu_text_secondary),
@@ -3162,7 +3164,7 @@ private fun ShortcutKeyChip(label: String, active: Boolean) {
 private fun GamepadSilhouetteVisualization(state: ShortcutSimulatorUiState) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val bodyColor = colorResource(R.color.game_menu_card_background)
     val outline = colorResource(R.color.controller_diag_outline).copy(
         alpha = CONTROLLER_DIAG_IDLE_OUTLINE_ALPHA
@@ -3439,7 +3441,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawControllerLabel
 
 @Composable
 private fun ControllerKeyIndicator(label: String, pressed: Boolean) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Surface(
         color = accent.copy(alpha = if (pressed) 0.16f else 0.03f),
         shape = CircleShape,
@@ -3457,7 +3459,7 @@ private fun ControllerKeyIndicator(label: String, pressed: Boolean) {
                 modifier = Modifier
                     .size(6.dp)
                     .background(
-                        if (pressed) accent else colorResource(R.color.game_menu_button_border),
+                        if (pressed) accent else appAccentSoftColor(),
                         CircleShape
                     )
             )
@@ -3594,7 +3596,7 @@ private fun ShortcutCardTestButton(
     onClick: () -> Unit,
     onFocused: () -> Unit
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val shape = AppShapes.small
     Surface(
         color = if (selected) Color(0xFFE34F63) else accent.copy(alpha = 0.12f),
@@ -3721,7 +3723,7 @@ private fun ControllerInfoOverlay(
                         Icon(
                             painter = painterResource(R.drawable.ic_info),
                             contentDescription = null,
-                            tint = colorResource(R.color.game_menu_accent),
+                            tint = appAccentColor(),
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(Modifier.width(8.dp))
@@ -3803,8 +3805,8 @@ private fun ControllerInfoScrollbar(
     val progress = (estimatedScrollOffset / estimatedScrollRange).coerceIn(0f, 1f)
     val visibleFraction = (viewportSize / estimatedContentSize)
         .coerceIn(0.18f, 0.72f)
-    val trackColor = colorResource(R.color.game_menu_button_border)
-    val thumbColor = colorResource(R.color.game_menu_accent)
+    val trackColor = appAccentSoftColor()
+    val thumbColor = appAccentColor()
 
     Canvas(
         modifier = modifier
@@ -3837,7 +3839,7 @@ private fun DiagnosticCard(
         shape = GameMenuCardShape,
         border = BorderStroke(
             GameMenuDimens.surfaceStroke,
-            colorResource(R.color.game_menu_button_border)
+            appAccentSoftColor()
         ),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -3884,7 +3886,7 @@ private fun EmptyControllerCard() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ControllerCard(device: ControllerDiagnostics.Device) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     DiagnosticCard(
         modifier = Modifier
             .gamepadFocusOutline(GameMenuCardShape)

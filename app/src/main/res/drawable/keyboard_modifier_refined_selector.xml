@@ -11,7 +11,7 @@
         <shape>
             <solid android:color="#3D2933" />
             <corners android:radius="@dimen/corner_radius_small" />
-            <stroke android:width="2dp" android:color="@color/game_menu_accent" />
+            <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     <item>

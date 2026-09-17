@@ -2,5 +2,5 @@
 <!-- 精致小圆点指示器 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
-    <solid android:color="#FF6B9D" />
+    <solid android:color="?attr/appAccent" />
 </shape>

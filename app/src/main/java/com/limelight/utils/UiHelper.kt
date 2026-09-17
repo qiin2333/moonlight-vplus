@@ -12,6 +12,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.util.TypedValue
 import android.os.BatteryManager
 import android.os.Build
 import android.os.LocaleList
@@ -19,6 +20,7 @@ import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
@@ -82,6 +84,83 @@ object UiHelper {
                 ?.setApplicationNightMode(platformMode)
         }
     }
+
+    // ---------- 强调色模式 ----------
+
+    private const val ACCENT_MODE_KEY = "accent_mode"
+    const val ACCENT_MODE_PINK = "pink"
+    const val ACCENT_MODE_BG = "bg"
+
+    /** 首页背景取色的 12 个色相桶对应的 overlay（由 BgAccent 选中其一）。 */
+    private val BG_OVERLAY_STYLES = intArrayOf(
+        R.style.YouAccentOverlayBg0, R.style.YouAccentOverlayBg1,
+        R.style.YouAccentOverlayBg2, R.style.YouAccentOverlayBg3,
+        R.style.YouAccentOverlayBg4, R.style.YouAccentOverlayBg5,
+        R.style.YouAccentOverlayBg6, R.style.YouAccentOverlayBg7,
+        R.style.YouAccentOverlayBg8, R.style.YouAccentOverlayBg9,
+        R.style.YouAccentOverlayBg10, R.style.YouAccentOverlayBg11,
+    )
+
+    /** 当前强调色模式：品牌粉 / 跟随首页背景。 */
+    fun getAccentMode(context: Context): String =
+        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
+            .getString(ACCENT_MODE_KEY, ACCENT_MODE_BG) ?: ACCENT_MODE_BG
+
+    fun setAccentMode(context: Context, mode: String) {
+        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
+            .edit { putString(ACCENT_MODE_KEY, mode) }
+    }
+
+    /**
+     * 对每个 Activity 在 onCreate 之前叠加强调色 overlay。
+     * 由 LimelightApplication 的 ActivityLifecycleCallbacks 调用；PcView 因
+     * splash 主题切换会抹掉 preCreated 阶段的叠加，需在其后重新调用一次。
+     * 品牌粉模式不做任何事。
+     */
+    fun applyAccentOverlay(activity: Activity) {
+        if (getAccentMode(activity) == ACCENT_MODE_BG) {
+            val bucket = BgAccent.bucket(activity)
+            if (bucket in BG_OVERLAY_STYLES.indices) {
+                activity.theme.applyStyle(BG_OVERLAY_STYLES[bucket], true)
+            }
+        }
+    }
+
+    /**
+     * 解析强调色主题属性（?attr/appAccent*）。
+     * 代码里原本直接读 @color/ui_shell_accent 系静态色的位置改用这里，
+     * 使其在开启 Material You 后跟随壁纸取色。解析失败回退到品牌粉静态色。
+     */
+    private fun resolveThemeColor(context: Context, attr: Int, fallback: Int): Int {
+        val tv = TypedValue()
+        if (context.theme.resolveAttribute(attr, tv, true)) {
+            return when (tv.type) {
+                TypedValue.TYPE_REFERENCE ->
+                    // @color 引用：带着 theme 解析，you_accent_* CSL 里的 ?attr 才能展开
+                    ContextCompat.getColor(context, tv.resourceId)
+                TypedValue.TYPE_ATTRIBUTE -> {
+                    // 属性套属性的情况极少出现；递归解析一层
+                    val inner = TypedValue()
+                    if (context.theme.resolveAttribute(tv.data, inner, true)) {
+                        inner.data
+                    } else {
+                        ContextCompat.getColor(context, fallback)
+                    }
+                }
+                else -> tv.data
+            }
+        }
+        return ContextCompat.getColor(context, fallback)
+    }
+
+    fun accentColor(context: Context): Int =
+        resolveThemeColor(context, R.attr.appAccent, R.color.ui_shell_accent)
+
+    fun accentSoftColor(context: Context): Int =
+        resolveThemeColor(context, R.attr.appAccentSoft, R.color.ui_shell_accent_soft)
+
+    fun accentFocusColor(context: Context): Int =
+        resolveThemeColor(context, R.attr.appAccentFocus, R.color.ui_shell_accent_focus)
 
     @RequiresApi(Build.VERSION_CODES.S)
     private fun isGameManagerAvailable(context: Context): Boolean {

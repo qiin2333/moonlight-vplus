@@ -20,6 +20,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import com.limelight.utils.UiHelper
 
 /** Owns the top-panel handle's rendering and transition state. */
 internal class TopPanelHandleController(
@@ -31,9 +32,9 @@ internal class TopPanelHandleController(
     private val backgroundColor = color(R.color.settings_drawer_background)
     private val primaryColor = color(R.color.ui_shell_text_primary)
     private val secondaryColor = withAlpha(color(R.color.ui_shell_text_secondary), 0.78f)
-    private val accentColor = color(R.color.game_menu_accent)
+    private val accentColor = UiHelper.accentColor(context)
     private val outlineColor = color(R.color.ui_shell_outline)
-    private val focusColor = color(R.color.ui_shell_accent)
+    private val focusColor = UiHelper.accentColor(context)
     private val cornerRadii = FloatArray(8)
     private val moonWheel = MoonWheelDrawable(
         density = density,

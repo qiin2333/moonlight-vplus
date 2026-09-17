@@ -47,6 +47,7 @@ import com.limelight.R
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppActionSheet
 import java.util.Locale
+import com.limelight.utils.appAccentSoftColor
 
 object NetworkQualitySheet {
     class TestingHandle internal constructor(
@@ -375,7 +376,7 @@ object NetworkQualitySheet {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppShapes.large)
-                .background(colorResource(R.color.app_dialog_accent_soft))
+                .background(appAccentSoftColor())
                 .padding(if (compact) 10.dp else 14.dp)
         ) {
             Text(
@@ -463,7 +464,7 @@ object NetworkQualitySheet {
         Column(
             modifier = Modifier.fillMaxWidth()
                 .clip(AppShapes.large)
-                .background(colorResource(R.color.app_dialog_accent_soft))
+                .background(appAccentSoftColor())
                 .padding(if (compact) 10.dp else 14.dp)
         ) {
             Row(
@@ -508,7 +509,7 @@ object NetworkQualitySheet {
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(colorResource(R.color.app_dialog_accent_soft)),
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(appAccentSoftColor()),
                 contentAlignment = Alignment.Center
             ) {
                 Text("!", color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Medium)

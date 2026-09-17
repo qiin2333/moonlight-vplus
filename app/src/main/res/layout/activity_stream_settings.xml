@@ -64,7 +64,7 @@
                 android:layout_marginTop="@dimen/activity_safearea_top"
                 android:layout_marginEnd="8dp"
                 android:layout_marginBottom="8dp"
-                android:src="@drawable/ic_search_stylish"
+                app:srcCompat="@drawable/ic_search_stylish"
                 android:background="@drawable/menu_button_background_stylish"
                 android:scaleType="center"
                 android:padding="10dp"
@@ -91,7 +91,7 @@
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:src="@drawable/ic_search_stylish"
+                    app:srcCompat="@drawable/ic_search_stylish"
                     android:layout_marginEnd="10dp"
                     android:contentDescription="@string/settings_search_hint" />
 
@@ -185,7 +185,7 @@
                 android:paddingBottom="12dp"
                 android:paddingTop="8dp"
                 android:textSize="10sp"
-                android:textColor="#44FF6B9D"
+                android:textColor="@color/you_accent_27"
                 android:letterSpacing="0.05"
                 android:fontFamily="monospace" />
 

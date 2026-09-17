@@ -6,7 +6,7 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#FF6B9D"
+        android:fillColor="?attr/appAccent"
         android:pathData="M10,4 A6,6 0 1,1 10,16 A6,6 0 1,1 10,4 M10,6 A4,4 0 1,0 10,14 A4,4 0 1,0 10,6 M14.5,14.5 L20,20 A1.5,1.5 0 1,1 17.879,22.121 L12.379,16.621 Z"
         android:fillType="evenOdd"/>
 </vector>

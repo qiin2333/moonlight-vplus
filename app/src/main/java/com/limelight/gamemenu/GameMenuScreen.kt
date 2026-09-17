@@ -119,6 +119,8 @@ import com.joco.showcaseview.ShowcasePosition
 import com.joco.showcaseview.highlight.ShowcaseHighlight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 private val GameMenuDialogShape = RoundedCornerShape(
     topStart = AppCornerRadii.overlay,
@@ -503,7 +505,7 @@ internal fun GameMenuGuideInputBlocker() {
 
 @Composable
 private fun gameMenuPalette() = GameMenuPalette(
-    accent = colorResource(R.color.game_menu_accent),
+    accent = appAccentColor(),
     card = colorResource(R.color.game_menu_card_background),
     textPrimary = colorResource(R.color.game_menu_text_primary),
     textSecondary = colorResource(R.color.game_menu_text_secondary),
@@ -901,7 +903,7 @@ private fun GameMenuVerticalScrollbar(
     modifier: Modifier = Modifier
 ) {
     val trackColor = colorResource(R.color.game_menu_list_item_border)
-    val thumbColor = colorResource(R.color.game_menu_accent)
+    val thumbColor = appAccentColor()
     Canvas(modifier) {
         if (viewportHeightPx <= 0 || scrollState.maxValue <= 0) return@Canvas
         val contentHeightPx = viewportHeightPx + scrollState.maxValue
@@ -931,7 +933,7 @@ private fun TouchModeChoice(
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val shape = GameMenuCardShape
     Column(
         modifier = modifier
@@ -1170,7 +1172,7 @@ private fun GameMenuHeader(
                     .background(colorResource(R.color.game_menu_card_background))
                     .border(
                         GameMenuDimens.surfaceStroke,
-                        colorResource(R.color.game_menu_button_border),
+                        appAccentSoftColor(),
                         settingsShape
                     )
                     .gamepadFocusOutline(settingsShape)
@@ -1209,7 +1211,7 @@ private fun GameMenuHeader(
                     .background(colorResource(R.color.game_menu_card_background))
                     .border(
                         GameMenuDimens.surfaceStroke,
-                        colorResource(R.color.game_menu_button_border),
+                        appAccentSoftColor(),
                         opacityShape
                     )
                     .gamepadFocusOutline(opacityShape)
@@ -1228,7 +1230,7 @@ private fun GameMenuHeader(
                         .clip(CircleShape)
                         .background(colorResource(R.color.game_menu_card_background))
                         .border(GameMenuDimens.surfaceStroke,
-                            colorResource(R.color.game_menu_button_border), CircleShape)
+                            appAccentSoftColor(), CircleShape)
                         .gamepadFocusOutline(CircleShape)
                         .clickable(onClick = callbacks.onUsbDevices)
                         .padding(8.dp)
@@ -1244,10 +1246,10 @@ private fun GameMenuHeader(
                     .then(crownGuideModifier)
                     .size(36.dp)
                     .clip(crownShape)
-                    .background(colorResource(R.color.game_menu_accent).copy(alpha = 0.10f))
+                    .background(appAccentColor().copy(alpha = 0.10f))
                     .border(
                         GameMenuDimens.surfaceStroke,
-                        colorResource(R.color.game_menu_accent).copy(alpha = 0.20f),
+                        appAccentColor().copy(alpha = 0.20f),
                         crownShape
                     )
                     .gamepadFocusOutline(crownShape)
@@ -1267,7 +1269,7 @@ private fun HeaderDeviceQuickAction(
     val toggle = option.inlineControl as? GameMenu.InlineControl.Toggle ?: return
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = CircleShape
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val stateDescription = stringResource(
         if (toggle.checked) R.string.game_menu_on else R.string.game_menu_off
     )

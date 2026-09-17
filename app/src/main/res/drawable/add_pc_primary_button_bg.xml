@@ -2,28 +2,28 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_enabled="false">
         <shape android:shape="rectangle">
-            <solid android:color="@color/add_pc_button_disabled" />
+            <solid android:color="@color/you_accent_40" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/theme_pink_dark" />
+            <solid android:color="@color/you_accent_80" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/add_pc_accent" />
+            <solid android:color="?attr/appAccent" />
             <corners android:radius="@dimen/corner_radius_medium" />
             <stroke
                 android:width="2dp"
-                android:color="@color/add_pc_accent_focus" />
+                android:color="?attr/appAccentFocus" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/add_pc_accent" />
+            <solid android:color="?attr/appAccent" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>

@@ -192,6 +192,9 @@ class StreamSettings : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 应用带阴影的主题
         theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+        // PreferenceThemeWithShadow 继承链会重新声明 appAccent=品牌粉，
+        // 覆盖掉 preCreated 阶段的取色 overlay —— 必须在其后重新叠加
+        UiHelper.applyAccentOverlay(this)
 
         super.onCreate(savedInstanceState)
         ConfigurationSyncScheduler.runNow(this)
@@ -576,7 +579,7 @@ class StreamSettings : AppCompatActivity() {
          */
         private fun updateItemAppearance(holder: ViewHolder, isSelected: Boolean, hasFocus: Boolean) {
             // 使用项目公共粉色主题
-            val accentColor = androidx.core.content.ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_accent)
+            val accentColor = UiHelper.accentColor(this@StreamSettings)
             val primaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_primary)
             val secondaryText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary)
             val subtleText = ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_outline_strong)
@@ -750,6 +753,7 @@ class StreamSettings : AppCompatActivity() {
         var shouldReloadSettings = nightModeChanged
         if (nightModeChanged) {
             theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+            UiHelper.applyAccentOverlay(this)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1389,7 +1393,7 @@ class StreamSettings : AppCompatActivity() {
          * SummaryProvider 是按需调用的，所以即便后续动态 setEntries() 也能拿到最新值。
          */
         private fun applyListPreferenceCurrentValueSummary(group: PreferenceGroup) {
-            val accent = ContextCompat.getColor(group.context, R.color.ui_shell_accent)
+            val accent = UiHelper.accentColor(group.context)
             val valueText = ContextCompat.getColor(group.context, R.color.ui_shell_text_primary)
             val disabledAccent = ContextCompat.getColor(group.context, R.color.ui_shell_text_disabled_primary)
             applyHighlightedSummariesRecursively(group, accent, valueText, disabledAccent)
@@ -3199,6 +3203,7 @@ class StreamSettings : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             // 添加阴影主题
             requireActivity().theme.applyStyle(R.style.PreferenceThemeWithShadow, true)
+            UiHelper.applyAccentOverlay(requireActivity())
 
             MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             initializeTouchModeDefaultsIfNeeded()
@@ -4394,7 +4399,7 @@ class StreamSettings : AppCompatActivity() {
                 ?: return
             val bitrate = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
                 ?: return
-            val accent = ContextCompat.getColor(bitrate.context, R.color.ui_shell_accent)
+            val accent = UiHelper.accentColor(bitrate.context)
             val valueText = ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_primary)
             val disabledAccent =
                 ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_disabled_primary)

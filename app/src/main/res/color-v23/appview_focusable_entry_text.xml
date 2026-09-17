@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API 23+ 版本：强调色走主题属性，Material You 开启后跟随壁纸。
+     API 22 使用 res/color/ 下的静态品牌粉版本。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:color="?attr/appAccent" />
+    <item android:state_focused="true" android:color="?attr/appAccent" />
+    <item android:color="@color/appview_text_primary" />
+</selector>

@@ -1185,7 +1185,7 @@ class PerformanceOverlayManager(
         val checkedState = intArrayOf(android.R.attr.state_checked)
         val defaultState = intArrayOf()
         val states = arrayOf(checkedState, defaultState)
-        val accent = ContextCompat.getColor(activity, R.color.app_dialog_accent_color)
+        val accent = UiHelper.accentColor(activity)
         val secondary = ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color)
 
         return ColorStateList(

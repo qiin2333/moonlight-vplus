@@ -39,6 +39,7 @@ import com.limelight.R
 import com.limelight.binding.input.StickCenterStore
 import com.limelight.utils.UiHelper
 import java.util.Locale
+import com.limelight.utils.appAccentColor
 
 /** Captures raw Android joystick axes, before deadzone and host Y inversion. */
 class StickCalibrationActivity : AppCompatActivity() {
@@ -60,7 +61,7 @@ class StickCalibrationActivity : AppCompatActivity() {
             val darkTheme = isSystemInDarkTheme()
             val baseColors = if (darkTheme) darkColorScheme() else lightColorScheme()
             val colors = baseColors.copy(
-                primary = colorResource(R.color.game_menu_accent),
+                primary = appAccentColor(),
                 onPrimary = Color.White,
                 background = colorResource(R.color.game_menu_dialog_background),
                 onBackground = colorResource(R.color.game_menu_text_primary),

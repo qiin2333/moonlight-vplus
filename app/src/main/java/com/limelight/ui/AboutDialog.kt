@@ -59,6 +59,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 /**
  * Compose implementation of the About dialog.
@@ -155,8 +157,8 @@ private fun FocusAwareCloseButton(
             .then(
                 if (showFocus) {
                     Modifier
-                        .background(colorResource(R.color.app_dialog_accent_soft), shape)
-                        .border(2.dp, colorResource(R.color.app_dialog_accent_color), shape)
+                        .background(appAccentSoftColor(), shape)
+                        .border(2.dp, appAccentColor(), shape)
                 } else {
                     Modifier
                 }
@@ -221,17 +223,17 @@ private fun AccentTextButton(
             .focusable(),
         shape = actionShape,
         border = if (showFocus) {
-            BorderStroke(2.dp, colorResource(R.color.app_dialog_accent_color))
+            BorderStroke(2.dp, appAccentColor())
         } else {
             null
         },
         colors = ButtonDefaults.textButtonColors(
             containerColor = if (showFocus) {
-                colorResource(R.color.app_dialog_accent_soft)
+                appAccentSoftColor()
             } else {
                 Color.Transparent
             },
-            contentColor = colorResource(R.color.app_dialog_accent_color)
+            contentColor = appAccentColor()
         ),
         contentPadding = PaddingValues(
             horizontal = 8.dp,
@@ -246,7 +248,7 @@ private fun AccentTextButton(
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 letterSpacing = 0.1.sp,
-                color = colorResource(R.color.app_dialog_accent_color)
+                color = appAccentColor()
             )
         )
     }
@@ -269,14 +271,14 @@ private fun BilibiliCard(
             .focusable(),
         shape = cardShape,
         color = if (showFocus) {
-            colorResource(R.color.app_dialog_surface_focused)
+            appAccentSoftColor()
         } else {
             colorResource(R.color.about_dialog_link_surface)
         },
         border = BorderStroke(
             if (showFocus) 2.dp else 1.dp,
             if (showFocus) {
-                colorResource(R.color.app_dialog_accent_color)
+                appAccentColor()
             } else {
                 colorResource(R.color.about_dialog_panel_outline)
             }
@@ -296,13 +298,13 @@ private fun BilibiliCard(
                     .size(width = 38.dp, height = 32.dp)
                     .border(
                         2.dp,
-                        colorResource(R.color.app_dialog_accent_color),
+                        appAccentColor(),
                         RoundedCornerShape(9.dp)
                     )
             ) {
                 Text(
                     stringResource(R.string.about_dialog_bilibili_badge),
-                    color = colorResource(R.color.app_dialog_accent_color),
+                    color = appAccentColor(),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -310,7 +312,7 @@ private fun BilibiliCard(
             Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(
                     stringResource(R.string.about_dialog_bilibili_title),
-                    color = colorResource(R.color.app_dialog_accent_color),
+                    color = appAccentColor(),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -324,7 +326,7 @@ private fun BilibiliCard(
             Icon(
                 painter = painterResource(R.drawable.ic_about_chevron_right),
                 contentDescription = null,
-                tint = colorResource(R.color.app_dialog_accent_color),
+                tint = appAccentColor(),
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -425,7 +427,7 @@ internal fun AboutDialogContent(
                                 .width(64.dp)
                                 .height(3.dp)
                                 .background(
-                                    colorResource(R.color.app_dialog_accent_color),
+                                    appAccentColor(),
                                     RoundedCornerShape(2.dp)
                                 )
                         )
@@ -576,7 +578,7 @@ private fun LandscapeAboutContent(
                     .width(64.dp)
                     .height(3.dp)
                     .background(
-                        colorResource(R.color.app_dialog_accent_color),
+                        appAccentColor(),
                         RoundedCornerShape(2.dp)
                     )
             )
@@ -805,14 +807,14 @@ private fun EcosystemCard(
         onClick = { onOpen(project) },
         shape = cardShape,
         color = if (showFocus) {
-            colorResource(R.color.app_dialog_surface_focused)
+            appAccentSoftColor()
         } else {
             colorResource(R.color.app_dialog_surface_elevated)
         },
         border = BorderStroke(
             if (showFocus) 2.dp else 1.dp,
             if (showFocus) {
-                colorResource(R.color.app_dialog_accent_color)
+                appAccentColor()
             } else {
                 colorResource(R.color.about_dialog_panel_outline)
             }
@@ -838,13 +840,13 @@ private fun EcosystemCard(
                             RoundedCornerShape(11.dp)
                         )
                         .background(
-                            colorResource(R.color.app_dialog_accent_soft),
+                            appAccentSoftColor(),
                             RoundedCornerShape(11.dp)
                         )
                 ) {
                     Text(
                         project.badge,
-                        color = colorResource(R.color.app_dialog_accent_color),
+                        color = appAccentColor(),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelSmall
                     )
@@ -860,7 +862,7 @@ private fun EcosystemCard(
                     )
                     Text(
                         project.platform,
-                        color = colorResource(R.color.app_dialog_accent_color),
+                        color = appAccentColor(),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(top = 2.dp)

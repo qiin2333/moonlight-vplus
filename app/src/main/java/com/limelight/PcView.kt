@@ -18,8 +18,12 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
+import android.graphics.drawable.Drawable
 import com.bumptech.glide.request.FutureTarget
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
@@ -60,6 +64,7 @@ import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppCacheManager
+import com.limelight.utils.BgAccent
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.HostCacheKey
 import com.limelight.utils.ConfigurationSyncScheduler
@@ -223,6 +228,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private lateinit var pcGridAdapter: PcGridAdapter
     private var pcListView: AbsListView? = null
     private var backgroundImageView: ImageView? = null
+    /** 当前主题 overlay 已使用的背景色相桶（用于检测背景刷新后的桶位变化）。 */
+    private var themedBgAccentBucket = Int.MIN_VALUE
     private var topSafeArea: Space? = null
 
     // State
@@ -255,6 +262,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private val backgroundTargetLock = Any()
     private var backgroundLoadGeneration = 0
     private var backgroundFutureTarget: FutureTarget<Bitmap>? = null
+    /** 背景显示层的异步 Glide 请求（CustomTarget），换代时显式取消，防旧图迟到覆盖新图。 */
+    private var backgroundDisplayTarget: Target<Drawable>? = null
     private var lastBackgroundSource: BackgroundSource? = null
     private var backgroundPrefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -309,6 +318,11 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         // androidx core-splashscreen backport shows the static icon over splash_bg and then
         // hands control to postSplashScreenTheme (AppTheme).
         val splashScreen = installSplashScreen()
+        // installSplashScreen 会把主题从 Theme.App.Starting 切到 postSplashScreenTheme(AppTheme)，
+        // 这一步 setTheme 会重建 Theme 对象、抹掉 Application 端 preCreated 阶段叠的
+        // Material You overlay —— 所以必须在 splash 切换之后重新叠一次。
+        UiHelper.applyAccentOverlay(this)
+        themedBgAccentBucket = BgAccent.bucket(this)
         // Hold the splash on screen until PcView's real content view is inflated
         // (completeOnCreate -> initializeViews -> setContentView(activity_pc_view)).
         // Without this, the system fires onExitAnimationListener as soon as the
@@ -757,10 +771,10 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         accent: Boolean = false,
         onClick: () -> Unit
     ) {
-        val iconColor = ColorStateList.valueOf(ContextCompat.getColor(
-            this,
-            if (accent) R.color.app_dialog_accent_color else R.color.ui_shell_text_secondary
-        ))
+        val iconColor = ColorStateList.valueOf(
+            if (accent) UiHelper.accentColor(this)
+            else ContextCompat.getColor(this, R.color.ui_shell_text_secondary)
+        )
         val titleColor = ContextCompat.getColor(this, R.color.ui_shell_text_primary)
         val subtitleColor = ContextCompat.getColor(this, R.color.ui_shell_text_secondary)
 
@@ -823,14 +837,33 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             UiHelper.THEME_MODE_LIGHT,
             UiHelper.THEME_MODE_DARK
         )
-        val labels = modes.map { getThemeModeLabel(it) }.toTypedArray()
-        val checked = modes.indexOf(UiHelper.getAppThemeMode(this)).coerceAtLeast(0)
+        // 第四项"跟随壁纸"：仅切换强调色来源为首页背景（日夜模式保持当前选择），
+        // 背景图刷新时强调色自动变化（见 loadBackgroundImage 的桶位比对）。
+        val labels = arrayOf(
+            getThemeModeLabel(UiHelper.THEME_MODE_SYSTEM),
+            getThemeModeLabel(UiHelper.THEME_MODE_LIGHT),
+            getThemeModeLabel(UiHelper.THEME_MODE_DARK),
+            getString(R.string.pcview_accent_follow_wallpaper)
+        )
+        val checked = if (UiHelper.getAccentMode(this) == UiHelper.ACCENT_MODE_BG) {
+            3
+        } else {
+            modes.indexOf(UiHelper.getAppThemeMode(this)).coerceAtLeast(0)
+        }
 
         val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
             .setTitle(R.string.pcview_theme_dialog_title)
             .setSingleChoiceItems(labels, checked) { dialogInterface, which ->
-                val mode = modes[which]
-                UiHelper.setAppThemeMode(this, mode)
+                if (which == 3) {
+                    // 跟随壁纸：自动锁定浅色主题 + 强调色来源切为首页背景。
+                    // 锁浅色后 per-app 夜间=NO，挡住 ROM 深夜的自动压暗，
+                    // 卡片 24 小时保持稳定的浅色+壁纸强调色形态。
+                    UiHelper.setAppThemeMode(this, UiHelper.THEME_MODE_LIGHT)
+                    UiHelper.setAccentMode(this, UiHelper.ACCENT_MODE_BG)
+                } else {
+                    UiHelper.setAppThemeMode(this, modes[which])
+                    UiHelper.setAccentMode(this, UiHelper.ACCENT_MODE_PINK)
+                }
                 showToast(getString(R.string.pcview_theme_applied, labels[which]))
                 dialogInterface.dismiss()
                 recreate()
@@ -839,6 +872,16 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             .create()
         dialog.show()
         AppDialogStyler.applySystemChoiceList(dialog, this)
+    }
+
+    /**
+     * 背景换桶后重染工具栏上以 ?attr/appAccent 着色的图标。
+     * 矢量在膨胀时一次性解析主题属性，主题 overlay 更新后不会自动重解析。
+     */
+    private fun refreshAccentTintedToolbarIcons() {
+        val tint = ColorStateList.valueOf(UiHelper.accentColor(this))
+        findViewById<ImageButton?>(R.id.aboutButton)?.imageTintList = tint
+        findViewById<ImageButton?>(R.id.easyTierControlButton)?.imageTintList = tint
     }
 
     private fun getThemeModeLabel(mode: String): String {
@@ -902,16 +945,20 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         if (target == null) {
             // "none" or self-demoted bad state → leave the view empty.
             backgroundImageView?.setImageDrawable(null)
+            BgAccent.clear(this)
             return
         }
 
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    decodeBackgroundBitmap(resolved, loadGeneration)
+                    val bmp = decodeBackgroundBitmap(resolved, loadGeneration)
+                    // 主导色相提取在 IO 线程完成（约 10~30ms 的逐像素采样）
+                    BgAccent.updateFromBitmap(this@PcView, bmp)
+                    bmp
                 }
                 if (isActive) {
-                    applyBlurredBackground(bitmap)
+                    applyNewBackgroundAndAccent(bitmap, loadGeneration)
                 }
             } catch (_: CancellationException) {
                 // Superseded by a newer load; nothing to do.
@@ -946,6 +993,7 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         loadGeneration: Int
     ): Bitmap {
         val target = requireNotNull(resolved.target)
+        val (width, height) = backgroundDecodeSize()
         val request = Glide.with(this@PcView as Context)
             .asBitmap()
             .load(resolveGlideTarget(target))
@@ -954,18 +1002,18 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
             // Keep the exact response bytes so settings can reuse the image
             // selected by random-image APIs instead of issuing a second draw.
             .diskCacheStrategy(DiskCacheStrategy.DATA)
+            // 显示解码一律按屏幕尺寸降采样。随机图源可能返回 8K 级原图，
+            // 全分辨率位图塞进 ImageView 会触发 "Canvas: trying to draw too
+            // large bitmap" 崩溃；长按保存走 DATA 磁盘缓存独立重解码，不受影响。
+            .override(width, height)
+            .downsample(DownsampleStrategy.CENTER_INSIDE)
 
         val futureTarget = if (resolved.source !== BackgroundSource.Local) {
-            // Preserve the existing decode and cache behavior for network
-            // backgrounds, including full-resolution long-press saves.
             request.submit()
         } else {
-            val (width, height) = backgroundDecodeSize()
             request
                 .apply(
                     RequestOptions()
-                        .override(width, height)
-                        .downsample(DownsampleStrategy.CENTER_INSIDE)
                         .format(DecodeFormat.PREFER_RGB_565)
                 )
                 .submit(width, height)
@@ -995,6 +1043,8 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
     private fun cancelPreviousBackgroundLoad(): Int {
         backgroundLoadJob?.cancel()
         backgroundImageView?.let { Glide.with(applicationContext).clear(it) }
+        backgroundDisplayTarget?.let { Glide.with(applicationContext).clear(it) }
+        backgroundDisplayTarget = null
 
         val (generation, previousTarget) = synchronized(backgroundTargetLock) {
             backgroundLoadGeneration += 1
@@ -1009,13 +1059,63 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
         return generation
     }
 
-    private fun applyBlurredBackground(bitmap: Bitmap) {
+    /**
+     * 新背景位图落地：先提取主导色相并同步强调色（跟随壁纸模式下桶位变化时
+     * 重叠 overlay、重绑列表、重染工具栏图标——不能 recreate：随机图源每次
+     * 加载都是新图，recreate 会触发无限循环），再做模糊处理上屏。
+     * 所有背景加载路径（loadBackgroundImage / refreshBackgroundImage）都必须走这里，
+     * 否则强调色会落后背景一次刷新。
+     */
+    private fun applyNewBackgroundAndAccent(bitmap: Bitmap, loadGeneration: Int) {
+        // 先于模糊处理提取主导色相（源头图信息量最大）
+        val bucket = BgAccent.updateFromBitmap(this, bitmap)
+        if (bucket != themedBgAccentBucket) {
+            themedBgAccentBucket = bucket
+            UiHelper.applyAccentOverlay(this)
+            pcGridAdapter.notifyDataSetChanged()
+            // 已膨胀的 ?attr 矢量图标不会自动重解析，需显式重染
+            refreshAccentTintedToolbarIcons()
+        }
+        applyBlurredBackground(bitmap, loadGeneration)
+    }
+
+    private fun applyBlurredBackground(bitmap: Bitmap, loadGeneration: Int) {
         if (backgroundImageView == null) return
+        // 兜底钳制：任何路径传入的位图都不得超过 2 倍屏幕像素，防止 Canvas 崩溃
+        val metrics = resources.displayMetrics
+        val maxPixels = metrics.widthPixels.toLong() * metrics.heightPixels * 2
+        val bitmapPixels = bitmap.width.toLong() * bitmap.height
+        val safe = if (bitmapPixels > maxPixels) {
+            val scale = Math.sqrt(maxPixels.toDouble() / bitmapPixels)
+            Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * scale).toInt().coerceAtLeast(1),
+                (bitmap.height * scale).toInt().coerceAtLeast(1),
+                true
+            )
+        } else {
+            bitmap
+        }
+        val displayTarget = object : CustomTarget<Drawable>() {
+            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                // 代际守卫：旧代的慢速模糊完成后不得覆盖新一代背景
+                if (loadGeneration == backgroundLoadGeneration) {
+                    backgroundImageView?.setImageDrawable(resource)
+                }
+            }
+
+            override fun onLoadCleared(placeholder: Drawable?) {
+                if (loadGeneration == backgroundLoadGeneration) {
+                    backgroundImageView?.setImageDrawable(placeholder)
+                }
+            }
+        }
+        backgroundDisplayTarget = displayTarget
         Glide.with(this as Context)
-                .load(bitmap)
+                .load(safe)
                 .apply(RequestOptions.bitmapTransform(BlurTransformation(2, 3)))
                 .transform(ColorFilterTransformation(Color.argb(120, 0, 0, 0)))
-                .into(backgroundImageView!!)
+                .into(displayTarget)
     }
 
     private fun handleGlideException(e: ExecutionException) {
@@ -1165,15 +1265,18 @@ class PcView : Activity(), AdapterFragmentCallbacks, ShakeDetector.Listener, Eas
 
         if (target == null) {
             backgroundImageView?.setImageDrawable(null)
+            BgAccent.clear(this)
             return
         }
         backgroundLoadJob = uiScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    decodeBackgroundBitmap(resolved, loadGeneration)
+                    val bmp = decodeBackgroundBitmap(resolved, loadGeneration)
+                    BgAccent.updateFromBitmap(this@PcView, bmp)
+                    bmp
                 }
                 if (isActive) {
-                    applyBlurredBackground(bitmap)
+                    applyNewBackgroundAndAccent(bitmap, loadGeneration)
                     if (isFromShake) {
                         showToast(getString(R.string.background_refreshed_with_remaining, getRemainingRefreshCount()))
                     }

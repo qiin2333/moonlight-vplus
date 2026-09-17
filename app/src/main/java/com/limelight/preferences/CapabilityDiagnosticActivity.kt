@@ -88,7 +88,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -105,6 +104,7 @@ import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
 import kotlinx.coroutines.launch
+import com.limelight.utils.appAccentColor
 
 /**
  * 编解码与屏幕能力检测页面。
@@ -714,7 +714,7 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
         val panel = Color(0xE6101020)
         val primary = Color(0xFFEEEEEE)
         val secondary = Color(0xAAFFFFFF)
-        val accent = colorResource(R.color.crown_accent)
+        val accent = appAccentColor()
         val reportFocusRequester = remember { FocusRequester() }
         val backFocusRequester = remember { FocusRequester() }
         val copyFocusRequester = remember { FocusRequester() }
@@ -1005,12 +1005,12 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
                 ) {
                     Text(
                             text = card.icon,
-                            color = colorResource(R.color.crown_accent),
+                            color = appAccentColor(),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                     .clip(AppShapes.small)
-                                    .background(colorResource(R.color.crown_accent).copy(alpha = 0.18f))
+                                    .background(appAccentColor().copy(alpha = 0.18f))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
@@ -1078,7 +1078,7 @@ class CapabilityDiagnosticActivity : ComponentActivity() {
             is DiagnosticRow.Section -> {
                 Text(
                         text = row.title,
-                        color = colorResource(R.color.crown_accent),
+                        color = appAccentColor(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 2.dp)

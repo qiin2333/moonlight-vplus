@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 首页背景取色的 12 个色相桶（每桶 30°，中心角 +15°）。由 BgAccent 按背景图主导色相选择对应 overlay。 -->
+    <color name="you_bg_accent_0">#FFED7E73</color>
+    <color name="you_bg_accent_0_soft">#1AED7E73</color>
+    <color name="you_bg_accent_0_focus">#33ED7E73</color>
+    <color name="you_bg_accent_1">#FFD88D52</color>
+    <color name="you_bg_accent_1_soft">#1AD88D52</color>
+    <color name="you_bg_accent_1_focus">#33D88D52</color>
+    <color name="you_bg_accent_2">#FFB59D44</color>
+    <color name="you_bg_accent_2_soft">#1AB59D44</color>
+    <color name="you_bg_accent_2_focus">#33B59D44</color>
+    <color name="you_bg_accent_3">#FF88A951</color>
+    <color name="you_bg_accent_3_soft">#1A88A951</color>
+    <color name="you_bg_accent_3_focus">#3388A951</color>
+    <color name="you_bg_accent_4">#FF4FB173</color>
+    <color name="you_bg_accent_4_soft">#1A4FB173</color>
+    <color name="you_bg_accent_4_focus">#334FB173</color>
+    <color name="you_bg_accent_5">#FF2AB09F</color>
+    <color name="you_bg_accent_5_soft">#1A2AB09F</color>
+    <color name="you_bg_accent_5_focus">#332AB09F</color>
+    <color name="you_bg_accent_6">#FF27AEBD</color>
+    <color name="you_bg_accent_6_soft">#1A27AEBD</color>
+    <color name="you_bg_accent_6_focus">#3327AEBD</color>
+    <color name="you_bg_accent_7">#FF1CAADB</color>
+    <color name="you_bg_accent_7_soft">#1A1CAADB</color>
+    <color name="you_bg_accent_7_focus">#331CAADB</color>
+    <color name="you_bg_accent_8">#FF53A2F5</color>
+    <color name="you_bg_accent_8_soft">#1A53A2F5</color>
+    <color name="you_bg_accent_8_focus">#3353A2F5</color>
+    <color name="you_bg_accent_9">#FFA492E8</color>
+    <color name="you_bg_accent_9_soft">#1AA492E8</color>
+    <color name="you_bg_accent_9_focus">#33A492E8</color>
+    <color name="you_bg_accent_10">#FFD681C8</color>
+    <color name="you_bg_accent_10_soft">#1AD681C8</color>
+    <color name="you_bg_accent_10_focus">#33D681C8</color>
+    <color name="you_bg_accent_11">#FFEE799D</color>
+    <color name="you_bg_accent_11_soft">#1AEE799D</color>
+    <color name="you_bg_accent_11_focus">#33EE799D</color>
+    <style name="YouAccentOverlayBg0">
+        <item name="appAccent">@color/you_bg_accent_0</item>
+        <item name="appAccentSoft">@color/you_bg_accent_0_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_0_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg1">
+        <item name="appAccent">@color/you_bg_accent_1</item>
+        <item name="appAccentSoft">@color/you_bg_accent_1_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_1_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg2">
+        <item name="appAccent">@color/you_bg_accent_2</item>
+        <item name="appAccentSoft">@color/you_bg_accent_2_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_2_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg3">
+        <item name="appAccent">@color/you_bg_accent_3</item>
+        <item name="appAccentSoft">@color/you_bg_accent_3_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_3_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg4">
+        <item name="appAccent">@color/you_bg_accent_4</item>
+        <item name="appAccentSoft">@color/you_bg_accent_4_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_4_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg5">
+        <item name="appAccent">@color/you_bg_accent_5</item>
+        <item name="appAccentSoft">@color/you_bg_accent_5_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_5_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg6">
+        <item name="appAccent">@color/you_bg_accent_6</item>
+        <item name="appAccentSoft">@color/you_bg_accent_6_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_6_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg7">
+        <item name="appAccent">@color/you_bg_accent_7</item>
+        <item name="appAccentSoft">@color/you_bg_accent_7_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_7_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg8">
+        <item name="appAccent">@color/you_bg_accent_8</item>
+        <item name="appAccentSoft">@color/you_bg_accent_8_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_8_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg9">
+        <item name="appAccent">@color/you_bg_accent_9</item>
+        <item name="appAccentSoft">@color/you_bg_accent_9_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_9_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg10">
+        <item name="appAccent">@color/you_bg_accent_10</item>
+        <item name="appAccentSoft">@color/you_bg_accent_10_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_10_focus</item>
+    </style>
+    <style name="YouAccentOverlayBg11">
+        <item name="appAccent">@color/you_bg_accent_11</item>
+        <item name="appAccentSoft">@color/you_bg_accent_11_soft</item>
+        <item name="appAccentFocus">@color/you_bg_accent_11_focus</item>
+    </style>
+</resources>

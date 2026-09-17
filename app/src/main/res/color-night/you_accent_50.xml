@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 夜间品牌粉 0.53 洗色 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#88FF8FA3" />
+</selector>

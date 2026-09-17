@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
+import com.limelight.utils.UiHelper
 
 class ScreenCombinationModePickerView(
     context: Context,
@@ -41,7 +42,7 @@ class ScreenCombinationModePickerView(
 
         val primaryTextColor = ContextCompat.getColor(context, R.color.appview_text_primary)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.appview_text_secondary)
-        val accentColor = ContextCompat.getColor(context, R.color.theme_pink_primary)
+        val accentColor = UiHelper.accentColor(context)
         val topSafePadding = resources.getDimensionPixelSize(R.dimen.activity_safearea_top)
 
         val root = LinearLayout(context).apply {
@@ -360,7 +361,7 @@ class ScreenCombinationModePickerView(
     ) : View(context) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val rect = RectF()
-        private val accentColor = ContextCompat.getColor(context, R.color.theme_pink_primary)
+        private val accentColor = UiHelper.accentColor(context)
         private val activeFill = Color.argb(if (selected) 235 else 205, 255, 107, 157)
         private val activeStroke = Color.argb(235, 255, 180, 210)
         private val idleFill = Color.argb(36, 255, 255, 255)
