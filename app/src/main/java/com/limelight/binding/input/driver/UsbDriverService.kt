@@ -683,7 +683,12 @@ class UsbDriverService : Service(), UsbDriverListener {
             }
         }
         val candidates = waveformRegistry.discover(identity)
-        val selected = HapticBackendSelector.select(candidates)
+        // One output companion per device: an ambiguous claim opens nothing rather than
+        // guessing between competing protocols.
+        val selected = candidates.singleOrNull {
+            it.ownership == HapticBackendOwnership.OUTPUT_COMPANION &&
+                it.capability.output == HapticOutput.WAVEFORM_STREAM && it.layoutMatches
+        }
         val unique = mgr.deviceList.values.count {
             it.vendorId == device.vendorId && it.productId == device.productId
         } == 1

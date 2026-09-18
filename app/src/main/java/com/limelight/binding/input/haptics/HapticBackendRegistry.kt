@@ -1,12 +1,12 @@
 package com.limelight.binding.input.haptics
 
-enum class HapticOutput { RUMBLE, PARAMETRIC, WAVEFORM_STREAM }
+enum class HapticOutput { WAVEFORM_STREAM }
 enum class HapticAvailability {
-    UNKNOWN, NEEDS_VALIDATION, NEEDS_PERMISSION, NEEDS_ASSOCIATION, BUSY,
+    NEEDS_VALIDATION, NEEDS_PERMISSION, NEEDS_ASSOCIATION, BUSY,
     INITIALIZING, READY, FAILED, DISCONNECTED, UNSUPPORTED_PATH
 }
 enum class HapticEvidence { PLATFORM_API, VENDOR_SDK, EXPERIMENTAL_PROTOCOL, VALIDATED_PROTOCOL }
-data class WaveformFormat(val sampleRateHz: Int, val channels: Int = 2, val bitsPerSample: Int = 16)
+data class WaveformFormat(val sampleRateHz: Int)
 data class ControllerHapticsCapability(
     val backendId: String,
     val output: HapticOutput,
@@ -52,7 +52,6 @@ class HapticBackendRegistry(private val profiles: List<HapticProtocolProfile> = 
 )) {
     init { require(profiles.map { it.id }.distinct().size == profiles.size) }
     fun discover(device: HapticDeviceIdentity): List<HapticCandidate> = profiles.mapNotNull { it.probe(device) }
-    fun hasKnownIdentity(device: HapticDeviceIdentity): Boolean = profiles.any { it.matchesIdentity(device) }
 }
 
 object KishiUsbHapticProfile : HapticProtocolProfile {
@@ -104,21 +103,6 @@ object HapticActivationPolicy {
         !uniqueDevice -> HapticAvailability.NEEDS_ASSOCIATION
         !hasPermission -> HapticAvailability.NEEDS_PERMISSION
         else -> HapticAvailability.INITIALIZING
-    }
-}
-
-/** One backend per motor group. Equally strong competing claims require explicit resolution. */
-object HapticBackendSelector {
-    fun select(candidates: List<HapticCandidate>): HapticCandidate? {
-        fun rank(evidence: HapticEvidence) = when (evidence) {
-            HapticEvidence.PLATFORM_API -> 0
-            HapticEvidence.VENDOR_SDK -> 1
-            HapticEvidence.VALIDATED_PROTOCOL -> 2
-            HapticEvidence.EXPERIMENTAL_PROTOCOL -> 3
-        }
-        val usable = candidates.filter { it.layoutMatches && it.capability.output == HapticOutput.WAVEFORM_STREAM }
-        val bestRank = usable.minOfOrNull { rank(it.capability.evidence) } ?: return null
-        return usable.filter { rank(it.capability.evidence) == bestRank }.singleOrNull()
     }
 }
 

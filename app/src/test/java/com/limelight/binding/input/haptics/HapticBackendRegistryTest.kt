@@ -65,16 +65,6 @@ class HapticBackendRegistryTest {
         assertEquals(HapticAvailability.UNSUPPORTED_PATH, state(candidate().copy(layoutMatches = false), experimental = true))
     }
 
-    @Test fun backendSelectionUsesEvidenceAndDoesNotGuessTies() {
-        val experimental = candidate()
-        val validated = experimental.copy(capability = experimental.capability.copy(
-            backendId = "validated", evidence = HapticEvidence.VALIDATED_PROTOCOL))
-        assertEquals(validated, HapticBackendSelector.select(listOf(experimental, validated)))
-        assertNull(HapticBackendSelector.select(listOf(validated, validated.copy(
-            capability = validated.capability.copy(backendId = "other")))))
-        assertNull(HapticBackendSelector.select(listOf(experimental.copy(layoutMatches = false))))
-    }
-
     @Test fun newProfilesDoNotRequireChangingTheRouter() {
         val profile = object : HapticProtocolProfile {
             override val id = "vendor-sdk"

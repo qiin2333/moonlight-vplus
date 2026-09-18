@@ -457,12 +457,6 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    fun attachDs5HapticsSink(
-        controllerId: Int,
-        controllerNumber: Short,
-        sink: DualSenseNativeHapticsSink
-    ) = attachWaveformHapticsSink(controllerId, controllerNumber, sink)
-
     fun attachWaveformHapticsSink(
         controllerId: Int,
         controllerNumber: Short,

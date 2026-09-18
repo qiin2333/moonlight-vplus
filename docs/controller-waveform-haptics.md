@@ -30,7 +30,7 @@ no new profile has been declared hardware-validated by this implementation.
 flowchart TD
     A[Connection identity and USB descriptors] --> B[Protocol profile registry]
     B --> C[Candidate capabilities and evidence]
-    C --> D[Backend selection and activation policy]
+    C --> D[Companion uniqueness and activation policy]
     D --> E[Connection-scoped route catalog]
     E --> F[Unique player association]
     F --> G[Waveform coordinator]
@@ -41,9 +41,8 @@ flowchart TD
 - `HapticBackendRegistry` performs passive matching. Profiles cannot open hardware
   during discovery. Built-in profiles recognize Kishi USB and Sony DualSense USB;
   Bluetooth does not inherit USB capabilities.
-- `HapticBackendSelector` prefers platform evidence, vendor SDK evidence, validated
-  protocols, then experimental protocols. Equal competing claims are not resolved
-  by registration order. Only the selected companion backend may open a device.
+- A device gets at most one output companion: an ambiguous competing claim opens
+  nothing rather than being resolved by registration order.
 - `HapticActivationPolicy` separately checks protocol evidence, API level, descriptor
   layout, unique device association, permission and external ownership. A descriptor
   match can reach `INITIALIZING`, never `READY` by itself.
