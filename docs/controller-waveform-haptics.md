@@ -159,6 +159,34 @@ Bluetooth transports are outside this implementation.
 
 ## Validation
 
+### Android device software validation (2026-09-18)
+
+Installed the non-root debug APK built from `707abe2ab` on a Meizu 17,
+Android 13 / API 33 / arm64-v8a, using `adb install -r` to preserve app data.
+Version: `12.12.8-beta.2` (`121208002`), package `com.limelight.vplus_debug`.
+Cold launch succeeded. No Kishi or other USB host device was attached.
+
+`WaveformSoftwareDeviceTest` and `UsbDevicePanelTest` passed together: **10 tests**.
+The targeted tests exercise JNI loading and disconnected-input rejection, actual
+Android USB enumeration with no false waveform candidate, 48-to-4 kHz packetization
+and stereo isolation on ART, fallback duplicate/end handling, and three consecutive
+USB service session attach/release cycles with startup and completion callbacks.
+The USB panel tests exercise touch and injected controller-key interaction.
+
+The initial service test invoked a legacy API stripped by R8; the final test uses
+the same explicit `attachSession` / `releaseSession` APIs as streaming. No production
+behavior or minification rules were changed to make the test pass.
+
+Reproduce after installing both debug and androidTest APKs:
+
+```sh
+adb shell am instrument -w -r -e class com.limelight.binding.input.haptics.WaveformSoftwareDeviceTest,com.limelight.UsbDevicePanelTest com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+This is software validation, not a Kishi hardware or live-stream acceptance result.
+USB permission/claim, packet delivery, actual actuator output, disconnect during
+playback and concurrent input/output remain unverified without the controller.
+
 Unit tests exercise both built-in profiles, rejection of name-only/unknown/incorrect-mode
 matches, descriptor constraints, evidence ordering, competing backends, validated-profile
 automatic activation, permissions, occupation, independent identical-device state,
