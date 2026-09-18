@@ -1,6 +1,7 @@
 package com.limelight.binding.input.driver
 
 import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
+import com.limelight.binding.input.haptics.HapticRouteSnapshot
 
 /**
  * Transport-neutral controller events consumed by [com.limelight.binding.input.ControllerHandler].
@@ -10,6 +11,17 @@ import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
  * existing controller lifecycle without introducing a parallel input path.
  */
 interface ControllerDriverListener {
+    fun onWaveformRouteChanged(route: HapticRouteSnapshot) = Unit
+    fun onWaveformRouteGone(routeId: Int) = Unit
+    /** Output-only companion to a system-managed InputDevice; must not allocate a player. */
+    fun onSystemWaveformSinkAvailable(
+        route: HapticRouteSnapshot,
+        sink: com.limelight.binding.input.haptics.WaveformHapticsSink,
+        onAssociationLost: () -> Unit
+    ) = Unit
+
+    fun onSystemWaveformSinkGone(routeId: Int) = Unit
+
     fun reportControllerState(
         controllerId: Int,
         buttonFlags: Int,

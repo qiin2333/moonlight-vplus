@@ -1,6 +1,8 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.preferences
 
+import com.limelight.nvstream.HostGamepadSelection
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -119,6 +121,8 @@ class PreferenceConfiguration {
     var multiController = false
     var combineJoyCons = true
     var usbDriver = false
+    var allowExperimentalHaptics = false
+    var hostGamepadSelection = HostGamepadSelection.AUTOMATIC
     var dualSenseWirelessBridge = false
     var dualSenseDirectBluetooth = false
     @JvmField var flipFaceButtons = false
@@ -1385,6 +1389,9 @@ class PreferenceConfiguration {
             config.multiController = prefs.getBoolean(MULTI_CONTROLLER_PREF_STRING, DEFAULT_MULTI_CONTROLLER)
             config.combineJoyCons = prefs.getBoolean("checkbox_combine_joycons", true)
             config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER)
+            config.allowExperimentalHaptics = prefs.getBoolean("checkbox_experimental_haptic_protocols", false)
+            config.hostGamepadSelection = HostGamepadSelection.fromPreference(
+                prefs.getString("list_host_gamepad_selection", "automatic"))
             config.dualSenseWirelessBridge = prefs.getBoolean(
                 DUALSENSE_WIRELESS_BRIDGE_PREF_STRING,
                 DEFAULT_DUALSENSE_WIRELESS_BRIDGE

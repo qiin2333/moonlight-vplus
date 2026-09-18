@@ -98,6 +98,8 @@ internal class DualSenseUsbHapticsSink(
     private var lastSequence = 0
     private var hasSequence = false
 
+    override val isOperational: Boolean get() = active.get()
+
     override fun start(): Boolean = synchronized(lifecycleLock) {
         if (stopStarted || stopCompleted) return@synchronized false
         if (startAttempted) return@synchronized active.get()

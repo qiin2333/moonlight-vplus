@@ -772,6 +772,18 @@
             android:title="@string/title_checkbox_xb1_driver"
             android:summary="@string/summary_checkbox_xb1_driver"
             android:defaultValue="true" />
+        <ListPreference
+            android:key="list_host_gamepad_selection"
+            android:title="@string/title_host_gamepad_selection"
+            android:summary="@string/summary_host_gamepad_selection"
+            android:entries="@array/host_gamepad_selection_names"
+            android:entryValues="@array/host_gamepad_selection_values"
+            android:defaultValue="automatic" />
+        <SwitchPreferenceCompat
+            android:key="checkbox_experimental_haptic_protocols"
+            android:title="@string/title_experimental_haptic_protocols"
+            android:summary="@string/summary_experimental_haptic_protocols"
+            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_usb_bind_all"
             android:dependency="checkbox_usb_driver"

@@ -3,6 +3,7 @@ package com.limelight.binding.input.haptics
 import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
+import com.limelight.LimeLog
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
@@ -23,7 +24,8 @@ internal class ControllerHapticsCoordinator(
 ) {
     private data class NativeHapticsBinding(
         val controllerNumber: Short,
-        val sink: DualSenseNativeHapticsSink
+        val sink: WaveformHapticsSink,
+        val onAvailability: (HapticAvailability) -> Unit
     )
 
     private val mixer = ControllerHapticsMixer()
@@ -60,7 +62,8 @@ internal class ControllerHapticsCoordinator(
             controllerAvailable = ::controllerHasRumble,
             controllerIntervalMs = ::dispatchIntervalMs,
             writeController = { mixed ->
-                handler.rumbleManager.handleRumble(
+                if (!ds5HapticsBindings.values.any { it.controllerNumber == mixed.controllerNumber &&
+                        it.sink.playbackControl?.playbackActive == true }) handler.rumbleManager.handleRumble(
                     mixed.controllerNumber, mixed.output.lowFrequency.toMotorShort(),
                     mixed.output.highFrequency.toMotorShort()
                 )
@@ -406,21 +409,59 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
+    private val pcmFallback = AuthoredPcmFallback()
+    private data class PendingPcm(val state: ControllerRumbleState, val expiresAt: Long)
+    private val pendingPcm = mutableMapOf<Short, PendingPcm>()
+    private var pcmDispatchPending = false
+
     fun submitDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
-        var target: DualSenseNativeHapticsSink? = null
-        for (binding in ds5HapticsBindings.values) {
-            if (binding.controllerNumber == frame.controllerNumber) {
-                target = binding.sink
-                break
+        if (isStoppingOrStopped()) return
+        val reduced = pcmFallback.accept(frame) ?: return
+        val binding = ds5HapticsBindings.values.firstOrNull { it.controllerNumber == frame.controllerNumber }
+        var direct = handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE &&
+            binding?.sink?.isOperational == true
+        if (direct) direct = runCatching { binding!!.sink.submit(frame) }.isSuccess
+        if (binding != null && (!binding.sink.isOperational ||
+                (handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE && !direct))) {
+            val entry = ds5HapticsBindings.entries.firstOrNull { it.value === binding }
+            if (entry != null && ds5HapticsBindings.remove(entry.key, binding)) {
+                binding.onAvailability(HapticAvailability.FAILED)
+                stopSinksAsync(listOf(binding))
             }
         }
-        target?.submit(frame)
+        // Bound the UI queue to one runnable and one latest value per player. Always send a
+        // zero when direct output takes ownership so stale fallback cannot replay afterward.
+        synchronized(pendingPcm) {
+            pendingPcm[frame.controllerNumber] = PendingPcm(
+                if (direct) ControllerRumbleState.ZERO else reduced, SystemClock.elapsedRealtime() + 50)
+            if (pcmDispatchPending) return
+            pcmDispatchPending = true
+        }
+        handler.mainThreadHandler.post {
+            val latest = synchronized(pendingPcm) {
+                pendingPcm.toMap().also { pendingPcm.clear(); pcmDispatchPending = false }
+            }
+            if (isStoppingOrStopped()) return@post
+            val now = SystemClock.elapsedRealtime()
+            for ((number, pending) in latest) {
+                val context = GameRumbleContext(handler.prefConfig.gameRumbleMode,
+                    controllerHasRumble(number), number.toInt() == 0 && deviceCapabilities.hasVibrator,
+                    deviceCapabilities.tier)
+                val plan = GameRumbleAllocator.allocate(context, RumbleSignalFeatures(pending.state))
+                renderer.queueController(mixer.submit(number, RumbleSource.AUTHORED,
+                    plan.controller ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
+                if (number.toInt() == 0) renderer.queueDevice(deviceMixer.submit(number,
+                    RumbleSource.AUTHORED, plan.device ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
+            }
+            scheduleNextExpiry(now)
+        }
     }
 
-    fun attachDs5HapticsSink(
+    fun attachWaveformHapticsSink(
         controllerId: Int,
         controllerNumber: Short,
-        sink: DualSenseNativeHapticsSink
+        sink: WaveformHapticsSink,
+        onAvailability: (HapticAvailability) -> Unit = {}
     ) {
         val generation: Long
         synchronized(ds5LifecycleLock) {
@@ -441,7 +482,30 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
 
-            if (!sink.start()) {
+            sink.playbackControl?.let { playback ->
+                playback.onPlaybackChanged = { playing ->
+                    val completed = java.util.concurrent.CountDownLatch(1)
+                    runOnOutputThread {
+                        try {
+                            if (ds5HapticsBindings[controllerId]?.sink === sink) {
+                                if (playing) handler.rumbleManager.handleRumble(controllerNumber, 0, 0)
+                                else onSinkChanged(controllerNumber)
+                            }
+                        } finally { completed.countDown() }
+                    }
+                    // Serialize rumble-off ahead of the first waveform packet. This callback runs
+                    // on the sink's transport worker, so a stalled main thread must only cost the
+                    // ordering guarantee here — throwing would tear down a healthy transport.
+                    if (playing && !completed.await(500, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                        LimeLog.warning(
+                            "Timed out zeroing motors before waveform playback for controller $controllerId"
+                        )
+                    }
+                }
+            }
+
+            if (!runCatching { sink.start() }.getOrDefault(false)) {
+                onAvailability(HapticAvailability.FAILED)
                 synchronized(ds5LifecycleLock) {
                     if (ds5RequestedGenerations[controllerId] == generation) {
                         ds5RequestedGenerations.remove(controllerId)
@@ -469,7 +533,7 @@ internal class ControllerHapticsCoordinator(
                         }
                     }
                     ds5HapticsBindings[controllerId] =
-                        NativeHapticsBinding(controllerNumber, sink)
+                        NativeHapticsBinding(controllerNumber, sink, onAvailability)
                     true
                 }
             }
@@ -477,6 +541,7 @@ internal class ControllerHapticsCoordinator(
                 sink.stop()
                 return@post
             }
+            onAvailability(HapticAvailability.READY)
             replaced.forEach { it.sink.stop() }
         }
     }

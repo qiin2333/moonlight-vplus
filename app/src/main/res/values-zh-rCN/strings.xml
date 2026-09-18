@@ -2162,4 +2162,21 @@
     <string name="theme_accent_pink">品牌粉</string>
     <string name="theme_accent_background">跟随首页背景</string>
     <string name="theme_summary">%1$s · %2$s</string>
+    <string name="title_experimental_haptic_protocols">允许实验性触觉协议</string>
+    <string name="summary_experimental_haptic_protocols">自动识别手柄。允许尝试已识别但尚未验证的波形协议；未知协议继续使用普通振动。更改后重新串流。</string>
+    <string name="waveform_status_ready">波形通道已就绪，播放仍需触觉内容。</string>
+    <string name="waveform_status_validation">已识别候选波形协议，尚待验证；当前保留普通振动。</string>
+    <string name="waveform_status_permission">波形输出需要 USB 授权，普通振动仍可使用。</string>
+    <string name="waveform_status_association">等待唯一玩家关联。请按下手柄按键；无法区分的同款设备保留普通振动。</string>
+    <string name="waveform_status_initializing">正在建立波形通道…</string>
+    <string name="waveform_status_busy">波形通道被占用，当前保留普通振动。</string>
+    <string name="waveform_status_failed">波形输出失败，已回退普通振动；重新连接可重试。</string>
+    <string name="waveform_status_unavailable">未识别到可用波形通道，当前保留普通振动。</string>
+    <string name="waveform_experimental">实验性</string>
+    <string name="waveform_player">玩家 %1$d</string>
+    <string name="waveform_test_channels">测试左右触觉</string>
+    <string name="waveform_test_cancel">停止触觉测试</string>
+    <string name="title_host_gamepad_selection">主机虚拟手柄</string>
+    <string name="summary_host_gamepad_selection">选择向 Sunshine 请求的手柄类型，对所有玩家生效。自动模式会为已识别的波形手柄或屏幕触摸板请求 DS5。更改后重新串流。</string>
+    <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
 </resources>
