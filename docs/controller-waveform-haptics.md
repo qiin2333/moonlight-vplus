@@ -11,6 +11,11 @@ own state: needs validation, needs USB permission, needs a unique player associa
 busy, initializing, ready, failed, or unavailable. Unknown devices retain ordinary
 vibration; this does not assert that their hardware lacks waveform support.
 
+A channel that fails to open is rebuilt automatically with a growing backoff
+(5 s to 60 s). After five consecutive builds without a working channel, the route
+stays failed instead of retrying forever; replugging the controller or restarting
+the stream resets that budget.
+
 **Allow experimental haptic protocols** is an optional validation-policy setting,
 default off. It permits trying recognized but unverified protocols, across brands.
 It does not enable discovery, bypass descriptor checks, infer support from device

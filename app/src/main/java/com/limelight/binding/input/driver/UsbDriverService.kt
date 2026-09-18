@@ -720,12 +720,21 @@ class UsbDriverService : Service(), UsbDriverListener {
                 if (waveformPermissionRequests.add(route.id)) requestUsbPermission(mgr, device, "Controller waveform haptics")
             }
             if (state != HapticAvailability.INITIALIZING) continue
-            val nowMs = SystemClock.elapsedRealtime()
             val pacing = waveformPacing[identity.instance]
-            if (pacing != null && nowMs < pacing.blockedUntilMs) {
-                scheduleWaveformRetry(identity.instance, pacing.blockedUntilMs - nowMs)
-                publishWaveform(route, HapticAvailability.FAILED)
-                continue
+            if (pacing != null) {
+                if (pacing.attempts >= MAX_WAVEFORM_BUILDS_PER_DEVICE) {
+                    // Failure budget exhausted for this session. Stick at FAILED until the
+                    // device is re-enumerated (replug/identity change) or the USB session
+                    // restarts — both clear pacing — instead of cycling the channel forever.
+                    publishWaveform(route, HapticAvailability.FAILED)
+                    continue
+                }
+                val nowMs = SystemClock.elapsedRealtime()
+                if (nowMs < pacing.blockedUntilMs) {
+                    scheduleWaveformRetry(identity.instance, pacing.blockedUntilMs - nowMs)
+                    publishWaveform(route, HapticAvailability.FAILED)
+                    continue
+                }
             }
             val activeRoute = renewWaveformRoute(route) ?: continue
             val sink = UsbWaveformBackends.create(mgr, device, candidate) { capability ->
@@ -795,7 +804,9 @@ class UsbDriverService : Service(), UsbDriverListener {
      * last READY report or physical re-enumeration: the first build is immediate, and each
      * consecutive build without a working channel waits longer (5s, 10s, 20s, 40s, then 60s).
      * A single transient failure still retries on the next discovery; a persistently broken
-     * device converges to one attempt per minute instead of cycling the USB connection forever.
+     * device converges to one attempt per minute and, once [MAX_WAVEFORM_BUILDS_PER_DEVICE]
+     * builds have failed, the route parks at FAILED until re-enumeration or a USB session
+     * restart clears the budget.
      */
     private fun armWaveformPacing(instance: String) {
         val delays = longArrayOf(0L, 5_000L, 10_000L, 20_000L, 40_000L, 60_000L)
@@ -1075,6 +1086,9 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         private const val ACTION_USB_PERMISSION = "com.limelight.USB_PERMISSION"
+
+        /** Channel builds allowed per device between successes; the route parks at FAILED beyond this. */
+        private const val MAX_WAVEFORM_BUILDS_PER_DEVICE = 5
         private const val USB_SESSION_RETRY_DELAY_MS = 50L
 
         @JvmStatic
