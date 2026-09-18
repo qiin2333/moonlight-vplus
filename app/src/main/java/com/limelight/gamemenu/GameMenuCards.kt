@@ -775,6 +775,19 @@ private fun AudioHapticsCard(
         },
         onLongClick = onConfigure
     ) {
+        if (state.waveformRoutes.isEmpty()) {
+            Text(text = stringResource(R.string.waveform_status_unavailable),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+        }
+        state.waveformRoutes.forEach { route ->
+            Text(text = route.label + "\n" + route.status,
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            if (route.canTest || route.testing) {
+                androidx.compose.material3.TextButton(onClick = { callbacks.onWaveformTest(route.id, route.testing) }) {
+                    Text(stringResource(if (route.testing) R.string.waveform_test_cancel else R.string.waveform_test_channels))
+                }
+            }
+        }
         if (state.enabled) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

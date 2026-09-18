@@ -3295,6 +3295,9 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             // Hide USB driver options on devices without USB host support
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
+                findPreference<Preference>("checkbox_experimental_haptic_protocols")?.isVisible = false
+            }
+            if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!
                 category.removePreference(findPreference("checkbox_usb_bind_all")!!)
                 category.removePreference(findPreference("checkbox_usb_driver")!!)

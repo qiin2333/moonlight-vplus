@@ -21,7 +21,7 @@ import kotlin.concurrent.withLock
 
 import com.limelight.LimeLog
 import com.limelight.R
-import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
+import com.limelight.binding.input.haptics.*
 import com.limelight.binding.input.driver.wireless.dualsense.DualSenseWirelessBridgeFailure
 import com.limelight.binding.input.driver.wireless.dualsense.HciDualSenseWirelessBridgeHost
 import com.limelight.binding.input.driver.wireless.dualsense.DualSenseWirelessBridgeListener
@@ -67,6 +67,33 @@ class UsbDriverService : Service(), UsbDriverListener {
     @Volatile private var listener: ControllerDriverListener? = null
     @Volatile private var stateListener: UsbDriverStateListener? = null
 
+    private val waveformRegistry = HapticBackendRegistry()
+    private val waveformRoutes = HapticRouteCatalog(ControllerDriverIdAllocator::allocate)
+    private val waveformPermissionRequests = mutableSetOf<Int>()
+
+    override fun onSystemWaveformSinkAvailable(route: HapticRouteSnapshot, sink: WaveformHapticsSink,
+                                              onAssociationLost: () -> Unit) {
+        listener?.onSystemWaveformSinkAvailable(route, sink, onAssociationLost)
+    }
+
+    override fun onSystemWaveformSinkGone(routeId: Int) {
+        waveformRoutes.snapshots().firstOrNull { it.id == routeId }?.let { route ->
+            val state = when {
+                forwardingReservations.contains(route.device.instance) -> HapticAvailability.BUSY
+                route.capability.availability == HapticAvailability.NEEDS_ASSOCIATION -> HapticAvailability.NEEDS_ASSOCIATION
+                else -> HapticAvailability.DISCONNECTED
+            }
+            publishWaveform(route, state)
+        }
+        listener?.onSystemWaveformSinkGone(routeId)
+    }
+
+    private fun publishWaveform(route: HapticRouteSnapshot, state: HapticAvailability) {
+        waveformRoutes.update(route.id, route.capability.copy(availability = state))?.let {
+            listener?.onWaveformRouteChanged(it)
+        }
+    }
+
     override fun reportControllerState(
         controllerId: Int, buttonFlags: Int,
         leftStickX: Float, leftStickY: Float,
@@ -109,10 +136,26 @@ class UsbDriverService : Service(), UsbDriverListener {
         controllerId: Int,
         sink: DualSenseNativeHapticsSink
     ) {
+        val route = waveformRoutes.snapshots().firstOrNull { it.id == controllerId }
+        if (route == null) { sink.stop(); return }
+        val candidate = waveformRegistry.discover(route.device)
+            .singleOrNull { it.capability.backendId == route.capability.backendId }
+        if (candidate == null) { sink.stop(); return }
+        val availability = HapticActivationPolicy.evaluate(candidate, Build.VERSION.SDK_INT,
+            prefConfig?.allowExperimentalHaptics == true, hasPermission = true, uniqueDevice = true,
+            reserved = forwardingReservations.contains(route.device.instance))
+        if (availability != HapticAvailability.INITIALIZING) {
+            publishWaveform(route, availability)
+            sink.stop()
+            return
+        }
         listener?.onDualSenseNativeHapticsSinkAvailable(controllerId, sink)
     }
 
     override fun onDualSenseNativeHapticsSinkGone(controllerId: Int) {
+        waveformRoutes.snapshots().firstOrNull { it.id == controllerId }?.let {
+            publishWaveform(it, HapticAvailability.DISCONNECTED)
+        }
         listener?.onDualSenseNativeHapticsSinkGone(controllerId)
     }
 
@@ -125,6 +168,13 @@ class UsbDriverService : Service(), UsbDriverListener {
             sessionHandoff.isStoppingController(controller.getControllerId())
         }
         if (!suppressCallback) listener?.deviceRemoved(controller)
+        if (controller is UsbWaveformController && started) mainHandler.post {
+            sessionLock.withLock {
+                if (started) usbManager?.let { manager ->
+                    manager.deviceList[controller.route.device.instance]?.let { discoverWaveformRoutes(manager, it) }
+                }
+            }
+        }
     }
 
     override fun deviceAdded(controller: AbstractController) {
@@ -147,6 +197,22 @@ class UsbDriverService : Service(), UsbDriverListener {
                     @Suppress("DEPRECATION")
                     val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
                     sessionLock.withLock {
+                        val companions = synchronized(controllersLock) {
+                            controllers.filter { it is UsbWaveformController && controllerDevices[it] == device?.deviceName }
+                        }
+                        companions.forEach { it.stop() }
+                        device?.let { detached ->
+                            waveformRoutes.remove(detached.deviceName).forEach { route ->
+                                waveformPermissionRequests.remove(route.id)
+                                listener?.onWaveformRouteGone(route.id)
+                            }
+                        }
+                        // Removing one of two identical devices can make the remaining route unambiguous.
+                        mainHandler.post {
+                            usbManager?.deviceList?.values?.forEach { remaining ->
+                                sessionLock.withLock { if (started) discoverWaveformRoutes(usbManager!!, remaining) }
+                            }
+                        }
                         if (device?.deviceId == wirelessBridgeDeviceId) {
                             stopWirelessBridgeLocked(adapterPresent = false)
                         }
@@ -296,19 +362,23 @@ class UsbDriverService : Service(), UsbDriverListener {
         this.listener = listener
 
         if (listener != null) {
+            waveformRoutes.snapshots().forEach(listener::onWaveformRouteChanged)
             val controllerSnapshot = synchronized(controllersLock) {
                 controllers.toList()
             }
             for (controller in controllerSnapshot) {
-                listener.deviceAdded(controller)
+                if (controller is UsbWaveformController) controller.announce()
+                else listener.deviceAdded(controller)
             }
         }
     }
 
     private fun handleUsbDeviceState(device: UsbDevice) {
-        if (forwardingReservations.contains(device.deviceName)) return
         val mgr = usbManager ?: return
         val config = prefConfig ?: return
+        val companionOwnsDevice = discoverWaveformRoutes(mgr, device)
+        if (forwardingReservations.contains(device.deviceName) || companionOwnsDevice) return
+        if (synchronized(controllersLock) { controllerDevices.values.contains(device.deviceName) }) return
 
         if (config.dualSenseWirelessBridge && handleWirelessBridgeAdapter(mgr, device)) {
             return
@@ -368,7 +438,10 @@ class UsbDriverService : Service(), UsbDriverListener {
                     SwitchProController.canClaimDevice(device) ->
                         SwitchProController(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     DualSenseUsbController.canClaimDevice(device) ->
-                        DualSenseUsbController(device, connection, ControllerDriverIdAllocator.allocate(), this)
+                        DualSenseUsbController(device, connection,
+                            waveformRoutes.snapshots().firstOrNull { it.device.instance == device.deviceName }
+                                ?.let(::renewWaveformRoute)?.id
+                                ?: ControllerDriverIdAllocator.allocate(), this)
                     Dualshock4Controller.canClaimDevice(device) ->
                         Dualshock4Controller(device, connection, ControllerDriverIdAllocator.allocate(), this)
                     else -> null
@@ -567,6 +640,117 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
     }
 
+    /** Runs for every attached USB device, independently of input-driver preferences. */
+    private fun discoverWaveformRoutes(mgr: UsbManager, device: UsbDevice): Boolean {
+        val identity = UsbWaveformBackends.identity(device)
+        if (waveformRoutes.snapshots().any { it.device.instance == identity.instance && it.device != identity }) {
+            waveformRoutes.remove(identity.instance).forEach {
+                waveformPermissionRequests.remove(it.id)
+                listener?.onWaveformRouteGone(it.id)
+            }
+            val oldOwners = synchronized(controllersLock) {
+                controllers.filter { controllerDevices[it] == identity.instance }
+            }
+            if (oldOwners.isNotEmpty()) {
+                oldOwners.forEach { owner ->
+                    owner.stopWithResult { result ->
+                        if (result.isSuccess) mainHandler.post { handleUsbDeviceStateSafely(device) }
+                    }
+                }
+                return true
+            }
+        }
+        val candidates = waveformRegistry.discover(identity)
+        val selected = HapticBackendSelector.select(candidates)
+        val unique = mgr.deviceList.values.count {
+            it.vendorId == device.vendorId && it.productId == device.productId
+        } == 1
+        var companionOwnsDevice = false
+        for (candidate in candidates) {
+            val route = waveformRoutes.discover(identity, candidate.capability)
+            val state = if (candidate.layoutMatches && selected == null) HapticAvailability.NEEDS_ASSOCIATION
+                else HapticActivationPolicy.evaluate(candidate, Build.VERSION.SDK_INT,
+                prefConfig?.allowExperimentalHaptics == true, mgr.hasPermission(device), unique,
+                forwardingReservations.contains(device.deviceName))
+            if (!unique) {
+                val ambiguous = synchronized(controllersLock) {
+                    controllers.filter { it is UsbWaveformController &&
+                        it.getVendorId() == device.vendorId && it.getProductId() == device.productId }
+                }
+                ambiguous.forEach { controller ->
+                    val existing = (controller as UsbWaveformController).route
+                    publishWaveform(existing, HapticAvailability.NEEDS_ASSOCIATION)
+                    controller.stop()
+                }
+            }
+            val alreadyOwned = synchronized(controllersLock) { controllers.any { it.getControllerId() == route.id } }
+            if (alreadyOwned) {
+                companionOwnsDevice = companionOwnsDevice || candidate.ownership == HapticBackendOwnership.OUTPUT_COMPANION
+                continue
+            }
+            val reportedState = if (candidate.ownership == HapticBackendOwnership.INPUT_DRIVER &&
+                state == HapticAvailability.INITIALIZING) HapticAvailability.UNSUPPORTED_PATH else state
+            publishWaveform(route, reportedState)
+            // The existing driver owns combined input/UAC devices. Discovery never steals its interfaces.
+            if (candidate.ownership != HapticBackendOwnership.OUTPUT_COMPANION) continue
+            if (candidate != selected) continue
+            if (state == HapticAvailability.NEEDS_PERMISSION) {
+                if (waveformPermissionRequests.add(route.id)) requestUsbPermission(mgr, device, "Controller waveform haptics")
+            }
+            if (state != HapticAvailability.INITIALIZING) continue
+            val activeRoute = renewWaveformRoute(route) ?: continue
+            val sink = UsbWaveformBackends.create(mgr, device, candidate) { capability ->
+                // Worker callbacks are connection-scoped. Ignore completions after detach/replacement.
+                mainHandler.post {
+                    sessionLock.withLock {
+                        if (started && synchronized(controllersLock) { controllers.any {
+                                it.getControllerId() == activeRoute.id && it is UsbWaveformController && !it.isStopping
+                            } }) {
+                            waveformRoutes.update(activeRoute.id, capability)?.let { listener?.onWaveformRouteChanged(it) }
+                        }
+                    }
+                }
+            }
+            if (sink == null) { publishWaveform(activeRoute, HapticAvailability.UNSUPPORTED_PATH); continue }
+            val companion = UsbWaveformController(activeRoute, sink, this) { reopenWaveformRoute(activeRoute.id) }
+            synchronized(controllersLock) {
+                controllers.add(companion)
+                controllerDevices[companion] = device.deviceName
+            }
+            publishWaveform(activeRoute, HapticAvailability.NEEDS_ASSOCIATION)
+            companion.start()
+            companionOwnsDevice = true
+        }
+        return companionOwnsDevice
+    }
+
+    private fun renewWaveformRoute(route: HapticRouteSnapshot): HapticRouteSnapshot? =
+        waveformRoutes.renew(route.id)?.also {
+            waveformPermissionRequests.remove(route.id)
+            listener?.onWaveformRouteGone(route.id)
+            listener?.onWaveformRouteChanged(it)
+        }
+
+    private fun reopenWaveformRoute(routeId: Int) {
+        mainHandler.post {
+            sessionLock.withLock {
+                if (!started) return@withLock
+                val route = waveformRoutes.snapshots().firstOrNull { it.id == routeId } ?: return@withLock
+                val owner = synchronized(controllersLock) { controllers.firstOrNull { it.getControllerId() == routeId } }
+                    ?: return@withLock
+                waveformRoutes.remove(route.device.instance).forEach {
+                    waveformPermissionRequests.remove(it.id)
+                    listener?.onWaveformRouteGone(it.id)
+                }
+                owner.stopWithResult { result ->
+                    if (result.isSuccess) mainHandler.post {
+                        usbManager?.deviceList?.get(route.device.instance)?.let(::handleUsbDeviceStateSafely)
+                    }
+                }
+            }
+        }
+    }
+
     private fun notifyPermissionPromptStarting() {
         runCatching { stateListener?.onUsbPermissionPromptStarting() }.onFailure {
             LimeLog.warning("Unable to notify USB permission start: ${it.message}")
@@ -612,6 +796,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun startNow(request: StartRequest) {
         this.claimAllAvailableOverride = request.claimAllAvailableOverride
+        prefConfig = PreferenceConfiguration.readPreferences(this)
         started = true
 
         val filter = IntentFilter()
@@ -658,6 +843,8 @@ class UsbDriverService : Service(), UsbDriverListener {
         stopResult = UsbDriverStopResult()
 
         started = false
+        waveformRoutes.clear().forEach { listener?.onWaveformRouteGone(it.id) }
+        waveformPermissionRequests.clear()
 
         if (receiverRegistered) {
             runCatching { unregisterReceiver(receiver) }.onFailure {

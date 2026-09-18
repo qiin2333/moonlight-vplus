@@ -1187,6 +1187,7 @@ class GameMenu(
             onAudioHapticsMode = audioHapticsCardController::setMode,
             onAudioHapticsScene = audioHapticsCardController::setScene,
             onAudioHapticsReset = audioHapticsCardController::resetTuning,
+            onWaveformTest = audioHapticsCardController::toggleWaveformTest,
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,
             onGyroActivationKey = {

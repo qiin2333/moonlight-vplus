@@ -1,6 +1,10 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.binding.input
 
+import com.limelight.binding.input.haptics.HapticEvidence
+
+import com.limelight.nvstream.HostGamepadSelection
+
 import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
@@ -22,6 +26,10 @@ import android.view.MotionEvent
 import android.view.HapticFeedbackConstants
 
 import com.limelight.LimeLog
+import java.util.concurrent.ConcurrentHashMap
+import com.limelight.R
+import com.limelight.binding.input.haptics.*
+import com.limelight.binding.input.haptics.WaveformHapticsSink
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
@@ -375,6 +383,9 @@ class ControllerHandler(
     // --- Managers ---
     internal val gyroManager = ControllerGyroManager(this)
     internal val rumbleManager = ControllerRumbleManager(this)
+    private val systemWaveformRoutes = ConcurrentHashMap<Int, SystemWaveformRoute>()
+    private val waveformCapabilities = ConcurrentHashMap<Int, HapticRouteSnapshot>()
+    private val retiredWaveformRoutes = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
     private val hapticsCoordinator = ControllerHapticsCoordinator(this)
     private var directDualSenseBluetoothTransport: AndroidBluetoothHidHostTransport? = null
 
@@ -491,6 +502,7 @@ class ControllerHandler(
 
     override fun onInputDeviceAdded(deviceId: Int) {
         registerRumbleContextIfNeeded(deviceId)
+        refreshSystemWaveformRoutes()
         hapticsCoordinator.refreshPrimaryController()
     }
 
@@ -518,6 +530,9 @@ class ControllerHandler(
     }
 
     override fun onInputDeviceRemoved(deviceId: Int) {
+        systemWaveformRoutes.entries.filter { it.value.inputId == deviceId }.forEach {
+            invalidateSystemWaveformRoute(it.key, it.value)
+        }
         val context = inputDeviceContexts.get(deviceId)
         if (context != null) {
             val wasController0GyroSource = contextWasController0GyroSource(context)
@@ -541,6 +556,7 @@ class ControllerHandler(
             hapticsCoordinator.refreshPrimaryController()
             hapticsCoordinator.clearControllerIfUnavailable(context.controllerNumber)
         }
+        refreshSystemWaveformRoutes()
     }
 
     // This can happen when gaining/losing input focus with some devices.
@@ -550,6 +566,13 @@ class ControllerHandler(
 
         // If we don't have a context for this device, we don't need to update anything
         val existingContext = inputDeviceContexts.get(deviceId) ?: return
+        if (existingContext.inputDevice?.let {
+                it.vendorId != device.vendorId || it.productId != device.productId || it.descriptor != device.descriptor
+            } == true) {
+            systemWaveformRoutes.entries.filter { it.value.inputId == deviceId }.forEach {
+                invalidateSystemWaveformRoute(it.key, it.value)
+            }
+        }
         val wasController0GyroSource = contextWasController0GyroSource(existingContext)
 
         LimeLog.info("Device changed: " + existingContext.name + " (" + deviceId + ")")
@@ -558,6 +581,7 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         newContext.migrateContext(existingContext)
         inputDeviceContexts.put(deviceId, newContext)
+        refreshSystemWaveformRoutes()
         if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
             gyroManager.onControllerSourceChanged(newContext.controllerNumber)
             gyroManager.onSensorsReenabled()
@@ -575,6 +599,9 @@ class ControllerHandler(
         }
 
         // Flush rumble while device contexts and HOST fallback paths are still available.
+        systemWaveformRoutes.values.forEach { it.sink.stop() }
+        systemWaveformRoutes.clear()
+        waveformCapabilities.clear()
         hapticsCoordinator.stop()
 
         // Stop new device contexts from being created or used
@@ -1561,19 +1588,50 @@ class ControllerHandler(
         controllerNumber: Int,
         baseMetadata: ControllerArrivalMetadata
     ): Int {
-        val metadata = decorateControllerArrivalMetadata(controllerNumber, baseMetadata)
+        var metadata = decorateControllerArrivalMetadata(controllerNumber, baseMetadata)
+        if (prefConfig.hostGamepadSelection == HostGamepadSelection.AUTOMATIC &&
+            (0 until inputDeviceContexts.size()).any {
+                val context = inputDeviceContexts.valueAt(it)
+                val device = context.inputDevice
+                context.controllerNumber.toInt() == controllerNumber && device != null &&
+                    waveformCapabilities.values.any { route ->
+                        route.device.vendorId == device.vendorId && route.device.productId == device.productId &&
+                            route.capability.output == HapticOutput.WAVEFORM_STREAM &&
+                            (route.capability.evidence != HapticEvidence.EXPERIMENTAL_PROTOCOL ||
+                                prefConfig.allowExperimentalHaptics)
+                    }
+            }) {
+            // Request authored host content independently of USB permission/output readiness.
+            metadata = metadata.copy(type = MoonBridge.LI_CTYPE_PS,
+                capabilities = (metadata.capabilities.toInt() or
+                    MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort())
+        }
 
+        // Preserve explicit client intent on hosts that also understand the legacy arrival bit.
+        metadata = when (prefConfig.hostGamepadSelection) {
+            HostGamepadSelection.XBOX -> metadata.copy(
+                type = MoonBridge.LI_CTYPE_XBOX,
+                capabilities = (metadata.capabilities.toInt() and MoonBridge.LI_CCAP_PREFER_DS5.toInt().inv()).toShort())
+            HostGamepadSelection.DS4 -> metadata.copy(
+                type = MoonBridge.LI_CTYPE_PS,
+                capabilities = (metadata.capabilities.toInt() and MoonBridge.LI_CCAP_PREFER_DS5.toInt().inv()).toShort())
+            HostGamepadSelection.DS5 -> metadata.copy(
+                type = MoonBridge.LI_CTYPE_PS,
+                capabilities = (metadata.capabilities.toInt() or MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort())
+            HostGamepadSelection.HOST -> baseMetadata
+            else -> metadata
+        }
         if (sentControllerArrivalMetadata[controllerNumber] == metadata) return 0
 
         // Release an allocated slot before replacing a fallback profile with the
         // physical controller profile. Sunshine rejects duplicate arrivals.
-        if (controllerNumber == 0 && sentControllerArrivalMetadata[0] != null) {
+        if (sentControllerArrivalMetadata[controllerNumber] != null) {
             conn.sendControllerInput(
-                0,
-                ScreenDs5ControllerPolicy.withoutPrimaryController(getActiveControllerMask()),
+                controllerNumber.toShort(),
+                (getActiveControllerMask().toInt() and (1 shl controllerNumber).inv()).toShort(),
                 0, 0, 0, 0, 0, 0, 0,
             )
-            sentControllerArrivalMetadata[0] = null
+            sentControllerArrivalMetadata[controllerNumber] = null
         }
 
         val result = conn.sendControllerArrivalEvent(
@@ -1642,6 +1700,9 @@ class ControllerHandler(
             }
         }
         hapticsCoordinator.noteControllerInput(originalContext)
+        if (originalContext is InputDeviceContext && systemWaveformRoutes.isNotEmpty()) {
+            refreshSystemWaveformRoutes()
+        }
 
         // Take the context's controller number and fuse all inputs with the same number
         val controllerNumber = originalContext.controllerNumber
@@ -3327,10 +3388,136 @@ class ControllerHandler(
             sink.stop()
             return
         }
-        hapticsCoordinator.attachDs5HapticsSink(controllerId, context.controllerNumber, sink)
+        updateWaveformAvailability(controllerId, HapticAvailability.INITIALIZING)
+        hapticsCoordinator.attachWaveformHapticsSink(controllerId, context.controllerNumber, sink) { state ->
+            updateWaveformAvailability(controllerId, state)
+        }
+    }
+
+    private data class SystemWaveformRoute(
+        val metadata: HapticRouteSnapshot, val sink: WaveformHapticsSink,
+        val reopen: () -> Unit,
+        var inputId: Int? = null, var player: Short? = null
+    )
+
+    override fun onWaveformRouteChanged(route: HapticRouteSnapshot) {
+        if (stopped || route.id in retiredWaveformRoutes) return
+        val firstObservation = waveformCapabilities.put(route.id, route) == null
+        if (firstObservation) mainThreadHandler.post {
+            if (!stopped) for (i in 0 until inputDeviceContexts.size()) {
+                val context = inputDeviceContexts.valueAt(i)
+                val device = context.inputDevice ?: continue
+                if (device.vendorId == route.device.vendorId && device.productId == route.device.productId &&
+                    context.controllerArrival.isReported) refreshControllerArrival(context)
+            }
+        }
+    }
+
+    override fun onWaveformRouteGone(routeId: Int) {
+        retiredWaveformRoutes.add(routeId)
+        waveformCapabilities.remove(routeId)?.let { route ->
+            mainThreadHandler.post {
+                if (!stopped) for (i in 0 until inputDeviceContexts.size()) {
+                    val context = inputDeviceContexts.valueAt(i)
+                    val device = context.inputDevice ?: continue
+                    if (device.vendorId == route.device.vendorId && device.productId == route.device.productId &&
+                        context.controllerArrival.isReported) refreshControllerArrival(context)
+                }
+            }
+        }
+        onSystemWaveformSinkGone(routeId)
+    }
+
+    private fun updateWaveformAvailability(id: Int, state: HapticAvailability) {
+        waveformCapabilities.computeIfPresent(id) { _, route ->
+            // A late startup result cannot undo a lost player association or a disconnect.
+            val old = route.capability.availability
+            if ((state == HapticAvailability.READY && old != HapticAvailability.INITIALIZING) ||
+                (state == HapticAvailability.FAILED && old !in setOf(HapticAvailability.INITIALIZING, HapticAvailability.READY)))
+                route else route.copy(capability = route.capability.copy(availability = state))
+        }
+    }
+
+    fun waveformHapticsRoutes(): List<HapticRouteView> = waveformCapabilities.values
+        .sortedWith(compareBy({ it.device.name }, { it.device.instance }, { it.capability.backendId }))
+        .map { snapshot ->
+            val route = systemWaveformRoutes[snapshot.id]
+            val test = route?.sink?.channelTest
+            HapticRouteView(snapshot, route?.player?.toInt(),
+                route?.inputId != null && test?.canTest == true, test?.isTesting == true)
+        }
+
+    fun testWaveformChannels(routeId: Int, cancel: Boolean) {
+        val route = systemWaveformRoutes[routeId] ?: return
+        if (cancel) route.sink.channelTest?.cancelTest()
+        else if (route.inputId != null) route.sink.channelTest?.testChannels()
+    }
+
+    fun cancelWaveformTests() {
+        systemWaveformRoutes.values.forEach { it.sink.channelTest?.cancelTest() }
+    }
+
+    override fun onSystemWaveformSinkAvailable(route: HapticRouteSnapshot, sink: WaveformHapticsSink,
+                                              onAssociationLost: () -> Unit) {
+        mainThreadHandler.post {
+            if (stopped || route.id in retiredWaveformRoutes) { sink.stop(); return@post }
+            if (systemWaveformRoutes[route.id]?.sink === sink) return@post
+            waveformCapabilities.putIfAbsent(route.id, route)
+            systemWaveformRoutes[route.id] = SystemWaveformRoute(route, sink, onAssociationLost)
+            refreshSystemWaveformRoutes()
+        }
+    }
+
+    override fun onSystemWaveformSinkGone(routeId: Int) {
+        val detach = Runnable {
+            systemWaveformRoutes.remove(routeId)?.sink?.stop()
+            hapticsCoordinator.detachDs5HapticsSink(routeId)
+        }
+        if (Looper.myLooper() == mainThreadHandler.looper) detach.run() else mainThreadHandler.post(detach)
+    }
+
+    private fun invalidateSystemWaveformRoute(id: Int, route: SystemWaveformRoute) {
+        updateWaveformAvailability(id, HapticAvailability.NEEDS_ASSOCIATION)
+        onSystemWaveformSinkGone(id)
+        route.reopen()
+    }
+
+    private fun refreshSystemWaveformRoutes() {
+        if (Looper.myLooper() != mainThreadHandler.looper) {
+            mainThreadHandler.post { refreshSystemWaveformRoutes() }
+            return
+        }
+        if (stopped) return
+        for ((id, route) in systemWaveformRoutes) {
+            val identity = route.metadata.device
+            val devices = InputDevice.getDeviceIds().asSequence().mapNotNull(InputDevice::getDevice).filter {
+                it.vendorId == identity.vendorId && it.productId == identity.productId &&
+                    (it.sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+            }
+            val device = devices.singleOrNull()
+            if (device == null || route.inputId?.let { it != device.id } == true) {
+                updateWaveformAvailability(id, HapticAvailability.NEEDS_ASSOCIATION)
+                if (route.inputId != null) invalidateSystemWaveformRoute(id, route)
+                continue
+            }
+            val context = inputDeviceContexts.get(device.id) ?: continue
+            if (prefConfig.multiController && !context.assignedControllerNumber) continue
+            if (route.inputId == null) {
+                route.inputId = device.id
+                route.player = context.controllerNumber
+                updateWaveformAvailability(id, HapticAvailability.INITIALIZING)
+                hapticsCoordinator.attachWaveformHapticsSink(id, context.controllerNumber, route.sink) { state ->
+                    updateWaveformAvailability(id, state)
+                }
+            } else if (route.player != context.controllerNumber) {
+                // A route cannot carry queued samples across a player reassignment.
+                invalidateSystemWaveformRoute(id, route)
+            }
+        }
     }
 
     override fun onDualSenseNativeHapticsSinkGone(controllerId: Int) {
+        updateWaveformAvailability(controllerId, HapticAvailability.DISCONNECTED)
         hapticsCoordinator.detachDs5HapticsSink(controllerId)
     }
 

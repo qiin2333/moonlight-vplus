@@ -9,16 +9,16 @@ import com.limelight.nvstream.Ds5HapticsPcmFrame
  * and Sunshine-facing input are identical. The coordinator therefore owns this interface rather
  * than a concrete USB pump.
  */
-interface DualSenseNativeHapticsSink {
+interface DualSenseNativeHapticsSink : WaveformHapticsSink {
     /** Starts transport output and returns true only when PCM can be accepted. */
-    fun start(): Boolean
+    override fun start(): Boolean
 
-    fun submit(frame: Ds5HapticsPcmFrame)
+    override fun submit(frame: Ds5HapticsPcmFrame)
 
-    fun stop()
+    override fun stop()
 
     /** Runs [onStopped] after the sink no longer accesses its transport. */
-    fun stopAndThen(onStopped: () -> Unit) {
+    override fun stopAndThen(onStopped: () -> Unit) {
         stop()
         onStopped()
     }

@@ -3,6 +3,7 @@ package com.limelight.binding.input.haptics
 /** Sources that may contribute to a controller's final rumble state. */
 internal enum class RumbleSource {
     HOST,
+    AUTHORED,
     AUDIO,
     TEST
 }
@@ -38,6 +39,7 @@ internal class ControllerHapticsMixer(
 
     private data class SourceStates(
         var host: TimedState? = null,
+        var authored: TimedState? = null,
         var audioContinuous: TimedState? = null,
         var audioTransient: TimedState? = null,
         var test: TimedState? = null
@@ -66,6 +68,7 @@ internal class ControllerHapticsMixer(
 
         when (source) {
             RumbleSource.HOST -> sources.host = timedState
+            RumbleSource.AUTHORED -> sources.authored = timedState
             RumbleSource.AUDIO -> sources.audioContinuous = timedState
             RumbleSource.TEST -> sources.test = timedState
         }
@@ -105,6 +108,7 @@ internal class ControllerHapticsMixer(
 
         when (source) {
             RumbleSource.HOST -> sources.host = null
+            RumbleSource.AUTHORED -> sources.authored = null
             RumbleSource.AUDIO -> {
                 sources.audioContinuous = null
                 sources.audioTransient = null
@@ -151,6 +155,7 @@ internal class ControllerHapticsMixer(
             .flatMap { sources ->
                 sequenceOf(
                     sources.host,
+                    sources.authored,
                     sources.audioContinuous,
                     sources.audioTransient,
                     sources.test
@@ -172,6 +177,10 @@ internal class ControllerHapticsMixer(
     private fun expire(sources: SourceStates, nowMs: Long): Boolean {
         var changed = false
 
+        if (sources.authored?.isExpired(nowMs) == true) {
+            sources.authored = null
+            changed = true
+        }
         if (sources.host?.isExpired(nowMs) == true) {
             sources.host = null
             changed = true
@@ -193,7 +202,8 @@ internal class ControllerHapticsMixer(
     }
 
     private fun mix(controllerNumber: Short, sources: SourceStates): MixedRumbleState {
-        val host = sources.host?.state ?: ControllerRumbleState.ZERO
+        val host = (sources.host?.state ?: ControllerRumbleState.ZERO)
+            .maxWith(sources.authored?.state ?: ControllerRumbleState.ZERO)
         val audio = (sources.audioContinuous?.state ?: ControllerRumbleState.ZERO)
             .maxWith(sources.audioTransient?.state ?: ControllerRumbleState.ZERO)
         val test = sources.test?.state ?: ControllerRumbleState.ZERO
