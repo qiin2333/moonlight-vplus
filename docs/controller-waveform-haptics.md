@@ -71,34 +71,63 @@ flowchart TD
 
 ## Host negotiation and fallback
 
-The current Sunshine host selects controller emulation through `gamepad=ds5` on
-both `/launch` and `/resume`. `LI_CCAP_PREFER_DS5` alone is not sufficient for that
-host version. The client now exposes Automatic, Follow host, Xbox 360, DS4 and DS5.
-Explicit selection wins. Automatic requests DS5 when the screen touchpad is enabled
-or a descriptor/API/validation-eligible USB waveform controller is present before
-launch. Host selection is session-wide, including other players. Host policy may
-reject the override or fall back if its DS5 component is unavailable. A controller
-plugged in after launch cannot change that query: reconnect or select DS5 beforehand.
-Legacy arrival metadata retains the PS type/DS5 preference for compatible older hosts;
-metadata replacement releases the correct player slot, including players beyond zero.
+Explicit Xbox 360 / DS4 / DS5 choices use the existing `gamepad` parameter on
+`/launch` and `/resume`. Sunshine snapshots it into the streaming session and
+passes it to both explicit-arrival and implicit-input controller allocation.
+A second session can no longer overwrite it. Host override policy still applies.
 
-PCM is a separate session-wide SDP capability. It is enabled when experimental
-protocols are allowed or an eligible waveform controller is present at launch.
-The JNI callback is selected on a connection-local copy, so a later legacy session
-cannot inherit it. The existing common-c parser, control packet and JNI frame are
-reused. No new wire protocol or per-player PCM capability is invented; the current
-host chooses raw PCM versus its legacy reducer using the session feature flags.
+Automatic selection sends no session-wide override. Instead each eligible player's
+arrival carries `LI_CCAP_PREFER_DS5=0x8000`, now defined in common-c. New Sunshine
+honors this only in auto mode; explicit host/client types still win. If the optional
+DS5 component is unavailable, a client preference degrades to DS4. Follow host clears
+the preference bit while retaining screen touchpad metadata. Older Sunshine versions
+that ignore the bit require explicitly choosing DS5; discovery never changes every
+player to DS5. Hot-plug metadata changes can still recreate that player's virtual
+controller when its **emulated type** changes, but output readiness never does.
 
-Because that choice disables host-side PCM-to-rumble fallback for the entire session,
-Android now supplies its own conservative energy fallback for players without a
-working waveform sink, including output failures and unplugging. It folds both
-actuator lanes to equal motor amplitudes at 0.25 gain; this is deliberately a lossy
-approximation, not the host SDK's perceptual reconstruction. The fallback is an
-independent AUTHORED mixer source, preserves ordinary HOST rumble, respects the
-controller/device routing preference, expires after 50 ms without fresh packets,
-and has at most one queued main-thread dispatch plus one latest value per player.
-Malformed, duplicate and reordered frames are rejected; sequence wrap and explicit
-stream restart are supported. Direct output clears only the authored fallback.
+PCM decoding support, descriptive device capability (`LI_CCAP_DS5_HAPTICS_PCM=0x200`),
+and a currently operational output are distinct. The capability bit alone is not a
+readiness update and does not disable host synthesis. The new common-c opt-in
+`STREAM_CONFIGURATION.perControllerHaptics` negotiates the following extension:
+
+| Direction | Definition | Meaning |
+|---|---|---|
+| Host SDP | `LI_FF_CONTROLLER_HAPTICS=0x400` | Supports per-player readiness |
+| Client SDP | `ML_FF_CONTROLLER_HAPTICS=0x20`, plus PCM `0x04` | Start every player in host fallback |
+| Client input | `SS_CONTROLLER_HAPTICS_MAGIC=0x5500000B` | Update one allocated player's readiness |
+
+The input message is exactly 12 bytes: existing 8-byte input header (size 8, big
+endian; magic little endian), player uint8 (0–15), ready uint8 (0/1), two zero
+reserved bytes. It uses the same reliable ENet channel as that player's arrival and
+removal; it changes neither controller type nor button state. Removal resets readiness.
+Truncated, oversized, invalid-player, invalid-mode and nonzero-reserved messages are
+rejected. No new PCM format or changes to the existing PCM/IR feedback types are needed.
+
+Android registers decoding support independently of experimental device activation.
+Only an operational, assigned sink with controller output enabled publishes ready.
+Arrival is queued first. Readiness changes are immediate on attach/detach/failure;
+a 250 ms state-only health check handles asynchronous failure, routing preferences
+and failed enqueue retries. It does not rescan USB or send unchanged state.
+
+Sunshine keeps its existing per-player SDK PCM-to-rumble reducer for all non-ready
+players and clears the old synthesized source when switching to raw PCM. Compatibility
+rumble and trigger feedback remain independent. Android validates incoming PCM and
+routes it to the matching sink; it no longer folds stereo actuator PCM into equal
+motor amplitudes. Trailing unreliable PCM after disabling is dropped without a sink.
+
+| Client / host | Result |
+|---|---|
+| New / new | Per-player ready routes receive PCM; all other players use host synthesis |
+| New / old | No PCM feature advertised; host synthesis preserved; explicit DS5 choice still works |
+| Old / new | Historical session-wide PCM or IR semantics retained |
+| Old / old | Unchanged |
+
+Queue success is **not** an acknowledgement. The protocol provides ordered readiness
+delivery, not a time-synchronized transition or a route-generation fence in PCM.
+A change can take network transit time plus up to 250 ms failure detection; existing
+transport idle/watchdog behavior remains necessary. Reordering/loss of unreliable
+PCM is handled by existing sequence validation. Hardware and multi-peer network
+acceptance are still required before claiming seamless transitions.
 
 ## Current transport adapters
 
@@ -116,9 +145,8 @@ USB transfer completion length. The budget measures local software age, not tota
 latency. Host presentation timestamps are not synchronized to the Kishi device clock.
 The Kishi backend also disables its waveform motor mode after 30 ms without a played
 packet, emitting silence during short underruns. This transport-local idle budget is
-independent of the 50 ms ordinary-rumble fallback expiry; the fallback timeout is not
-a minimum hold time for raw waveform devices. Extending idle mode would not restore
-missing waveform samples.
+independent of the host reducer's 100 ms watchdog. Extending idle mode would not
+restore missing waveform samples.
 
 Kishi supports a cancellable, low-amplitude test: 400 ms left followed by 400 ms right.
 Host PCM is ignored during the test. Shutdown logs sent, dropped and silence packets.
@@ -154,9 +182,10 @@ matches, descriptor constraints, evidence ordering, competing backends, validate
 automatic activation, permissions, occupation, independent identical-device state,
 reconnect/layout-change tokens and late callback rejection. Encoder tests cover channel
 isolation, chunk-invariant resampling, reset, packet layout/checksum, malformed data and
-anti-alias attenuation. PCM fallback tests cover malformed payloads, independent player
-sequences, wrap/restart, terminal zero, expiry, source isolation and explicit host-selection
-precedence. JNI is compiled through the Android native build. Existing haptic mixing/lifecycle/forwarding tests remain in use.
+anti-alias attenuation. PCM validation tests cover malformed payloads, independent player
+sequences and wrap/restart. Readiness tests cover arrival ordering, retries, duplicate
+suppression and player reuse. Common-c golden tests cover the compatibility matrix
+and exact wire validation; host tests cover type-selection precedence and session preferences. JNI is compiled through the Android native build. Existing haptic mixing/lifecycle/forwarding tests remain in use.
 
 Hardware acceptance before changing profile evidence:
 

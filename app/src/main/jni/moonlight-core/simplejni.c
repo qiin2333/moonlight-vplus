@@ -161,6 +161,12 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendPenEvent(JNIEnv *env, jclass claz
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendControllerHapticsState(JNIEnv *env, jclass clazz,
+                                                                  jbyte controllerNumber, jboolean ready) {
+    return LiSendControllerHapticsState(controllerNumber, ready);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendControllerArrivalEvent(JNIEnv *env, jclass clazz,
                                                                       jbyte controllerNumber,
                                                                       jshort activeGamepadMask,

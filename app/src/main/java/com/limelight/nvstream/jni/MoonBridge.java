@@ -172,7 +172,7 @@ public class MoonBridge {
     public static final short LI_CCAP_RGB_LED         = 0x80;
     // Foundation Sunshine extension: prefer a DualSense device over DS4 for PS controllers.
     // Foundation extensions claim the top capability bit; upstream moonlight-common-c
-    // owns the low bits (currently 0x00FF). Keep in sync with Sunshine's GAMEPAD_CAP_PREFER_DS5.
+    // also defines this extension as LI_CCAP_PREFER_DS5. It does not imply PCM readiness.
     public static final short LI_CCAP_PREFER_DS5      = (short) 0x8000;
 
     public static final byte LI_MOTION_TYPE_ACCEL = 0x01;
@@ -598,6 +598,9 @@ public class MoonBridge {
     public static native int sendPenEvent(byte eventType, byte toolType, byte penButtons, float x, float y,
                                           float pressure, float contactAreaMajor, float contactAreaMinor,
                                           short rotation, byte tilt);
+
+    public static final int LI_FF_CONTROLLER_HAPTICS = 0x400;
+    public static native int sendControllerHapticsState(byte controllerNumber, boolean ready);
 
     public static native int sendControllerArrivalEvent(byte controllerNumber, short activeGamepadMask, byte type, int supportedButtonFlags, short capabilities);
 
