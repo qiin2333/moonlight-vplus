@@ -3509,6 +3509,10 @@ class ControllerHandler(
                 updateWaveformAvailability(id, HapticAvailability.INITIALIZING)
                 hapticsCoordinator.attachWaveformHapticsSink(id, context.controllerNumber, route.sink) { state ->
                     updateWaveformAvailability(id, state)
+                    // A failed attach leaves a finished sink bound to this route; ask the
+                    // transport owner to rebuild it. The service's creation pacing bounds
+                    // how often a persistently failing channel is rebuilt.
+                    if (state == HapticAvailability.FAILED) route.reopen()
                 }
             } else if (route.player != context.controllerNumber) {
                 // A route cannot carry queued samples across a player reassignment.

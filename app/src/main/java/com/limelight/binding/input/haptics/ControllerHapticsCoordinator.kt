@@ -3,6 +3,7 @@ package com.limelight.binding.input.haptics
 import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
+import com.limelight.LimeLog
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
@@ -490,19 +491,21 @@ internal class ControllerHapticsCoordinator(
             sink.playbackControl?.let { playback ->
                 playback.onPlaybackChanged = { playing ->
                     val completed = java.util.concurrent.CountDownLatch(1)
-                    val ownsRoute = java.util.concurrent.atomic.AtomicBoolean()
                     runOnOutputThread {
                         try {
                             if (ds5HapticsBindings[controllerId]?.sink === sink) {
-                                ownsRoute.set(!isStoppingOrStopped())
                                 if (playing) handler.rumbleManager.handleRumble(controllerNumber, 0, 0)
                                 else onSinkChanged(controllerNumber)
                             }
                         } finally { completed.countDown() }
                     }
-                    // Serialize rumble-off ahead of the first waveform packet.
-                    if (playing) check(completed.await(500, java.util.concurrent.TimeUnit.MILLISECONDS) && ownsRoute.get()) {
-                        "Timed out acquiring haptic output ownership"
+                    // Serialize rumble-off ahead of the first waveform packet. This callback runs
+                    // on the sink's transport worker, so a stalled main thread must only cost the
+                    // ordering guarantee here — throwing would tear down a healthy transport.
+                    if (playing && !completed.await(500, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                        LimeLog.warning(
+                            "Timed out zeroing motors before waveform playback for controller $controllerId"
+                        )
                     }
                 }
             }

@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import android.view.InputDevice
 import android.widget.Toast
 import java.util.concurrent.CompletableFuture
@@ -71,6 +72,11 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val waveformRoutes = HapticRouteCatalog(ControllerDriverIdAllocator::allocate)
     private val waveformPermissionRequests = mutableSetOf<Int>()
 
+    /** Rates waveform-channel rebuilds per device so failures cannot loop the USB lifecycle. */
+    private class WaveformPacing(val attempts: Int, val blockedUntilMs: Long)
+    private val waveformPacing = java.util.concurrent.ConcurrentHashMap<String, WaveformPacing>()
+    private val waveformRetryRunnables = java.util.concurrent.ConcurrentHashMap<String, Runnable>()
+
     override fun onSystemWaveformSinkAvailable(route: HapticRouteSnapshot, sink: WaveformHapticsSink,
                                               onAssociationLost: () -> Unit) {
         listener?.onSystemWaveformSinkAvailable(route, sink, onAssociationLost)
@@ -80,6 +86,7 @@ class UsbDriverService : Service(), UsbDriverListener {
         waveformRoutes.snapshots().firstOrNull { it.id == routeId }?.let { route ->
             val state = when {
                 forwardingReservations.contains(route.device.instance) -> HapticAvailability.BUSY
+                route.capability.availability == HapticAvailability.FAILED -> HapticAvailability.FAILED
                 route.capability.availability == HapticAvailability.NEEDS_ASSOCIATION -> HapticAvailability.NEEDS_ASSOCIATION
                 else -> HapticAvailability.DISCONNECTED
             }
@@ -206,6 +213,8 @@ class UsbDriverService : Service(), UsbDriverListener {
                                 waveformPermissionRequests.remove(route.id)
                                 removedRouteIds.add(route.id)
                             }
+                            // A replug is a fresh attempt; forget any failure backoff.
+                            waveformPacing.remove(detached.deviceName)
                         }
                         // Removing one of two identical devices can make the remaining route unambiguous.
                         mainHandler.post {
@@ -227,6 +236,13 @@ class UsbDriverService : Service(), UsbDriverListener {
                         @Suppress("DEPRECATION")
                         val device: UsbDevice? =
                             intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                        // The prompt has settled; forget the in-flight request so a later
+                        // discovery may prompt again instead of being wedged by the dedupe set.
+                        device?.deviceName?.let { instance ->
+                            waveformRoutes.snapshots()
+                                .filter { it.device.instance == instance }
+                                .forEach { waveformPermissionRequests.remove(it.id) }
+                        }
                         if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                             device?.let { handleUsbDeviceStateSafely(it) }
                         }
@@ -653,6 +669,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 waveformPermissionRequests.remove(it.id)
                 listener?.onWaveformRouteGone(it.id)
             }
+            waveformPacing.remove(identity.instance)
             val oldOwners = synchronized(controllersLock) {
                 controllers.filter { controllerDevices[it] == identity.instance }
             }
@@ -703,17 +720,33 @@ class UsbDriverService : Service(), UsbDriverListener {
                 if (waveformPermissionRequests.add(route.id)) requestUsbPermission(mgr, device, "Controller waveform haptics")
             }
             if (state != HapticAvailability.INITIALIZING) continue
+            val nowMs = SystemClock.elapsedRealtime()
+            val pacing = waveformPacing[identity.instance]
+            if (pacing != null && nowMs < pacing.blockedUntilMs) {
+                scheduleWaveformRetry(identity.instance, pacing.blockedUntilMs - nowMs)
+                publishWaveform(route, HapticAvailability.FAILED)
+                continue
+            }
             val activeRoute = renewWaveformRoute(route) ?: continue
             val sink = UsbWaveformBackends.create(mgr, device, candidate) { capability ->
                 // Worker callbacks are connection-scoped. Ignore completions after detach/replacement.
                 mainHandler.post {
+                    var failedCompanion: UsbWaveformController? = null
                     sessionLock.withLock {
-                        if (started && synchronized(controllersLock) { controllers.any {
+                        if (!started) return@post
+                        val companion = synchronized(controllersLock) {
+                            controllers.firstOrNull {
                                 it.getControllerId() == activeRoute.id && it is UsbWaveformController && !it.isStopping
-                            } }) {
-                            waveformRoutes.update(activeRoute.id, capability)?.let { listener?.onWaveformRouteChanged(it) }
-                        }
+                            } as? UsbWaveformController
+                        } ?: return@post
+                        if (capability.availability == HapticAvailability.READY) waveformPacing.remove(device.deviceName)
+                        waveformRoutes.update(activeRoute.id, capability)?.let { listener?.onWaveformRouteChanged(it) }
+                        // A finished sink cannot recover in place. Release its companion so the
+                        // removal path re-runs discovery; creation pacing bounds repeat attempts.
+                        if (capability.availability == HapticAvailability.FAILED) failedCompanion = companion
                     }
+                    // Stop outside sessionLock: teardown callbacks re-enter the service.
+                    failedCompanion?.stop()
                 }
             }
             if (sink == null) { publishWaveform(activeRoute, HapticAvailability.UNSUPPORTED_PATH); continue }
@@ -723,6 +756,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 controllerDevices[companion] = device.deviceName
             }
             publishWaveform(activeRoute, HapticAvailability.NEEDS_ASSOCIATION)
+            armWaveformPacing(device.deviceName)
             companion.start()
             companionOwnsDevice = true
         }
@@ -752,6 +786,37 @@ class UsbDriverService : Service(), UsbDriverListener {
                         usbManager?.deviceList?.get(route.device.instance)?.let(::handleUsbDeviceStateSafely)
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Backoff between waveform-channel rebuilds of one device, counted per creation since the
+     * last READY report or physical re-enumeration: the first build is immediate, and each
+     * consecutive build without a working channel waits longer (5s, 10s, 20s, 40s, then 60s).
+     * A single transient failure still retries on the next discovery; a persistently broken
+     * device converges to one attempt per minute instead of cycling the USB connection forever.
+     */
+    private fun armWaveformPacing(instance: String) {
+        val delays = longArrayOf(0L, 5_000L, 10_000L, 20_000L, 40_000L, 60_000L)
+        val attempts = waveformPacing[instance]?.attempts ?: 0
+        val delay = delays[attempts.coerceAtMost(delays.lastIndex)]
+        waveformPacing[instance] = WaveformPacing(attempts + 1, SystemClock.elapsedRealtime() + delay)
+    }
+
+    private fun scheduleWaveformRetry(instance: String, delayMs: Long) {
+        waveformRetryRunnables.remove(instance)?.let(mainHandler::removeCallbacks)
+        val runnable = Runnable { retryWaveformDiscovery(instance) }
+        waveformRetryRunnables[instance] = runnable
+        mainHandler.postDelayed(runnable, delayMs.coerceIn(1L, 60_000L))
+    }
+
+    private fun retryWaveformDiscovery(instance: String) {
+        waveformRetryRunnables.remove(instance)
+        sessionLock.withLock {
+            if (!started) return
+            usbManager?.let { manager ->
+                manager.deviceList[instance]?.let { discoverWaveformRoutes(manager, it) }
             }
         }
     }
@@ -850,6 +915,9 @@ class UsbDriverService : Service(), UsbDriverListener {
         started = false
         waveformRoutes.clear().forEach { listener?.onWaveformRouteGone(it.id) }
         waveformPermissionRequests.clear()
+        waveformPacing.clear()
+        waveformRetryRunnables.values.forEach(mainHandler::removeCallbacks)
+        waveformRetryRunnables.clear()
 
         if (receiverRegistered) {
             runCatching { unregisterReceiver(receiver) }.onFailure {
