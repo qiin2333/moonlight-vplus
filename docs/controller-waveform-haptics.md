@@ -82,8 +82,12 @@ plugged in after launch cannot change that query: reconnect or select DS5 before
 Legacy arrival metadata retains the PS type/DS5 preference for compatible older hosts;
 metadata replacement releases the correct player slot, including players beyond zero.
 
-PCM is a separate session-wide SDP capability. It is enabled when experimental
-protocols are allowed or an eligible waveform controller is present at launch.
+PCM is a separate session-wide SDP capability. It is enabled only when an eligible waveform controller is present at launch,
+controller output is enabled, and the explicit host choice is neither Xbox nor DS4.
+Enabling experimental protocols alone never changes session PCM negotiation.
+Eligibility is a passive descriptor/API/evidence check, not proof of permission or
+working output. Connecting the first eligible controller after launch requires
+reconnecting to negotiate PCM.
 The JNI callback is selected on a connection-local copy, so a later legacy session
 cannot inherit it. The existing common-c parser, control packet and JNI frame are
 reused. No new wire protocol or per-player PCM capability is invented; the current
@@ -99,6 +103,12 @@ controller/device routing preference, expires after 50 ms without fresh packets,
 and has at most one queued main-thread dispatch plus one latest value per player.
 Malformed, duplicate and reordered frames are rejected; sequence wrap and explicit
 stream restart are supported. Direct output clears only the authored fallback.
+
+This change is client-only: common-c stays at `31a2a4589ea926988a08ca508bb317fbfbe2a177`;
+there are no new feature bits, messages or host requirements. The host's existing
+session-wide routing and process-global gamepad preference behavior are unchanged.
+Consequently mixed-player PCM fallback is an approximation, and concurrent-session
+type isolation cannot be guaranteed by this client change.
 
 ## Current transport adapters
 

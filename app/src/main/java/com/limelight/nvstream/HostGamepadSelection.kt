@@ -10,6 +10,10 @@ enum class HostGamepadSelection(val preferenceValue: String) {
         else -> preferenceValue
     }
 
+    /** Existing PCM negotiation affects the entire session, so opt in only for a usable candidate. */
+    fun requestsAuthoredPcm(waveformController: Boolean, controllerOutputEnabled: Boolean): Boolean =
+        waveformController && controllerOutputEnabled && this != XBOX && this != DS4
+
     companion object {
         fun fromPreference(value: String?) = entries.firstOrNull { it.preferenceValue == value } ?: AUTOMATIC
     }

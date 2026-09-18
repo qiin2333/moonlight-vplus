@@ -61,4 +61,16 @@ class AuthoredPcmFallbackTest {
         assertEquals("ds5", HostGamepadSelection.DS5.resolve(false, false))
         assertEquals(HostGamepadSelection.AUTOMATIC, HostGamepadSelection.fromPreference("invalid"))
     }
+
+    @Test fun pcmNegotiationRequiresCandidateAndCompatibleOutputChoice() {
+        for (choice in HostGamepadSelection.entries) {
+            assertFalse(choice.requestsAuthoredPcm(false, true))
+            assertFalse(choice.requestsAuthoredPcm(true, false))
+        }
+        assertFalse(HostGamepadSelection.XBOX.requestsAuthoredPcm(true, true))
+        assertFalse(HostGamepadSelection.DS4.requestsAuthoredPcm(true, true))
+        assertTrue(HostGamepadSelection.AUTOMATIC.requestsAuthoredPcm(true, true))
+        assertTrue(HostGamepadSelection.DS5.requestsAuthoredPcm(true, true))
+        assertTrue(HostGamepadSelection.HOST.requestsAuthoredPcm(true, true))
+    }
 }
