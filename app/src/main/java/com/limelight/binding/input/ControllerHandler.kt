@@ -996,6 +996,9 @@ class ControllerHandler(
         hapticsCoordinator.refreshPrimaryController()
         hapticsCoordinator.onSinkChanged(context.controllerNumber)
 
+        // Association depends on assignment, not the frequency of input packets.
+        if (context is InputDeviceContext) refreshSystemWaveformRoutes()
+
         // Report attributes of this new controller to the host
         reportControllerArrival(context)
         if (context is InputDeviceContext) {
@@ -1618,7 +1621,8 @@ class ControllerHandler(
             HostGamepadSelection.DS5 -> metadata.copy(
                 type = MoonBridge.LI_CTYPE_PS,
                 capabilities = (metadata.capabilities.toInt() or MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort())
-            HostGamepadSelection.HOST -> baseMetadata
+            // Follow host selection without dropping the enabled screen touchpad capabilities.
+            HostGamepadSelection.HOST -> metadata
             else -> metadata
         }
         if (sentControllerArrivalMetadata[controllerNumber] == metadata) return 0
@@ -1700,9 +1704,6 @@ class ControllerHandler(
             }
         }
         hapticsCoordinator.noteControllerInput(originalContext)
-        if (originalContext is InputDeviceContext && systemWaveformRoutes.isNotEmpty()) {
-            refreshSystemWaveformRoutes()
-        }
 
         // Take the context's controller number and fuse all inputs with the same number
         val controllerNumber = originalContext.controllerNumber

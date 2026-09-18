@@ -196,15 +196,15 @@ class UsbDriverService : Service(), UsbDriverListener {
                 } else if (action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
                     @Suppress("DEPRECATION")
                     val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-                    sessionLock.withLock {
+                    val removedRouteIds = ArrayList<Int>()
+                    val companions = sessionLock.withLock {
                         val companions = synchronized(controllersLock) {
                             controllers.filter { it is UsbWaveformController && controllerDevices[it] == device?.deviceName }
                         }
-                        companions.forEach { it.stop() }
                         device?.let { detached ->
                             waveformRoutes.remove(detached.deviceName).forEach { route ->
                                 waveformPermissionRequests.remove(route.id)
-                                listener?.onWaveformRouteGone(route.id)
+                                removedRouteIds.add(route.id)
                             }
                         }
                         // Removing one of two identical devices can make the remaining route unambiguous.
@@ -216,7 +216,12 @@ class UsbDriverService : Service(), UsbDriverListener {
                         if (device?.deviceId == wirelessBridgeDeviceId) {
                             stopWirelessBridgeLocked(adapterPresent = false)
                         }
+                        companions
                     }
+                    // Both notifications and stop may synchronously re-enter the service.
+                    // Release sessionLock before invoking any waveform teardown callbacks.
+                    removedRouteIds.forEach { listener?.onWaveformRouteGone(it) }
+                    companions.forEach { it.stop() }
                 } else if (action == ACTION_USB_PERMISSION) {
                     try {
                         @Suppress("DEPRECATION")

@@ -114,6 +114,11 @@ conservative gain, clamping and 64-byte packet encoding. It queues at most ten 3
 packets, drops locally stale packets, flushes discontinuities/end-of-stream, and checks
 USB transfer completion length. The budget measures local software age, not total
 latency. Host presentation timestamps are not synchronized to the Kishi device clock.
+The Kishi backend also disables its waveform motor mode after 30 ms without a played
+packet, emitting silence during short underruns. This transport-local idle budget is
+independent of the 50 ms ordinary-rumble fallback expiry; the fallback timeout is not
+a minimum hold time for raw waveform devices. Extending idle mode would not restore
+missing waveform samples.
 
 Kishi supports a cancellable, low-amplitude test: 400 ms left followed by 400 ms right.
 Host PCM is ignored during the test. Shutdown logs sent, dropped and silence packets.
