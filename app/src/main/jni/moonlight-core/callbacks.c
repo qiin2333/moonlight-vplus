@@ -830,7 +830,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
 
     CONNECTION_LISTENER_CALLBACKS connectionCallbacks = BridgeConnListenerCallbacks;
     connectionCallbacks.ds5HapticsPcm = authoredPcmHaptics ? BridgeClDs5HapticsPcm : NULL;
-    streamConfig.perControllerHaptics = authoredPcmHaptics;
 
     int ret = LiStartConnection(&serverInfo,
                                 &streamConfig,

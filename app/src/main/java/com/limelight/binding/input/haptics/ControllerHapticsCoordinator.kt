@@ -408,25 +408,52 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    private val pcmValidator = AuthoredPcmValidator()
-    fun hasReadyPcmSink(controllerNumber: Short): Boolean =
-        !isStoppingOrStopped() && handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE &&
-            ds5HapticsBindings.values.any { it.controllerNumber == controllerNumber && it.sink.isOperational }
+    private val pcmFallback = AuthoredPcmFallback()
+    private data class PendingPcm(val state: ControllerRumbleState, val expiresAt: Long)
+    private val pendingPcm = mutableMapOf<Short, PendingPcm>()
+    private var pcmDispatchPending = false
 
     fun submitDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
-        if (isStoppingOrStopped() || !pcmValidator.accept(frame)) return
-        val binding = ds5HapticsBindings.values.firstOrNull { it.controllerNumber == frame.controllerNumber } ?: return
-        if (handler.prefConfig.gameRumbleMode == GameRumbleMode.DEVICE) return
-        if (!binding.sink.isOperational || runCatching { binding.sink.submit(frame) }.isFailure) {
+        if (isStoppingOrStopped()) return
+        val reduced = pcmFallback.accept(frame) ?: return
+        val binding = ds5HapticsBindings.values.firstOrNull { it.controllerNumber == frame.controllerNumber }
+        var direct = handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE &&
+            binding?.sink?.isOperational == true
+        if (direct) direct = runCatching { binding!!.sink.submit(frame) }.isSuccess
+        if (binding != null && (!binding.sink.isOperational ||
+                (handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE && !direct))) {
             val entry = ds5HapticsBindings.entries.firstOrNull { it.value === binding }
             if (entry != null && ds5HapticsBindings.remove(entry.key, binding)) {
                 binding.onAvailability(HapticAvailability.FAILED)
-                handler.refreshPcmHapticsState()
                 stopSinksAsync(listOf(binding))
             }
         }
-        // Host synthesis owns non-PCM routes. Late unreliable packets after a
-        // disable are discarded, never reduced into a second rumble source.
+        // Bound the UI queue to one runnable and one latest value per player. Always send a
+        // zero when direct output takes ownership so stale fallback cannot replay afterward.
+        synchronized(pendingPcm) {
+            pendingPcm[frame.controllerNumber] = PendingPcm(
+                if (direct) ControllerRumbleState.ZERO else reduced, SystemClock.elapsedRealtime() + 50)
+            if (pcmDispatchPending) return
+            pcmDispatchPending = true
+        }
+        handler.mainThreadHandler.post {
+            val latest = synchronized(pendingPcm) {
+                pendingPcm.toMap().also { pendingPcm.clear(); pcmDispatchPending = false }
+            }
+            if (isStoppingOrStopped()) return@post
+            val now = SystemClock.elapsedRealtime()
+            for ((number, pending) in latest) {
+                val context = GameRumbleContext(handler.prefConfig.gameRumbleMode,
+                    controllerHasRumble(number), number.toInt() == 0 && deviceCapabilities.hasVibrator,
+                    deviceCapabilities.tier)
+                val plan = GameRumbleAllocator.allocate(context, RumbleSignalFeatures(pending.state))
+                renderer.queueController(mixer.submit(number, RumbleSource.AUTHORED,
+                    plan.controller ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
+                if (number.toInt() == 0) renderer.queueDevice(deviceMixer.submit(number,
+                    RumbleSource.AUTHORED, plan.device ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
+            }
+            scheduleNextExpiry(now)
+        }
     }
 
     fun attachDs5HapticsSink(
@@ -518,7 +545,6 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
             onAvailability(HapticAvailability.READY)
-            handler.refreshPcmHapticsState()
             replaced.forEach { it.sink.stop() }
         }
     }
@@ -531,7 +557,6 @@ internal class ControllerHapticsCoordinator(
             binding = ds5HapticsBindings.remove(controllerId)
         }
         binding?.let { stopSinksAsync(listOf(it)) }
-        handler.refreshPcmHapticsState()
     }
 
     private fun stopSinksAsync(bindings: List<NativeHapticsBinding>) {
@@ -557,7 +582,6 @@ internal class ControllerHapticsCoordinator(
 
     /** Replays current logical state when the physical sink for a controller changes. */
     fun onSinkChanged(controllerNumber: Short) {
-        handler.refreshPcmHapticsState()
         runOnOutputThread {
             if (isStoppingOrStopped()) return@runOnOutputThread
 

@@ -376,29 +376,6 @@ class ControllerHandler(
     private val controllerArrivalMetadata = arrayOfNulls<ControllerArrivalMetadata>(MAX_GAMEPADS.toInt())
     private val sentControllerArrivalMetadata = arrayOfNulls<ControllerArrivalMetadata>(MAX_GAMEPADS.toInt())
 
-    private val pcmReadiness = com.limelight.binding.input.haptics.ControllerPcmReadiness()
-    private val pcmReadinessPoll = Runnable { refreshPcmHapticsState() }
-
-    /** Main-thread route publication; retry failed queues and observe asynchronous sink failure. */
-    internal fun refreshPcmHapticsState() {
-        if (Looper.myLooper() != mainThreadHandler.looper) {
-            mainThreadHandler.post { refreshPcmHapticsState() }
-            return
-        }
-        mainThreadHandler.removeCallbacks(pcmReadinessPoll)
-        if (stopped || MoonBridge.getHostFeatureFlags() and MoonBridge.LI_FF_CONTROLLER_HAPTICS == 0) return
-        synchronized(arrivalMetadataLock) {
-            for (number in sentControllerArrivalMetadata.indices) {
-                pcmReadiness.update(number, sentControllerArrivalMetadata[number] != null,
-                    hapticsCoordinator.hasReadyPcmSink(number.toShort())) { ready ->
-                    MoonBridge.sendControllerHapticsState(number.toByte(), ready) == 0
-                }
-            }
-        }
-        // State-only polling, never USB discovery or repeated unchanged packets.
-        mainThreadHandler.postDelayed(pcmReadinessPoll, 250)
-    }
-
     private val stickDeadzone: Double
 
     internal val defaultContext: InputDeviceContext
@@ -1645,8 +1622,7 @@ class ControllerHandler(
                 type = MoonBridge.LI_CTYPE_PS,
                 capabilities = (metadata.capabilities.toInt() or MoonBridge.LI_CCAP_PREFER_DS5.toInt()).toShort())
             // Follow host selection without dropping the enabled screen touchpad capabilities.
-            HostGamepadSelection.HOST -> metadata.copy(
-                capabilities = (metadata.capabilities.toInt() and MoonBridge.LI_CCAP_PREFER_DS5.toInt().inv()).toShort())
+            HostGamepadSelection.HOST -> metadata
             else -> metadata
         }
         if (sentControllerArrivalMetadata[controllerNumber] == metadata) return 0
@@ -1661,7 +1637,6 @@ class ControllerHandler(
             )
             sentControllerArrivalMetadata[controllerNumber] = null
         }
-        pcmReadiness.removed(controllerNumber)
 
         val result = conn.sendControllerArrivalEvent(
             controllerNumber.toByte(), getActiveControllerMask(), metadata.type,
@@ -1669,7 +1644,6 @@ class ControllerHandler(
         )
         if (result == 0) {
             sentControllerArrivalMetadata[controllerNumber] = metadata
-            mainThreadHandler.post { refreshPcmHapticsState() }
         }
         return result
     }

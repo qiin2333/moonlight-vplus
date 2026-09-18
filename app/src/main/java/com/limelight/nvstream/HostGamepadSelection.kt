@@ -4,9 +4,8 @@ package com.limelight.nvstream
 enum class HostGamepadSelection(val preferenceValue: String) {
     AUTOMATIC("automatic"), HOST("host"), XBOX("x360"), DS4("ds4"), DS5("ds5");
 
-    fun resolve(): String? = when (this) {
-        // Automatic DS5 hints belong to individual arrival packets, not the session.
-        AUTOMATIC -> null
+    fun resolve(screenDs5: Boolean, waveformController: Boolean): String? = when (this) {
+        AUTOMATIC -> if (screenDs5 || waveformController) "ds5" else null
         HOST -> null
         else -> preferenceValue
     }

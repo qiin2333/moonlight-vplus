@@ -2,6 +2,7 @@
 package com.limelight
 
 import com.limelight.ui.ThemedComponentActivity
+import com.limelight.binding.input.driver.UsbWaveformBackends
 
 import android.hardware.usb.UsbManager
 
@@ -1072,7 +1073,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         negotiatedHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
         framegenInputHdrEnabled = negotiatedHdrEnabled
 
-        val hostGamepad = prefConfig.hostGamepadSelection.resolve()
+        val waveformController = UsbWaveformBackends.hasEligibleController(
+            getSystemService(USB_SERVICE) as? UsbManager,
+            prefConfig.allowExperimentalHaptics)
+        val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
@@ -1093,7 +1097,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
             .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
-            .setAuthoredPcmHaptics(true)
+            .setAuthoredPcmHaptics(prefConfig.allowExperimentalHaptics || waveformController)
             .setHostGamepad(hostGamepad)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
