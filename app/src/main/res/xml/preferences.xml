@@ -946,6 +946,31 @@
             android:title="@string/title_optimize_hardware_touchpad"
             android:summary="@string/summary_optimize_hardware_touchpad"
             android:defaultValue="false" />
+        <com.limelight.preferences.TouchpadCompatibilityPreference
+            android:key="touchpad_compatibility_devices"
+            android:title="@string/title_touchpad_compatibility"
+            android:summary="@string/summary_touchpad_compatibility"
+            android:dialogMessage="@string/message_touchpad_compatibility" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="touchpad_pointer_speed"
+            android:title="@string/title_touchpad_pointer_speed"
+            android:summary="@string/summary_touchpad_pointer_speed"
+            android:dialogMessage="@string/summary_touchpad_pointer_speed"
+            seekbar:min="25"
+            android:max="300"
+            seekbar:step="5"
+            android:defaultValue="100"
+            android:text="%" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="touchpad_scroll_speed"
+            android:title="@string/title_touchpad_scroll_speed"
+            android:summary="@string/summary_touchpad_scroll_speed"
+            android:dialogMessage="@string/summary_touchpad_scroll_speed"
+            seekbar:min="25"
+            android:max="300"
+            seekbar:step="5"
+            android:defaultValue="100"
+            android:text="%" />
         <!-- Legacy storage flag. Kept for old backups and hidden by StreamSettings. -->
         <CheckBoxPreference
             android:defaultValue="true"

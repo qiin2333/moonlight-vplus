@@ -9,14 +9,20 @@ import android.os.Looper
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import com.limelight.binding.input.touchpad.TouchpadCompatibilityDevices
 
 @TargetApi(Build.VERSION_CODES.O)
 class AndroidNativePointerCaptureProvider(
     activity: Activity,
-    private val targetView: View
+    private val targetView: View,
+    private val fallback: InputCaptureProvider? = null
 ) : AndroidPointerIconCaptureProvider(activity, targetView), InputManager.InputDeviceListener {
 
     private val inputManager: InputManager = activity.getSystemService(InputManager::class.java)
+    private val handler = Handler(Looper.getMainLooper())
+    private val refreshCapture = Runnable { updateCapture() }
+    private var compatibilityMode = false
+    private var listening = false
 
     companion object {
         fun isCaptureProviderSupported(): Boolean {
@@ -46,35 +52,64 @@ class AndroidNativePointerCaptureProvider(
 
     override fun showCursor() {
         super.showCursor()
-        inputManager.unregisterInputDeviceListener(this)
+        handler.removeCallbacks(refreshCapture)
+        if (listening) inputManager.unregisterInputDeviceListener(this)
+        listening = false
         targetView.releasePointerCapture()
+        fallback?.disableCapture()
     }
 
     override fun hideCursor() {
         super.hideCursor()
-        inputManager.registerInputDeviceListener(this, null)
-        if (hasCaptureCompatibleInputDevice()) {
-            targetView.requestPointerCapture()
-        }
+        if (!listening) inputManager.registerInputDeviceListener(this, null)
+        listening = true
+        updateCapture()
     }
 
     override fun onWindowFocusChanged(focusActive: Boolean) {
+        handler.removeCallbacks(refreshCapture)
         if (!focusActive || !isCapturing || isCursorVisible) {
             return
         }
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (hasCaptureCompatibleInputDevice()) {
-                targetView.requestPointerCapture()
-            }
-        }, 500)
+        handler.postDelayed(refreshCapture, 500)
     }
 
     override fun isCapturingActive(): Boolean {
-        return isCapturing && targetView.hasPointerCapture()
+        return isCapturing && if (fallback != null && !compatibilityMode)
+            fallback.isCapturingActive() else targetView.hasPointerCapture()
+    }
+
+    override fun isPointerInputActive(): Boolean = isCapturingActive() ||
+        (isCapturing && !isCursorVisible && compatibilityMode && targetView.hasWindowFocus())
+
+    private fun updateCapture() {
+        compatibilityMode = TouchpadCompatibilityDevices.connected().any {
+            TouchpadCompatibilityDevices.contains(targetView.context, it)
+        }
+        // A saved, disconnected device must not displace Root's Evdev path.
+        // Keep the same provider alive across hotplug, releasing it only while
+        // Android needs to deliver events for an online compatibility device.
+        fallback?.let {
+            val shouldEnable = isCapturing && !isCursorVisible && !compatibilityMode
+            if (shouldEnable && !it.isCapturingEnabled()) it.enableCapture()
+            else if (!shouldEnable && it.isCapturingEnabled()) it.disableCapture()
+        }
+        val shouldCapture = isCapturing && !isCursorVisible && targetView.hasWindowFocus() &&
+            hasCaptureCompatibleInputDevice() && !compatibilityMode && fallback == null
+        if (shouldCapture && !targetView.hasPointerCapture()) targetView.requestPointerCapture()
+        else if (!shouldCapture && targetView.hasPointerCapture()) targetView.releasePointerCapture()
+    }
+
+    override fun destroy() {
+        handler.removeCallbacks(refreshCapture)
+        if (listening) inputManager.unregisterInputDeviceListener(this)
+        listening = false
+        targetView.releasePointerCapture()
+        fallback?.destroy()
     }
 
     override fun eventHasRelativeMouseAxes(event: MotionEvent): Boolean {
+        if (fallback != null && !compatibilityMode) return fallback.eventHasRelativeMouseAxes(event)
         val eventSource = event.source
         return (eventSource == InputDevice.SOURCE_MOUSE_RELATIVE && event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
             (eventSource == InputDevice.SOURCE_TOUCHPAD && targetView.hasPointerCapture())
@@ -101,19 +136,14 @@ class AndroidNativePointerCaptureProvider(
     }
 
     override fun onInputDeviceAdded(deviceId: Int) {
-        if (!targetView.hasPointerCapture() && hasCaptureCompatibleInputDevice()) {
-            targetView.requestPointerCapture()
-        }
+        updateCapture()
     }
 
     override fun onInputDeviceRemoved(deviceId: Int) {
-        if (targetView.hasPointerCapture() && !hasCaptureCompatibleInputDevice()) {
-            targetView.releasePointerCapture()
-        }
+        updateCapture()
     }
 
     override fun onInputDeviceChanged(deviceId: Int) {
-        onInputDeviceRemoved(deviceId)
-        onInputDeviceAdded(deviceId)
+        updateCapture()
     }
 }
