@@ -118,6 +118,10 @@ class CursorServiceManager(
     }
 
     fun onConnectionStarted() {
+        if (compatibilityCursor) {
+            compatibilityCursor = false
+            restoreDefaultCursor()
+        }
         connected = true
         loggedUnsupportedHost = false
         sessionGeneration.incrementAndGet()
@@ -222,6 +226,7 @@ class CursorServiceManager(
 
         connected = false
         localModeActive = false
+        compatibilityCursor = false
         sessionGeneration.incrementAndGet()
         cancelCursorUpdateTimeout()
         clearCursorState()

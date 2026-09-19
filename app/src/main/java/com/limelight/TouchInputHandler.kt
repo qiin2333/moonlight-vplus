@@ -111,12 +111,7 @@ class TouchInputHandler(private val game: Game) {
     private var compatibilityPointerDeviceId = -1
     private var dispatchedPointerPosition: CompatibilityTouchpadGesture.Action.Position? = null
     private var dispatchedPointerPositionSent = false
-    private val touchpadSensitivity by lazy {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(game)
-        TouchpadSensitivity(
-            prefs.getInt("touchpad_pointer_speed", 100).coerceIn(25, 300) / 100f,
-            prefs.getInt("touchpad_scroll_speed", 100).coerceIn(25, 300) / 100f)
-    }
+    private var touchpadSensitivity = TouchpadSensitivity()
     private val touchpadActions = StreamActionExecutor(game, { game.conn })
     private var touchpadSwitchConnection: NvConnection? = null
     private var touchpadSwitchOwnsAlt = false
@@ -1607,6 +1602,10 @@ class TouchInputHandler(private val game: Game) {
      */
     fun initTouchContexts(conn: NvConnection, streamView: StreamView, prefConfig: PreferenceConfiguration) {
         cancelCompatibilityTouchpad()
+        val prefs = PreferenceManager.getDefaultSharedPreferences(game)
+        touchpadSensitivity = TouchpadSensitivity(
+            prefs.getInt("touchpad_pointer_speed", 100).coerceIn(25, 300) / 100f,
+            prefs.getInt("touchpad_scroll_speed", 100).coerceIn(25, 300) / 100f)
         for (i in 0 until TOUCH_CONTEXT_LENGTH) {
             absoluteTouchContextMap[i] = AbsoluteTouchContext(conn, i, streamView)
             relativeTouchContextMap[i] = RelativeTouchContext(conn, i, streamView, prefConfig)
