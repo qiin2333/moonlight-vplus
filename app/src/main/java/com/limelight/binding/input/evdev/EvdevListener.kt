@@ -6,6 +6,7 @@ interface EvdevListener {
     fun mouseVScroll(amount: Byte)
     fun mouseHScroll(amount: Byte)
     fun keyboardEvent(buttonDown: Boolean, keyCode: Short)
+    fun cancelKeyboardEvent(keyCode: Short) = keyboardEvent(false, keyCode)
     fun touchpadEvent(
         eventType: Byte,
         pointerId: Int,

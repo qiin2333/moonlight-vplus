@@ -826,6 +826,13 @@
     <string name="summary_fix_mouse_wheel">部分裝置會把本機滑鼠滾輪轉成觸控捲動事件；遇到此問題時啟用。</string>
     <string name="title_optimize_hardware_touchpad">平板觸控板支援</string>
     <string name="summary_optimize_hardware_touchpad">為支援的平板鍵盤觸控板使用專用事件處理，Root 與非 Root 版本皆可使用。</string>
+    <string name="title_touchpad_compatibility">觸控板相容性</string>
+    <string name="summary_touchpad_compatibility">選擇擷取滑鼠後無法使用的觸控板</string>
+    <string name="title_touchpad_pointer_speed">觸控板游標移動速度</string>
+    <string name="summary_touchpad_pointer_speed">調整相容觸控板的主機游標速度，包含拖曳。裝置未提供相對位移時維持系統速度。100% 為預設，重新連線生效。</string>
+    <string name="title_touchpad_scroll_speed">觸控板捲動速度</string>
+    <string name="summary_touchpad_scroll_speed">調整所選相容觸控板的水平與垂直捲動速度。100% 為預設速度，重新連線生效。</string>
+    <string name="message_touchpad_compatibility">連接並選擇觸控板，即可在現有主機上使用輕觸、捲動、捏合和三指切換視窗。使用相容觸控板後，本次串流統一顯示主機游標；所選裝置連接期間停用滑鼠擷取。Android 保留的手勢仍由系統處理。</string>
     <string name="title_show_guide_button">顯示手把 Guide/Home 鍵</string>
     <string name="summary_show_guide_button">在螢幕虛擬手把上顯示原生手把 Guide/Home 鍵；它不是 Win+G 鍵盤快速鍵。</string>
     <string name="keyboard_picker_main">主鍵區</string>

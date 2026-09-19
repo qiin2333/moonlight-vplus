@@ -681,6 +681,13 @@
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
     <string name="title_optimize_hardware_touchpad">适配平板触摸板</string>
+    <string name="title_touchpad_compatibility">触控板兼容</string>
+    <string name="summary_touchpad_compatibility">选择捕获鼠标后无法使用的触控板</string>
+    <string name="title_touchpad_pointer_speed">触控板指针移动速度</string>
+    <string name="summary_touchpad_pointer_speed">调整兼容触控板的主机光标速度，包含拖动。设备未提供相对位移时保持系统速度。100% 为默认，重新连接生效。</string>
+    <string name="title_touchpad_scroll_speed">触控板滚动速度</string>
+    <string name="summary_touchpad_scroll_speed">调整所选兼容触控板的横向和纵向滚动速度。100% 为默认速度，重新连接生效。</string>
+    <string name="message_touchpad_compatibility">连接并选择触控板，即可在现有主机上使用轻触、滚动、捏合和三指切窗。使用兼容触控板后，本次串流统一显示主机光标；所选设备连接期间停用鼠标捕获。Android 保留的手势仍由系统处理。</string>
     <string name="summary_optimize_hardware_touchpad">为受支持的平板键盘触摸板使用专用事件处理，Root 与非 Root 版本均可用。</string>
     <string name="title_checkbox_enable_esc_menu">双击按键打开串流菜单</string>
     <string name="summary_checkbox_enable_esc_menu">双击所选按键打开串流返回菜单；单击仍会发送到主机。</string>

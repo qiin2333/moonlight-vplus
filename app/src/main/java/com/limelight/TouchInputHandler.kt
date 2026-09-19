@@ -1,27 +1,36 @@
 @file:Suppress("DEPRECATION")
 package com.limelight
 
+import android.annotation.SuppressLint
 import android.graphics.Point
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.preference.PreferenceManager
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.EnhancedTouchGestureRouteOwner
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
+import com.limelight.binding.input.touchpad.CompatibilityTouchpadGesture
+import com.limelight.binding.input.touchpad.CompatibilityTouchpadHandler
+import com.limelight.binding.input.touchpad.TouchpadCompatibilityDevices
+import com.limelight.binding.input.touchpad.TouchpadSensitivity
+import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.touchpad.ScreenDs5PressureClickDetector
 import com.limelight.binding.input.touchpad.ScreenDs5TapClickDetector
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
+import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
@@ -98,6 +107,19 @@ class TouchInputHandler(private val game: Game) {
     var detectMouseMiddle = false         // 键盘处理也会读写
     var detectMouseMiddleDown = false     // 键盘处理也会读写
     private val nonRootTouchpadHandler = NonRootTouchpadHandler()
+    private val compatibilityTouchpad = CompatibilityTouchpadHandler(game, ::sendCompatibilityTouchpadAction)
+    private var compatibilityPointerDeviceId = -1
+    private var dispatchedPointerPosition: CompatibilityTouchpadGesture.Action.Position? = null
+    private var dispatchedPointerPositionSent = false
+    private val touchpadSensitivity by lazy {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(game)
+        TouchpadSensitivity(
+            prefs.getInt("touchpad_pointer_speed", 100).coerceIn(25, 300) / 100f,
+            prefs.getInt("touchpad_scroll_speed", 100).coerceIn(25, 300) / 100f)
+    }
+    private val touchpadActions = StreamActionExecutor(game, { game.conn })
+    private var touchpadSwitchConnection: NvConnection? = null
+    private var touchpadSwitchOwnsAlt = false
     private val penPointerCoords = MotionEvent.PointerCoords()
     private val screenDs5PressureClickDetector = ScreenDs5PressureClickDetector()
     private var screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
@@ -112,16 +134,32 @@ class TouchInputHandler(private val game: Game) {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun handleMotionEvent(view: View?, event: MotionEvent): Boolean {
-        if (!game.grabbedInput) return false
+        if (!game.grabbedInput) {
+            cancelCompatibilityTouchpad()
+            return false
+        }
 
-        val eventSource = event.source
+        val compatibilityDevice = TouchpadCompatibilityDevices.contains(game, event.device)
+        @SuppressLint("InlinedApi") // FLAG_CANCELED is an inlined bit mask, not a runtime API call.
+        val compatibilityCancelled = compatibilityDevice &&
+            (event.actionMasked == MotionEvent.ACTION_CANCEL || event.flags and MotionEvent.FLAG_CANCELED != 0)
+        if (compatibilityDevice && compatibilityPointerDeviceId != event.deviceId) {
+            touchpadSensitivity.resetPointer()
+            compatibilityPointerDeviceId = event.deviceId
+        }
+        if (handleCompatibilityTouchpad(event)) return true
+
+        // OEMs can rewrite the final release of a touchpad's physical/right click too.
+        val eventSource = if (compatibilityDevice &&
+            (event.source == InputDevice.SOURCE_TOUCHSCREEN || event.isFromSource(InputDevice.SOURCE_TOUCHPAD)))
+            InputDevice.SOURCE_MOUSE else event.source
         val hasStylusTool = eventHasStylusTool(event)
 
         if (view != null && hasStylusTool && trySendPenEvent(view, event)) {
             return true
         }
 
-        if (!BuildConfig.ROOT_BUILD && game.prefConfig.optimizeHardwareTouchpad &&
+        if (!compatibilityDevice && !BuildConfig.ROOT_BUILD && game.prefConfig.optimizeHardwareTouchpad &&
             !hasStylusTool &&
             NonRootTouchpadHandler.isHardwareTouchpadEvent(event)) {
             if (game.inputCaptureProvider.isCapturingActive()) {
@@ -133,7 +171,7 @@ class TouchInputHandler(private val game: Game) {
         }
 
         // 华为平板原生鼠标下的滚动逻辑
-        if (game.prefConfig.fixMouseWheel && game.cursorVisible &&
+        if (!compatibilityDevice && game.prefConfig.fixMouseWheel && game.cursorVisible &&
             eventSource == InputDevice.SOURCE_MOUSE &&
             (event.actionMasked == MotionEvent.ACTION_HOVER_MOVE ||
                 event.actionMasked == MotionEvent.ACTION_MOVE ||
@@ -208,7 +246,7 @@ class TouchInputHandler(private val game: Game) {
         }
 
         // 华为鼠标中键
-        if (game.prefConfig.fixMouseMiddle) {
+        if (!compatibilityDevice && game.prefConfig.fixMouseMiddle) {
             if (game.cursorVisible) {
                 if (eventSource == InputDevice.SOURCE_MOUSE &&
                     event.actionMasked == MotionEvent.ACTION_HOVER_MOVE
@@ -239,9 +277,9 @@ class TouchInputHandler(private val game: Game) {
                         ", source: $eventSource, x: ${event.x}, y: ${event.y}" +
                         ", buttons: ${event.buttonState}"
                 )
-                updateMousePosition(view, event)
+                if (!compatibilityCancelled) updateMousePosition(view, event)
 
-                val buttonState = event.buttonState
+                val buttonState = if (compatibilityCancelled) 0 else event.buttonState
                 val changedButtons = buttonState xor lastButtonState
 
                 if (changedButtons and MotionEvent.BUTTON_PRIMARY != 0) {
@@ -266,9 +304,8 @@ class TouchInputHandler(private val game: Game) {
                     }
                 }
 
-                if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    game.conn?.sendMouseHighResScroll((event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120).toInt().toShort())
-                    game.conn?.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
+                if (!compatibilityCancelled && event.actionMasked == MotionEvent.ACTION_SCROLL) {
+                    sendMouseScroll(event)
                 }
 
                 lastButtonState = buttonState
@@ -294,10 +331,10 @@ class TouchInputHandler(private val game: Game) {
                         event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
                 eventSource == 12290
             ) {
-                var buttonState = event.buttonState
+                var buttonState = if (compatibilityCancelled) 0 else event.buttonState
                 var changedButtons = buttonState xor lastButtonState
 
-                if (eventSource == 12290) {
+                if (!compatibilityCancelled && eventSource == 12290) {
                     buttonState = when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN -> buttonState or MotionEvent.BUTTON_PRIMARY
                         MotionEvent.ACTION_UP -> buttonState and MotionEvent.BUTTON_PRIMARY.inv()
@@ -306,14 +343,18 @@ class TouchInputHandler(private val game: Game) {
                     changedButtons = buttonState xor lastButtonState
                 }
 
-                if (!game.inputCaptureProvider.isCapturingActive()) {
+                if (!game.inputCaptureProvider.isPointerInputActive()) {
                     return true
                 }
 
                 val eventHasRelativeMouseAxes = game.inputCaptureProvider.eventHasRelativeMouseAxes(event)
-                if (eventHasRelativeMouseAxes) {
-                    val deltaX = game.inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
-                    val deltaY = game.inputCaptureProvider.getRelativeAxisY(event).toInt().toShort()
+                if (!compatibilityCancelled && eventHasRelativeMouseAxes) {
+                    val rawX = game.inputCaptureProvider.getRelativeAxisX(event)
+                    val rawY = game.inputCaptureProvider.getRelativeAxisY(event)
+                    val scaled = if (TouchpadCompatibilityDevices.contains(game, event.device))
+                        touchpadSensitivity.move(rawX, rawY) else null
+                    val deltaX = scaled?.x ?: rawX.toInt().toShort()
+                    val deltaY = scaled?.y ?: rawY.toInt().toShort()
                     if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
                         if (game.prefConfig.absoluteMouseMode) {
                             val activeStreamView = game.activeStreamView!!
@@ -325,7 +366,7 @@ class TouchInputHandler(private val game: Game) {
                             game.conn?.sendMouseMove(deltaX, deltaY)
                         }
                     }
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
+                } else if (!compatibilityCancelled && (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
                     val device = event.device
                     if (device != null) {
                         val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
@@ -341,13 +382,12 @@ class TouchInputHandler(private val game: Game) {
                             }
                         }
                     }
-                } else if (view != null) {
+                } else if (!compatibilityCancelled && view != null) {
                     updateMousePosition(view, event)
                 }
 
-                if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    game.conn?.sendMouseHighResScroll((event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120).toInt().toShort())
-                    game.conn?.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
+                if (!compatibilityCancelled && event.actionMasked == MotionEvent.ACTION_SCROLL) {
+                    sendMouseScroll(event)
                 }
 
                 if (changedButtons and MotionEvent.BUTTON_PRIMARY != 0) {
@@ -738,6 +778,15 @@ class TouchInputHandler(private val game: Game) {
 
     private fun updateMousePosition(touchedView: View?, event: MotionEvent) {
         val activeStreamView = game.activeStreamView ?: return
+        if (TouchpadCompatibilityDevices.contains(game, event.device)) {
+            // Raw touchpad button frames contain finger positions, not cursor positions.
+            if (!event.isFromSource(InputDevice.SOURCE_TOUCHPAD)) {
+                sendCompatibilityTouchpadAction(CompatibilityTouchpadHandler.pointerPosition(event), event.metaState)
+            }
+            return
+        } else {
+            touchpadSensitivity.resetPointer()
+        }
 
         var eventX: Float
         var eventY: Float
@@ -1388,10 +1437,176 @@ class TouchInputHandler(private val game: Game) {
         nonRootTouchpadHandler.cancelAll(game.conn)
     }
 
+    fun handleCompatibilityTouchpad(event: MotionEvent): Boolean =
+        game.grabbedInput && game.hasWindowFocus() &&
+            (game.prefConfig.enableNativeMousePointer || game.inputCaptureProvider.isPointerInputActive()) &&
+            compatibilityTouchpad.handle(event)
+
+    internal fun dispatchCompatibilityPointer(event: MotionEvent,
+        dispatch: (CompatibilityTouchpadGesture.Action.Position?) -> Boolean): Boolean {
+        if (!game.grabbedInput || !game.hasWindowFocus() ||
+            (!game.prefConfig.enableNativeMousePointer && !game.inputCaptureProvider.isPointerInputActive())) return dispatch(null)
+        if (compatibilityPointerDeviceId != event.deviceId) {
+            touchpadSensitivity.resetPointer()
+            compatibilityPointerDeviceId = event.deviceId
+        }
+        val movesPointer = compatibilityTouchpad.movesPointer(event)
+        val point = if (movesPointer) CompatibilityTouchpadHandler.pointerPosition(event)
+            else CompatibilityTouchpadGesture.Action.Position(event.rawX, event.rawY)
+        val window = game.window.decorView
+        val origin = IntArray(2)
+        window.getLocationOnScreen(origin)
+        val cursor = touchpadSensitivity.position(TouchpadSensitivity.toStream(point,
+            origin[0].toFloat(), origin[1].toFloat(), 1f, 1f), window.width, window.height)
+        val position = cursor.copy(x = cursor.x + origin[0], y = cursor.y + origin[1])
+        val previous = dispatchedPointerPosition
+        val previousSent = dispatchedPointerPositionSent
+        dispatchedPointerPosition = position
+        dispatchedPointerPositionSent = false
+        return try { dispatch(position) } finally {
+            // A local control may consume hover/drag. Keep the visible host cursor
+            // following the logical pointer without forwarding its local buttons.
+            if (movesPointer && !dispatchedPointerPositionSent) sendCompatibilityTouchpadAction(position, event.metaState)
+            dispatchedPointerPosition = previous
+            dispatchedPointerPositionSent = previousSent
+        }
+    }
+
+    fun cancelCompatibilityTouchpad() {
+        compatibilityTouchpad.cancel()
+        touchpadSensitivity.reset()
+    }
+
+    fun destroyCompatibilityTouchpad() = compatibilityTouchpad.destroy()
+
+    private fun sendMouseScroll(event: MotionEvent) {
+        val x = event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120
+        val y = event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120
+        if (TouchpadCompatibilityDevices.contains(game, event.device)) {
+            sendTouchpadScroll(x, y)
+        } else {
+            game.conn?.sendMouseHighResScroll(y.toInt().toShort())
+            game.conn?.sendMouseHighResHScroll(x.toInt().toShort())
+        }
+    }
+
+    private fun sendTouchpadScroll(x: Float, y: Float) {
+        val scroll = touchpadSensitivity.scroll(x, y)
+        // Chromium treats vertical wheel input following a horizontal event with
+        // the same timestamp as horizontal too. Match the normal mouse order.
+        if (scroll.y.toInt() != 0) game.conn?.sendMouseHighResScroll(scroll.y)
+        if (scroll.x.toInt() != 0) game.conn?.sendMouseHighResHScroll(scroll.x)
+    }
+
+    private fun sendCompatibilityTouchpadAction(action: CompatibilityTouchpadGesture.Action, metaState: Int) {
+        if (action is CompatibilityTouchpadGesture.Action.EndSwitch) {
+            finishTouchpadSwitch(action.cancelled)
+            return
+        }
+        val conn = game.conn ?: return
+        game.cursorServiceManager.useHostCursorForCompatibility()
+        when (action) {
+            is CompatibilityTouchpadGesture.Action.Position -> {
+                val pointer = dispatchedPointerPosition ?: action
+                dispatchedPointerPositionSent = true
+                val view = game.activeStreamView ?: return
+                if (view.width == 0 || view.height == 0 || view.scaleX == 0f || view.scaleY == 0f) return
+                val location = IntArray(2)
+                view.getLocationOnScreen(location)
+                val point = if (game.externalDisplayManager?.isUsingExternalDisplay() == true) {
+                    val size = Point()
+                    game.windowManager.defaultDisplay.getRealSize(size)
+                    TouchpadSensitivity.toStream(pointer, 0f, 0f,
+                        size.x.toFloat() / view.width, size.y.toFloat() / view.height)
+                } else {
+                    TouchpadSensitivity.toStream(pointer, location[0].toFloat(), location[1].toFloat(),
+                        view.scaleX, view.scaleY)
+                }
+                conn.sendMousePosition(point.x.coerceIn(0f, view.width.toFloat()).toInt().toShort(),
+                    point.y.coerceIn(0f, view.height.toFloat()).toInt().toShort(),
+                    view.width.toShort(), view.height.toShort())
+            }
+            is CompatibilityTouchpadGesture.Action.Button -> {
+                if (action.down) conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+                else conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            }
+            is CompatibilityTouchpadGesture.Action.Move -> {
+                val move = touchpadSensitivity.move(action.x.toFloat(), action.y.toFloat())
+                if (move.x.toInt() != 0 || move.y.toInt() != 0) {
+                    val view = game.activeStreamView ?: return
+                    if (game.prefConfig.absoluteMouseMode) conn.sendMouseMoveAsMousePosition(
+                        move.x, move.y, view.width.toShort(), view.height.toShort())
+                    else conn.sendMouseMove(move.x, move.y)
+                }
+            }
+            is CompatibilityTouchpadGesture.Action.Click -> {
+                val button = when (action.fingers) {
+                    1 -> MouseButtonPacket.BUTTON_LEFT
+                    2 -> MouseButtonPacket.BUTTON_RIGHT
+                    else -> MouseButtonPacket.BUTTON_MIDDLE
+                }
+                conn.sendMouseButtonDown(button)
+                conn.sendMouseButtonUp(button)
+            }
+            is CompatibilityTouchpadGesture.Action.Scroll -> {
+                // Contact X/Y both increase right/down, but host wheel axes have
+                // opposite signs. Keep content following the fingers on both axes.
+                sendTouchpadScroll(-action.x.toFloat(), action.y.toFloat())
+            }
+            is CompatibilityTouchpadGesture.Action.Zoom -> {
+                // Each zoom step releases its own modifier immediately, so cancellation,
+                // device removal and reconnects cannot strand Ctrl on the host.
+                val ctrlHeld = metaState and KeyEvent.META_CTRL_ON != 0
+                if (!ctrlHeld) conn.sendKeyboardInput(KeyboardTranslator.VK_LCONTROL.toShort(), KeyboardPacket.KEY_DOWN, 0, 0)
+                conn.sendMouseHighResScroll(action.amount)
+                if (!ctrlHeld) conn.sendKeyboardInput(KeyboardTranslator.VK_LCONTROL.toShort(), KeyboardPacket.KEY_UP, 0, 0)
+            }
+            is CompatibilityTouchpadGesture.Action.Swipe -> when (action.direction) {
+                CompatibilityTouchpadGesture.Direction.LEFT, CompatibilityTouchpadGesture.Direction.RIGHT ->
+                    stepTouchpadSwitch(conn, action.direction == CompatibilityTouchpadGesture.Direction.LEFT, metaState)
+                CompatibilityTouchpadGesture.Direction.UP -> touchpadActions.sendKeys(
+                    shortArrayOf(KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_TAB.toShort()))
+                CompatibilityTouchpadGesture.Direction.DOWN -> touchpadActions.sendKeys(
+                    shortArrayOf(KeyboardTranslator.VK_LWIN.toShort(), KeyboardTranslator.VK_D.toShort()))
+            }
+            is CompatibilityTouchpadGesture.Action.EndSwitch -> Unit
+        }
+    }
+
+    private fun stepTouchpadSwitch(conn: NvConnection, backwards: Boolean, metaState: Int) {
+        if (touchpadSwitchConnection !== conn) {
+            finishTouchpadSwitch(cancelled = true)
+            touchpadSwitchConnection = conn
+            touchpadSwitchOwnsAlt = metaState and KeyEvent.META_ALT_ON == 0
+            if (touchpadSwitchOwnsAlt) conn.sendKeyboardInput(KeyboardTranslator.VK_MENU.toShort(), KeyboardPacket.KEY_DOWN, 0, 0)
+        }
+        val shiftHeld = metaState and KeyEvent.META_SHIFT_ON != 0
+        val pressShift = backwards && !shiftHeld
+        val modifiers = (KeyboardPacket.MODIFIER_ALT.toInt() or
+            if (backwards || shiftHeld) KeyboardPacket.MODIFIER_SHIFT.toInt() else 0).toByte()
+        if (pressShift) conn.sendKeyboardInput(KeyboardTranslator.VK_LSHIFT.toShort(), KeyboardPacket.KEY_DOWN, KeyboardPacket.MODIFIER_ALT, 0)
+        conn.sendKeyboardInput(KeyboardTranslator.VK_TAB.toShort(), KeyboardPacket.KEY_DOWN, modifiers, 0)
+        conn.sendKeyboardInput(KeyboardTranslator.VK_TAB.toShort(), KeyboardPacket.KEY_UP, modifiers, 0)
+        if (pressShift) conn.sendKeyboardInput(KeyboardTranslator.VK_LSHIFT.toShort(), KeyboardPacket.KEY_UP, KeyboardPacket.MODIFIER_ALT, 0)
+    }
+
+    private fun finishTouchpadSwitch(cancelled: Boolean) {
+        // Release on the connection that received DOWN, even during reconnect/teardown.
+        val conn = touchpadSwitchConnection ?: return
+        touchpadSwitchConnection = null
+        if (cancelled) {
+            conn.sendKeyboardInput(KeyboardTranslator.VK_ESCAPE.toShort(), KeyboardPacket.KEY_DOWN, KeyboardPacket.MODIFIER_ALT, 0)
+            conn.sendKeyboardInput(KeyboardTranslator.VK_ESCAPE.toShort(), KeyboardPacket.KEY_UP, KeyboardPacket.MODIFIER_ALT, 0)
+        }
+        if (touchpadSwitchOwnsAlt) conn.sendKeyboardInput(KeyboardTranslator.VK_MENU.toShort(), KeyboardPacket.KEY_UP, 0, 0)
+        touchpadSwitchOwnsAlt = false
+    }
+
     /**
      * 初始化触控上下文（由 Game 在 onCreate / prepareConnection 中调用）
      */
     fun initTouchContexts(conn: NvConnection, streamView: StreamView, prefConfig: PreferenceConfiguration) {
+        cancelCompatibilityTouchpad()
         for (i in 0 until TOUCH_CONTEXT_LENGTH) {
             absoluteTouchContextMap[i] = AbsoluteTouchContext(conn, i, streamView)
             relativeTouchContextMap[i] = RelativeTouchContext(conn, i, streamView, prefConfig)

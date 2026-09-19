@@ -73,6 +73,7 @@ class CursorServiceManager(
     private var destroyed = false
 
     private var hostCursorVisible = false
+    private var compatibilityCursor = false
     private var currentShapeId: Int? = null
     private var streamWidth = prefConfig.width.coerceAtLeast(1)
     private var streamHeight = prefConfig.height.coerceAtLeast(1)
@@ -104,6 +105,16 @@ class CursorServiceManager(
         if (localModeActive) {
             postApplyCurrentCursor()
         }
+        if (compatibilityCursor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            streamView.pointerIcon = PointerIcon.getSystemIcon(streamView.context, PointerIcon.TYPE_NULL)
+        }
+    }
+
+    /** One host cursor for this compatibility session, including mixed pointer devices. */
+    fun useHostCursorForCompatibility() {
+        if (compatibilityCursor) return
+        compatibilityCursor = true
+        refreshCursorMode()
     }
 
     fun onConnectionStarted() {
@@ -234,7 +245,8 @@ class CursorServiceManager(
             nativePointerEnabled = prefConfig.enableNativeMousePointer,
             touchpadEnabled = prefConfig.touchscreenTrackpad,
             localCursorEnabled = prefConfig.enableLocalCursorRendering,
-            hasCursorOverlay = cursorOverlay != null
+            hasCursorOverlay = cursorOverlay != null,
+            compatibilityPointer = compatibilityCursor
         )
     }
 
@@ -439,7 +451,7 @@ class CursorServiceManager(
                 try {
                     streamView.pointerIcon = PointerIcon.getSystemIcon(
                         streamView.context,
-                        PointerIcon.TYPE_ARROW
+                        if (compatibilityCursor) PointerIcon.TYPE_NULL else PointerIcon.TYPE_ARROW
                     )
                 } catch (_: Exception) {
                 }
@@ -470,8 +482,10 @@ internal object CursorModePolicy {
         nativePointerEnabled: Boolean,
         touchpadEnabled: Boolean,
         localCursorEnabled: Boolean,
-        hasCursorOverlay: Boolean
+        hasCursorOverlay: Boolean,
+        compatibilityPointer: Boolean = false
     ): Boolean {
+        if (compatibilityPointer) return false
         val nativePointer = nativePointerSupported && nativePointerEnabled
         val touchpadOverlay = touchpadEnabled && localCursorEnabled && hasCursorOverlay
         return nativePointer || touchpadOverlay
