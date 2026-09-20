@@ -234,11 +234,21 @@ and sink passed the opt-in device test, including startup, channel-test expiry,
 silence and USB release. The user confirmed **left then right** vibration from
 this independent implementation. No vendor encoder is used in that test or app.
 
-Thirty targeted unit tests pass: legacy Kishi encoder and registry regression,
-Sensa packet vectors, three-band framing, invalid values, stereo isolation,
-chunk invariance, silence and reset. These checks do not establish game-stream
-fidelity, sustained performance, unplug behavior, or compatibility with other
-firmware. The XL profile therefore remains experimental.
+The full haptics unit-test selection passed 115 tests, including legacy Kishi
+encoder and registry regression, Sensa packet vectors, three-band framing,
+invalid values, stereo isolation, chunk invariance, silence and reset.
+Three opted-in hardware checks passed: independent Sensa enable/reopen with the
+legacy experimental switch off; live rumble/PCM source selection, Rumble only
+PCM suppression and tuning-preview expiry; and the standalone settings test.
+These transport checks used zero strength to avoid requiring subjective feedback.
+The physical pulse and descriptor-dump diagnostics were not enabled in that run.
+
+Separately, the user confirmed converted ordinary rumble with Xbox emulation,
+correct left/right channel order, and authored game haptics in Returnal streamed
+from the PC. These are functional observations on this device, not measurements
+of waveform fidelity, sustained performance, unplug behavior or compatibility
+with other firmware. The XL profile therefore retains experimental protocol
+evidence even though its user-facing enable switch is independent.
 
 With debug and androidTest APKs installed and USB permission granted:
 
