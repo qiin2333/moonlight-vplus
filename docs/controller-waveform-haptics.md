@@ -173,7 +173,8 @@ Inside are a three-mode selector, channel test, strength (0–100%)
 and frequency (30–400 Hz) controls, followed by the same host emulation choices
 as Settings. Changing emulation applies on reconnection, with a pending notice. These
 share preferences with the standalone settings. Both sliders have minus/plus buttons
-with a step of 5, while dragging or using the slider D-pad changes the value
+that move to the next multiple of 5 in the selected direction (92 becomes 95
+with plus or 90 with minus), while dragging or using the slider D-pad changes the value
 in units of 1 (1% or 1 Hz); tuning changes preview both actuators for 250 ms at the selected
 strength and frequency. Repeated changes restart the preview deadline, and closing
 the menu cancels tests. The haptic channel test is in this card, independently of

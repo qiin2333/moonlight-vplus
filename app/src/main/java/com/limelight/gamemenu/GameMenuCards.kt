@@ -970,7 +970,7 @@ private fun HapticTuningSlider(
     val decrease = stringResource(R.string.seekbar_decrease)
     val increase = stringResource(R.string.seekbar_increase)
     val change: (Float) -> Unit = { raw ->
-        // Dragging keeps single-unit precision; only the explicit buttons jump by five.
+        // Dragging keeps single-unit precision; buttons move to the next multiple of five.
         val snapped = kotlin.math.round(raw).coerceIn(range.start, range.endInclusive)
         if (snapped != value) onChange(snapped)
     }
@@ -982,7 +982,7 @@ private fun HapticTuningSlider(
     Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.TextButton(
             enabled = value > range.start,
-            onClick = { change(value - 5f) },
+            onClick = { change((kotlin.math.ceil(value / 5f) - 1f) * 5f) },
             modifier = Modifier.semantics { contentDescription = "$decrease: $title, 5 $unit" }
         ) { Text("−") }
         CompactGameMenuSlider(
@@ -996,7 +996,7 @@ private fun HapticTuningSlider(
         )
         androidx.compose.material3.TextButton(
             enabled = value < range.endInclusive,
-            onClick = { change(value + 5f) },
+            onClick = { change((kotlin.math.floor(value / 5f) + 1f) * 5f) },
             modifier = Modifier.semantics { contentDescription = "$increase: $title, 5 $unit" }
         ) { Text("+") }
     }

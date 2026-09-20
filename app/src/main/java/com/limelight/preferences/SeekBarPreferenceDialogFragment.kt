@@ -163,8 +163,15 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         } else {
             val offset = if (pref.minValue < 0) pref.minValue else 0
             val step = pref.buttonStepSize.takeIf { it > 0 } ?: pref.stepSize
-            newProgress = (currentProgress + offset + direction * step)
-                .coerceIn(pref.minValue, pref.maxValue) - offset
+            val current = currentProgress + offset
+            // Explicit coarse buttons advance to the next grid point in their direction:
+            // 92 -> 95 / 90, while an aligned 95 -> 100 / 90. Touch remains precise.
+            val next = if (pref.buttonStepSize > 0) {
+                val position = current.toDouble() / step
+                ((if (direction > 0) kotlin.math.floor(position) + 1
+                    else kotlin.math.ceil(position) - 1) * step).toInt()
+            } else current + direction * step
+            newProgress = next.coerceIn(pref.minValue, pref.maxValue) - offset
         }
 
         seekBar.progress = newProgress
