@@ -69,6 +69,23 @@ class CompletionSignalTest {
         signal.await()
     }
 
+    @Test fun throwingListenerDoesNotBlockOtherListenersOrCompleter() {
+        val signal = CompletionSignal()
+        var secondCalled = false
+        signal.whenComplete { throw IllegalStateException("first listener boom") }
+        signal.whenComplete { secondCalled = true }
+        signal.complete()
+        assertTrue(secondCalled)
+        assertTrue(signal.isDone)
+        assertFalse(signal.isFailed)
+    }
+
+    @Test fun throwingLateListenerDoesNotEscapeWhenComplete() {
+        val signal = CompletionSignal()
+        signal.complete()
+        signal.whenComplete { throw IllegalStateException("late listener boom") }
+    }
+
     @Test fun allOfEmptyCompletesImmediately() {
         val all = CompletionSignal.allOf(emptyList())
         assertTrue(all.isDone)

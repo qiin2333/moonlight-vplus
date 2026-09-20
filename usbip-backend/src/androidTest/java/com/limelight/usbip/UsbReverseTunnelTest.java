@@ -65,6 +65,7 @@ public class UsbReverseTunnelTest {
             assertTrue(tunnel.ready().await(15_000));
             exchange.get(15, TimeUnit.SECONDS);
             assertTrue(tunnel.completion().await(5_000));
+            assertFalse("Tunnel completed exceptionally", tunnel.completion().isFailed());
         } finally { worker.shutdownNow(); }
     }
 
@@ -146,6 +147,7 @@ public class UsbReverseTunnelTest {
             echo.get(10, TimeUnit.SECONDS);
             // Peer EOF closes the local backend too.
             assertTrue(tunnel.completion().await(5_000));
+            assertFalse("Tunnel completed exceptionally", tunnel.completion().isFailed());
         } finally { workers.shutdownNow(); }
     }
 

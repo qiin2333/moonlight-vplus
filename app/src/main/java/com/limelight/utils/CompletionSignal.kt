@@ -1,5 +1,6 @@
 package com.limelight.utils
 
+import com.limelight.LimeLog
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -11,7 +12,8 @@ import java.util.concurrent.atomic.AtomicReference
  * NoClassDefFoundError (issue #631).
  *
  * Listeners registered before completion run on the completing thread; late listeners run
- * inline. Not a general replacement: no result value, no chaining, no cancellation.
+ * inline. A throwing listener is logged and skipped without affecting other listeners or
+ * the completer. Not a general replacement: no result value, no chaining, no cancellation.
  */
 class CompletionSignal {
     private val lock = Any()
@@ -42,7 +44,7 @@ class CompletionSignal {
             }
             pending = failure
         }
-        action(pending)
+        dispatch(action, pending)
     }
 
     /** Blocks until completion, then rethrows the failure, if any. */
@@ -80,7 +82,16 @@ class CompletionSignal {
             listeners.clear()
             (lock as Object).notifyAll()
         }
-        fired.forEach { it(error) }
+        fired.forEach { dispatch(it, error) }
+    }
+
+    /** One throwing listener must neither abort the remaining listeners nor the completer. */
+    private fun dispatch(action: (Throwable?) -> Unit, error: Throwable?) {
+        try {
+            action(error)
+        } catch (t: Throwable) {
+            LimeLog.warning("CompletionSignal listener threw: $t")
+        }
     }
 
     companion object {

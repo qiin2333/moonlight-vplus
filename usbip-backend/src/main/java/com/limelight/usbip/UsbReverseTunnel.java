@@ -58,7 +58,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
                 if (!done) listeners.add(listener);
                 outcome = error;
             }
-            if (runNow) listener.onCompletion(outcome);
+            if (runNow) dispatch(listener, outcome);
         }
 
         /** Blocks up to {@code timeoutMs}; true on completion, false on timeout. */
@@ -91,7 +91,16 @@ public final class UsbReverseTunnel implements AutoCloseable {
                 listeners.clear();
                 lock.notifyAll();
             }
-            for (Listener listener : snapshot) listener.onCompletion(cause);
+            for (Listener listener : snapshot) dispatch(listener, cause);
+        }
+
+        /** One throwing listener must neither abort the remaining listeners nor the completer. */
+        private static void dispatch(Listener listener, Throwable cause) {
+            try {
+                listener.onCompletion(cause);
+            } catch (Throwable t) {
+                Log.w(TAG, "Tunnel completion listener threw", t);
+            }
         }
     }
 
