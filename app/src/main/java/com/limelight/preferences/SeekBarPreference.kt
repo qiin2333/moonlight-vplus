@@ -24,6 +24,7 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreferenc
     val minValue: Int
     val stepSize: Int
     val keyStepSize: Int
+    val buttonStepSize: Int
     val divisor: Int
     val isLogarithmic: Boolean
     val showTickMarks: Boolean
@@ -46,6 +47,8 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreferenc
         stepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "step", 1)
         divisor = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "divisor", 1)
         keyStepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "keyStep", 0)
+        // An optional button increment independent of touch-slider quantization.
+        buttonStepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "buttonStep", 0)
 
         showTickMarks = attrs.getAttributeBooleanValue(SEEKBAR_SCHEMA_URL, "tickMarks", false)
 

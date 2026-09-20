@@ -809,7 +809,9 @@
             android:defaultValue="100"
             seekbar:min="0"
             android:max="100"
-            seekbar:step="5"
+            seekbar:step="1"
+            seekbar:keyStep="1"
+            seekbar:buttonStep="5"
             android:text="%" />
         <com.limelight.preferences.SeekBarPreference
             android:key="sensa_haptics_frequency"
@@ -819,7 +821,9 @@
             android:defaultValue="100"
             seekbar:min="30"
             android:max="400"
-            seekbar:step="5"
+            seekbar:step="1"
+            seekbar:keyStep="1"
+            seekbar:buttonStep="5"
             android:text="@string/sensa_frequency_unit" />
         <CheckBoxPreference
             android:key="checkbox_usb_bind_all"

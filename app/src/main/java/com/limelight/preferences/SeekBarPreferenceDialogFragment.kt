@@ -59,10 +59,10 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         // Value display
         valueText = layout.findViewById(R.id.pref_seekbar_value)
 
-        // +/- buttons (logarithmic mode only)
+        // Explicit button steps can be coarser than the touch slider's step.
         val btnMinus = layout.findViewById<ImageView>(R.id.pref_seekbar_btn_minus)
         val btnPlus = layout.findViewById<ImageView>(R.id.pref_seekbar_btn_plus)
-        if (pref.isLogarithmic) {
+        if (pref.isLogarithmic || pref.buttonStepSize > 0) {
             btnMinus.setImageResource(R.drawable.ic_pref_minus)
             btnPlus.setImageResource(R.drawable.ic_pref_plus)
             btnMinus.visibility = View.VISIBLE
@@ -161,7 +161,10 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
             val newBitrate = maxOf(pref.minValue, minOf(pref.maxValue, currentBitrate + direction * adjustStep))
             newProgress = pref.logToLinear(newBitrate)
         } else {
-            newProgress = maxOf(pref.minValue, minOf(pref.maxValue, currentProgress + direction * pref.stepSize))
+            val offset = if (pref.minValue < 0) pref.minValue else 0
+            val step = pref.buttonStepSize.takeIf { it > 0 } ?: pref.stepSize
+            newProgress = (currentProgress + offset + direction * step)
+                .coerceIn(pref.minValue, pref.maxValue) - offset
         }
 
         seekBar.progress = newProgress

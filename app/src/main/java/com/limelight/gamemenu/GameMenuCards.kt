@@ -970,33 +970,36 @@ private fun HapticTuningSlider(
     val decrease = stringResource(R.string.seekbar_decrease)
     val increase = stringResource(R.string.seekbar_increase)
     val change: (Float) -> Unit = { raw ->
-        val snapped = (kotlin.math.round(raw / 5) * 5).coerceIn(range.start, range.endInclusive)
+        // Dragging keeps single-unit precision; only the explicit buttons jump by five.
+        val snapped = kotlin.math.round(raw).coerceIn(range.start, range.endInclusive)
         if (snapped != value) onChange(snapped)
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp,
             modifier = Modifier.weight(1f))
+        Text("${value.toInt()} $unit", color = appAccentColor(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.TextButton(
             enabled = value > range.start,
             onClick = { change(value - 5f) },
             modifier = Modifier.semantics { contentDescription = "$decrease: $title, 5 $unit" }
         ) { Text("−") }
-        Text("${value.toInt()} $unit", color = appAccentColor(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        CompactGameMenuSlider(
+            value = value, onValueChange = change, onValueChangeFinished = {}, valueRange = range,
+            modifier = Modifier.weight(1f).height(GameMenuSliderSpec.height)
+                .semantics { contentDescription = title }
+                .gamepadFocusOutline(GameMenuControlShape)
+                .handleSliderDpad(value = value, step = 1f, valueRange = range,
+                    onValueChange = change, onValueChangeFinished = {})
+                .lockParentScrollDuringGesture(onSliderGesture)
+        )
         androidx.compose.material3.TextButton(
             enabled = value < range.endInclusive,
             onClick = { change(value + 5f) },
             modifier = Modifier.semantics { contentDescription = "$increase: $title, 5 $unit" }
         ) { Text("+") }
     }
-    CompactGameMenuSlider(
-        value = value, onValueChange = change, onValueChangeFinished = {}, valueRange = range,
-        modifier = Modifier.fillMaxWidth().height(GameMenuSliderSpec.height)
-            .semantics { contentDescription = title }
-            .gamepadFocusOutline(GameMenuControlShape)
-            .handleSliderDpad(value = value, step = 5f, valueRange = range,
-                onValueChange = change, onValueChangeFinished = {})
-            .lockParentScrollDuringGesture(onSliderGesture)
-    )
 }
 
 @Composable
