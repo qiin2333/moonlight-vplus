@@ -27,3 +27,10 @@
 
 # Virtual-controller instrumentation calls across the target/test APK boundary.
 -keep class com.limelight.binding.input.virtual_controller.** { *; }
+
+# Instrumentation exercises constructors and IME metadata across the APK boundary.
+-keepclassmembers class com.limelight.ui.StreamView {
+    public <init>(...);
+    public void setTextInputEnabled(boolean);
+    public boolean isTextInputEnabled();
+}

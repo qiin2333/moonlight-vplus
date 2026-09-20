@@ -1,0 +1,6 @@
+<resources>
+    <!-- Model a theme/system default which opts the stream into handwriting. -->
+    <style name="HandwritingEnabledStreamFixture">
+        <item name="android:autoHandwritingEnabled">true</item>
+    </style>
+</resources>

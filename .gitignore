@@ -52,6 +52,7 @@ app/google-services.json
 docs/*
 !docs/DUALSENSE_WIRELESS_BRIDGE_IMPLEMENTATION.md
 !docs/REMOTE_TEXT_FOCUS_DETECTION_IMPLEMENTATION.md
+!docs/STYLUS_IME_HANDWRITING_ISOLATION.md
 !docs/controller-waveform-haptics.md
 
 # Kotlin build cache
