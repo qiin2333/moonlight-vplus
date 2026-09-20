@@ -72,7 +72,7 @@ flowchart TD
 - The menu renders a dedicated waveform card — separate from the audio-haptics
   card — with one status/test row per discovered route, and only while at least
   one route exists. Testing selects a route ID, not a brand or an arbitrary first
-  device. Tests are cancelled when the card is dismissed.
+  device. Tests are cancelled when the game menu is dismissed.
 
 ## Host negotiation and fallback
 
