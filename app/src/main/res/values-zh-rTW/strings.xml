@@ -939,4 +939,21 @@
     <string name="theme_accent_pink">品牌粉</string>
     <string name="theme_accent_background">跟隨首頁背景</string>
     <string name="theme_summary">%1$s · %2$s</string>
+    <string name="title_experimental_haptic_protocols">允許實驗性觸覺協定</string>
+    <string name="summary_experimental_haptic_protocols">自動辨識控制器。允許嘗試已辨識但尚未驗證的波形協定；未知協定繼續使用一般震動。變更後請重新串流。</string>
+    <string name="waveform_status_ready">波形通道已就緒，播放需要觸覺內容。</string>
+    <string name="waveform_status_validation">已辨識候選波形協定，尚待驗證。目前維持一般震動。</string>
+    <string name="waveform_status_permission">波形輸出需要 USB 授權，一般震動仍可使用。</string>
+    <string name="waveform_status_association">等待唯一玩家關聯。請按下控制器按鍵；無法區分的同型裝置維持一般震動。</string>
+    <string name="waveform_status_initializing">正在建立波形通道…</string>
+    <string name="waveform_status_busy">波形通道已被占用，目前維持一般震動。</string>
+    <string name="waveform_status_failed">波形輸出失敗，已回退至一般震動；重新連接可重試。</string>
+    <string name="waveform_status_unavailable">未辨識到可用的波形通道，目前維持一般震動。</string>
+    <string name="waveform_experimental">實驗性</string>
+    <string name="waveform_player">玩家 %1$d</string>
+    <string name="waveform_test_channels">測試左右觸覺</string>
+    <string name="waveform_test_cancel">停止觸覺測試</string>
+    <string name="title_host_gamepad_selection">主機虛擬控制器</string>
+    <string name="summary_host_gamepad_selection">選擇向 Sunshine 請求的控制器類型，對所有玩家生效。自動模式會為已辨識的波形控制器或螢幕觸控板請求 DS5。變更後請重新串流。</string>
+    <string-array name="host_gamepad_selection_names"><item>自動</item><item>遵循主機設定</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
 </resources>

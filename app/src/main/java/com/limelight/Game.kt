@@ -2,6 +2,10 @@
 package com.limelight
 
 import com.limelight.ui.ThemedComponentActivity
+import com.limelight.binding.input.driver.UsbWaveformBackends
+
+import android.hardware.usb.UsbManager
+
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.audio.AndroidAudioRenderer
 import com.limelight.binding.audio.AudioDiagnostics
@@ -575,7 +579,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             initializeControllerManager()
         }
 
-        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge) {
+        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) {
             bindUsbDriverService()
         }
 
@@ -1069,6 +1073,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         negotiatedHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
         framegenInputHdrEnabled = negotiatedHdrEnabled
 
+        val waveformController = UsbWaveformBackends.hasEligibleController(
+            getSystemService(USB_SERVICE) as? UsbManager,
+            prefConfig.allowExperimentalHaptics)
+        val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
@@ -1089,6 +1097,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
             .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
+            .setAuthoredPcmHaptics(prefConfig.hostGamepadSelection.requestsAuthoredPcm(
+                waveformController,
+                prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE))
+            .setHostGamepad(hostGamepad)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
                 decoderRenderer?.getPreferredColorRange()
@@ -1187,7 +1199,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         audioVibrationService?.controllerHandler = controllerHandler
 
-        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge) {
+        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) {
             bindUsbDriverService()
         } else {
             usbDriverServiceManager?.refreshListener()

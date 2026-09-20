@@ -485,7 +485,8 @@ open class NvConnection(
                         context.streamConfig.getEnableMic(),
                         context.streamConfig.getControlOnly(),
                         context.streamConfig.audioCodec,
-                        context.streamConfig.audioBitrate
+                        context.streamConfig.audioBitrate,
+                        context.streamConfig.authoredPcmHaptics
                     )
                 }
                 if (ret != 0) {

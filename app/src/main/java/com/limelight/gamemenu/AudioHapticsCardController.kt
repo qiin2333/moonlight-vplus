@@ -1,6 +1,9 @@
 package com.limelight.gamemenu
 
 import com.limelight.Game
+import com.limelight.R
+import com.limelight.binding.input.haptics.HapticAvailability
+import com.limelight.binding.input.haptics.HapticEvidence
 import com.limelight.binding.audio.AudioHapticsSettings
 import com.limelight.binding.audio.AudioVibrationService
 import com.limelight.preferences.PreferenceConfiguration
@@ -10,7 +13,12 @@ internal data class AudioHapticsCardState(
     val strength: Int,
     val mode: String,
     val scene: Int,
-    val pendingRestart: Boolean
+    val pendingRestart: Boolean,
+    val waveformRoutes: List<WaveformRouteCardState> = emptyList()
+)
+
+internal data class WaveformRouteCardState(
+    val id: Int, val label: String, val status: String, val canTest: Boolean, val testing: Boolean
 )
 
 /**
@@ -20,6 +28,18 @@ internal data class AudioHapticsCardState(
  * backend can safely accept the new settings without restarting the stream.
  */
 internal class AudioHapticsCardController(private val game: Game) {
+    private val statusHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val statusPoll = object : Runnable {
+        override fun run() {
+            if (onStateChanged == null) return
+            val routes = readWaveformRoutes()
+            if (state.waveformRoutes != routes) {
+                state = state.copy(waveformRoutes = routes)
+                emitState()
+            }
+            statusHandler.postDelayed(this, if (routes.any { it.testing }) 100 else 1000)
+        }
+    }
     private var onStateChanged: ((AudioHapticsCardState) -> Unit)? = null
     private var runtimeSettings = game.currentAudioHapticsSettings()
     private var state = readSettings().let { desired ->
@@ -35,6 +55,8 @@ internal class AudioHapticsCardController(private val game: Game) {
             desired.toCardState(pendingRestart = desired != runtimeSettings)
         }
         emitState()
+        statusHandler.removeCallbacks(statusPoll)
+        statusHandler.post(statusPoll)
     }
 
     fun setEnabled(enabled: Boolean) {
@@ -91,8 +113,38 @@ internal class AudioHapticsCardController(private val game: Game) {
     }
 
     fun dispose() {
+        statusHandler.removeCallbacks(statusPoll)
+        runCatching { game.controllerHandler.cancelWaveformTests() }
         onStateChanged = null
     }
+
+    fun toggleWaveformTest(routeId: Int, cancel: Boolean) {
+        game.controllerHandler.testWaveformChannels(routeId, cancel)
+        statusHandler.removeCallbacks(statusPoll)
+        statusHandler.post(statusPoll)
+    }
+
+    private fun readWaveformRoutes(): List<WaveformRouteCardState> =
+        runCatching { game.controllerHandler.waveformHapticsRoutes() }.getOrDefault(emptyList()).map { view ->
+            val capability = view.route.capability
+            val statusResource = when (capability.availability) {
+                HapticAvailability.READY -> R.string.waveform_status_ready
+                HapticAvailability.NEEDS_VALIDATION -> R.string.waveform_status_validation
+                HapticAvailability.NEEDS_PERMISSION -> R.string.waveform_status_permission
+                HapticAvailability.NEEDS_ASSOCIATION -> R.string.waveform_status_association
+                HapticAvailability.INITIALIZING -> R.string.waveform_status_initializing
+                HapticAvailability.BUSY -> R.string.waveform_status_busy
+                HapticAvailability.FAILED -> R.string.waveform_status_failed
+                else -> R.string.waveform_status_unavailable
+            }
+            val status = game.getString(statusResource) +
+                if (capability.evidence == HapticEvidence.EXPERIMENTAL_PROTOCOL)
+                    " · " + game.getString(R.string.waveform_experimental) else ""
+            val label = view.route.device.name + (view.player?.let {
+                " · " + game.getString(R.string.waveform_player, it + 1)
+            } ?: "")
+            WaveformRouteCardState(view.route.id, label, status, view.canTest, view.testing)
+        }
 
     private fun applyAndPersist() {
         applyCurrentSettings()
@@ -136,7 +188,8 @@ internal class AudioHapticsCardController(private val game: Game) {
             strength = strength,
             mode = mode,
             scene = scene,
-            pendingRestart = pendingRestart
+            pendingRestart = pendingRestart,
+            waveformRoutes = readWaveformRoutes()
         )
     }
 

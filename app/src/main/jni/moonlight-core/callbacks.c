@@ -712,11 +712,7 @@ static CONNECTION_LISTENER_CALLBACKS BridgeConnListenerCallbacks = {
         .setMotionEventState = BridgeClSetMotionEventState,
         .setControllerLED = BridgeClSetControllerLED,
         .setAdaptiveTriggers = BridgeClSetAdaptiveTriggers,
-        // Moonlight-common uses the presence of this callback to advertise raw DualSense
-        // PCM support in the SDP. Android can only consume that stream while a compatible
-        // USB DualSense audio endpoint is open. Advertising it unconditionally suppresses
-        // the host-side rumble fallback and silently drops haptics on all other devices.
-        // Keep this disabled until endpoint availability can be negotiated for the session.
+        // Set per connection below, only with a client-side rumble fallback.
         .ds5HapticsPcm = NULL,
         .resolutionChanged = BridgeClResolutionChanged,
         .clipboardData = BridgeClClipboardData,
@@ -779,7 +775,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
                                                            jint videoCapabilities,
                                                            jint colorSpace, jint colorRange, jint hdrMode,
                                                            jboolean enableMic, jboolean controlOnly,
-                                                           jint audioCodec, jint audioBitrate) {
+                                                           jint audioCodec, jint audioBitrate, jboolean authoredPcmHaptics) {
     SERVER_INFORMATION serverInfo = {
             .address = (*env)->GetStringUTFChars(env, address, 0),
             .serverInfoAppVersion = (*env)->GetStringUTFChars(env, appVersion, 0),
@@ -832,9 +828,12 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
         streamConfig.encryptionFlags = ENCFLG_ALL;
     }
 
+    CONNECTION_LISTENER_CALLBACKS connectionCallbacks = BridgeConnListenerCallbacks;
+    connectionCallbacks.ds5HapticsPcm = authoredPcmHaptics ? BridgeClDs5HapticsPcm : NULL;
+
     int ret = LiStartConnection(&serverInfo,
                                 &streamConfig,
-                                &BridgeConnListenerCallbacks,
+                                &connectionCallbacks,
                                 &BridgeVideoRendererCallbacks,
                                 &BridgeAudioRendererCallbacks,
                                 NULL, 0,

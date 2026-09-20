@@ -2246,4 +2246,22 @@ Tap again to replace it.</string>
     <string name="theme_accent_pink">Brand pink</string>
     <string name="theme_accent_background">Follow home background</string>
     <string name="theme_summary">%1$s · %2$s</string>
+    <string name="title_experimental_haptic_protocols">Allow experimental haptic protocols</string>
+    <string name="summary_experimental_haptic_protocols">Controllers are detected automatically. Allow attempts to use recognized but unverified waveform protocols. Unknown protocols keep ordinary vibration. Reconnect the stream after changing.</string>
+    <string name="waveform_status_ready">Waveform channel ready; playback requires haptic content.</string>
+    <string name="waveform_status_validation">Candidate waveform protocol needs validation. Using ordinary vibration.</string>
+    <string name="waveform_status_permission">Waveform output needs USB permission. Ordinary vibration remains available.</string>
+    <string name="waveform_status_association">Waiting for a unique player association. Press a controller button; indistinguishable devices keep ordinary vibration.</string>
+    <string name="waveform_status_initializing">Opening waveform channel…</string>
+    <string name="waveform_status_busy">Waveform channel is in use. Using ordinary vibration.</string>
+    <string name="waveform_status_failed">Waveform output failed. Using ordinary vibration; reconnect to retry.</string>
+    <string name="waveform_status_unavailable">No usable waveform channel identified. Ordinary vibration remains available.</string>
+    <string name="waveform_experimental">Experimental</string>
+    <string name="waveform_player">Player %1$d</string>
+    <string name="waveform_test_channels">Test left / right haptics</string>
+    <string name="waveform_test_cancel">Stop haptic test</string>
+    <string name="title_host_gamepad_selection">Host virtual controller</string>
+    <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
+    <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
 </resources>
