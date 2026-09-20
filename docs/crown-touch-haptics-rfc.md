@@ -53,4 +53,3 @@ flowchart LR
 - 单元测试验证连续三次短触觉不会等待 250ms。
 - 编译 `nonRootDebug` Kotlin 和 AndroidTest。
 - 执行 `testNonRootDebugUnitTest`、`lintNonRootDebug` 和 `assembleNonRootDebug`。
-
