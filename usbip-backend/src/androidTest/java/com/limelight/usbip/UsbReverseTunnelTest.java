@@ -33,10 +33,10 @@ public class UsbReverseTunnelTest {
         try (UsbReverseTunnel tunnel = new UsbReverseTunnel()) {
             tunnel.start("127.0.0.1", Integer.parseInt(sunshineProbePort),
                     "interop-test-only", physicalBusId, Integer.parseInt(localPort),
-                    client.cert, client.key, host.cert).get(15, TimeUnit.SECONDS);
+                    client.cert, client.key, host.cert);
+            assertTrue(tunnel.ready().await(15_000));
             // Bound window for desktop PnP/driver checks; never leaves a persistent tunnel.
-            try { tunnel.completion().get(45, TimeUnit.SECONDS); fail("Physical tunnel ended early"); }
-            catch (TimeoutException expected) { }
+            assertFalse("Physical tunnel ended early", tunnel.completion().await(45_000));
         }
     }
 
@@ -61,9 +61,10 @@ public class UsbReverseTunnelTest {
                 } catch (Exception error) { throw new RuntimeException(error); }
             });
             tunnel.start("127.0.0.1", Integer.parseInt(port), "interop-test-only", "1-9:0", backend.getLocalPort(),
-                    client.cert, client.key, host.cert).get(15, TimeUnit.SECONDS);
+                    client.cert, client.key, host.cert);
+            assertTrue(tunnel.ready().await(15_000));
             exchange.get(15, TimeUnit.SECONDS);
-            tunnel.completion().get(5, TimeUnit.SECONDS);
+            assertTrue(tunnel.completion().await(5_000));
         } finally { worker.shutdownNow(); }
     }
 
@@ -139,11 +140,12 @@ public class UsbReverseTunnelTest {
                 } catch (Exception error) { throw new RuntimeException(error); }
             });
             tunnel.start("127.0.0.1", listener.getLocalPort(), "test-token", "1-9:0", backend.getLocalPort(),
-                    client.cert, client.key, host.cert).get(10, TimeUnit.SECONDS);
+                    client.cert, client.key, host.cert);
+            assertTrue(tunnel.ready().await(10_000));
             peer.get(10, TimeUnit.SECONDS);
             echo.get(10, TimeUnit.SECONDS);
             // Peer EOF closes the local backend too.
-            tunnel.completion().get(5, TimeUnit.SECONDS);
+            assertTrue(tunnel.completion().await(5_000));
         } finally { workers.shutdownNow(); }
     }
 
@@ -160,12 +162,11 @@ public class UsbReverseTunnelTest {
                     catch (java.io.IOException expected) { }
                 } catch (Exception error) { throw new RuntimeException(error); }
             });
-            try {
-                tunnel.start("127.0.0.1", listener.getLocalPort(), "secret", "1-1", backend.getLocalPort(),
-                        client.cert, client.key, client.cert).get(10, TimeUnit.SECONDS);
-                fail("Wrong pin accepted");
-            } catch (ExecutionException expected) { }
+            tunnel.start("127.0.0.1", listener.getLocalPort(), "secret", "1-1", backend.getLocalPort(),
+                    client.cert, client.key, client.cert);
             peer.get(10, TimeUnit.SECONDS);
+            assertTrue(tunnel.ready().await(10_000));
+            assertTrue("Wrong pin accepted", tunnel.ready().isFailed());
             backend.setSoTimeout(200);
             try (Socket ignored = backend.accept()) { fail("Backend opened before authentication"); }
             catch (java.net.SocketTimeoutException expected) { }
@@ -187,12 +188,11 @@ public class UsbReverseTunnelTest {
                         socket.getOutputStream().write(response.getBytes("UTF-8"));
                     } catch (Exception error) { throw new RuntimeException(error); }
                 });
-                try {
-                    tunnel.start("127.0.0.1", listener.getLocalPort(), "token", "1-1", backend.getLocalPort(),
-                            client.cert, client.key, host.cert).get(10, TimeUnit.SECONDS);
-                    fail("Invalid response accepted");
-                } catch (ExecutionException expected) { }
+                tunnel.start("127.0.0.1", listener.getLocalPort(), "token", "1-1", backend.getLocalPort(),
+                        client.cert, client.key, host.cert);
                 peer.get(10, TimeUnit.SECONDS);
+                assertTrue(tunnel.ready().await(10_000));
+                assertTrue("Invalid response accepted", tunnel.ready().isFailed());
                 backend.setSoTimeout(200);
                 try (Socket ignored = backend.accept()) { fail("Backend opened after rejection"); }
                 catch (java.net.SocketTimeoutException expected) { }
@@ -205,12 +205,12 @@ public class UsbReverseTunnelTest {
         try (ServerSocket listener = new ServerSocket(0);
              UsbReverseTunnel tunnel = new UsbReverseTunnel()) {
             listener.setSoTimeout(5000);
-            CompletableFuture<Void> ready = tunnel.start("127.0.0.1", listener.getLocalPort(), "token", "1-1", 3240,
+            tunnel.start("127.0.0.1", listener.getLocalPort(), "token", "1-1", 3240,
                     client.cert, client.key, host.cert);
             try (Socket ignored = listener.accept()) {
                 tunnel.close(); tunnel.close();
-                tunnel.completion().get(2, TimeUnit.SECONDS);
-                assertTrue(ready.isCompletedExceptionally());
+                assertTrue(tunnel.completion().await(2_000));
+                assertTrue(tunnel.ready().isFailed());
             }
         }
     }

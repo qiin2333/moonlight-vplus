@@ -188,15 +188,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var usbForwardingCreationPending = false
 
 
-    @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
     fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
         if (!connected) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
-            if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
+            if (!previousCleanup.isDone || previousCleanup.isFailed) {
                 if (!usbForwardingCreationPending) {
                     usbForwardingCreationPending = true
-                    previousCleanup.whenComplete { _, error ->
+                    previousCleanup.whenComplete { error ->
                         runOnUiThread {
                             usbForwardingCreationPending = false
                             if (!isDestroyed && connected) {

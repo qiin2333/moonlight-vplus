@@ -1,7 +1,7 @@
 package com.limelight.binding.input.driver
 
 import java.lang.reflect.Proxy
-import java.util.concurrent.CompletableFuture
+import com.limelight.utils.CompletionSignal
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -24,15 +24,15 @@ class ControllerStopResultTest {
 
     @Test fun releaseFailureReachesLeaseDespiteCompletedStopCallback() {
         val controller = Controller(true)
-        val stop = CompletableFuture<Void>()
+        val stop = CompletionSignal()
         val registry = UsbForwardingReservations()
         val lease = registry.reserve("usb/a")
         lease.awaitStops(listOf(stop))
         controller.stopWithResult { result ->
-            result.fold({ stop.complete(null) }, { stop.completeExceptionally(it) })
+            result.fold({ stop.complete() }, { stop.completeExceptionally(it) })
         }
         assertTrue(controller.closed)
-        assertTrue(lease.ready.isCompletedExceptionally)
+        assertTrue(lease.ready.isFailed)
         assertFalse(lease.canRestore())
         assertTrue(registry.contains("usb/a"))
     }
