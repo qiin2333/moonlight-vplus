@@ -28,6 +28,7 @@ internal data class GameMenuComposeUiState(
     val visibleCards: GameMenuVisibleCards,
     val bitrate: BitrateCardState,
     val audioHaptics: AudioHapticsCardState,
+    val waveformHaptics: WaveformHapticsCardState,
     val gyro: GyroCardState,
     val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
