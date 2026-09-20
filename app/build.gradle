@@ -23,11 +23,6 @@ def escapeBuildConfigString = { value ->
 }
 def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
 def audioHapticsAppLabel = "Moonlight V+"
-// Override for a short local build number; otherwise every debug build is identifiable.
-def testBuildNumber = (project.findProperty("testBuildNumber") ?: new Date().format("yyyyMMdd-HHmmss")).toString()
-if (!(testBuildNumber ==~ /[0-9][0-9.-]*/)) {
-    throw new GradleException("testBuildNumber must contain only digits, dots and hyphens")
-}
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
                 ?: localProperties.getProperty("audioHapticsSdkDir")
@@ -185,9 +180,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix ".vplus_debug"
-            versionNameSuffix "-test.${testBuildNumber}"
-            resValue "string", "app_label", "${audioHapticsAppLabel} test #${testBuildNumber}"
-            resValue "string", "app_label_root", "${audioHapticsAppLabel} test #${testBuildNumber}"
+            resValue "string", "app_label", audioHapticsAppLabel
+            resValue "string", "app_label_root", audioHapticsAppLabel
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
