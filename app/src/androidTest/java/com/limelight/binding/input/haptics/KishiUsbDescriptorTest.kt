@@ -14,6 +14,26 @@ import org.junit.runner.RunWith
 /** Opt-in XL hardware checks: passive descriptor read or explicit production channel test. */
 @RunWith(AndroidJUnit4::class)
 class KishiUsbDescriptorTest {
+    @Test fun cancellingStartupReleasesUsbWithoutWaitingForMetadataBudget() {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("kishiRumbleLifecycle") == "true")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val manager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        val device = manager.deviceList.values.single { it.vendorId == 0x1532 && it.productId == 0x0727 }
+        val iface = (0 until device.interfaceCount).map(device::getInterface).single { it.id == 4 }
+        val sink = KishiSensaHapticsSink(manager, device, iface,
+            (0 until iface.endpointCount).map(iface::getEndpoint).single { it.address == 4 },
+            strength = { 0.0 }, frequency = { 100.0 }, conversionEnabled = { true }, pcmEnabled = { true }) {}
+        val caller = Thread { sink.start() }
+        val released = java.util.concurrent.CountDownLatch(1)
+        caller.start()
+        SystemClock.sleep(5)
+        sink.stopAndThen { released.countDown() }
+        assertTrue(released.await(2, java.util.concurrent.TimeUnit.SECONDS))
+        caller.join(500)
+        assertTrue(!caller.isAlive)
+        assertTrue(!sink.isOperational)
+        assertTrue(sink.releaseFailure == null)
+    }
     /** Silent transport check: conversion, live toggle, PCM with conversion off, and stop. */
     @Test fun testRumbleConversionLifecycle() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("kishiRumbleLifecycle") == "true")

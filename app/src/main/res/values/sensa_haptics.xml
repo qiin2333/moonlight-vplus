@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">Frequency</string>
     <string name="sensa_frequency_summary">Applies to converted rumble and the local test. Authored effects retain their own frequencies.</string>
     <string name="sensa_frequency_unit">Hz</string>

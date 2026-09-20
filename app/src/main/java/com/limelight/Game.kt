@@ -1694,6 +1694,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbDriverServiceManager?.updateSensaHaptics(enabled)
     }
 
+    internal fun appliedSensaHaptics(): Boolean? = usbDriverServiceManager?.appliedSensaHaptics()
+
     internal fun applyAudioHapticsStrength(strength: Int): Boolean {
         val service = audioVibrationService ?: return false
         if (service.systemAudioCoupledDeviceActive) return false

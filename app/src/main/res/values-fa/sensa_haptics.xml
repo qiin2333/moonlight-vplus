@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">فرکانس</string>
     <string name="sensa_frequency_summary">برای لرزش تبدیل‌شده و آزمایش محلی. جلوه‌های اصلی فرکانس خود را حفظ می‌کنند.</string>
     <string name="sensa_frequency_unit">هرتز</string>

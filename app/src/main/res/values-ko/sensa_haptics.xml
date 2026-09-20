@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">주파수</string>
     <string name="sensa_frequency_summary">변환된 진동과 로컬 테스트에 적용합니다. 원본 효과는 고유 주파수를 유지합니다.</string>
     <string name="sensa_frequency_unit">Hz</string>

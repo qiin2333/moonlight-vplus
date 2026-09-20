@@ -860,7 +860,15 @@ private fun HapticVibrationCard(
     val prefs = remember(context) { androidx.preference.PreferenceManager.getDefaultSharedPreferences(context) }
     val settings = com.limelight.preferences.SensaStrengthPreferences
     val initiallyEnabled = remember { settings.enabled(context) }
-    var enabled by remember { mutableStateOf(initiallyEnabled) }
+    var requestedEnabled by remember { mutableStateOf(initiallyEnabled) }
+    var appliedEnabled by remember { mutableStateOf(callbacks.appliedSensaHaptics()) }
+    androidx.compose.runtime.LaunchedEffect(callbacks.appliedSensaHaptics) {
+        while (true) {
+            appliedEnabled = callbacks.appliedSensaHaptics()
+            kotlinx.coroutines.delay(100)
+        }
+    }
+    val enabled = appliedEnabled == true
     val initialEmulation = remember { prefs.getString("list_host_gamepad_selection", "automatic") ?: "automatic" }
     var emulation by remember { mutableStateOf(initialEmulation) }
     var showEmulation by remember { mutableStateOf(false) }
@@ -879,14 +887,18 @@ private fun HapticVibrationCard(
                 checked = enabled,
                 contentDescription = stringResource(R.string.sensa_menu_title),
                 onToggle = {
-                    enabled = !enabled
-                    callbacks.onSensaHapticsEnabled(enabled)
+                    requestedEnabled = !requestedEnabled
+                    callbacks.onSensaHapticsEnabled(requestedEnabled)
                 }
             )
         },
         onLongClick = callbacks.onEditCards
     ) {
-        if (enabled) {
+        if (appliedEnabled == null || appliedEnabled != requestedEnabled) {
+            Text(stringResource(R.string.waveform_status_initializing),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+        }
+        if (enabled && requestedEnabled) {
             Text(stringResource(R.string.sensa_mode_title),
                 color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
             Box {

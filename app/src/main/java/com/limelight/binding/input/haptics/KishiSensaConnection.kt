@@ -19,8 +19,11 @@ internal class KishiSensaConnection(private val usb: UsbDeviceConnection, privat
     private var claimed = false
     private var originalMode: Int? = null
     private var modeChanged = false
+    private var cancelled: () -> Boolean = { false }
 
-    fun initialize() {
+    fun initialize(isCancelled: () -> Boolean = { false }, onMetadataSize: (Int) -> Unit = {}) {
+        cancelled = isCancelled
+        check(!cancelled()) { "Sensa initialization cancelled" }
         // Force-claim only the already matched haptics interface if Android owns it.
         // Claiming the input interface here would disconnect ordinary controller input.
         claimed = usb.claimInterface(iface, false) || usb.claimInterface(iface, true)
@@ -33,11 +36,12 @@ internal class KishiSensaConnection(private val usb: UsbDeviceConnection, privat
         val size = exchange(0x90, byteArrayOf(0, 0))
         check(size.size == 2)
         val length = ((size[0].toInt() and 255) shl 8) or (size[1].toInt() and 255)
-        check(length in 1..4096) { "Invalid Sensa metadata size" }
+        check(length in 1..SensaStartupBudget.MAX_METADATA_BYTES) { "Invalid Sensa metadata size" }
+        onMetadataSize(length)
         val metadata = ByteArray(length)
         var offset = 0
         while (offset < length) {
-            val count = minOf(50, length - offset)
+            val count = minOf(SensaStartupBudget.CHUNK_BYTES, length - offset)
             val reply = exchange(0x91, byteArrayOf((offset shr 8).toByte(), offset.toByte(), count.toByte(), 0, 0))
             check(reply.size == count + 3 && reply[0] == (offset shr 8).toByte() &&
                 reply[1] == offset.toByte() && reply[2] == count.toByte()) { "Invalid Sensa metadata chunk" }
@@ -76,16 +80,18 @@ internal class KishiSensaConnection(private val usb: UsbDeviceConnection, privat
     }
 
     private fun transfer(report: ByteArray): ByteArray {
+        check(!cancelled()) { "Sensa output cancelled" }
         // Arm IN before OUT to catch immediate acknowledgements. Both completions
         // share one deadline, including any unrelated replies discarded below.
         val incoming = ByteBuffer.allocateDirect(64)
         val outgoing = ByteBuffer.allocateDirect(64).apply { put(report); flip() }
         check(input.queue(incoming))
         check(output.queue(outgoing))
-        val deadline = SystemClock.elapsedRealtime() + 150
+        val deadline = SystemClock.elapsedRealtime() + SensaStartupBudget.TRANSFER_MS
         var sent = false
         var reply: ByteArray? = null
         while (!sent || reply == null) {
+            check(!cancelled()) { "Sensa output cancelled" }
             val remaining = deadline - SystemClock.elapsedRealtime()
             check(remaining > 0) { "Sensa response timeout" }
             when (usb.requestWait(remaining)) {

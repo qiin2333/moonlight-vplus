@@ -1196,6 +1196,7 @@ class GameMenu(
             onHapticRumbleSettingsChanged = { game.controllerHandler.refreshHapticRumbleSettings() },
             onHapticTuningPreview = { game.controllerHandler.previewHapticTuning() },
             onSensaHapticsEnabled = game::setSensaHapticsEnabled,
+            appliedSensaHaptics = game::appliedSensaHaptics,
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,
             onGyroActivationKey = {

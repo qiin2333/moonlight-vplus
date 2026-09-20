@@ -131,5 +131,6 @@ internal data class GameMenuCallbacks(
     val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> },
     val onHapticRumbleSettingsChanged: () -> Unit = {},
     val onHapticTuningPreview: () -> Unit = {},
-    val onSensaHapticsEnabled: (Boolean) -> Unit = {}
+    val onSensaHapticsEnabled: (Boolean) -> Unit = {},
+    val appliedSensaHaptics: () -> Boolean? = { null }
 )

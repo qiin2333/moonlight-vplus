@@ -18,6 +18,7 @@ internal class SettingsHapticsTest(private val context: Context, private val pre
     private var ownsDiagnostics = false
     private var selectedPath: String? = null
     private var activeSink: WaveformHapticsSink? = null
+    private var activeRouteId: Int? = null
     private var picker: AlertDialog? = null
 
     fun start() {
@@ -44,7 +45,8 @@ internal class SettingsHapticsTest(private val context: Context, private val pre
         preference.setSummary(R.string.haptics_test_connecting)
         bound = context.bindService(Intent(context, UsbDriverService::class.java), connection, Context.BIND_AUTO_CREATE)
         if (!bound) finish(R.string.haptics_test_failed)
-        else handler.postDelayed({ if (!closed) finish(R.string.haptics_test_failed) }, 15000)
+        else handler.postDelayed({ if (!closed) finish(R.string.haptics_test_failed) },
+            SensaStartupBudget.maximumMs + 5000) // Startup, three-second test and service dispatch.
     }
 
     private val connection = object : ServiceConnection {
@@ -66,6 +68,7 @@ internal class SettingsHapticsTest(private val context: Context, private val pre
             handler.post {
                 if (closed || route.device.instance != selectedPath || activeSink != null) return@post
                 activeSink = sink
+                activeRouteId = route.id
                 Thread({
                     val started = runCatching { sink.start() }.getOrDefault(false)
                     handler.post {
@@ -98,7 +101,10 @@ internal class SettingsHapticsTest(private val context: Context, private val pre
             }
         }
         override fun onSystemWaveformSinkGone(routeId: Int) {
-            handler.post { if (!closed && activeSink != null) finish(R.string.haptics_test_failed) }
+            handler.post {
+                if (!closed && activeSink != null && routeId == activeRouteId)
+                    finish(R.string.haptics_test_failed)
+            }
         }
         override fun reportControllerState(controllerId: Int, buttonFlags: Int, leftStickX: Float, leftStickY: Float,
                                            rightStickX: Float, rightStickY: Float, leftTrigger: Float, rightTrigger: Float) = Unit

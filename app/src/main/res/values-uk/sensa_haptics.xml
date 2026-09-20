@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">Частота</string>
     <string name="sensa_frequency_summary">Для перетвореної вібрації та локального тесту. Готові ефекти зберігають власні частоти.</string>
     <string name="sensa_frequency_unit">Гц</string>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">Frekvens</string>
     <string name="sensa_frequency_summary">För omvandlad vibration och lokalt test. Ursprungliga effekter behåller sina frekvenser.</string>
     <string name="sensa_frequency_unit">Hz</string>

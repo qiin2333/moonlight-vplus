@@ -53,15 +53,18 @@ class KishiExperimentalToggleTest {
             })
             val first = checkNotNull(sinks.poll(5, TimeUnit.SECONDS)) { "No Sensa companion" }
             assertTrue(first.start())
+            assertEquals(true, binder.appliedSensaHaptics(token))
             binder.updateSensaHaptics(token, false)
             val deadline = SystemClock.elapsedRealtime() + 2000
             while (first.isOperational && SystemClock.elapsedRealtime() < deadline) SystemClock.sleep(10)
             assertFalse("Sensa output must stop", first.isOperational)
+            assertEquals(false, binder.appliedSensaHaptics(token))
             assertNull("Disabled backend must not reopen", sinks.poll(300, TimeUnit.MILLISECONDS))
             binder.updateSensaHaptics(token, true)
             val second = checkNotNull(sinks.poll(5, TimeUnit.SECONDS)) { "Sensa did not reopen" }
             assertNotSame(first, second)
             assertTrue(second.start())
+            assertEquals(true, binder.appliedSensaHaptics(token))
             binder.updateSensaHaptics(token + 1, false)
             SystemClock.sleep(100)
             assertTrue("Foreign session changed output", second.isOperational)

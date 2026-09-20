@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">Frekuensi</string>
     <string name="sensa_frequency_summary">Untuk getaran yang dikonversi dan pengujian lokal. Efek asli mempertahankan frekuensinya.</string>
     <string name="sensa_frequency_unit">Hz</string>

@@ -127,6 +127,10 @@ IN 0x84). It may detach the kernel driver only on this dedicated interface;
 gamepad input interfaces remain untouched. API 26+ is required for bounded
 request completion waits. Startup reads and validates the device metadata,
 selects DESIGN mode if necessary, and remembers the original mode for cleanup.
+Startup runs in a dedicated task rather than blocking the shared input worker.
+Its deadline covers the allowed metadata size and tightens after the size reply;
+cancellation is checked between bounded USB exchanges. Pending startup sinks
+are cancelled on detach, replacement and stream teardown.
 Every stream report consumes and checks its echo acknowledgement. Unrelated
 queued replies are skipped within the same bounded deadline.
 
@@ -159,16 +163,21 @@ The XL channel test, converted rumble and streamed PCM use the Sensa strength se
 The tone test uses full-scale amplitude at 100%; 0% mutes output.
 The XL channel test plays left for 1 second, silence for 1 second, then right
 for 1 second. The 250 ms simultaneous tuning preview is independent of this test.
-A local Sensa test button directly below the Sansa HD support toggle acquires
+A local Sensa test button directly below the Sensa HD support toggle acquires
 the USB companion through the existing service without requiring a host stream
 or player association. It refuses to interrupt an active streaming session.
 
-The in-stream popup has a separate Sansa HD support card beside Audio Haptics.
+The in-stream popup has a separate Sensa HD support card beside Audio Haptics.
 Its header controls the independent Kishi XL enable preference and collapses the
 settings when disabled. The legacy experimental switch still controls other
 experimental backends. Its previous value is migrated once into the new preference.
 The live USB session releases/reopens only the Sensa output companion;
 session-token checks prevent an old UI owner from changing a new stream.
+The manager retains the latest request across attachment and reconnection; the
+service also retains requests during handoff. The card shows the service-applied
+enable state and a pending indication until it matches the requested state.
+USB readiness remains a separate route status. A standalone test only treats
+removal of its own active route as a failure.
 Inside are a three-mode selector, channel test, strength (0–100%)
 and frequency (30–400 Hz) controls, followed by the same host emulation choices
 as Settings. Changing emulation applies on reconnection, with a pending notice. These

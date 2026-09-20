@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">周波数</string>
     <string name="sensa_frequency_summary">変換した振動とローカルテストに適用します。専用エフェクトは元の周波数を維持します。</string>
     <string name="sensa_frequency_unit">Hz</string>

@@ -60,6 +60,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val sessionLock = forwardingLock
     private val controllerDevices = mutableMapOf<AbstractController, String>()
     private val sessionOwner = UsbDriverSessionOwner()
+    private var requestedSensaEnabled: Boolean? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val sessionHandoff = UsbDriverSessionHandoff<StartRequest>()
     private val stopCallbacks = mutableListOf<() -> Unit>()
@@ -297,6 +298,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                     LimeLog.warning("Replacing an active USB driver session with a new stream session")
                 }
                 val token = sessionOwner.acquire()
+                requestedSensaEnabled = null
                 setListenerLocked(listener)
                 this@UsbDriverService.stateListener = stateListener
                 this@UsbDriverService.start(claimAllAvailableOverride = null)
@@ -315,7 +317,11 @@ class UsbDriverService : Service(), UsbDriverListener {
         fun updateSensaHaptics(token: Long, enabled: Boolean) {
             mainHandler.post {
                 sessionLock.withLock {
-                    if (!sessionOwner.owns(token) || !started) return@withLock
+                    if (!sessionOwner.owns(token)) return@withLock
+                    requestedSensaEnabled = enabled
+                    // During a handoff, startNow applies the latest request before discovery.
+                    if (!started || sessionHandoff.isStopping) return@withLock
+                    if (prefConfig?.sensaHapticsEnabled == enabled) return@withLock
                     prefConfig?.sensaHapticsEnabled = enabled
                     val sensa = waveformRoutes.snapshots().filter {
                         it.capability.backendId == KishiSensaHapticProfile.id
@@ -331,6 +337,11 @@ class UsbDriverService : Service(), UsbDriverListener {
             }
         }
 
+        fun appliedSensaHaptics(token: Long): Boolean? = sessionLock.withLock {
+            if (!sessionOwner.owns(token) || !started || sessionHandoff.isStopping) null
+            else prefConfig?.sensaHapticsEnabled
+        }
+
         fun releaseSession(token: Long, onReleased: () -> Unit = {}) {
             sessionLock.withLock {
                 if (!sessionOwner.release(token)) {
@@ -339,6 +350,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 }
                 setListenerLocked(null)
                 stateListener = null
+                requestedSensaEnabled = null
                 sessionHandoff.cancelPendingStart()
                 this@UsbDriverService.stop(onReleased)
             }
@@ -905,6 +917,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     private fun startNow(request: StartRequest) {
         this.claimAllAvailableOverride = request.claimAllAvailableOverride
         prefConfig = PreferenceConfiguration.readPreferences(this)
+        requestedSensaEnabled?.let { prefConfig?.sensaHapticsEnabled = it }
         started = true
 
         val filter = IntentFilter()

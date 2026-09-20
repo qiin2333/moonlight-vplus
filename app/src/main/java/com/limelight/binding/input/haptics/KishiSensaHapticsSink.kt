@@ -74,6 +74,7 @@ internal class KishiSensaHapticsSink(
     private var sequence: Int? = null
     private var lastInputAt = 0L
     private val initialized = java.util.concurrent.CountDownLatch(1)
+    @Volatile private var startupDeadline = 0L
     @Volatile private var ready = false
     @Volatile override var releaseFailure: Throwable? = null
         private set
@@ -120,10 +121,18 @@ internal class KishiSensaHapticsSink(
             if (stopping || finished) return false
             if (started) return ready
             started = true
+            startupDeadline = SystemClock.elapsedRealtime() + SensaStartupBudget.maximumMs
             worker = Thread(::run, "KishiSensaOutput").apply { start() }
         }
         val success = try {
-            initialized.await(1500, java.util.concurrent.TimeUnit.MILLISECONDS) && ready
+            // The metadata reply tightens this budget to the actual transfer count.
+            // Short waits let cancellation release the caller without waiting for that budget.
+            while (!stopping && !finished && initialized.count != 0L) {
+                val remaining = startupDeadline - SystemClock.elapsedRealtime()
+                if (remaining <= 0) break
+                initialized.await(minOf(remaining, 100), java.util.concurrent.TimeUnit.MILLISECONDS)
+            }
+            initialized.count == 0L && ready && !stopping
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             false
@@ -201,7 +210,9 @@ internal class KishiSensaHapticsSink(
             val usb = manager.openDevice(device) ?: error("Sensa USB open failed")
             val transport = KishiSensaConnection(usb, iface)
             connection = transport
-            transport.initialize()
+            transport.initialize({ stopping }) { bytes ->
+                startupDeadline = SystemClock.elapsedRealtime() + SensaStartupBudget.remainingAfterSize(bytes)
+            }
             if (stopping) return
             ready = true
             initialized.countDown()

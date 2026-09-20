@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">Frekvencia</string>
     <string name="sensa_frequency_summary">Az átalakított rezgéshez és a helyi teszthez. Az eredeti effektek megtartják saját frekvenciájukat.</string>
     <string name="sensa_frequency_unit">Hz</string>

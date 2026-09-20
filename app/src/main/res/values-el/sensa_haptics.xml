@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">Συχνότητα</string>
     <string name="sensa_frequency_summary">Για τη μετατρεπόμενη δόνηση και την τοπική δοκιμή. Τα έτοιμα εφέ διατηρούν τις συχνότητές τους.</string>
     <string name="sensa_frequency_unit">Hz</string>

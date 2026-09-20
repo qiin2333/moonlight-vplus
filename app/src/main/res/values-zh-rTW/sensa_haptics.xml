@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_menu_title">Sensa HD support</string>
     <string name="sensa_frequency_title">頻率</string>
     <string name="sensa_frequency_summary">用於轉換後的震動與本機測試。原生觸覺效果保留自身頻率。</string>
     <string name="sensa_frequency_unit">Hz</string>
