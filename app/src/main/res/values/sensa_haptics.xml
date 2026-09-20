@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Frequency</string>
+    <string name="sensa_frequency_summary">Applies to converted rumble and the local test. Authored effects retain their own frequencies.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="sensa_mode_title">Output mode</string>
+    <string name="sensa_mode_summary">Only haptic: authored game effects only. Haptic or rumble: authored effects take priority; otherwise game rumble is converted to Sensa. Rumble only: convert game rumble and ignore authored effects.</string>
+    <string name="sensa_support_summary">Enable Sensa output for Kishi V3 Pro XL, independently of experimental haptic protocols.</string>
+    <string-array name="sensa_haptics_mode_names" translatable="false">
+        <item>Only haptic</item><item>Haptic or rumble</item><item>Rumble only</item>
+    </string-array>
+    <string-array name="sensa_haptics_mode_values" translatable="false">
+        <item>only_haptic</item><item>haptic_or_rumble</item><item>rumble_only</item>
+    </string-array>
+</resources>

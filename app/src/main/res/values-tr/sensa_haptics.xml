@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Frekans</string>
+    <string name="sensa_frequency_summary">Dönüştürülen titreşim ve yerel test için geçerlidir. Özgün efektler kendi frekanslarını korur.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Titreşim gücü</string>
+    <string name="title_test_experimental_haptics">Sol / sağ titreşimi test et</string>
+    <string name="summary_test_experimental_haptics">Yerel test: sol, ardından sağ. Oyun gerektirmez.</string>
+    <string name="summary_sensa_haptics_strength">Kishi XL gücü: %0 titreşimi kapatır, %100 en yüksek düzeydir.</string>
+    <string name="haptics_test_unavailable">Desteklenen bir USB kontrolcüsü bağlayın. Android 8 veya üzeri gerekir.</string>
+    <string name="haptics_test_connecting">Bağlanıyor… USB erişimine izin verin.</string>
+    <string name="haptics_test_running">Test ediliyor: sol, ardından sağ…</string>
+    <string name="haptics_test_finished">Yerel test tamamlandı. Oyun titreşimi doğrulanmadı.</string>
+    <string name="haptics_test_failed">Test başarısız. USB erişimini kontrol edip kontrolcüyü yeniden bağlayın.</string>
+    <string name="haptics_test_busy">Kontrolcü kullanımda. Yayını veya USB yönlendirmesini durdurun.</string>
+    <string name="sensa_mode_title">Titreşim modu</string>
+    <string name="sensa_mode_summary">Only haptic: yalnızca oyunun haptik efektleri. Haptic or rumble: efektler önceliklidir; yoksa titreşim Sensa biçimine dönüştürülür. Rumble only: yalnızca titreşim dönüştürülür, haptik efektler yok sayılır.</string>
+    <string name="sensa_support_summary">Kishi V3 Pro XL için Sensa çıkışını deneysel haptik protokollerden bağımsız olarak etkinleştirir.</string>
+</resources>

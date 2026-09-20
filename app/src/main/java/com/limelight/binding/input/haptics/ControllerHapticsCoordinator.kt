@@ -62,7 +62,14 @@ internal class ControllerHapticsCoordinator(
             controllerAvailable = ::controllerHasRumble,
             controllerIntervalMs = ::dispatchIntervalMs,
             writeController = { mixed ->
-                if (!ds5HapticsBindings.values.any { it.controllerNumber == mixed.controllerNumber &&
+                val converted = ds5HapticsBindings.values.firstOrNull {
+                    it.controllerNumber == mixed.controllerNumber && it.sink.isOperational &&
+                        it.sink.rumbleOutput != null
+                }?.sink?.rumbleOutput
+                converted?.submitRumble(mixed.output.lowFrequency, mixed.output.highFrequency)
+                // A Sensa route owns ordinary rumble even in Only haptic mode: do not
+                // leak the ignored rumble to Android's separate motor output.
+                if (converted == null && !ds5HapticsBindings.values.any { it.controllerNumber == mixed.controllerNumber &&
                         it.sink.playbackControl?.playbackActive == true }) handler.rumbleManager.handleRumble(
                     mixed.controllerNumber, mixed.output.lowFrequency.toMotorShort(),
                     mixed.output.highFrequency.toMotorShort()
@@ -138,7 +145,9 @@ internal class ControllerHapticsCoordinator(
         ) {
             return false
         }
-        return context.vibratorManager != null ||
+        return ds5HapticsBindings.values.any { it.controllerNumber == context.controllerNumber &&
+            it.sink.isOperational && it.sink.rumbleOutput != null } ||
+            context.vibratorManager != null ||
             context.vibrator != null ||
             context.directDualSenseBluetoothOutput != null ||
             handler.sceManager.isRecognizedDevice(inputDevice)
@@ -542,6 +551,8 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
             onAvailability(HapticAvailability.READY)
+            refreshPrimaryController()
+            onSinkChanged(controllerNumber)
             replaced.forEach { it.sink.stop() }
         }
     }
@@ -640,6 +651,8 @@ internal class ControllerHapticsCoordinator(
     }
 
     private fun controllerHasRumble(controllerNumber: Short): Boolean {
+        if (ds5HapticsBindings.values.any { it.controllerNumber == controllerNumber &&
+                it.sink.isOperational && it.sink.rumbleOutput != null }) return true
         for (i in 0 until handler.inputDeviceContexts.size()) {
             val context = handler.inputDeviceContexts.valueAt(i)
             if (context.controllerNumber == controllerNumber && hasRumbleCapability(context)) {

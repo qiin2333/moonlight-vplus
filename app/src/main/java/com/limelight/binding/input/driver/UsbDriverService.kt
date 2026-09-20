@@ -257,6 +257,7 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     inner class UsbDriverBinder : Binder() {
+        fun hasActiveStreamSession(): Boolean = sessionLock.withLock { sessionOwner.hasActiveSession() }
         fun setListener(listener: UsbDriverListener?) {
             sessionLock.withLock {
                 if (sessionOwner.hasActiveSession()) {
@@ -307,6 +308,25 @@ class UsbDriverService : Service(), UsbDriverListener {
             sessionLock.withLock {
                 if (sessionOwner.owns(token)) {
                     setListenerLocked(listener)
+                }
+            }
+        }
+
+        fun updateSensaHaptics(token: Long, enabled: Boolean) {
+            mainHandler.post {
+                sessionLock.withLock {
+                    if (!sessionOwner.owns(token) || !started) return@withLock
+                    prefConfig?.sensaHapticsEnabled = enabled
+                    val sensa = waveformRoutes.snapshots().filter {
+                        it.capability.backendId == KishiSensaHapticProfile.id
+                    }
+                    sensa.forEach { route ->
+                        val companion = synchronized(controllersLock) {
+                            controllers.any { it is UsbWaveformController && it.getControllerId() == route.id }
+                        }
+                        if (companion) reopenWaveformRoute(route.id)
+                        else retryWaveformDiscovery(route.device.instance)
+                    }
                 }
             }
         }
@@ -697,7 +717,9 @@ class UsbDriverService : Service(), UsbDriverListener {
             val route = waveformRoutes.discover(identity, candidate.capability)
             val state = if (candidate.layoutMatches && selected == null) HapticAvailability.NEEDS_ASSOCIATION
                 else HapticActivationPolicy.evaluate(candidate, Build.VERSION.SDK_INT,
-                prefConfig?.allowExperimentalHaptics == true, mgr.hasPermission(device), unique,
+                (if (candidate.capability.backendId == KishiSensaHapticProfile.id)
+                    prefConfig?.sensaHapticsEnabled else prefConfig?.allowExperimentalHaptics) == true,
+                mgr.hasPermission(device), unique,
                 forwardingReservations.contains(device.deviceName))
             if (!unique) {
                 val ambiguous = synchronized(controllersLock) {
@@ -742,7 +764,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 }
             }
             val activeRoute = renewWaveformRoute(route) ?: continue
-            val sink = UsbWaveformBackends.create(mgr, device, candidate) { capability ->
+            val sink = UsbWaveformBackends.create(this, mgr, device, candidate) { capability ->
                 // Worker callbacks are connection-scoped. Ignore completions after detach/replacement.
                 mainHandler.post {
                     var failedCompanion: UsbWaveformController? = null

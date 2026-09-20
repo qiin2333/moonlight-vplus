@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Частота</string>
+    <string name="sensa_frequency_summary">Для преобразованной вибрации и локального теста. Готовые эффекты сохраняют свои частоты.</string>
+    <string name="sensa_frequency_unit">Гц</string>
+    <string name="sensa_mode_title">Режим вибрации</string>
+    <string name="sensa_mode_summary">Only haptic: только готовые haptic-эффекты игры. Haptic or rumble: готовые эффекты имеют приоритет; без них обычная игровая вибрация преобразуется в Sensa. Rumble only: преобразуется только обычная вибрация, готовые haptic-эффекты игнорируются.</string>
+    <string name="sensa_support_summary">Включает Sensa для Kishi V3 Pro XL независимо от экспериментальных haptic-протоколов.</string>
+</resources>

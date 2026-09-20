@@ -107,4 +107,8 @@ class UsbDriverServiceManager(
     }
 
     val isConnected get() = connected
+    fun updateSensaHaptics(enabled: Boolean) {
+        val token = sessionToken ?: return
+        binder?.updateSensaHaptics(token, enabled)
+    }
 }

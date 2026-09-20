@@ -105,6 +105,9 @@ internal fun GameMenuCards(
                 callbacks.onEditCards
             )
         }
+        if (state.visibleCards.hapticVibration) {
+            HapticVibrationCard(state.audioHaptics.waveformRoutes, callbacks, onSliderGesture)
+        }
         if (state.visibleCards.gyro) {
             GyroCard(state.gyro, callbacks, onSliderGesture, callbacks.onEditCards)
         }
@@ -845,6 +848,155 @@ private fun AudioHapticsCard(
             )
         }
     }
+}
+
+@Composable
+private fun HapticVibrationCard(
+    routes: List<WaveformRouteCardState>,
+    callbacks: GameMenuCallbacks,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember(context) { androidx.preference.PreferenceManager.getDefaultSharedPreferences(context) }
+    val settings = com.limelight.preferences.SensaStrengthPreferences
+    val initiallyEnabled = remember { settings.enabled(context) }
+    var enabled by remember { mutableStateOf(initiallyEnabled) }
+    val initialEmulation = remember { prefs.getString("list_host_gamepad_selection", "automatic") ?: "automatic" }
+    var emulation by remember { mutableStateOf(initialEmulation) }
+    var showEmulation by remember { mutableStateOf(false) }
+    val emulationNames = stringArrayResource(R.array.host_gamepad_selection_names)
+    val emulationValues = stringArrayResource(R.array.host_gamepad_selection_values)
+    var mode by remember { mutableStateOf(settings.mode(context)) }
+    var showMode by remember { mutableStateOf(false) }
+    val modeNames = stringArrayResource(R.array.sensa_haptics_mode_names)
+    val modeValues = stringArrayResource(R.array.sensa_haptics_mode_values)
+    var strength by remember { mutableStateOf((settings.read(context) * 100).toFloat()) }
+    var frequency by remember { mutableStateOf(settings.frequency(context).toFloat()) }
+    GameMenuCard(
+        title = stringResource(R.string.sensa_menu_title),
+        trailing = {
+            InlineToggle(
+                checked = enabled,
+                contentDescription = stringResource(R.string.sensa_menu_title),
+                onToggle = {
+                    enabled = !enabled
+                    callbacks.onSensaHapticsEnabled(enabled)
+                }
+            )
+        },
+        onLongClick = callbacks.onEditCards
+    ) {
+        if (enabled) {
+            Text(stringResource(R.string.sensa_mode_title),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            Box {
+                androidx.compose.material3.TextButton(onClick = { showMode = true }) {
+                    Text(modeNames[modeValues.indexOf(mode).coerceAtLeast(0)] + " ▾")
+                }
+                androidx.compose.material3.DropdownMenu(expanded = showMode,
+                    onDismissRequest = { showMode = false }) {
+                    modeValues.forEachIndexed { index, value ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(modeNames[index]) }, onClick = {
+                            mode = value
+                            prefs.edit().putString(settings.MODE_KEY, value).apply()
+                            callbacks.onHapticRumbleSettingsChanged()
+                            showMode = false
+                        })
+                    }
+                }
+            }
+            Text(stringResource(R.string.sensa_mode_summary),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            HapticTuningSlider(stringResource(R.string.title_sensa_haptics_strength), strength, 0f..100f, "%",
+                onSliderGesture) {
+                strength = it
+                prefs.edit().putInt(settings.KEY, it.toInt()).apply()
+                callbacks.onHapticTuningPreview()
+            }
+            HapticTuningSlider(stringResource(R.string.sensa_frequency_title), frequency, 30f..400f,
+                stringResource(R.string.sensa_frequency_unit), onSliderGesture) {
+                frequency = it
+                prefs.edit().putInt(settings.FREQUENCY_KEY, it.toInt()).apply()
+                callbacks.onHapticTuningPreview()
+            }
+            Text(stringResource(R.string.sensa_frequency_summary),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            if (routes.isEmpty()) {
+                Text(stringResource(R.string.haptics_test_unavailable),
+                    color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            }
+            routes.forEach { route ->
+                Text(route.label + "\n" + route.status,
+                    color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+                androidx.compose.material3.TextButton(
+                    enabled = route.canTest || route.testing,
+                    onClick = { callbacks.onWaveformTest(route.id, route.testing) }
+                ) {
+                    Text(stringResource(if (route.testing) R.string.waveform_test_cancel else R.string.title_test_experimental_haptics))
+                }
+            }
+            Text(stringResource(R.string.title_host_gamepad_selection),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            Box {
+                androidx.compose.material3.TextButton(onClick = { showEmulation = true }) {
+                    Text(emulationNames[emulationValues.indexOf(emulation).coerceAtLeast(0)] + " ▾")
+                }
+                androidx.compose.material3.DropdownMenu(expanded = showEmulation,
+                    onDismissRequest = { showEmulation = false }) {
+                    emulationValues.forEachIndexed { index, value ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(emulationNames[index]) },
+                            onClick = {
+                                emulation = value
+                                prefs.edit().putString("list_host_gamepad_selection", value).apply()
+                                showEmulation = false
+                            })
+                    }
+                }
+            }
+            if (emulation != initialEmulation || !initiallyEnabled) {
+                Text(stringResource(R.string.game_menu_audio_haptics_pending_restart),
+                    color = appAccentColor(), fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HapticTuningSlider(
+    title: String, value: Float, range: ClosedFloatingPointRange<Float>, unit: String,
+    onSliderGesture: (Boolean) -> Unit, onChange: (Float) -> Unit
+) {
+    val decrease = stringResource(R.string.seekbar_decrease)
+    val increase = stringResource(R.string.seekbar_increase)
+    val change: (Float) -> Unit = { raw ->
+        val snapped = (kotlin.math.round(raw / 5) * 5).coerceIn(range.start, range.endInclusive)
+        if (snapped != value) onChange(snapped)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp,
+            modifier = Modifier.weight(1f))
+        androidx.compose.material3.TextButton(
+            enabled = value > range.start,
+            onClick = { change(value - 5f) },
+            modifier = Modifier.semantics { contentDescription = "$decrease: $title, 5 $unit" }
+        ) { Text("−") }
+        Text("${value.toInt()} $unit", color = appAccentColor(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.TextButton(
+            enabled = value < range.endInclusive,
+            onClick = { change(value + 5f) },
+            modifier = Modifier.semantics { contentDescription = "$increase: $title, 5 $unit" }
+        ) { Text("+") }
+    }
+    CompactGameMenuSlider(
+        value = value, onValueChange = change, onValueChangeFinished = {}, valueRange = range,
+        modifier = Modifier.fillMaxWidth().height(GameMenuSliderSpec.height)
+            .semantics { contentDescription = title }
+            .gamepadFocusOutline(GameMenuControlShape)
+            .handleSliderDpad(value = value, step = 5f, valueRange = range,
+                onValueChange = change, onValueChangeFinished = {})
+            .lockParentScrollDuringGesture(onSliderGesture)
+    )
 }
 
 @Composable

@@ -117,11 +117,29 @@ type isolation cannot be guaranteed by this client change.
 
 ## Current transport adapters
 
-Kishi uses VID 0x1532 and candidate PIDs 0x0719, 0x071a, 0x0721, 0x0724. Shared PID
-0x0037 and name-only guesses are excluded. Its experimental profile requires interface
-ID 3 (not enumeration index), alternate 0, HID class, one 64-byte Interrupt OUT endpoint
-and no input endpoints. The backend uses `claimInterface(..., false)`; a busy kernel
-interface is not forcibly detached. API 26+ is required for bounded completion waits.
+Kishi uses two separate experimental backends. VID 0x1532 / PIDs 0x0719,
+0x071a, 0x0721 and 0x0724 retain the original interface-3 PCM protocol and
+non-forced claim. Shared PID 0x0037 and name-only guesses are excluded.
+
+Kishi V3 Pro XL (0x0727) uses `razer-kishi-xl-sensa`: interface ID 4,
+alternate 0, HID class, exactly two 64-byte Interrupt endpoints (OUT 0x04,
+IN 0x84). It may detach the kernel driver only on this dedicated interface;
+gamepad input interfaces remain untouched. API 26+ is required for bounded
+request completion waits. Startup reads and validates the device metadata,
+selects DESIGN mode if necessary, and remembers the original mode for cleanup.
+Every stream report consumes and checks its echo acknowledgement. Unrelated
+queued replies are skipped within the same bounded deadline.
+
+The independent XL encoder approximates stereo S16LE input with three spectral
+bands per actuator. It uses 40 ms Hann windows, 10 Hz frequency search steps,
+four interpolated amplitude points per 10 ms output frame, and a user-selected
+gain from 0 to 1 (default 1), also used to cap each band's amplitude. This is lossy PCM-to-Sensa conversion,
+not raw PCM output or a reimplementation of Cortex's perceptual processing.
+Input rates must be between 3 and 48 kHz and divisible by 100. Recent silence
+zeros amplitudes immediately; discontinuities reset history. The sink drops
+queued packets older than 30 ms, emits silence after an idle timeout or stream
+end, and performs bounded silence/mode restoration during shutdown. No Cortex
+APK, native library, preset, or runtime dependency is included in the app.
 
 The Kishi encoder preserves stereo channel separation and resampling state across
 blocks. It converts S16LE to 4 kHz, using a 63-tap anti-alias filter for downsampling,
@@ -137,6 +155,45 @@ missing waveform samples.
 
 Kishi supports a cancellable, low-amplitude test: 400 ms left followed by 400 ms right.
 Host PCM is ignored during the test. Shutdown logs sent, dropped and silence packets.
+The XL channel test, converted rumble and streamed PCM use the Sensa strength setting.
+The tone test uses full-scale amplitude at 100%; 0% mutes output.
+The XL channel test plays left for 1 second, silence for 1 second, then right
+for 1 second. The 250 ms simultaneous tuning preview is independent of this test.
+A local Sensa test button directly below the Sansa HD support toggle acquires
+the USB companion through the existing service without requiring a host stream
+or player association. It refuses to interrupt an active streaming session.
+
+The in-stream popup has a separate Sansa HD support card beside Audio Haptics.
+Its header controls the independent Kishi XL enable preference and collapses the
+settings when disabled. The legacy experimental switch still controls other
+experimental backends. Its previous value is migrated once into the new preference.
+The live USB session releases/reopens only the Sensa output companion;
+session-token checks prevent an old UI owner from changing a new stream.
+Inside are a three-mode selector, channel test, strength (0–100%)
+and frequency (30–400 Hz) controls, followed by the same host emulation choices
+as Settings. Changing emulation applies on reconnection, with a pending notice. These
+share preferences with the standalone settings. Both sliders have minus/plus buttons
+with a step of 5; tuning changes preview both actuators for 250 ms at the selected
+strength and frequency. Repeated changes restart the preview deadline, and closing
+the menu cancels tests. The haptic channel test is in this card, independently of
+the Audio Haptics switch. Labels are localized for all
+28 existing locale configurations, in addition to the default English resources.
+
+Ordinary host rumble reaches the existing source mixer and routing policy first.
+An optional Sensa rumble output converts its low/high motor amplitudes into
+left/right tones with four amplitude interpolation points per 10 ms packet.
+Zero stops the tone; strength zero mutes it. The default mode is Haptic or rumble; existing conversion-off users migrate to
+Only haptic. Only haptic ignores ordinary rumble, including Android motor output
+while the Sensa route owns the device. Rumble only ignores authored PCM and
+converts ordinary rumble. Mode changes clear obsolete queued PCM.
+In Haptic or rumble, authored PCM takes precedence while current (30 ms); conversion resumes with
+the latest rumble state afterward. The local channel test temporarily overrides
+both sources. Frequency controls tones only; authored PCM retains its spectrum.
+Stream teardown releases the same transport and restores the prior controller mode.
+
+Kishi XL advertises ordinary rumble and no longer automatically requests DS5.
+Explicit DS5 selection remains available for authored effects. Other backends
+retain their previous host-selection and rumble behavior.
 
 The DualSense profile recognizes Sony USB identities and UAC streaming OUT descriptors.
 Its existing input driver owns interface setup. The Java isochronous transport remains
@@ -163,6 +220,38 @@ AIDL, rumble-to-PCM synthesis, a manual identical-device association selector an
 Bluetooth transports are outside this implementation.
 
 ## Validation
+
+### Kishi V3 Pro XL 0x0727 validation (2026-09-20)
+
+On Honor ROD2-W09S / Android 16 (API 36), the legacy Feature report failed
+because the XL interface has no Feature reports. The separate Sensa transport
+successfully read mode 0 and 879 bytes of metadata identifying Denise V2 T1 XL,
+bodypart IDs 216 and 116, three bands, four points and two transients.
+
+An initial diagnostic using offline-generated reference packets produced physical
+vibration, confirmed by the user. Subsequently the independent production encoder
+and sink passed the opt-in device test, including startup, channel-test expiry,
+silence and USB release. The user confirmed **left then right** vibration from
+this independent implementation. No vendor encoder is used in that test or app.
+
+Thirty targeted unit tests pass: legacy Kishi encoder and registry regression,
+Sensa packet vectors, three-band framing, invalid values, stereo isolation,
+chunk invariance, silence and reset. These checks do not establish game-stream
+fidelity, sustained performance, unplug behavior, or compatibility with other
+firmware. The XL profile therefore remains experimental.
+
+With debug and androidTest APKs installed and USB permission granted:
+
+```sh
+# Passive descriptor query (no vibration)
+adb shell am instrument -w -r -e class com.limelight.binding.input.haptics.KishiUsbDescriptorTest#readReportDescriptors -e kishiDescriptors true com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+# Independent production sink: 1 s left, 1 s pause, 1 s right
+adb shell am instrument -w -r -e class com.limelight.binding.input.haptics.KishiUsbDescriptorTest#testIndependentSensa -e kishiIndependentPulse true com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Hardware diagnostics are skipped unless explicitly enabled. They interrupt a
+running target-app stream. Close Cortex before testing to avoid USB ownership
+conflicts. Live game-stream validation is the next hardware acceptance step.
 
 ### Android device software validation (2026-09-18)
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">주파수</string>
+    <string name="sensa_frequency_summary">변환된 진동과 로컬 테스트에 적용합니다. 원본 효과는 고유 주파수를 유지합니다.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">진동 강도</string>
+    <string name="title_test_experimental_haptics">왼쪽 / 오른쪽 진동 테스트</string>
+    <string name="summary_test_experimental_haptics">로컬 테스트: 왼쪽, 다음 오른쪽. 게임이 필요하지 않습니다.</string>
+    <string name="summary_sensa_haptics_strength">Kishi XL 강도: 0%는 진동 끄기, 100%는 최대입니다.</string>
+    <string name="haptics_test_unavailable">지원되는 USB 컨트롤러를 연결하세요. Android 8 이상이 필요합니다.</string>
+    <string name="haptics_test_connecting">연결 중… USB 접근을 허용하세요.</string>
+    <string name="haptics_test_running">테스트 중: 왼쪽, 다음 오른쪽…</string>
+    <string name="haptics_test_finished">로컬 테스트 완료. 게임의 진동은 확인되지 않았습니다.</string>
+    <string name="haptics_test_failed">테스트 실패. USB 권한을 확인하고 컨트롤러를 다시 연결하세요.</string>
+    <string name="haptics_test_busy">컨트롤러 사용 중. 스트리밍 또는 USB 전달을 종료하세요.</string>
+    <string name="sensa_mode_title">진동 모드</string>
+    <string name="sensa_mode_summary">Only haptic: 게임의 햅틱 효과만 사용합니다. Haptic or rumble: 햅틱 효과를 우선하고 없으면 일반 진동을 Sensa로 변환합니다. Rumble only: 일반 진동만 변환하고 햅틱 효과는 무시합니다.</string>
+    <string name="sensa_support_summary">실험적 햅틱 프로토콜과 별개로 Kishi V3 Pro XL의 Sensa 출력을 활성화합니다.</string>
+</resources>

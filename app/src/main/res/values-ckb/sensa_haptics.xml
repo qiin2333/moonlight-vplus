@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">فرێکوێنسی</string>
+    <string name="sensa_frequency_summary">بۆ لەرینەوەی گۆڕدراو و تاقیکردنەوەی ناوخۆیی. کاریگەرییە ئامادەکان فرێکوێنسی خۆیان دەپارێزن.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">هێزی لەرینەوە</string>
+    <string name="title_test_experimental_haptics">تاقیکردنەوەی لەرینەوەی چەپ / ڕاست</string>
+    <string name="summary_test_experimental_haptics">تاقیکردنەوەی ناوخۆیی: چەپ، پاشان ڕاست. پێویستی بە یاری نییە.</string>
+    <string name="summary_sensa_haptics_strength">هێزی Kishi XL: 0% بێدەنگە، 100% زۆرترینە.</string>
+    <string name="haptics_test_unavailable">کۆنترۆڵەرێکی USB پشتگیریکراو ببەستەوە. Android 8 یان نوێتر پێویستە.</string>
+    <string name="haptics_test_connecting">پەیوەندی دەبەسترێت… ڕێگە بە دەستگەیشتنی USB بدە.</string>
+    <string name="haptics_test_running">تاقیکردنەوە: چەپ، پاشان ڕاست…</string>
+    <string name="haptics_test_finished">تاقیکردنەوەی ناوخۆیی تەواو بوو. لەرینەوەی یاری تاقی نەکراوەتەوە.</string>
+    <string name="haptics_test_failed">تاقیکردنەوە شکستی هێنا. مۆڵەتی USB بپشکنە و کۆنترۆڵەرەکە دووبارە ببەستەوە.</string>
+    <string name="haptics_test_busy">کۆنترۆڵەر بەکاردێت. پەخش یان گواستنەوەی USB بوەستێنە.</string>
+    <string name="sensa_mode_title">دۆخی لەرزین</string>
+    <string name="sensa_mode_summary">Only haptic: تەنها کاریگەرییە هەپتیکییەکانی یاری. Haptic or rumble: کاریگەرییەکان پێشینەیان هەیە؛ ئەگەر نەبن لەرزینی ئاسایی دەگۆڕدرێت بۆ Sensa. Rumble only: تەنها لەرزینی ئاسایی دەگۆڕدرێت و کاریگەرییە هەپتیکییەکان پشتگوێ دەخرێن.</string>
+    <string name="sensa_support_summary">چالاککردنی Sensa بۆ Kishi V3 Pro XL بە سەربەخۆیی لە پرۆتۆکۆلە هەپتیکییە تاقیکارییەکان.</string>
+</resources>

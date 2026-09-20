@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Frequentie</string>
+    <string name="sensa_frequency_summary">Voor omgezette trillingen en de lokale test. Originele effecten behouden hun frequenties.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Trillingssterkte</string>
+    <string name="title_test_experimental_haptics">Linker / rechter trilling testen</string>
+    <string name="summary_test_experimental_haptics">Lokale test: links, dan rechts. Geen spel nodig.</string>
+    <string name="summary_sensa_haptics_strength">Kishi XL-sterkte: 0% schakelt trilling uit, 100% is het maximum.</string>
+    <string name="haptics_test_unavailable">Sluit een ondersteunde USB-controller aan. Vereist Android 8 of nieuwer.</string>
+    <string name="haptics_test_connecting">Verbinden… Sta USB-toegang toe.</string>
+    <string name="haptics_test_running">Test: links, dan rechts…</string>
+    <string name="haptics_test_finished">Lokale test voltooid. Speltrillingen zijn niet gecontroleerd.</string>
+    <string name="haptics_test_failed">Test mislukt. Controleer USB-toegang en sluit de controller opnieuw aan.</string>
+    <string name="haptics_test_busy">Controller in gebruik. Stop streaming of USB-doorsturen.</string>
+    <string name="sensa_mode_title">Trillingsmodus</string>
+    <string name="sensa_mode_summary">Only haptic: alleen haptische speleffecten. Haptic or rumble: effecten krijgen voorrang; anders worden trillingen omgezet naar Sensa. Rumble only: alleen trillingen omzetten en haptische effecten negeren.</string>
+    <string name="sensa_support_summary">Schakel Sensa voor Kishi V3 Pro XL in, onafhankelijk van experimentele haptische protocollen.</string>
+</resources>

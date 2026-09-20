@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Frecvență</string>
+    <string name="sensa_frequency_summary">Pentru vibrațiile convertite și testul local. Efectele originale își păstrează frecvențele.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Intensitatea vibrațiilor</string>
+    <string name="title_test_experimental_haptics">Testează vibrația stânga / dreapta</string>
+    <string name="summary_test_experimental_haptics">Test local: stânga, apoi dreapta. Nu necesită un joc.</string>
+    <string name="summary_sensa_haptics_strength">Intensitate Kishi XL: 0% oprește vibrația, 100% este maximul.</string>
+    <string name="haptics_test_unavailable">Conectează un controler USB compatibil. Necesită Android 8 sau mai nou.</string>
+    <string name="haptics_test_connecting">Conectare… Permite accesul USB.</string>
+    <string name="haptics_test_running">Testare: stânga, apoi dreapta…</string>
+    <string name="haptics_test_finished">Test local finalizat. Vibrația din joc nu a fost verificată.</string>
+    <string name="haptics_test_failed">Test eșuat. Verifică accesul USB și reconectează controlerul.</string>
+    <string name="haptics_test_busy">Controlerul este utilizat. Oprește transmisia sau redirecționarea USB.</string>
+    <string name="sensa_mode_title">Mod de vibrație</string>
+    <string name="sensa_mode_summary">Only haptic: doar efectele haptice ale jocului. Haptic or rumble: efectele au prioritate; altfel, vibrația este convertită în Sensa. Rumble only: convertește doar vibrația și ignoră efectele haptice.</string>
+    <string name="sensa_support_summary">Activează Sensa pentru Kishi V3 Pro XL independent de protocoalele haptice experimentale.</string>
+</resources>

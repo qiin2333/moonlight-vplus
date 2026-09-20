@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Tần số</string>
+    <string name="sensa_frequency_summary">Cho rung được chuyển đổi và kiểm tra cục bộ. Hiệu ứng gốc giữ nguyên tần số.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Cường độ rung</string>
+    <string name="title_test_experimental_haptics">Kiểm tra rung trái / phải</string>
+    <string name="summary_test_experimental_haptics">Kiểm tra cục bộ: trái, rồi phải. Không cần trò chơi.</string>
+    <string name="summary_sensa_haptics_strength">Cường độ Kishi XL: 0% tắt rung, 100% là tối đa.</string>
+    <string name="haptics_test_unavailable">Kết nối bộ điều khiển USB được hỗ trợ. Yêu cầu Android 8 trở lên.</string>
+    <string name="haptics_test_connecting">Đang kết nối… Cho phép truy cập USB.</string>
+    <string name="haptics_test_running">Đang kiểm tra: trái, rồi phải…</string>
+    <string name="haptics_test_finished">Đã hoàn tất kiểm tra cục bộ. Chưa xác minh rung từ trò chơi.</string>
+    <string name="haptics_test_failed">Kiểm tra thất bại. Kiểm tra quyền USB và kết nối lại bộ điều khiển.</string>
+    <string name="haptics_test_busy">Bộ điều khiển đang được dùng. Dừng phát trực tuyến hoặc chuyển tiếp USB.</string>
+    <string name="sensa_mode_title">Chế độ rung</string>
+    <string name="sensa_mode_summary">Only haptic: chỉ hiệu ứng haptic của trò chơi. Haptic or rumble: ưu tiên hiệu ứng haptic; nếu không có thì chuyển rung thường sang Sensa. Rumble only: chỉ chuyển rung thường và bỏ qua hiệu ứng haptic.</string>
+    <string name="sensa_support_summary">Bật Sensa cho Kishi V3 Pro XL độc lập với giao thức haptic thử nghiệm.</string>
+</resources>

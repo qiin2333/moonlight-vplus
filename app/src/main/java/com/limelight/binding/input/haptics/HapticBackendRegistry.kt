@@ -48,7 +48,7 @@ interface HapticProtocolProfile {
 
 /** Protocols register here; discovery, routing and UI do not know their brands. */
 class HapticBackendRegistry(private val profiles: List<HapticProtocolProfile> = listOf(
-    KishiUsbHapticProfile, DualSenseUsbHapticProfile
+    KishiUsbHapticProfile, KishiSensaHapticProfile, DualSenseUsbHapticProfile
 )) {
     init { require(profiles.map { it.id }.distinct().size == profiles.size) }
     fun discover(device: HapticDeviceIdentity): List<HapticCandidate> = profiles.mapNotNull { it.probe(device) }
@@ -73,6 +73,27 @@ object KishiUsbHapticProfile : HapticProtocolProfile {
         id, HapticOutput.WAVEFORM_STREAM, state, HapticEvidence.EXPERIMENTAL_PROTOCOL,
         WaveformFormat(4000), reason
     )
+}
+
+object KishiSensaHapticProfile : HapticProtocolProfile {
+    override val id = "razer-kishi-xl-sensa"
+    override fun matchesIdentity(device: HapticDeviceIdentity) = device.transport == HapticTransport.USB &&
+        device.vendorId == 0x1532 && device.productId == 0x0727
+    override fun probe(device: HapticDeviceIdentity): HapticCandidate? {
+        if (!matchesIdentity(device)) return null
+        val iface = device.interfaces.singleOrNull {
+            it.id == 4 && it.alternate == 0 && it.deviceClass == 3 && it.endpoints.size == 2 &&
+                it.endpoints.map { ep -> ep.address }.toSet() == setOf(4, 0x84) &&
+                it.endpoints.all { ep -> ep.type == 3 && ep.packetSize == 64 }
+        }
+        return HapticCandidate(capability(HapticAvailability.NEEDS_VALIDATION),
+            HapticBackendOwnership.OUTPUT_COMPANION, 26, iface?.id,
+            if (iface != null) 4 else null, iface != null)
+    }
+    fun allowsKernelDriverDetach(device: HapticDeviceIdentity) = probe(device)?.layoutMatches == true
+    fun capability(state: HapticAvailability, reason: String? = null) = ControllerHapticsCapability(
+        id, HapticOutput.WAVEFORM_STREAM, state, HapticEvidence.EXPERIMENTAL_PROTOCOL,
+        reason = reason ?: "Sensa spectral approximation")
 }
 
 object DualSenseUsbHapticProfile : HapticProtocolProfile {

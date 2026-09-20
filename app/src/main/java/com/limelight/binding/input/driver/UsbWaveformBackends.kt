@@ -6,9 +6,9 @@ import com.limelight.binding.input.haptics.*
 
 /** Android transport adapters. Matching and activation decisions live in the pure registry. */
 internal object UsbWaveformBackends {
-    private val factories: Map<String, (UsbManager, UsbDevice, HapticCandidate,
+    private val factories: Map<String, (android.content.Context, UsbManager, UsbDevice, HapticCandidate,
         (ControllerHapticsCapability) -> Unit) -> WaveformHapticsSink?> = mapOf(
-        KishiUsbHapticProfile.id to { manager, device, candidate, status ->
+        KishiUsbHapticProfile.id to { _, manager, device, candidate, status ->
             val iface = (0 until device.interfaceCount).map(device::getInterface).singleOrNull {
                 it.id == candidate.interfaceId && it.alternateSetting == 0
             }
@@ -16,15 +16,31 @@ internal object UsbWaveformBackends {
                 .singleOrNull { it.address == candidate.endpointAddress } }
             if (iface != null && endpoint != null) KishiUsbHapticsSink(manager, device, iface, endpoint, status)
             else null
+        },
+        KishiSensaHapticProfile.id to { context, manager, device, candidate, status ->
+            val iface = (0 until device.interfaceCount).map(device::getInterface).singleOrNull {
+                it.id == candidate.interfaceId && it.alternateSetting == 0
+            }
+            if (iface != null && KishiSensaHapticProfile.probe(identity(device))?.layoutMatches == true) {
+                KishiSensaHapticsSink(manager, device, iface,
+                    (0 until iface.endpointCount).map(iface::getEndpoint).single { it.address == 4 },
+                    { com.limelight.preferences.SensaStrengthPreferences.read(context) },
+                    { com.limelight.preferences.SensaStrengthPreferences.frequency(context) },
+                    { com.limelight.preferences.SensaStrengthPreferences.conversionEnabled(context) },
+                    { com.limelight.preferences.SensaStrengthPreferences.pcmEnabled(context) }, status)
+            } else null
         }
     )
 
     /** Passive pre-launch hint. Permission and a working sink are still required for output. */
-    fun hasEligibleController(manager: UsbManager?, allowExperimental: Boolean): Boolean =
+    fun hasEligibleController(manager: UsbManager?, allowExperimental: Boolean,
+                              includeRumbleConversion: Boolean = true, sensaEnabled: Boolean = false): Boolean =
         manager?.deviceList?.values?.any { device ->
             HapticBackendRegistry().discover(identity(device)).any {
                 it.layoutMatches && android.os.Build.VERSION.SDK_INT >= it.minimumApi &&
-                    (it.capability.evidence != HapticEvidence.EXPERIMENTAL_PROTOCOL || allowExperimental)
+                    (includeRumbleConversion || it.capability.backendId != KishiSensaHapticProfile.id) &&
+                    (if (it.capability.backendId == KishiSensaHapticProfile.id) sensaEnabled
+                    else it.capability.evidence != HapticEvidence.EXPERIMENTAL_PROTOCOL || allowExperimental)
             }
         } == true
 
@@ -40,7 +56,7 @@ internal object UsbWaveformBackends {
         }
     )
 
-    fun create(manager: UsbManager, device: UsbDevice, candidate: HapticCandidate,
+    fun create(context: android.content.Context, manager: UsbManager, device: UsbDevice, candidate: HapticCandidate,
                status: (ControllerHapticsCapability) -> Unit): WaveformHapticsSink? =
-        factories[candidate.capability.backendId]?.invoke(manager, device, candidate, status)
+        factories[candidate.capability.backendId]?.invoke(context, manager, device, candidate, status)
 }

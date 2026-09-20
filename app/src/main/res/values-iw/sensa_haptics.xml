@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">תדר</string>
+    <string name="sensa_frequency_summary">לרטט מומר ולבדיקה מקומית. אפקטים מקוריים שומרים על התדרים שלהם.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">עוצמת רטט</string>
+    <string name="title_test_experimental_haptics">בדיקת רטט שמאל / ימין</string>
+    <string name="summary_test_experimental_haptics">בדיקה מקומית: שמאל, ואז ימין. אין צורך במשחק.</string>
+    <string name="summary_sensa_haptics_strength">עוצמת Kishi XL: ‏0% מכבה רטט, 100% היא העוצמה המרבית.</string>
+    <string name="haptics_test_unavailable">חבר בקר USB נתמך. נדרש Android 8 ואילך.</string>
+    <string name="haptics_test_connecting">מתחבר… יש לאשר גישת USB.</string>
+    <string name="haptics_test_running">בודק: שמאל, ואז ימין…</string>
+    <string name="haptics_test_finished">הבדיקה המקומית הסתיימה. רטט מהמשחק לא נבדק.</string>
+    <string name="haptics_test_failed">הבדיקה נכשלה. בדוק הרשאת USB וחבר מחדש את הבקר.</string>
+    <string name="haptics_test_busy">הבקר בשימוש. הפסק את ההזרמה או העברת USB.</string>
+    <string name="sensa_mode_title">מצב רטט</string>
+    <string name="sensa_mode_summary">Only haptic: רק אפקטים הפטיים של המשחק. Haptic or rumble: עדיפות לאפקטים הפטיים; בהיעדרם רטט רגיל מומר ל־Sensa. Rumble only: המרת רטט רגיל בלבד והתעלמות מאפקטים הפטיים.</string>
+    <string name="sensa_support_summary">הפעלת Sensa עבור Kishi V3 Pro XL בנפרד מפרוטוקולים הפטיים ניסיוניים.</string>
+</resources>

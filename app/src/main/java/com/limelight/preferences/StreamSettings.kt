@@ -956,6 +956,13 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+        private var hapticsTest: SettingsHapticsTest? = null
+
+        override fun onStop() {
+            hapticsTest?.close()
+            hapticsTest = null
+            super.onStop()
+        }
         private companion object {
             private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
             private const val BACKGROUND_STREAM_BEHAVIOR_PREF_KEY = "list_background_stream_behavior"
@@ -3213,7 +3220,15 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             initializeTouchModeDefaultsIfNeeded()
+            SensaStrengthPreferences.enabled(requireContext()) // Migrate before XML defaults are applied.
             setPreferencesFromResource(R.xml.preferences, rootKey)
+            findPreference<ListPreference>(SensaStrengthPreferences.MODE_KEY)?.value =
+                SensaStrengthPreferences.mode(requireContext())
+            findPreference<Preference>("test_experimental_haptics")?.setOnPreferenceClickListener { preference ->
+                hapticsTest?.close()
+                hapticsTest = SettingsHapticsTest(requireContext(), preference).also { it.start() }
+                true
+            }
             val screen = preferenceScreen
 
             setupLowResolutionPresetVisibility()
@@ -3296,6 +3311,11 @@ class StreamSettings : ThemedAppCompatActivity() {
             // Hide USB driver options on devices without USB host support
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
                 findPreference<Preference>("checkbox_experimental_haptic_protocols")?.isVisible = false
+                findPreference<Preference>(SensaStrengthPreferences.ENABLED_KEY)?.isVisible = false
+                findPreference<Preference>("test_experimental_haptics")?.isVisible = false
+                findPreference<Preference>(SensaStrengthPreferences.KEY)?.isVisible = false
+                findPreference<Preference>(SensaStrengthPreferences.FREQUENCY_KEY)?.isVisible = false
+                findPreference<Preference>(SensaStrengthPreferences.MODE_KEY)?.isVisible = false
             }
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
                 val category = findPreference<PreferenceCategory>("category_gamepad_settings")!!

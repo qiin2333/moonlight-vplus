@@ -84,7 +84,8 @@ internal data class GameMenuVisibleCards(
     val bitrate: Boolean,
     val audioHaptics: Boolean,
     val gyro: Boolean,
-    val shortcuts: Boolean
+    val shortcuts: Boolean,
+    val hapticVibration: Boolean = false
 )
 
 internal data class GameMenuCallbacks(
@@ -127,5 +128,8 @@ internal data class GameMenuCallbacks(
     val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
     val onManageTouchPointerSensitivityPresets: () -> Unit,
     val onCustomKey: (CustomKeyData) -> Unit,
-    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> }
+    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> },
+    val onHapticRumbleSettingsChanged: () -> Unit = {},
+    val onHapticTuningPreview: () -> Unit = {},
+    val onSensaHapticsEnabled: (Boolean) -> Unit = {}
 )

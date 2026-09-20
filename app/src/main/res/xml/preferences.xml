@@ -784,6 +784,43 @@
             android:title="@string/title_experimental_haptic_protocols"
             android:summary="@string/summary_experimental_haptic_protocols"
             android:defaultValue="false" />
+        <SwitchPreferenceCompat
+            android:key="checkbox_sensa_haptics"
+            android:title="@string/sensa_menu_title"
+            android:summary="@string/sensa_support_summary"
+            android:defaultValue="false" />
+        <Preference
+            android:key="test_experimental_haptics"
+            android:dependency="checkbox_sensa_haptics"
+            android:title="@string/title_test_experimental_haptics"
+            android:summary="@string/summary_test_experimental_haptics" />
+        <ListPreference
+            android:key="sensa_haptics_mode"
+            android:dependency="checkbox_sensa_haptics"
+            android:title="@string/sensa_mode_title"
+            android:summary="@string/sensa_mode_summary"
+            android:entries="@array/sensa_haptics_mode_names"
+            android:entryValues="@array/sensa_haptics_mode_values" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="sensa_haptics_strength"
+            android:dependency="checkbox_sensa_haptics"
+            android:title="@string/title_sensa_haptics_strength"
+            android:dialogMessage="@string/summary_sensa_haptics_strength"
+            android:defaultValue="100"
+            seekbar:min="0"
+            android:max="100"
+            seekbar:step="5"
+            android:text="%" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="sensa_haptics_frequency"
+            android:dependency="checkbox_sensa_haptics"
+            android:title="@string/sensa_frequency_title"
+            android:dialogMessage="@string/sensa_frequency_summary"
+            android:defaultValue="100"
+            seekbar:min="30"
+            android:max="400"
+            seekbar:step="5"
+            android:text="@string/sensa_frequency_unit" />
         <CheckBoxPreference
             android:key="checkbox_usb_bind_all"
             android:dependency="checkbox_usb_driver"

@@ -3,26 +3,66 @@ package com.limelight.binding.input.haptics
 import android.hardware.usb.*
 import android.os.SystemClock
 import com.limelight.nvstream.Ds5HapticsPcmFrame
-import java.nio.ByteBuffer
 import java.util.ArrayDeque
 import java.util.concurrent.locks.LockSupport
 
-/** Owns the haptics interface on a dedicated USB connection. Gamepad input interfaces are untouched. */
+/**
+ * Serializes Sensa output on one USB worker; callers only update state under [lock].
+ * Source priority is local test, fresh authored PCM, then sustained game rumble.
+ * PCM is time-sensitive and expires after 30 ms; rumble is a latched motor command
+ * that remains valid until replaced or stopped. Neither source owns another USB handle.
+ * This backend is XL-specific; the older Kishi PCM transport remains separate.
+ */
 @android.annotation.SuppressLint("NewApi") // Created only on API 26+, required for bounded requestWait.
-internal class KishiUsbHapticsSink(
+internal class KishiSensaHapticsSink(
     private val manager: UsbManager,
     private val device: UsbDevice,
     private val iface: UsbInterface,
     private val endpoint: UsbEndpoint,
+    private val strength: () -> Double = { 1.0 },
+    private val frequency: () -> Double = { 100.0 },
+    private val conversionEnabled: () -> Boolean = { true },
+    private val pcmEnabled: () -> Boolean = { true },
     private val status: (ControllerHapticsCapability) -> Unit
-) : WaveformHapticsSink, WaveformPlaybackControl, WaveformChannelTest {
+) : WaveformHapticsSink, WaveformPlaybackControl, WaveformChannelTest, WaveformRumbleOutput {
+    override val rumbleOutput: WaveformRumbleOutput get() = this
+    override val enabled: Boolean get() = conversionEnabled()
     override val isOperational: Boolean get() = ready && !stopping && !finished
     override val playbackControl: WaveformPlaybackControl get() = this
     override val channelTest: WaveformChannelTest get() = this
     private data class Packet(val data: ByteArray, val queuedAt: Long)
     private val lock = Any()
     private val queue = ArrayDeque<Packet>()
-    private val encoder = KishiPcmEncoder()
+    private val encoder = KishiSensaEncoder()
+    private val rumbleEncoder = SensaRumbleEncoder()
+    private var rumbleLow = 0f
+    private var rumbleHigh = 0f
+    private var acceptsPcm = true
+
+    private fun refreshPcmMode() {
+        // Switching to/from Rumble only must not replay the previous mode's buffered
+        // samples. Preserve an explicit user test, which is independent of source mode.
+        val next = pcmEnabled()
+        if (acceptsPcm == next) return
+        acceptsPcm = next
+        if (testUntil == 0L) {
+            queue.clear()
+            encoder.reset()
+            sequence = null
+            lastInputAt = 0L
+            endRequested = true
+            epoch++
+        }
+    }
+
+    override fun submitRumble(low: Float, high: Float) = synchronized(lock) {
+        // Retain the latest state even in Only haptic, so enabling conversion while
+        // a game is holding a motor on does not require a new host rumble event.
+        if (stopping || finished || !low.isFinite() || !high.isFinite()) return@synchronized
+        rumbleLow = low.coerceIn(0f, 1f)
+        rumbleHigh = high.coerceIn(0f, 1f)
+        worker?.let(LockSupport::unpark)
+    }
     private val stoppedCallbacks = mutableListOf<() -> Unit>()
     @Volatile private var stopping = false
     @Volatile private var started = false
@@ -39,21 +79,30 @@ internal class KishiUsbHapticsSink(
         private set
     @Volatile private var endRequested = false
     private var epoch = 0L
+    // Every queue invalidation advances epoch. The worker checks it again after
+    // leaving the lock, preventing an already-dequeued obsolete packet from playing.
     @Volatile private var testUntil = 0L
+    private var testBoth = false
     override val isTesting: Boolean get() = testUntil > SystemClock.elapsedRealtime()
     override val canTest: Boolean get() = ready && !stopping && !finished
     private var sentPackets = 0L
     private var droppedPackets = 0L
     private var silencePackets = 0L
 
-    override fun testChannels() = synchronized(lock) {
+    override fun testChannels() = beginTest(3000, false)
+    override fun previewBoth() = beginTest(250, true)
+
+    private fun beginTest(durationMs: Long, both: Boolean) = synchronized(lock) {
         if (!ready || stopping || finished) return@synchronized
         queue.clear()
         encoder.reset()
+        rumbleEncoder.reset()
         sequence = null
         epoch++
         endRequested = false
-        testUntil = SystemClock.elapsedRealtime() + 800
+        testBoth = both
+        testUntil = SystemClock.elapsedRealtime() + durationMs
+        worker?.let(LockSupport::unpark)
     }
 
     override fun cancelTest() = synchronized(lock) {
@@ -71,7 +120,7 @@ internal class KishiUsbHapticsSink(
             if (stopping || finished) return false
             if (started) return ready
             started = true
-            worker = Thread(::run, "KishiPcmOutput").apply { start() }
+            worker = Thread(::run, "KishiSensaOutput").apply { start() }
         }
         val success = try {
             initialized.await(1500, java.util.concurrent.TimeUnit.MILLISECONDS) && ready
@@ -85,6 +134,8 @@ internal class KishiUsbHapticsSink(
 
     override fun submit(frame: Ds5HapticsPcmFrame) {
         synchronized(lock) {
+            refreshPcmMode()
+            if (!acceptsPcm) return
             if (!started || stopping || finished || !encoder.accepts(frame)) return
             if (testUntil != 0L) return
             val now = SystemClock.elapsedRealtime()
@@ -109,6 +160,7 @@ internal class KishiUsbHapticsSink(
                 return
             }
             endRequested = false
+            encoder.setStrength(strength())
             encoder.encode(frame) { packet ->
                 while (queue.size >= 10) { queue.removeFirst(); droppedPackets++ }
                 queue.addLast(Packet(packet, now))
@@ -126,7 +178,7 @@ internal class KishiUsbHapticsSink(
                 stoppedCallbacks.add(onStopped)
                 if (!started) {
                     started = true
-                    worker = Thread(::run, "KishiPcmCleanup").apply { start() }
+                    worker = Thread(::run, "KishiSensaCleanup").apply { start() }
                 }
                 false
             }
@@ -142,131 +194,81 @@ internal class KishiUsbHapticsSink(
     }
 
     private fun run() {
-        var connection: UsbDeviceConnection? = null
-        var request: UsbRequest? = null
-        var claimed = false
-        var enabled = false
-        var stage = "open"
+        var connection: KishiSensaConnection? = null
         try {
             if (stopping) return
-            val usb = manager.openDevice(device) ?: error("USB open failed")
-            connection = usb
-            stage = "claim"
-            claimed = usb.claimInterface(iface, false)
-            check(claimed) { "Haptic interface claim failed" }
-            stage = "initialize request"
-            val output = UsbRequest()
-            request = output
-            check(output.initialize(usb, endpoint)) { "Interrupt request initialization failed" }
-            stage = "disable waveform"
-            setLevel(usb, 0)
+            check(device.vendorId == 0x1532 && device.productId == 0x0727 && iface.id == 4)
+            val usb = manager.openDevice(device) ?: error("Sensa USB open failed")
+            val transport = KishiSensaConnection(usb, iface)
+            connection = transport
+            transport.initialize()
             if (stopping) return
             ready = true
             initialized.countDown()
-            status(KishiUsbHapticProfile.capability(HapticAvailability.READY, "Experimental transport; hardware validation pending"))
-            com.limelight.LimeLog.info("Kishi PCM ready: pid=${device.productId.toString(16)} interface=${iface.id} endpoint=${endpoint.address}")
-            val buffer = ByteBuffer.allocateDirect(64)
-            var deadline = System.nanoTime()
+            status(KishiSensaHapticProfile.capability(HapticAvailability.READY,
+                "Experimental Sensa spectral approximation"))
             var lastPacketAt = 0L
-            fun write(bytes: ByteArray) {
-                stage = "write PCM"
-                buffer.clear()
-                buffer.put(bytes).flip()
-                check(output.queue(buffer)) { "USB queue failed" }
-                check(usb.requestWait(100) === output && buffer.position() == 64) { "USB short or failed transfer" }
-            }
             while (!stopping) {
                 var packetEpoch = 0L
                 val packet = synchronized(lock) {
+                    refreshPcmMode()
                     packetEpoch = epoch
                     val now = SystemClock.elapsedRealtime()
                     if (testUntil != 0L) {
                         if (now >= testUntil) cancelTest()
                         else {
-                            val channel = if (testUntil - now > 400) 0 else 1
-                            val pcm = ByteArray(48)
-                            for (i in 0 until 12) {
-                                val value = (3000 * kotlin.math.sin(2 * Math.PI * 150 * (now * 4 + i) / 4000)).toInt()
-                                pcm[i * 4 + channel * 2] = value.toByte()
-                                pcm[i * 4 + channel * 2 + 1] = (value shr 8).toByte()
-                            }
-                            encoder.encode(Ds5HapticsPcmFrame(0, 0, 0, 0, 4000, 12, 2, 16, pcm)) {
-                                queue.addLast(Packet(it, now))
-                            }
+                            val remaining = testUntil - now
+                            queue.addLast(Packet(rumbleEncoder.encode(
+                                if (testBoth || remaining > 2000) 1f else 0f,
+                                if (testBoth || remaining <= 1000) 1f else 0f,
+                                strength(), frequency()), now))
                         }
                     }
                     while (queue.isNotEmpty() && now - queue.first.queuedAt > 30) {
-                        queue.removeFirst()
-                        droppedPackets++
+                        queue.removeFirst(); droppedPackets++
                     }
-                    queue.pollFirst()
+                    // PCM freshness, rather than nonzero amplitude, determines priority:
+                    // authored silence is also meaningful and must suppress rumble.
+                    queue.pollFirst() ?: if (testUntil == 0L && enabled &&
+                        (endRequested || now - lastInputAt > 30) && (rumbleLow > 0f || rumbleHigh > 0f)) {
+                        Packet(rumbleEncoder.encode(rumbleLow, rumbleHigh, strength(), frequency()), now)
+                    } else null
                 }
                 if (packet == null) {
-                    if (enabled && (endRequested || SystemClock.elapsedRealtime() - lastPacketAt >= 30)) {
-                        write(KishiPcmEncoder.silence())
+                    if (playbackActive && (endRequested || SystemClock.elapsedRealtime() - lastPacketAt >= 30)) {
+                        transport.write(KishiSensaPacket.silence())
                         silencePackets++
-                        setLevel(usb, 0)
-                        enabled = false
+                        rumbleEncoder.reset()
                         playback(false)
-                    } else if (enabled) {
-                        write(KishiPcmEncoder.silence())
-                        silencePackets++
-                        LockSupport.parkNanos(3_000_000)
                     }
                     LockSupport.parkNanos(1_000_000)
-                    deadline = System.nanoTime()
                     continue
-                }
-                if (!enabled) {
-                    stage = "enable waveform"
-                    playback(true)
-                    setLevel(usb, 1)
-                    setLevel(usb, 0x21)
-                    enabled = true
                 }
                 if (stopping || synchronized(lock) { packetEpoch != epoch } ||
                     SystemClock.elapsedRealtime() - packet.queuedAt > 30) continue
-                write(packet.data)
+                val start = System.nanoTime()
+                playback(true)
+                transport.write(packet.data)
                 sentPackets++
                 lastPacketAt = SystemClock.elapsedRealtime()
-                deadline += 3_000_000
-                val remaining = deadline - System.nanoTime()
+                val remaining = 10_000_000 - (System.nanoTime() - start)
                 if (remaining > 0) LockSupport.parkNanos(remaining)
-                else deadline = System.nanoTime() // Never burst old packets to catch up.
             }
         } catch (error: Exception) {
-            com.limelight.LimeLog.warning("Kishi PCM failed: stage=$stage pid=${device.productId.toString(16)} " +
-                "interface=${iface.id} endpoint=${endpoint.address} stopping=$stopping\n${android.util.Log.getStackTraceString(error)}")
-            if (!stopping) status(KishiUsbHapticProfile.capability(HapticAvailability.FAILED, error.message))
+            com.limelight.LimeLog.warning("Kishi Sensa failed: ${android.util.Log.getStackTraceString(error)}")
+            if (!stopping) status(KishiSensaHapticProfile.capability(HapticAvailability.FAILED, error.message))
         } finally {
             ready = false
             initialized.countDown()
-            runCatching { request?.cancel() }
-            runCatching { request?.close() }
-            if (claimed) {
-                runCatching { connection?.let { setLevel(it, 0) } }
-                runCatching { check(connection?.releaseInterface(iface) == true) { "Haptic interface release failed" } }
-                    .onFailure { com.limelight.LimeLog.warning("Kishi PCM cleanup: ${it.message}") }
-            }
             runCatching { connection?.close() }.onFailure { releaseFailure = it }
             runCatching { playback(false) }
             val callbacks = synchronized(lock) {
                 finished = true
-                com.limelight.LimeLog.info("Kishi PCM stopped: sent=$sentPackets dropped=$droppedPackets silence=$silencePackets")
+                com.limelight.LimeLog.info("Kishi Sensa stopped: sent=$sentPackets dropped=$droppedPackets silence=$silencePackets")
                 queue.clear()
                 stoppedCallbacks.toList().also { stoppedCallbacks.clear() }
             }
             callbacks.forEach { runCatching(it) }
-        }
-    }
-
-    private fun setLevel(connection: UsbDeviceConnection, level: Int) {
-        for (channel in 1..2) {
-            val data = byteArrayOf(0, channel.toByte(), level.toByte())
-            val transferred = connection.controlTransfer(0x21, 9, 0x300, iface.id, data, 3, 100)
-            check(transferred == 3) {
-                "Feature report failed: interface=${iface.id} channel=$channel level=$level transferred=$transferred expected=3"
-            }
         }
     }
 }

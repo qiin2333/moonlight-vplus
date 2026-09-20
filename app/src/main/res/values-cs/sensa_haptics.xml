@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sansa HD support</string>
+    <string name="sensa_frequency_title">Frekvence</string>
+    <string name="sensa_frequency_summary">Pro převedené vibrace a místní test. Původní efekty si zachovávají vlastní frekvence.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Síla vibrací</string>
+    <string name="title_test_experimental_haptics">Test vibrací vlevo / vpravo</string>
+    <string name="summary_test_experimental_haptics">Místní test: vlevo, pak vpravo. Nevyžaduje hru.</string>
+    <string name="summary_sensa_haptics_strength">Síla pro Kishi XL: 0% vypne vibrace, 100% je maximum.</string>
+    <string name="haptics_test_unavailable">Připojte podporovaný USB ovladač. Vyžaduje Android 8 nebo novější.</string>
+    <string name="haptics_test_connecting">Připojování… Povolte přístup přes USB.</string>
+    <string name="haptics_test_running">Test: vlevo, pak vpravo…</string>
+    <string name="haptics_test_finished">Místní test dokončen. Vibrace ze hry nebyly ověřeny.</string>
+    <string name="haptics_test_failed">Test selhal. Zkontrolujte přístup přes USB a znovu připojte ovladač.</string>
+    <string name="haptics_test_busy">Ovladač je používán. Ukončete streamování nebo přesměrování USB.</string>
+    <string name="sensa_mode_title">Režim vibrací</string>
+    <string name="sensa_mode_summary">Only haptic: pouze hotové efekty hry. Haptic or rumble: efekty mají přednost; jinak se běžné vibrace převádějí na Sensa. Rumble only: pouze převod vibrací, hotové efekty se ignorují.</string>
+    <string name="sensa_support_summary">Zapne Sensa pro Kishi V3 Pro XL nezávisle na experimentálních haptických protokolech.</string>
+</resources>

@@ -1193,6 +1193,9 @@ class GameMenu(
             onAudioHapticsScene = audioHapticsCardController::setScene,
             onAudioHapticsReset = audioHapticsCardController::resetTuning,
             onWaveformTest = waveformHapticsCardController::toggleWaveformTest,
+            onHapticRumbleSettingsChanged = { game.controllerHandler.refreshHapticRumbleSettings() },
+            onHapticTuningPreview = { game.controllerHandler.previewHapticTuning() },
+            onSensaHapticsEnabled = game::setSensaHapticsEnabled,
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,
             onGyroActivationKey = {
@@ -1397,7 +1400,8 @@ class GameMenu(
             bitrate = game.prefConfig.showBitrateCard,
             audioHaptics = game.prefConfig.showAudioHapticsCard,
             gyro = game.prefConfig.showGyroCard,
-            shortcuts = game.prefConfig.showQuickKeyCard
+            shortcuts = game.prefConfig.showQuickKeyCard,
+            hapticVibration = game.prefConfig.showHapticVibrationCard
         )
     }
 
