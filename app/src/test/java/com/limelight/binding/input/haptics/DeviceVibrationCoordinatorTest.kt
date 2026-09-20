@@ -123,6 +123,28 @@ class DeviceVibrationCoordinatorTest {
     }
 
     @Test
+    fun rapidTouchHapticsAreNotHeldBehindGameRumblePacing() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock)
+
+        try {
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            await { vibrations.size == 1 }
+
+            repeat(3) { index ->
+                coordinator.playTouchHaptic(2_000, 2_000, 50)
+                await { vibrations.size == index + 2 }
+                assertEquals(Vibration(7, 50), vibrations.last())
+            }
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
     fun gameSourcesMixAndClearingOneRestoresTheOther() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
