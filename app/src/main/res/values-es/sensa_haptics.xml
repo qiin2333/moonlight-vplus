@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Error en la prueba. Comprueba el acceso USB y vuelve a conectar el mando.</string>
     <string name="haptics_test_busy">El mando está en uso. Finaliza la transmisión o el reenvío USB.</string>
     <string name="sensa_mode_title">Modo de vibración</string>
-    <string name="sensa_mode_summary">Only haptic: solo efectos hápticos del juego. Haptic or rumble: los efectos tienen prioridad; en su ausencia, la vibración se convierte a Sensa. Rumble only: solo convierte la vibración e ignora los efectos hápticos.</string>
+    <string name="sensa_mode_summary">Haptic only: solo efectos hápticos del juego. Haptic or rumble: los efectos tienen prioridad; en su ausencia, la vibración se convierte a Sensa. Rumble only: solo convierte la vibración e ignora los efectos hápticos.</string>
     <string name="sensa_support_summary">Activa Sensa para Kishi V3 Pro XL independientemente de los protocolos hápticos experimentales.</string>
 </resources>

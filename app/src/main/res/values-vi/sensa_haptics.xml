@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Kiểm tra thất bại. Kiểm tra quyền USB và kết nối lại bộ điều khiển.</string>
     <string name="haptics_test_busy">Bộ điều khiển đang được dùng. Dừng phát trực tuyến hoặc chuyển tiếp USB.</string>
     <string name="sensa_mode_title">Chế độ rung</string>
-    <string name="sensa_mode_summary">Only haptic: chỉ hiệu ứng haptic của trò chơi. Haptic or rumble: ưu tiên hiệu ứng haptic; nếu không có thì chuyển rung thường sang Sensa. Rumble only: chỉ chuyển rung thường và bỏ qua hiệu ứng haptic.</string>
+    <string name="sensa_mode_summary">Haptic only: chỉ hiệu ứng haptic của trò chơi. Haptic or rumble: ưu tiên hiệu ứng haptic; nếu không có thì chuyển rung thường sang Sensa. Rumble only: chỉ chuyển rung thường và bỏ qua hiệu ứng haptic.</string>
     <string name="sensa_support_summary">Bật Sensa cho Kishi V3 Pro XL độc lập với giao thức haptic thử nghiệm.</string>
 </resources>

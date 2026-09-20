@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Test selhal. Zkontrolujte přístup přes USB a znovu připojte ovladač.</string>
     <string name="haptics_test_busy">Ovladač je používán. Ukončete streamování nebo přesměrování USB.</string>
     <string name="sensa_mode_title">Režim vibrací</string>
-    <string name="sensa_mode_summary">Only haptic: pouze hotové efekty hry. Haptic or rumble: efekty mají přednost; jinak se běžné vibrace převádějí na Sensa. Rumble only: pouze převod vibrací, hotové efekty se ignorují.</string>
+    <string name="sensa_mode_summary">Haptic only: pouze hotové efekty hry. Haptic or rumble: efekty mají přednost; jinak se běžné vibrace převádějí na Sensa. Rumble only: pouze převod vibrací, hotové efekty se ignorují.</string>
     <string name="sensa_support_summary">Zapne Sensa pro Kishi V3 Pro XL nezávisle na experimentálních haptických protokolech.</string>
 </resources>

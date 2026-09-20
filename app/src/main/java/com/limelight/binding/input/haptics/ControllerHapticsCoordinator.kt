@@ -67,7 +67,7 @@ internal class ControllerHapticsCoordinator(
                         it.sink.rumbleOutput != null
                 }?.sink?.rumbleOutput
                 converted?.submitRumble(mixed.output.lowFrequency, mixed.output.highFrequency)
-                // A Sensa route owns ordinary rumble even in Only haptic mode: do not
+                // A Sensa route owns ordinary rumble even in Haptic only mode: do not
                 // leak the ignored rumble to Android's separate motor output.
                 if (converted == null && !ds5HapticsBindings.values.any { it.controllerNumber == mixed.controllerNumber &&
                         it.sink.playbackControl?.playbackActive == true }) handler.rumbleManager.handleRumble(

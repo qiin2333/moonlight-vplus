@@ -183,7 +183,7 @@ Ordinary host rumble reaches the existing source mixer and routing policy first.
 An optional Sensa rumble output converts its low/high motor amplitudes into
 left/right tones with four amplitude interpolation points per 10 ms packet.
 Zero stops the tone; strength zero mutes it. The default mode is Haptic or rumble; existing conversion-off users migrate to
-Only haptic. Only haptic ignores ordinary rumble, including Android motor output
+Haptic only. Haptic only ignores ordinary rumble, including Android motor output
 while the Sensa route owns the device. Rumble only ignores authored PCM and
 converts ordinary rumble. Mode changes clear obsolete queued PCM.
 In Haptic or rumble, authored PCM takes precedence while current (30 ms); conversion resumes with

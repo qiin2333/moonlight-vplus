@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Test mislukt. Controleer USB-toegang en sluit de controller opnieuw aan.</string>
     <string name="haptics_test_busy">Controller in gebruik. Stop streaming of USB-doorsturen.</string>
     <string name="sensa_mode_title">Trillingsmodus</string>
-    <string name="sensa_mode_summary">Only haptic: alleen haptische speleffecten. Haptic or rumble: effecten krijgen voorrang; anders worden trillingen omgezet naar Sensa. Rumble only: alleen trillingen omzetten en haptische effecten negeren.</string>
+    <string name="sensa_mode_summary">Haptic only: alleen haptische speleffecten. Haptic or rumble: effecten krijgen voorrang; anders worden trillingen omgezet naar Sensa. Rumble only: alleen trillingen omzetten en haptische effecten negeren.</string>
     <string name="sensa_support_summary">Schakel Sensa voor Kishi V3 Pro XL in, onafhankelijk van experimentele haptische protocollen.</string>
 </resources>

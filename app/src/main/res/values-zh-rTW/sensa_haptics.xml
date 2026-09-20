@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">測試失敗。請檢查 USB 權限並重新連接控制器。</string>
     <string name="haptics_test_busy">控制器使用中。請先停止串流或 USB 轉送。</string>
     <string name="sensa_mode_title">震動模式</string>
-    <string name="sensa_mode_summary">Only haptic：僅播放遊戲觸覺效果。Haptic or rumble：優先播放觸覺效果，否則將一般震動轉換為 Sensa。Rumble only：僅轉換一般震動，忽略觸覺效果。</string>
+    <string name="sensa_mode_summary">Haptic only：僅播放遊戲觸覺效果。Haptic or rumble：優先播放觸覺效果，否則將一般震動轉換為 Sensa。Rumble only：僅轉換一般震動，忽略觸覺效果。</string>
     <string name="sensa_support_summary">獨立啟用 Kishi V3 Pro XL 的 Sensa 輸出，不受實驗性觸覺協定開關影響。</string>
 </resources>

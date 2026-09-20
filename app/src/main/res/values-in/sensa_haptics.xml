@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Pengujian gagal. Periksa akses USB dan hubungkan ulang pengontrol.</string>
     <string name="haptics_test_busy">Pengontrol sedang digunakan. Hentikan streaming atau penerusan USB.</string>
     <string name="sensa_mode_title">Mode getaran</string>
-    <string name="sensa_mode_summary">Only haptic: hanya efek haptik game. Haptic or rumble: efek haptik diprioritaskan; jika tidak ada, getaran dikonversi ke Sensa. Rumble only: hanya konversi getaran dan abaikan efek haptik.</string>
+    <string name="sensa_mode_summary">Haptic only: hanya efek haptik game. Haptic or rumble: efek haptik diprioritaskan; jika tidak ada, getaran dikonversi ke Sensa. Rumble only: hanya konversi getaran dan abaikan efek haptik.</string>
     <string name="sensa_support_summary">Aktifkan Sensa untuk Kishi V3 Pro XL secara terpisah dari protokol haptik eksperimental.</string>
 </resources>

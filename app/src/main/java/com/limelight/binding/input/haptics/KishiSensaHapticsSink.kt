@@ -56,7 +56,7 @@ internal class KishiSensaHapticsSink(
     }
 
     override fun submitRumble(low: Float, high: Float) = synchronized(lock) {
-        // Retain the latest state even in Only haptic, so enabling conversion while
+        // Retain the latest state even in Haptic only, so enabling conversion while
         // a game is holding a motor on does not require a new host rumble event.
         if (stopping || finished || !low.isFinite() || !high.isFinite()) return@synchronized
         rumbleLow = low.coerceIn(0f, 1f)

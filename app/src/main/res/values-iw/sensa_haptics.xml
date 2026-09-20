@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">הבדיקה נכשלה. בדוק הרשאת USB וחבר מחדש את הבקר.</string>
     <string name="haptics_test_busy">הבקר בשימוש. הפסק את ההזרמה או העברת USB.</string>
     <string name="sensa_mode_title">מצב רטט</string>
-    <string name="sensa_mode_summary">Only haptic: רק אפקטים הפטיים של המשחק. Haptic or rumble: עדיפות לאפקטים הפטיים; בהיעדרם רטט רגיל מומר ל־Sensa. Rumble only: המרת רטט רגיל בלבד והתעלמות מאפקטים הפטיים.</string>
+    <string name="sensa_mode_summary">Haptic only: רק אפקטים הפטיים של המשחק. Haptic or rumble: עדיפות לאפקטים הפטיים; בהיעדרם רטט רגיל מומר ל־Sensa. Rumble only: המרת רטט רגיל בלבד והתעלמות מאפקטים הפטיים.</string>
     <string name="sensa_support_summary">הפעלת Sensa עבור Kishi V3 Pro XL בנפרד מפרוטוקולים הפטיים ניסיוניים.</string>
 </resources>

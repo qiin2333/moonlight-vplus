@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Test mislyktes. Sjekk USB-tilgang og koble til kontrolleren på nytt.</string>
     <string name="haptics_test_busy">Kontrolleren er i bruk. Avslutt strømming eller USB-videresending.</string>
     <string name="sensa_mode_title">Vibrasjonsmodus</string>
-    <string name="sensa_mode_summary">Only haptic: bare spillets haptiske effekter. Haptic or rumble: effektene prioriteres; ellers konverteres vibrasjoner til Sensa. Rumble only: konverter bare vibrasjoner og ignorer haptiske effekter.</string>
+    <string name="sensa_mode_summary">Haptic only: bare spillets haptiske effekter. Haptic or rumble: effektene prioriteres; ellers konverteres vibrasjoner til Sensa. Rumble only: konverter bare vibrasjoner og ignorer haptiske effekter.</string>
     <string name="sensa_support_summary">Aktiver Sensa for Kishi V3 Pro XL uavhengig av eksperimentelle haptiske protokoller.</string>
 </resources>

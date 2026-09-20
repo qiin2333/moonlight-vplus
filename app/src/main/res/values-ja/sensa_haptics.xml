@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">テストに失敗しました。USBアクセスを確認し、コントローラーを再接続してください。</string>
     <string name="haptics_test_busy">コントローラーは使用中です。ストリーミングまたはUSB転送を終了してください。</string>
     <string name="sensa_mode_title">振動モード</string>
-    <string name="sensa_mode_summary">Only haptic：ゲームの触覚効果のみ。Haptic or rumble：触覚効果を優先し、ない場合は通常の振動をSensaに変換します。Rumble only：通常の振動のみを変換し、触覚効果を無視します。</string>
+    <string name="sensa_mode_summary">Haptic only：ゲームの触覚効果のみ。Haptic or rumble：触覚効果を優先し、ない場合は通常の振動をSensaに変換します。Rumble only：通常の振動のみを変換し、触覚効果を無視します。</string>
     <string name="sensa_support_summary">実験的な触覚プロトコルとは独立して、Kishi V3 Pro XLのSensa出力を有効にします。</string>
 </resources>

@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Η δοκιμή απέτυχε. Ελέγξτε την πρόσβαση USB και επανασυνδέστε το χειριστήριο.</string>
     <string name="haptics_test_busy">Το χειριστήριο χρησιμοποιείται. Τερματίστε τη ροή ή την προώθηση USB.</string>
     <string name="sensa_mode_title">Λειτουργία δόνησης</string>
-    <string name="sensa_mode_summary">Only haptic: μόνο απτικά εφέ του παιχνιδιού. Haptic or rumble: τα εφέ έχουν προτεραιότητα· διαφορετικά η δόνηση μετατρέπεται σε Sensa. Rumble only: μόνο μετατροπή δόνησης, τα απτικά εφέ αγνοούνται.</string>
+    <string name="sensa_mode_summary">Haptic only: μόνο απτικά εφέ του παιχνιδιού. Haptic or rumble: τα εφέ έχουν προτεραιότητα· διαφορετικά η δόνηση μετατρέπεται σε Sensa. Rumble only: μόνο μετατροπή δόνησης, τα απτικά εφέ αγνοούνται.</string>
     <string name="sensa_support_summary">Ενεργοποιεί το Sensa για Kishi V3 Pro XL ανεξάρτητα από τα πειραματικά απτικά πρωτόκολλα.</string>
 </resources>

@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Перевірка не вдалася. Перевірте доступ до USB та перепід’єднайте контролер.</string>
     <string name="haptics_test_busy">Контролер зайнятий. Завершіть трансляцію або переспрямування USB.</string>
     <string name="sensa_mode_title">Режим вібрації</string>
-    <string name="sensa_mode_summary">Only haptic: лише готові ефекти гри. Haptic or rumble: готові ефекти мають пріоритет; інакше звичайна вібрація перетворюється на Sensa. Rumble only: лише перетворення звичайної вібрації, готові ефекти ігноруються.</string>
+    <string name="sensa_mode_summary">Haptic only: лише готові ефекти гри. Haptic or rumble: готові ефекти мають пріоритет; інакше звичайна вібрація перетворюється на Sensa. Rumble only: лише перетворення звичайної вібрації, готові ефекти ігноруються.</string>
     <string name="sensa_support_summary">Вмикає Sensa для Kishi V3 Pro XL незалежно від експериментальних протоколів.</string>
 </resources>

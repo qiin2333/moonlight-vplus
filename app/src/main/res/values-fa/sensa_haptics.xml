@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">آزمایش ناموفق بود. دسترسی USB را بررسی و دسته را دوباره وصل کنید.</string>
     <string name="haptics_test_busy">دسته در حال استفاده است. پخش یا انتقال USB را متوقف کنید.</string>
     <string name="sensa_mode_title">حالت لرزش</string>
-    <string name="sensa_mode_summary">Only haptic: فقط جلوه‌های لمسی بازی. Haptic or rumble: جلوه‌های لمسی اولویت دارند؛ در نبود آن‌ها لرزش عادی به Sensa تبدیل می‌شود. Rumble only: فقط تبدیل لرزش عادی و نادیده گرفتن جلوه‌های لمسی.</string>
+    <string name="sensa_mode_summary">Haptic only: فقط جلوه‌های لمسی بازی. Haptic or rumble: جلوه‌های لمسی اولویت دارند؛ در نبود آن‌ها لرزش عادی به Sensa تبدیل می‌شود. Rumble only: فقط تبدیل لرزش عادی و نادیده گرفتن جلوه‌های لمسی.</string>
     <string name="sensa_support_summary">فعال کردن Sensa برای Kishi V3 Pro XL مستقل از پروتکل‌های لمسی آزمایشی.</string>
 </resources>

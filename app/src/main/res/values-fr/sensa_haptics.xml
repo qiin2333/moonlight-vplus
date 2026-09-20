@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Échec du test. Vérifiez l’accès USB et rebranchez la manette.</string>
     <string name="haptics_test_busy">Manette utilisée. Arrêtez le streaming ou la redirection USB.</string>
     <string name="sensa_mode_title">Mode de vibration</string>
-    <string name="sensa_mode_summary">Only haptic : effets haptiques du jeu uniquement. Haptic or rumble : priorité aux effets haptiques ; sinon, conversion des vibrations en Sensa. Rumble only : conversion des vibrations uniquement, effets haptiques ignorés.</string>
+    <string name="sensa_mode_summary">Haptic only : effets haptiques du jeu uniquement. Haptic or rumble : priorité aux effets haptiques ; sinon, conversion des vibrations en Sensa. Rumble only : conversion des vibrations uniquement, effets haptiques ignorés.</string>
     <string name="sensa_support_summary">Active Sensa pour Kishi V3 Pro XL indépendamment des protocoles haptiques expérimentaux.</string>
 </resources>

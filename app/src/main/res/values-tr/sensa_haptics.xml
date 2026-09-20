@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">Test başarısız. USB erişimini kontrol edip kontrolcüyü yeniden bağlayın.</string>
     <string name="haptics_test_busy">Kontrolcü kullanımda. Yayını veya USB yönlendirmesini durdurun.</string>
     <string name="sensa_mode_title">Titreşim modu</string>
-    <string name="sensa_mode_summary">Only haptic: yalnızca oyunun haptik efektleri. Haptic or rumble: efektler önceliklidir; yoksa titreşim Sensa biçimine dönüştürülür. Rumble only: yalnızca titreşim dönüştürülür, haptik efektler yok sayılır.</string>
+    <string name="sensa_mode_summary">Haptic only: yalnızca oyunun haptik efektleri. Haptic or rumble: efektler önceliklidir; yoksa titreşim Sensa biçimine dönüştürülür. Rumble only: yalnızca titreşim dönüştürülür, haptik efektler yok sayılır.</string>
     <string name="sensa_support_summary">Kishi V3 Pro XL için Sensa çıkışını deneysel haptik protokollerden bağımsız olarak etkinleştirir.</string>
 </resources>

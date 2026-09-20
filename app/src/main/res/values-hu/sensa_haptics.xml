@@ -15,6 +15,6 @@
     <string name="haptics_test_failed">A teszt sikertelen. Ellenőrizd az USB-hozzáférést és csatlakoztasd újra a vezérlőt.</string>
     <string name="haptics_test_busy">A vezérlő használatban van. Állítsd le a streamelést vagy az USB-továbbítást.</string>
     <string name="sensa_mode_title">Rezgési mód</string>
-    <string name="sensa_mode_summary">Only haptic: csak a játék kész effektjei. Haptic or rumble: az effektek elsőbbséget élveznek; egyébként a rezgés Sensa formátumra alakul. Rumble only: csak rezgésátalakítás, a kész effektek figyelmen kívül maradnak.</string>
+    <string name="sensa_mode_summary">Haptic only: csak a játék kész effektjei. Haptic or rumble: az effektek elsőbbséget élveznek; egyébként a rezgés Sensa formátumra alakul. Rumble only: csak rezgésátalakítás, a kész effektek figyelmen kívül maradnak.</string>
     <string name="sensa_support_summary">Sensa engedélyezése a Kishi V3 Pro XL számára a kísérleti haptikus protokolloktól függetlenül.</string>
 </resources>

@@ -23,7 +23,7 @@ internal object SensaStrengthPreferences {
         return prefs.getBoolean(ENABLED_KEY, false)
     }
     fun mode(context: Context): String {
-        // Preserve conversion-off installations as Only haptic. New installations
+        // Preserve conversion-off installations as Haptic only. New installations
         // use authored effects with rumble fallback; malformed values use that default.
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         return when (val saved = prefs.getString(MODE_KEY, null)) {
