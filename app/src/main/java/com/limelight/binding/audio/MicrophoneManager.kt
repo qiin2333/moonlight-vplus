@@ -139,7 +139,7 @@ class MicrophoneManager(
         }
 
         pendingInitialStart = false
-        resumeMicrophone()
+        resumeMicrophone(persistState = false)
     }
 
     fun toggleMicrophone() {
@@ -173,21 +173,21 @@ class MicrophoneManager(
         }
     }
 
-    fun resumeMicrophone() {
+    fun resumeMicrophone(persistState: Boolean = true) {
         if (!checkMicrophonePermission()) return
 
         if (microphoneStream != null && !microphoneStream!!.isRunning()) {
             if (microphoneStream!!.resume()) {
                 showMessage(context.getString(R.string.mic_enabled))
-                notifyStateChange(true)
+                notifyStateChange(true, persistState)
                 updateMicrophoneButtonState()
             } else {
-                restartMicrophoneStream()
+                restartMicrophoneStream(persistState)
             }
         }
     }
 
-    private fun restartMicrophoneStream() {
+    private fun restartMicrophoneStream(persistState: Boolean) {
         LimeLog.warning("麦克风恢复失败，尝试重新初始化")
         microphoneStream!!.stop()
         MicrophoneConfig.updateBitrateFromConfig(context)
@@ -197,15 +197,17 @@ class MicrophoneManager(
         microphoneStream = MicrophoneStream(activeConnection)
         if (microphoneStream!!.start()) {
             showMessage(context.getString(R.string.mic_enabled))
-            notifyStateChange(true)
+            notifyStateChange(true, persistState)
             updateMicrophoneButtonState()
         } else {
             showMessage("麦克风恢复失败: 重新初始化失败")
         }
     }
 
-    private fun notifyStateChange(isActive: Boolean) {
-        initialStateStore.save(hostUuid, isActive)
+    private fun notifyStateChange(isActive: Boolean, persistState: Boolean = true) {
+        if (persistState) {
+            initialStateStore.save(hostUuid, isActive)
+        }
         stateListener?.onMicrophoneStateChanged(isActive)
     }
 
@@ -246,7 +248,7 @@ class MicrophoneManager(
     fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         if (requestCode == MicrophoneConfig.PERMISSION_REQUEST_MICROPHONE &&
             grantResults.isNotEmpty()) {
-            val requestGeneration = permissionRequestGeneration ?: lifecycleGeneration
+            val requestGeneration = permissionRequestGeneration ?: return
             val startsInitial = permissionRequestStartsInitial
             permissionRequestGeneration = null
             permissionRequestStartsInitial = false
