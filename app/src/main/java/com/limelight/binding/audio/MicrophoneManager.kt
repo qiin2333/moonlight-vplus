@@ -13,16 +13,21 @@ import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.preferences.MicrophoneInitialState
 import com.limelight.preferences.PreferenceConfiguration
 
 class MicrophoneManager(
     private val context: Context,
     private val connection: NvConnection?,
-    private var enableMic: Boolean
+    private var enableMic: Boolean,
+    private val hostUuid: String? = null,
 ) {
     private var microphoneStream: MicrophoneStream? = null
     private var micButton: ImageButton? = null
     private val buttonPreferences = MicrophoneButtonPreferences(context)
+    private val initialStateStore = MicrophoneInitialStateStore(context)
+    private var pendingInitialStart = false
 
     interface MicrophoneStateListener {
         fun onMicrophoneStateChanged(isActive: Boolean)
@@ -85,6 +90,46 @@ class MicrophoneManager(
         }
     }
 
+    /** Applies the configured initial state after the stream handshake has completed. */
+    fun applyInitialState(initialState: MicrophoneInitialState) {
+        if (!enableMic || !MoonBridge.isMicrophoneRequested()) {
+            pendingInitialStart = false
+            updateMicrophoneButtonState()
+            return
+        }
+
+        if (!initialState.resolve(initialStateStore.load(hostUuid))) {
+            pendingInitialStart = false
+            setDefaultStateOff()
+            return
+        }
+
+        pendingInitialStart = true
+        if (!hasMicrophonePermission()) {
+            requestMicrophonePermission()
+            return
+        }
+        startPendingInitialState()
+    }
+
+    private fun startPendingInitialState() {
+        if (!pendingInitialStart) return
+        if (!enableMic || !MoonBridge.isMicrophoneRequested() || !hasMicrophonePermission()) {
+            pendingInitialStart = false
+            updateMicrophoneButtonState()
+            return
+        }
+
+        if (!initializeMicrophoneStream()) {
+            pendingInitialStart = false
+            updateMicrophoneButtonState()
+            return
+        }
+
+        pendingInitialStart = false
+        resumeMicrophone()
+    }
+
     fun toggleMicrophone() {
         if (!checkMicrophonePermission()) return
 
@@ -113,6 +158,7 @@ class MicrophoneManager(
             microphoneStream!!.pause()
             showMessage(context.getString(R.string.mic_disabled))
             notifyStateChange(false)
+            updateMicrophoneButtonState()
         }
     }
 
@@ -123,6 +169,7 @@ class MicrophoneManager(
             if (microphoneStream!!.resume()) {
                 showMessage(context.getString(R.string.mic_enabled))
                 notifyStateChange(true)
+                updateMicrophoneButtonState()
             } else {
                 restartMicrophoneStream()
             }
@@ -139,12 +186,14 @@ class MicrophoneManager(
         if (microphoneStream!!.start()) {
             showMessage(context.getString(R.string.mic_enabled))
             notifyStateChange(true)
+            updateMicrophoneButtonState()
         } else {
             showMessage("麦克风恢复失败: 重新初始化失败")
         }
     }
 
     private fun notifyStateChange(isActive: Boolean) {
+        initialStateStore.save(hostUuid, isActive)
         stateListener?.onMicrophoneStateChanged(isActive)
     }
 
@@ -187,12 +236,17 @@ class MicrophoneManager(
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Handler(Looper.getMainLooper()).postDelayed({
                     if (hasMicrophonePermission()) {
-                        toggleMicrophone()
+                        if (pendingInitialStart) {
+                            startPendingInitialState()
+                        } else {
+                            toggleMicrophone()
+                        }
                     } else {
                         showPermissionError()
                     }
                 }, MicrophoneConfig.PERMISSION_DELAY_MS.toLong())
             } else {
+                pendingInitialStart = false
                 showPermissionError()
             }
         }
@@ -264,6 +318,7 @@ class MicrophoneManager(
     }
 
     fun stopMicrophoneStream() {
+        pendingInitialStart = false
         microphoneStream?.stop()
         microphoneStream = null
     }

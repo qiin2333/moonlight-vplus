@@ -414,6 +414,16 @@
         <item>show_button</item>
         <item>toggle_microphone</item>
     </string-array>
+    <string-array name="mic_initial_state_entries">
+        <item>@string/mic_initial_state_off</item>
+        <item>@string/mic_initial_state_on</item>
+        <item>@string/mic_initial_state_follow_last</item>
+    </string-array>
+    <string-array name="mic_initial_state_values" translatable="false">
+        <item>off</item>
+        <item>on</item>
+        <item>follow_last</item>
+    </string-array>
     <string-array name="mic_button_position_entries">
         <item>@string/mic_button_position_top_left</item>
         <item>@string/mic_button_position_top_center</item>

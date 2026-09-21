@@ -6,6 +6,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneManager
+import com.limelight.preferences.MicrophoneInitialState
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.utils.Dialog
@@ -234,7 +235,12 @@ class ConnectionCallbackHandler(private val game: Game) {
         }
 
         // 初始化麦克风管理器
-        game.microphoneManager = MicrophoneManager(game, game.conn, game.prefConfig.enableMic)
+        game.microphoneManager = MicrophoneManager(
+            game,
+            game.conn,
+            game.prefConfig.enableMic,
+            game.computerUuid,
+        )
         game.microphoneManager?.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
             override fun onMicrophoneStateChanged(isActive: Boolean) {
                 LimeLog.info("麦克风状态改变: " + if (isActive) "激活" else "暂停")
@@ -245,21 +251,13 @@ class ConnectionCallbackHandler(private val game: Game) {
             }
         })
 
-        // 初始化麦克风流
-        if (game.prefConfig.enableMic) {
-            game.runOnUiThread {
-                if (game.microphoneManager?.initializeMicrophoneStream() != true) {
-                    LimeLog.warning("Failed to start microphone stream")
-                } else {
-                    LimeLog.info("Microphone stream initialized successfully")
-                }
-
-                // 更新麦克风按钮状态
-                if (game.micButton != null) {
-                    game.microphoneManager?.setMicrophoneButton(game.micButton)
-                    game.microphoneManager?.setDefaultStateOff()
-                }
-            }
+        // Apply the initial microphone state only after the handshake has negotiated the
+        // microphone port. The manager remains idle for the default-off path.
+        game.runOnUiThread {
+            game.microphoneManager?.setMicrophoneButton(game.micButton)
+            game.microphoneManager?.applyInitialState(
+                MicrophoneInitialState.fromPreferenceValue(game.prefConfig.micInitialState)
+            )
         }
 
         // 初始化串流时长统计

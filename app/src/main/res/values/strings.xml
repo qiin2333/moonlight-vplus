@@ -312,8 +312,13 @@
     <string name="summary_checkbox_enable_spatializer">Use Android Spatializer for audio decoded by Moonlight. Requires Android 13 and compatible output; passthrough audio bypasses it.</string>
     <string name="title_checkbox_control_only">Control-only mode</string>
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
-    <string name="title_checkbox_enable_mic">Send this device’s microphone to the host</string>
-    <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Sunshine Foundation build 20250720 or later.</string>
+    <string name="title_checkbox_enable_mic">Enable microphone</string>
+    <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Sunshine Foundation 20260117 or later.</string>
+    <string name="title_list_mic_initial_state">Initial microphone state</string>
+    <string name="summary_list_mic_initial_state">Choose the microphone state when each stream starts.</string>
+    <string name="mic_initial_state_off">Off</string>
+    <string name="mic_initial_state_on">On</string>
+    <string name="mic_initial_state_follow_last">Follow last state</string>
     <string name="title_list_mic_menu_action_mode">Microphone action in the stream menu</string>
     <string name="summary_list_mic_menu_action_mode">Choose what the microphone button in the stream menu does</string>
     <string name="mic_menu_action_show_button">Show or hide floating microphone button</string>

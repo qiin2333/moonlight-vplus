@@ -87,6 +87,12 @@ class ConfigurationSyncSchemaTest {
         ).forEach { key ->
             assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }
+        assertFalse(
+            "Per-host microphone last state must stay local",
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                PreferenceConfiguration.MIC_INITIAL_STATE_PREF_STRING
+            )
+        )
     }
 
     @Test
