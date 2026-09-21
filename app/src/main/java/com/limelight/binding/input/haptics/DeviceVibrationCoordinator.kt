@@ -115,7 +115,11 @@ internal class DeviceVibrationCoordinator(
                 amplitude = SingleMotorRumbleFold.amplitude(lowFrequency, highFrequency),
                 durationMs = duration,
                 generation = currentGeneration,
-                sequence = ++outputSequence
+                sequence = ++outputSequence,
+                // User-paced input, not controller packet rate: a pulse parked behind the
+                // level cooldown would be displaced by its own urgent completion restore
+                // before dispatching, dropping every tap inside the cooldown window.
+                urgent = true
             )
             completion = Runnable { finishTouchHaptic(epoch) }
             touchCompletion = completion

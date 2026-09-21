@@ -391,6 +391,67 @@ class DeviceVibrationCoordinatorTest {
         }
     }
 
+    @Test
+    fun rapidTouchHapticsAreNotDroppedBehindLevelPacing() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val cancels = AtomicInteger()
+        val clock = FakeClock()
+        val coordinator = DeviceVibrationCoordinator(
+            postDelayed = clock::post, removeCallback = clock::remove,
+            vibrateDevice = { amplitude, duration -> vibrations += Vibration(amplitude, duration) },
+            cancelDeviceVibration = { cancels.incrementAndGet() }, executor = executor,
+            // Amplified window: production paces levels 250 ms, and the second tap must
+            // land inside it for this test to exercise the cooldown.
+            minimumIntervalMs = 60_000L
+        )
+        try {
+            coordinator.playTouchHaptic(2_000, 2_000, 50)
+            await { vibrations.size == 1 }
+            assertEquals(Vibration(7, 50), vibrations.single())
+
+            coordinator.playTouchHaptic(2_000, 2_000, 50)
+            await { vibrations.size == 2 }
+            assertEquals(Vibration(7, 50), vibrations.last())
+
+            // The pulse restore is still a cancel, not a spurious level write.
+            clock.advance(50)
+            await { cancels.get() == 1 }
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            assertEquals(2, vibrations.size)
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun gameLevelReplacementStillWaitsOutTheLevelPacingWindow() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = DeviceVibrationCoordinator(
+            postDelayed = clock::post, removeCallback = clock::remove,
+            vibrateDevice = { amplitude, duration -> vibrations += Vibration(amplitude, duration) },
+            cancelDeviceVibration = {}, executor = executor,
+            minimumIntervalMs = 60_000L
+        )
+        try {
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            await { vibrations.size == 1 }
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+
+            // A mid-stream level change has no start/stop edge: it must sit behind the
+            // vendor cooldown instead of reprogramming effects at packet rate.
+            coordinator.submitGameRumble(ROUTED_GAME, 208, 100)
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            assertEquals(1, vibrations.size)
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
+    }
+
     private fun coordinator(
         executor: ScheduledExecutorService,
         vibrations: MutableList<Vibration>,
