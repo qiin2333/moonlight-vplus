@@ -1313,7 +1313,7 @@
     <string name="layout_page_device_text_mmo_true_text">仅鼠标移动</string>
     <string name="layout_page_device_text_mmo_false_text">鼠标移动+点击</string>
     <string name="layout_page_config_text_8ea81">多点触控</string>
-    <string name="layout_page_config_text_cd2c1">手机同步振动</string>
+    <string name="layout_page_config_text_cd2c1">设备同步振动</string>
     <string name="layout_page_config_text_f4651">虚拟按键振动</string>
     <string name="layout_page_config_text_66ab5">新建</string>
     <string name="layout_page_config_text_df603">完成</string>

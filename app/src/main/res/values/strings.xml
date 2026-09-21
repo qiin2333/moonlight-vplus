@@ -1629,7 +1629,7 @@ Tap again to replace it.</string>
     <string name="layout_page_config_text_83a23">Touch Input</string>
     <string name="layout_page_config_text_f4b7c">Touchpad</string>
     <string name="layout_page_config_text_8ea81">Multi-Touch</string>
-    <string name="layout_page_config_text_cd2c1">Phone-synced vibration</string>
+    <string name="layout_page_config_text_cd2c1">Device-synced vibration</string>
     <string name="layout_page_config_text_f4651">Virtual button vibration</string>
     <string name="layout_page_config_text_66ab5">New</string>
     <string name="layout_page_config_text_df603">Done</string>
