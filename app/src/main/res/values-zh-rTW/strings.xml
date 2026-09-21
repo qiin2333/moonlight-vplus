@@ -652,8 +652,13 @@
     <string name="config_sync_action_enable">啟用同步</string>
     <string name="title_seekbar_scale">主機渲染解析度比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例縮放所選串流解析度後再向主機請求。高於 100% 可增加來源畫面細節但會提高主機 GPU 負載；低於 100% 可減輕負載。主機必須支援縮放後的解析度。</string>
-    <string name="title_checkbox_enable_mic">將本機麥克風傳送到主機（實驗性）</string>
-    <string name="summary_checkbox_enable_mic">把本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20250720 或更新版本。</string>
+    <string name="title_checkbox_enable_mic">啟用麥克風</string>
+    <string name="summary_checkbox_enable_mic">將本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20260117 或更新版本。</string>
+    <string name="title_list_mic_initial_state">麥克風初始狀態</string>
+    <string name="summary_list_mic_initial_state">選擇每次串流開始時的麥克風狀態。</string>
+    <string name="mic_initial_state_off">關閉</string>
+    <string name="mic_initial_state_on">開啟</string>
+    <string name="mic_initial_state_follow_last">跟隨上次狀態</string>
     <string name="title_seekbar_long_press_flat_region">長按防抖半徑</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半徑內時持續傳送初始位置，以減少全螢幕長按抖動；設為 0 則關閉。</string>
     <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">多指鍵盤快捷手勢</string>

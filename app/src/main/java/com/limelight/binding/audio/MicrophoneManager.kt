@@ -13,16 +13,24 @@ import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.preferences.MicrophoneInitialState
 import com.limelight.preferences.PreferenceConfiguration
 
 class MicrophoneManager(
     private val context: Context,
     private val connection: NvConnection?,
-    private var enableMic: Boolean
+    private var enableMic: Boolean,
+    private val hostUuid: String? = null,
 ) {
     private var microphoneStream: MicrophoneStream? = null
     private var micButton: ImageButton? = null
     private val buttonPreferences = MicrophoneButtonPreferences(context)
+    private val initialStateStore = MicrophoneInitialStateStore(context)
+    private var pendingInitialStart = false
+    private var lifecycleGeneration = 0L
+    private var permissionRequestGeneration: Long? = null
+    private var permissionRequestStartsInitial = false
 
     interface MicrophoneStateListener {
         fun onMicrophoneStateChanged(isActive: Boolean)
@@ -46,6 +54,11 @@ class MicrophoneManager(
             return false
         }
 
+        val activeConnection = connection ?: run {
+            showMessage("麦克风状态切换: 连接不存在")
+            return false
+        }
+
         if (microphoneStream != null) {
             LimeLog.info("麦克风流已存在")
             return true
@@ -59,9 +72,11 @@ class MicrophoneManager(
         try {
             MicrophoneConfig.updateBitrateFromConfig(context)
             MicrophoneConfig.updateVolumeProcessingFromConfig(context)
-            microphoneStream = MicrophoneStream(connection!!)
+            microphoneStream = MicrophoneStream(activeConnection)
 
             if (!microphoneStream!!.start()) {
+                microphoneStream?.stop()
+                microphoneStream = null
                 showMessage("无法启动麦克风流")
                 return false
             }
@@ -79,10 +94,52 @@ class MicrophoneManager(
 
             return true
         } catch (e: Exception) {
+            microphoneStream?.stop()
+            microphoneStream = null
             LimeLog.warning("初始化麦克风流失败: ${e.message}")
             showMessage("初始化麦克风流失败: ${e.message}")
             return false
         }
+    }
+
+    /** Applies the configured initial state after the stream handshake has completed. */
+    fun applyInitialState(initialState: MicrophoneInitialState) {
+        if (!enableMic || !MoonBridge.isMicrophoneRequested()) {
+            pendingInitialStart = false
+            updateMicrophoneButtonState()
+            return
+        }
+
+        if (!initialState.resolve(initialStateStore.load(hostUuid))) {
+            pendingInitialStart = false
+            setDefaultStateOff()
+            return
+        }
+
+        pendingInitialStart = true
+        if (!hasMicrophonePermission()) {
+            requestMicrophonePermission(forInitialStart = true)
+            return
+        }
+        startPendingInitialState()
+    }
+
+    private fun startPendingInitialState() {
+        if (!pendingInitialStart) return
+        if (!enableMic || !MoonBridge.isMicrophoneRequested() || !hasMicrophonePermission()) {
+            pendingInitialStart = false
+            updateMicrophoneButtonState()
+            return
+        }
+
+        if (!initializeMicrophoneStream()) {
+            pendingInitialStart = false
+            updateMicrophoneButtonState()
+            return
+        }
+
+        pendingInitialStart = false
+        resumeMicrophone(persistState = false)
     }
 
     fun toggleMicrophone() {
@@ -96,8 +153,7 @@ class MicrophoneManager(
             }
         } else if (connection != null) {
             if (initializeMicrophoneStream()) {
-                updateMicrophoneButtonState()
-                showMessage(context.getString(R.string.mic_disabled))
+                resumeMicrophone()
             } else {
                 showMessage("麦克风状态切换: 初始化失败")
             }
@@ -113,38 +169,45 @@ class MicrophoneManager(
             microphoneStream!!.pause()
             showMessage(context.getString(R.string.mic_disabled))
             notifyStateChange(false)
+            updateMicrophoneButtonState()
         }
     }
 
-    fun resumeMicrophone() {
+    fun resumeMicrophone(persistState: Boolean = true) {
         if (!checkMicrophonePermission()) return
 
         if (microphoneStream != null && !microphoneStream!!.isRunning()) {
             if (microphoneStream!!.resume()) {
                 showMessage(context.getString(R.string.mic_enabled))
-                notifyStateChange(true)
+                notifyStateChange(true, persistState)
+                updateMicrophoneButtonState()
             } else {
-                restartMicrophoneStream()
+                restartMicrophoneStream(persistState)
             }
         }
     }
 
-    private fun restartMicrophoneStream() {
+    private fun restartMicrophoneStream(persistState: Boolean) {
         LimeLog.warning("麦克风恢复失败，尝试重新初始化")
         microphoneStream!!.stop()
         MicrophoneConfig.updateBitrateFromConfig(context)
         MicrophoneConfig.updateVolumeProcessingFromConfig(context)
 
-        microphoneStream = MicrophoneStream(connection!!)
+        val activeConnection = connection ?: return
+        microphoneStream = MicrophoneStream(activeConnection)
         if (microphoneStream!!.start()) {
             showMessage(context.getString(R.string.mic_enabled))
-            notifyStateChange(true)
+            notifyStateChange(true, persistState)
+            updateMicrophoneButtonState()
         } else {
             showMessage("麦克风恢复失败: 重新初始化失败")
         }
     }
 
-    private fun notifyStateChange(isActive: Boolean) {
+    private fun notifyStateChange(isActive: Boolean, persistState: Boolean = true) {
+        if (persistState) {
+            initialStateStore.save(hostUuid, isActive)
+        }
         stateListener?.onMicrophoneStateChanged(isActive)
     }
 
@@ -171,7 +234,9 @@ class MicrophoneManager(
             android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
 
-    fun requestMicrophonePermission() {
+    fun requestMicrophonePermission(forInitialStart: Boolean = false) {
+        permissionRequestGeneration = lifecycleGeneration
+        permissionRequestStartsInitial = forInitialStart
         if (context is android.app.Activity) {
             ActivityCompat.requestPermissions(context,
                 arrayOf(android.Manifest.permission.RECORD_AUDIO),
@@ -183,16 +248,29 @@ class MicrophoneManager(
     fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         if (requestCode == MicrophoneConfig.PERMISSION_REQUEST_MICROPHONE &&
             grantResults.isNotEmpty()) {
+            val requestGeneration = permissionRequestGeneration ?: return
+            val startsInitial = permissionRequestStartsInitial
+            permissionRequestGeneration = null
+            permissionRequestStartsInitial = false
+            if (requestGeneration != lifecycleGeneration) return
 
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Handler(Looper.getMainLooper()).postDelayed({
+                    if (requestGeneration != lifecycleGeneration) return@postDelayed
                     if (hasMicrophonePermission()) {
-                        toggleMicrophone()
+                        if (startsInitial) {
+                            if (pendingInitialStart) {
+                                startPendingInitialState()
+                            }
+                        } else {
+                            toggleMicrophone()
+                        }
                     } else {
                         showPermissionError()
                     }
                 }, MicrophoneConfig.PERMISSION_DELAY_MS.toLong())
             } else {
+                pendingInitialStart = false
                 showPermissionError()
             }
         }
@@ -264,6 +342,8 @@ class MicrophoneManager(
     }
 
     fun stopMicrophoneStream() {
+        lifecycleGeneration++
+        pendingInitialStart = false
         microphoneStream?.stop()
         microphoneStream = null
     }
