@@ -6,6 +6,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneManager
+import com.limelight.preferences.MicrophoneInitialState
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.utils.Dialog
@@ -85,6 +86,9 @@ class ConnectionCallbackHandler(private val game: Game) {
         game.runOnUiThread {
             // Let the display go to sleep now
             game.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            // Release both SDK and system audio-coupled phone-motor ownership.
+            game.stopAudioHapticsForStream()
 
             // Stop processing controller input
             game.controllerHandler?.stop()
@@ -234,31 +238,36 @@ class ConnectionCallbackHandler(private val game: Game) {
         }
 
         // 初始化麦克风管理器
-        game.microphoneManager = MicrophoneManager(game, game.conn, game.prefConfig.enableMic)
-        game.microphoneManager?.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
-            override fun onMicrophoneStateChanged(isActive: Boolean) {
-                LimeLog.info("麦克风状态改变: " + if (isActive) "激活" else "暂停")
-            }
+        val connection = game.conn
+        if (connection != null) {
+            val microphoneManager = MicrophoneManager(
+                game,
+                connection,
+                game.prefConfig.enableMic,
+                game.computerUuid,
+            )
+            game.microphoneManager = microphoneManager
+            microphoneManager.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
+                override fun onMicrophoneStateChanged(isActive: Boolean) {
+                    LimeLog.info("麦克风状态改变: " + if (isActive) "激活" else "暂停")
+                }
 
-            override fun onPermissionRequested() {
-                LimeLog.info("麦克风权限请求已发送")
-            }
-        })
+                override fun onPermissionRequested() {
+                    LimeLog.info("麦克风权限请求已发送")
+                }
+            })
 
-        // 初始化麦克风流
-        if (game.prefConfig.enableMic) {
+            // Apply the initial microphone state only after the handshake has negotiated the
+            // microphone port. The manager remains idle for the default-off path.
             game.runOnUiThread {
-                if (game.microphoneManager?.initializeMicrophoneStream() != true) {
-                    LimeLog.warning("Failed to start microphone stream")
-                } else {
-                    LimeLog.info("Microphone stream initialized successfully")
+                if (!game.connected || game.conn !== connection || game.microphoneManager !== microphoneManager) {
+                    return@runOnUiThread
                 }
 
-                // 更新麦克风按钮状态
-                if (game.micButton != null) {
-                    game.microphoneManager?.setMicrophoneButton(game.micButton)
-                    game.microphoneManager?.setDefaultStateOff()
-                }
+                microphoneManager.setMicrophoneButton(game.micButton)
+                microphoneManager.applyInitialState(
+                    MicrophoneInitialState.fromPreferenceValue(game.prefConfig.micInitialState)
+                )
             }
         }
 
@@ -288,6 +297,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         game.attemptedConnection = false
 
         game.cancelKeepAliveNotification()
+        game.stopAudioHapticsForStream()
 
         if (game.connecting || game.connected) {
             game.connecting = false

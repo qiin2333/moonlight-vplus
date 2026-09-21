@@ -114,6 +114,16 @@ class PcmPassthroughRenderer(
         } catch (_: Exception) {}
     }
 
+    fun detachSystemAudioHaptics(): Boolean {
+        systemAudioHaptics.detach()
+        return true
+    }
+
+    fun attachSystemAudioHaptics(): Boolean {
+        val currentTrack = track ?: return false
+        return systemAudioHaptics.attach(currentTrack)
+    }
+
     override fun playDecodedAudio(audioData: ShortArray) {
         // Unused.
     }

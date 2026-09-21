@@ -554,7 +554,7 @@
     <string name="feature_guide_quick_actions_title">快捷列也要我教嗎？</string>
     <string name="feature_guide_quick_actions_body">長按快捷按鈕就能新增、移除或拖曳排序。把常用操作排好，下次可別再手忙腳亂啦。</string>
     <string name="feature_guide_crown_title">給你的設定戴個皇冠吧</string>
-    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
+    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和振動回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">這次記住啦</string>
     <string name="feature_guide_skip">才不要看</string>
@@ -652,8 +652,13 @@
     <string name="config_sync_action_enable">啟用同步</string>
     <string name="title_seekbar_scale">主機渲染解析度比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例縮放所選串流解析度後再向主機請求。高於 100% 可增加來源畫面細節但會提高主機 GPU 負載；低於 100% 可減輕負載。主機必須支援縮放後的解析度。</string>
-    <string name="title_checkbox_enable_mic">將本機麥克風傳送到主機（實驗性）</string>
-    <string name="summary_checkbox_enable_mic">把本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20250720 或更新版本。</string>
+    <string name="title_checkbox_enable_mic">啟用麥克風</string>
+    <string name="summary_checkbox_enable_mic">將本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20260117 或更新版本。</string>
+    <string name="title_list_mic_initial_state">麥克風初始狀態</string>
+    <string name="summary_list_mic_initial_state">選擇每次串流開始時的麥克風狀態。</string>
+    <string name="mic_initial_state_off">關閉</string>
+    <string name="mic_initial_state_on">開啟</string>
+    <string name="mic_initial_state_follow_last">跟隨上次狀態</string>
     <string name="title_seekbar_long_press_flat_region">長按防抖半徑</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半徑內時持續傳送初始位置，以減少全螢幕長按抖動；設為 0 則關閉。</string>
     <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">多指鍵盤快捷手勢</string>
@@ -693,7 +698,7 @@
     <string name="summary_screen_offset_y">把已對齊的串流畫面向上或向下移動。</string>
     <string name="category_crown_features">Crown</string>
     <string name="title_crown_super_features">啟用 Crown 設定檔</string>
-    <string name="summary_crown_super_features">把螢幕按鍵、快捷動作、觸控模式和回饋設定作為命名設定檔整套切換。</string>
+    <string name="summary_crown_super_features">虛擬螢幕按鍵解決方案。把螢幕按鍵、快捷動作、觸控模式和振動回饋設定作為命名設定檔整套切換。</string>
     <string name="title_use_external_display">把串流傳送到外接顯示器</string>
     <string name="summary_use_external_display">連接第二個顯示器時，在外接顯示器而不是本機螢幕上顯示串流。</string>
     <string name="title_background_image_api">自訂背景網址</string>

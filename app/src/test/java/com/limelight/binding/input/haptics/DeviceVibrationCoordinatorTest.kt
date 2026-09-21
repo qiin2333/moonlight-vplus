@@ -86,10 +86,16 @@ class DeviceVibrationCoordinatorTest {
         coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
         assertTrue(gameWriteStarted.await(2, TimeUnit.SECONDS))
 
-        assertFalse(coordinator.claimForAudio())
+        assertEquals(
+            DeviceVibrationCoordinator.AudioClaimResult.OWNED_NOT_READY,
+            coordinator.claimForAudio()
+        )
         releaseGameWrite.countDown()
         executor.submit {}.get(2, TimeUnit.SECONDS)
-        assertTrue(coordinator.claimForAudio())
+        assertEquals(
+            DeviceVibrationCoordinator.AudioClaimResult.OWNED_READY,
+            coordinator.claimForAudio()
+        )
 
         coordinator.stop()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
@@ -120,6 +126,42 @@ class DeviceVibrationCoordinatorTest {
 
         coordinator.stop()
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun touchHapticPreemptsAudioAndRestoresAudioAfterPulse() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock)
+        var preemptions = 0
+        var restorations = 0
+        coordinator.setAudioTouchCallbacks(
+            onPreemptRequested = { preemptions++; true },
+            onFinished = { restorations++ }
+        )
+
+        try {
+            coordinator.claimForAudio()
+            coordinator.playTouchHaptic(2_000, 2_000, 50)
+            await { vibrations.size == 1 }
+            assertEquals(Vibration(7, 50), vibrations.last())
+            assertEquals(1, preemptions)
+            assertEquals(
+                DeviceVibrationCoordinator.AudioClaimResult.REJECTED,
+                coordinator.claimForAudio()
+            )
+
+            clock.advance(50)
+            await { restorations == 1 }
+            assertEquals(
+                DeviceVibrationCoordinator.AudioClaimResult.OWNED_READY,
+                coordinator.claimForAudio()
+            )
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
     }
 
     @Test
@@ -395,7 +437,10 @@ class DeviceVibrationCoordinatorTest {
             await { vibrations.size == 1 }
             executor.submit {}.get(2, TimeUnit.SECONDS)
             if (audio) {
-                assertTrue(coordinator.claimForAudio())
+                assertEquals(
+                    DeviceVibrationCoordinator.AudioClaimResult.OWNED_READY,
+                    coordinator.claimForAudio()
+                )
             } else {
                 coordinator.playTouchHaptic(2_000, 2_000, 50)
                 await { vibrations.size == 2 }

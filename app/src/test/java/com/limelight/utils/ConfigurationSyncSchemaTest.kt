@@ -80,13 +80,21 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
-    fun microphoneButtonSettingsArePortable() {
+    fun microphoneSettingsKeepPolicyPortableAndLastHostStateLocal() {
         listOf(
             MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
-            MicrophoneButtonPreferences.KEY_PRESET_POSITION
+            MicrophoneButtonPreferences.KEY_PRESET_POSITION,
+            PreferenceConfiguration.MIC_INITIAL_STATE_PREF_STRING,
         ).forEach { key ->
             assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }
+        assertFalse(
+            "Per-host microphone last state must stay local",
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                "microphone_initial_state",
+                "host_test",
+            ),
+        )
     }
 
     @Test

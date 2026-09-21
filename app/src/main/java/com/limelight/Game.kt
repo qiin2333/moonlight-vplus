@@ -190,15 +190,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var usbForwardingCreationPending = false
 
 
-    @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
     fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
         if (!connected) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
-            if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
+            if (!previousCleanup.isDone || previousCleanup.isFailed) {
                 if (!usbForwardingCreationPending) {
                     usbForwardingCreationPending = true
-                    previousCleanup.whenComplete { _, error ->
+                    previousCleanup.whenComplete { error ->
                         runOnUiThread {
                             usbForwardingCreationPending = false
                             if (!isDestroyed && connected) {
@@ -520,6 +519,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         audioVibrationService = AudioVibrationService(this)
         audioVibrationService?.controllerHandler = controllerHandler
+        bindAudioHapticsTouchArbitration()
+        audioVibrationService?.detachSystemAudioHaptics = {
+            audioRenderer?.detachSystemAudioHaptics() == true
+        }
+        audioVibrationService?.attachSystemAudioHaptics = {
+            audioRenderer?.attachSystemAudioHaptics() == true
+        }
         audioVibrationService?.setSettings(
             prefConfig.enableAudioVibration,
             prefConfig.audioVibrationStrength,
@@ -1184,6 +1190,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     )
 
     private fun prepareConnection() {
+        audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
         runOnUiThread {
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
@@ -1212,6 +1219,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         performanceOverlayManager?.recordStreamStart()
 
         audioVibrationService?.controllerHandler = controllerHandler
+        bindAudioHapticsTouchArbitration()
 
         if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) {
             bindUsbDriverService()
@@ -1257,6 +1265,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         if (audioVibrationService != null) {
             updateAudioHapticsRuntimeEnabled(true)
+            if (connected) audioVibrationService?.resumeAfterForeground()
         }
         KeyboardAccessibilityService.setIntercepting(true)
         val service = KeyboardAccessibilityService.instance
@@ -1647,6 +1656,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
         val featureEnabled = foreground && prefConfig.enableAudioVibration
         MoonBridge.setAudioHapticsOutputEnabled(featureEnabled)
+    }
+
+    private fun bindAudioHapticsTouchArbitration() {
+        val service = audioVibrationService ?: return
+        if (!::controllerHandler.isInitialized) return
+        controllerHandler.setDeviceTouchAudioCallbacks(
+            onPreemptRequested = service::preemptDeviceOutputForTouch,
+            onFinished = service::resumeDeviceOutputAfterTouch,
+        )
+    }
+
+    internal fun stopAudioHapticsForStream() {
+        audioVibrationService?.stop()
     }
 
     /**

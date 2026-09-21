@@ -129,7 +129,10 @@ class GameRumblePipelineTest {
 
     @Test fun audioOwnershipRestoresTheLatestRenderedGameLevel() = Rig().use { r ->
         r.host(0f, 1f)
-        assertTrue(r.device.claimForAudio())
+        assertEquals(
+            DeviceVibrationCoordinator.AudioClaimResult.OWNED_READY,
+            r.device.claimForAudio()
+        )
         r.flush()
         val writes = r.deviceWrites.size
         r.advance(250)

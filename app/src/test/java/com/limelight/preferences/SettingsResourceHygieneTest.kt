@@ -74,6 +74,7 @@ class SettingsResourceHygieneTest {
             "float_ball_action_names",
             "hdr_mode_entries",
             "mic_menu_action_mode_entries",
+            "mic_initial_state_entries",
             "native_mouse_mode_preset_names",
             "video_frame_pacing_names",
             "screen_position_names",
@@ -163,6 +164,7 @@ class SettingsResourceHygieneTest {
             ),
             "category_microphone_settings" to setOf(
                 "checkbox_enable_mic",
+                "list_mic_initial_state",
                 "list_mic_menu_action_mode",
                 "checkbox_show_mic_button",
                 "list_mic_button_position",

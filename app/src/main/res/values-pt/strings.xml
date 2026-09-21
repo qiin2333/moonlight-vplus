@@ -314,8 +314,13 @@
     <string name="summary_checkbox_enable_spatializer">Ativa experiência de áudio 3D imersiva usando o espacializador do Android. Requer Android 13+ e dispositivo de saída de áudio compatível.</string>
     <string name="title_checkbox_control_only">Modo somente controle</string>
     <string name="summary_checkbox_control_only">Estabelecer apenas conexão de controle sem streams de vídeo e áudio. Útil para controle de entrada remoto apenas.</string>
-    <string name="title_checkbox_enable_mic">Ativar redirecionamento de microfone</string>
-    <string name="summary_checkbox_enable_mic">Redirecionar o microfone do dispositivo para o computador host para chat de voz e comunicação.</string>
+    <string name="title_checkbox_enable_mic">Ativar microfone</string>
+    <string name="summary_checkbox_enable_mic">Enviar o áudio do microfone deste dispositivo para o host. Requer o Sunshine Foundation 20260117 ou posterior.</string>
+    <string name="title_list_mic_initial_state">Estado inicial do microfone</string>
+    <string name="summary_list_mic_initial_state">Escolha o estado do microfone ao iniciar cada transmissão.</string>
+    <string name="mic_initial_state_off">Desligado</string>
+    <string name="mic_initial_state_on">Ligado</string>
+    <string name="mic_initial_state_follow_last">Seguir o último estado</string>
     <string name="title_seekbar_mic_bitrate">Taxa de bits do microfone</string>
     <string name="summary_seekbar_mic_bitrate">Ajustar a qualidade de áudio do redirecionamento de microfone.</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
@@ -456,7 +461,7 @@
     <!-- Crown features -->
     <string name="category_crown_features">Área de recursos Crown</string>
     <string name="title_crown_super_features">Super recursos Crown</string>
-    <string name="summary_crown_super_features">Botões personalizados e configurações durante streaming, salvos em configurações personalizadas para troca rápida</string>
+    <string name="summary_crown_super_features">Uma solução de botões virtuais na tela. Alterne os botões na tela, as ações rápidas, o modo de toque e as configurações de vibração como perfis nomeados.</string>
     <string name="title_export_super_config">Exportar configuração</string>
     <string name="summary_export_super_config">Exportar arquivo de configuração de botões personalizados e configurações de streaming</string>
     <string name="title_import_super_config">Importar configuração</string>
