@@ -115,7 +115,12 @@ internal class DeviceVibrationCoordinator(
                 amplitude = SingleMotorRumbleFold.amplitude(lowFrequency, highFrequency),
                 durationMs = duration,
                 generation = currentGeneration,
-                sequence = ++outputSequence
+                sequence = ++outputSequence,
+                // Touch feedback is a discrete edge, not a continuously refreshed game-rumble
+                // level. It must not inherit the 250 ms pacing used for long-running effects.
+                // The same single worker and latest-wins slot still serialize vendor calls and
+                // keep a blocked vibrator from creating an unbounded queue.
+                urgent = true
             )
             completion = Runnable { finishTouchHaptic(epoch) }
             touchCompletion = completion
