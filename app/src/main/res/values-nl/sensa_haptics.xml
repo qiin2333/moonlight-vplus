@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Trillingssterkte</string>
     <string name="title_test_experimental_haptics">Linker / rechter trilling testen</string>
     <string name="summary_test_experimental_haptics">Lokale test: links, dan rechts. Geen spel nodig.</string>
-    <string name="summary_sensa_haptics_strength">Kishi XL-sterkte: 0% schakelt trilling uit, 100% is het maximum.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL-sterkte: 0% schakelt trilling uit, 100% is het maximum.</string>
     <string name="haptics_test_unavailable">Sluit een ondersteunde USB-controller aan. Vereist Android 8 of nieuwer.</string>
     <string name="haptics_test_connecting">Verbinden… Sta USB-toegang toe.</string>
     <string name="haptics_test_running">Test: links, dan rechts…</string>

@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">هێزی لەرینەوە</string>
     <string name="title_test_experimental_haptics">تاقیکردنەوەی لەرینەوەی چەپ / ڕاست</string>
     <string name="summary_test_experimental_haptics">تاقیکردنەوەی ناوخۆیی: چەپ، پاشان ڕاست. پێویستی بە یاری نییە.</string>
-    <string name="summary_sensa_haptics_strength">هێزی Kishi XL: 0% بێدەنگە، 100% زۆرترینە.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">هێزی Kishi XL: 0% بێدەنگە، 100% زۆرترینە.</string>
     <string name="haptics_test_unavailable">کۆنترۆڵەرێکی USB پشتگیریکراو ببەستەوە. Android 8 یان نوێتر پێویستە.</string>
     <string name="haptics_test_connecting">پەیوەندی دەبەسترێت… ڕێگە بە دەستگەیشتنی USB بدە.</string>
     <string name="haptics_test_running">تاقیکردنەوە: چەپ، پاشان ڕاست…</string>

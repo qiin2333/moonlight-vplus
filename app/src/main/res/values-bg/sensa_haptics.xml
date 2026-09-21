@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Сила на вибрацията</string>
     <string name="title_test_experimental_haptics">Тест на лява / дясна вибрация</string>
     <string name="summary_test_experimental_haptics">Локален тест: ляво, после дясно. Не изисква игра.</string>
-    <string name="summary_sensa_haptics_strength">Сила за Kishi XL: 0% изключва вибрацията, 100% е максимумът.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Сила за Kishi XL: 0% изключва вибрацията, 100% е максимумът.</string>
     <string name="haptics_test_unavailable">Свържете поддържан USB контролер. Изисква Android 8 или по-нова версия.</string>
     <string name="haptics_test_connecting">Свързване… Разрешете USB достъпа.</string>
     <string name="haptics_test_running">Тест: ляво, после дясно…</string>

@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Siła wibracji</string>
     <string name="title_test_experimental_haptics">Test wibracji lewej / prawej</string>
     <string name="summary_test_experimental_haptics">Test lokalny: lewa, potem prawa strona. Nie wymaga gry.</string>
-    <string name="summary_sensa_haptics_strength">Siła Kishi XL: 0% wyłącza wibracje, 100% to maksimum.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Siła Kishi XL: 0% wyłącza wibracje, 100% to maksimum.</string>
     <string name="haptics_test_unavailable">Podłącz obsługiwany kontroler USB. Wymagany Android 8 lub nowszy.</string>
     <string name="haptics_test_connecting">Łączenie… Zezwól na dostęp USB.</string>
     <string name="haptics_test_running">Test: lewa, potem prawa strona…</string>

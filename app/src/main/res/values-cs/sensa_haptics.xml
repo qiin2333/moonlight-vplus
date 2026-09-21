@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Síla vibrací</string>
     <string name="title_test_experimental_haptics">Test vibrací vlevo / vpravo</string>
     <string name="summary_test_experimental_haptics">Místní test: vlevo, pak vpravo. Nevyžaduje hru.</string>
-    <string name="summary_sensa_haptics_strength">Síla pro Kishi XL: 0% vypne vibrace, 100% je maximum.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Síla pro Kishi XL: 0% vypne vibrace, 100% je maximum.</string>
     <string name="haptics_test_unavailable">Připojte podporovaný USB ovladač. Vyžaduje Android 8 nebo novější.</string>
     <string name="haptics_test_connecting">Připojování… Povolte přístup přes USB.</string>
     <string name="haptics_test_running">Test: vlevo, pak vpravo…</string>

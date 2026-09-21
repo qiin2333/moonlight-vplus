@@ -286,7 +286,7 @@
     <string name="title_test_experimental_haptics">Проверить вибрацию слева / справа</string>
     <string name="summary_test_experimental_haptics">Локальный тест: слева, затем справа. Игра и подключение к хосту не нужны.</string>
     <string name="title_sensa_haptics_strength">Сила вибрации</string>
-    <string name="summary_sensa_haptics_strength">Сила вибрации Kishi XL в трансляции и тесте каналов. 0% отключает вибрацию, 100% — полное усиление.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Сила вибрации Kishi XL в трансляции и тесте каналов. 0% отключает вибрацию, 100% — полное усиление.</string>
     <string name="haptics_test_unavailable">Подключите поддерживаемый USB-контроллер. Для теста нужен Android 8 или новее.</string>
     <string name="haptics_test_connecting">Подключение… Разрешите доступ к USB, если появится запрос.</string>
     <string name="haptics_test_running">Проверка: слева, затем справа…</string>

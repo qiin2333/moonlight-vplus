@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">振动强度</string>
     <string name="title_test_experimental_haptics">测试左侧 / 右侧振动</string>
     <string name="summary_test_experimental_haptics">本地测试：先左后右。无需运行游戏。</string>
-    <string name="summary_sensa_haptics_strength">Kishi XL 强度：0% 关闭振动，100% 为最大强度。</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL 强度：0% 关闭振动，100% 为最大强度。</string>
     <string name="haptics_test_unavailable">请连接支持的 USB 手柄。需要 Android 8 或更高版本。</string>
     <string name="haptics_test_connecting">正在连接… 请允许 USB 访问。</string>
     <string name="haptics_test_running">正在测试：先左后右…</string>

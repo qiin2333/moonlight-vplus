@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Cường độ rung</string>
     <string name="title_test_experimental_haptics">Kiểm tra rung trái / phải</string>
     <string name="summary_test_experimental_haptics">Kiểm tra cục bộ: trái, rồi phải. Không cần trò chơi.</string>
-    <string name="summary_sensa_haptics_strength">Cường độ Kishi XL: 0% tắt rung, 100% là tối đa.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Cường độ Kishi XL: 0% tắt rung, 100% là tối đa.</string>
     <string name="haptics_test_unavailable">Kết nối bộ điều khiển USB được hỗ trợ. Yêu cầu Android 8 trở lên.</string>
     <string name="haptics_test_connecting">Đang kết nối… Cho phép truy cập USB.</string>
     <string name="haptics_test_running">Đang kiểm tra: trái, rồi phải…</string>

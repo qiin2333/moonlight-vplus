@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Vibrationsstärke</string>
     <string name="title_test_experimental_haptics">Vibration links / rechts testen</string>
     <string name="summary_test_experimental_haptics">Lokaler Test: links, dann rechts. Kein Spiel erforderlich.</string>
-    <string name="summary_sensa_haptics_strength">Stärke für Kishi XL: 0% schaltet Vibration aus, 100% ist das Maximum.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Stärke für Kishi XL: 0% schaltet Vibration aus, 100% ist das Maximum.</string>
     <string name="haptics_test_unavailable">Unterstützten USB-Controller anschließen. Android 8 oder neuer erforderlich.</string>
     <string name="haptics_test_connecting">Verbindung wird hergestellt… USB-Zugriff erlauben.</string>
     <string name="haptics_test_running">Test: links, dann rechts…</string>

@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">振動の強さ</string>
     <string name="title_test_experimental_haptics">左 / 右の振動をテスト</string>
     <string name="summary_test_experimental_haptics">ローカルテスト：左、次に右。ゲームは不要です。</string>
-    <string name="summary_sensa_haptics_strength">Kishi XLの強さ：0%で振動なし、100%で最大。</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XLの強さ：0%で振動なし、100%で最大。</string>
     <string name="haptics_test_unavailable">対応USBコントローラーを接続してください。Android 8以降が必要です。</string>
     <string name="haptics_test_connecting">接続中… USBアクセスを許可してください。</string>
     <string name="haptics_test_running">テスト中：左、次に右…</string>

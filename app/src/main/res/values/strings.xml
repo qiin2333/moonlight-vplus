@@ -2273,7 +2273,7 @@ Tap again to replace it.</string>
     <string name="title_test_experimental_haptics">Test left / right vibration</string>
     <string name="summary_test_experimental_haptics">Local test: left, then right. Does not require a game or streaming host.</string>
     <string name="title_sensa_haptics_strength">Vibration strength</string>
-    <string name="summary_sensa_haptics_strength">Strength for Kishi XL streaming and the channel test. 0% mutes vibration; 100% uses full gain.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Strength for Kishi XL streaming and the channel test. 0% mutes vibration; 100% uses full gain.</string>
     <string name="haptics_test_unavailable">Connect a supported USB controller. This test requires Android 8 or newer.</string>
     <string name="haptics_test_connecting">Connecting… Allow USB access if prompted.</string>
     <string name="haptics_test_running">Testing left, then right…</string>

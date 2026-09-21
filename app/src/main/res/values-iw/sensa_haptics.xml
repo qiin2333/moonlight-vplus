@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">עוצמת רטט</string>
     <string name="title_test_experimental_haptics">בדיקת רטט שמאל / ימין</string>
     <string name="summary_test_experimental_haptics">בדיקה מקומית: שמאל, ואז ימין. אין צורך במשחק.</string>
-    <string name="summary_sensa_haptics_strength">עוצמת Kishi XL: ‏0% מכבה רטט, 100% היא העוצמה המרבית.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">עוצמת Kishi XL: ‏0% מכבה רטט, 100% היא העוצמה המרבית.</string>
     <string name="haptics_test_unavailable">חבר בקר USB נתמך. נדרש Android 8 ואילך.</string>
     <string name="haptics_test_connecting">מתחבר… יש לאשר גישת USB.</string>
     <string name="haptics_test_running">בודק: שמאל, ואז ימין…</string>

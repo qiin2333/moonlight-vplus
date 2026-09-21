@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Rezgés erőssége</string>
     <string name="title_test_experimental_haptics">Bal / jobb rezgés tesztelése</string>
     <string name="summary_test_experimental_haptics">Helyi teszt: bal, majd jobb. Nem igényel játékot.</string>
-    <string name="summary_sensa_haptics_strength">Kishi XL erősség: 0% kikapcsolja a rezgést, 100% a maximum.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL erősség: 0% kikapcsolja a rezgést, 100% a maximum.</string>
     <string name="haptics_test_unavailable">Csatlakoztass támogatott USB-vezérlőt. Android 8 vagy újabb szükséges.</string>
     <string name="haptics_test_connecting">Csatlakozás… Engedélyezd az USB-hozzáférést.</string>
     <string name="haptics_test_running">Teszt: bal, majd jobb…</string>

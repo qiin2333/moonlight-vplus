@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">진동 강도</string>
     <string name="title_test_experimental_haptics">왼쪽 / 오른쪽 진동 테스트</string>
     <string name="summary_test_experimental_haptics">로컬 테스트: 왼쪽, 다음 오른쪽. 게임이 필요하지 않습니다.</string>
-    <string name="summary_sensa_haptics_strength">Kishi XL 강도: 0%는 진동 끄기, 100%는 최대입니다.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL 강도: 0%는 진동 끄기, 100%는 최대입니다.</string>
     <string name="haptics_test_unavailable">지원되는 USB 컨트롤러를 연결하세요. Android 8 이상이 필요합니다.</string>
     <string name="haptics_test_connecting">연결 중… USB 접근을 허용하세요.</string>
     <string name="haptics_test_running">테스트 중: 왼쪽, 다음 오른쪽…</string>

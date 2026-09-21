@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Ένταση δόνησης</string>
     <string name="title_test_experimental_haptics">Δοκιμή δόνησης αριστερά / δεξιά</string>
     <string name="summary_test_experimental_haptics">Τοπική δοκιμή: αριστερά, μετά δεξιά. Δεν απαιτεί παιχνίδι.</string>
-    <string name="summary_sensa_haptics_strength">Ένταση Kishi XL: 0% απενεργοποιεί τη δόνηση, 100% είναι το μέγιστο.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Ένταση Kishi XL: 0% απενεργοποιεί τη δόνηση, 100% είναι το μέγιστο.</string>
     <string name="haptics_test_unavailable">Συνδέστε υποστηριζόμενο χειριστήριο USB. Απαιτεί Android 8 ή νεότερο.</string>
     <string name="haptics_test_connecting">Σύνδεση… Επιτρέψτε την πρόσβαση USB.</string>
     <string name="haptics_test_running">Δοκιμή: αριστερά, μετά δεξιά…</string>

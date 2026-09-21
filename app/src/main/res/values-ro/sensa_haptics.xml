@@ -7,7 +7,7 @@
     <string name="title_sensa_haptics_strength">Intensitatea vibrațiilor</string>
     <string name="title_test_experimental_haptics">Testează vibrația stânga / dreapta</string>
     <string name="summary_test_experimental_haptics">Test local: stânga, apoi dreapta. Nu necesită un joc.</string>
-    <string name="summary_sensa_haptics_strength">Intensitate Kishi XL: 0% oprește vibrația, 100% este maximul.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Intensitate Kishi XL: 0% oprește vibrația, 100% este maximul.</string>
     <string name="haptics_test_unavailable">Conectează un controler USB compatibil. Necesită Android 8 sau mai nou.</string>
     <string name="haptics_test_connecting">Conectare… Permite accesul USB.</string>
     <string name="haptics_test_running">Testare: stânga, apoi dreapta…</string>
