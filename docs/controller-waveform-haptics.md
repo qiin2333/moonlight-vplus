@@ -6,7 +6,7 @@ Controller discovery runs automatically whenever a USB host is available, includ
 when Moonlight's ordinary USB input driver is disabled. There is no brand enable
 switch and no need to choose a controller model.
 
-Each recognized connection appears in the stream menu audio-haptics card with its
+Each recognized connection appears in the stream menu Waveform Haptics card with its
 own state: needs validation, needs USB permission, needs a unique player association,
 busy, initializing, ready, failed, or unavailable. Unknown devices retain ordinary
 vibration; this does not assert that their hardware lacks waveform support.
