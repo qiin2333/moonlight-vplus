@@ -141,8 +141,7 @@ class MicrophoneManager(
             }
         } else if (connection != null) {
             if (initializeMicrophoneStream()) {
-                updateMicrophoneButtonState()
-                showMessage(context.getString(R.string.mic_disabled))
+                resumeMicrophone()
             } else {
                 showMessage("麦克风状态切换: 初始化失败")
             }

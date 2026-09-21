@@ -235,29 +235,37 @@ class ConnectionCallbackHandler(private val game: Game) {
         }
 
         // 初始化麦克风管理器
-        game.microphoneManager = MicrophoneManager(
-            game,
-            game.conn,
-            game.prefConfig.enableMic,
-            game.computerUuid,
-        )
-        game.microphoneManager?.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
-            override fun onMicrophoneStateChanged(isActive: Boolean) {
-                LimeLog.info("麦克风状态改变: " + if (isActive) "激活" else "暂停")
-            }
-
-            override fun onPermissionRequested() {
-                LimeLog.info("麦克风权限请求已发送")
-            }
-        })
-
-        // Apply the initial microphone state only after the handshake has negotiated the
-        // microphone port. The manager remains idle for the default-off path.
-        game.runOnUiThread {
-            game.microphoneManager?.setMicrophoneButton(game.micButton)
-            game.microphoneManager?.applyInitialState(
-                MicrophoneInitialState.fromPreferenceValue(game.prefConfig.micInitialState)
+        val connection = game.conn
+        if (connection != null) {
+            val microphoneManager = MicrophoneManager(
+                game,
+                connection,
+                game.prefConfig.enableMic,
+                game.computerUuid,
             )
+            game.microphoneManager = microphoneManager
+            microphoneManager.setStateListener(object : MicrophoneManager.MicrophoneStateListener {
+                override fun onMicrophoneStateChanged(isActive: Boolean) {
+                    LimeLog.info("麦克风状态改变: " + if (isActive) "激活" else "暂停")
+                }
+
+                override fun onPermissionRequested() {
+                    LimeLog.info("麦克风权限请求已发送")
+                }
+            })
+
+            // Apply the initial microphone state only after the handshake has negotiated the
+            // microphone port. The manager remains idle for the default-off path.
+            game.runOnUiThread {
+                if (!game.connected || game.conn !== connection || game.microphoneManager !== microphoneManager) {
+                    return@runOnUiThread
+                }
+
+                microphoneManager.setMicrophoneButton(game.micButton)
+                microphoneManager.applyInitialState(
+                    MicrophoneInitialState.fromPreferenceValue(game.prefConfig.micInitialState)
+                )
+            }
         }
 
         // 初始化串流时长统计

@@ -3389,6 +3389,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "list_languages",
             MicrophoneButtonPreferences.KEY_PRESET_POSITION,
             "list_mic_icon_color",
+            PreferenceConfiguration.MIC_INITIAL_STATE_PREF_STRING,
             "list_mic_volume_processing_mode",
             "list_native_mouse_mode_preset",
             "list_perf_overlay_orientation",
