@@ -1040,16 +1040,16 @@ class PerformanceOverlayManager(
             .append(" × ").append(perfInfo.initialHeight).append("\n")
         resolutionInfo.append(activity.getString(R.string.perf_host_resolution)).append(hostWidth)
             .append(" × ").append(hostHeight).append("\n")
-        resolutionInfo.append(activity.getString(R.string.perf_scale_factor)).append(String.format("%.2f", scaleFactor))
+        resolutionInfo.append(activity.getString(R.string.perf_scale_factor)).append(String.format(Locale.getDefault(), "%.2f", scaleFactor))
             .append(" (").append(scalePercent).append("%)\n")
 
         val deviceRefreshRate = UiHelper.getDeviceRefreshRate(activity)
         resolutionInfo.append(activity.getString(R.string.perf_target_fps)).append(prefConfig.fps).append(" FPS\n")
-        resolutionInfo.append(activity.getString(R.string.perf_current_fps)).append(String.format("%.0f", perfInfo.totalFps)).append(" FPS\n")
-        resolutionInfo.append(activity.getString(R.string.perf_device_refresh)).append(String.format("%.0f", deviceRefreshRate)).append(" Hz\n")
+        resolutionInfo.append(activity.getString(R.string.perf_current_fps)).append(String.format(Locale.getDefault(), "%.0f", perfInfo.totalFps)).append(" FPS\n")
+        resolutionInfo.append(activity.getString(R.string.perf_device_refresh)).append(String.format(Locale.getDefault(), "%.0f", deviceRefreshRate)).append(" Hz\n")
 
         if (actualDisplayRefreshRate > 0) {
-            resolutionInfo.append(activity.getString(R.string.perf_actual_refresh)).append(String.format("%.2f", actualDisplayRefreshRate)).append(" Hz\n")
+            resolutionInfo.append(activity.getString(R.string.perf_actual_refresh)).append(String.format(Locale.getDefault(), "%.2f", actualDisplayRefreshRate)).append(" Hz\n")
         }
 
         showInfoDialog(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString())
