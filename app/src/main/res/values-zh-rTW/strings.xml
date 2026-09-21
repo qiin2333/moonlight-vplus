@@ -948,10 +948,11 @@
     <string name="waveform_status_initializing">正在建立波形通道…</string>
     <string name="waveform_status_busy">波形通道已被占用，目前維持一般震動。</string>
     <string name="waveform_status_failed">波形輸出失敗，已回退至一般震動；重新連接可重試。</string>
-    <string name="waveform_status_unavailable">未辨識到可用的波形通道，目前維持一般震動。</string>
+    <string name="waveform_status_disconnected">控制器已斷線，目前維持一般震動。</string>
     <string name="waveform_experimental">實驗性</string>
     <string name="waveform_player">玩家 %1$d</string>
     <string name="waveform_test_channels">測試左右觸覺</string>
+    <string name="waveform_card_title">波形觸覺</string>
     <string name="waveform_test_cancel">停止觸覺測試</string>
     <string name="title_host_gamepad_selection">主機虛擬控制器</string>
     <string name="summary_host_gamepad_selection">選擇向 Sunshine 請求的控制器類型，對所有玩家生效。自動模式會為已辨識的波形控制器或螢幕觸控板請求 DS5。變更後請重新串流。</string>

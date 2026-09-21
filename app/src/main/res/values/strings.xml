@@ -2255,10 +2255,11 @@ Tap again to replace it.</string>
     <string name="waveform_status_initializing">Opening waveform channel…</string>
     <string name="waveform_status_busy">Waveform channel is in use. Using ordinary vibration.</string>
     <string name="waveform_status_failed">Waveform output failed. Using ordinary vibration; reconnect to retry.</string>
-    <string name="waveform_status_unavailable">No usable waveform channel identified. Ordinary vibration remains available.</string>
+    <string name="waveform_status_disconnected">Controller disconnected. Ordinary vibration remains available.</string>
     <string name="waveform_experimental">Experimental</string>
     <string name="waveform_player">Player %1$d</string>
     <string name="waveform_test_channels">Test left / right haptics</string>
+    <string name="waveform_card_title">Waveform haptics</string>
     <string name="waveform_test_cancel">Stop haptic test</string>
     <string name="title_host_gamepad_selection">Host virtual controller</string>
     <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>

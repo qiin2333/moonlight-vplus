@@ -249,6 +249,7 @@ class GameMenu(
     private val actionExecutor = StreamActionExecutor(game, { conn }, handler)
     private val bitrateCardController = BitrateCardController(game, conn)
     private val audioHapticsCardController = AudioHapticsCardController(game)
+    private val waveformHapticsCardController = WaveformHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
     private val touchPointerSensitivityController = TouchPointerSensitivityController(game)
     private val renderingProfile = GameMenuRenderingProfile.from(game)
@@ -1132,6 +1133,7 @@ class GameMenu(
                 visibleCards = readVisibleCards(),
                 bitrate = bitrateCardController.snapshot(),
                 audioHaptics = audioHapticsCardController.snapshot(),
+                waveformHaptics = waveformHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
                 touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
@@ -1148,6 +1150,9 @@ class GameMenu(
         }
         audioHapticsCardController.start { audioHaptics ->
             composeUiState?.let { it.value = it.value.copy(audioHaptics = audioHaptics) }
+        }
+        waveformHapticsCardController.start { waveformHaptics ->
+            composeUiState?.let { it.value = it.value.copy(waveformHaptics = waveformHaptics) }
         }
         gyroCardController.start { gyro ->
             composeUiState?.let { it.value = it.value.copy(gyro = gyro) }
@@ -1187,7 +1192,7 @@ class GameMenu(
             onAudioHapticsMode = audioHapticsCardController::setMode,
             onAudioHapticsScene = audioHapticsCardController::setScene,
             onAudioHapticsReset = audioHapticsCardController::resetTuning,
-            onWaveformTest = audioHapticsCardController::toggleWaveformTest,
+            onWaveformTest = waveformHapticsCardController::toggleWaveformTest,
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,
             onGyroActivationKey = {
@@ -1306,6 +1311,7 @@ class GameMenu(
             guideDismissController.clear()
             bitrateCardController.dispose()
             audioHapticsCardController.dispose()
+            waveformHapticsCardController.dispose()
             gyroCardController.dispose()
             touchPointerSensitivityController.dispose()
             menuStack.clear()
