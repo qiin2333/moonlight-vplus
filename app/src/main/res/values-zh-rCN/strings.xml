@@ -779,7 +779,7 @@
     <!-- Crown feature area -->
     <string name="category_crown_features">王冠</string>
     <string name="title_crown_super_features">启用 Crown 配置</string>
-    <string name="summary_crown_super_features">把屏幕按键、快捷动作、触控模式和反馈设置作为命名配置整套切换。</string>
+    <string name="summary_crown_super_features">虚拟屏幕按键解决方案。把屏幕按键、快捷动作、触控模式和振动反馈设置作为命名配置整套切换。</string>
     <string name="title_export_super_config">导出配置</string>
     <string name="summary_export_super_config">导出自定义按钮的和串流内设置的配置文件。</string>
     <string name="title_import_super_config">导入配置</string>
@@ -805,7 +805,7 @@
     <string name="game_menu_configure_crown_function">返回键打开王冠</string>
     <string name="crown_control_visibility_subtitle">临时收起或显示屏幕按键</string>
     <string name="crown_control_touch_subtitle">暂停或恢复当前档案的触控输入</string>
-    <string name="crown_control_profiles_subtitle">切换已保存的按键、触控和反馈档案</string>
+    <string name="crown_control_profiles_subtitle">切换当前按键、触控、振动反馈配置</string>
     <string name="crown_control_layout_subtitle">移动和调整屏幕按键</string>
     <string name="crown_control_back_key_subtitle">用返回键快速打开王冠面板</string>
     <string name="toast_elements_visible">按键已显示</string>
@@ -1303,7 +1303,7 @@
     <string name="layout_page_analog_stick_text_4b292">字体按下颜色</string>
     <string name="page_config_section_profile">档案</string>
     <string name="page_config_section_touch">触控</string>
-    <string name="page_config_section_feedback">反馈</string>
+    <string name="page_config_section_feedback">振动反馈</string>
     <string name="crown_profile_name_title">档案名称</string>
     <string name="crown_profile_name_error">档案名称需为 1-10 个字符</string>
     <string name="layout_page_config_text_9eba2">当前档案</string>
@@ -1313,8 +1313,8 @@
     <string name="layout_page_device_text_mmo_true_text">仅鼠标移动</string>
     <string name="layout_page_device_text_mmo_false_text">鼠标移动+点击</string>
     <string name="layout_page_config_text_8ea81">多点触控</string>
-    <string name="layout_page_config_text_cd2c1">游戏反馈</string>
-    <string name="layout_page_config_text_f4651">按键反馈</string>
+    <string name="layout_page_config_text_cd2c1">手机同步振动</string>
+    <string name="layout_page_config_text_f4651">虚拟按键振动</string>
     <string name="layout_page_config_text_66ab5">新建</string>
     <string name="layout_page_config_text_df603">完成</string>
     <string name="layout_page_device_text_5f411">返回</string>
@@ -2035,7 +2035,7 @@
     <string name="feature_guide_quick_actions_title">快捷栏也要我教吗？</string>
     <string name="feature_guide_quick_actions_body">长按快捷按钮就能添加、移除或拖动排序。把常用操作摆好，下次可别再手忙脚乱啦。</string>
     <string name="feature_guide_crown_title">给你的配置戴个皇冠吧</string>
-    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和反馈设置都能存成皇冠配置。一键整套切换，这下杂鱼也不会弄乱啦。</string>
+    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和振动反馈设置都能存成皇冠配置。一键整套切换，这下杂鱼也不会弄乱啦。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">这次记住啦</string>
     <string name="feature_guide_skip">才不要看</string>

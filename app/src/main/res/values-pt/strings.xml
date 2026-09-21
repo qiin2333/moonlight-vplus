@@ -461,7 +461,7 @@
     <!-- Crown features -->
     <string name="category_crown_features">Área de recursos Crown</string>
     <string name="title_crown_super_features">Super recursos Crown</string>
-    <string name="summary_crown_super_features">Botões personalizados e configurações durante streaming, salvos em configurações personalizadas para troca rápida</string>
+    <string name="summary_crown_super_features">Uma solução de botões virtuais na tela. Alterne os botões na tela, as ações rápidas, o modo de toque e as configurações de vibração como perfis nomeados.</string>
     <string name="title_export_super_config">Exportar configuração</string>
     <string name="summary_export_super_config">Exportar arquivo de configuração de botões personalizados e configurações de streaming</string>
     <string name="title_import_super_config">Importar configuração</string>
