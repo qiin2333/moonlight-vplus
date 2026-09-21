@@ -871,7 +871,7 @@
     <!-- Crown feature area -->
     <string name="category_crown_features">Crown</string>
     <string name="title_crown_super_features">Enable Crown profiles</string>
-    <string name="summary_crown_super_features">Switch on-screen buttons, quick actions, touch mode, and feedback settings together as named profiles.</string>
+    <string name="summary_crown_super_features">A virtual on-screen button solution. Switch on-screen buttons, quick actions, touch mode, and vibration feedback settings together as named profiles.</string>
     <string name="title_export_super_config">Export Configuration</string>
     <string name="summary_export_super_config">Export custom button and streaming settings configuration file</string>
     <string name="title_import_super_config">Import Configuration</string>
@@ -1012,7 +1012,7 @@
     <string name="game_menu_configure_crown_function">Open Crown with Back</string>
     <string name="crown_control_visibility_subtitle">Keep the on-screen buttons out of the way</string>
     <string name="crown_control_touch_subtitle">Pause or resume touch input</string>
-    <string name="crown_control_profiles_subtitle">Switch saved button and touch profiles</string>
+    <string name="crown_control_profiles_subtitle">Switch the current button, touch, and vibration feedback profile</string>
     <string name="crown_control_layout_subtitle">Move and resize the on-screen buttons</string>
     <string name="crown_control_back_key_subtitle">Use Back to reopen this Crown panel</string>
     <string name="toast_elements_visible">Buttons shown</string>
@@ -1622,15 +1622,15 @@ Tap again to replace it.</string>
     <string name="layout_page_analog_stick_text_4b292">Font Pressed Color</string>
     <string name="page_config_section_profile">Profile</string>
     <string name="page_config_section_touch">Touch</string>
-    <string name="page_config_section_feedback">Feedback</string>
+    <string name="page_config_section_feedback">Vibration feedback</string>
     <string name="crown_profile_name_title">Profile Name</string>
     <string name="crown_profile_name_error">Profile name must be 1-10 characters</string>
     <string name="layout_page_config_text_9eba2">Current Profile</string>
     <string name="layout_page_config_text_83a23">Touch Input</string>
     <string name="layout_page_config_text_f4b7c">Touchpad</string>
     <string name="layout_page_config_text_8ea81">Multi-Touch</string>
-    <string name="layout_page_config_text_cd2c1">Game Rumble</string>
-    <string name="layout_page_config_text_f4651">Button Feedback</string>
+    <string name="layout_page_config_text_cd2c1">Device-synced vibration</string>
+    <string name="layout_page_config_text_f4651">Virtual button vibration</string>
     <string name="layout_page_config_text_66ab5">New</string>
     <string name="layout_page_config_text_df603">Done</string>
     <string name="layout_page_device_text_5f411">Back</string>
@@ -2128,7 +2128,7 @@ Tap again to replace it.</string>
     <string name="feature_guide_quick_actions_title">Need help with shortcuts too?</string>
     <string name="feature_guide_quick_actions_body">Press and hold a shortcut to add, remove, or rearrange it. Put your favorites in order so you don’t fumble next time.</string>
     <string name="feature_guide_crown_title">Give your setup a tiny Crown</string>
-    <string name="feature_guide_crown_body">Save controls, shortcuts, touch mode, and feedback as one Crown profile. Switch everything at once—even a little rookie can’t mess it up.</string>
+    <string name="feature_guide_crown_body">Save controls, shortcuts, touch mode, and vibration feedback as one Crown profile. Switch everything at once—even a little rookie can’t mess it up.</string>
     <string name="feature_guide_next">Teach me more</string>
     <string name="feature_guide_done">Got it this time!</string>
     <string name="feature_guide_skip">Nope, later</string>

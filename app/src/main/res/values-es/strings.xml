@@ -441,7 +441,7 @@
     <string name="summary_checkbox_enhanced_touch_on_which_side">Invertir zona de toque mejorada a la izquierda (predeterminado: en el lado derecho de la pantalla)</string>
     <string name="summary_checkbox_reverse_resolution">Intercambiar valores de ancho y alto para requisitos especiales de visualización</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
-    <string name="summary_crown_super_features">Botones y configuraciones personalizadas durante la transmisión, guardadas en configuraciones personalizadas para cambio rápido</string>
+    <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
     <string name="summary_custom_resolutions">Crear tus propias resoluciones personalizadas</string>
     <string name="summary_enable_analytics">Ayudar a mejorar la aplicación compartiendo estadísticas de uso anónimas</string>
     <string name="summary_enable_perf_overlay">Mostrar información de rendimiento de transmisión en tiempo real mientras transmites</string>

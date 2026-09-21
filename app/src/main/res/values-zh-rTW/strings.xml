@@ -554,7 +554,7 @@
     <string name="feature_guide_quick_actions_title">快捷列也要我教嗎？</string>
     <string name="feature_guide_quick_actions_body">長按快捷按鈕就能新增、移除或拖曳排序。把常用操作排好，下次可別再手忙腳亂啦。</string>
     <string name="feature_guide_crown_title">給你的設定戴個皇冠吧</string>
-    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
+    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和振動回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">這次記住啦</string>
     <string name="feature_guide_skip">才不要看</string>
@@ -698,7 +698,7 @@
     <string name="summary_screen_offset_y">把已對齊的串流畫面向上或向下移動。</string>
     <string name="category_crown_features">Crown</string>
     <string name="title_crown_super_features">啟用 Crown 設定檔</string>
-    <string name="summary_crown_super_features">把螢幕按鍵、快捷動作、觸控模式和回饋設定作為命名設定檔整套切換。</string>
+    <string name="summary_crown_super_features">虛擬螢幕按鍵解決方案。把螢幕按鍵、快捷動作、觸控模式和振動回饋設定作為命名設定檔整套切換。</string>
     <string name="title_use_external_display">把串流傳送到外接顯示器</string>
     <string name="summary_use_external_display">連接第二個顯示器時，在外接顯示器而不是本機螢幕上顯示串流。</string>
     <string name="title_background_image_api">自訂背景網址</string>

@@ -87,6 +87,9 @@ class ConnectionCallbackHandler(private val game: Game) {
             // Let the display go to sleep now
             game.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+            // Release both SDK and system audio-coupled phone-motor ownership.
+            game.stopAudioHapticsForStream()
+
             // Stop processing controller input
             game.controllerHandler?.stop()
 
@@ -294,6 +297,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         game.attemptedConnection = false
 
         game.cancelKeepAliveNotification()
+        game.stopAudioHapticsForStream()
 
         if (game.connecting || game.connected) {
             game.connecting = false

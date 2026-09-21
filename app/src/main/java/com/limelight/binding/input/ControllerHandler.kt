@@ -3731,10 +3731,15 @@ class ControllerHandler(
     fun playDeviceTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) =
         hapticsCoordinator.playDeviceTouchHaptic(lowFrequency, highFrequency, durationMs)
 
-    fun claimDeviceVibratorForAudio(): Boolean =
+    fun setDeviceTouchAudioCallbacks(
+        onPreemptRequested: (() -> Boolean)?,
+        onFinished: (() -> Unit)?
+    ) = hapticsCoordinator.setDeviceTouchAudioCallbacks(onPreemptRequested, onFinished)
+
+    internal fun claimDeviceVibratorForAudio(): DeviceVibrationCoordinator.AudioClaimResult =
         hapticsCoordinator.claimDeviceVibratorForAudio()
 
-    fun releaseDeviceVibratorFromAudio() =
+    internal fun releaseDeviceVibratorFromAudio() =
         hapticsCoordinator.releaseDeviceVibratorFromAudio()
 
     fun refreshAudioRumbleWatchdog() =

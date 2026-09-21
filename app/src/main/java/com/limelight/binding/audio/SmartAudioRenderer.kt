@@ -127,4 +127,16 @@ class SmartAudioRenderer(
     fun resumeProcessing() {
         (delegate as? AndroidAudioRenderer)?.resumeProcessing()
     }
+
+    fun detachSystemAudioHaptics(): Boolean = when (val current = delegate) {
+        is AndroidAudioRenderer -> current.detachSystemAudioHaptics()
+        is PcmPassthroughRenderer -> current.detachSystemAudioHaptics()
+        else -> false
+    }
+
+    fun attachSystemAudioHaptics(): Boolean = when (val current = delegate) {
+        is AndroidAudioRenderer -> current.attachSystemAudioHaptics()
+        is PcmPassthroughRenderer -> current.attachSystemAudioHaptics()
+        else -> false
+    }
 }
