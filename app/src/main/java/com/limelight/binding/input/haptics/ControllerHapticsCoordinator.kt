@@ -125,7 +125,8 @@ internal class ControllerHapticsCoordinator(
         onFinished: (() -> Unit)?
     ) = deviceVibrationCoordinator.setAudioTouchCallbacks(onPreemptRequested, onFinished)
 
-    fun claimDeviceVibratorForAudio(): Boolean = deviceVibrationCoordinator.claimForAudio()
+    fun claimDeviceVibratorForAudio(): DeviceVibrationCoordinator.AudioClaimResult =
+        deviceVibrationCoordinator.claimForAudio()
 
     fun releaseDeviceVibratorFromAudio() = deviceVibrationCoordinator.releaseFromAudio()
 

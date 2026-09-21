@@ -5,6 +5,7 @@ import android.os.SystemClock
 
 import com.limelight.LimeLog
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.haptics.DeviceVibrationCoordinator.AudioClaimResult
 import com.moonlight.haptics.HapticFrame
 import com.moonlight.haptics.android.AndroidHapticRenderer
 import com.moonlight.haptics.android.NativeHapticsSession
@@ -422,8 +423,16 @@ class AudioVibrationService(context: Context) {
                 deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
                 deviceVibratorOwner = null
             }
-            handler.claimDeviceVibratorForAudio().also { claimed ->
-                if (claimed) deviceVibratorOwner = handler
+            when (handler.claimDeviceVibratorForAudio()) {
+                AudioClaimResult.REJECTED -> false
+                AudioClaimResult.OWNED_NOT_READY -> {
+                    deviceVibratorOwner = handler
+                    false
+                }
+                AudioClaimResult.OWNED_READY -> {
+                    deviceVibratorOwner = handler
+                    true
+                }
             }
         }
 
@@ -435,7 +444,9 @@ class AudioVibrationService(context: Context) {
                 if (deviceVibratorOwner !== handler) {
                     deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
                     deviceVibratorOwner = null
-                    if (handler.claimDeviceVibratorForAudio()) deviceVibratorOwner = handler
+                    if (handler.claimDeviceVibratorForAudio() != AudioClaimResult.REJECTED) {
+                        deviceVibratorOwner = handler
+                    }
                 }
             } else {
                 deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
