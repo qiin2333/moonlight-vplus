@@ -3599,7 +3599,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                     if (hdrPref != null) {
                         hdrPref.isEnabled = false
                         hdrPref.isChecked = false
-                        hdrPref.summary = "Update the firmware on your NVIDIA SHIELD Android TV to enable HDR"
+                        hdrPref.summary = requireContext().getString(R.string.hdr_shield_update)
                     }
                     // 同时禁用 HDR 高亮度选项
                     if (hdrHighBrightnessPref != null) {

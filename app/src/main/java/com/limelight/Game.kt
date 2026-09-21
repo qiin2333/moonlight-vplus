@@ -598,7 +598,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             Dialog.displayDialog(
                 this, resources.getString(R.string.conn_error_title),
-                "This device or ROM doesn't support hardware accelerated H.264 playback.", true
+                this.getString(R.string.error_h264_unsupported), true
             )
             return
         }
@@ -892,10 +892,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                         MoonBridge.HDR_MODE_HDR10 -> "HDR10"
                         else -> "HDR"
                     }
-                    Toast.makeText(this, "Display mode does not support $requiredType", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, this.getString(R.string.error_display_hdr_format, requiredType), Toast.LENGTH_LONG).show()
                 }
             } else {
-                Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, this.getString(R.string.error_hdr_android_version), Toast.LENGTH_LONG).show()
             }
         }
 
@@ -1004,7 +1004,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 MoonBridge.HDR_MODE_HDR10_PLUS -> if (hdr10PlusRequested) "HDR10+" else "HDR10"
                 else -> "HDR10"
             }
-            Toast.makeText(this, "Decoder does not support $requiredProfile profile", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_decoder_profile, requiredProfile), Toast.LENGTH_LONG).show()
         }
 
         // The renderer is constructed before this final decoder gate so that common-c can
@@ -1013,10 +1013,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         decoderRenderer?.setHdr10PlusRequested(willStreamHdr && hdr10PlusRequested)
 
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
-            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_no_hevc_decoder), Toast.LENGTH_LONG).show()
         }
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && decoderRenderer?.isAv1Supported() != true) {
-            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_no_av1_decoder), Toast.LENGTH_LONG).show()
         }
 
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
@@ -1041,7 +1041,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 ||
                 prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_H264
             ) {
-                Toast.makeText(this, "Dolby Vision requires HEVC; ignoring codec preference", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, this.getString(R.string.error_dolby_requires_hevc), Toast.LENGTH_LONG).show()
             }
             LimeLog.info("Dolby Vision requested: restricting codec mask to HEVC")
         }
@@ -2793,6 +2793,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 perfAttrs[getString(R.string.perf_decode_time)] = String.format("%.2f", performanceInfo.decodeTimeMs)
                 perfAttrs[getString(R.string.perf_bandwidth)] = performanceInfo.bandWidth ?: ""
                 perfAttrs[getString(R.string.perf_render_latency)] = String.format("%.2f", performanceInfo.renderingLatencyMs)
+                com.limelight.utils.PerformanceTemplateTokens.addCanonicalAliases(perfAttrs)
                 for (display in performanceInfoDisplays) {
                     display.display(perfAttrs)
                 }

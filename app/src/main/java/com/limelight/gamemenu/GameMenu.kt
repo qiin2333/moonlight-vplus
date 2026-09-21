@@ -2084,7 +2084,7 @@ class GameMenu(
                     windowsCodesBuilder.append(windowsCode)
                     if (i < androidCodes.size - 1) windowsCodesBuilder.append(",")
                 } catch (_: Exception) {
-                    Toast.makeText(game, "error: invalid key code", Toast.LENGTH_LONG).show()
+                    Toast.makeText(game, game.getString(R.string.error_invalid_key_code), Toast.LENGTH_LONG).show()
                     return@setOnClickListener
                 }
             }

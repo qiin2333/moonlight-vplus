@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Системный ввод тачпада клавиатуры планшета без root. Нужен Foundation Sunshine с включённой адаптацией нативного тачпада. Проверено лишь на некоторых планшетах Xiaomi.</string>
+</resources>

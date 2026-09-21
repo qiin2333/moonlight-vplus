@@ -21,7 +21,7 @@
                 android:layout_marginBottom="12dp"
                 android:textColor="@color/crown_text_primary"
                 android:textSize="18sp"
-                android:text="Title:"/>
+                android:text="@string/editor_title"/>
             <EditText
                 android:id="@+id/window_edittext"
                 android:layout_width="match_parent"

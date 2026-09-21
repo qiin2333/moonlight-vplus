@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_move_buttons">Перетаскивайте кнопки для перемещения. В меню можно завершить правку или сменить раскладку.</string>
+    <string name="osc_resize_buttons">Перетаскивайте кнопки для изменения размера. В меню можно завершить правку или сменить раскладку.</string>
+    <string name="osc_dpad">Крестовина</string>
+    <string name="osc_quick_menu">Раскладка и правка геймпада</string>
+    <string name="osc_action_move">Перемещение</string>
+    <string name="osc_action_resize">Размер кнопок</string>
+    <string name="osc_action_done">Сохранить и завершить</string>
+</resources>

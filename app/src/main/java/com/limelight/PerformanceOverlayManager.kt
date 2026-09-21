@@ -997,7 +997,7 @@ class PerformanceOverlayManager(
     }
 
     private fun showMoonPhaseInfo() {
-        val moonPhaseInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo()
+        val moonPhaseInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo(activity)
         val moonPhase = MoonPhaseUtils.getCurrentMoonPhase()
         val phasePercentage = MoonPhaseUtils.getMoonPhasePercentage(moonPhase)
         val daysInCycle = MoonPhaseUtils.getDaysInMoonCycle(moonPhase)
@@ -1036,23 +1036,23 @@ class PerformanceOverlayManager(
         val hostHeight = (perfInfo.initialHeight * scaleFactor).toInt()
 
         val resolutionInfo = StringBuilder()
-        resolutionInfo.append("Client Resolution: ").append(perfInfo.initialWidth)
+        resolutionInfo.append(activity.getString(R.string.perf_client_resolution)).append(perfInfo.initialWidth)
             .append(" × ").append(perfInfo.initialHeight).append("\n")
-        resolutionInfo.append("Host Resolution: ").append(hostWidth)
+        resolutionInfo.append(activity.getString(R.string.perf_host_resolution)).append(hostWidth)
             .append(" × ").append(hostHeight).append("\n")
-        resolutionInfo.append("Scale Factor: ").append(String.format("%.2f", scaleFactor))
+        resolutionInfo.append(activity.getString(R.string.perf_scale_factor)).append(String.format("%.2f", scaleFactor))
             .append(" (").append(scalePercent).append("%)\n")
 
         val deviceRefreshRate = UiHelper.getDeviceRefreshRate(activity)
-        resolutionInfo.append("Target FPS: ").append(prefConfig.fps).append(" FPS\n")
-        resolutionInfo.append("Current FPS: ").append(String.format("%.0f", perfInfo.totalFps)).append(" FPS\n")
-        resolutionInfo.append("Device Refresh Rate: ").append(String.format("%.0f", deviceRefreshRate)).append(" Hz\n")
+        resolutionInfo.append(activity.getString(R.string.perf_target_fps)).append(prefConfig.fps).append(" FPS\n")
+        resolutionInfo.append(activity.getString(R.string.perf_current_fps)).append(String.format("%.0f", perfInfo.totalFps)).append(" FPS\n")
+        resolutionInfo.append(activity.getString(R.string.perf_device_refresh)).append(String.format("%.0f", deviceRefreshRate)).append(" Hz\n")
 
         if (actualDisplayRefreshRate > 0) {
-            resolutionInfo.append("Actual Display Refresh Rate: ").append(String.format("%.2f", actualDisplayRefreshRate)).append(" Hz\n")
+            resolutionInfo.append(activity.getString(R.string.perf_actual_refresh)).append(String.format("%.2f", actualDisplayRefreshRate)).append(" Hz\n")
         }
 
-        showInfoDialog("📱 Resolution Information", resolutionInfo.toString())
+        showInfoDialog(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString())
     }
 
     private fun showDecoderInfo() {
@@ -1064,10 +1064,14 @@ class PerformanceOverlayManager(
         val decoderInfo = StringBuilder()
         val perfInfo = currentPerformanceInfo
         if (perfInfo != null) {
-            decoderInfo.append("Codec: ").append(perfInfo.decoder).append("\n\n")
+            decoderInfo.append(activity.getString(R.string.perf_codec_label)).append(perfInfo.decoder).append("\n\n")
             val decoderTypeInfo = getDecoderTypeInfo(perfInfo.decoder)
-            decoderInfo.append("Type: ").append(decoderTypeInfo.fullName).append("\n")
-            decoderInfo.append("Dynamic range: ").append(perfInfo.hdrFormat.diagnosticName).append("\n")
+            decoderInfo.append(activity.getString(R.string.perf_type_label)).append(decoderTypeInfo.fullName).append("\n")
+            decoderInfo.append(activity.getString(R.string.perf_dynamic_range)).append(when (perfInfo.hdrFormat) {
+                com.limelight.binding.video.StreamHdrFormat.HDR10_PLUS -> activity.getString(R.string.hdr_diagnostic_hdr10_plus)
+                com.limelight.binding.video.StreamHdrFormat.DOLBY_VISION -> activity.getString(R.string.hdr_diagnostic_dolby)
+                else -> perfInfo.hdrFormat.displayName
+            }).append("\n")
         }
         decoderInfo.append(activity.getString(R.string.perf_decoder_info))
         return decoderInfo.toString()
