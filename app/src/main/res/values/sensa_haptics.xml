@@ -7,10 +7,15 @@
     <string name="sensa_mode_title">Output mode</string>
     <string name="sensa_mode_summary">Haptic only: authored game effects only. Haptic or rumble: authored effects take priority; otherwise game rumble is converted to Sensa. Rumble only: convert game rumble and ignore authored effects.</string>
     <string name="sensa_support_summary">Enable Sensa output for Kishi V3 Pro XL, independently of experimental haptic protocols.</string>
-    <string-array name="sensa_haptics_mode_names" translatable="false">
-        <item>Haptic only</item><item>Haptic or rumble</item><item>Rumble only</item>
+    <string-array name="sensa_haptics_mode_names">
+        <item>@string/sensa_mode_haptic_only</item>
+        <item>@string/sensa_mode_haptic_or_rumble</item>
+        <item>@string/sensa_mode_rumble_only</item>
     </string-array>
     <string-array name="sensa_haptics_mode_values" translatable="false">
         <item>only_haptic</item><item>haptic_or_rumble</item><item>rumble_only</item>
     </string-array>
+    <string name="sensa_mode_haptic_only">Haptic only</string>
+    <string name="sensa_mode_haptic_or_rumble">Haptic or rumble</string>
+    <string name="sensa_mode_rumble_only">Rumble only</string>
 </resources>

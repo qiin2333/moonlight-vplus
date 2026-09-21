@@ -178,17 +178,28 @@ service also retains requests during handoff. The card shows the service-applied
 enable state and a pending indication until it matches the requested state.
 USB readiness remains a separate route status. A standalone test only treats
 removal of its own active route as a failure.
-Inside are a three-mode selector, channel test, strength (0–100%)
-and frequency (30–400 Hz) controls, followed by the same host emulation choices
-as Settings. Changing emulation applies on reconnection, with a pending notice. These
-share preferences with the standalone settings. Both sliders have minus/plus buttons
+Inside are a three-mode selector, strength (0 to 100%) and frequency (30 to 400 Hz)
+controls. A dedicated controller owns the preference snapshot and service-applied
+state; the composable only renders state and dispatches actions. These controls
+share preferences with the standalone settings. Host emulation stays in StreamSettings
+because it applies to every player in the session. Route status, left/right channel
+tests and cancellation belong exclusively to the separate Waveform Haptics card.
+That card requires at least one route and can be hidden independently in the card
+visibility editor. Waveform visibility defaults to enabled and never inherits the
+Sensa card's visibility. The restart notice appears only when authored haptics are
+enabled, PCM was not requested at launch, and the current controller and output
+settings allow requesting PCM on the next launch. Xbox/DS4 emulation, device-only
+output and absent hardware do not produce a misleading restart notice. Hidden
+Sensa cards do not poll; visible cards poll at 100 ms while reconciling the service
+and 1 second after it has applied the requested state. Both sliders have minus/plus buttons
 that move to the next multiple of 5 in the selected direction (92 becomes 95
 with plus or 90 with minus), while dragging or using the slider D-pad changes the value
 in units of 1 (1% or 1 Hz); tuning changes preview both actuators for 250 ms at the selected
 strength and frequency. Repeated changes restart the preview deadline, and closing
-the menu cancels tests. The haptic channel test is in this card, independently of
-the Audio Haptics switch. Labels are localized for all
-28 existing locale configurations, in addition to the default English resources.
+the menu cancels tests. The haptic channel test is in the waveform card, independently of
+the Audio Haptics switch. Sensa and waveform labels, mode names and status messages
+are localized in English, Russian, Simplified Chinese and Traditional Chinese.
+Other locale resources remain partial and use the default English strings where needed.
 
 Ordinary host rumble reaches the existing source mixer and routing policy first.
 An optional Sensa rumble output converts its low/high motor amplitudes into
@@ -324,3 +335,24 @@ Hardware acceptance before changing profile evidence:
 7. Forward an active USB device; ensure forwarding waits for local handle release.
 8. Measure sustained latency, underruns, thermal load and artifacts across supported
    Android builds and firmware. Successful writes alone do not complete validation.
+
+
+### Running Sensa preference checks on a device without uninstalling the app
+
+On a device used for streaming, build the test APK without using Gradle's
+`connected...AndroidTest` task. Update both APKs with `adb install -r`, then run
+the selected instrumentation class directly. Do not uninstall either package or
+clear app data before or after the tests. The preference tests use an isolated
+SharedPreferences namespace and clear only that test namespace.
+
+```powershell
+.\gradlew.bat :app:testNonRootDebugUnitTest :app:assembleNonRootDebug :app:assembleNonRootDebugAndroidTest
+adb install -r app/build/outputs/apk/nonRoot/debug/app-nonRoot-debug.apk
+adb install -r app/build/outputs/apk/androidTest/nonRoot/debug/app-nonRoot-debug-androidTest.apk
+adb shell am instrument -w -r -e class com.limelight.preferences.SensaCardPreferencesTest com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+If replacement fails (for example, due to a signing mismatch), stop; do not use
+uninstall or data clearing as a workaround. Instrumentation restarts the app's
+process, so run it outside an active stream. The app and test package remain
+installed after this sequence.

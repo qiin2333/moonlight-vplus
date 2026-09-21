@@ -106,7 +106,7 @@ internal fun GameMenuCards(
             )
         }
         if (state.visibleCards.hapticVibration) {
-            HapticVibrationCard(state.audioHaptics.waveformRoutes, callbacks, onSliderGesture)
+            HapticVibrationCard(state.sensaHaptics, callbacks, onSliderGesture)
         }
         if (state.visibleCards.gyro) {
             GyroCard(state.gyro, callbacks, onSliderGesture, callbacks.onEditCards)
@@ -114,7 +114,7 @@ internal fun GameMenuCards(
         if (state.visibleCards.shortcuts && state.customKeys.isNotEmpty()) {
             ShortcutCard(state.customKeys, callbacks.onCustomKey, callbacks.onEditCards)
         }
-        if (state.waveformHaptics.routes.isNotEmpty()) {
+        if (state.visibleCards.waveformHaptics && state.waveformHaptics.routes.isNotEmpty()) {
             WaveformHapticsCard(state.waveformHaptics, callbacks)
         }
     }
@@ -852,34 +852,14 @@ private fun AudioHapticsCard(
 
 @Composable
 private fun HapticVibrationCard(
-    routes: List<WaveformRouteCardState>,
+    state: SensaHapticsCardState,
     callbacks: GameMenuCallbacks,
     onSliderGesture: (Boolean) -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember(context) { androidx.preference.PreferenceManager.getDefaultSharedPreferences(context) }
-    val settings = com.limelight.preferences.SensaStrengthPreferences
-    val initiallyEnabled = remember { settings.enabled(context) }
-    var requestedEnabled by remember { mutableStateOf(initiallyEnabled) }
-    var appliedEnabled by remember { mutableStateOf(callbacks.appliedSensaHaptics()) }
-    androidx.compose.runtime.LaunchedEffect(callbacks.appliedSensaHaptics) {
-        while (true) {
-            appliedEnabled = callbacks.appliedSensaHaptics()
-            kotlinx.coroutines.delay(100)
-        }
-    }
-    val enabled = appliedEnabled == true
-    val initialEmulation = remember { prefs.getString("list_host_gamepad_selection", "automatic") ?: "automatic" }
-    var emulation by remember { mutableStateOf(initialEmulation) }
-    var showEmulation by remember { mutableStateOf(false) }
-    val emulationNames = stringArrayResource(R.array.host_gamepad_selection_names)
-    val emulationValues = stringArrayResource(R.array.host_gamepad_selection_values)
-    var mode by remember { mutableStateOf(settings.mode(context)) }
+    val enabled = state.appliedEnabled == true
     var showMode by remember { mutableStateOf(false) }
     val modeNames = stringArrayResource(R.array.sensa_haptics_mode_names)
     val modeValues = stringArrayResource(R.array.sensa_haptics_mode_values)
-    var strength by remember { mutableStateOf((settings.read(context) * 100).toFloat()) }
-    var frequency by remember { mutableStateOf(settings.frequency(context).toFloat()) }
     GameMenuCard(
         title = stringResource(R.string.sensa_menu_title),
         trailing = {
@@ -887,31 +867,28 @@ private fun HapticVibrationCard(
                 checked = enabled,
                 contentDescription = stringResource(R.string.sensa_menu_title),
                 onToggle = {
-                    requestedEnabled = !requestedEnabled
-                    callbacks.onSensaHapticsEnabled(requestedEnabled)
+                    callbacks.onSensaHapticsEnabled(!state.requestedEnabled)
                 }
             )
         },
         onLongClick = callbacks.onEditCards
     ) {
-        if (appliedEnabled == null || appliedEnabled != requestedEnabled) {
+        if (state.pending) {
             Text(stringResource(R.string.waveform_status_initializing),
                 color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
         }
-        if (enabled && requestedEnabled) {
+        if (enabled && state.requestedEnabled) {
             Text(stringResource(R.string.sensa_mode_title),
                 color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
             Box {
                 androidx.compose.material3.TextButton(onClick = { showMode = true }) {
-                    Text(modeNames[modeValues.indexOf(mode).coerceAtLeast(0)] + " ▾")
+                    Text(modeNames[modeValues.indexOf(state.mode).coerceAtLeast(0)] + " ▾")
                 }
                 androidx.compose.material3.DropdownMenu(expanded = showMode,
                     onDismissRequest = { showMode = false }) {
                     modeValues.forEachIndexed { index, value ->
                         androidx.compose.material3.DropdownMenuItem(text = { Text(modeNames[index]) }, onClick = {
-                            mode = value
-                            prefs.edit().putString(settings.MODE_KEY, value).apply()
-                            callbacks.onHapticRumbleSettingsChanged()
+                            callbacks.onSensaHapticsMode(value)
                             showMode = false
                         })
                     }
@@ -919,54 +896,17 @@ private fun HapticVibrationCard(
             }
             Text(stringResource(R.string.sensa_mode_summary),
                 color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
-            HapticTuningSlider(stringResource(R.string.title_sensa_haptics_strength), strength, 0f..100f, "%",
+            HapticTuningSlider(stringResource(R.string.title_sensa_haptics_strength), state.strength, 0f..100f, "%",
                 onSliderGesture) {
-                strength = it
-                prefs.edit().putInt(settings.KEY, it.toInt()).apply()
-                callbacks.onHapticTuningPreview()
+                callbacks.onSensaHapticsStrength(it)
             }
-            HapticTuningSlider(stringResource(R.string.sensa_frequency_title), frequency, 30f..400f,
+            HapticTuningSlider(stringResource(R.string.sensa_frequency_title), state.frequency, 30f..400f,
                 stringResource(R.string.sensa_frequency_unit), onSliderGesture) {
-                frequency = it
-                prefs.edit().putInt(settings.FREQUENCY_KEY, it.toInt()).apply()
-                callbacks.onHapticTuningPreview()
+                callbacks.onSensaHapticsFrequency(it)
             }
             Text(stringResource(R.string.sensa_frequency_summary),
                 color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
-            if (routes.isEmpty()) {
-                Text(stringResource(R.string.haptics_test_unavailable),
-                    color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
-            }
-            routes.forEach { route ->
-                Text(route.label + "\n" + route.status,
-                    color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
-                androidx.compose.material3.TextButton(
-                    enabled = route.canTest || route.testing,
-                    onClick = { callbacks.onWaveformTest(route.id, route.testing) }
-                ) {
-                    Text(stringResource(if (route.testing) R.string.waveform_test_cancel else R.string.title_test_experimental_haptics))
-                }
-            }
-            Text(stringResource(R.string.title_host_gamepad_selection),
-                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
-            Box {
-                androidx.compose.material3.TextButton(onClick = { showEmulation = true }) {
-                    Text(emulationNames[emulationValues.indexOf(emulation).coerceAtLeast(0)] + " ▾")
-                }
-                androidx.compose.material3.DropdownMenu(expanded = showEmulation,
-                    onDismissRequest = { showEmulation = false }) {
-                    emulationValues.forEachIndexed { index, value ->
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text(emulationNames[index]) },
-                            onClick = {
-                                emulation = value
-                                prefs.edit().putString("list_host_gamepad_selection", value).apply()
-                                showEmulation = false
-                            })
-                    }
-                }
-            }
-            if (emulation != initialEmulation || !initiallyEnabled) {
+            if (state.pendingRestart) {
                 Text(stringResource(R.string.game_menu_audio_haptics_pending_restart),
                     color = appAccentColor(), fontSize = 10.sp)
             }
@@ -1378,7 +1318,10 @@ private fun WaveformHapticsCard(
     state: WaveformHapticsCardState,
     callbacks: GameMenuCallbacks
 ) {
-    GameMenuCard(title = stringResource(R.string.waveform_card_title)) {
+    GameMenuCard(
+        title = stringResource(R.string.waveform_card_title),
+        onLongClick = callbacks.onEditCards
+    ) {
         state.routes.forEach { route ->
             Text(
                 text = route.label + "\n" + route.status,

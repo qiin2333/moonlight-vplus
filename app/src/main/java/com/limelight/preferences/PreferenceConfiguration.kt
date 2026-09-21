@@ -215,6 +215,7 @@ class PreferenceConfiguration {
     // Card visibility
     var showBitrateCard = false
     var showAudioHapticsCard = false
+    var showWaveformHapticsCard = true
     var showHapticVibrationCard = false
     var showGyroCard = false
     var showQuickKeyCard = false
@@ -318,6 +319,7 @@ class PreferenceConfiguration {
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                 .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
+                .putBoolean(SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING, showWaveformHapticsCard)
                 .putBoolean(SHOW_HAPTIC_VIBRATION_CARD_PREF_STRING, showHapticVibrationCard)
                 .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                 .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
@@ -527,6 +529,7 @@ class PreferenceConfiguration {
         copy.audioVibrationScene = this.audioVibrationScene
         copy.showBitrateCard = this.showBitrateCard
         copy.showAudioHapticsCard = this.showAudioHapticsCard
+        copy.showWaveformHapticsCard = this.showWaveformHapticsCard
         copy.showHapticVibrationCard = this.showHapticVibrationCard
         copy.showGyroCard = this.showGyroCard
         copy.showQuickKeyCard = this.showQuickKeyCard
@@ -605,6 +608,7 @@ class PreferenceConfiguration {
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
         private const val SHOW_AUDIO_HAPTICS_CARD_PREF_STRING = "checkbox_show_audio_haptics_card"
+        private const val SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING = "checkbox_show_waveform_haptics_card"
         private const val SHOW_HAPTIC_VIBRATION_CARD_PREF_STRING = "checkbox_show_haptic_vibration_card"
         private const val SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card"
         @Suppress("ConstPropertyName")
@@ -1528,6 +1532,8 @@ class PreferenceConfiguration {
 
             // Cards visibility (defaults to true)
             config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true)
+            // Sensa visibility is unrelated to other waveform devices.
+            config.showWaveformHapticsCard = prefs.getBoolean(SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING, true)
             config.showHapticVibrationCard = prefs.getBoolean(SHOW_HAPTIC_VIBRATION_CARD_PREF_STRING,
                 config.sensaHapticsEnabled)
             config.showAudioHapticsCard = prefs.getBoolean(

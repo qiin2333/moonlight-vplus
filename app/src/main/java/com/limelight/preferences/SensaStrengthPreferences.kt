@@ -15,6 +15,18 @@ internal object SensaStrengthPreferences {
     const val HAPTIC_OR_RUMBLE = "haptic_or_rumble"
     const val RUMBLE_ONLY = "rumble_only"
     const val ENABLED_KEY = "checkbox_sensa_haptics"
+    fun setMode(context: Context, mode: String) {
+        if (mode !in setOf(ONLY_HAPTIC, HAPTIC_OR_RUMBLE, RUMBLE_ONLY)) return
+        PreferenceManager.getDefaultSharedPreferences(context).edit().putString(MODE_KEY, mode).apply()
+    }
+    fun setStrength(context: Context, strength: Int) {
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+            .putInt(KEY, strength.coerceIn(0, 100)).apply()
+    }
+    fun setFrequency(context: Context, frequency: Int) {
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+            .putInt(FREQUENCY_KEY, frequency.coerceIn(30, 400)).apply()
+    }
     fun enabled(context: Context): Boolean {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         // Preserve the previous choice once, then keep the two switches independent.

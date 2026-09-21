@@ -282,6 +282,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var framegenInputHdrEnabled = false
     /** Final HDR decision after display and decoder capability negotiation. */
     private var negotiatedHdrEnabled = false
+    internal var authoredPcmHapticsRequested = false
+        private set
     private var framegenEnabledToastShown = false
     private var reportedCrash = false
 
@@ -1171,6 +1173,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 "protocolHdrMode=${config.hdrMode} fullRange=${prefConfig.fullRange}"
         )
 
+        authoredPcmHapticsRequested = config.authoredPcmHaptics
         return StreamConfigResult(config, displayRefreshRate, clientRefreshRateX100)
     }
 

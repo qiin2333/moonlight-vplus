@@ -255,8 +255,9 @@ class SettingsResourceHygieneTest {
     }
 
     private fun stringValues(directory: String): Map<String, String> =
-        parse(File(resourceDir, "$directory/strings.xml"))
-            .documentElement.childNodes.asElementSequence()
+        File(resourceDir, directory).listFiles { file -> file.extension == "xml" }
+            .orEmpty().asSequence()
+            .flatMap { parse(it).documentElement.childNodes.asElementSequence() }
             .filter { it.tagName == "string" }
             .associate { it.getAttribute("name") to it.textContent }
 
