@@ -41,6 +41,10 @@ class AudioVibrationService(context: Context) {
     private var isGamepadRumbling = false
     private val deviceVibratorOwnershipLock = Any()
     private var deviceVibratorOwner: ControllerHandler? = null
+    private var systemAudioHapticsDetachedForTouch = false
+
+    @Volatile
+    private var deviceOutputSuspendedForTouch = false
 
     private var lastHapticTimestampUs: Long = -1
     private var rhythmStatsStartMs: Long = SystemClock.elapsedRealtime()
@@ -59,6 +63,9 @@ class AudioVibrationService(context: Context) {
 
     val systemAudioCoupledDeviceActive: Boolean
         get() = isSystemAudioCoupledDeviceActive
+
+    var detachSystemAudioHaptics: (() -> Boolean)? = null
+    var attachSystemAudioHaptics: (() -> Boolean)? = null
 
     // Gamepad rumble handler (optional, set externally)
     var controllerHandler: ControllerHandler? = null
@@ -209,6 +216,7 @@ class AudioVibrationService(context: Context) {
 
         val deviceOutputReady = shouldVibrateDevice(settings.vibrationMode) &&
             !isSystemAudioCoupledDeviceActive &&
+            !deviceOutputSuspendedForTouch &&
             claimDeviceVibratorBeforeAudioOutput()
         if (deviceOutputReady) {
             val accepted = sdkDeviceRenderer.submit(
@@ -265,9 +273,44 @@ class AudioVibrationService(context: Context) {
     }
 
     fun stop() {
+        detachSystemAudioHapticsForStream()
         nativeSession.stop()
         sdkDeviceRenderer.clearAudioPresentationClock()
         stopAll()
+    }
+
+    fun preemptDeviceOutputForTouch(): Boolean {
+        deviceOutputSuspendedForTouch = true
+        val systemActive = isSystemAudioCoupledDeviceActive
+        if (systemActive && detachSystemAudioHaptics?.invoke() != true) {
+            deviceOutputSuspendedForTouch = false
+            return false
+        }
+        if (systemActive) systemAudioHapticsDetachedForTouch = true
+        // Stop is idempotent and also closes the small window between claiming the
+        // coordinator and publishing isSdkDeviceActive after submit().
+        sdkDeviceRenderer.stop()
+        isSdkDeviceActive = false
+        lastMusicGrooveBedAmplitude = 0f
+        syncDeviceVibratorOwnership()
+        return true
+    }
+
+    fun resumeDeviceOutputAfterTouch() {
+        if (systemAudioHapticsDetachedForTouch) {
+            attachSystemAudioHaptics?.invoke()
+            systemAudioHapticsDetachedForTouch = false
+        }
+        deviceOutputSuspendedForTouch = false
+        syncDeviceVibratorOwnership()
+    }
+
+    /** Reattaches the system generator after an activity pause/resume cycle. */
+    fun resumeAfterForeground() {
+        if (wantsSystemAudioCoupledDeviceHaptics()) {
+            attachSystemAudioHaptics?.invoke()
+        }
+        syncDeviceVibratorOwnership()
     }
 
     /** True when Android's system audio-coupled backend should own the phone motor. */
@@ -316,9 +359,10 @@ class AudioVibrationService(context: Context) {
     }
 
     fun release() {
+        detachSystemAudioHapticsForStream()
+        nativeSession.stop()
+        sdkDeviceRenderer.clearAudioPresentationClock()
         stopAll()
-        isSystemAudioCoupledDeviceActive = false
-        syncDeviceVibratorOwnership()
         sdkDeviceRenderer.close()
         nativeSession.close()
     }
@@ -342,6 +386,8 @@ class AudioVibrationService(context: Context) {
     // ==================== Stop ====================
 
     private fun stopAll() {
+        deviceOutputSuspendedForTouch = false
+        systemAudioHapticsDetachedForTouch = false
         sdkDeviceRenderer.stop()
         isSdkDeviceActive = false
         syncDeviceVibratorOwnership()
@@ -374,9 +420,11 @@ class AudioVibrationService(context: Context) {
             val handler = controllerHandler ?: return@synchronized true
             if (deviceVibratorOwner !== handler) {
                 deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
-                deviceVibratorOwner = handler
+                deviceVibratorOwner = null
             }
-            handler.claimDeviceVibratorForAudio()
+            handler.claimDeviceVibratorForAudio().also { claimed ->
+                if (claimed) deviceVibratorOwner = handler
+            }
         }
 
     private fun syncDeviceVibratorOwnership() {
@@ -386,14 +434,21 @@ class AudioVibrationService(context: Context) {
             if (shouldOwn && handler != null) {
                 if (deviceVibratorOwner !== handler) {
                     deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
-                    handler.claimDeviceVibratorForAudio()
-                    deviceVibratorOwner = handler
+                    deviceVibratorOwner = null
+                    if (handler.claimDeviceVibratorForAudio()) deviceVibratorOwner = handler
                 }
             } else {
                 deviceVibratorOwner?.releaseDeviceVibratorFromAudio()
                 deviceVibratorOwner = null
             }
         }
+    }
+
+    private fun detachSystemAudioHapticsForStream() {
+        if (!isSystemAudioCoupledDeviceActive) return
+        detachSystemAudioHaptics?.invoke()
+        isSystemAudioCoupledDeviceActive = false
+        syncDeviceVibratorOwnership()
     }
 
     companion object {

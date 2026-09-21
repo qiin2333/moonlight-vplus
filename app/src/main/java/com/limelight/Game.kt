@@ -517,6 +517,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         audioVibrationService = AudioVibrationService(this)
         audioVibrationService?.controllerHandler = controllerHandler
+        bindAudioHapticsTouchArbitration()
+        audioVibrationService?.detachSystemAudioHaptics = {
+            audioRenderer?.detachSystemAudioHaptics() == true
+        }
+        audioVibrationService?.attachSystemAudioHaptics = {
+            audioRenderer?.attachSystemAudioHaptics() == true
+        }
         audioVibrationService?.setSettings(
             prefConfig.enableAudioVibration,
             prefConfig.audioVibrationStrength,
@@ -1171,6 +1178,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     )
 
     private fun prepareConnection() {
+        audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
         runOnUiThread {
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
@@ -1199,6 +1207,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         performanceOverlayManager?.recordStreamStart()
 
         audioVibrationService?.controllerHandler = controllerHandler
+        bindAudioHapticsTouchArbitration()
 
         if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) {
             bindUsbDriverService()
@@ -1244,6 +1253,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         if (audioVibrationService != null) {
             updateAudioHapticsRuntimeEnabled(true)
+            if (connected) audioVibrationService?.resumeAfterForeground()
         }
         KeyboardAccessibilityService.setIntercepting(true)
         val service = KeyboardAccessibilityService.instance
@@ -1634,6 +1644,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
         val featureEnabled = foreground && prefConfig.enableAudioVibration
         MoonBridge.setAudioHapticsOutputEnabled(featureEnabled)
+    }
+
+    private fun bindAudioHapticsTouchArbitration() {
+        val service = audioVibrationService ?: return
+        if (!::controllerHandler.isInitialized) return
+        controllerHandler.setDeviceTouchAudioCallbacks(
+            onPreemptRequested = service::preemptDeviceOutputForTouch,
+            onFinished = service::resumeDeviceOutputAfterTouch,
+        )
+    }
+
+    internal fun stopAudioHapticsForStream() {
+        audioVibrationService?.stop()
     }
 
     /**

@@ -66,8 +66,23 @@ internal class DeviceVibrationCoordinator(
     private var outputSequence = 0L
     private var lastGameCommandAmplitude = -1
     private var outputWriteInFlight = false
+    private var touchAudioPreempted = false
+
+    @Volatile
+    private var onAudioTouchPreemptRequested: (() -> Boolean)? = null
+
+    @Volatile
+    private var onAudioTouchFinished: (() -> Unit)? = null
 
     private var levelAmplitude = 0
+
+    fun setAudioTouchCallbacks(
+        onPreemptRequested: (() -> Boolean)?,
+        onFinished: (() -> Unit)?
+    ) {
+        onAudioTouchPreemptRequested = onPreemptRequested
+        onAudioTouchFinished = onFinished
+    }
 
     /**
      * [targetAmplitude] is 0-255 and already carries every routing gain: callers fold the two
@@ -102,10 +117,22 @@ internal class DeviceVibrationCoordinator(
 
     fun playTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) {
         val duration = durationMs.toLong().coerceIn(1L, MAXIMUM_TOUCH_DURATION_MS)
+        val audioWasOwned = synchronized(lock) {
+            if (closed) return
+            audioOwned
+        }
+        if (audioWasOwned && onAudioTouchPreemptRequested?.invoke() != true) return
+
         val command: VibrationCommand
         val completion: Runnable
         synchronized(lock) {
-            if (closed || audioOwned) return
+            if (closed) return
+            if (audioOwned) {
+                audioOwned = false
+                generation++
+                clearGameRefreshLocked()
+            }
+            touchAudioPreempted = touchAudioPreempted || audioWasOwned
             touchCompletion?.let(removeCallback)
             clearGameRefreshLocked()
             touchActive = true
@@ -134,7 +161,7 @@ internal class DeviceVibrationCoordinator(
     fun claimForAudio(): Boolean {
         var ownershipChanged = false
         val readyForAudio = synchronized(lock) {
-            if (closed) return false
+            if (closed || touchActive) return false
             if (!audioOwned) {
                 audioOwned = true
                 generation++
@@ -169,6 +196,7 @@ internal class DeviceVibrationCoordinator(
             closed = true
             audioOwned = false
             touchActive = false
+            touchAudioPreempted = false
             touchEpoch++
             touchCompletion?.let(removeCallback)
             touchCompletion = null
@@ -188,14 +216,18 @@ internal class DeviceVibrationCoordinator(
     }
 
     private fun finishTouchHaptic(epoch: Long) {
+        var restoreAudio = false
         val command = synchronized(lock) {
             if (closed || audioOwned || !touchActive || epoch != touchEpoch) return
             touchActive = false
             touchCompletion = null
+            restoreAudio = touchAudioPreempted
+            touchAudioPreempted = false
             generation++
             gameAmplitudeCommandLocked(mixedGameAmplitudeLocked(), forceWrite = true)
         }
         command?.let(dispatcher::submit)
+        if (restoreAudio) onAudioTouchFinished?.invoke()
     }
 
     private fun mixedGameAmplitudeLocked(): Int {

@@ -123,6 +123,36 @@ class DeviceVibrationCoordinatorTest {
     }
 
     @Test
+    fun touchHapticPreemptsAudioAndRestoresAudioAfterPulse() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
+        val clock = FakeClock()
+        val coordinator = coordinator(executor, vibrations, clock)
+        var preemptions = 0
+        var restorations = 0
+        coordinator.setAudioTouchCallbacks(
+            onPreemptRequested = { preemptions++; true },
+            onFinished = { restorations++ }
+        )
+
+        try {
+            coordinator.claimForAudio()
+            coordinator.playTouchHaptic(2_000, 2_000, 50)
+            await { vibrations.size == 1 }
+            assertEquals(Vibration(7, 50), vibrations.last())
+            assertEquals(1, preemptions)
+            assertFalse(coordinator.claimForAudio())
+
+            clock.advance(50)
+            await { restorations == 1 }
+            assertTrue(coordinator.claimForAudio())
+        } finally {
+            coordinator.stop()
+            assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
     fun rapidTouchHapticsAreNotHeldBehindGameRumblePacing() {
         val executor = Executors.newSingleThreadScheduledExecutor()
         val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())

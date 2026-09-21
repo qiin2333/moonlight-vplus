@@ -368,6 +368,16 @@ class AndroidAudioRenderer(
         }
     }
 
+    fun detachSystemAudioHaptics(): Boolean {
+        systemAudioHaptics.detach()
+        return true
+    }
+
+    fun attachSystemAudioHaptics(): Boolean {
+        val currentTrack = track ?: return false
+        return systemAudioHaptics.attach(currentTrack)
+    }
+
     override fun cleanup() {
         clearAudioPresentationClock()
         systemAudioHaptics.close()
