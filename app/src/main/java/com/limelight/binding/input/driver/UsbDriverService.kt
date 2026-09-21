@@ -17,7 +17,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.InputDevice
 import android.widget.Toast
-import java.util.concurrent.CompletableFuture
+import com.limelight.utils.CompletionSignal
 import kotlin.concurrent.withLock
 
 import com.limelight.LimeLog
@@ -1052,10 +1052,9 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
 
         /** Called on the export worker; ready completes only after local USB release. */
-        @SuppressLint("NewApi") // CompletableFuture is supplied by core library desugaring.
         fun reserveForForwarding(device: UsbDevice): ForwardingReservation {
             val lease: UsbForwardingReservations.Lease
-            val stops = mutableListOf<CompletableFuture<Void>>()
+            val stops = mutableListOf<CompletionSignal>()
             val controllersToStop = mutableListOf<AbstractController>()
             forwardingLock.withLock {
                 lease = forwardingReservations.reserve(device.deviceName)
@@ -1076,11 +1075,11 @@ class UsbDriverService : Service(), UsbDriverListener {
             // Drivers may join threads which call back into the service. Never stop
             // them under the session lock.
             controllersToStop.forEach { controller ->
-                val stopped = CompletableFuture<Void>()
+                val stopped = CompletionSignal()
                 stops.add(stopped)
                 try {
                     controller.stopWithResult { result ->
-                        result.fold({ stopped.complete(null) }, { stopped.completeExceptionally(it) })
+                        result.fold({ stopped.complete() }, { stopped.completeExceptionally(it) })
                     }
                 } catch (error: Exception) {
                     stopped.completeExceptionally(error)
