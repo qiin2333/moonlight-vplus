@@ -74,6 +74,10 @@ class UsbForwardingController(
     private class Forwarding(val device: UsbDevice) {
         var generation = 0L
         var request = 0
+
+        /** Released while its own permission dialog was on screen: the answer
+         * that dialog eventually returns must be discarded. */
+        var cancelled = false
         var phase by mutableStateOf(Phase.Local)
         @Volatile var export: UsbIpBackend.Export? = null
         @Volatile var tunnel: UsbReverseTunnel? = null
@@ -261,9 +265,12 @@ class UsbForwardingController(
                 manager.requestPermission(next.device, PendingIntent.getBroadcast(game, next.request,
                     Intent(permissionAction).setPackage(game.packageName).putExtra("request", next.request), flags))
             } catch (_: Exception) {
+                // No dialog was shown, so the bookkeeping closes here and the
+                // queue can carry on.
                 pendingPermission = null
                 game.onUsbPermissionPromptCompleted()
                 releaseGroup(listOf(next), R.string.usb_forward_permission_denied)
+                pumpPermissionQueue()
             }
             return
         }
@@ -274,17 +281,23 @@ class UsbForwardingController(
         if (request != pending.request) return
         pendingPermission = null
         game.onUsbPermissionPromptCompleted()
+        if (pending.cancelled) {
+            // Released while its dialog was up: the answer no longer applies.
+            pumpPermissionQueue()
+            return
+        }
         if (granted && manager.hasPermission(pending.device)) export(pending)
         else releaseGroup(listOf(pending), R.string.usb_forward_permission_denied)
         pumpPermissionQueue()
     }
 
-    /** Drops a device that is waiting for permission, keeping the prompt
-     * bookkeeping balanced when its dialog is still on screen. */
+    /** Drops a device that is waiting for permission. A dialog that is already on
+     * screen keeps its record until it answers: the system shows one at a time,
+     * and its completion still has to be accounted for. */
     private fun cancelPermission(state: Forwarding) {
         if (pendingPermission === state) {
-            pendingPermission = null
-            game.onUsbPermissionPromptCompleted()
+            state.cancelled = true
+            return
         }
         permissionQueue.remove(state)
     }
