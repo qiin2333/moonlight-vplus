@@ -439,7 +439,6 @@ class PerformanceOverlayManager(
         }
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateResolutionText(view: TextView, performanceInfo: PerformanceInfo) {
         val resValue = String.format(Locale.getDefault(), "%dx%d@%.0f",
             performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps)
@@ -455,7 +454,6 @@ class PerformanceOverlayManager(
         view.typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateRenderFpsText(view: TextView, performanceInfo: PerformanceInfo) {
         // NBSP + Word Joiner 围绕 / 防止 TextView 在 "Rx 60 / Rd 60" 任意空格或斜杠处断行
         val fpsValue = if (performanceInfo.framegenFps > 0.5f) {
@@ -469,14 +467,12 @@ class PerformanceOverlayManager(
         view.text = createStyledText(null, fpsValue, "FPS", 0xFF0DDAF4.toInt(), textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updatePacketLossText(view: TextView, performanceInfo: PerformanceInfo) {
         val lossValue = String.format(Locale.getDefault(), "%.2f", performanceInfo.lostFrameRate)
         val lossColor = if (performanceInfo.lostFrameRate < 5.0f) 0xFF7D9D7D.toInt() else 0xFFB57D7D.toInt()
         view.text = createStyledText(R.drawable.phc_perf_signal, lossValue, "%", lossColor, textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateNetworkLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         // 带宽用 gauge 仪表盘图标更直观，始终显示
         val iconRes: Int = R.drawable.phc_perf_gauge
@@ -487,7 +483,6 @@ class PerformanceOverlayManager(
         view.text = createStyledText(iconRes, bandwidthAndLatency, "ms", 0xFFBCEDD3.toInt(), textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateDecodeLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         val isHot = performanceInfo.decodeTimeMs >= 15
         val iconRes: Int? = if (isHot) null else R.drawable.phc_perf_timer
@@ -496,7 +491,6 @@ class PerformanceOverlayManager(
         view.text = createStyledText(iconRes, latencyValue, "ms", 0xFFD597E3.toInt(), iconEmoji, textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateHostLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         if (performanceInfo.framesWithHostProcessingLatency > 0) {
             val latencyValue = String.format(Locale.getDefault(), "%.1f", performanceInfo.aveHostProcessingLatency)
@@ -532,7 +526,6 @@ class PerformanceOverlayManager(
         view.text = createStyledText(iconRes, batteryLevel.toString(), "%", batteryColor, textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateOnePercentLowText(view: TextView, performanceInfo: PerformanceInfo) {
         val lowFps = performanceInfo.onePercentLowFps
         if (lowFps <= 0) {
