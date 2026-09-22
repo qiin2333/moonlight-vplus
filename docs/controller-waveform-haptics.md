@@ -162,9 +162,14 @@ its protocol knowledge came from. The current ones:
   PeaSyo implementation (AGPL-3.0, link and review date above). The encoder
   (windowed-sinc FIR with ring-buffer history), output worker, queue discipline and
   lifecycle in `KishiPcmEncoder`/`KishiUsbHapticsSink` are independent code, not a
-  translation of that reference. AGPL-3.0 is one-way compatible with this project's
-  GPLv3, so even a disputed derivation would be a remediable attribution matter,
-  not a distribution blocker.
+  translation of that reference. AGPL-3.0 and GPLv3 are compatible for combining
+  (GPLv3 §7 / AGPL-3.0 §13), but any incorporated AGPL code carries its own
+  obligations — preserved notices, license text and the network-source provision —
+  which go beyond attribution. Because the encoder and worker here are independent
+  implementations, no AGPL obligations attach unless a derivation is established;
+  and since this project already distributes complete source under GPLv3, even a
+  disputed derivation would be an obligation this project already satisfies rather
+  than a distribution blocker.
 - **DualSense USB audio (UAC) topology** — interface/endpoint and channel-role facts
   from the public HIDMaestro DualSense profile (MIT), cited in the
   `DualSenseUsbHapticsSink` header.
