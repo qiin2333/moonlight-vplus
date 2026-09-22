@@ -173,7 +173,7 @@
             seekbar:keyStep="2"
             seekbar:divisor="1"
             android:summary="@string/summary_framegen_slow_threshold_ms"
-                android:text="@string/suffix_seekbar_float_ball_auto_hide_delay_ms"
+            android:text="ms"
             android:title="@string/title_framegen_slow_threshold_ms" />
         <CheckBoxPreference
             android:key="checkbox_framegen_present_real_first"
@@ -898,7 +898,7 @@
             seekbar:divisor="1"
             android:defaultValue="125"
             android:summary="@string/summary_seekbar_double_tap_time_threshold"
-                android:text="@string/suffix_seekbar_float_ball_auto_hide_delay_ms"
+            android:text="ms"
             android:title="@string/title_seekbar_double_tap_time_threshold" />
         <CheckBoxPreference
             android:key="checkbox_special_key_map"
