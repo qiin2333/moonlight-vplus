@@ -170,11 +170,19 @@ public final class UsbIpBackend implements AutoCloseable {
                 }
             }
             if (exporter != 0) {
-                // Whatever a failed release left behind is torn down here.
+                // Whatever a failed release left behind is torn down here. A
+                // stopped exporter wraps no connection any more, so the devices
+                // it kept are closed with it: nothing else can reach them once
+                // this backend is closed.
                 try {
                     NativeUsbIp.stop(exporter);
                     exporter = 0;
                     exporterPort = 0;
+                    // Empty the map first: a throwing close must not leave an
+                    // entry that nothing can reach again.
+                    ArrayList<Active> abandoned = new ArrayList<>(exports.values());
+                    exports.clear();
+                    for (Active active : abandoned) active.connection.close();
                 } catch (Throwable error) {
                     if (failure == null) failure = error;
                     else failure.addSuppressed(error);
