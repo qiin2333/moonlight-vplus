@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="error_display_hdr_format">Der Anzeigemodus unterstützt %1$s nicht</string>
     <string name="error_hdr_android_version">HDR erfordert Android 7.0 oder höher</string>
     <string name="error_decoder_profile">Der Decoder unterstützt das Profil %1$s nicht</string>
     <string name="error_no_hevc_decoder">Kein HEVC-Decoder gefunden</string>
-    <string name="error_no_av1_decoder">Kein AV1-Decoder gefunden</string>
+    <string name="error_no_av1_decoder" tools:ignore="Typos">Kein AV1-Decoder gefunden</string>
     <string name="error_dolby_requires_hevc">Dolby Vision erfordert HEVC; Codec-Einstellung wird ignoriert</string>
     <string name="error_h264_unsupported">Dieses Gerät oder ROM unterstützt keine hardwarebeschleunigte H.264-Wiedergabe.</string>
     <string name="error_invalid_key_code">Ungültiger Tastencode</string>
@@ -126,7 +126,7 @@
     <string name="details_running_game">Laufende Spiel-ID</string>
     <string name="details_https_port">HTTPS-Port</string>
     <string name="details_sunshine_version">Sunshine-Version</string>
-    <string name="details_desktop_support">Desktop-Sonder-App-Unterstützung</string>
+    <string name="details_desktop_support" tools:ignore="Typos">Desktop-Sonder-App-Unterstützung</string>
     <string name="details_vdd_version">VDD-Fähigkeitsversion</string>
     <string name="details_hdr_support">HDR unterstützt</string>
     <string name="details_super_commands">Superbefehle</string>

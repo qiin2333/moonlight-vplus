@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="error_display_hdr_format">El modo de pantalla no admite %1$s</string>
     <string name="error_hdr_android_version">HDR requiere Android 7.0 o posterior</string>
     <string name="error_decoder_profile">El decodificador no admite el perfil %1$s</string>
     <string name="error_no_hevc_decoder">No se encontró decodificador HEVC</string>
     <string name="error_no_av1_decoder">No se encontró decodificador AV1</string>
-    <string name="error_dolby_requires_hevc">Dolby Vision requiere HEVC; se ignora la preferencia de códec</string>
+    <string name="error_dolby_requires_hevc" tools:ignore="Typos">Dolby Vision requiere HEVC; se ignora la preferencia de códec</string>
     <string name="error_h264_unsupported">Este dispositivo o ROM no admite la reproducción H.264 acelerada por hardware.</string>
     <string name="error_invalid_key_code">Código de tecla no válido</string>
     <string name="hdr_shield_update">Actualiza el firmware de tu NVIDIA SHIELD Android TV para activar HDR</string>
@@ -111,7 +111,7 @@
     <string name="keyboard_full">Completa</string>
     <string name="easytier_nat_other">Otro tipo (%1$d)</string>
     <string name="hdr_diagnostic_hdr10_plus">HDR10+ (metadatos detectados)</string>
-    <string name="hdr_diagnostic_dolby">Dolby Vision (negociado)</string>
+    <string name="hdr_diagnostic_dolby" tools:ignore="Typos">Dolby Vision (negociado)</string>
     <string name="crown_performance_default">Ancho de banda: ##Bandwidth##    Host/Red/Decod.: ##Host Latency## / ##Net Latency## / ##Decode Time##    FPS: ##FPS##    Pérdida: ##Drop Rate##    Render: ##Render Latency##    Hora: HH:MM:SS</string>
     <string name="crown_combo_default">Combinación</string>
     <string name="details_name">Nombre</string>

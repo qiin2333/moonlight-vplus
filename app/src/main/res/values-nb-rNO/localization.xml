@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="error_display_hdr_format">Skjermmodus støtter ikke %1$s</string>
     <string name="error_hdr_android_version">HDR krever Android 7.0 eller nyere</string>
     <string name="error_decoder_profile">Dekoderen støtter ikke %1$s-profilen</string>
     <string name="error_no_hevc_decoder">Fant ingen HEVC-dekoder</string>
-    <string name="error_no_av1_decoder">Fant ingen AV1-dekoder</string>
+    <string name="error_no_av1_decoder" tools:ignore="Typos">Fant ingen AV1-dekoder</string>
     <string name="error_dolby_requires_hevc">Dolby Vision krever HEVC; kodekvalg ignoreres</string>
     <string name="error_h264_unsupported">Denne enheten eller ROM-en støtter ikke maskinvareakselerert H.264-avspilling.</string>
     <string name="error_invalid_key_code">Ugyldig tastekode</string>
