@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Ativa a adaptação da entrada nativa para o touchpad do teclado de um tablet. Não requer permissões de root. Requer o Foundation Sunshine com a opção “Adaptar touchpad nativo” ativada. Testado apenas em alguns tablets Xiaomi.</string>
+</resources>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">태블릿 키보드 터치패드에 네이티브 터치패드 입력 최적화를 사용합니다. 루트 권한은 필요하지 않습니다. Foundation Sunshine에서 ‘네이티브 터치패드 적용’ 옵션을 활성화해야 합니다. 일부 Xiaomi 태블릿에서만 테스트되었습니다.</string>
+</resources>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Aktiverar anpassning av inbyggd styrplatteinmatning för styrplattan på ett surfplattetangentbord. Kräver inte root-behörighet. Kräver Foundation Sunshine med alternativet ”Anpassa inbyggd styrplatta” aktiverat. Endast testat på vissa Xiaomi-surfplattor.</string>
+</resources>

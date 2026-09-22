@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Вмикає адаптацію нативного введення для сенсорної панелі клавіатури планшета. Права root не потрібні. Потрібен Foundation Sunshine з увімкненою опцією «Адаптувати нативний тачпад». Перевірено лише на деяких планшетах Xiaomi.</string>
+</resources>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Schakelt aangepaste systeemeigen touchpadinvoer in voor het touchpad van een tablettoetsenbord. Rootrechten zijn niet nodig. Vereist Foundation Sunshine met de optie ‘Systeemeigen touchpad aanpassen’ ingeschakeld. Alleen getest op enkele Xiaomi-tablets.</string>
+</resources>
