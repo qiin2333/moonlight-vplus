@@ -22,7 +22,8 @@ public class NativeUsbIpTest {
         return socket;
     }
 
-    /** Requests a device list and asserts the reply of an exporter with nothing bound. */
+    /** Requests a device list and asserts the reply of an exporter with nothing bound.
+     * A session serves exactly one request, so every check needs its own connection. */
     private static void assertEmptyDeviceList(Socket socket) throws Exception {
         socket.setSoTimeout(3000);
         DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -69,13 +70,19 @@ public class NativeUsbIpTest {
         int firstPort = NativeUsbIp.localPort(first);
         int secondPort = NativeUsbIp.localPort(second);
         assertNotEquals(firstPort, secondPort);
-        try (Socket a = authorizedSocket(first, firstPort);
-             Socket b = authorizedSocket(second, secondPort)) {
-            assertEmptyDeviceList(a);
-            assertEmptyDeviceList(b);
-            // Stopping one exporter leaves the other one serving.
+        try {
+            try (Socket a = authorizedSocket(first, firstPort)) {
+                assertEmptyDeviceList(a);
+            }
+            try (Socket b = authorizedSocket(second, secondPort)) {
+                assertEmptyDeviceList(b);
+            }
+            // Stopping one exporter leaves the other one serving. A session serves
+            // exactly one request, so this needs a connection of its own.
             NativeUsbIp.stop(first);
-            assertEmptyDeviceList(b);
+            try (Socket survivor = authorizedSocket(second, secondPort)) {
+                assertEmptyDeviceList(survivor);
+            }
         } finally {
             NativeUsbIp.stop(first);
             NativeUsbIp.stop(second);

@@ -164,7 +164,7 @@ class UsbForwardingController(
                 onEnabledChange = ::changeEnabled,
                 onRetry = ::refreshCapability,
                 onShare = { path -> manager.deviceList[path]?.let(::request) },
-                onRelease = { path -> forwarding[path]?.let { releaseGroup(listOf(it)) } },
+                onRelease = { path -> forwarding[path]?.let { releaseGroup(listOf(it), R.string.usb_forward_choose) } },
                 onRefresh = { refreshDevices() },
                 onDismiss = { sheet?.dismiss() }
             )
