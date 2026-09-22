@@ -6,32 +6,44 @@
 #include <libusb.h>
 #include <usbipdcpp/LibusbHandler/LibusbServer.h>
 #include <usbipdcpp/LibusbHandler/tools.h>
+#include <chrono>
 #include <memory>
 #include <mutex>
-#include <atomic>
-#include <cstdint>
+#include <shared_mutex>
 #include <stdexcept>
+#include <string>
+#include <thread>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace {
-// One exporter per exported device. Nothing here is process-global device
-// state: each instance owns its listener, its device FD, and the single source
-// port its own tunnel is allowed to connect from, so sharing one device cannot
-// disturb another. Handles are never reused, so a stale handle can only ever
-// miss.
+// One exporter serves any number of devices, each bound by its own busid, the
+// way a desktop usbipd does. A handle is never reused, so a stale handle can
+// only ever miss.
 struct Instance {
     std::unique_ptr<usbipdcpp::LibusbServer> server;
-    std::atomic_uint16_t authorizedSourcePort{0};
+    // busid -> duplicated FD. The library never closes it, so it stays valid
+    // until the device is unbound, and can be re-wrapped per client connection.
+    std::unordered_map<std::string, int> devices;
+    // The connection filter runs on the server's network thread, which stop()
+    // joins while holding the global mutex: it must never take that mutex, or
+    // stopping an exporter would deadlock against its own accept loop.
+    std::mutex filterMutex;
+    std::unordered_set<std::uint16_t> authorizedPorts;
     std::uint16_t port = 0;
-    int deviceFd = -1;
 };
+
+// Releasing a device closes its tunnel first, so its session usually drains on
+// its own; the tiers below only cover a session that does not.
+constexpr auto kDrainTimeout = std::chrono::milliseconds(1500);
+constexpr auto kForceTimeout = std::chrono::milliseconds(2500);
+constexpr auto kPollInterval = std::chrono::milliseconds(2);
 
 std::mutex mutex;
 std::unordered_map<jlong, std::unique_ptr<Instance>> instances;
 jlong nextHandle = 1;
 // libusb's default context is process-wide and reference counted. It lives for
-// as long as any exporter does: every instance wraps its own Android FD into
-// that one context and runs its own event thread over it.
+// as long as any exporter does.
 int libusbReferences = 0;
 
 void fail(JNIEnv* env, const char* message) {
@@ -57,11 +69,32 @@ void releaseLibusb() {
     if (--libusbReferences == 0) libusb_exit(nullptr);
 }
 
-/** Stops the exporter and closes the duplicated FD; caller holds mutex. */
+bool deviceInUse(usbipdcpp::Server& server, const std::string& busid) {
+    std::shared_lock lock(server.get_devices_mutex());
+    return server.get_using_devices().contains(busid);
+}
+
+/** Polls a condition that a session teardown completes on another thread. */
+template <typename Condition>
+bool waitFor(Condition done, std::chrono::milliseconds timeout) {
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (!done()) {
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        std::this_thread::sleep_for(kPollInterval);
+    }
+    return true;
+}
+
+void closeDevices(Instance& instance) {
+    for (const auto& device : instance.devices) close(device.second);
+    instance.devices.clear();
+}
+
+/** Stops the exporter and closes every FD it still owns; caller holds mutex. */
 void teardown(Instance& instance) {
-    // Stop waits for URB callbacks before the FD is released.
+    // Stop waits for URB callbacks before the FDs are released.
     if (instance.server) { instance.server->stop(); instance.server.reset(); }
-    if (instance.deviceFd >= 0) { close(instance.deviceFd); instance.deviceFd = -1; }
+    closeDevices(instance);
 }
 }
 
@@ -85,9 +118,11 @@ Java_com_limelight_usbip_NativeUsbIp_start(JNIEnv* env, jclass) {
         Instance* owner = &instance;
         instance.server->get_server().set_connection_filter([owner](const asio::ip::tcp::endpoint& peer) {
             if (!peer.address().is_loopback()) return false;
-            std::uint16_t expected = peer.port();
-            return expected != 0 && owner->authorizedSourcePort.compare_exchange_strong(
-                    expected, 0, std::memory_order_acq_rel);
+            const std::uint16_t source = peer.port();
+            if (source == 0) return false;
+            // Each tunnel authorizes its own source port and spends it here.
+            std::lock_guard filterLock(owner->filterMutex);
+            return owner->authorizedPorts.erase(source) == 1;
         });
         asio::ip::tcp::endpoint endpoint(asio::ip::address_v4::loopback(), 0);
         if (auto error = instance.server->start(endpoint))
@@ -126,7 +161,8 @@ Java_com_limelight_usbip_NativeUsbIp_authorizeLocalConnection(JNIEnv* env, jclas
         fail(env, "Invalid USB/IP local connection authorization");
         return;
     }
-    instance->authorizedSourcePort.store(static_cast<std::uint16_t>(sourcePort), std::memory_order_release);
+    std::lock_guard filterLock(instance->filterMutex);
+    instance->authorizedPorts.insert(static_cast<std::uint16_t>(sourcePort));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -134,49 +170,95 @@ Java_com_limelight_usbip_NativeUsbIp_revokeLocalConnection(JNIEnv*, jclass, jlon
     if (sourcePort < 1 || sourcePort > 65535) return;
     std::lock_guard lock(mutex);
     Instance* instance = find(handle);
-    // An exporter that is already gone took its authorization with it.
+    // An exporter that is already gone took its authorizations with it.
     if (!instance) return;
-    std::uint16_t expected = static_cast<std::uint16_t>(sourcePort);
-    instance->authorizedSourcePort.compare_exchange_strong(expected, 0, std::memory_order_acq_rel);
+    std::lock_guard filterLock(instance->filterMutex);
+    instance->authorizedPorts.erase(static_cast<std::uint16_t>(sourcePort));
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_limelight_usbip_NativeUsbIp_bind(JNIEnv* env, jclass, jlong handle, jint fd) {
     std::lock_guard lock(mutex);
     Instance* instance = find(handle);
+    int ownedFd = -1;
     try {
-        if (!instance || instance->deviceFd >= 0) throw std::runtime_error("Invalid USB/IP binding state");
-        int ownedFd = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+        if (!instance || !instance->server) throw std::runtime_error("Invalid USB/IP binding state");
+        ownedFd = fcntl(fd, F_DUPFD_CLOEXEC, 0);
         if (ownedFd < 0) throw std::runtime_error("Unable to duplicate USB FD");
-        // Wrapped handles never close the FD, so the duplicate stays owned here
-        // and can be re-wrapped for every client connection.
-        instance->deviceFd = ownedFd;
         libusb_device_handle* device = nullptr;
         if (libusb_wrap_sys_device(nullptr, ownedFd, &device) != 0)
             throw std::runtime_error("Unable to wrap USB FD");
+        // The wrapper only reads identity here: the library wraps the FD again
+        // for every client connection.
         std::unique_ptr<libusb_device_handle, decltype(&libusb_close)> wrapped(device, libusb_close);
-        const auto busId = usbipdcpp::get_device_busid(libusb_get_device(device));
+        const std::string busId = usbipdcpp::get_device_busid(libusb_get_device(device));
         wrapped.reset();
-        if (instance->server->bind_host_device_with_wrapped_fd(ownedFd) != usbipdcpp::DeviceOperationResult::Success)
-            throw std::runtime_error("Unable to bind USB device");
-        jstring result = env->NewStringUTF(busId.c_str());
-        if (!result) {
-            // Allocation failed mid-bind: drop this exporter here since the
-            // caller has no handle left to release it with.
-            jthrowable pending = env->ExceptionOccurred();
-            if (pending) env->ExceptionClear();
-            teardown(*instance);
-            instances.erase(handle);
-            releaseLibusb();
-            if (pending) env->Throw(pending);
+        // Own the FD before binding it: no failure may leave the library holding
+        // an FD this map does not know about.
+        if (!instance->devices.emplace(busId, ownedFd).second)
+            throw std::runtime_error("USB device is already exported");
+        try {
+            if (instance->server->bind_host_device_with_wrapped_fd(ownedFd)
+                    != usbipdcpp::DeviceOperationResult::Success)
+                throw std::runtime_error("Unable to bind USB device");
+            jstring result = env->NewStringUTF(busId.c_str());
+            if (!result) throw std::runtime_error("Unable to report the USB busid");
+            return result;
+        } catch (...) {
+            // Undo everything for a device the caller never learned about.
+            instance->server->notify_device_removed(busId);
+            instance->devices.erase(busId);
+            throw;
         }
-        return result;
     } catch (const std::exception& error) {
-        // The duplicated FD stays owned by this instance: callers release it by
-        // stopping the exporter, which preserves the original connection until
-        // the stop succeeds.
+        if (ownedFd >= 0) close(ownedFd);
         fail(env, error.what());
         return nullptr;
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_limelight_usbip_NativeUsbIp_unbind(JNIEnv* env, jclass, jlong handle, jstring busId) {
+    std::lock_guard lock(mutex);
+    Instance* instance = find(handle);
+    if (!instance || !instance->server) {
+        fail(env, "Invalid USB/IP handle");
+        return;
+    }
+    if (!busId) {
+        fail(env, "Invalid USB/IP busid");
+        return;
+    }
+    const char* raw = env->GetStringUTFChars(busId, nullptr);
+    if (!raw) return;   // pending OutOfMemoryError
+    const std::string busid(raw);
+    env->ReleaseStringUTFChars(busId, raw);
+    auto found = instance->devices.find(busid);
+    if (found == instance->devices.end()) return;   // already released
+    const int deviceFd = found->second;
+
+    usbipdcpp::Server& server = instance->server->get_server();
+    try {
+        // The tunnel is closed before this call, so the session normally drains
+        // by itself; otherwise it is forced to stop, and the FD can only be
+        // closed once the device has left both device lists.
+        if (waitFor([&] { return !deviceInUse(server, busid); }, kDrainTimeout)) {
+            // Drained: drop it from the available list, releasing whatever the
+            // session did not.
+            auto result = instance->server->unbind_host_device_by_fd(deviceFd);
+            if (result != usbipdcpp::DeviceOperationResult::Success
+                    && result != usbipdcpp::DeviceOperationResult::DeviceNotFound)
+                throw std::runtime_error("Unable to unbind USB device");
+        } else {
+            instance->server->notify_device_removed(busid);
+            if (!waitFor([&] { return !server.has_bound_device(busid); }, kForceTimeout))
+                throw std::runtime_error("USB device did not drain");
+        }
+        close(deviceFd);
+        instance->devices.erase(found);
+    } catch (const std::exception& error) {
+        // Keep the FD and the registration: the handler may still wrap it.
+        fail(env, error.what());
     }
 }
 

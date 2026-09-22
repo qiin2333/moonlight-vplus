@@ -62,6 +62,53 @@ public class NativeUsbIpTest {
         }
     }
 
+    /** One exporter serves several tunnels at once, one authorized port each. */
+    @Test public void oneExporterServesSeveralTunnelsAtOnce() throws Exception {
+        NativeUsbIp.load();
+        long handle = NativeUsbIp.start();
+        int port = NativeUsbIp.localPort(handle);
+        try (Socket first = authorizedSocket(handle, port);
+             Socket second = authorizedSocket(handle, port)) {
+            assertNotEquals(first.getLocalPort(), second.getLocalPort());
+            assertEmptyDeviceList(first);
+            assertEmptyDeviceList(second);
+        } finally { NativeUsbIp.stop(handle); }
+    }
+
+    /** Revoking one tunnel's port leaves the exporter's other authorizations alone. */
+    @Test public void revokingOnePortKeepsTheOtherAuthorized() throws Exception {
+        NativeUsbIp.load();
+        long handle = NativeUsbIp.start();
+        int port = NativeUsbIp.localPort(handle);
+        Socket reservation = new Socket();
+        reservation.setReuseAddress(true);
+        reservation.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
+        int revokedPort = reservation.getLocalPort();
+        NativeUsbIp.authorizeLocalConnection(handle, revokedPort);
+        // Keep one authorized connection unused until the check below.
+        try (Socket keeper = authorizedSocket(handle, port)) {
+            NativeUsbIp.revokeLocalConnection(handle, revokedPort);
+            reservation.close();
+            try (Socket rejected = unauthorizedSocket(revokedPort, port)) {
+                assertRejected(rejected);
+            }
+            assertEmptyDeviceList(keeper);
+        } finally { NativeUsbIp.stop(handle); }
+    }
+
+    /** Unbinding a device the exporter does not serve must leave it serving. */
+    @Test public void unbindUnknownDeviceLeavesExporterServing() throws Exception {
+        NativeUsbIp.load();
+        long handle = NativeUsbIp.start();
+        int port = NativeUsbIp.localPort(handle);
+        try {
+            NativeUsbIp.unbind(handle, "9-9:0");
+            try (Socket socket = authorizedSocket(handle, port)) {
+                assertEmptyDeviceList(socket);
+            }
+        } finally { NativeUsbIp.stop(handle); }
+    }
+
     /** Two exporters share one process: separate listeners, separate authorizations. */
     @Test public void instancesForwardIndependently() throws Exception {
         NativeUsbIp.load();

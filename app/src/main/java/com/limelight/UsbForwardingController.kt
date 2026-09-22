@@ -30,9 +30,9 @@ import java.security.cert.X509Certificate
 import java.util.UUID
 import java.util.concurrent.Executors
 
-/** One foreground stream owns one export per shared device. Permission and UI
- * state stay on the main thread; blocking native cleanup is serialized behind
- * export on the worker. */
+/** One foreground stream owns one export per shared device, all served by the
+ * backend's single exporter. Permission and UI state stay on the main thread;
+ * blocking native cleanup is serialized behind export on the worker. */
 class UsbForwardingController(
     private val game: Game,
     private val host: String,
