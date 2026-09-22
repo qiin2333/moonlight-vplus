@@ -441,7 +441,7 @@ class PerformanceOverlayManager(
 
     @SuppressLint("DefaultLocale")
     private fun updateResolutionText(view: TextView, performanceInfo: PerformanceInfo) {
-        val resValue = String.format("%dx%d@%.0f",
+        val resValue = String.format(Locale.getDefault(), "%dx%d@%.0f",
             performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps)
         val moonIcon = getCurrentMoonPhaseIcon()
         // 月相位置保持与原版一致：用 emoji 作为前缀图标
@@ -459,10 +459,10 @@ class PerformanceOverlayManager(
     private fun updateRenderFpsText(view: TextView, performanceInfo: PerformanceInfo) {
         // NBSP + Word Joiner 围绕 / 防止 TextView 在 "Rx 60 / Rd 60" 任意空格或斜杠处断行
         val fpsValue = if (performanceInfo.framegenFps > 0.5f) {
-            String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f\u00A0\u2060/\u2060\u00A0FG\u00A0%.0f",
+            String.format(Locale.getDefault(), "Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f\u00A0\u2060/\u2060\u00A0FG\u00A0%.0f",
                 performanceInfo.receivedFps, performanceInfo.renderedFps, performanceInfo.framegenFps)
         } else {
-            String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f",
+            String.format(Locale.getDefault(), "Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f",
                 performanceInfo.receivedFps, performanceInfo.renderedFps)
         }
         // 原版本本行无图标
@@ -471,7 +471,7 @@ class PerformanceOverlayManager(
 
     @SuppressLint("DefaultLocale")
     private fun updatePacketLossText(view: TextView, performanceInfo: PerformanceInfo) {
-        val lossValue = String.format("%.2f", performanceInfo.lostFrameRate)
+        val lossValue = String.format(Locale.getDefault(), "%.2f", performanceInfo.lostFrameRate)
         val lossColor = if (performanceInfo.lostFrameRate < 5.0f) 0xFF7D9D7D.toInt() else 0xFFB57D7D.toInt()
         view.text = createStyledText(R.drawable.phc_perf_signal, lossValue, "%", lossColor, textSizePx = view.textSize)
     }
@@ -480,7 +480,7 @@ class PerformanceOverlayManager(
     private fun updateNetworkLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         // 带宽用 gauge 仪表盘图标更直观，始终显示
         val iconRes: Int = R.drawable.phc_perf_gauge
-        val bandwidthAndLatency = String.format("%s\u00A0\u00A0\u00A0%d\u00A0\u00B1\u00A0%d",
+        val bandwidthAndLatency = String.format(Locale.getDefault(), "%s\u00A0\u00A0\u00A0%d\u00A0\u00B1\u00A0%d",
             performanceInfo.bandWidth,
             (performanceInfo.rttInfo shr 32).toInt(),
             performanceInfo.rttInfo.toInt())
@@ -492,14 +492,14 @@ class PerformanceOverlayManager(
         val isHot = performanceInfo.decodeTimeMs >= 15
         val iconRes: Int? = if (isHot) null else R.drawable.phc_perf_timer
         val iconEmoji: String? = if (isHot) "🥵" else null
-        val latencyValue = String.format("%.2f", performanceInfo.decodeTimeMs)
+        val latencyValue = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
         view.text = createStyledText(iconRes, latencyValue, "ms", 0xFFD597E3.toInt(), iconEmoji, textSizePx = view.textSize)
     }
 
     @SuppressLint("DefaultLocale")
     private fun updateHostLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         if (performanceInfo.framesWithHostProcessingLatency > 0) {
-            val latencyValue = String.format("%.1f", performanceInfo.aveHostProcessingLatency)
+            val latencyValue = String.format(Locale.getDefault(), "%.1f", performanceInfo.aveHostProcessingLatency)
             view.text = createStyledText(R.drawable.phc_perf_monitor, latencyValue, "ms", 0xFF009688.toInt(), textSizePx = view.textSize)
         } else {
             // 空置时保持原版本的 🧋 emoji
@@ -539,7 +539,7 @@ class PerformanceOverlayManager(
             view.text = createStyledText(null, "1%Low\u00A0—", "FPS", 0xFFFF7043.toInt(), textSizePx = view.textSize)
             return
         }
-        val value = String.format("1%%Low\u00A0%.1f", lowFps)
+        val value = String.format(Locale.getDefault(), "1%%Low\u00A0%.1f", lowFps)
         val color = when {
             lowFps >= performanceInfo.renderedFps * 0.9f -> 0xFF90EE90.toInt()
             lowFps >= performanceInfo.renderedFps * 0.7f -> 0xFFFFD740.toInt()
@@ -1006,6 +1006,7 @@ class PerformanceOverlayManager(
         val currentDate = dateFormat.format(Calendar.getInstance(TimeZone.getDefault()).time)
 
         val moonInfo = String.format(
+            Locale.getDefault(),
             activity.getString(R.string.perf_moon_phase_info),
             moonPhaseInfo.icon, moonPhaseInfo.name, phasePercentage, daysInCycle, currentDate, moonPhaseInfo.description
         )
