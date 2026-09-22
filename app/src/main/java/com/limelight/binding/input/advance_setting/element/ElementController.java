@@ -35,7 +35,6 @@ import android.widget.Toast;
 import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.R;
-import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.DirectConfigAction;
 import com.limelight.binding.input.advance_setting.DirectConfigSwitchState;
@@ -115,7 +114,6 @@ public class ElementController {
     private Element dispatchingElement;
 
     private final ControllerManager controllerManager;
-    private final ControllerHandler controllerHandler;
     private final PageDeviceController pageDeviceController;
 
     private GamepadInputContext gamepadInputContext = new GamepadInputContext();
@@ -255,7 +253,6 @@ public class ElementController {
         this.context = context;
         this.game = (Game) context;
         this.controllerManager = controllerManager;
-        this.controllerHandler = game.getControllerHandler();
         this.pageDeviceController = controllerManager.getPageDeviceController();
         this.handler = new Handler(Looper.getMainLooper());
         this.pageEdit = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_edit, null);
@@ -1756,7 +1753,7 @@ public class ElementController {
     }
 
     public void sendGamepadEvent() {
-        controllerHandler.reportOscState(
+        game.getControllerHandler().reportOscState(
                 gamepadInputContext.inputMap,
                 gamepadInputContext.leftStickX,
                 gamepadInputContext.leftStickY,
@@ -1769,7 +1766,7 @@ public class ElementController {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                controllerHandler.reportOscState(
+                game.getControllerHandler().reportOscState(
                         gamepadInputContext.inputMap,
                         gamepadInputContext.leftStickX,
                         gamepadInputContext.leftStickY,
@@ -1793,7 +1790,7 @@ public class ElementController {
     public void setGameVibrator(boolean gameVibrator) {
         this.gameVibrator = gameVibrator;
         if (!gameVibrator) {
-            controllerHandler.submitLegacyDeviceRumble((short) 0, (short) 0);
+            game.getControllerHandler().submitLegacyDeviceRumble((short) 0, (short) 0);
         }
     }
 
@@ -1805,12 +1802,12 @@ public class ElementController {
 
     public void gameVibrator(short lowFreqMotor, short highFreqMotor) {
         if (gameVibrator) {
-            controllerHandler.submitLegacyDeviceRumble(lowFreqMotor, highFreqMotor);
+            game.getControllerHandler().submitLegacyDeviceRumble(lowFreqMotor, highFreqMotor);
         }
     }
 
 
     public void rumbleSingleVibrator(short lowFreqMotor, short highFreqMotor, int vibratorTime) {
-        controllerHandler.playDeviceTouchHaptic(lowFreqMotor, highFreqMotor, vibratorTime);
+        game.getControllerHandler().playDeviceTouchHaptic(lowFreqMotor, highFreqMotor, vibratorTime);
     }
 }

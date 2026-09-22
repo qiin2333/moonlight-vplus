@@ -803,6 +803,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
+        virtualController?.rebindControllerHandler(controllerHandler)
         // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
         // re-runs this path once it claims controller 0.
         controllerHandler.onSensorsReenabled()
