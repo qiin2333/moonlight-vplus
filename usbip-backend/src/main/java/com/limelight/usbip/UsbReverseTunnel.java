@@ -107,6 +107,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
     private final Object lock = new Object();
     private Socket remote;
     private Socket local;
+    private long authorizedHandle;
     private int authorizedLocalPort;
     private boolean closed;
     private boolean started;
@@ -141,16 +142,16 @@ public final class UsbReverseTunnel implements AutoCloseable {
     /** API 28+ prototype; invoke once. Register on {@link #ready()} to learn when forwarding starts. */
     public void start(String host, int port, String token, UsbIpBackend.Export export,
             X509Certificate client, PrivateKey key, X509Certificate pinned) {
-        startInternal(host, port, token, export.busId, export.port, client, key, pinned, true);
+        startInternal(host, port, token, export.busId, export.port, export.handle, client, key, pinned, true);
     }
 
     // Package-visible endpoint form is used by transport tests without claiming a USB device.
     void start(String host, int port, String token, String busId, int localPort,
             X509Certificate client, PrivateKey key, X509Certificate pinned) {
-        startInternal(host, port, token, busId, localPort, client, key, pinned, false);
+        startInternal(host, port, token, busId, localPort, 0L, client, key, pinned, false);
     }
 
-    private void startInternal(String host, int port, String token, String busId, int localPort,
+    private void startInternal(String host, int port, String token, String busId, int localPort, long handle,
             X509Certificate client, PrivateKey key, X509Certificate pinned, boolean authorizeLocal) {
         if (host == null || host.isEmpty() || port < 1 || port > 65535 || localPort < 1 || localPort > 65535
                 || token == null || token.isEmpty() || busId == null || !busId.matches("[A-Za-z0-9.:-]{1,31}")
@@ -160,7 +161,8 @@ public final class UsbReverseTunnel implements AutoCloseable {
             if (started || closed) throw new IllegalStateException("Tunnel already started or closed");
             started = true;
         }
-        new Thread(() -> run(host, port, token, busId, localPort, client, key, pinned, authorizeLocal), "UsbTunnelConnect").start();
+        new Thread(() -> run(host, port, token, busId, localPort, handle, client, key, pinned, authorizeLocal),
+                "UsbTunnelConnect").start();
     }
 
     /** Completes when byte forwarding starts, exceptionally on startup failure. */
@@ -168,7 +170,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
 
     public Completion completion() { return completion; }
 
-    private void run(String host, int port, String token, String busId, int localPort,
+    private void run(String host, int port, String token, String busId, int localPort, long handle,
             X509Certificate client, PrivateKey key, X509Certificate pinned, boolean authorizeLocal) {
         ScheduledExecutorService deadline = Executors.newSingleThreadScheduledExecutor();
         deadline.schedule(() -> finish(new IOException("USB tunnel startup timed out")), 15, TimeUnit.SECONDS);
@@ -197,8 +199,9 @@ public final class UsbReverseTunnel implements AutoCloseable {
                 backend.bind(new InetSocketAddress("127.0.0.1", 0));
                 synchronized (lock) {
                     if (closed) throw new IOException("USB tunnel closed");
+                    authorizedHandle = handle;
                     authorizedLocalPort = backend.getLocalPort();
-                    NativeUsbIp.authorizeLocalConnection(authorizedLocalPort);
+                    NativeUsbIp.authorizeLocalConnection(handle, authorizedLocalPort);
                 }
             }
             backend.connect(new InetSocketAddress("127.0.0.1", localPort), 5000);
@@ -257,8 +260,9 @@ public final class UsbReverseTunnel implements AutoCloseable {
             if (closed) return;
             closed = true;
             if (authorizedLocalPort != 0) {
-                NativeUsbIp.revokeLocalConnection(authorizedLocalPort);
+                NativeUsbIp.revokeLocalConnection(authorizedHandle, authorizedLocalPort);
                 authorizedLocalPort = 0;
+                authorizedHandle = 0;
             }
             closeSocket(remote);
             closeSocket(local);

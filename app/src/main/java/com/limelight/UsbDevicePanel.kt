@@ -34,15 +34,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.limelight.utils.AppActionSheet
 
-internal data class UsbPanelDevice(val path: String, val name: String, val type: UsbDeviceType)
+/** One row: its own share state, its own progress, its own status line. */
+internal data class UsbPanelDevice(
+    val path: String, val name: String, val type: UsbDeviceType, val status: Int,
+    val sharing: Boolean = false, val busy: Boolean = false, val locked: Boolean = false
+)
 
 /** Shared dialog shell, with explicit controls and one focus target per action. */
 @Composable
 internal fun UsbDevicePanel(
-    devices: List<UsbPanelDevice>, selected: String?, busy: Boolean, message: Int,
+    devices: List<UsbPanelDevice>, busy: Boolean, message: Int,
     hostName: String, forwardingEnabled: Boolean, canShare: Boolean,
     onEnabledChange: (Boolean) -> Unit, onRetry: () -> Unit,
-    onShare: (String) -> Unit, onRelease: () -> Unit,
+    onShare: (String) -> Unit, onRelease: (String) -> Unit,
     onRefresh: () -> Unit, onDismiss: () -> Unit
 ) {
     val initialFocus = remember { FocusRequester() }
@@ -82,11 +86,12 @@ internal fun UsbDevicePanel(
                             UsbPanelAction(stringResource(R.string.usb_forward_refresh), onRefresh, initialFocus)
                         }
                     }
-                    if (message != R.string.usb_forward_choose || busy) {
+                    val working = busy || devices.any { it.busy }
+                    if (message != R.string.usb_forward_choose || working) {
                         item {
                             Text(stringResource(message), style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+                            if (working) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
                             if (forwardingEnabled && !canShare && !busy) {
                                 UsbPanelAction(stringResource(R.string.usb_forward_retry), onRetry, initialFocus)
                             }
@@ -97,11 +102,10 @@ internal fun UsbDevicePanel(
                             Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                     items(devices, key = { it.path }) { device ->
-                        val active = device.path == selected
-                        val enabled = if (active) message != R.string.usb_forward_releasing
-                            else canShare && !busy && selected == null
-                        UsbDeviceRow(device, active, enabled, initialFocus) {
-                            if (active) onRelease() else onShare(device.path)
+                        // Every device acts on its own: one in flight never blocks the rest.
+                        val enabled = if (device.sharing) !device.locked else canShare && !busy
+                        UsbDeviceRow(device, enabled, initialFocus) {
+                            if (device.sharing) onRelease(device.path) else onShare(device.path)
                         }
                     }
                     item {
@@ -227,7 +231,7 @@ private fun UsbSharingToggle(forwardingEnabled: Boolean, busy: Boolean, initialF
 }
 
 @Composable
-private fun UsbDeviceRow(device: UsbPanelDevice, active: Boolean, enabled: Boolean,
+private fun UsbDeviceRow(device: UsbPanelDevice, enabled: Boolean,
     initialFocus: FocusRequester, onAction: () -> Unit) {
     val accent = usbPanelAccent()
     val deviceType = device.type
@@ -242,15 +246,16 @@ private fun UsbDeviceRow(device: UsbPanelDevice, active: Boolean, enabled: Boole
                 Column(Modifier.weight(1f)) {
                     Text(device.name,
                         fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(stringResource(deviceType.label) + " · " + stringResource(if (active) R.string.usb_forward_sharing else R.string.usb_forward_local),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(deviceType.label) + " · " + stringResource(device.status),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
         val action: @Composable () -> Unit = {
-            UsbPanelAction(stringResource(if (active) R.string.usb_forward_release else R.string.usb_forward_share),
+            UsbPanelAction(stringResource(if (device.sharing) R.string.usb_forward_release else R.string.usb_forward_share),
                 onAction, initialFocus,
-                enabled = enabled, style = if (active) UsbActionStyle.Outlined else UsbActionStyle.Filled)
+                enabled = enabled, style = if (device.sharing) UsbActionStyle.Outlined else UsbActionStyle.Filled)
         }
         if (narrow) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             info()
