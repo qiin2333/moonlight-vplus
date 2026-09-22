@@ -10,7 +10,7 @@
     <string name="error_invalid_key_code">Ogiltig tangentkod</string>
     <string name="hdr_shield_update">Uppdatera firmware på din NVIDIA SHIELD Android TV för att aktivera HDR</string>
     <string name="preference_summary_current">%1$s (Aktuellt: %2$s)</string>
-    <string name="shortcut_app_removed">App borttagen från datorn</string>
+    <string name="shortcut_app_removed">App borttagen från PC</string>
     <string name="mic_error_no_connection">Mikrofonen är otillgänglig: ingen anslutning</string>
     <string name="mic_error_start">Det gick inte att starta mikrofonströmmen</string>
     <string name="mic_error_host_unsupported">Värden har inte stöd för mikrofonströmning</string>
@@ -18,8 +18,8 @@
     <string name="mic_error_resume">Det gick inte att återuppta mikrofonen: initieringen misslyckades</string>
     <string name="mic_error_init_detail">Mikrofoninitieringen misslyckades: %1$s</string>
     <string name="connection_not_paired">Enheten är inte parkopplad med datorn</string>
-    <string name="connection_hdr_unsupported">Datorns GPU har inte stöd för HDR-strömning. Strömmen blir SDR.</string>
-    <string name="connection_above_4k_host">Värddatorn har inte stöd för strömning i upplösningar över 4K.</string>
+    <string name="connection_hdr_unsupported">PC:ns GPU har inte stöd för HDR-strömning. Strömmen blir SDR.</string>
+    <string name="connection_above_4k_host">Värd-PC:n har inte stöd för strömning i upplösningar över 4K.</string>
     <string name="connection_above_4k_client">Strömningsenheten måste ha stöd för HEVC eller AV1 för att strömma över 4K.</string>
     <string name="connection_4k_update">Uppdatera GeForce Experience för att strömma i 4K. Strömmen blir 1080p.</string>
     <string name="connection_app_missing">Appen %1$s finns inte i GFE-applistan</string>
@@ -32,9 +32,9 @@
     <string name="connection_operation_interrupted">Åtgärden avbröts</string>
     <string name="connection_network_error">Nätverksfel: %1$s</string>
     <string name="connection_rotation_unsupported">Värden har inte stöd för skärmrotation. Uppdatera värdprogramvaran.</string>
-    <string name="connection_foreign_session_resumed">Denna session startades av en annan enhet. Avsluta den på den enheten eller på datorn. (Felkod: %1$d)</string>
-    <string name="connection_foreign_session_quit">Denna session startades av en annan enhet. Avsluta den på den enheten eller på datorn. (Felkod: %1$d)</string>
-    <string name="connection_app_minimized">Programmet är minimerat. Återställ det på datorn eller avsluta sessionen och börja strömma igen.</string>
+    <string name="connection_foreign_session_resumed">Denna session startades av en annan enhet. Avsluta den på den enheten eller på PC:n. (Felkod: %1$d)</string>
+    <string name="connection_foreign_session_quit">Denna session startades av en annan enhet. Avsluta den på den enheten eller på PC:n. (Felkod: %1$d)</string>
+    <string name="connection_app_minimized">Programmet är minimerat. Återställ det på PC:n eller avsluta sessionen och börja strömma igen.</string>
     <string name="addpc_ipv6_hint">\n\nKontrollera följande för IPv6:\n1. Modemets brandvägg tillåter IPv6-trafik.\n2. IPv6-portvidarebefordran är aktiverat på routern.\n3. IPv6-brandväggsinställningarna på värden.</string>
     <string name="address_selection_title">Välj en anslutningsadress</string>
     <string name="address_host_name">Värdnamn</string>
@@ -54,7 +54,7 @@
     <string name="direction_right">HÖGER</string>
     <string name="direction_down">NED</string>
     <string name="editor_title">Titel:</string>
-    <string name="pc_icon_description">Datorikon</string>
+    <string name="pc_icon_description">PC-ikon</string>
     <string name="pc_status_description">Statusöverlägg</string>
     <string name="loading_description">Läser in</string>
     <string name="root_mouse_unavailable">Enheten är inte rootad: musinfångning är inte tillgänglig</string>

@@ -10,7 +10,7 @@
     <string name="error_invalid_key_code">קוד מקש לא חוקי</string>
     <string name="hdr_shield_update">עדכן את הקושחה של NVIDIA SHIELD Android TV כדי להפעיל HDR</string>
     <string name="preference_summary_current">%1$s (נוכחי: %2$s)</string>
-    <string name="shortcut_app_removed">האפליקציה הוסרה מהמחשב</string>
+    <string name="shortcut_app_removed">האפליקציה הוסרה מה-PC</string>
     <string name="mic_error_no_connection">המיקרופון אינו זמין: אין חיבור</string>
     <string name="mic_error_start">לא ניתן להתחיל הזרמת מיקרופון</string>
     <string name="mic_error_host_unsupported">המחשב המארח אינו תומך בהזרמת מיקרופון</string>
@@ -18,8 +18,8 @@
     <string name="mic_error_resume">לא ניתן לחדש את המיקרופון: האתחול נכשל</string>
     <string name="mic_error_init_detail">אתחול המיקרופון נכשל: %1$s</string>
     <string name="connection_not_paired">המכשיר אינו מותאם למחשב</string>
-    <string name="connection_hdr_unsupported">ה-GPU של המחשב אינו תומך בהזרמת HDR. ההזרמה תהיה SDR.</string>
-    <string name="connection_above_4k_host">המחשב המארח אינו תומך בהזרמה ברזולוציות מעל 4K.</string>
+    <string name="connection_hdr_unsupported">ה-GPU של ה-PC אינו תומך בהזרמת HDR. ההזרמה תהיה SDR.</string>
+    <string name="connection_above_4k_host">ה-PC המארח אינו תומך בהזרמה ברזולוציות מעל 4K.</string>
     <string name="connection_above_4k_client">המכשיר חייב לתמוך ב-HEVC או ב-AV1 כדי להזרים מעל 4K.</string>
     <string name="connection_4k_update">עדכן את GeForce Experience כדי להזרים ב-4K. ההזרמה תהיה 1080p.</string>
     <string name="connection_app_missing">האפליקציה %1$s אינה ברשימת האפליקציות של GFE</string>
@@ -32,9 +32,9 @@
     <string name="connection_operation_interrupted">הפעולה הופרעה</string>
     <string name="connection_network_error">שגיאת רשת: %1$s</string>
     <string name="connection_rotation_unsupported">המחשב המארח אינו תומך בסיבוב התצוגה. עדכן את תוכנת המארח.</string>
-    <string name="connection_foreign_session_resumed">הפעלה זו הופעלה על ידי מכשיר אחר. סיים אותה במכשיר זה או במחשב. (קוד שגיאה: %1$d)</string>
-    <string name="connection_foreign_session_quit">הפעלה זו הופעלה על ידי מכשיר אחר. סיים אותה במכשיר זה או במחשב. (קוד שגיאה: %1$d)</string>
-    <string name="connection_app_minimized">האפליקציה ממוזערת. שחזר אותה במחשב או צא מההפעלה והתחל להזרים שוב.</string>
+    <string name="connection_foreign_session_resumed">הפעלה זו הופעלה על ידי מכשיר אחר. סיים אותה במכשיר זה או ב-PC. (קוד שגיאה: %1$d)</string>
+    <string name="connection_foreign_session_quit">הפעלה זו הופעלה על ידי מכשיר אחר. סיים אותה במכשיר זה או ב-PC. (קוד שגיאה: %1$d)</string>
+    <string name="connection_app_minimized">האפליקציה ממוזערת. שחזר אותה ב-PC או צא מההפעלה והתחל להזרים שוב.</string>
     <string name="addpc_ipv6_hint">\n\nעבור IPv6, בדוק:\n1. חומת האש של המודם מאפשרת תעבורת IPv6.\n2. העברת פורטים של IPv6 מופעלת בנתב.\n3. הגדרות חומת אש IPv6 במארח.</string>
     <string name="address_selection_title">בחר כתובת לחיבור</string>
     <string name="address_host_name">שם מארח</string>
@@ -54,10 +54,10 @@
     <string name="direction_right">ימינה</string>
     <string name="direction_down">למטה</string>
     <string name="editor_title">כותרת:</string>
-    <string name="pc_icon_description">סמל מחשב</string>
+    <string name="pc_icon_description">סמל PC</string>
     <string name="pc_status_description">שכבת על של מצב</string>
     <string name="loading_description">טוען</string>
-    <string name="root_mouse_unavailable">המכשיר אינו מושרש - לכידת עכבר אינה זמינה</string>
+    <string name="root_mouse_unavailable">המכשיר אינו root - לכידת עכבר אינה זמינה</string>
     <string name="perf_client_resolution">"רזולוציית לקוח: "</string>
     <string name="perf_host_resolution">"רזולוציית מארח: "</string>
     <string name="perf_scale_factor">"מקדם שינוי גודל: "</string>

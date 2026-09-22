@@ -10,7 +10,7 @@
     <string name="error_invalid_key_code">Μη έγκυρος κωδικός πλήκτρου</string>
     <string name="hdr_shield_update">Ενημερώστε το firmware του NVIDIA SHIELD Android TV για ενεργοποίηση HDR</string>
     <string name="preference_summary_current">%1$s (Τρέχον: %2$s)</string>
-    <string name="shortcut_app_removed">Η εφαρμογή αφαιρέθηκε από τον υπολογιστή</string>
+    <string name="shortcut_app_removed">Η εφαρμογή αφαιρέθηκε από το PC</string>
     <string name="mic_error_no_connection">Το μικρόφωνο δεν είναι διαθέσιμο: χωρίς σύνδεση</string>
     <string name="mic_error_start">Αδυναμία έναρξης ροής μικροφώνου</string>
     <string name="mic_error_host_unsupported">Ο υπολογιστής δεν υποστηρίζει ροή μικροφώνου</string>
@@ -18,8 +18,8 @@
     <string name="mic_error_resume">Αδυναμία συνέχισης μικροφώνου: αποτυχία αρχικοποίησης</string>
     <string name="mic_error_init_detail">Αποτυχία αρχικοποίησης μικροφώνου: %1$s</string>
     <string name="connection_not_paired">Η συσκευή δεν είναι συζευγμένη με τον υπολογιστή</string>
-    <string name="connection_hdr_unsupported">Η GPU του υπολογιστή δεν υποστηρίζει ροή HDR. Η ροή θα είναι SDR.</string>
-    <string name="connection_above_4k_host">Ο υπολογιστής δεν υποστηρίζει ροή σε αναλύσεις άνω των 4K.</string>
+    <string name="connection_hdr_unsupported">Η GPU του PC δεν υποστηρίζει ροή HDR. Η ροή θα είναι SDR.</string>
+    <string name="connection_above_4k_host">Ο host PC δεν υποστηρίζει ροή σε αναλύσεις άνω των 4K.</string>
     <string name="connection_above_4k_client">Η συσκευή πρέπει να υποστηρίζει HEVC ή AV1 για ροή άνω των 4K.</string>
     <string name="connection_4k_update">Ενημερώστε το GeForce Experience για ροή σε 4K. Η ροή θα είναι 1080p.</string>
     <string name="connection_app_missing">Η εφαρμογή %1$s δεν είναι στη λίστα εφαρμογών GFE</string>
@@ -32,9 +32,9 @@
     <string name="connection_operation_interrupted">Η λειτουργία διακόπηκε</string>
     <string name="connection_network_error">Σφάλμα δικτύου: %1$s</string>
     <string name="connection_rotation_unsupported">Ο υπολογιστής δεν υποστηρίζει περιστροφή οθόνης. Ενημερώστε το λογισμικό του.</string>
-    <string name="connection_foreign_session_resumed">Αυτή η συνεδρία ξεκίνησε από άλλη συσκευή. Τερματίστε τη σε αυτή τη συσκευή ή στον υπολογιστή. (Κωδικός σφάλματος: %1$d)</string>
-    <string name="connection_foreign_session_quit">Αυτή η συνεδρία ξεκίνησε από άλλη συσκευή. Τερματίστε τη σε αυτή τη συσκευή ή στον υπολογιστή. (Κωδικός σφάλματος: %1$d)</string>
-    <string name="connection_app_minimized">Η εφαρμογή είναι ελαχιστοποιημένη. Επαναφέρετέ την στον υπολογιστή ή τερματίστε τη συνεδρία και ξεκινήστε ξανά τη ροή.</string>
+    <string name="connection_foreign_session_resumed">Αυτή η συνεδρία ξεκίνησε από άλλη συσκευή. Τερματίστε τη σε αυτή τη συσκευή ή στο PC. (Κωδικός σφάλματος: %1$d)</string>
+    <string name="connection_foreign_session_quit">Αυτή η συνεδρία ξεκίνησε από άλλη συσκευή. Τερματίστε τη σε αυτή τη συσκευή ή στο PC. (Κωδικός σφάλματος: %1$d)</string>
+    <string name="connection_app_minimized">Η εφαρμογή είναι ελαχιστοποιημένη. Επαναφέρετέ την στο PC ή τερματίστε τη συνεδρία και ξεκινήστε ξανά τη ροή.</string>
     <string name="addpc_ipv6_hint">\n\nΓια IPv6, ελέγξτε:\n1. Το τείχος προστασίας του modem επιτρέπει κίνηση IPv6.\n2. Η προώθηση θυρών IPv6 είναι ενεργή στον δρομολογητή.\n3. Οι ρυθμίσεις τείχους προστασίας IPv6 στον υπολογιστή.</string>
     <string name="address_selection_title">Επιλέξτε διεύθυνση σύνδεσης</string>
     <string name="address_host_name">Όνομα κεντρικού υπολογιστή</string>
@@ -54,7 +54,7 @@
     <string name="direction_right">ΔΕΞΙΑ</string>
     <string name="direction_down">ΚΑΤΩ</string>
     <string name="editor_title">Τίτλος:</string>
-    <string name="pc_icon_description">Εικονίδιο υπολογιστή</string>
+    <string name="pc_icon_description">Εικονίδιο PC</string>
     <string name="pc_status_description">Επικάλυψη κατάστασης</string>
     <string name="loading_description">Φόρτωση</string>
     <string name="root_mouse_unavailable">Η συσκευή δεν έχει root: η κατάληψη ποντικιού δεν είναι διαθέσιμη</string>

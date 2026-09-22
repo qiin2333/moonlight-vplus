@@ -57,7 +57,7 @@
     <string name="pc_icon_description">PC 아이콘</string>
     <string name="pc_status_description">상태 오버레이</string>
     <string name="loading_description">불러오는 중</string>
-    <string name="root_mouse_unavailable">이 기기는 루팅되지 않아 마우스 캡처를 사용할 수 없습니다</string>
+    <string name="root_mouse_unavailable">이 기기는 root되지 않아 마우스 캡처를 사용할 수 없습니다</string>
     <string name="perf_client_resolution">"클라이언트 해상도: "</string>
     <string name="perf_host_resolution">"호스트 해상도: "</string>
     <string name="perf_scale_factor">"배율: "</string>

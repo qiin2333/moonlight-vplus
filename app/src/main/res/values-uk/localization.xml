@@ -10,7 +10,7 @@
     <string name="error_invalid_key_code">Недійсний код клавіші</string>
     <string name="hdr_shield_update">Оновіть прошивку NVIDIA SHIELD Android TV, щоб увімкнути HDR</string>
     <string name="preference_summary_current">%1$s (Поточне: %2$s)</string>
-    <string name="shortcut_app_removed">Застосунок видалено з ПК</string>
+    <string name="shortcut_app_removed">Застосунок видалено з PC</string>
     <string name="mic_error_no_connection">Мікрофон недоступний: немає з\'єднання</string>
     <string name="mic_error_start">Не вдалося запустити потік мікрофона</string>
     <string name="mic_error_host_unsupported">Хост не підтримує потокову передачу мікрофона</string>
@@ -18,8 +18,8 @@
     <string name="mic_error_resume">Не вдалося відновити мікрофон: помилка ініціалізації</string>
     <string name="mic_error_init_detail">Не вдалося ініціалізувати мікрофон: %1$s</string>
     <string name="connection_not_paired">Пристрій не спарений із комп\'ютером</string>
-    <string name="connection_hdr_unsupported">GPU вашого ПК не підтримує потокову передачу HDR. Потік буде SDR.</string>
-    <string name="connection_above_4k_host">Хост-ПК не підтримує передачу в роздільній здатності понад 4K.</string>
+    <string name="connection_hdr_unsupported">GPU вашого PC не підтримує потокову передачу HDR. Потік буде SDR.</string>
+    <string name="connection_above_4k_host">Хост-PC не підтримує передачу в роздільній здатності понад 4K.</string>
     <string name="connection_above_4k_client">Для передачі понад 4K пристрій має підтримувати HEVC або AV1.</string>
     <string name="connection_4k_update">Оновіть GeForce Experience для передачі в 4K. Потік буде 1080p.</string>
     <string name="connection_app_missing">Застосунку %1$s немає у списку застосунків GFE</string>
@@ -32,9 +32,9 @@
     <string name="connection_operation_interrupted">Операцію перервано</string>
     <string name="connection_network_error">Помилка мережі: %1$s</string>
     <string name="connection_rotation_unsupported">Хост не підтримує обертання дисплея. Оновіть програмне забезпечення хоста.</string>
-    <string name="connection_foreign_session_resumed">Цей сеанс було запущено з іншого пристрою. Завершіть його на тому пристрої або на ПК. (Код помилки: %1$d)</string>
-    <string name="connection_foreign_session_quit">Цей сеанс було запущено з іншого пристрою. Завершіть його на тому пристрої або на ПК. (Код помилки: %1$d)</string>
-    <string name="connection_app_minimized">Застосунок згорнуто. Відновіть його на ПК або завершіть сеанс і почніть трансляцію знову.</string>
+    <string name="connection_foreign_session_resumed">Цей сеанс було запущено з іншого пристрою. Завершіть його на тому пристрої або на PC. (Код помилки: %1$d)</string>
+    <string name="connection_foreign_session_quit">Цей сеанс було запущено з іншого пристрою. Завершіть його на тому пристрої або на PC. (Код помилки: %1$d)</string>
+    <string name="connection_app_minimized">Застосунок згорнуто. Відновіть його на PC або завершіть сеанс і почніть трансляцію знову.</string>
     <string name="addpc_ipv6_hint">\n\nДля IPv6 перевірте:\n1. Брандмауер модему пропускає трафік IPv6.\n2. Переадресацію портів IPv6 увімкнено на маршрутизаторі.\n3. Налаштування брандмауера IPv6 на хості.</string>
     <string name="address_selection_title">Виберіть адресу для з\'єднання</string>
     <string name="address_host_name">Ім\'я хоста</string>
@@ -54,7 +54,7 @@
     <string name="direction_right">ПРАВОРУЧ</string>
     <string name="direction_down">ВНИЗ</string>
     <string name="editor_title">Назва:</string>
-    <string name="pc_icon_description">Значок ПК</string>
+    <string name="pc_icon_description">Значок PC</string>
     <string name="pc_status_description">Накладка стану</string>
     <string name="loading_description">Завантаження</string>
     <string name="root_mouse_unavailable">Пристрій без root: захоплення миші недоступне</string>

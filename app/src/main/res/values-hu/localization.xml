@@ -10,7 +10,7 @@
     <string name="error_invalid_key_code">Érvénytelen billentyűkód</string>
     <string name="hdr_shield_update">Frissítsd az NVIDIA SHIELD Android TV firmware-jét a HDR engedélyezéséhez</string>
     <string name="preference_summary_current">%1$s (Jelenlegi: %2$s)</string>
-    <string name="shortcut_app_removed">Alkalmazás eltávolítva a számítógépről</string>
+    <string name="shortcut_app_removed">Alkalmazás eltávolítva a PC-ről</string>
     <string name="mic_error_no_connection">A mikrofon nem érhető el: nincs kapcsolat</string>
     <string name="mic_error_start">A mikrofontovábbítás nem indítható el</string>
     <string name="mic_error_host_unsupported">A gazdagép nem támogatja a mikrofon átvitelét</string>
@@ -18,8 +18,8 @@
     <string name="mic_error_resume">A mikrofon nem folytatható: az inicializálás sikertelen</string>
     <string name="mic_error_init_detail">A mikrofon inicializálása sikertelen: %1$s</string>
     <string name="connection_not_paired">Az eszköz nincs párosítva a számítógéppel</string>
-    <string name="connection_hdr_unsupported">A számítógép GPU-ja nem támogatja a HDR-továbbítást. A stream SDR lesz.</string>
-    <string name="connection_above_4k_host">A gazdaszámítógép nem támogatja a 4K fölötti felbontású továbbítást.</string>
+    <string name="connection_hdr_unsupported">A PC GPU-ja nem támogatja a HDR-továbbítást. A stream SDR lesz.</string>
+    <string name="connection_above_4k_host">A host PC nem támogatja a 4K fölötti felbontású továbbítást.</string>
     <string name="connection_above_4k_client">A 4K fölötti továbbításhoz az eszköznek HEVC-t vagy AV1-et kell támogatnia.</string>
     <string name="connection_4k_update">A 4K-s továbbításhoz frissítsd a GeForce Experience-t. A stream 1080p lesz.</string>
     <string name="connection_app_missing">A(z) %1$s alkalmazás nincs a GFE alkalmazáslistájában</string>
@@ -32,9 +32,9 @@
     <string name="connection_operation_interrupted">A művelet megszakadt</string>
     <string name="connection_network_error">Hálózati hiba: %1$s</string>
     <string name="connection_rotation_unsupported">A gazdagép nem támogatja a képernyőforgatást. Frissítsd a gazda szoftverét.</string>
-    <string name="connection_foreign_session_resumed">Ezt a munkamenetet egy másik eszköz indította. Fejezd be ott vagy a számítógépen. (Hibakód: %1$d)</string>
-    <string name="connection_foreign_session_quit">Ezt a munkamenetet egy másik eszköz indította. Fejezd be ott vagy a számítógépen. (Hibakód: %1$d)</string>
-    <string name="connection_app_minimized">Az alkalmazás minimalizálva van. Állítsd vissza a számítógépen, vagy zárd le a munkamenetet, és indítsd újra a továbbítást.</string>
+    <string name="connection_foreign_session_resumed">Ezt a munkamenetet egy másik eszköz indította. Fejezd be ott vagy a PC-n. (Hibakód: %1$d)</string>
+    <string name="connection_foreign_session_quit">Ezt a munkamenetet egy másik eszköz indította. Fejezd be ott vagy a PC-n. (Hibakód: %1$d)</string>
+    <string name="connection_app_minimized">Az alkalmazás minimalizálva van. Állítsd vissza a PC-n, vagy zárd le a munkamenetet, és indítsd újra a továbbítást.</string>
     <string name="addpc_ipv6_hint">\n\nIPv6 esetén ellenőrizd:\n1. A modem tűzfala engedi az IPv6-forgalmat.\n2. Az IPv6-porttovábbítás be van kapcsolva a routeren.\n3. A gazdagép IPv6-tűzfal-beállításai.</string>
     <string name="address_selection_title">Válassz kapcsolati címet</string>
     <string name="address_host_name">Gazdanév</string>

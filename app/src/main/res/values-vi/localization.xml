@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Không thể tiếp tục micrô: khởi tạo thất bại</string>
     <string name="mic_error_init_detail">Khởi tạo micrô thất bại: %1$s</string>
     <string name="connection_not_paired">Thiết bị chưa ghép nối với máy tính</string>
-    <string name="connection_hdr_unsupported">GPU của máy tính không hỗ trợ truyền HDR. Luồng sẽ là SDR.</string>
+    <string name="connection_hdr_unsupported">GPU của PC không hỗ trợ truyền HDR. Luồng sẽ là SDR.</string>
     <string name="connection_above_4k_host">Máy chủ PC không hỗ trợ truyền ở độ phân giải trên 4K.</string>
     <string name="connection_above_4k_client">Thiết bị phải hỗ trợ HEVC hoặc AV1 để truyền trên 4K.</string>
     <string name="connection_4k_update">Cập nhật GeForce Experience để truyền 4K. Luồng sẽ là 1080p.</string>
@@ -32,8 +32,8 @@
     <string name="connection_operation_interrupted">Thao tác bị gián đoạn</string>
     <string name="connection_network_error">Lỗi mạng: %1$s</string>
     <string name="connection_rotation_unsupported">Máy chủ không hỗ trợ xoay màn hình. Hãy cập nhật phần mềm máy chủ.</string>
-    <string name="connection_foreign_session_resumed">Phiên này do thiết bị khác bắt đầu. Hãy kết thúc trên thiết bị đó hoặc trên máy tính. (Mã lỗi: %1$d)</string>
-    <string name="connection_foreign_session_quit">Phiên này do thiết bị khác bắt đầu. Hãy kết thúc trên thiết bị đó hoặc trên máy tính. (Mã lỗi: %1$d)</string>
+    <string name="connection_foreign_session_resumed">Phiên này do thiết bị khác bắt đầu. Hãy kết thúc trên thiết bị đó hoặc trên PC. (Mã lỗi: %1$d)</string>
+    <string name="connection_foreign_session_quit">Phiên này do thiết bị khác bắt đầu. Hãy kết thúc trên thiết bị đó hoặc trên PC. (Mã lỗi: %1$d)</string>
     <string name="connection_app_minimized">Ứng dụng đang được thu nhỏ. Hãy khôi phục trên PC hoặc thoát phiên rồi bắt đầu truyền lại.</string>
     <string name="addpc_ipv6_hint">\n\nĐối với IPv6, hãy kiểm tra:\n1. Tường lửa của modem cho phép lưu lượng IPv6.\n2. Chuyển hướng cổng IPv6 đã bật trên bộ định tuyến.\n3. Cài đặt tường lửa IPv6 trên máy chủ.</string>
     <string name="address_selection_title">Chọn địa chỉ kết nối</string>
