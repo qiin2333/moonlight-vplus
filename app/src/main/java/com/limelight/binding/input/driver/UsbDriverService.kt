@@ -203,6 +203,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 } else if (action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
                     @Suppress("DEPRECATION")
                     val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                    device?.let(::forwardingDeviceDetached)
                     val removedRouteIds = ArrayList<Int>()
                     val companions = sessionLock.withLock {
                         val companions = synchronized(controllersLock) {
@@ -1028,6 +1029,10 @@ class UsbDriverService : Service(), UsbDriverListener {
         private val forwardingReservations = UsbForwardingReservations()
         private val forwardingLock = forwardingReservations.lock
         private val forwardingServices = mutableSetOf<UsbDriverService>()
+
+        fun forwardingDeviceDetached(device: UsbDevice) {
+            forwardingReservations.deviceDetached(device.deviceName)
+        }
 
         class ForwardingReservation internal constructor(
             private val lease: UsbForwardingReservations.Lease

@@ -33,8 +33,11 @@ class UsbForwardingReservationsTest {
         lease.awaitStops(listOf(stop))
         assertThrows(TimeoutException::class.java) { lease.ready.await(1) }
         var restored = false
-        lease.restoreWhenReady({ restored = true }, { throw AssertionError(it) })
-        stop.completeExceptionally(IllegalStateException("release failed"))
+        var failure: Throwable? = null
+        lease.restoreWhenReady({ restored = true }, { failure = it })
+        val error = IllegalStateException("release failed")
+        stop.completeExceptionally(error)
+        assertSame(error, failure)
         assertFalse(restored)
         assertTrue(registry.contains("usb/a"))
         registry.reserve("usb/other")
@@ -139,5 +142,55 @@ class UsbForwardingReservationsTest {
         }
         assertTrue(finished.await(2, TimeUnit.SECONDS))
         assertFalse(canClaim)
+    }
+
+    @Test fun failedStopReportsFailureAndReplugAllowsSamePathWithoutRestoringOldDriver() {
+        val registry = UsbForwardingReservations()
+        val old = registry.reserve("usb/a")
+        val stop = CompletionSignal()
+        old.awaitStops(listOf(stop))
+        val error = IllegalStateException("connection close failed")
+        stop.completeExceptionally(error)
+        var failure: Throwable? = null
+        var restored = false
+        old.restoreWhenReady({ restored = true }, { failure = it })
+        assertSame(error, failure)
+        assertFalse(restored)
+        assertThrows(IllegalStateException::class.java) { registry.reserve("usb/a") }
+        registry.deviceDetached("usb/a")
+        val replacement = registry.reserve("usb/a")
+        old.restoreWhenReady({ restored = true }, {})
+        assertFalse(restored)
+        assertTrue(registry.contains("usb/a"))
+        replacement.awaitStops(emptyList())
+        replacement.restore {}
+    }
+
+    @Test fun detachDuringStopWaitsForAllOwnersBeforeRecoveringFailure() {
+        val registry = UsbForwardingReservations()
+        val lease = registry.reserve("usb/a")
+        val first = CompletionSignal()
+        val second = CompletionSignal()
+        lease.awaitStops(listOf(first, second))
+        registry.deviceDetached("usb/a")
+        first.completeExceptionally(IllegalStateException("close failed"))
+        assertTrue(registry.contains("usb/a"))
+        second.complete()
+        assertFalse(registry.contains("usb/a"))
+        registry.reserve("usb/a")
+    }
+
+    @Test fun detachDoesNotReleaseSuccessfulHandoffBeforeExporterCleanup() {
+        val registry = UsbForwardingReservations()
+        val lease = registry.reserve("usb/a")
+        val stop = CompletionSignal()
+        lease.awaitStops(listOf(stop))
+        registry.deviceDetached("usb/a")
+        stop.complete()
+        assertTrue(registry.contains("usb/a"))
+        registry.deviceDetached("usb/a")
+        assertTrue(registry.contains("usb/a"))
+        lease.restore {}
+        assertFalse(registry.contains("usb/a"))
     }
 }

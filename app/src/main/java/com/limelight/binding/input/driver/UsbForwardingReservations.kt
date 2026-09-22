@@ -11,6 +11,17 @@ internal class UsbForwardingReservations {
 
     fun contains(path: String): Boolean = lock.withLock { owners.containsKey(path) }
 
+    /** Unplug removes the physical owner, including a connection whose close failed.
+     * Successful handoffs still need exporter cleanup; pending stops must finish first. */
+    fun deviceDetached(path: String) {
+        val lease = lock.withLock { owners[path] } ?: return
+        lease.ready.whenComplete { error ->
+            if (error != null) lock.withLock {
+                if (owners[path] === lease) owners.remove(path)
+            }
+        }
+    }
+
     fun reserve(path: String): Lease = lock.withLock {
         check(!owners.containsKey(path)) { "USB device already reserved: $path" }
         Lease(path).also { owners[path] = it }
@@ -31,6 +42,8 @@ internal class UsbForwardingReservations {
             ready.whenComplete { error ->
                 if (error == null) {
                     runCatching { restore(onRestored) }.onFailure(onFailure)
+                } else {
+                    onFailure(error)
                 }
             }
         }
