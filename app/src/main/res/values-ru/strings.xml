@@ -195,7 +195,7 @@
     <string name="addpc_enter_ip">Введите IP-адрес</string>
     <string name="addpc_wrong_sitelocal">Неверный адрес. Для трансляции через интернет нужен внешний IP-адрес роутера.</string>
     <string name="addpc_back">Назад</string>
-    <string name="addpc_page_title">new ПК ()</string>
+    <string name="addpc_page_title">new DianLao ()</string>
     <string name="addpc_page_subtitle">Укажите адрес и порт в скобках, чтобы добавить ПК с Sunshine.</string>
     <string name="addpc_address_label">Формула подключения</string>
     <string name="addpc_host_hint">IP или домен</string>
@@ -1334,7 +1334,7 @@
     <string name="appview_background_mode_acrylic">Акрил</string>
     <string name="appview_background_mode_soft_color">Мягкий цвет</string>
     <string name="appview_display_selection_title">Выбор экрана</string>
-    <string name="appview_display_selection_default">Стандарт</string>
+    <string name="appview_display_selection_default">Default</string>
     <string name="layout_capability_diagnostic_text_a5e80">Возможности устройства</string>
     <string name="layout_capability_diagnostic_text_41b60">HDR · Декодер · Экран</string>
     <string name="layout_capability_diagnostic_text_79d3a">Копир.</string>
