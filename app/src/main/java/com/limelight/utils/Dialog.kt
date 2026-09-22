@@ -198,7 +198,7 @@ class Dialog private constructor(
                     val label = parts[0].trim()
                     val value = parts[1].trim()
                     val icon = getIconForLabel(label)
-                    "$icon $label: $value"
+                    "$icon ${localizeDetailsLabel(label)}: $value"
                 } else {
                     line
                 }
@@ -206,6 +206,29 @@ class Dialog private constructor(
                 line
             }
         }
+    }
+
+    private fun localizeDetailsLabel(label: String): String {
+        val resource = when (label) {
+            "Name" -> R.string.details_name
+            "State" -> R.string.details_state
+            "Active Address" -> R.string.details_active_address
+            "Local Address" -> R.string.details_local_address
+            "Remote Address" -> R.string.details_remote_address
+            "IPv6 Address" -> R.string.details_ipv6_address
+            "Manual Address" -> R.string.details_manual_address
+            "MAC Address" -> R.string.details_mac_address
+            "Pair State" -> R.string.details_pair_state
+            "Running Game ID" -> R.string.details_running_game
+            "HTTPS Port" -> R.string.details_https_port
+            "Sunshine Version" -> R.string.details_sunshine_version
+            "Desktop Special App Support" -> R.string.details_desktop_support
+            "VDD Capability Version" -> R.string.details_vdd_version
+            "HDR Supported" -> R.string.details_hdr_support
+            "Super CMDs" -> R.string.details_super_commands
+            else -> return label
+        }
+        return activity.getString(resource)
     }
 
     private fun getIconForLabel(label: String): String = when (label.lowercase()) {

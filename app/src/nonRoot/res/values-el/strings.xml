@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Ενεργοποιεί την προσαρμογή εγγενούς εισόδου επιφάνειας αφής για την επιφάνεια αφής πληκτρολογίου tablet. Δεν απαιτεί δικαιώματα root. Απαιτεί Foundation Sunshine με ενεργοποιημένη την επιλογή «Προσαρμογή εγγενούς επιφάνειας αφής». Έχει δοκιμαστεί μόνο σε ορισμένα tablet Xiaomi.</string>
+</resources>

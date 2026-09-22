@@ -364,7 +364,7 @@ public class ElementController {
             @Override
             public void onClick(View v) {
                 DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-                ContentValues contentValues = SimplifyPerformance.getInitialInfo();
+                ContentValues contentValues = SimplifyPerformance.getInitialInfo(context);
                 contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_X, displayMetrics.widthPixels / 2);
                 contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_Y, 30);
                 addElement(contentValues);
@@ -373,7 +373,7 @@ public class ElementController {
         pageEdit.findViewById(R.id.page_edit_add_digital_combine_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ContentValues contentValues = DigitalCombineButton.getInitialInfo();
+                ContentValues contentValues = DigitalCombineButton.getInitialInfo(context);
                 addElement(contentValues);
             }
         });
@@ -401,7 +401,7 @@ public class ElementController {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     setDragEditEnabled(isChecked);
-                    String message = isChecked ? "长按移动按键" : "可直接拖动按键";
+                    String message = isChecked ? context.getString(R.string.crown_drag_hold) : context.getString(R.string.crown_drag_direct);
                     showToast(message);
                 }
             });

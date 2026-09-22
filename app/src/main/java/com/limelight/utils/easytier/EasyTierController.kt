@@ -925,7 +925,7 @@ class EasyTierController(
             7 -> activity.getString(R.string.easytier_nat_symmetric_udp_firewall)
             8 -> activity.getString(R.string.easytier_nat_symmetric_easy_inc)
             9 -> activity.getString(R.string.easytier_nat_symmetric_easy_dec)
-            else -> "Other Type ($typeCode)"
+            else -> activity.getString(R.string.easytier_nat_other, typeCode)
         }
     }
 

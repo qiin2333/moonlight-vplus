@@ -55,7 +55,7 @@ class MicrophoneManager(
         }
 
         val activeConnection = connection ?: run {
-            showMessage("麦克风状态切换: 连接不存在")
+            showMessage(context.getString(R.string.mic_error_no_connection))
             return false
         }
 
@@ -77,14 +77,14 @@ class MicrophoneManager(
             if (!microphoneStream!!.start()) {
                 microphoneStream?.stop()
                 microphoneStream = null
-                showMessage("无法启动麦克风流")
+                showMessage(context.getString(R.string.mic_error_start))
                 return false
             }
 
             LimeLog.info("麦克风流启动成功")
 
             if (!microphoneStream!!.isMicrophoneAvailable()) {
-                showMessage("主机不支持麦克风功能")
+                showMessage(context.getString(R.string.mic_error_host_unsupported))
             }
 
             if (microphoneStream!!.isRunning()) {
@@ -96,8 +96,8 @@ class MicrophoneManager(
         } catch (e: Exception) {
             microphoneStream?.stop()
             microphoneStream = null
-            LimeLog.warning("初始化麦克风流失败: ${e.message}")
-            showMessage("初始化麦克风流失败: ${e.message}")
+            LimeLog.warning(context.getString(R.string.mic_error_init_detail, e.message.orEmpty()))
+            showMessage(context.getString(R.string.mic_error_init_detail, e.message.orEmpty()))
             return false
         }
     }
@@ -155,10 +155,10 @@ class MicrophoneManager(
             if (initializeMicrophoneStream()) {
                 resumeMicrophone()
             } else {
-                showMessage("麦克风状态切换: 初始化失败")
+                showMessage(context.getString(R.string.mic_error_init))
             }
         } else {
-            showMessage("麦克风状态切换: 连接不存在")
+            showMessage(context.getString(R.string.mic_error_no_connection))
         }
 
         updateMicrophoneButtonState()
@@ -200,7 +200,7 @@ class MicrophoneManager(
             notifyStateChange(true, persistState)
             updateMicrophoneButtonState()
         } else {
-            showMessage("麦克风恢复失败: 重新初始化失败")
+            showMessage(context.getString(R.string.mic_error_resume))
         }
     }
 

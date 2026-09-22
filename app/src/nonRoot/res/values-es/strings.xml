@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Activa la adaptación de entrada nativa para el panel táctil del teclado de una tableta. No requiere permisos root. Requiere Foundation Sunshine con la opción «Adaptar panel táctil nativo» activada. Solo se ha probado en algunas tabletas Xiaomi.</string>
+</resources>

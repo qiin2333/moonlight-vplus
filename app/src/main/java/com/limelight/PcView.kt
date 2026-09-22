@@ -1760,7 +1760,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         try {
             addDetails.name = getString(R.string.title_add_pc)
         } catch (e: Exception) {
-            addDetails.name = "添加电脑"
+            addDetails.name = getString(R.string.title_add_pc_choose)
         }
         addDetails.state = ComputerDetails.State.UNKNOWN
 

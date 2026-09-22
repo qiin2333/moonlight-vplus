@@ -422,7 +422,7 @@
     <string name="summary_list_float_ball_position">將懸浮球放到螢幕邊緣。拖曳位置會覆蓋預設，再次選擇預設即可清除。</string>
     <string name="title_seekbar_float_ball_auto_hide_delay">自動隱藏延遲</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">懸浮球自動隱藏到螢幕邊緣前的等待時間。</string>
-    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">毫秒</string>
+    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
 
     <!-- 懸浮球手勢動作 -->
     <string name="title_float_ball_single_click_action">單擊動作</string>

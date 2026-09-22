@@ -1730,7 +1730,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 }
 
                 if (!stillExists) {
-                    shortcutHelper.disableAppShortcut(computer!!, existingApp.app, "App removed from PC")
+                    shortcutHelper.disableAppShortcut(computer!!, existingApp.app, this.getString(R.string.shortcut_app_removed))
                 }
             }
 

@@ -148,14 +148,14 @@ class ComputerDetails {
         return availableAddresses.size > 1
     }
 
-    fun getAddressTypeDescription(address: AddressTuple?): String {
+    fun getAddressTypeDescription(context: android.content.Context, address: AddressTuple?): String {
         if (address == null) return ""
 
-        if (address == localAddress) return "本地网络"
-        if (address == remoteAddress) return "远程网络"
-        if (address == manualAddress) return "手动配置"
-        if (address == ipv6Address) return "IPv6网络"
-        return "其他网络"
+        if (address == localAddress) return context.getString(com.limelight.R.string.address_local)
+        if (address == remoteAddress) return context.getString(com.limelight.R.string.address_remote)
+        if (address == manualAddress) return context.getString(com.limelight.R.string.address_manual)
+        if (address == ipv6Address) return context.getString(com.limelight.R.string.address_ipv6)
+        return context.getString(com.limelight.R.string.address_other)
     }
 
     fun getLanIpv4Addresses(): List<AddressTuple> {

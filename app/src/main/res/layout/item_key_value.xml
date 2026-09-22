@@ -41,6 +41,6 @@
         android:minWidth="80dp"
         android:maxWidth="120dp"
         android:paddingHorizontal="10dp"
-        android:text="UP" />
+        android:text="@string/direction_up" />
 
 </LinearLayout>
