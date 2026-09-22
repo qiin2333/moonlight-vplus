@@ -785,8 +785,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         )
         val config = streamConfigResult.config
 
+        // Keep connection callbacks localized on API 22-32 where setLocale() updates
+        // the Activity resources without changing the process application context.
+        val connectionContext = applicationContext.createConfigurationContext(Configuration(resources.configuration))
         conn = NvConnection(
-            applicationContext,
+            connectionContext,
             ComputerDetails.AddressTuple(host, port),
             httpsPort, uniqueId, pairName, config,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
