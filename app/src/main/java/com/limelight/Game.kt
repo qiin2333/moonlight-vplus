@@ -2779,20 +2779,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 perfAttrs[getString(R.string.perf_decoder)] = performanceInfo.decoder ?: ""
                 perfAttrs[getString(R.string.perf_hdr_format)] = performanceInfo.hdrFormat.displayName
                 perfAttrs[getString(R.string.perf_resolution)] = "${performanceInfo.initialWidth}x${performanceInfo.initialHeight}"
-                perfAttrs[getString(R.string.perf_fps)] = String.format("%.0f", performanceInfo.totalFps)
-                perfAttrs[getString(R.string.perf_rx_fps)] = String.format("%.0f", performanceInfo.receivedFps)
-                perfAttrs[getString(R.string.perf_rd_fps)] = String.format("%.0f", performanceInfo.renderedFps)
+                perfAttrs[getString(R.string.perf_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.totalFps)
+                perfAttrs[getString(R.string.perf_rx_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.receivedFps)
+                perfAttrs[getString(R.string.perf_rd_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.renderedFps)
                 perfAttrs[getString(R.string.perf_fg_fps)] = if (performanceInfo.framegenFps > 0.5f) {
-                    String.format("%.0f", performanceInfo.framegenFps)
+                    String.format(Locale.getDefault(), "%.0f", performanceInfo.framegenFps)
                 } else {
                     "0"
                 }
-                perfAttrs[getString(R.string.perf_frame_loss)] = String.format("%.1f", performanceInfo.lostFrameRate)
-                perfAttrs[getString(R.string.perf_network_rtt)] = String.format("%d", (performanceInfo.rttInfo shr 32).toInt())
-                perfAttrs[getString(R.string.perf_host_latency)] = String.format("%.2f", performanceInfo.aveHostProcessingLatency)
-                perfAttrs[getString(R.string.perf_decode_time)] = String.format("%.2f", performanceInfo.decodeTimeMs)
+                perfAttrs[getString(R.string.perf_frame_loss)] = String.format(Locale.getDefault(), "%.1f", performanceInfo.lostFrameRate)
+                perfAttrs[getString(R.string.perf_network_rtt)] = String.format(Locale.getDefault(), "%d", (performanceInfo.rttInfo shr 32).toInt())
+                perfAttrs[getString(R.string.perf_host_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.aveHostProcessingLatency)
+                perfAttrs[getString(R.string.perf_decode_time)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
                 perfAttrs[getString(R.string.perf_bandwidth)] = performanceInfo.bandWidth ?: ""
-                perfAttrs[getString(R.string.perf_render_latency)] = String.format("%.2f", performanceInfo.renderingLatencyMs)
+                perfAttrs[getString(R.string.perf_render_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.renderingLatencyMs)
                 com.limelight.utils.PerformanceTemplateTokens.addCanonicalAliases(perfAttrs)
                 for (display in performanceInfoDisplays) {
                     display.display(perfAttrs)

@@ -9,6 +9,7 @@ import android.util.TypedValue
 import android.view.View
 import com.limelight.R
 import kotlin.math.max
+import java.util.Locale
 
 /**
  * 抖动监控图表 View。绘制：
@@ -166,15 +167,16 @@ class JitterMonitorView(context: Context) : View(context) {
         }
         y += dp(6f) + metricPaint.textSize
         metricPaint.color = judderColor
-        canvas.drawText(String.format(context.getString(R.string.jitter_chart_judder), judderPct), padX, y, metricPaint)
+        canvas.drawText(String.format(Locale.getDefault(), context.getString(R.string.jitter_chart_judder), judderPct), padX, y, metricPaint)
         metricPaint.color = Color.WHITE
-        val fpsText = String.format(context.getString(R.string.jitter_chart_fps), fps)
+        val fpsText = String.format(Locale.getDefault(), context.getString(R.string.jitter_chart_fps), fps)
         canvas.drawText(fpsText, right - metricPaint.measureText(fpsText), y, metricPaint)
 
         // ---- 次级指标 ----
         y += dp(4f) + labelPaint.textSize
         canvas.drawText(
             String.format(
+                Locale.getDefault(),
                 context.getString(R.string.jitter_chart_stats),
                 jitterMs, avgIntervalMs, histTotal
             ),
@@ -237,7 +239,7 @@ class JitterMonitorView(context: Context) : View(context) {
             if (histTotal > 0) {
                 val pct = 100f * c / histTotal
                 if (pct >= 1f) {
-                    canvas.drawText(String.format("%.0f", pct), cx, histBottom - barH - dp(2f), countPaint)
+            canvas.drawText(String.format(Locale.getDefault(), "%.0f", pct), cx, histBottom - barH - dp(2f), countPaint)
                 }
             }
             // 单位刻度
