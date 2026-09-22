@@ -125,6 +125,10 @@ Moonlight V+ 不只追求字面上的统一。部分大小写、混合语言、�
 
 模板周围的显示标签可以翻译，占位符本身不能翻译。兼容旧配置时，应增加明确的读取别名，不能批量重写用户已经保存的 Crown 内容。
 
+`perf_decoder`、`perf_hdr_format`、`perf_resolution`、`perf_fps`、`perf_rx_fps`、`perf_rd_fps`、`perf_fg_fps`、`perf_frame_loss`、`perf_network_rtt`、`perf_host_latency`、`perf_decode_time`、`perf_bandwidth` 和 `perf_render_latency` 当前用于性能模板的数据键，不是界面标签。新语言不得为这些键增加本地化值，也不得为了本地化后的键增加新的运行时别名。
+
+`PerformanceTemplateTokens` 只承担已发布旧配置的读取兼容。目前其中的中文别名用于识别旧版硬编码中文模板，以及用户导入、共享或继续使用的中文 Crown 配置；`Drop Rate` 和 `Net Latency` 是旧英文占位符别名。普通翻译 PR 不应扩展该兼容表。只有某个本地化标识确实进入过正式版本并被持久化后，才应在独立兼容性修改中增加别名并补充测试。
+
 ### 其他程序内容
 
 - `\n`、`\'` 和必要的 XML 转义
