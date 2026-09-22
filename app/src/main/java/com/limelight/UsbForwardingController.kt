@@ -30,7 +30,6 @@ import com.limelight.utils.CompletionSignal
 import java.security.cert.X509Certificate
 import java.util.UUID
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeoutException
 
 /** One foreground stream owns one export. Permission and UI state stay on the main
  * thread; blocking native cleanup is serialized behind export on the worker. */
@@ -82,6 +81,9 @@ class UsbForwardingController(
         override fun onReceive(context: Context, intent: Intent) {
             if (closed) return
             val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
+            if (intent.action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
+                UsbDriverService.forwardingDeviceDetached(device)
+            }
             refreshDevices()
             val active = selected
             if (intent.action == UsbManager.ACTION_USB_DEVICE_ATTACHED && active != null &&
@@ -308,18 +310,11 @@ class UsbForwardingController(
                 export?.let { backend.release(it).get() }
                 export = null
                 localReservation?.let { reservation ->
-                    val stopped = try {
-                        reservation.ready.await(10_000)
-                        true
-                    } catch (_: TimeoutException) {
-                        // Native cleanup already succeeded. A slow local stop keeps
-                        // only this path reserved until its completion callback restores it.
-                        reservation.restoreWhenReady {
-                            LimeLog.warning("Unable to restore local USB driver: $it")
-                        }
-                        false
+                    // Native cleanup succeeded. Restore a clean handoff immediately,
+                    // or after a pending stop, without wedging the UI on local failure.
+                    reservation.restoreWhenReady {
+                        LimeLog.warning("Unable to restore local USB driver; reconnect the USB device: $it")
                     }
-                    if (stopped) reservation.restore()
                     localReservation = null
                 }
             }.isSuccess
