@@ -1011,7 +1011,7 @@ class PerformanceOverlayManager(
         AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(title)
             .setMessage(message)
-            .setPositiveButton("Ok", null)
+            .setPositiveButton(R.string.dialog_button_ok, null)
             .setCancelable(true)
             .show()
             .also { AppDialogStyler.installDismissKeys(it) }
