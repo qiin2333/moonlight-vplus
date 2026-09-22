@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sensa HD support</string>
+    <string name="sensa_frequency_title">Frekvens</string>
+    <string name="sensa_frequency_summary">For konvertert vibrasjon og lokal test. Originale effekter beholder sine frekvenser.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Vibrasjonsstyrke</string>
+    <string name="title_test_experimental_haptics">Test venstre / høyre vibrasjon</string>
+    <string name="summary_test_experimental_haptics">Lokal test: venstre, så høyre. Krever ikke et spill.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL-styrke: 0% slår av vibrasjon, 100% er maksimum.</string>
+    <string name="haptics_test_unavailable">Koble til en støttet USB-kontroller. Krever Android 8 eller nyere.</string>
+    <string name="haptics_test_connecting">Kobler til… Tillat USB-tilgang.</string>
+    <string name="haptics_test_running">Tester: venstre, så høyre…</string>
+    <string name="haptics_test_finished">Lokal test fullført. Vibrasjon fra spillet er ikke bekreftet.</string>
+    <string name="haptics_test_failed">Test mislyktes. Sjekk USB-tilgang og koble til kontrolleren på nytt.</string>
+    <string name="haptics_test_busy">Kontrolleren er i bruk. Avslutt strømming eller USB-videresending.</string>
+    <string name="sensa_mode_title">Vibrasjonsmodus</string>
+    <string name="sensa_mode_summary">Haptic only: bare spillets haptiske effekter. Haptic or rumble: effektene prioriteres; ellers konverteres vibrasjoner til Sensa. Rumble only: konverter bare vibrasjoner og ignorer haptiske effekter.</string>
+    <string name="sensa_support_summary">Aktiver Sensa for Kishi V3 Pro XL uavhengig av eksperimentelle haptiske protokoller.</string>
+</resources>

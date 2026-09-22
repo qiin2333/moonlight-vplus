@@ -34,6 +34,7 @@ internal class ControllerHapticsCoordinator(
     private val ds5LifecycleLock = Any()
     private var ds5LifecycleGeneration = 0L
     private val ds5RequestedGenerations = mutableMapOf<Int, Long>()
+    private val startingSinks = mutableMapOf<Int, NativeHapticsBinding>()
     private val deviceCapabilities: DeviceHapticsCapabilities by lazy {
         DeviceHapticsCapabilities.probe(handler.deviceVibrator)
     }
@@ -62,7 +63,14 @@ internal class ControllerHapticsCoordinator(
             controllerAvailable = ::controllerHasRumble,
             controllerIntervalMs = ::dispatchIntervalMs,
             writeController = { mixed ->
-                if (!ds5HapticsBindings.values.any { it.controllerNumber == mixed.controllerNumber &&
+                val converted = ds5HapticsBindings.values.firstOrNull {
+                    it.controllerNumber == mixed.controllerNumber && it.sink.isOperational &&
+                        it.sink.rumbleOutput != null
+                }?.sink?.rumbleOutput
+                converted?.submitRumble(mixed.output.lowFrequency, mixed.output.highFrequency)
+                // A Sensa route owns ordinary rumble even in Haptic only mode: do not
+                // leak the ignored rumble to Android's separate motor output.
+                if (converted == null && !ds5HapticsBindings.values.any { it.controllerNumber == mixed.controllerNumber &&
                         it.sink.playbackControl?.playbackActive == true }) handler.rumbleManager.handleRumble(
                     mixed.controllerNumber, mixed.output.lowFrequency.toMotorShort(),
                     mixed.output.highFrequency.toMotorShort()
@@ -144,7 +152,9 @@ internal class ControllerHapticsCoordinator(
         ) {
             return false
         }
-        return context.vibratorManager != null ||
+        return ds5HapticsBindings.values.any { it.controllerNumber == context.controllerNumber &&
+            it.sink.isOperational && it.sink.rumbleOutput != null } ||
+            context.vibratorManager != null ||
             context.vibrator != null ||
             context.directDualSenseBluetoothOutput != null ||
             handler.sceManager.isRecognizedDevice(inputDevice)
@@ -470,22 +480,24 @@ internal class ControllerHapticsCoordinator(
         onAvailability: (HapticAvailability) -> Unit = {}
     ) {
         val generation: Long
-        synchronized(ds5LifecycleLock) {
+        val previousStartup = synchronized(ds5LifecycleLock) {
             generation = ++ds5LifecycleGeneration
             ds5RequestedGenerations[controllerId] = generation
+            startingSinks.put(controllerId, NativeHapticsBinding(controllerNumber, sink, onAvailability))
         }
+        previousStartup?.takeIf { it.sink !== sink }?.let { stopSinksAsync(listOf(it)) }
         // A sink may arrive on the main thread. Its startup can perform transport I/O, so keep it
-        // on the existing background worker.
-        handler.backgroundThreadHandler.post {
+        // on a dedicated task so a slow handshake cannot stall input or other controllers.
+        Thread(startup@ {
             synchronized(ds5LifecycleLock) {
                 if (ds5RequestedGenerations[controllerId] != generation) {
                     sink.stop()
-                    return@post
+                    return@startup
                 }
             }
             if (isStoppingOrStopped()) {
                 sink.stop()
-                return@post
+                return@startup
             }
 
             sink.playbackControl?.let { playback ->
@@ -511,14 +523,15 @@ internal class ControllerHapticsCoordinator(
             }
 
             if (!runCatching { sink.start() }.getOrDefault(false)) {
-                onAvailability(HapticAvailability.FAILED)
                 synchronized(ds5LifecycleLock) {
                     if (ds5RequestedGenerations[controllerId] == generation) {
                         ds5RequestedGenerations.remove(controllerId)
+                        startingSinks.remove(controllerId)
+                        onAvailability(HapticAvailability.FAILED)
                     }
                 }
                 sink.stop()
-                return@post
+                return@startup
             }
 
             val replaced = ArrayList<NativeHapticsBinding>()
@@ -527,6 +540,7 @@ internal class ControllerHapticsCoordinator(
                     false
                 } else {
                     ds5RequestedGenerations.remove(controllerId)
+                    startingSinks.remove(controllerId)
                     ds5HapticsBindings.remove(controllerId)?.let(replaced::add)
                     // In single-controller mode several devices may share player 0. Preserve the
                     // historical latest-attached-wins policy without dropping the working sink
@@ -545,21 +559,25 @@ internal class ControllerHapticsCoordinator(
             }
             if (!accepted) {
                 sink.stop()
-                return@post
+                return@startup
             }
             onAvailability(HapticAvailability.READY)
+            refreshPrimaryController()
+            onSinkChanged(controllerNumber)
             replaced.forEach { it.sink.stop() }
-        }
+        }, "WaveformHapticsStartup").apply { isDaemon = true }.start()
     }
 
     fun detachDs5HapticsSink(controllerId: Int) {
         val binding: NativeHapticsBinding?
+        val pending: NativeHapticsBinding?
         synchronized(ds5LifecycleLock) {
             ds5RequestedGenerations.remove(controllerId)
+            pending = startingSinks.remove(controllerId)
             ds5LifecycleGeneration++
             binding = ds5HapticsBindings.remove(controllerId)
         }
-        binding?.let { stopSinksAsync(listOf(it)) }
+        stopSinksAsync(listOfNotNull(binding, pending))
     }
 
     private fun stopSinksAsync(bindings: List<NativeHapticsBinding>) {
@@ -604,7 +622,10 @@ internal class ControllerHapticsCoordinator(
         val bindings = synchronized(ds5LifecycleLock) {
             ds5RequestedGenerations.clear()
             ds5LifecycleGeneration++
-            ds5HapticsBindings.values.toList().also { ds5HapticsBindings.clear() }
+            (ds5HapticsBindings.values.toList() + startingSinks.values.toList()).also {
+                ds5HapticsBindings.clear()
+                startingSinks.clear()
+            }
         }
         primaryControllerNumber = NO_CONTROLLER
         stopped = true
@@ -646,6 +667,8 @@ internal class ControllerHapticsCoordinator(
     }
 
     private fun controllerHasRumble(controllerNumber: Short): Boolean {
+        if (ds5HapticsBindings.values.any { it.controllerNumber == controllerNumber &&
+                it.sink.isOperational && it.sink.rumbleOutput != null }) return true
         for (i in 0 until handler.inputDeviceContexts.size()) {
             val context = handler.inputDeviceContexts.valueAt(i)
             if (context.controllerNumber == controllerNumber && hasRumbleCapability(context)) {

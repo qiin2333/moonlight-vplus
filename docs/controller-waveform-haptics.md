@@ -6,7 +6,7 @@ Controller discovery runs automatically whenever a USB host is available, includ
 when Moonlight's ordinary USB input driver is disabled. There is no brand enable
 switch and no need to choose a controller model.
 
-Each recognized connection appears in the stream menu audio-haptics card with its
+Each recognized connection appears in the stream menu Waveform Haptics card with its
 own state: needs validation, needs USB permission, needs a unique player association,
 busy, initializing, ready, failed, or unavailable. Unknown devices retain ordinary
 vibration; this does not assert that their hardware lacks waveform support.
@@ -117,11 +117,33 @@ type isolation cannot be guaranteed by this client change.
 
 ## Current transport adapters
 
-Kishi uses VID 0x1532 and candidate PIDs 0x0719, 0x071a, 0x0721, 0x0724. Shared PID
-0x0037 and name-only guesses are excluded. Its experimental profile requires interface
-ID 3 (not enumeration index), alternate 0, HID class, one 64-byte Interrupt OUT endpoint
-and no input endpoints. The backend uses `claimInterface(..., false)`; a busy kernel
-interface is not forcibly detached. API 26+ is required for bounded completion waits.
+Kishi uses two separate experimental backends. VID 0x1532 / PIDs 0x0719,
+0x071a, 0x0721 and 0x0724 retain the original interface-3 PCM protocol and
+non-forced claim. Shared PID 0x0037 and name-only guesses are excluded.
+
+Kishi V3 Pro XL (0x0727) uses `razer-kishi-xl-sensa`: interface ID 4,
+alternate 0, HID class, exactly two 64-byte Interrupt endpoints (OUT 0x04,
+IN 0x84). It may detach the kernel driver only on this dedicated interface;
+gamepad input interfaces remain untouched. API 26+ is required for bounded
+request completion waits. Startup reads and validates the device metadata,
+selects DESIGN mode if necessary, and remembers the original mode for cleanup.
+Startup runs in a dedicated task rather than blocking the shared input worker.
+Its deadline covers the allowed metadata size and tightens after the size reply;
+cancellation is checked between bounded USB exchanges. Pending startup sinks
+are cancelled on detach, replacement and stream teardown.
+Every stream report consumes and checks its echo acknowledgement. Unrelated
+queued replies are skipped within the same bounded deadline.
+
+The independent XL encoder approximates stereo S16LE input with three spectral
+bands per actuator. It uses 40 ms Hann windows, 10 Hz frequency search steps,
+four interpolated amplitude points per 10 ms output frame, and a user-selected
+gain from 0 to 1 (default 1), also used to cap each band's amplitude. This is lossy PCM-to-Sensa conversion,
+not raw PCM output or a reimplementation of Cortex's perceptual processing.
+Input rates must be between 3 and 48 kHz and divisible by 100. Recent silence
+zeros amplitudes immediately; discontinuities reset history. The sink drops
+queued packets older than 30 ms, emits silence after an idle timeout or stream
+end, and performs bounded silence/mode restoration during shutdown. No Cortex
+APK, native library, preset, or runtime dependency is included in the app.
 
 The Kishi encoder preserves stereo channel separation and resampling state across
 blocks. It converts S16LE to 4 kHz, using a 63-tap anti-alias filter for downsampling,
@@ -137,6 +159,63 @@ missing waveform samples.
 
 Kishi supports a cancellable, low-amplitude test: 400 ms left followed by 400 ms right.
 Host PCM is ignored during the test. Shutdown logs sent, dropped and silence packets.
+The XL channel test, converted rumble and streamed PCM use the Sensa strength setting.
+The tone test uses full-scale amplitude at 100%; 0% mutes output.
+The XL channel test plays left for 1 second, silence for 1 second, then right
+for 1 second. The 250 ms simultaneous tuning preview is independent of this test.
+A local Sensa test button directly below the Sensa HD support toggle acquires
+the USB companion through the existing service without requiring a host stream
+or player association. It refuses to interrupt an active streaming session.
+
+The in-stream popup has a separate Sensa HD support card beside Audio Haptics.
+Its header controls the independent Kishi XL enable preference and collapses the
+settings when disabled. The legacy experimental switch still controls other
+experimental backends. Its previous value is migrated once into the new preference.
+The live USB session releases/reopens only the Sensa output companion;
+session-token checks prevent an old UI owner from changing a new stream.
+The manager retains the latest request across attachment and reconnection; the
+service also retains requests during handoff. The card shows the service-applied
+enable state and a pending indication until it matches the requested state.
+USB readiness remains a separate route status. A standalone test only treats
+removal of its own active route as a failure.
+Inside are a three-mode selector, strength (0 to 100%) and frequency (30 to 400 Hz)
+controls. A dedicated controller owns the preference snapshot and service-applied
+state; the composable only renders state and dispatches actions. These controls
+share preferences with the standalone settings. Host emulation stays in StreamSettings
+because it applies to every player in the session. Route status, left/right channel
+tests and cancellation belong exclusively to the separate Waveform Haptics card.
+That card requires at least one route and can be hidden independently in the card
+visibility editor. Waveform visibility defaults to enabled and never inherits the
+Sensa card's visibility. The restart notice appears only when authored haptics are
+enabled, PCM was not requested at launch, and the current controller and output
+settings allow requesting PCM on the next launch. Xbox/DS4 emulation, device-only
+output and absent hardware do not produce a misleading restart notice. Hidden
+Sensa cards do not poll; visible cards poll at 100 ms while reconciling the service
+and 1 second after it has applied the requested state. Both sliders have minus/plus buttons
+that move to the next multiple of 5 in the selected direction (92 becomes 95
+with plus or 90 with minus), while dragging or using the slider D-pad changes the value
+in units of 1 (1% or 1 Hz); tuning changes preview both actuators for 250 ms at the selected
+strength and frequency. Repeated changes restart the preview deadline, and closing
+the menu cancels tests. The haptic channel test is in the waveform card, independently of
+the Audio Haptics switch. Sensa and waveform labels, mode names and status messages
+are localized in English, Russian, Simplified Chinese and Traditional Chinese.
+Other locale resources remain partial and use the default English strings where needed.
+
+Ordinary host rumble reaches the existing source mixer and routing policy first.
+An optional Sensa rumble output converts its low/high motor amplitudes into
+left/right tones with four amplitude interpolation points per 10 ms packet.
+Zero stops the tone; strength zero mutes it. The default mode is Haptic or rumble; existing conversion-off users migrate to
+Haptic only. Haptic only ignores ordinary rumble, including Android motor output
+while the Sensa route owns the device. Rumble only ignores authored PCM and
+converts ordinary rumble. Mode changes clear obsolete queued PCM.
+In Haptic or rumble, authored PCM takes precedence while current (30 ms); conversion resumes with
+the latest rumble state afterward. The local channel test temporarily overrides
+both sources. Frequency controls tones only; authored PCM retains its spectrum.
+Stream teardown releases the same transport and restores the prior controller mode.
+
+Kishi XL advertises ordinary rumble and no longer automatically requests DS5.
+Explicit DS5 selection remains available for authored effects. Other backends
+retain their previous host-selection and rumble behavior.
 
 The DualSense profile recognizes Sony USB identities and UAC streaming OUT descriptors.
 Its existing input driver owns interface setup. The Java isochronous transport remains
@@ -193,6 +272,48 @@ Bluetooth transports are outside this implementation.
 
 ## Validation
 
+### Kishi V3 Pro XL 0x0727 validation (2026-09-20)
+
+On Honor ROD2-W09S / Android 16 (API 36), the legacy Feature report failed
+because the XL interface has no Feature reports. The separate Sensa transport
+successfully read mode 0 and 879 bytes of metadata identifying Denise V2 T1 XL,
+bodypart IDs 216 and 116, three bands, four points and two transients.
+
+An initial diagnostic using offline-generated reference packets produced physical
+vibration, confirmed by the user. Subsequently the independent production encoder
+and sink passed the opt-in device test, including startup, channel-test expiry,
+silence and USB release. The user confirmed **left then right** vibration from
+this independent implementation. No vendor encoder is used in that test or app.
+
+The full haptics unit-test selection passed 115 tests, including legacy Kishi
+encoder and registry regression, Sensa packet vectors, three-band framing,
+invalid values, stereo isolation, chunk invariance, silence and reset.
+Three opted-in hardware checks passed: independent Sensa enable/reopen with the
+legacy experimental switch off; live rumble/PCM source selection, Rumble only
+PCM suppression and tuning-preview expiry; and the standalone settings test.
+These transport checks used zero strength to avoid requiring subjective feedback.
+The physical pulse and descriptor-dump diagnostics were not enabled in that run.
+
+Separately, the user confirmed converted ordinary rumble with Xbox emulation,
+correct left/right channel order, and authored game haptics in Returnal streamed
+from the PC. These are functional observations on this device, not measurements
+of waveform fidelity, sustained performance, unplug behavior or compatibility
+with other firmware. The XL profile therefore retains experimental protocol
+evidence even though its user-facing enable switch is independent.
+
+With debug and androidTest APKs installed and USB permission granted:
+
+```sh
+# Passive descriptor query (no vibration)
+adb shell am instrument -w -r -e class com.limelight.binding.input.haptics.KishiUsbDescriptorTest#readReportDescriptors -e kishiDescriptors true com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+# Independent production sink: 1 s left, 1 s pause, 1 s right
+adb shell am instrument -w -r -e class com.limelight.binding.input.haptics.KishiUsbDescriptorTest#testIndependentSensa -e kishiIndependentPulse true com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Hardware diagnostics are skipped unless explicitly enabled. They interrupt a
+running target-app stream. Close Cortex before testing to avoid USB ownership
+conflicts. Live game-stream validation is the next hardware acceptance step.
+
 ### Android device software validation (2026-09-18)
 
 Installed the non-root debug APK built from `707abe2ab` on a Meizu 17,
@@ -243,3 +364,24 @@ Hardware acceptance before changing profile evidence:
 7. Forward an active USB device; ensure forwarding waits for local handle release.
 8. Measure sustained latency, underruns, thermal load and artifacts across supported
    Android builds and firmware. Successful writes alone do not complete validation.
+
+
+### Running Sensa preference checks on a device without uninstalling the app
+
+On a device used for streaming, build the test APK without using Gradle's
+`connected...AndroidTest` task. Update both APKs with `adb install -r`, then run
+the selected instrumentation class directly. Do not uninstall either package or
+clear app data before or after the tests. The preference tests use an isolated
+SharedPreferences namespace and clear only that test namespace.
+
+```powershell
+.\gradlew.bat :app:testNonRootDebugUnitTest :app:assembleNonRootDebug :app:assembleNonRootDebugAndroidTest
+adb install -r app/build/outputs/apk/nonRoot/debug/app-nonRoot-debug.apk
+adb install -r app/build/outputs/apk/androidTest/nonRoot/debug/app-nonRoot-debug-androidTest.apk
+adb shell am instrument -w -r -e class com.limelight.preferences.SensaCardPreferencesTest com.limelight.vplus_debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+If replacement fails (for example, due to a signing mismatch), stop; do not use
+uninstall or data clearing as a workaround. Instrumentation restarts the app's
+process, so run it outside an active stream. The app and test package remain
+installed after this sequence.

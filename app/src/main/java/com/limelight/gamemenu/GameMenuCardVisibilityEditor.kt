@@ -12,6 +12,8 @@ internal object GameMenuCardVisibilityEditor {
     private const val AUDIO_HAPTICS = 1
     private const val GYRO = 2
     private const val SHORTCUTS = 3
+    private const val HAPTIC_VIBRATION = 4
+    private const val WAVEFORM_HAPTICS = 5
 
     fun show(
         context: Context,
@@ -45,6 +47,8 @@ internal object GameMenuCardVisibilityEditor {
                 config.showAudioHapticsCard = AUDIO_HAPTICS in selectedIds
                 config.showGyroCard = GYRO in selectedIds
                 config.showQuickKeyCard = SHORTCUTS in selectedIds
+                config.showWaveformHapticsCard = WAVEFORM_HAPTICS in selectedIds
+                config.showHapticVibrationCard = HAPTIC_VIBRATION in selectedIds
                 config.writePreferences(context)
                 onSaved(config)
             },
@@ -61,13 +65,17 @@ internal object GameMenuCardVisibilityEditor {
         context.getString(R.string.game_menu_tab_bitrate),
         context.getString(R.string.game_menu_tab_audio_haptics),
         context.getString(R.string.game_menu_tab_gyro),
-        context.getString(R.string.game_menu_tab_shortcuts)
+        context.getString(R.string.game_menu_tab_shortcuts),
+        context.getString(R.string.sensa_menu_title),
+        context.getString(R.string.waveform_card_title)
     )
 
     private fun selectedIds(config: PreferenceConfiguration): Set<Int> = setOfNotNull(
         BITRATE.takeIf { config.showBitrateCard },
         AUDIO_HAPTICS.takeIf { config.showAudioHapticsCard },
         GYRO.takeIf { config.showGyroCard },
-        SHORTCUTS.takeIf { config.showQuickKeyCard }
+        SHORTCUTS.takeIf { config.showQuickKeyCard },
+        HAPTIC_VIBRATION.takeIf { config.showHapticVibrationCard },
+        WAVEFORM_HAPTICS.takeIf { config.showWaveformHapticsCard }
     )
 }

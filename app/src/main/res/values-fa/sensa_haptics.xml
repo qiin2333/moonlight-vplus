@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sensa HD support</string>
+    <string name="sensa_frequency_title">فرکانس</string>
+    <string name="sensa_frequency_summary">برای لرزش تبدیل‌شده و آزمایش محلی. جلوه‌های اصلی فرکانس خود را حفظ می‌کنند.</string>
+    <string name="sensa_frequency_unit">هرتز</string>
+    <string name="title_sensa_haptics_strength">شدت لرزش</string>
+    <string name="title_test_experimental_haptics">آزمایش لرزش چپ / راست</string>
+    <string name="summary_test_experimental_haptics">آزمایش محلی: چپ، سپس راست. نیازی به بازی ندارد.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">شدت Kishi XL: 0% لرزش را قطع می‌کند، 100% بیشینه است.</string>
+    <string name="haptics_test_unavailable">دسته USB پشتیبانی‌شده را وصل کنید. نیازمند Android 8 یا جدیدتر است.</string>
+    <string name="haptics_test_connecting">در حال اتصال… دسترسی USB را مجاز کنید.</string>
+    <string name="haptics_test_running">آزمایش: چپ، سپس راست…</string>
+    <string name="haptics_test_finished">آزمایش محلی تمام شد. لرزش بازی بررسی نشده است.</string>
+    <string name="haptics_test_failed">آزمایش ناموفق بود. دسترسی USB را بررسی و دسته را دوباره وصل کنید.</string>
+    <string name="haptics_test_busy">دسته در حال استفاده است. پخش یا انتقال USB را متوقف کنید.</string>
+    <string name="sensa_mode_title">حالت لرزش</string>
+    <string name="sensa_mode_summary">Haptic only: فقط جلوه‌های لمسی بازی. Haptic or rumble: جلوه‌های لمسی اولویت دارند؛ در نبود آن‌ها لرزش عادی به Sensa تبدیل می‌شود. Rumble only: فقط تبدیل لرزش عادی و نادیده گرفتن جلوه‌های لمسی.</string>
+    <string name="sensa_support_summary">فعال کردن Sensa برای Kishi V3 Pro XL مستقل از پروتکل‌های لمسی آزمایشی.</string>
+</resources>

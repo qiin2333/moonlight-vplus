@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sensa HD 支援</string>
+    <string name="sensa_frequency_title">頻率</string>
+    <string name="sensa_frequency_summary">用於轉換後的震動與本機測試。原生觸覺效果保留自身頻率。</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">震動強度</string>
+    <string name="title_test_experimental_haptics">測試左側 / 右側震動</string>
+    <string name="summary_test_experimental_haptics">本機測試：先左後右。無需執行遊戲。</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL 強度：0% 關閉震動，100% 為最大強度。</string>
+    <string name="haptics_test_unavailable">請連接支援的 USB 控制器。需要 Android 8 或更新版本。</string>
+    <string name="haptics_test_connecting">正在連線… 請允許 USB 存取。</string>
+    <string name="haptics_test_running">正在測試：先左後右…</string>
+    <string name="haptics_test_finished">本機測試完成。尚未驗證遊戲震動。</string>
+    <string name="haptics_test_failed">測試失敗。請檢查 USB 權限並重新連接控制器。</string>
+    <string name="haptics_test_busy">控制器使用中。請先停止串流或 USB 轉送。</string>
+    <string name="sensa_mode_title">輸出模式</string>
+    <string name="sensa_mode_summary">僅觸覺效果：僅播放遊戲製作的觸覺效果。觸覺效果或一般震動：優先播放觸覺效果；沒有觸覺效果時，將一般遊戲震動轉換為 Sensa。僅一般震動：僅轉換一般遊戲震動，忽略觸覺效果。</string>
+    <string name="sensa_support_summary">獨立啟用 Kishi V3 Pro XL 的 Sensa 輸出，不受實驗性觸覺協定開關影響。</string>
+    <string name="sensa_mode_haptic_only">僅觸覺效果</string>
+    <string name="sensa_mode_haptic_or_rumble">觸覺效果或一般震動</string>
+    <string name="sensa_mode_rumble_only">僅一般震動</string>
+</resources>

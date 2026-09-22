@@ -281,6 +281,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var framegenInputHdrEnabled = false
     /** Final HDR decision after display and decoder capability negotiation. */
     private var negotiatedHdrEnabled = false
+    internal var authoredPcmHapticsRequested = false
+        private set
     private var framegenEnabledToastShown = false
     private var reportedCrash = false
 
@@ -1083,8 +1085,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         val waveformController = UsbWaveformBackends.hasEligibleController(
             getSystemService(USB_SERVICE) as? UsbManager,
-            prefConfig.allowExperimentalHaptics)
-        val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
+            prefConfig.allowExperimentalHaptics, sensaEnabled = prefConfig.sensaHapticsEnabled)
+        // Sensa can render ordinary rumble and does not require DS5 emulation.
+        // Still negotiate authored PCM separately when the chosen host supports it.
+        val authoredOnlyController = UsbWaveformBackends.hasEligibleController(
+            getSystemService(USB_SERVICE) as? UsbManager,
+            prefConfig.allowExperimentalHaptics, includeRumbleConversion = false)
+        val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, authoredOnlyController)
+        if (BuildConfig.DEBUG) LimeLog.info("Haptic negotiation: selection=${prefConfig.hostGamepadSelection} " +
+            "hostGamepad=$hostGamepad waveform=$waveformController " +
+            "authored=${prefConfig.hostGamepadSelection.requestsAuthoredPcm(waveformController,
+                prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE)}")
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
@@ -1168,6 +1179,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 "protocolHdrMode=${config.hdrMode} fullRange=${prefConfig.fullRange}"
         )
 
+        authoredPcmHapticsRequested = config.authoredPcmHaptics
         return StreamConfigResult(config, displayRefreshRate, clientRefreshRateX100)
     }
 
@@ -1696,6 +1708,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             scene = prefConfig.audioVibrationScene
         )
     }
+
+    internal fun setSensaHapticsEnabled(enabled: Boolean) {
+        prefConfig.sensaHapticsEnabled = enabled
+        prefConfig.showHapticVibrationCard = true
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).edit()
+            .putBoolean(com.limelight.preferences.SensaStrengthPreferences.ENABLED_KEY, enabled)
+            .putBoolean("checkbox_show_haptic_vibration_card", true).apply()
+        if (!enabled) controllerHandler.cancelWaveformTests()
+        usbDriverServiceManager?.updateSensaHaptics(enabled)
+    }
+
+    internal fun appliedSensaHaptics(): Boolean? = usbDriverServiceManager?.appliedSensaHaptics()
 
     internal fun applyAudioHapticsStrength(strength: Int): Boolean {
         val service = audioVibrationService ?: return false
@@ -2403,7 +2427,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.handleSetControllerLED(controllerNumber, r, g, b)
     }
 
+    private var lastHapticPcmLogMs = 0L
     override fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame) {
+        if (BuildConfig.DEBUG && android.os.SystemClock.elapsedRealtime() - lastHapticPcmLogMs >= 1000) {
+            lastHapticPcmLogMs = android.os.SystemClock.elapsedRealtime()
+            LimeLog.info("Haptic PCM received: player=${frame.controllerNumber} rate=${frame.sampleRate} " +
+                "frames=${frame.frameCount} flags=${frame.flags} nonzero=${frame.pcm.any { it != 0.toByte() }}")
+        }
         controllerHandler.handleDs5HapticsPcm(frame)
     }
 

@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 import java.util.ArrayDeque
 import java.util.concurrent.locks.LockSupport
 
-/** Owns a dedicated USB connection. Input interfaces are never claimed or detached. */
+/** Owns the haptics interface on a dedicated USB connection. Gamepad input interfaces are untouched. */
 @android.annotation.SuppressLint("NewApi") // Created only on API 26+, required for bounded requestWait.
 internal class KishiUsbHapticsSink(
     private val manager: UsbManager,
@@ -146,24 +146,30 @@ internal class KishiUsbHapticsSink(
         var request: UsbRequest? = null
         var claimed = false
         var enabled = false
+        var stage = "open"
         try {
             if (stopping) return
             val usb = manager.openDevice(device) ?: error("USB open failed")
             connection = usb
-            check(usb.claimInterface(iface, false)) { "Haptic interface busy; kernel driver retained" }
-            claimed = true
+            stage = "claim"
+            claimed = usb.claimInterface(iface, false)
+            check(claimed) { "Haptic interface claim failed" }
+            stage = "initialize request"
             val output = UsbRequest()
             request = output
             check(output.initialize(usb, endpoint)) { "Interrupt request initialization failed" }
+            stage = "disable waveform"
             setLevel(usb, 0)
             if (stopping) return
             ready = true
             initialized.countDown()
             status(KishiUsbHapticProfile.capability(HapticAvailability.READY, "Experimental transport; hardware validation pending"))
+            com.limelight.LimeLog.info("Kishi PCM ready: pid=${device.productId.toString(16)} interface=${iface.id} endpoint=${endpoint.address}")
             val buffer = ByteBuffer.allocateDirect(64)
             var deadline = System.nanoTime()
             var lastPacketAt = 0L
             fun write(bytes: ByteArray) {
+                stage = "write PCM"
                 buffer.clear()
                 buffer.put(bytes).flip()
                 check(output.queue(buffer)) { "USB queue failed" }
@@ -212,6 +218,7 @@ internal class KishiUsbHapticsSink(
                     continue
                 }
                 if (!enabled) {
+                    stage = "enable waveform"
                     playback(true)
                     setLevel(usb, 1)
                     setLevel(usb, 0x21)
@@ -228,6 +235,8 @@ internal class KishiUsbHapticsSink(
                 else deadline = System.nanoTime() // Never burst old packets to catch up.
             }
         } catch (error: Exception) {
+            com.limelight.LimeLog.warning("Kishi PCM failed: stage=$stage pid=${device.productId.toString(16)} " +
+                "interface=${iface.id} endpoint=${endpoint.address} stopping=$stopping\n${android.util.Log.getStackTraceString(error)}")
             if (!stopping) status(KishiUsbHapticProfile.capability(HapticAvailability.FAILED, error.message))
         } finally {
             ready = false
@@ -236,7 +245,8 @@ internal class KishiUsbHapticsSink(
             runCatching { request?.close() }
             if (claimed) {
                 runCatching { connection?.let { setLevel(it, 0) } }
-                runCatching { connection?.releaseInterface(iface) }
+                runCatching { check(connection?.releaseInterface(iface) == true) { "Haptic interface release failed" } }
+                    .onFailure { com.limelight.LimeLog.warning("Kishi PCM cleanup: ${it.message}") }
             }
             runCatching { connection?.close() }.onFailure { releaseFailure = it }
             runCatching { playback(false) }
@@ -253,8 +263,9 @@ internal class KishiUsbHapticsSink(
     private fun setLevel(connection: UsbDeviceConnection, level: Int) {
         for (channel in 1..2) {
             val data = byteArrayOf(0, channel.toByte(), level.toByte())
-            check(connection.controlTransfer(0x21, 9, 0x300, iface.id, data, 3, 100) == 3) {
-                "Feature report failed for channel $channel"
+            val transferred = connection.controlTransfer(0x21, 9, 0x300, iface.id, data, 3, 100)
+            check(transferred == 3) {
+                "Feature report failed: interface=${iface.id} channel=$channel level=$level transferred=$transferred expected=3"
             }
         }
     }

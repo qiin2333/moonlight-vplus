@@ -283,4 +283,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Улучшение голоса</string>
     <string name="summary_checkbox_mic_voice_enhancement">Уменьшает низкочастотный шум и повышает разборчивость речи. Доступно при фиксированном усилении и выравнивании громкости.</string>
+    <string name="title_test_experimental_haptics">Проверить вибрацию слева / справа</string>
+    <string name="summary_test_experimental_haptics">Локальный тест: слева, затем справа. Игра и подключение к хосту не нужны.</string>
+    <string name="title_sensa_haptics_strength">Сила вибрации</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Сила вибрации Kishi XL в трансляции и тесте каналов. 0% отключает вибрацию, 100% — полное усиление.</string>
+    <string name="haptics_test_unavailable">Подключите поддерживаемый USB-контроллер. Для теста нужен Android 8 или новее.</string>
+    <string name="haptics_test_connecting">Подключение… Разрешите доступ к USB, если появится запрос.</string>
+    <string name="haptics_test_running">Проверка: слева, затем справа…</string>
+    <string name="haptics_test_finished">Локальный тест завершён. Передачу вибрации от игры или хоста он не проверяет.</string>
+    <string name="haptics_test_failed">Тест не выполнен. Проверьте разрешение USB и переподключите контроллер.</string>
+    <string name="haptics_test_busy">Контроллер занят. Завершите трансляцию или проброс USB перед проверкой здесь.</string>
+    <string name="waveform_status_ready">Канал тактильного вывода готов. Для воспроизведения нужны тактильные эффекты.</string>
+    <string name="waveform_status_validation">Обнаруженный протокол тактильного вывода требует проверки. Используется обычная вибрация.</string>
+    <string name="waveform_status_permission">Для тактильного вывода нужно разрешение на доступ к USB. Обычная вибрация остаётся доступной.</string>
+    <string name="waveform_status_association">Ожидание однозначной привязки к игроку. Нажмите кнопку контроллера. Если устройства невозможно различить, используется обычная вибрация.</string>
+    <string name="waveform_status_initializing">Открытие канала тактильного вывода…</string>
+    <string name="waveform_status_busy">Канал тактильного вывода занят. Используется обычная вибрация.</string>
+    <string name="waveform_status_failed">Ошибка тактильного вывода. Используется обычная вибрация. Переподключите контроллер, чтобы повторить попытку.</string>
+    <string name="waveform_status_disconnected">Контроллер отключён. Обычная вибрация остаётся доступной.</string>
+    <string name="waveform_experimental">Экспериментально</string>
+    <string name="waveform_player">Игрок %1$d</string>
+    <string name="waveform_test_channels">Проверить тактильную отдачу слева / справа</string>
+    <string name="waveform_card_title">Тактильный вывод</string>
+    <string name="waveform_test_cancel">Остановить тест</string>
+    <string name="game_menu_audio_haptics_pending_restart">Сохранено · вступит в силу при следующей трансляции</string>
+    <string name="seekbar_decrease">Уменьшить</string>
+    <string name="seekbar_increase">Увеличить</string>
+    <string name="game_menu_card_config_title">Видимые карточки</string>
+    <string name="game_menu_ok">ОК</string>
+    <string name="game_menu_cancel">Отмена</string>
+    <string name="game_menu_tab_audio_haptics">Вибрация из звука</string>
+    <string name="game_menu_tab_bitrate">Битрейт</string>
+    <string name="game_menu_tab_gyro">Гироскоп</string>
+    <string name="game_menu_tab_shortcuts">Быстрые команды</string>
 </resources>

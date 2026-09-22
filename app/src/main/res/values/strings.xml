@@ -2270,4 +2270,14 @@ Tap again to replace it.</string>
     <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
     <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
+    <string name="title_test_experimental_haptics">Test left / right vibration</string>
+    <string name="summary_test_experimental_haptics">Local test: left, then right. Does not require a game or streaming host.</string>
+    <string name="title_sensa_haptics_strength">Vibration strength</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Strength for Kishi XL streaming and the channel test. 0% mutes vibration; 100% uses full gain.</string>
+    <string name="haptics_test_unavailable">Connect a supported USB controller. This test requires Android 8 or newer.</string>
+    <string name="haptics_test_connecting">Connecting… Allow USB access if prompted.</string>
+    <string name="haptics_test_running">Testing left, then right…</string>
+    <string name="haptics_test_finished">Local test completed. This does not verify vibration sent by the game or host.</string>
+    <string name="haptics_test_failed">Test failed. Check USB permission and reconnect the controller.</string>
+    <string name="haptics_test_busy">Controller is in use. End the stream or USB forwarding before testing here.</string>
 </resources>

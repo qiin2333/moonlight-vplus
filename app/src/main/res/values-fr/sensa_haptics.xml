@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sensa HD support</string>
+    <string name="sensa_frequency_title">Fréquence</string>
+    <string name="sensa_frequency_summary">Pour les vibrations converties et le test local. Les effets originaux conservent leurs fréquences.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Intensité des vibrations</string>
+    <string name="title_test_experimental_haptics">Tester la vibration gauche / droite</string>
+    <string name="summary_test_experimental_haptics">Test local : gauche, puis droite. Aucun jeu requis.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Intensité Kishi XL : 0% coupe la vibration, 100% est le maximum.</string>
+    <string name="haptics_test_unavailable">Branchez une manette USB compatible. Android 8 ou ultérieur requis.</string>
+    <string name="haptics_test_connecting">Connexion… Autorisez l’accès USB.</string>
+    <string name="haptics_test_running">Test : gauche, puis droite…</string>
+    <string name="haptics_test_finished">Test local terminé. La vibration du jeu n’a pas été vérifiée.</string>
+    <string name="haptics_test_failed">Échec du test. Vérifiez l’accès USB et rebranchez la manette.</string>
+    <string name="haptics_test_busy">Manette utilisée. Arrêtez le streaming ou la redirection USB.</string>
+    <string name="sensa_mode_title">Mode de vibration</string>
+    <string name="sensa_mode_summary">Haptic only : effets haptiques du jeu uniquement. Haptic or rumble : priorité aux effets haptiques ; sinon, conversion des vibrations en Sensa. Rumble only : conversion des vibrations uniquement, effets haptiques ignorés.</string>
+    <string name="sensa_support_summary">Active Sensa pour Kishi V3 Pro XL indépendamment des protocoles haptiques expérimentaux.</string>
+</resources>

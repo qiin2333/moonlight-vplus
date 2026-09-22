@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sensa HD support</string>
+    <string name="sensa_frequency_title">Frekuensi</string>
+    <string name="sensa_frequency_summary">Untuk getaran yang dikonversi dan pengujian lokal. Efek asli mempertahankan frekuensinya.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Kekuatan getaran</string>
+    <string name="title_test_experimental_haptics">Uji getaran kiri / kanan</string>
+    <string name="summary_test_experimental_haptics">Uji lokal: kiri, lalu kanan. Tidak memerlukan game.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kekuatan Kishi XL: 0% mematikan getaran, 100% maksimum.</string>
+    <string name="haptics_test_unavailable">Hubungkan pengontrol USB yang didukung. Memerlukan Android 8 atau lebih baru.</string>
+    <string name="haptics_test_connecting">Menghubungkan… Izinkan akses USB.</string>
+    <string name="haptics_test_running">Menguji: kiri, lalu kanan…</string>
+    <string name="haptics_test_finished">Uji lokal selesai. Getaran dari game belum diverifikasi.</string>
+    <string name="haptics_test_failed">Pengujian gagal. Periksa akses USB dan hubungkan ulang pengontrol.</string>
+    <string name="haptics_test_busy">Pengontrol sedang digunakan. Hentikan streaming atau penerusan USB.</string>
+    <string name="sensa_mode_title">Mode getaran</string>
+    <string name="sensa_mode_summary">Haptic only: hanya efek haptik game. Haptic or rumble: efek haptik diprioritaskan; jika tidak ada, getaran dikonversi ke Sensa. Rumble only: hanya konversi getaran dan abaikan efek haptik.</string>
+    <string name="sensa_support_summary">Aktifkan Sensa untuk Kishi V3 Pro XL secara terpisah dari protokol haptik eksperimental.</string>
+</resources>

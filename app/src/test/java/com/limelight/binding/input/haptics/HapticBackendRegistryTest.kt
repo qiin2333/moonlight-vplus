@@ -45,6 +45,69 @@ class HapticBackendRegistryTest {
         assertFalse(registry.discover(kishi().copy(interfaces = listOf(iface, iface))).single().layoutMatches)
     }
 
+    @Test fun proXlUsesItsDedicatedInterfaceAndRequestsPermissionAfterOptIn() {
+        val device = kishi().copy(productId = 0x0727, interfaces = listOf(
+            kishi().interfaces.single(),
+            HapticUsbInterface(4, 0, 3, 0, listOf(
+                HapticUsbEndpoint(0x84, 3, 64), HapticUsbEndpoint(0x04, 3, 64)))
+        ))
+        val result = registry.discover(device).single()
+        assertTrue(result.layoutMatches)
+        assertEquals(4, result.interfaceId)
+        assertTrue(KishiSensaHapticProfile.allowsKernelDriverDetach(device))
+        assertFalse(KishiSensaHapticProfile.allowsKernelDriverDetach(device.copy(vendorId = 0x9999)))
+        assertFalse(KishiSensaHapticProfile.allowsKernelDriverDetach(device.copy(transport = HapticTransport.BLUETOOTH)))
+        assertEquals(0x04, result.endpointAddress)
+        assertEquals(0x04, registry.discover(device.copy(interfaces = listOf(
+            device.interfaces.last().copy(endpoints = device.interfaces.last().endpoints.reversed())
+        ))).single().endpointAddress)
+        assertEquals(HapticAvailability.NEEDS_VALIDATION, state(result, permission = false))
+        assertEquals(HapticAvailability.NEEDS_PERMISSION, state(result, experimental = true, permission = false))
+        assertEquals(HapticAvailability.INITIALIZING, state(result, experimental = true))
+        assertTrue(registry.discover(device.copy(transport = HapticTransport.BLUETOOTH)).isEmpty())
+    }
+
+    @Test fun proXlRejectsOtherInterfacesAndMalformedEndpoints() {
+        val endpoint = HapticUsbEndpoint(0x04, 3, 64)
+        val input = endpoint.copy(address = 0x84)
+        val iface = HapticUsbInterface(4, 0, 3, 0, listOf(input, endpoint))
+        val invalidLayouts = listOf(
+            listOf(iface.copy(id = 3)), listOf(iface.copy(alternate = 1)),
+            listOf(iface.copy(deviceClass = 1)), listOf(iface, iface),
+            listOf(iface.copy(endpoints = emptyList())),
+            listOf(iface.copy(endpoints = listOf(endpoint))),
+            listOf(iface.copy(endpoints = listOf(input))),
+            listOf(iface.copy(endpoints = listOf(endpoint, endpoint))),
+            listOf(iface.copy(endpoints = listOf(input, endpoint, input))),
+            listOf(iface.copy(endpoints = listOf(input.copy(address = 0x85), endpoint))),
+            listOf(iface.copy(endpoints = listOf(input.copy(type = 2), endpoint))),
+            listOf(iface.copy(endpoints = listOf(input.copy(packetSize = 32), endpoint)))
+        ) + listOf(endpoint.copy(address = 0x84), endpoint.copy(address = 2),
+            endpoint.copy(type = 2), endpoint.copy(packetSize = 32)).map {
+            listOf(iface.copy(endpoints = listOf(input, it)))
+        }
+        for (interfaces in invalidLayouts) {
+            assertFalse(KishiSensaHapticProfile.allowsKernelDriverDetach(kishi().copy(productId = 0x0727, interfaces = interfaces)))
+            val result = registry.discover(kishi().copy(productId = 0x0727, interfaces = interfaces)).single()
+            assertFalse(result.layoutMatches)
+            assertEquals(HapticAvailability.UNSUPPORTED_PATH, state(result, experimental = true))
+        }
+    }
+
+    @Test fun olderKishiProductsRetainInterfaceThree() {
+        for (productId in listOf(0x0719, 0x071a, 0x0721, 0x0724)) {
+            val device = kishi().copy(productId = productId)
+            assertFalse(KishiSensaHapticProfile.allowsKernelDriverDetach(device))
+            val result = registry.discover(device).single()
+            assertTrue(result.layoutMatches)
+            assertEquals(3, result.interfaceId)
+            assertEquals(output.address, result.endpointAddress)
+            assertFalse(registry.discover(device.copy(interfaces = listOf(
+                device.interfaces.single().copy(id = 4)
+            ))).single().layoutMatches)
+        }
+    }
+
     @Test fun experimentalIdentityNeverBecomesReadyFromDescriptors() {
         assertEquals(HapticAvailability.NEEDS_VALIDATION, state())
         assertEquals(HapticAvailability.INITIALIZING, state(experimental = true))

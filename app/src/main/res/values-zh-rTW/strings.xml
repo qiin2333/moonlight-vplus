@@ -962,4 +962,12 @@
     <string name="title_host_gamepad_selection">主機虛擬控制器</string>
     <string name="summary_host_gamepad_selection">選擇向 Sunshine 請求的控制器類型，對所有玩家生效。自動模式會為已辨識的波形控制器或螢幕觸控板請求 DS5。變更後請重新串流。</string>
     <string-array name="host_gamepad_selection_names"><item>自動</item><item>遵循主機設定</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string name="seekbar_decrease">減小</string>
+    <string name="seekbar_increase">增大</string>
+    <string name="game_menu_card_config_title">顯示的卡片</string>
+    <string name="game_menu_ok">確定</string>
+    <string name="game_menu_cancel">取消</string>
+    <string name="game_menu_tab_bitrate">位元速率</string>
+    <string name="game_menu_tab_gyro">陀螺儀</string>
+    <string name="game_menu_tab_shortcuts">快捷指令</string>
 </resources>

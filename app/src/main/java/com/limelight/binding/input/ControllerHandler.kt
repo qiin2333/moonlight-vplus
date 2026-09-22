@@ -1592,6 +1592,18 @@ class ControllerHandler(
         baseMetadata: ControllerArrivalMetadata
     ): Int {
         var metadata = decorateControllerArrivalMetadata(controllerNumber, baseMetadata)
+        val sensaRumble = prefConfig.sensaHapticsEnabled &&
+            (0 until inputDeviceContexts.size()).any {
+                val context = inputDeviceContexts.valueAt(it)
+                val device = context.inputDevice
+                context.controllerNumber.toInt() == controllerNumber && device != null &&
+                    waveformCapabilities.values.any { route ->
+                        route.device.vendorId == device.vendorId && route.device.productId == device.productId &&
+                            route.capability.backendId == com.limelight.binding.input.haptics.KishiSensaHapticProfile.id
+                    }
+            }
+        if (sensaRumble) metadata = metadata.copy(capabilities =
+            (metadata.capabilities.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt()).toShort())
         if (prefConfig.hostGamepadSelection == HostGamepadSelection.AUTOMATIC &&
             (0 until inputDeviceContexts.size()).any {
                 val context = inputDeviceContexts.valueAt(it)
@@ -1599,6 +1611,7 @@ class ControllerHandler(
                 context.controllerNumber.toInt() == controllerNumber && device != null &&
                     waveformCapabilities.values.any { route ->
                         route.device.vendorId == device.vendorId && route.device.productId == device.productId &&
+                            route.capability.backendId != com.limelight.binding.input.haptics.KishiSensaHapticProfile.id &&
                             route.capability.output == HapticOutput.WAVEFORM_STREAM &&
                             (route.capability.evidence != HapticEvidence.EXPERIMENTAL_PROTOCOL ||
                                 prefConfig.allowExperimentalHaptics)
@@ -3456,6 +3469,19 @@ class ControllerHandler(
 
     fun cancelWaveformTests() {
         systemWaveformRoutes.values.forEach { it.sink.channelTest?.cancelTest() }
+    }
+
+    fun previewHapticTuning() {
+        systemWaveformRoutes.values.filter {
+            it.inputId != null && it.sink.rumbleOutput != null && it.sink.channelTest?.canTest == true
+        }.singleOrNull()?.sink?.channelTest?.previewBoth()
+    }
+
+    fun refreshHapticRumbleSettings() {
+        systemWaveformRoutes.values.mapNotNull { it.player }.distinct().forEach {
+            hapticsCoordinator.onSinkChanged(it)
+        }
+        hapticsCoordinator.refreshPrimaryController()
     }
 
     override fun onSystemWaveformSinkAvailable(route: HapticRouteSnapshot, sink: WaveformHapticsSink,

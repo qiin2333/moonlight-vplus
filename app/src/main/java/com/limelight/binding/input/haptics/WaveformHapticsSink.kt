@@ -8,6 +8,7 @@ interface WaveformHapticsSink {
     val isOperational: Boolean get() = true
     val playbackControl: WaveformPlaybackControl? get() = null
     val channelTest: WaveformChannelTest? get() = null
+    val rumbleOutput: WaveformRumbleOutput? get() = null
     val releaseFailure: Throwable? get() = null
     fun start(): Boolean
     fun submit(frame: Ds5HapticsPcmFrame)
@@ -16,6 +17,12 @@ interface WaveformHapticsSink {
         stop()
         onStopped()
     }
+}
+
+/** Optional conversion of ordinary two-motor rumble, without authored PCM. */
+interface WaveformRumbleOutput {
+    val enabled: Boolean
+    fun submitRumble(low: Float, high: Float)
 }
 
 /** Optional motor ownership and test capabilities; routing never casts to a device implementation. */
@@ -28,5 +35,6 @@ interface WaveformChannelTest {
     val isTesting: Boolean
     val canTest: Boolean
     fun testChannels()
+    fun previewBoth() = Unit
     fun cancelTest()
 }

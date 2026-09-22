@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensa_menu_title">Sensa HD support</string>
+    <string name="sensa_frequency_title">Frekvencia</string>
+    <string name="sensa_frequency_summary">Az átalakított rezgéshez és a helyi teszthez. Az eredeti effektek megtartják saját frekvenciájukat.</string>
+    <string name="sensa_frequency_unit">Hz</string>
+    <string name="title_sensa_haptics_strength">Rezgés erőssége</string>
+    <string name="title_test_experimental_haptics">Bal / jobb rezgés tesztelése</string>
+    <string name="summary_test_experimental_haptics">Helyi teszt: bal, majd jobb. Nem igényel játékot.</string>
+    <string name="summary_sensa_haptics_strength" formatted="false">Kishi XL erősség: 0% kikapcsolja a rezgést, 100% a maximum.</string>
+    <string name="haptics_test_unavailable">Csatlakoztass támogatott USB-vezérlőt. Android 8 vagy újabb szükséges.</string>
+    <string name="haptics_test_connecting">Csatlakozás… Engedélyezd az USB-hozzáférést.</string>
+    <string name="haptics_test_running">Teszt: bal, majd jobb…</string>
+    <string name="haptics_test_finished">A helyi teszt kész. A játék rezgése nincs ellenőrizve.</string>
+    <string name="haptics_test_failed">A teszt sikertelen. Ellenőrizd az USB-hozzáférést és csatlakoztasd újra a vezérlőt.</string>
+    <string name="haptics_test_busy">A vezérlő használatban van. Állítsd le a streamelést vagy az USB-továbbítást.</string>
+    <string name="sensa_mode_title">Rezgési mód</string>
+    <string name="sensa_mode_summary">Haptic only: csak a játék kész effektjei. Haptic or rumble: az effektek elsőbbséget élveznek; egyébként a rezgés Sensa formátumra alakul. Rumble only: csak rezgésátalakítás, a kész effektek figyelmen kívül maradnak.</string>
+    <string name="sensa_support_summary">Sensa engedélyezése a Kishi V3 Pro XL számára a kísérleti haptikus protokolloktól függetlenül.</string>
+</resources>

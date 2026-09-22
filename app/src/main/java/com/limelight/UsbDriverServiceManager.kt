@@ -37,6 +37,7 @@ class UsbDriverServiceManager(
     private var stopRequested = false
     private var binder: UsbDriverService.UsbDriverBinder? = null
     private var sessionToken: Long? = null
+    private var requestedSensaEnabled: Boolean? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
@@ -49,6 +50,9 @@ class UsbDriverServiceManager(
             val currentStateListener = stateListener ?: return
             binder = usbBinder
             sessionToken = usbBinder.attachSession(controllerHandler, currentStateListener)
+            val desired = requestedSensaEnabled
+                ?: com.limelight.preferences.SensaStrengthPreferences.enabled(context)
+            usbBinder.updateSensaHaptics(checkNotNull(sessionToken), desired)
             connected = true
         }
 
@@ -77,6 +81,7 @@ class UsbDriverServiceManager(
         connected = false
         binder = null
         sessionToken = null
+        requestedSensaEnabled = null
         controllerHandler = null
         stateListener = null
         if (currentBinder != null && currentSessionToken != null) {
@@ -107,4 +112,12 @@ class UsbDriverServiceManager(
     }
 
     val isConnected get() = connected
+    fun updateSensaHaptics(enabled: Boolean) {
+        requestedSensaEnabled = enabled
+        val token = sessionToken ?: return
+        binder?.updateSensaHaptics(token, enabled)
+    }
+
+    /** Null means attachment/startup is still pending, not an applied disabled state. */
+    fun appliedSensaHaptics(): Boolean? = sessionToken?.let { binder?.appliedSensaHaptics(it) }
 }

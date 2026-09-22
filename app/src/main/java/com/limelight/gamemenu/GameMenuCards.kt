@@ -105,13 +105,16 @@ internal fun GameMenuCards(
                 callbacks.onEditCards
             )
         }
+        if (state.visibleCards.hapticVibration) {
+            HapticVibrationCard(state.sensaHaptics, callbacks, onSliderGesture)
+        }
         if (state.visibleCards.gyro) {
             GyroCard(state.gyro, callbacks, onSliderGesture, callbacks.onEditCards)
         }
         if (state.visibleCards.shortcuts && state.customKeys.isNotEmpty()) {
             ShortcutCard(state.customKeys, callbacks.onCustomKey, callbacks.onEditCards)
         }
-        if (state.waveformHaptics.routes.isNotEmpty()) {
+        if (state.visibleCards.waveformHaptics && state.waveformHaptics.routes.isNotEmpty()) {
             WaveformHapticsCard(state.waveformHaptics, callbacks)
         }
     }
@@ -848,6 +851,110 @@ private fun AudioHapticsCard(
 }
 
 @Composable
+private fun HapticVibrationCard(
+    state: SensaHapticsCardState,
+    callbacks: GameMenuCallbacks,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    val enabled = state.appliedEnabled == true
+    var showMode by remember { mutableStateOf(false) }
+    val modeNames = stringArrayResource(R.array.sensa_haptics_mode_names)
+    val modeValues = stringArrayResource(R.array.sensa_haptics_mode_values)
+    GameMenuCard(
+        title = stringResource(R.string.sensa_menu_title),
+        trailing = {
+            InlineToggle(
+                checked = enabled,
+                contentDescription = stringResource(R.string.sensa_menu_title),
+                onToggle = {
+                    callbacks.onSensaHapticsEnabled(!state.requestedEnabled)
+                }
+            )
+        },
+        onLongClick = callbacks.onEditCards
+    ) {
+        if (state.pending) {
+            Text(stringResource(R.string.waveform_status_initializing),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+        }
+        if (enabled && state.requestedEnabled) {
+            Text(stringResource(R.string.sensa_mode_title),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            Box {
+                androidx.compose.material3.TextButton(onClick = { showMode = true }) {
+                    Text(modeNames[modeValues.indexOf(state.mode).coerceAtLeast(0)] + " ▾")
+                }
+                androidx.compose.material3.DropdownMenu(expanded = showMode,
+                    onDismissRequest = { showMode = false }) {
+                    modeValues.forEachIndexed { index, value ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(modeNames[index]) }, onClick = {
+                            callbacks.onSensaHapticsMode(value)
+                            showMode = false
+                        })
+                    }
+                }
+            }
+            Text(stringResource(R.string.sensa_mode_summary),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            HapticTuningSlider(stringResource(R.string.title_sensa_haptics_strength), state.strength, 0f..100f, "%",
+                onSliderGesture) {
+                callbacks.onSensaHapticsStrength(it)
+            }
+            HapticTuningSlider(stringResource(R.string.sensa_frequency_title), state.frequency, 30f..400f,
+                stringResource(R.string.sensa_frequency_unit), onSliderGesture) {
+                callbacks.onSensaHapticsFrequency(it)
+            }
+            Text(stringResource(R.string.sensa_frequency_summary),
+                color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+            if (state.pendingRestart) {
+                Text(stringResource(R.string.game_menu_audio_haptics_pending_restart),
+                    color = appAccentColor(), fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HapticTuningSlider(
+    title: String, value: Float, range: ClosedFloatingPointRange<Float>, unit: String,
+    onSliderGesture: (Boolean) -> Unit, onChange: (Float) -> Unit
+) {
+    val decrease = stringResource(R.string.seekbar_decrease)
+    val increase = stringResource(R.string.seekbar_increase)
+    val change: (Float) -> Unit = { raw ->
+        // Dragging keeps single-unit precision; buttons move to the next multiple of five.
+        val snapped = kotlin.math.round(raw).coerceIn(range.start, range.endInclusive)
+        if (snapped != value) onChange(snapped)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp,
+            modifier = Modifier.weight(1f))
+        Text("${value.toInt()} $unit", color = appAccentColor(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.TextButton(
+            enabled = value > range.start,
+            onClick = { change((kotlin.math.ceil(value / 5f) - 1f) * 5f) },
+            modifier = Modifier.semantics { contentDescription = "$decrease: $title, 5 $unit" }
+        ) { Text("−") }
+        CompactGameMenuSlider(
+            value = value, onValueChange = change, onValueChangeFinished = {}, valueRange = range,
+            modifier = Modifier.weight(1f).height(GameMenuSliderSpec.height)
+                .semantics { contentDescription = title }
+                .gamepadFocusOutline(GameMenuControlShape)
+                .handleSliderDpad(value = value, step = 1f, valueRange = range,
+                    onValueChange = change, onValueChangeFinished = {})
+                .lockParentScrollDuringGesture(onSliderGesture)
+        )
+        androidx.compose.material3.TextButton(
+            enabled = value < range.endInclusive,
+            onClick = { change((kotlin.math.floor(value / 5f) + 1f) * 5f) },
+            modifier = Modifier.semantics { contentDescription = "$increase: $title, 5 $unit" }
+        ) { Text("+") }
+    }
+}
+
+@Composable
 private fun AudioHapticsResetButton(onReset: () -> Unit) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val description = stringResource(R.string.game_menu_audio_haptics_reset)
@@ -1211,7 +1318,10 @@ private fun WaveformHapticsCard(
     state: WaveformHapticsCardState,
     callbacks: GameMenuCallbacks
 ) {
-    GameMenuCard(title = stringResource(R.string.waveform_card_title)) {
+    GameMenuCard(
+        title = stringResource(R.string.waveform_card_title),
+        onLongClick = callbacks.onEditCards
+    ) {
         state.routes.forEach { route ->
             Text(
                 text = route.label + "\n" + route.status,
