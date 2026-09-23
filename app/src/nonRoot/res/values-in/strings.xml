@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Aktifkan adaptasi input touchpad native untuk touchpad keyboard tablet. Tidak memerlukan izin root. Memerlukan Foundation Sunshine dengan opsi “Adaptasi Touchpad Native” diaktifkan. Hanya diuji pada beberapa tablet Xiaomi.</string>
+</resources>

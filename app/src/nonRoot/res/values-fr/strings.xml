@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Active l’adaptation de l’entrée native pour le pavé tactile du clavier d’une tablette. Aucun accès root n’est requis. Nécessite Foundation Sunshine avec l’option « Adapter le pavé tactile natif » activée. Testé uniquement sur certaines tablettes Xiaomi.</string>
+</resources>

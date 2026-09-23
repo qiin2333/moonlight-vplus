@@ -122,7 +122,7 @@ public class PageConfigController {
             public void onClick(View v) {
                 SuperPageLayout pageWindow = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_window,null);
                 TextView title = pageWindow.findViewById(R.id.window_title);
-                String titleString = "是否删除:" + configNames.get(configIds.indexOf(currentConfigId));
+                String titleString = context.getString(R.string.crown_delete_prefix) + configNames.get(configIds.indexOf(currentConfigId));
                 title.setText(getCrownDialogTitle(titleString));
                 pageWindow.findViewById(R.id.window_edittext).setVisibility(View.GONE);
                 //窗口确认按钮

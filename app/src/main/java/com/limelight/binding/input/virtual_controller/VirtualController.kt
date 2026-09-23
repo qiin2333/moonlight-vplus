@@ -25,7 +25,7 @@ import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
 
 class VirtualController(
-    private val controllerHandler: ControllerHandler?,
+    private var controllerHandler: ControllerHandler?,
     layout: FrameLayout?,
     private val context: Context,
 ) {
@@ -174,6 +174,11 @@ class VirtualController(
         hidden = false
         elements.forEach { it.visibility = View.VISIBLE }
         buttonConfigure.visibility = View.VISIBLE
+    }
+
+    /** Replaces the stream-scoped input sink after an automatic reconnect. */
+    fun rebindControllerHandler(controllerHandler: ControllerHandler?) {
+        this.controllerHandler = controllerHandler
     }
 
     private fun releaseInputs() {

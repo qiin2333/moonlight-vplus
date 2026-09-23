@@ -9,6 +9,7 @@ import android.util.TypedValue
 import android.view.View
 import com.limelight.R
 import kotlin.math.max
+import java.util.Locale
 
 /**
  * 抖动监控图表 View。绘制：
@@ -156,7 +157,7 @@ class JitterMonitorView(context: Context) : View(context) {
 
         // ---- 标题 ----
         y += titlePaint.textSize
-        canvas.drawText("画面流畅度 · ${modeLabel}", padX, y, titlePaint)
+        canvas.drawText(context.getString(R.string.jitter_chart_title, modeLabel), padX, y, titlePaint)
 
         // ---- 主指标（卡顿率大字，随健康度着色）----
         val judderColor = when {
@@ -166,16 +167,17 @@ class JitterMonitorView(context: Context) : View(context) {
         }
         y += dp(6f) + metricPaint.textSize
         metricPaint.color = judderColor
-        canvas.drawText(String.format("卡顿 %.1f%%", judderPct), padX, y, metricPaint)
+        canvas.drawText(String.format(Locale.getDefault(), context.getString(R.string.jitter_chart_judder), judderPct), padX, y, metricPaint)
         metricPaint.color = Color.WHITE
-        val fpsText = String.format("%.0f 帧/秒", fps)
+        val fpsText = String.format(Locale.getDefault(), context.getString(R.string.jitter_chart_fps), fps)
         canvas.drawText(fpsText, right - metricPaint.measureText(fpsText), y, metricPaint)
 
         // ---- 次级指标 ----
         y += dp(4f) + labelPaint.textSize
         canvas.drawText(
             String.format(
-                "抖动 %.2fms · 平均每帧 %.2fms · 采样 %d",
+                Locale.getDefault(),
+                context.getString(R.string.jitter_chart_stats),
                 jitterMs, avgIntervalMs, histTotal
             ),
             padX, y, labelPaint
@@ -212,7 +214,7 @@ class JitterMonitorView(context: Context) : View(context) {
             }
         }
         y = timelineBottom + labelPaint.textSize + dp(3f)
-        canvas.drawText("每帧间隔（绿=流畅 · 黄/红=卡顿）", padX, y, labelPaint)
+        canvas.drawText(context.getString(R.string.jitter_chart_intervals), padX, y, labelPaint)
         y += dp(8f)
 
         // ---- 直方图 ----
@@ -237,13 +239,13 @@ class JitterMonitorView(context: Context) : View(context) {
             if (histTotal > 0) {
                 val pct = 100f * c / histTotal
                 if (pct >= 1f) {
-                    canvas.drawText(String.format("%.0f", pct), cx, histBottom - barH - dp(2f), countPaint)
+            canvas.drawText(String.format(Locale.getDefault(), "%.0f", pct), cx, histBottom - barH - dp(2f), countPaint)
                 }
             }
             // 单位刻度
             canvas.drawText("$u", cx, histBottom + labelPaint.textSize + dp(1f), countPaint)
         }
         y = histBottom + labelPaint.textSize + dp(3f)
-        canvas.drawText("横轴：每帧占几个屏幕刷新（集中一处=稳）", padX, y + labelPaint.textSize + dp(1f), labelPaint)
+        canvas.drawText(context.getString(R.string.jitter_chart_axis), padX, y + labelPaint.textSize + dp(1f), labelPaint)
     }
 }

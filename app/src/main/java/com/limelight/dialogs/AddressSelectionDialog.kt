@@ -150,7 +150,7 @@ class AddressSelectionDialog(
 
             holder.addressText.text = address.toString()
 
-            val addressType = computerDetails.getAddressTypeDescription(address)
+            val addressType = computerDetails.getAddressTypeDescription(context, address)
             holder.addressType.text = addressType
 
             val isFocused = position == addressList.selectedItemPosition

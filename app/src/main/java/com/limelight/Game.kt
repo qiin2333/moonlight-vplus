@@ -598,7 +598,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             Dialog.displayDialog(
                 this, resources.getString(R.string.conn_error_title),
-                "This device or ROM doesn't support hardware accelerated H.264 playback.", true
+                this.getString(R.string.error_h264_unsupported), true
             )
             return
         }
@@ -785,8 +785,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         )
         val config = streamConfigResult.config
 
+        // Keep connection callbacks localized on API 22-32 where setLocale() updates
+        // the Activity resources without changing the process application context.
+        val connectionContext = applicationContext.createConfigurationContext(Configuration(resources.configuration))
         conn = NvConnection(
-            applicationContext,
+            connectionContext,
             ComputerDetails.AddressTuple(host, port),
             httpsPort, uniqueId, pairName, config,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
@@ -800,6 +803,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
+        virtualController?.rebindControllerHandler(controllerHandler)
         // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
         // re-runs this path once it claims controller 0.
         controllerHandler.onSensorsReenabled()
@@ -892,10 +896,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                         MoonBridge.HDR_MODE_HDR10 -> "HDR10"
                         else -> "HDR"
                     }
-                    Toast.makeText(this, "Display mode does not support $requiredType", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, this.getString(R.string.error_display_hdr_format, requiredType), Toast.LENGTH_LONG).show()
                 }
             } else {
-                Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, this.getString(R.string.error_hdr_android_version), Toast.LENGTH_LONG).show()
             }
         }
 
@@ -1004,7 +1008,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 MoonBridge.HDR_MODE_HDR10_PLUS -> if (hdr10PlusRequested) "HDR10+" else "HDR10"
                 else -> "HDR10"
             }
-            Toast.makeText(this, "Decoder does not support $requiredProfile profile", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_decoder_profile, requiredProfile), Toast.LENGTH_LONG).show()
         }
 
         // The renderer is constructed before this final decoder gate so that common-c can
@@ -1013,10 +1017,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         decoderRenderer?.setHdr10PlusRequested(willStreamHdr && hdr10PlusRequested)
 
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
-            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_no_hevc_decoder), Toast.LENGTH_LONG).show()
         }
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && decoderRenderer?.isAv1Supported() != true) {
-            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_no_av1_decoder), Toast.LENGTH_LONG).show()
         }
 
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
@@ -1041,7 +1045,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 ||
                 prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_H264
             ) {
-                Toast.makeText(this, "Dolby Vision requires HEVC; ignoring codec preference", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, this.getString(R.string.error_dolby_requires_hevc), Toast.LENGTH_LONG).show()
             }
             LimeLog.info("Dolby Vision requested: restricting codec mask to HEVC")
         }
@@ -2779,20 +2783,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 perfAttrs[getString(R.string.perf_decoder)] = performanceInfo.decoder ?: ""
                 perfAttrs[getString(R.string.perf_hdr_format)] = performanceInfo.hdrFormat.displayName
                 perfAttrs[getString(R.string.perf_resolution)] = "${performanceInfo.initialWidth}x${performanceInfo.initialHeight}"
-                perfAttrs[getString(R.string.perf_fps)] = String.format("%.0f", performanceInfo.totalFps)
-                perfAttrs[getString(R.string.perf_rx_fps)] = String.format("%.0f", performanceInfo.receivedFps)
-                perfAttrs[getString(R.string.perf_rd_fps)] = String.format("%.0f", performanceInfo.renderedFps)
+                perfAttrs[getString(R.string.perf_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.totalFps)
+                perfAttrs[getString(R.string.perf_rx_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.receivedFps)
+                perfAttrs[getString(R.string.perf_rd_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.renderedFps)
                 perfAttrs[getString(R.string.perf_fg_fps)] = if (performanceInfo.framegenFps > 0.5f) {
-                    String.format("%.0f", performanceInfo.framegenFps)
+                    String.format(Locale.getDefault(), "%.0f", performanceInfo.framegenFps)
                 } else {
                     "0"
                 }
-                perfAttrs[getString(R.string.perf_frame_loss)] = String.format("%.1f", performanceInfo.lostFrameRate)
-                perfAttrs[getString(R.string.perf_network_rtt)] = String.format("%d", (performanceInfo.rttInfo shr 32).toInt())
-                perfAttrs[getString(R.string.perf_host_latency)] = String.format("%.2f", performanceInfo.aveHostProcessingLatency)
-                perfAttrs[getString(R.string.perf_decode_time)] = String.format("%.2f", performanceInfo.decodeTimeMs)
+                perfAttrs[getString(R.string.perf_frame_loss)] = String.format(Locale.getDefault(), "%.1f", performanceInfo.lostFrameRate)
+                perfAttrs[getString(R.string.perf_network_rtt)] = String.format(Locale.getDefault(), "%d", (performanceInfo.rttInfo shr 32).toInt())
+                perfAttrs[getString(R.string.perf_host_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.aveHostProcessingLatency)
+                perfAttrs[getString(R.string.perf_decode_time)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
                 perfAttrs[getString(R.string.perf_bandwidth)] = performanceInfo.bandWidth ?: ""
-                perfAttrs[getString(R.string.perf_render_latency)] = String.format("%.2f", performanceInfo.renderingLatencyMs)
+                perfAttrs[getString(R.string.perf_render_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.renderingLatencyMs)
+                com.limelight.utils.PerformanceTemplateTokens.addCanonicalAliases(perfAttrs)
                 for (display in performanceInfoDisplays) {
                     display.display(perfAttrs)
                 }

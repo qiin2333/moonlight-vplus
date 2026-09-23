@@ -439,9 +439,8 @@ class PerformanceOverlayManager(
         }
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateResolutionText(view: TextView, performanceInfo: PerformanceInfo) {
-        val resValue = String.format("%dx%d@%.0f",
+        val resValue = String.format(Locale.getDefault(), "%dx%d@%.0f",
             performanceInfo.initialWidth, performanceInfo.initialHeight, performanceInfo.totalFps)
         val moonIcon = getCurrentMoonPhaseIcon()
         // 月相位置保持与原版一致：用 emoji 作为前缀图标
@@ -455,51 +454,46 @@ class PerformanceOverlayManager(
         view.typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateRenderFpsText(view: TextView, performanceInfo: PerformanceInfo) {
         // NBSP + Word Joiner 围绕 / 防止 TextView 在 "Rx 60 / Rd 60" 任意空格或斜杠处断行
         val fpsValue = if (performanceInfo.framegenFps > 0.5f) {
-            String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f\u00A0\u2060/\u2060\u00A0FG\u00A0%.0f",
+            String.format(Locale.getDefault(), "Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f\u00A0\u2060/\u2060\u00A0FG\u00A0%.0f",
                 performanceInfo.receivedFps, performanceInfo.renderedFps, performanceInfo.framegenFps)
         } else {
-            String.format("Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f",
+            String.format(Locale.getDefault(), "Rx\u00A0%.0f\u00A0\u2060/\u2060\u00A0Rd\u00A0%.0f",
                 performanceInfo.receivedFps, performanceInfo.renderedFps)
         }
         // 原版本本行无图标
         view.text = createStyledText(null, fpsValue, "FPS", 0xFF0DDAF4.toInt(), textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updatePacketLossText(view: TextView, performanceInfo: PerformanceInfo) {
-        val lossValue = String.format("%.2f", performanceInfo.lostFrameRate)
+        val lossValue = String.format(Locale.getDefault(), "%.2f", performanceInfo.lostFrameRate)
         val lossColor = if (performanceInfo.lostFrameRate < 5.0f) 0xFF7D9D7D.toInt() else 0xFFB57D7D.toInt()
         view.text = createStyledText(R.drawable.phc_perf_signal, lossValue, "%", lossColor, textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateNetworkLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         // 带宽用 gauge 仪表盘图标更直观，始终显示
         val iconRes: Int = R.drawable.phc_perf_gauge
-        val bandwidthAndLatency = String.format("%s\u00A0\u00A0\u00A0%d\u00A0\u00B1\u00A0%d",
+        val bandwidthAndLatency = String.format(Locale.getDefault(), "%s\u00A0\u00A0\u00A0%d\u00A0\u00B1\u00A0%d",
             performanceInfo.bandWidth,
             (performanceInfo.rttInfo shr 32).toInt(),
             performanceInfo.rttInfo.toInt())
         view.text = createStyledText(iconRes, bandwidthAndLatency, "ms", 0xFFBCEDD3.toInt(), textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateDecodeLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         val isHot = performanceInfo.decodeTimeMs >= 15
         val iconRes: Int? = if (isHot) null else R.drawable.phc_perf_timer
         val iconEmoji: String? = if (isHot) "🥵" else null
-        val latencyValue = String.format("%.2f", performanceInfo.decodeTimeMs)
+        val latencyValue = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
         view.text = createStyledText(iconRes, latencyValue, "ms", 0xFFD597E3.toInt(), iconEmoji, textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateHostLatencyText(view: TextView, performanceInfo: PerformanceInfo) {
         if (performanceInfo.framesWithHostProcessingLatency > 0) {
-            val latencyValue = String.format("%.1f", performanceInfo.aveHostProcessingLatency)
+            val latencyValue = String.format(Locale.getDefault(), "%.1f", performanceInfo.aveHostProcessingLatency)
             view.text = createStyledText(R.drawable.phc_perf_monitor, latencyValue, "ms", 0xFF009688.toInt(), textSizePx = view.textSize)
         } else {
             // 空置时保持原版本的 🧋 emoji
@@ -532,14 +526,13 @@ class PerformanceOverlayManager(
         view.text = createStyledText(iconRes, batteryLevel.toString(), "%", batteryColor, textSizePx = view.textSize)
     }
 
-    @SuppressLint("DefaultLocale")
     private fun updateOnePercentLowText(view: TextView, performanceInfo: PerformanceInfo) {
         val lowFps = performanceInfo.onePercentLowFps
         if (lowFps <= 0) {
             view.text = createStyledText(null, "1%Low\u00A0—", "FPS", 0xFFFF7043.toInt(), textSizePx = view.textSize)
             return
         }
-        val value = String.format("1%%Low\u00A0%.1f", lowFps)
+        val value = String.format(Locale.getDefault(), "1%%Low\u00A0%.1f", lowFps)
         val color = when {
             lowFps >= performanceInfo.renderedFps * 0.9f -> 0xFF90EE90.toInt()
             lowFps >= performanceInfo.renderedFps * 0.7f -> 0xFFFFD740.toInt()
@@ -997,7 +990,7 @@ class PerformanceOverlayManager(
     }
 
     private fun showMoonPhaseInfo() {
-        val moonPhaseInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo()
+        val moonPhaseInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo(activity)
         val moonPhase = MoonPhaseUtils.getCurrentMoonPhase()
         val phasePercentage = MoonPhaseUtils.getMoonPhasePercentage(moonPhase)
         val daysInCycle = MoonPhaseUtils.getDaysInMoonCycle(moonPhase)
@@ -1006,6 +999,7 @@ class PerformanceOverlayManager(
         val currentDate = dateFormat.format(Calendar.getInstance(TimeZone.getDefault()).time)
 
         val moonInfo = String.format(
+            Locale.getDefault(),
             activity.getString(R.string.perf_moon_phase_info),
             moonPhaseInfo.icon, moonPhaseInfo.name, phasePercentage, daysInCycle, currentDate, moonPhaseInfo.description
         )
@@ -1017,7 +1011,7 @@ class PerformanceOverlayManager(
         AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(title)
             .setMessage(message)
-            .setPositiveButton("Ok", null)
+            .setPositiveButton(R.string.dialog_button_ok, null)
             .setCancelable(true)
             .show()
             .also { AppDialogStyler.installDismissKeys(it) }
@@ -1036,23 +1030,23 @@ class PerformanceOverlayManager(
         val hostHeight = (perfInfo.initialHeight * scaleFactor).toInt()
 
         val resolutionInfo = StringBuilder()
-        resolutionInfo.append("Client Resolution: ").append(perfInfo.initialWidth)
+        resolutionInfo.append(activity.getString(R.string.perf_client_resolution)).append(perfInfo.initialWidth)
             .append(" × ").append(perfInfo.initialHeight).append("\n")
-        resolutionInfo.append("Host Resolution: ").append(hostWidth)
+        resolutionInfo.append(activity.getString(R.string.perf_host_resolution)).append(hostWidth)
             .append(" × ").append(hostHeight).append("\n")
-        resolutionInfo.append("Scale Factor: ").append(String.format("%.2f", scaleFactor))
+        resolutionInfo.append(activity.getString(R.string.perf_scale_factor)).append(String.format(Locale.getDefault(), "%.2f", scaleFactor))
             .append(" (").append(scalePercent).append("%)\n")
 
         val deviceRefreshRate = UiHelper.getDeviceRefreshRate(activity)
-        resolutionInfo.append("Target FPS: ").append(prefConfig.fps).append(" FPS\n")
-        resolutionInfo.append("Current FPS: ").append(String.format("%.0f", perfInfo.totalFps)).append(" FPS\n")
-        resolutionInfo.append("Device Refresh Rate: ").append(String.format("%.0f", deviceRefreshRate)).append(" Hz\n")
+        resolutionInfo.append(activity.getString(R.string.perf_target_fps)).append(prefConfig.fps).append(" FPS\n")
+        resolutionInfo.append(activity.getString(R.string.perf_current_fps)).append(String.format(Locale.getDefault(), "%.0f", perfInfo.totalFps)).append(" FPS\n")
+        resolutionInfo.append(activity.getString(R.string.perf_device_refresh)).append(String.format(Locale.getDefault(), "%.0f", deviceRefreshRate)).append(" Hz\n")
 
         if (actualDisplayRefreshRate > 0) {
-            resolutionInfo.append("Actual Display Refresh Rate: ").append(String.format("%.2f", actualDisplayRefreshRate)).append(" Hz\n")
+            resolutionInfo.append(activity.getString(R.string.perf_actual_refresh)).append(String.format(Locale.getDefault(), "%.2f", actualDisplayRefreshRate)).append(" Hz\n")
         }
 
-        showInfoDialog("📱 Resolution Information", resolutionInfo.toString())
+        showInfoDialog(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString())
     }
 
     private fun showDecoderInfo() {
@@ -1064,10 +1058,14 @@ class PerformanceOverlayManager(
         val decoderInfo = StringBuilder()
         val perfInfo = currentPerformanceInfo
         if (perfInfo != null) {
-            decoderInfo.append("Codec: ").append(perfInfo.decoder).append("\n\n")
+            decoderInfo.append(activity.getString(R.string.perf_codec_label)).append(perfInfo.decoder).append("\n\n")
             val decoderTypeInfo = getDecoderTypeInfo(perfInfo.decoder)
-            decoderInfo.append("Type: ").append(decoderTypeInfo.fullName).append("\n")
-            decoderInfo.append("Dynamic range: ").append(perfInfo.hdrFormat.diagnosticName).append("\n")
+            decoderInfo.append(activity.getString(R.string.perf_type_label)).append(decoderTypeInfo.fullName).append("\n")
+            decoderInfo.append(activity.getString(R.string.perf_dynamic_range)).append(when (perfInfo.hdrFormat) {
+                com.limelight.binding.video.StreamHdrFormat.HDR10_PLUS -> activity.getString(R.string.hdr_diagnostic_hdr10_plus)
+                com.limelight.binding.video.StreamHdrFormat.DOLBY_VISION -> activity.getString(R.string.hdr_diagnostic_dolby)
+                else -> perfInfo.hdrFormat.displayName
+            }).append("\n")
         }
         decoderInfo.append(activity.getString(R.string.perf_decoder_info))
         return decoderInfo.toString()

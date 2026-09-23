@@ -35,7 +35,6 @@ import android.widget.Toast;
 import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.R;
-import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.DirectConfigAction;
 import com.limelight.binding.input.advance_setting.DirectConfigSwitchState;
@@ -115,7 +114,6 @@ public class ElementController {
     private Element dispatchingElement;
 
     private final ControllerManager controllerManager;
-    private final ControllerHandler controllerHandler;
     private final PageDeviceController pageDeviceController;
 
     private GamepadInputContext gamepadInputContext = new GamepadInputContext();
@@ -255,7 +253,6 @@ public class ElementController {
         this.context = context;
         this.game = (Game) context;
         this.controllerManager = controllerManager;
-        this.controllerHandler = game.getControllerHandler();
         this.pageDeviceController = controllerManager.getPageDeviceController();
         this.handler = new Handler(Looper.getMainLooper());
         this.pageEdit = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_edit, null);
@@ -364,7 +361,7 @@ public class ElementController {
             @Override
             public void onClick(View v) {
                 DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-                ContentValues contentValues = SimplifyPerformance.getInitialInfo();
+                ContentValues contentValues = SimplifyPerformance.getInitialInfo(context);
                 contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_X, displayMetrics.widthPixels / 2);
                 contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_Y, 30);
                 addElement(contentValues);
@@ -373,7 +370,7 @@ public class ElementController {
         pageEdit.findViewById(R.id.page_edit_add_digital_combine_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ContentValues contentValues = DigitalCombineButton.getInitialInfo();
+                ContentValues contentValues = DigitalCombineButton.getInitialInfo(context);
                 addElement(contentValues);
             }
         });
@@ -401,7 +398,7 @@ public class ElementController {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     setDragEditEnabled(isChecked);
-                    String message = isChecked ? "长按移动按键" : "可直接拖动按键";
+                    String message = isChecked ? context.getString(R.string.crown_drag_hold) : context.getString(R.string.crown_drag_direct);
                     showToast(message);
                 }
             });
@@ -1756,7 +1753,7 @@ public class ElementController {
     }
 
     public void sendGamepadEvent() {
-        controllerHandler.reportOscState(
+        game.getControllerHandler().reportOscState(
                 gamepadInputContext.inputMap,
                 gamepadInputContext.leftStickX,
                 gamepadInputContext.leftStickY,
@@ -1769,7 +1766,7 @@ public class ElementController {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                controllerHandler.reportOscState(
+                game.getControllerHandler().reportOscState(
                         gamepadInputContext.inputMap,
                         gamepadInputContext.leftStickX,
                         gamepadInputContext.leftStickY,
@@ -1793,7 +1790,7 @@ public class ElementController {
     public void setGameVibrator(boolean gameVibrator) {
         this.gameVibrator = gameVibrator;
         if (!gameVibrator) {
-            controllerHandler.submitLegacyDeviceRumble((short) 0, (short) 0);
+            game.getControllerHandler().submitLegacyDeviceRumble((short) 0, (short) 0);
         }
     }
 
@@ -1805,12 +1802,12 @@ public class ElementController {
 
     public void gameVibrator(short lowFreqMotor, short highFreqMotor) {
         if (gameVibrator) {
-            controllerHandler.submitLegacyDeviceRumble(lowFreqMotor, highFreqMotor);
+            game.getControllerHandler().submitLegacyDeviceRumble(lowFreqMotor, highFreqMotor);
         }
     }
 
 
     public void rumbleSingleVibrator(short lowFreqMotor, short highFreqMotor, int vibratorTime) {
-        controllerHandler.playDeviceTouchHaptic(lowFreqMotor, highFreqMotor, vibratorTime);
+        game.getControllerHandler().playDeviceTouchHaptic(lowFreqMotor, highFreqMotor, vibratorTime);
     }
 }

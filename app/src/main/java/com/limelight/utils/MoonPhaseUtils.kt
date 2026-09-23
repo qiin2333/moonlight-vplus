@@ -1,5 +1,7 @@
 package com.limelight.utils
 
+import android.content.Context
+import com.limelight.R
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -16,15 +18,15 @@ object MoonPhaseUtils {
         val icon: String
     )
 
-    enum class MoonPhaseType(val displayName: String, private val minPhase: Double, private val maxPhase: Double) {
-        NEW_MOON("新月", 0.0, 0.0625),
-        WAXING_CRESCENT("娥眉月", 0.0625, 0.1875),
-        FIRST_QUARTER("上弦月", 0.1875, 0.3125),
-        WAXING_GIBBOUS("盈凸月", 0.3125, 0.4375),
-        FULL_MOON("满月", 0.4375, 0.5625),
-        WANING_GIBBOUS("亏凸月", 0.5625, 0.6875),
-        LAST_QUARTER("下弦月", 0.6875, 0.8125),
-        WANING_CRESCENT("残月", 0.8125, 0.9375);
+    enum class MoonPhaseType(val nameRes: Int, private val minPhase: Double, private val maxPhase: Double) {
+        NEW_MOON(R.string.moon_new_moon, 0.0, 0.0625),
+        WAXING_CRESCENT(R.string.moon_waxing_crescent, 0.0625, 0.1875),
+        FIRST_QUARTER(R.string.moon_first_quarter, 0.1875, 0.3125),
+        WAXING_GIBBOUS(R.string.moon_waxing_gibbous, 0.3125, 0.4375),
+        FULL_MOON(R.string.moon_full_moon, 0.4375, 0.5625),
+        WANING_GIBBOUS(R.string.moon_waning_gibbous, 0.5625, 0.6875),
+        LAST_QUARTER(R.string.moon_last_quarter, 0.6875, 0.8125),
+        WANING_CRESCENT(R.string.moon_waning_crescent, 0.8125, 0.9375);
 
         fun isInRange(phase: Double): Boolean = phase in minPhase..<maxPhase
     }
@@ -62,36 +64,36 @@ object MoonPhaseUtils {
         MoonPhaseType.WANING_CRESCENT -> "🌘"
     }
 
-    fun getMoonPhasePoeticTitle(phase: Double): String = when (getMoonPhaseType(phase)) {
-        MoonPhaseType.NEW_MOON -> "🌑 新月如钩 · 万象更新"
-        MoonPhaseType.WAXING_CRESCENT -> "🌒 娥眉初现 · 希望萌芽"
-        MoonPhaseType.FIRST_QUARTER -> "🌓 上弦月明 · 平衡之道"
-        MoonPhaseType.WAXING_GIBBOUS -> "🌔 盈凸月满 · 收获在望"
-        MoonPhaseType.FULL_MOON -> "🌕 满月当空 · 圆满时刻"
-        MoonPhaseType.WANING_GIBBOUS -> "🌖 亏凸月暗 · 感恩释放"
-        MoonPhaseType.LAST_QUARTER -> "🌗 下弦月残 · 反思内省"
-        MoonPhaseType.WANING_CRESCENT -> "🌘 残月如钩 · 循环往复"
-    }
+    fun getMoonPhasePoeticTitle(context: Context, phase: Double): String = context.getString(when (getMoonPhaseType(phase)) {
+        MoonPhaseType.NEW_MOON -> R.string.moon_new_moon_title
+        MoonPhaseType.WAXING_CRESCENT -> R.string.moon_waxing_crescent_title
+        MoonPhaseType.FIRST_QUARTER -> R.string.moon_first_quarter_title
+        MoonPhaseType.WAXING_GIBBOUS -> R.string.moon_waxing_gibbous_title
+        MoonPhaseType.FULL_MOON -> R.string.moon_full_moon_title
+        MoonPhaseType.WANING_GIBBOUS -> R.string.moon_waning_gibbous_title
+        MoonPhaseType.LAST_QUARTER -> R.string.moon_last_quarter_title
+        MoonPhaseType.WANING_CRESCENT -> R.string.moon_waning_crescent_title
+    })
 
-    fun getMoonPhaseDescription(phase: Double): String = when (getMoonPhaseType(phase)) {
-        MoonPhaseType.NEW_MOON -> "月亮与太阳同方向，不可见。\n象征新的开始和重生。"
-        MoonPhaseType.WAXING_CRESCENT -> "月亮的右侧开始发光。\n象征成长和希望的萌芽。"
-        MoonPhaseType.FIRST_QUARTER -> "月亮的一半被照亮。\n象征平衡和决策的时刻。"
-        MoonPhaseType.WAXING_GIBBOUS -> "月亮大部分被照亮。\n象征接近圆满和收获。"
-        MoonPhaseType.FULL_MOON -> "月亮完全被照亮。\n象征圆满、成就和庆祝。"
-        MoonPhaseType.WANING_GIBBOUS -> "月亮开始变暗。\n象征释放和感恩。"
-        MoonPhaseType.LAST_QUARTER -> "月亮的一半变暗。\n象征反思和内省。"
-        MoonPhaseType.WANING_CRESCENT -> "月亮几乎不可见。\n象征结束和准备新的循环。"
-    }
+    fun getMoonPhaseDescription(context: Context, phase: Double): String = context.getString(when (getMoonPhaseType(phase)) {
+        MoonPhaseType.NEW_MOON -> R.string.moon_new_moon_description
+        MoonPhaseType.WAXING_CRESCENT -> R.string.moon_waxing_crescent_description
+        MoonPhaseType.FIRST_QUARTER -> R.string.moon_first_quarter_description
+        MoonPhaseType.WAXING_GIBBOUS -> R.string.moon_waxing_gibbous_description
+        MoonPhaseType.FULL_MOON -> R.string.moon_full_moon_description
+        MoonPhaseType.WANING_GIBBOUS -> R.string.moon_waning_gibbous_description
+        MoonPhaseType.LAST_QUARTER -> R.string.moon_last_quarter_description
+        MoonPhaseType.WANING_CRESCENT -> R.string.moon_waning_crescent_description
+    })
 
-    fun getMoonPhaseInfo(phase: Double): MoonPhaseInfo = MoonPhaseInfo(
-        poeticTitle = getMoonPhasePoeticTitle(phase),
-        name = getMoonPhaseType(phase).displayName,
-        description = getMoonPhaseDescription(phase),
+    fun getMoonPhaseInfo(context: Context, phase: Double): MoonPhaseInfo = MoonPhaseInfo(
+        poeticTitle = getMoonPhasePoeticTitle(context, phase),
+        name = context.getString(getMoonPhaseType(phase).nameRes),
+        description = getMoonPhaseDescription(context, phase),
         icon = getMoonPhaseIcon(phase)
     )
 
-    fun getCurrentMoonPhaseInfo(): MoonPhaseInfo = getMoonPhaseInfo(getCurrentMoonPhase())
+    fun getCurrentMoonPhaseInfo(context: Context): MoonPhaseInfo = getMoonPhaseInfo(context, getCurrentMoonPhase())
 
     fun getMoonPhasePercentage(phase: Double): Double = phase * 100
 

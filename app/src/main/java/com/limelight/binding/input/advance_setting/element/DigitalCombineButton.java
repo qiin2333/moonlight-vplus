@@ -658,6 +658,12 @@ public class DigitalCombineButton extends Element {
         invalidate();
     }
 
+    public static ContentValues getInitialInfo(Context context) {
+        ContentValues values = getInitialInfo();
+        values.put(COLUMN_STRING_ELEMENT_TEXT, context.getString(R.string.crown_combo_default));
+        return values;
+    }
+
     public static ContentValues getInitialInfo() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_DIGITAL_COMBINE_BUTTON);

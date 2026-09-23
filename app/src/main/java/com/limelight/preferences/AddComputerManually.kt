@@ -280,10 +280,7 @@ class AddComputerManually : ThemedActivity() {
             }
 
             if (isIPv6) {
-                dialogText += "\n\n提示：如果您使用的是IPv6地址，请检查：\n" +
-                        "1. 光猫防火墙是否放行了IPv6流量\n" +
-                        "2. 路由器是否启用了IPv6端口转发\n" +
-                        "3. 目标主机的IPv6防火墙设置"
+                dialogText += getString(R.string.addpc_ipv6_hint)
             }
 
             showAddFailure(generation, dialogText)
