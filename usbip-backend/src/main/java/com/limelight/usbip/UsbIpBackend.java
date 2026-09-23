@@ -36,10 +36,17 @@ public final class UsbIpBackend implements AutoCloseable {
         }
     }
 
+    /** What closing an export needs from the device layer. The device handle
+     *  itself cannot be built outside the framework, and this keeps the
+     *  teardown paths reachable from a test. */
+    interface Connection {
+        void close();
+    }
+
     private static final class Active {
         final Export export;
-        final UsbDeviceConnection connection;
-        Active(Export export, UsbDeviceConnection connection) {
+        final Connection connection;
+        Active(Export export, Connection connection) {
             this.export = export; this.connection = connection;
         }
     }
@@ -94,11 +101,21 @@ public final class UsbIpBackend implements AutoCloseable {
                 busId = NativeUsbIp.bind(exporter, connection.getFileDescriptor());
                 Log.i(TAG, "native exporter bound busid=" + busId);
                 Export export = new Export(exporter, device.getDeviceName(), busId, exporterPort);
-                exports.put(device.getDeviceName(), new Active(export, connection));
+                exports.put(device.getDeviceName(), new Active(export, connection::close));
                 return export;
             } catch (Exception | Error error) {
                 Log.e(TAG, "USB export failed", error);
-                rollback(busId, connection);
+                if (rollback(busId, connection)) {
+                    // Nothing is bound here any more, so an exporter that this
+                    // failed export started must not keep listening.
+                    try {
+                        stopIdleExporter();
+                    } catch (Exception stopError) {
+                        // It keeps running, and the next release or close will
+                        // stop it; the export failure is what the caller needs.
+                        Log.e(TAG, "Idle exporter did not stop", stopError);
+                    }
+                }
                 throw error;
             }
         });
@@ -141,17 +158,19 @@ public final class UsbIpBackend implements AutoCloseable {
 
     /** Undoes a partially started export. The native side owns the FD until the
      * device is unbound, so the connection only closes once it is gone; a device
-     * that cannot be unbound stays with the exporter, which closes it on stop. */
-    private void rollback(String busId, UsbDeviceConnection connection) {
+     * that cannot be unbound stays with the exporter, which closes it on stop.
+     * @return whether no native owner is left holding the device handle. */
+    private boolean rollback(String busId, UsbDeviceConnection connection) {
         if (busId != null) {
             try {
                 NativeUsbIp.unbind(exporter, busId);
             } catch (Exception unbindError) {
                 Log.e(TAG, "USB device did not unbind; the exporter keeps its handle", unbindError);
-                return;
+                return false;
             }
         }
         if (connection != null) connection.close();
+        return true;
     }
 
     public synchronized Future<?> closeAsync() {
@@ -183,6 +202,10 @@ public final class UsbIpBackend implements AutoCloseable {
                     ArrayList<Active> abandoned = new ArrayList<>(exports.values());
                     exports.clear();
                     for (Active active : abandoned) active.connection.close();
+                    // The fallback released what the failed releases could not,
+                    // so there is nothing left to report: the caller treats a
+                    // reported failure as devices it must keep reserved.
+                    failure = null;
                 } catch (Throwable error) {
                     if (failure == null) failure = error;
                     else failure.addSuppressed(error);
