@@ -4,24 +4,35 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.limelight.LimeLog
 import com.limelight.R
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Persistent theme choices and their application; independent of Activity lifecycle variants. */
 object AppTheme {
     private const val APP_THEME_PREFS = "AppTheme"
     private const val APP_THEME_MODE_KEY = "theme_mode"
+    private val paletteFailureLogged = AtomicBoolean(false)
+    private val nightModeFailureLogged = AtomicBoolean(false)
 
     const val THEME_MODE_SYSTEM = "system"
     const val THEME_MODE_LIGHT = "light"
     const val THEME_MODE_DARK = "dark"
 
     fun applyStoredAppTheme(context: Context) {
-        applyAppThemeMode(context, getAppThemeMode(context))
+        try {
+            applyAppThemeMode(context, getAppThemeMode(context))
+        } catch (error: IllegalArgumentException) {
+            logNightModeFallback(error)
+        } catch (error: IllegalStateException) {
+            logNightModeFallback(error)
+        }
     }
 
     fun getAppThemeMode(context: Context): String {
@@ -151,7 +162,40 @@ object AppTheme {
         else -> null
     }
 
-    fun applyTo(context: Context) = applyPalette(context.theme, activeBucket(context))
+    /** Optional accent overlays must never prevent an Activity from using its base theme. */
+    fun applyTo(context: Context): Boolean =
+        applyPaletteSafely(context.theme, activeBucket(context))
+
+    private fun applyPaletteSafely(theme: Resources.Theme, bucket: Int): Boolean {
+        return try {
+            applyPalette(theme, bucket)
+            true
+        } catch (error: Resources.NotFoundException) {
+            logPaletteFallback(error)
+            false
+        } catch (error: IllegalArgumentException) {
+            logPaletteFallback(error)
+            false
+        }
+    }
+
+    private fun logPaletteFallback(error: RuntimeException) {
+        if (paletteFailureLogged.compareAndSet(false, true)) {
+            LimeLog.warning(
+                "App theme accent overlay unavailable; using base theme " +
+                    "(${error.javaClass.simpleName})"
+            )
+        }
+    }
+
+    private fun logNightModeFallback(error: RuntimeException) {
+        if (nightModeFailureLogged.compareAndSet(false, true)) {
+            LimeLog.warning(
+                "App night mode unavailable; using the manifest theme " +
+                    "(${error.javaClass.simpleName})"
+            )
+        }
+    }
 
     private fun applyPalette(theme: android.content.res.Resources.Theme, bucket: Int) {
         // Reset first: removing a background or disabling its accent must not retain the old overlay.
@@ -167,6 +211,6 @@ object AppTheme {
     fun paletteContext(context: Context, bucket: Int = activeBucket(context)): Context =
         android.view.ContextThemeWrapper(configurationContext(context), 0).also {
             it.theme.setTo(context.theme)
-            applyPalette(it.theme, bucket)
+            applyPaletteSafely(it.theme, bucket)
         }
 }
