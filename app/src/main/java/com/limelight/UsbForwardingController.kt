@@ -118,6 +118,9 @@ class UsbForwardingController(
     private var pendingPermission: Forwarding? = null
     private val promptHandler = Handler(Looper.getMainLooper())
     private var promptTimeout: Runnable? = null
+    /** Whether the stream activity holds window focus, i.e. no system dialog
+     *  is on top of it; the stream starts focused. */
+    private var hasFocus = true
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -311,12 +314,16 @@ class UsbForwardingController(
      *  dialog on top of it is gone. A prompt with no answer by then was
      *  dismissed rather than decided: settle it as not granted, or it would
      *  block every later request until the app restarted. The grace covers the
-     *  result broadcast, which the dialog sends as it finishes. */
-    fun onFocusReturned() {
-        if (closed) return
+     *  result broadcast, which the dialog sends as it finishes, and focus is
+     *  re-checked when it expires: losing it again means the dialog is only
+     *  late, not dismissed - our own sheet closing hands focus back before the
+     *  system dialog has taken it. */
+    fun onFocusChanged(focused: Boolean) {
+        hasFocus = focused
+        if (closed || !focused) return
         val request = pendingPermission?.request ?: return
         promptHandler.postDelayed({
-            if (closed || pendingPermission?.request != request) return@postDelayed
+            if (closed || !hasFocus || pendingPermission?.request != request) return@postDelayed
             LimeLog.warning("USB permission prompt $request was dismissed; treating it as not granted")
             completePermission(request, false)
         }, PROMPT_DISMISS_GRACE_MS)

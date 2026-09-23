@@ -1482,9 +1482,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // the app holds input focus; clips copied in another app while
             // Game was paused are silently dropped. Re-poll on focus regain.
             clipboardSyncManager?.onFocusGained()
-            // The system USB permission dialog is a window of its own, so the
-            // prompt is over once this one has focus again.
-            usbForwarding?.onFocusReturned()
+        }
+        // The system USB permission dialog is a window of its own: this tells
+        // the prompt whether it still has the screen to itself.
+        usbForwarding?.onFocusChanged(hasFocus)
         }
     }
 
