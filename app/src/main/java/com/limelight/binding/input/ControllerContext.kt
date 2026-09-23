@@ -127,9 +127,7 @@ open class GenericControllerContext(
         handler.withControllerInputLock {
             handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
             if (!enabled) {
-                if (mouseEmulationActive) {
-                    handler.releaseEmulatedMouseButtons(mouseEmulationLastInputMap)
-                }
+                handler.releaseEmulatedMouseButtons(this)
                 handler.releaseEmulatedDpadKeys(this)
             }
             if (mouseEmulationActive != enabled) {

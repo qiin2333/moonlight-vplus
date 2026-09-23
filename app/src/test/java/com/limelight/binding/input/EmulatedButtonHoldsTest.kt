@@ -4,10 +4,10 @@ import com.limelight.nvstream.input.ControllerPacket
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class EmulatedDpadHoldsTest {
+class EmulatedButtonHoldsTest {
     @Test
     fun releasingOneControllerKeepsTheOtherControllersArrowHeld() {
-        val holds = EmulatedDpadHolds()
+        val holds = EmulatedButtonHolds()
         val first = Any()
         val second = Any()
         val up = ControllerPacket.UP_FLAG
@@ -22,7 +22,7 @@ class EmulatedDpadHoldsTest {
 
     @Test
     fun releasingOneDirectionDoesNotReleaseAnother() {
-        val holds = EmulatedDpadHolds()
+        val holds = EmulatedButtonHolds()
         val context = Any()
         val up = ControllerPacket.UP_FLAG
         val right = ControllerPacket.RIGHT_FLAG
@@ -30,5 +30,19 @@ class EmulatedDpadHoldsTest {
         assertEquals(up or right, holds.update(context, up or right))
         assertEquals(up, holds.update(context, right))
         assertEquals(right, holds.heldMask)
+    }
+
+    @Test
+    fun releasingOneControllerKeepsTheOtherControllersMouseButtonHeld() {
+        val holds = EmulatedButtonHolds()
+        val first = Any()
+        val second = Any()
+        val leftButton = ControllerPacket.A_FLAG
+
+        assertEquals(leftButton, holds.update(first, leftButton))
+        assertEquals(0, holds.update(second, leftButton))
+        assertEquals(0, holds.update(first, 0))
+        assertEquals(leftButton, holds.heldMask)
+        assertEquals(leftButton, holds.update(second, 0))
     }
 }

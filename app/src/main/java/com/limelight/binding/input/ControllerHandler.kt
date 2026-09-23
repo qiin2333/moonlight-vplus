@@ -87,6 +87,7 @@ class ControllerHandler(
         private val USB_MENU_DIRECTION_MASK = ControllerPacket.UP_FLAG or
             ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG
         private val MOUSE_DPAD_MASK = USB_MENU_DIRECTION_MASK
+        private val MOUSE_BUTTON_MASK = ControllerPacket.A_FLAG or ControllerPacket.B_FLAG
         private val MOUSE_DPAD_FLAGS = intArrayOf(
             ControllerPacket.UP_FLAG, ControllerPacket.DOWN_FLAG,
             ControllerPacket.LEFT_FLAG, ControllerPacket.RIGHT_FLAG
@@ -350,7 +351,8 @@ class ControllerHandler(
 
     private val inputVector = Vector2d()
     private val mouseKeyboardTranslator by lazy { KeyboardTranslator() }
-    private val emulatedDpadHolds = EmulatedDpadHolds()
+    private val emulatedDpadHolds = EmulatedButtonHolds()
+    private val emulatedMouseButtonHolds = EmulatedButtonHolds()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
@@ -1776,26 +1778,9 @@ class ControllerHandler(
 
         if (originalContext.mouseEmulationActive) {
             val changedMask = inputMap xor originalContext.mouseEmulationLastInputMap
-
-            val aDown = (inputMap and ControllerPacket.A_FLAG) != 0
-            val bDown = (inputMap and ControllerPacket.B_FLAG) != 0
-
             originalContext.mouseEmulationLastInputMap = inputMap
-
-            if ((changedMask and ControllerPacket.A_FLAG) != 0) {
-                if (aDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                }
-            }
-            if ((changedMask and ControllerPacket.B_FLAG) != 0) {
-                if (bDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                }
-            }
+            updateEmulatedMouseButtonsLocked(originalContext,
+                if (forceNeutral) 0 else originalContext.inputMap and MOUSE_BUTTON_MASK)
             if (prefConfig.controllerMouseDpadArrows) {
                 updateEmulatedDpadKeysLocked(originalContext,
                     if (forceNeutral) 0 else originalContext.inputMap and MOUSE_DPAD_MASK)
@@ -1817,6 +1802,7 @@ class ControllerHandler(
                 0.toShort(), 0.toShort(), 0.toShort(), 0.toShort()
             )
         } else {
+            updateEmulatedMouseButtonsLocked(originalContext, 0)
             updateEmulatedDpadKeysLocked(originalContext, 0)
             conn.sendControllerInput(
                 controllerNumber, getActiveControllerMask(),
@@ -2397,13 +2383,26 @@ class ControllerHandler(
 
     // ========== Mouse Emulation ==========
 
-    internal fun releaseEmulatedMouseButtons(inputMap: Int) {
-        if ((inputMap and ControllerPacket.A_FLAG) != 0) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+    private fun updateEmulatedMouseButtonsLocked(context: GenericControllerContext, mask: Int) {
+        val changedMask = emulatedMouseButtonHolds.update(context, mask)
+        if ((changedMask and ControllerPacket.A_FLAG) != 0) {
+            if ((emulatedMouseButtonHolds.heldMask and ControllerPacket.A_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            }
         }
-        if ((inputMap and ControllerPacket.B_FLAG) != 0) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+        if ((changedMask and ControllerPacket.B_FLAG) != 0) {
+            if ((emulatedMouseButtonHolds.heldMask and ControllerPacket.B_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+            }
         }
+    }
+
+    internal fun releaseEmulatedMouseButtons(context: GenericControllerContext) {
+        withControllerInputLock { updateEmulatedMouseButtonsLocked(context, 0) }
     }
 
     private fun sendEmulatedDpadKey(flag: Int, pressed: Boolean) {
