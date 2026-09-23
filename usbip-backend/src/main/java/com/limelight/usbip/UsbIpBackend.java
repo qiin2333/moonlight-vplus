@@ -138,7 +138,12 @@ public final class UsbIpBackend implements AutoCloseable {
      * same device: the identity check belongs to the caller's own handle. */
     private void releaseNow(Export expected) {
         Active active = exports.get(expected.deviceName);
-        if (active == null || active.export != expected) return;
+        if (active == null || active.export != expected) {
+            // Either a stale export, or the retry of a release whose exporter
+            // stop failed: the export is gone, but an idle exporter may not be.
+            stopIdleExporter();
+            return;
+        }
         // Unbinds before either FD owner is released. Native cleanup runs first so
         // that a failure keeps the device handle open and the export registered.
         NativeUsbIp.unbind(exporter, expected.busId);

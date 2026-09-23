@@ -59,6 +59,25 @@ public class UsbIpBackendLifecycleTest {
         }
     }
 
+    /** A release whose exporter stop failed is retried by the owner. The export
+     *  is already gone by then, so the retry has to stop the idle exporter the
+     *  first attempt could not, or it would keep listening until closing. */
+    @Test public void retryingAReleaseStopsTheExporterLeftBehind() throws Exception {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        UsbIpBackend backend = new UsbIpBackend(context);
+        try {
+            NativeUsbIp.load();
+            Object stale = newExport(-1L, "usb/test", "9-9:0", 1);
+            field(backend, "exporter").setLong(backend, -1L);
+
+            backend.release(stale).get(5, TimeUnit.SECONDS);
+            assertEquals("The idle exporter survived its release", 0L,
+                    field(backend, "exporter").getLong(backend));
+        } finally {
+            backend.closeAsync().get(2, TimeUnit.SECONDS);
+        }
+    }
+
     private static Field field(UsbIpBackend backend, String name) throws Exception {
         Field field = UsbIpBackend.class.getDeclaredField(name);
         field.setAccessible(true);
