@@ -9,6 +9,8 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.InputDevice
 import android.widget.Toast
 import androidx.compose.runtime.getValue
@@ -42,6 +44,14 @@ class UsbForwardingController(
     private val httpProvider: () -> NvHTTP?
 ) : AutoCloseable {
     companion object {
+        /** Covers the result broadcast the dialog sends as it finishes, so an
+         *  answered prompt is never mistaken for a dismissed one. */
+        private const val PROMPT_DISMISS_GRACE_MS = 400L
+
+        /** Backstop for a prompt whose dialog never hands focus back, which is
+         *  the only thing left to tell a dismissal from an open dialog by. */
+        private const val PROMPT_TIMEOUT_MS = 30_000L
+
         private val cleanupLock = Any()
         private var lastCleanup = CompletionSignal.completed()
 
@@ -106,13 +116,17 @@ class UsbForwardingController(
     /** One system permission dialog at a time; everything else waits in here. */
     private val permissionQueue = ArrayDeque<Forwarding>()
     private var pendingPermission: Forwarding? = null
+    private val promptHandler = Handler(Looper.getMainLooper())
+    private var promptTimeout: Runnable? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (closed) return
             if (intent.action == permissionAction) {
-                completePermission(intent.getIntExtra("request", -1),
-                    intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false))
+                val request = intent.getIntExtra("request", -1)
+                val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                LimeLog.info("USB permission result for request $request: granted=$granted")
+                completePermission(request, granted)
                 return
             }
             val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
@@ -264,6 +278,7 @@ class UsbForwardingController(
                 if (Build.VERSION.SDK_INT >= 31) flags = flags or PendingIntent.FLAG_MUTABLE
                 manager.requestPermission(next.device, PendingIntent.getBroadcast(game, next.request,
                     Intent(permissionAction).setPackage(game.packageName).putExtra("request", next.request), flags))
+                schedulePromptTimeout(next.request)
             } catch (_: Exception) {
                 // No dialog was shown, so the bookkeeping closes here and the
                 // queue can carry on.
@@ -279,6 +294,7 @@ class UsbForwardingController(
     private fun completePermission(request: Int, granted: Boolean) {
         val pending = pendingPermission ?: return
         if (request != pending.request) return
+        clearPromptTimeout()
         pendingPermission = null
         game.onUsbPermissionPromptCompleted()
         if (pending.cancelled) {
@@ -289,6 +305,40 @@ class UsbForwardingController(
         if (granted && manager.hasPermission(pending.device)) export(pending)
         else releaseGroup(listOf(pending), R.string.usb_forward_permission_denied)
         pumpPermissionQueue()
+    }
+
+    /** Called when the stream regains window focus, which means any system
+     *  dialog on top of it is gone. A prompt with no answer by then was
+     *  dismissed rather than decided: settle it as not granted, or it would
+     *  block every later request until the app restarted. The grace covers the
+     *  result broadcast, which the dialog sends as it finishes. */
+    fun onFocusReturned() {
+        if (closed) return
+        val request = pendingPermission?.request ?: return
+        promptHandler.postDelayed({
+            if (closed || pendingPermission?.request != request) return@postDelayed
+            LimeLog.warning("USB permission prompt $request was dismissed; treating it as not granted")
+            completePermission(request, false)
+        }, PROMPT_DISMISS_GRACE_MS)
+    }
+
+    /** Backstop for a prompt whose dialog never hands focus back at all. */
+    private fun schedulePromptTimeout(request: Int) {
+        clearPromptTimeout()
+        val timeout = Runnable {
+            promptTimeout = null
+            if (closed) return@Runnable
+            if (pendingPermission?.request != request) return@Runnable
+            LimeLog.warning("USB permission prompt $request was never answered; treating it as not granted")
+            completePermission(request, false)
+        }
+        promptTimeout = timeout
+        promptHandler.postDelayed(timeout, PROMPT_TIMEOUT_MS)
+    }
+
+    private fun clearPromptTimeout() {
+        promptTimeout?.let { promptHandler.removeCallbacks(it) }
+        promptTimeout = null
     }
 
     /** Drops a device that is waiting for permission. A dialog that is already on
@@ -484,6 +534,7 @@ class UsbForwardingController(
         // The system dialog can outlive this controller; only its bookkeeping can
         // be balanced here.
         pendingPermission?.let { pendingPermission = null; game.onUsbPermissionPromptCompleted() }
+        clearPromptTimeout()
         permissionQueue.clear()
         game.unregisterReceiver(receiver)
     }
