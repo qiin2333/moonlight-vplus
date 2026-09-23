@@ -31,6 +31,8 @@
     <string name="usb_forward_wireless_adapter">Bluetooth USB adapter forwarding is not supported yet.</string>
     <string name="usb_forward_duplicate_device">Another connected device has the same vendor and product IDs. Android cannot tell them apart, so it also stops receiving input here while one of them is shared.</string>
     <string name="usb_forward_failed_short">Sharing failed</string>
+    <string name="usb_forward_host_releasing">The host is still releasing this device. Try again in a moment.</string>
+    <string name="usb_forward_host_attach_failed">The host could not attach this device. Restart Sunshine on the host, then try again.</string>
     <string name="usb_forward_experimental">Experimental</string>
     <string name="usb_forward_toggle_title">USB sharing</string>
     <string name="usb_forward_toggle_hint">Only for this computer</string>

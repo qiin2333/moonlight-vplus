@@ -33,6 +33,28 @@ import javax.net.ssl.X509TrustManager;
 public final class UsbReverseTunnel implements AutoCloseable {
     private static final String TAG = "MoonlightUsbIp";
 
+    /** The host refused the forwarding request and said why. The reason is the
+     *  host's own short string ("device already forwarded", "usbip attach
+     *  failed", ...) and is the only thing that separates a slot the host has
+     *  not released yet from a usbip backend that needs a restart, so it is
+     *  carried out to the caller instead of being flattened into one message. */
+    public static final class Rejected extends IOException {
+        public final String reason;
+
+        Rejected(String reason) {
+            super("USB tunnel host rejected forwarding: " + reason);
+            this.reason = reason;
+        }
+    }
+
+    /** The host's reason behind {@code error}, or null when it did not refuse. */
+    public static String rejectionReason(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof Rejected) return ((Rejected) cause).reason;
+        }
+        return null;
+    }
+
     /** Minimal one-shot completion handle. CompletableFuture is API 24+ and no longer
      * rewritten by core library desugaring, which crashed API 22/23 TVs (#631). */
     public static final class Completion {
@@ -191,7 +213,7 @@ public final class UsbReverseTunnel implements AutoCloseable {
             JSONObject response = new JSONObject(readLine(tls.getInputStream()));
             Log.i(TAG, "tunnel host response=" + response);
             if (!"ready".equals(response.optString("op")))
-                throw new IOException("USB tunnel host rejected forwarding");
+                throw new Rejected(response.optString("reason", ""));
             Socket backend = new Socket();
             register(backend, false);
             backend.setTcpNoDelay(true);

@@ -31,6 +31,8 @@
     <string name="usb_forward_wireless_adapter">暂不支持转发蓝牙 USB 适配器。</string>
     <string name="usb_forward_duplicate_device">存在厂商和产品 ID 相同的其它已连接设备。Android 无法区分它们，共享其中一台时另一台在本机也不会收到输入。</string>
     <string name="usb_forward_failed_short">共享失败</string>
+    <string name="usb_forward_host_releasing">主机仍在释放该设备，请稍后再试。</string>
+    <string name="usb_forward_host_attach_failed">主机未能挂载该设备，请在主机上重启 Sunshine 后重试。</string>
     <string name="usb_forward_experimental">实验性</string>
     <string name="usb_forward_toggle_title">USB 共享</string>
     <string name="usb_forward_toggle_hint">仅对此电脑启用</string>

@@ -332,7 +332,10 @@ class UsbForwardingController(
                                 if (!closed && state.generation == operation) {
                                     if (error != null) {
                                         LimeLog.severe("USB forwarding tunnel failed: ${error.cause ?: error}")
-                                        releaseGroup(listOf(state), R.string.usb_forward_failed)
+                                        // What the user can do about it depends on the
+                                        // host's reason; see UsbForwardingFailure.
+                                        releaseGroup(listOf(state), UsbForwardingFailure.messageOf(
+                                            UsbReverseTunnel.rejectionReason(error)))
                                     }
                                     else {
                                         state.phase = Phase.Sharing
