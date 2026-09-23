@@ -67,7 +67,7 @@ public class UsbIpBackendLifecycleTest {
         UsbIpBackend backend = new UsbIpBackend(context);
         try {
             NativeUsbIp.load();
-            Object stale = newExport(-1L, "usb/test", "9-9:0", 1);
+            UsbIpBackend.Export stale = (UsbIpBackend.Export) newExport(-1L, "usb/test", "9-9:0", 1);
             field(backend, "exporter").setLong(backend, -1L);
 
             backend.release(stale).get(5, TimeUnit.SECONDS);
