@@ -350,6 +350,7 @@ class ControllerHandler(
 
     private val inputVector = Vector2d()
     private val mouseKeyboardTranslator by lazy { KeyboardTranslator() }
+    private val emulatedDpadHolds = EmulatedDpadHolds()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
@@ -1685,6 +1686,10 @@ class ControllerHandler(
         }
     }
 
+    internal fun withControllerInputLock(action: () -> Unit) {
+        synchronized(arrivalMetadataLock) { action() }
+    }
+
     internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean {
         for (i in 0 until inputDeviceContexts.size()) {
             val context = inputDeviceContexts.valueAt(i)
@@ -1792,13 +1797,10 @@ class ControllerHandler(
                 }
             }
             if (prefConfig.controllerMouseDpadArrows) {
-                for (flag in MOUSE_DPAD_FLAGS) {
-                    if ((changedMask and flag) != 0) {
-                        sendEmulatedDpadKey(flag, (inputMap and flag) != 0)
-                    }
-                }
-                originalContext.mouseEmulationHeldArrowMask = inputMap and MOUSE_DPAD_MASK
+                updateEmulatedDpadKeysLocked(originalContext,
+                    if (forceNeutral) 0 else originalContext.inputMap and MOUSE_DPAD_MASK)
             } else {
+                updateEmulatedDpadKeysLocked(originalContext, 0)
                 if ((changedMask and ControllerPacket.UP_FLAG) != 0 &&
                     (inputMap and ControllerPacket.UP_FLAG) != 0) conn.sendMouseScroll(1.toByte())
                 if ((changedMask and ControllerPacket.DOWN_FLAG) != 0 &&
@@ -1815,6 +1817,7 @@ class ControllerHandler(
                 0.toShort(), 0.toShort(), 0.toShort(), 0.toShort()
             )
         } else {
+            updateEmulatedDpadKeysLocked(originalContext, 0)
             conn.sendControllerInput(
                 controllerNumber, getActiveControllerMask(),
                 inputMap,
@@ -2415,10 +2418,17 @@ class ControllerHandler(
             if (pressed) KeyboardPacket.KEY_DOWN else KeyboardPacket.KEY_UP, 0, 0)
     }
 
-    internal fun releaseEmulatedDpadKeys(mask: Int) {
+    private fun updateEmulatedDpadKeysLocked(context: GenericControllerContext, mask: Int) {
+        val changedMask = emulatedDpadHolds.update(context, mask)
         for (flag in MOUSE_DPAD_FLAGS) {
-            if ((mask and flag) != 0) sendEmulatedDpadKey(flag, false)
+            if ((changedMask and flag) != 0) {
+                sendEmulatedDpadKey(flag, (emulatedDpadHolds.heldMask and flag) != 0)
+            }
         }
+    }
+
+    internal fun releaseEmulatedDpadKeys(context: GenericControllerContext) {
+        withControllerInputLock { updateEmulatedDpadKeysLocked(context, 0) }
     }
 
     private fun calibratedStickAxis(event: MotionEvent, axis: Int): Float {

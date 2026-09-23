@@ -66,9 +66,8 @@ open class GenericControllerContext(
 
     var startDownTime: Long = 0
 
-    var mouseEmulationActive: Boolean = false
+    @Volatile var mouseEmulationActive: Boolean = false
     var mouseEmulationLastInputMap: Int = 0
-    var mouseEmulationHeldArrowMask: Int = 0
     var mouseEmulationRemainderX: Double = 0.0
     var mouseEmulationRemainderY: Double = 0.0
     val mouseEmulationReportPeriod: Int = 50
@@ -125,22 +124,23 @@ open class GenericControllerContext(
     }
 
     internal fun setMouseEmulation(enabled: Boolean) {
-        handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
-        if (!enabled && mouseEmulationActive) {
-            handler.releaseEmulatedMouseButtons(mouseEmulationLastInputMap)
-        }
-        if (!enabled && mouseEmulationHeldArrowMask != 0) {
-            handler.releaseEmulatedDpadKeys(mouseEmulationHeldArrowMask)
-            mouseEmulationHeldArrowMask = 0
-        }
-        if (mouseEmulationActive != enabled) {
-            mouseEmulationLastInputMap = 0
-            mouseEmulationRemainderX = 0.0
-            mouseEmulationRemainderY = 0.0
-        }
-        mouseEmulationActive = enabled
-        if (enabled) {
-            handler.mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod.toLong())
+        handler.withControllerInputLock {
+            handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
+            if (!enabled) {
+                if (mouseEmulationActive) {
+                    handler.releaseEmulatedMouseButtons(mouseEmulationLastInputMap)
+                }
+                handler.releaseEmulatedDpadKeys(this)
+            }
+            if (mouseEmulationActive != enabled) {
+                mouseEmulationLastInputMap = 0
+                mouseEmulationRemainderX = 0.0
+                mouseEmulationRemainderY = 0.0
+            }
+            mouseEmulationActive = enabled
+            if (enabled) {
+                handler.mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod.toLong())
+            }
         }
     }
 
