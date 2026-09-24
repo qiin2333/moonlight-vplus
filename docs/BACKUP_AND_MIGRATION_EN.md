@@ -14,7 +14,7 @@ A full backup may contain settings, game presets, Crown profiles, paired compute
 
 ## Save a restorable copy
 
-1. Open Backup and Sync in settings, use Save Backup File, and note where the file is stored.
+1. Open Backup and Sync in settings, use Save Backup File to export an encrypted backup, and note where the file is stored. If no backup password is saved, the app asks you to set one first; otherwise, it reuses the saved password.
 2. To keep copies in a selected folder, choose Backup Folder, set a backup password, and save a backup there. You can choose a folder provided by a cloud-drive app; that app handles uploading the file.
 3. Keep the password separately. A password remembered on this device may be unavailable after reinstalling or clearing app data; a protected backup cannot be previewed or restored without it.
 4. Check the automatic-sync status or manual-save result periodically so a failed write is not mistaken for a backup.
