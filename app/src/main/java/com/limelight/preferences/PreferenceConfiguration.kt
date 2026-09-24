@@ -173,6 +173,8 @@ class PreferenceConfiguration {
     var screenDs5Touchpad = false
     /** Ask the host to auto-invoke its touch keyboard when a text field gains focus (Sunshine extension). */
     var touchKeyboardAutoInvoke = true
+    /** Auto-open the local IME on API 33+ when the host reports a trusted editable activation. */
+    var remoteImeAutoShow = true
     var audioConfiguration: MoonBridge.AudioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO
     /** Negotiated audio codec preference — see [MoonBridge.AUDIO_CODEC_OPUS] etc. */
     var audioCodec: Int = MoonBridge.AUDIO_CODEC_OPUS
@@ -360,6 +362,7 @@ class PreferenceConfiguration {
                 )
                 .putBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, touchscreenTrackpad)
                 .putBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, touchKeyboardAutoInvoke)
+                .putBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, remoteImeAutoShow)
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
@@ -693,6 +696,7 @@ class PreferenceConfiguration {
         const val RESOLUTION_PREF_STRING = "list_resolution"
         const val TOUCHSCREEN_TRACKPAD_PREF_STRING = "checkbox_touchscreen_trackpad"
         const val TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING = "checkbox_touch_keyboard_auto_invoke"
+        const val REMOTE_IME_AUTO_SHOW_PREF_STRING = "checkbox_remote_ime_auto_show"
         const val SCREEN_DS5_TOUCHPAD_PREF_STRING = "checkbox_screen_ds5_touchpad"
         const val ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer"
         const val NATIVE_MOUSE_MODE_PRESET_PREF_STRING = "list_native_mouse_mode_preset"
@@ -1480,6 +1484,7 @@ class PreferenceConfiguration {
             config.enableNativeMousePointer = touchModeState.nativeMousePointer
             config.screenDs5Touchpad = touchModeState.screenDs5Touchpad
             config.touchKeyboardAutoInvoke = prefs.getBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, true)
+            config.remoteImeAutoShow = prefs.getBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, true)
             config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.enableStun = prefs.getBoolean(ENABLE_STUN_PREF_STRING, DEFAULT_ENABLE_STUN)
 

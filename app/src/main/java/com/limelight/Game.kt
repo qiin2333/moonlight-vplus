@@ -420,7 +420,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
         panZoomHandler = PanZoomHandler(this, this, streamView, cursorOverlayView, prefConfig)
-        remoteImeController = RemoteImeController(this, streamView, panZoomHandler)
+        remoteImeController = RemoteImeController(this, streamView, panZoomHandler,
+            autoShowEnabled = prefConfig.remoteImeAutoShow)
 
         val backgroundTouchView = findViewById<View>(R.id.backgroundTouchView)
         backgroundTouchView.setOnTouchListener(this)

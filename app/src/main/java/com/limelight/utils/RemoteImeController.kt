@@ -1,22 +1,32 @@
 package com.limelight.utils
 
 import android.app.Activity
+import android.content.Context
+import android.os.Build
 import android.os.SystemClock
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewTreeObserver
+import android.view.inputmethod.InputMethodManager
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.limelight.LimeLog
 import com.limelight.nvstream.RemoteTextContext
 import com.limelight.nvstream.RemoteTextContextPolicy
 import com.limelight.nvstream.ImeAvoidanceSession
 import com.limelight.ui.StreamView
 
-/** Avoids a manually opened IME. Host observations never request keyboard display. */
+/**
+ * Avoids the open IME over the host's focused field. On API 33+ a trusted host
+ * activation may also open the keyboard; the view's auto-handwriting shield keeps
+ * stylus strokes on the video remote, so the temporary input connection stays safe.
+ */
 class RemoteImeController(
     private val activity: Activity,
     private val streamView: StreamView,
     private val panZoomHandler: PanZoomHandler,
+    // Defaults to false so direct constructions keep the advisory-only contract.
+    private val autoShowEnabled: Boolean = false,
 ) : ViewTreeObserver.OnGlobalLayoutListener {
     private var latestContext: RemoteTextContext? = null
     private var latestRevision = -1L
@@ -25,6 +35,9 @@ class RemoteImeController(
     @Volatile private var disposed = false
     private var generation = 0L
     private val avoidanceSession = ImeAvoidanceSession()
+    private val canAutoShow = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    private var autoShown = false
+    private var autoShownActivationId = 0L
 
     init {
         // Freeze the temporary offset on a real pan/scale, without changing the
@@ -42,6 +55,11 @@ class RemoteImeController(
         if (disposed) return
         activity.runOnUiThread {
             if (disposed) return@runOnUiThread
+            LimeLog.info(
+                "RemoteIme: context rev=${context.revision} act=${context.activationId} " +
+                    "source=${context.source} cause=${context.cause} flags=0x" +
+                    Integer.toHexString(context.flags)
+            )
             val revision = context.revision.toLong() and 0xffff_ffffL
             if (latestRevision >= 0 && !RemoteTextContextPolicy.isNewerRevision(revision, latestRevision)) return@runOnUiThread
             val activeActivationId = latestContext?.activationId ?: 0L
@@ -51,6 +69,11 @@ class RemoteImeController(
                 latestContext = null
                 avoidanceSession.invalidateTarget()
                 if (!avoidanceSession.userControlled) panZoomHandler.setImeOffsetY(0f)
+                if (autoShown && autoShownActivationId == activeActivationId) {
+                    autoShown = false
+                    activity.getSystemService(InputMethodManager::class.java)
+                        ?.hideSoftInputFromWindow(streamView.windowToken, 0)
+                }
                 return@runOnUiThread
             }
             if (!RemoteTextContextPolicy.isTrustedActivation(context)) return@runOnUiThread
@@ -63,13 +86,32 @@ class RemoteImeController(
                 context.hasFlag(RemoteTextContext.FLAG_PASSWORD),
                 context.hasFlag(RemoteTextContext.FLAG_MULTILINE),
             )
-            // UIA and InputPane are advisory geometry, not proof of editing intent.
-            // Do not steal focus or restart an ongoing manual IME composition.
+            // Geometry stays advisory: never restart an in-flight manual IME
+            // composition. Auto-show binds to a fresh trusted activation.
+            if (canAutoShow && autoShowEnabled) maybeShow(context, acceptedGeneration)
             ViewCompat.requestApplyInsets(streamView)
             streamView.post {
                 if (!disposed && generation == acceptedGeneration) {
                     updateAvoidance(ViewCompat.getRootWindowInsets(streamView))
                 }
+            }
+        }
+    }
+
+    private fun maybeShow(context: RemoteTextContext, acceptedGeneration: Long) {
+        if (autoShown && autoShownActivationId == context.activationId) return
+        val imeVisible = ViewCompat.getRootWindowInsets(streamView)
+            ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        if (imeVisible) return
+        autoShown = true
+        autoShownActivationId = context.activationId
+        streamView.setTextInputEnabled(true)
+        streamView.isFocusableInTouchMode = true
+        streamView.requestFocus()
+        streamView.post {
+            if (!disposed && generation == acceptedGeneration) {
+                activity.getSystemService(InputMethodManager::class.java)
+                    ?.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
             }
         }
     }
@@ -145,6 +187,7 @@ class RemoteImeController(
         latestContext = null
         latestInsets = null
         imeWasVisible = false
+        autoShown = false
         streamView.setTextInputEnabled(false)
         avoidanceSession.reset()
         panZoomHandler.onUserTransform = null
@@ -163,6 +206,7 @@ class RemoteImeController(
             latestRevision = -1L
             latestInsets = null
             imeWasVisible = false
+            autoShown = false
             streamView.setTextInputEnabled(false)
             avoidanceSession.reset()
             panZoomHandler.setImeOffsetY(0f)

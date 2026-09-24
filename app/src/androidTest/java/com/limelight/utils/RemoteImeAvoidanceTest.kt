@@ -383,4 +383,107 @@ class RemoteImeAvoidanceTest {
         }
     }
 
+    private fun deactivationContext(activationId: Long, revision: Int) = RemoteTextContext(
+        flags = RemoteTextContext.FLAG_INPUT_MATCHED,
+        revision = revision, activationId = activationId, inputToken = 3,
+        source = RemoteTextContext.SOURCE_UIA, cause = RemoteTextContext.CAUSE_REMOTE_TOUCH,
+        anchorX = 0, anchorY = 0,
+        elementLeft = 0, elementTop = 0, elementRight = 0, elementBottom = 0,
+        caretLeft = 0, caretTop = 0, caretRight = 0, caretBottom = 0,
+        captureWidth = 1920, captureHeight = 1080,
+    )
+
+    private fun awaitIme(stream: StreamView, visible: Boolean) {
+        val deadline = SystemClock.uptimeMillis() + 8000
+        var reached = false
+        while (!reached && SystemClock.uptimeMillis() < deadline) {
+            rule.scenario.onActivity {
+                val insets = ViewCompat.getRootWindowInsets(stream)
+                reached = insets != null && insets.isVisible(WindowInsetsCompat.Type.ime()) == visible
+            }
+            if (!reached) SystemClock.sleep(50)
+        }
+        assertTrue("IME visible=$visible", reached)
+    }
+
+    private fun attachController(autoShowEnabled: Boolean): Triple<android.app.Activity, StreamView, RemoteImeController> {
+        lateinit var activity: android.app.Activity
+        lateinit var stream: StreamView
+        lateinit var controller: RemoteImeController
+        rule.scenario.onActivity {
+            activity = it
+            it.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+            val root = FrameLayout(it)
+            stream = StreamView(it)
+            root.addView(stream, FrameLayout.LayoutParams(-1, -1))
+            it.setContentView(root)
+            val pan = PanZoomHandler(it, Game(), stream, View(it), PreferenceConfiguration())
+            controller = RemoteImeController(it, stream, pan, autoShowEnabled = autoShowEnabled)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        return Triple(activity, stream, controller)
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
+    fun autoShowOpensKeyboardAndTrustedDeactivationClosesIt() {
+        val (_, stream, controller) = attachController(autoShowEnabled = true)
+        try {
+            rule.scenario.onActivity { controller.handle(context()) }
+            awaitIme(stream, visible = true)
+            rule.scenario.onActivity {
+                assertTrue("Auto-show must arm the temporary input connection", stream.isTextInputEnabled())
+            }
+            rule.scenario.onActivity { controller.handle(deactivationContext(activationId = 2, revision = 2)) }
+            awaitIme(stream, visible = false)
+            rule.scenario.onActivity {
+                assertFalse("Dismissed IME must release the temporary text editor", stream.isTextInputEnabled())
+            }
+        } finally {
+            rule.scenario.onActivity { controller.dispose() }
+        }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
+    fun autoShowDoesNotRepeatForTheSameActivationAfterDismissal() {
+        val (_, stream, controller) = attachController(autoShowEnabled = true)
+        try {
+            rule.scenario.onActivity { controller.handle(context()) }
+            awaitIme(stream, visible = true)
+            rule.scenario.onActivity { activity ->
+                (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .hideSoftInputFromWindow(stream.windowToken, 0)
+            }
+            awaitIme(stream, visible = false)
+            // Newer revision of the same activation must not re-open against the user.
+            rule.scenario.onActivity { controller.handle(context().copy(revision = 5)) }
+            SystemClock.sleep(1000)
+            rule.scenario.onActivity {
+                val insets = ViewCompat.getRootWindowInsets(stream)
+                assertFalse(insets?.isVisible(WindowInsetsCompat.Type.ime()) == true)
+            }
+        } finally {
+            rule.scenario.onActivity { controller.dispose() }
+        }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
+    fun autoShowDisabledKeepsHostObservationsAdvisoryOnly() {
+        val (_, stream, controller) = attachController(autoShowEnabled = false)
+        try {
+            rule.scenario.onActivity { controller.handle(context()) }
+            SystemClock.sleep(1200)
+            rule.scenario.onActivity {
+                val insets = ViewCompat.getRootWindowInsets(stream)
+                assertFalse("No host-triggered show while auto-show is off",
+                    insets?.isVisible(WindowInsetsCompat.Type.ime()) == true)
+                assertFalse(stream.isTextInputEnabled())
+            }
+        } finally {
+            rule.scenario.onActivity { controller.dispose() }
+        }
+    }
+
 }
