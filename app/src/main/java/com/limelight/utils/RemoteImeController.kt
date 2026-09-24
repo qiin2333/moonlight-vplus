@@ -71,7 +71,7 @@ class RemoteImeController(
                 if (!avoidanceSession.userControlled) panZoomHandler.setImeOffsetY(0f)
                 if (autoShown && autoShownActivationId == activeActivationId) {
                     autoShown = false
-                    activity.getSystemService(InputMethodManager::class.java)
+                    (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
                         ?.hideSoftInputFromWindow(streamView.windowToken, 0)
                 }
                 return@runOnUiThread
@@ -110,7 +110,7 @@ class RemoteImeController(
         streamView.requestFocus()
         streamView.post {
             if (!disposed && generation == acceptedGeneration) {
-                activity.getSystemService(InputMethodManager::class.java)
+                (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
                     ?.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
             }
         }
