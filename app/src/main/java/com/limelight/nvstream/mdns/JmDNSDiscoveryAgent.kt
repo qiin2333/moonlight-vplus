@@ -51,18 +51,27 @@ class JmDNSDiscoveryAgent(
     override fun startDiscovery(discoveryIntervalMs: Int) {
         stopDiscovery()
 
-        multicastLock.acquire()
+        try {
+            multicastLock.acquire()
+        } catch (error: RuntimeException) {
+            LimeLog.warning("mDNS: Unable to acquire multicast lock; discovery disabled (${error.message})")
+            notifyDiscoveryFailureSafely(error)
+            return
+        }
 
         synchronized(listeners) {
             listeners.add(this)
         }
 
         discoveryThread = Thread {
-            val resolver = referenceResolver()
+            val currentThread = Thread.currentThread()
+            var resolver: JmmDNS? = null
 
             try {
+                val activeResolver = referenceResolver()
+                resolver = activeResolver
                 while (!Thread.interrupted()) {
-                    resolver.requestServiceInfo(SERVICE_TYPE, null, discoveryIntervalMs.toLong())
+                    activeResolver.requestServiceInfo(SERVICE_TYPE, null, discoveryIntervalMs.toLong())
 
                     val pendingNames: ArrayList<String>
                     synchronized(pendingResolution) {
@@ -70,7 +79,7 @@ class JmDNSDiscoveryAgent(
                     }
                     for (name in pendingNames) {
                         LimeLog.info("mDNS: Retrying service resolution for machine: $name")
-                        val infos = resolver.getServiceInfos(SERVICE_TYPE, name, 500)
+                        val infos = activeResolver.getServiceInfos(SERVICE_TYPE, name, 500)
                         if (infos != null && infos.isNotEmpty()) {
                             LimeLog.info("mDNS: Resolved (retry) with ${infos.size} service entries")
                             for (svcinfo in infos) {
@@ -85,8 +94,25 @@ class JmDNSDiscoveryAgent(
                         break
                     }
                 }
+            } catch (error: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } catch (error: Exception) {
+                LimeLog.warning("mDNS: Discovery initialization failed; discovery disabled (${error.message})")
+                notifyDiscoveryFailureSafely(error)
             } finally {
-                dereferenceResolver()
+                if (resolver != null) {
+                    dereferenceResolver()
+                }
+                // stopDiscovery() may already have released the lock while this
+                // thread was unwinding. Only the current generation may clean up
+                // the shared lock and listener registration.
+                if (discoveryThread === currentThread) {
+                    synchronized(listeners) {
+                        listeners.remove(this@JmDNSDiscoveryAgent)
+                    }
+                    releaseMulticastLockSafely()
+                    discoveryThread = null
+                }
             }
         }.apply {
             name = "mDNS Discovery Thread"
@@ -95,11 +121,7 @@ class JmDNSDiscoveryAgent(
     }
 
     override fun stopDiscovery() {
-        // startDiscovery() 先调本方法再 acquire；首次调用时锁尚未持有，
-        // 直接 release 会抛 IllegalStateException（"MulticastLock under-locked"）
-        if (multicastLock.isHeld) {
-            multicastLock.release()
-        }
+        releaseMulticastLockSafely()
 
         synchronized(listeners) {
             listeners.remove(this)
@@ -107,6 +129,24 @@ class JmDNSDiscoveryAgent(
 
         discoveryThread?.interrupt()
         discoveryThread = null
+    }
+
+    private fun releaseMulticastLockSafely() {
+        try {
+            if (multicastLock.isHeld) {
+                multicastLock.release()
+            }
+        } catch (error: RuntimeException) {
+            LimeLog.warning("mDNS: Unable to release multicast lock (${error.message})")
+        }
+    }
+
+    private fun notifyDiscoveryFailureSafely(error: Exception) {
+        try {
+            listener.notifyDiscoveryFailure(error)
+        } catch (callbackError: RuntimeException) {
+            LimeLog.warning("mDNS: Discovery failure callback failed (${callbackError.message})")
+        }
     }
 
     override fun serviceAdded(event: ServiceEvent) {
