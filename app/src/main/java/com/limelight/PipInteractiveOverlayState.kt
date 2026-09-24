@@ -17,5 +17,7 @@ internal class PipInteractiveOverlayState {
 
     fun exit(): PipInteractiveOverlaySnapshot? = snapshot.also { snapshot = null }
 
+    fun virtualControllerVisibleOrNull(): Boolean? = snapshot?.virtualControllerVisible
+
     fun isActive(): Boolean = snapshot != null
 }

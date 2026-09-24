@@ -16,6 +16,7 @@ class PipInteractiveOverlayStateTest {
             microphoneButtonVisible = false
         )
         assertTrue(state.enter(original))
+        assertEquals(true, state.virtualControllerVisibleOrNull())
         assertFalse(state.enter(
             PipInteractiveOverlaySnapshot(
                 virtualControllerVisible = false,
@@ -25,6 +26,7 @@ class PipInteractiveOverlayStateTest {
         ))
 
         assertEquals(original, state.exit())
+        assertNull(state.virtualControllerVisibleOrNull())
         assertFalse(state.isActive())
     }
 

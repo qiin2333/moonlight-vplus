@@ -1758,7 +1758,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         activeGameMenu = null
 
         if (!isFinishing) {
-            virtualControllerVisibleBeforeStop = isVirtualControllerVisible()
+            virtualControllerVisibleBeforeStop =
+                pipInteractiveOverlayState.virtualControllerVisibleOrNull()
+                    ?: isVirtualControllerVisible()
         }
         if (virtualController != null) {
             virtualController?.hide()
