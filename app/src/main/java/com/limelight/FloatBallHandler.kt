@@ -88,6 +88,8 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
         if (visible) hide() else show()
     }
 
+    fun isVisible(): Boolean = visible
+
     fun release() {
         manager?.release()
         manager = null

@@ -1337,7 +1337,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 PipInteractiveOverlaySnapshot(
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
-                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE
+                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE,
+                    floatBallVisible = ::floatBallHandler.isInitialized && floatBallHandler.isVisible()
                 )
             )
             enforcePictureInPictureUiState()
@@ -1353,7 +1354,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
             lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
         ) {
-            floatBallHandler.show()
+            if (snapshot.floatBallVisible) floatBallHandler.show() else floatBallHandler.hide()
         }
 
         if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
@@ -1371,9 +1372,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         notificationOverlayManager.setHiding(false)
         notificationOverlayManager.applyVisibility()
         microphoneManager?.setEnableMic(prefConfig.enableMic)
-        if (!snapshot.microphoneButtonVisible) {
-            micButton?.visibility = View.GONE
-        }
+        micButton?.visibility = if (snapshot.microphoneButtonVisible) View.VISIBLE else View.GONE
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
     }
@@ -1383,6 +1382,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerManager?.hide()
         micButton?.visibility = View.GONE
         if (::floatBallHandler.isInitialized) floatBallHandler.hide()
+        controllerShortcutHintView?.visibility = View.GONE
         hideStartHoldWheel()
         performanceOverlayManager?.hideOverlayImmediate()
         jitterMonitorManager?.hideImmediate()
