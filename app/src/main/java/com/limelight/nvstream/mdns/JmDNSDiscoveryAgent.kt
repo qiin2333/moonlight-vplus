@@ -23,6 +23,7 @@ class JmDNSDiscoveryAgent(
 ) : MdnsDiscoveryAgent(listener), ServiceListener {
 
     private val multicastLock: WifiManager.MulticastLock
+    private val discoveryStateLock = Any()
     private var discoveryThread: Thread? = null
     private val pendingResolution = HashSet<String>()
 
@@ -49,78 +50,99 @@ class JmDNSDiscoveryAgent(
     }
 
     override fun startDiscovery(discoveryIntervalMs: Int) {
-        stopDiscovery()
-
-        try {
-            multicastLock.acquire()
-        } catch (error: RuntimeException) {
-            LimeLog.warning("mDNS: Unable to acquire multicast lock; discovery disabled (${error.message})")
-            notifyDiscoveryFailureSafely(error)
-            return
-        }
-
-        synchronized(listeners) {
-            listeners.add(this)
-        }
-
-        discoveryThread = Thread {
-            val currentThread = Thread.currentThread()
-            var resolver: JmmDNS? = null
+        synchronized(discoveryStateLock) {
+            stopDiscoveryLocked()
 
             try {
-                val activeResolver = referenceResolver()
-                resolver = activeResolver
-                while (!Thread.interrupted()) {
-                    activeResolver.requestServiceInfo(SERVICE_TYPE, null, discoveryIntervalMs.toLong())
+                multicastLock.acquire()
+            } catch (error: RuntimeException) {
+                LimeLog.warning("mDNS: Unable to acquire multicast lock; discovery disabled (${error.message})")
+                notifyDiscoveryFailureSafely(error)
+                return
+            }
 
-                    val pendingNames: ArrayList<String>
-                    synchronized(pendingResolution) {
-                        pendingNames = ArrayList(pendingResolution)
-                    }
-                    for (name in pendingNames) {
-                        LimeLog.info("mDNS: Retrying service resolution for machine: $name")
-                        val infos = activeResolver.getServiceInfos(SERVICE_TYPE, name, 500)
-                        if (infos != null && infos.isNotEmpty()) {
-                            LimeLog.info("mDNS: Resolved (retry) with ${infos.size} service entries")
-                            for (svcinfo in infos) {
-                                handleResolvedServiceInfo(svcinfo)
+            synchronized(listeners) {
+                listeners.add(this)
+            }
+
+            val worker = Thread {
+                val currentThread = Thread.currentThread()
+                var resolver: JmmDNS? = null
+
+                try {
+                    val activeResolver = referenceResolver()
+                    resolver = activeResolver
+                    while (!Thread.interrupted()) {
+                        activeResolver.requestServiceInfo(SERVICE_TYPE, null, discoveryIntervalMs.toLong())
+
+                        val pendingNames: ArrayList<String>
+                        synchronized(pendingResolution) {
+                            pendingNames = ArrayList(pendingResolution)
+                        }
+                        for (name in pendingNames) {
+                            LimeLog.info("mDNS: Retrying service resolution for machine: $name")
+                            val infos = activeResolver.getServiceInfos(SERVICE_TYPE, name, 500)
+                            if (infos != null && infos.isNotEmpty()) {
+                                LimeLog.info("mDNS: Resolved (retry) with ${infos.size} service entries")
+                                for (svcinfo in infos) {
+                                    handleResolvedServiceInfo(svcinfo)
+                                }
                             }
+                        }
+
+                        try {
+                            Thread.sleep(discoveryIntervalMs.toLong())
+                        } catch (e: InterruptedException) {
+                            break
+                        }
+                    }
+                } catch (error: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (error: Exception) {
+                    LimeLog.warning("mDNS: Discovery initialization failed; discovery disabled (${error.message})")
+                    notifyDiscoveryFailureSafely(error)
+                } finally {
+                    if (resolver != null) {
+                        try {
+                            dereferenceResolver()
+                        } catch (error: RuntimeException) {
+                            LimeLog.warning("mDNS: Unable to close resolver (${error.message})")
                         }
                     }
 
-                    try {
-                        Thread.sleep(discoveryIntervalMs.toLong())
-                    } catch (e: InterruptedException) {
-                        break
+                    synchronized(discoveryStateLock) {
+                        // stopDiscovery() may already have released the lock while this
+                        // thread was unwinding. Only the current worker may clean up
+                        // the shared lock and listener registration.
+                        if (discoveryThread === currentThread) {
+                            synchronized(listeners) {
+                                listeners.remove(this@JmDNSDiscoveryAgent)
+                            }
+                            releaseMulticastLockSafely()
+                            discoveryThread = null
+                        }
                     }
                 }
-            } catch (error: InterruptedException) {
-                Thread.currentThread().interrupt()
-            } catch (error: Exception) {
-                LimeLog.warning("mDNS: Discovery initialization failed; discovery disabled (${error.message})")
+            }.apply { name = "mDNS Discovery Thread" }
+
+            // Publish before start(): a worker can fail during its first instruction.
+            discoveryThread = worker
+            try {
+                worker.start()
+            } catch (error: RuntimeException) {
+                stopDiscoveryLocked()
                 notifyDiscoveryFailureSafely(error)
-            } finally {
-                if (resolver != null) {
-                    dereferenceResolver()
-                }
-                // stopDiscovery() may already have released the lock while this
-                // thread was unwinding. Only the current generation may clean up
-                // the shared lock and listener registration.
-                if (discoveryThread === currentThread) {
-                    synchronized(listeners) {
-                        listeners.remove(this@JmDNSDiscoveryAgent)
-                    }
-                    releaseMulticastLockSafely()
-                    discoveryThread = null
-                }
             }
-        }.apply {
-            name = "mDNS Discovery Thread"
-            start()
         }
     }
 
     override fun stopDiscovery() {
+        synchronized(discoveryStateLock) {
+            stopDiscoveryLocked()
+        }
+    }
+
+    private fun stopDiscoveryLocked() {
         releaseMulticastLockSafely()
 
         synchronized(listeners) {
@@ -229,9 +251,25 @@ class JmDNSDiscoveryAgent(
         private fun referenceResolver(): JmmDNS {
             synchronized(JmDNSDiscoveryAgent::class.java) {
                 val instance = JmmDNS.Factory.getInstance()
-                if (++resolverRefCount == 1) {
-                    instance.addServiceListener(SERVICE_TYPE, nvstreamListener)
+                if (resolverRefCount == 0) {
+                    try {
+                        instance.addServiceListener(SERVICE_TYPE, nvstreamListener)
+                    } catch (error: RuntimeException) {
+                        try {
+                            instance.removeServiceListener(SERVICE_TYPE, nvstreamListener)
+                        } catch (cleanupError: RuntimeException) {
+                            LimeLog.warning("mDNS: Unable to roll back resolver listener (${cleanupError.message})")
+                        }
+                        resolverRefCount = 0
+                        try {
+                            JmmDNS.Factory.close()
+                        } catch (cleanupError: Exception) {
+                            LimeLog.warning("mDNS: Unable to close failed resolver (${cleanupError.message})")
+                        }
+                        throw error
+                    }
                 }
+                resolverRefCount++
                 return instance
             }
         }
