@@ -3762,6 +3762,12 @@ class StreamSettings : ThemedAppCompatActivity() {
                         true
                     }
 
+            findPreference<Preference>("controller_mouse_settings")!!.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        startActivity(Intent(requireActivity(), ControllerMouseSettingsActivity::class.java))
+                        true
+                    }
+
             findPreference<Preference>("stick_calibration")!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
                         startActivity(Intent(requireActivity(), StickCalibrationActivity::class.java))

@@ -281,6 +281,11 @@
             android:theme="@style/SettingsThemeCompat"
             android:label="@string/stick_calibration_title" />
         <activity
+            android:name=".preferences.ControllerMouseSettingsActivity"
+            android:exported="false"
+            android:theme="@style/SettingsThemeCompat"
+            android:label="@string/title_controller_mouse_settings" />
+        <activity
             android:name=".preferences.ControllerDiagnosticActivity"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
