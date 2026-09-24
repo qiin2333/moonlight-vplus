@@ -315,7 +315,7 @@
     <string name="title_checkbox_control_only">Modo somente controle</string>
     <string name="summary_checkbox_control_only">Estabelecer apenas conexão de controle sem streams de vídeo e áudio. Útil para controle de entrada remoto apenas.</string>
     <string name="title_checkbox_enable_mic">Ativar microfone</string>
-    <string name="summary_checkbox_enable_mic">Enviar o áudio do microfone deste dispositivo para o host. Requer o Sunshine Foundation 20260117 ou posterior.</string>
+    <string name="summary_checkbox_enable_mic">Enviar o áudio do microfone deste dispositivo para o host. Requer o Foundation Sunshine 2025.0720 ou posterior.</string>
     <string name="title_list_mic_initial_state">Estado inicial do microfone</string>
     <string name="summary_list_mic_initial_state">Escolha o estado do microfone ao iniciar cada transmissão.</string>
     <string name="mic_initial_state_off">Desligado</string>
@@ -388,8 +388,8 @@
     
     <!-- Host settings -->
     <string name="title_screen_combination_mode">Definições de combinação de ecrãs</string>
-    <string name="summary_screen_combination_mode">Controlo de ecrãs do Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controlo de ecrãs do Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Controlo de ecrãs do Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controlo de ecrãs do Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir anfitrião</string>
     <string name="screen_mode_no_operation">Modo sem operação</string>
     <string name="screen_mode_auto_activate">Modo de ativação</string>

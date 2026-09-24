@@ -325,7 +325,7 @@
     <string name="title_checkbox_control_only">Control-only mode</string>
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
     <string name="title_checkbox_enable_mic">Enable microphone</string>
-    <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Sunshine Foundation 20260117 or later.</string>
+    <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Foundation Sunshine 2025.0720 or later.</string>
     <string name="title_list_mic_initial_state">Initial microphone state</string>
     <string name="summary_list_mic_initial_state">Choose the microphone state when each stream starts.</string>
     <string name="mic_initial_state_off">Off</string>
@@ -682,8 +682,8 @@
     <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
     <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
     <string name="title_screen_combination_mode">Host display arrangement</string>
-    <string name="summary_screen_combination_mode">Choose how Sunshine Base arranges or combines host displays. Requires a compatible Sunshine Base host.</string>
-    <string name="screen_combination_mode_dialog_subtitle">Applies to Sunshine Foundation display control</string>
+    <string name="summary_screen_combination_mode">Choose how Foundation Sunshine arranges or combines host displays. Requires a compatible Foundation Sunshine host.</string>
+    <string name="screen_combination_mode_dialog_subtitle">Applies to Foundation Sunshine display control</string>
     <string name="screen_mode_host_default">Follow host</string>
     <string name="screen_mode_no_operation">No operation mode</string>
     <string name="screen_mode_auto_activate">Activate mode</string>
@@ -1620,7 +1620,7 @@ Tap again to replace it.</string>
     <string name="layout_dlg_peer_info_item_text_9d9a3">Latency:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">Traffic (Rx/Tx):</string>
     <string name="layout_game_menu_super_empty_text_a7970">No super commands yet</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">Create super commands in Sunshine Foundation Edition.</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">Create super commands in Foundation Sunshine.</string>
     <string name="game_menu_super_commands">Super Commands</string>
     <string name="layout_item_key_value_text_0952a">Section 1</string>
     <string name="layout_item_key_value_hint_dd44f">Section name, defaults to key name if empty</string>

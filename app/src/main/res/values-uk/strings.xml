@@ -280,8 +280,8 @@
     <string name="pcview_menu_eol">Закриття сервісів NVIDIA GameStream</string>
     <string name="perf_overlay_hostprocessinglatency">Затримка обробки хостом мін./макс./середня: %1$.1f/%2$.1f/%3$.1f мс</string>
     <string name="title_screen_combination_mode">Налаштування комбінації екранів</string>
-    <string name="summary_screen_combination_mode">Керування дисплеями Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Застосовується до керування дисплеями Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Керування дисплеями Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Застосовується до керування дисплеями Foundation Sunshine</string>
     <string name="screen_mode_host_default">Слідувати хосту</string>
     <string name="screen_mode_no_operation">Режим без операції</string>
     <string name="screen_mode_auto_activate">Режим активації</string>

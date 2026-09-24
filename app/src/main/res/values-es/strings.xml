@@ -433,7 +433,7 @@
     <string name="summary_checkbox_enable_enhanced_touch">	</string>
     <string name="summary_checkbox_enable_esc_menu">Cuando está habilitado, presionar doble ESC abre el menú de retorno de transmisión, una sola presión de ESC se pasa al host</string>
     <string name="summary_checkbox_enable_keyboard_toggle_in_native_touch">	</string>
-    <string name="summary_checkbox_enable_mic">Enviar el audio del micrófono de este dispositivo al host. Requiere Sunshine Foundation 20260117 o posterior.</string>
+    <string name="summary_checkbox_enable_mic">Enviar el audio del micrófono de este dispositivo al host. Requiere Foundation Sunshine 2025.0720 o posterior.</string>
     <string name="summary_list_mic_initial_state">Elegir el estado del micrófono al iniciar cada transmisión.</string>
     <string name="mic_initial_state_off">Desactivado</string>
     <string name="mic_initial_state_on">Activado</string>
@@ -535,8 +535,8 @@
     <string name="width_hint">ej. 1920</string>
 
     <string name="title_screen_combination_mode">Configuración de combinación de pantallas</string>
-    <string name="summary_screen_combination_mode">Control de pantallas de Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Control de pantallas de Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir host</string>
     <string name="screen_mode_no_operation">Modo sin operación</string>
     <string name="screen_mode_auto_activate">Modo de activación</string>

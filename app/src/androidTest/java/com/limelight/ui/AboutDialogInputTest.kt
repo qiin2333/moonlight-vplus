@@ -111,7 +111,6 @@ class AboutDialogInputTest {
 
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).assertIsFocused()
-        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).performKeyInput {
             pressKey(Key.DirectionDown)
         }

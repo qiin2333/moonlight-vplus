@@ -523,7 +523,7 @@
     <string name="title_framegen_present_real_first">運動節奏修正</string>
     <string name="summary_framegen_present_real_first">僅在畫面節奏不穩時嘗試，預設關閉。</string>
     <string name="title_screen_combination_mode">主機顯示器排列</string>
-    <string name="summary_screen_combination_mode">選擇 Sunshine Base 如何排列或組合主機顯示器，需要相容的 Sunshine Base 主機。</string>
+    <string name="summary_screen_combination_mode">選擇 Foundation Sunshine 如何排列或組合主機顯示器，需要相容的 Foundation Sunshine 主機。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地適用</string>
     <string name="screen_mode_host_default">跟隨主機</string>
     <string name="screen_mode_no_operation">無操作模式</string>
@@ -674,7 +674,7 @@
     <string name="title_seekbar_scale">主機渲染解析度比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例縮放所選串流解析度後再向主機請求。高於 100% 可增加來源畫面細節但會提高主機 GPU 負載；低於 100% 可減輕負載。主機必須支援縮放後的解析度。</string>
     <string name="title_checkbox_enable_mic">啟用麥克風</string>
-    <string name="summary_checkbox_enable_mic">將本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20260117 或更新版本。</string>
+    <string name="summary_checkbox_enable_mic">將本機麥克風音訊傳送到主機，需要 Foundation Sunshine 2025.0720 或更新版本。</string>
     <string name="title_list_mic_initial_state">麥克風初始狀態</string>
     <string name="summary_list_mic_initial_state">選擇每次串流開始時的麥克風狀態。</string>
     <string name="mic_initial_state_off">關閉</string>

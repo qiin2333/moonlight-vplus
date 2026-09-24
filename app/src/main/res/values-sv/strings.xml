@@ -269,8 +269,8 @@
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_analog_scrolling">Använd en analog spak för att bläddra</string>
     <string name="title_screen_combination_mode">Inställningar för skärmkombination</string>
-    <string name="summary_screen_combination_mode">Skärmkontroll för Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Gäller skärmkontroll för Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Skärmkontroll för Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Gäller skärmkontroll för Foundation Sunshine</string>
     <string name="screen_mode_host_default">Följ värd</string>
     <string name="screen_mode_no_operation">Läge utan åtgärd</string>
     <string name="screen_mode_auto_activate">Aktiveringsläge</string>

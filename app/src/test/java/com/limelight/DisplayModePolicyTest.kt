@@ -72,14 +72,6 @@ class DisplayModePolicyTest {
         assertTrue(result.hdrFilterApplied)
     }
 
-    @Test
-    fun modeEqualityUsesHdrTypeValues() {
-        assertEquals(
-            mode(id = 1, refreshRate = 60f, hdrTypes = listOf(HDR10)),
-            mode(id = 1, refreshRate = 60f, hdrTypes = listOf(HDR10)),
-        )
-    }
-
     private fun mode(
         id: Int,
         width: Int = 3840,

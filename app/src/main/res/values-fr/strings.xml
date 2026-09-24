@@ -282,8 +282,8 @@
     <string name="summary_seekbar_vibrate_fallback_strength">Amplifie ou réduit l\'intensité de la vibration sur votre appareil</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="title_screen_combination_mode">Paramètres de combinaison d’écrans</string>
-    <string name="summary_screen_combination_mode">Contrôle des écrans Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">S’applique au contrôle des écrans Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Contrôle des écrans Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">S’applique au contrôle des écrans Foundation Sunshine</string>
     <string name="screen_mode_host_default">Suivre l’hôte</string>
     <string name="screen_mode_no_operation">Mode sans opération</string>
     <string name="screen_mode_auto_activate">Mode activation</string>
