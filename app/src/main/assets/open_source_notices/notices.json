@@ -98,7 +98,7 @@
   {
     "id": "audio-haptics",
     "name": "Moonlight Audio Haptics SDK",
-    "version": "0.6.0 (b71b47a08fd400996ed374a97e1bff73bac2932e)",
+    "version": "0.5.14 (b3f97c3bb7500ea7b1985aea568e5c7b40308d3b)",
     "url": "https://github.com/AlkaidLab/moonlight-audio-haptics",
     "license": "Apache-2.0",
     "licenseFile": "audio-haptics-LICENSE.txt"
