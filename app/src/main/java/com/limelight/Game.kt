@@ -1254,7 +1254,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onResume() {
         super.onResume()
         if (::floatBallHandler.isInitialized &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
+            !pipInteractiveOverlayState.isActive()
         ) {
             floatBallHandler.show()
         }
@@ -1348,7 +1349,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return
         }
 
-        val snapshot = pipInteractiveOverlayState.exit() ?: return
+        val snapshot = pipInteractiveOverlayState.exitIfResumed(
+            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        ) ?: return
         // onResume may arrive while the platform still reports PiP. In that
         // order, the later PiP exit callback must restore the floating window.
         if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
