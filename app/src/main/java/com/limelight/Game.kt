@@ -1397,21 +1397,28 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         pipFloatBallRestorePending = true
         pendingPipExitSnapshot = snapshot
         val generation = ++pipOverlayRestoreGeneration
-        window.decorView.doOnPreDraw {
-            if (generation != pipOverlayRestoreGeneration || isFinishing || isDestroyed ||
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode)
-            ) {
-                return@doOnPreDraw
-            }
+        fun restoreAfterWindowExit() {
+            window.decorView.doOnPreDraw {
+                if (generation != pipOverlayRestoreGeneration || isFinishing || isDestroyed) {
+                    return@doOnPreDraw
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) {
+                    // Some OEMs report the PiP exit callback before the window
+                    // leaves PiP. Keep waiting instead of losing the snapshot.
+                    window.decorView.postOnAnimation { restoreAfterWindowExit() }
+                    return@doOnPreDraw
+                }
 
-            pipFloatBallRestorePending = false
-            pendingPipExitSnapshot = null
-            if (snapshot.floatBallVisible) {
-                floatBallHandler.show()
-            } else {
-                floatBallHandler.hide()
+                pipFloatBallRestorePending = false
+                pendingPipExitSnapshot = null
+                if (snapshot.floatBallVisible) {
+                    floatBallHandler.show()
+                } else {
+                    floatBallHandler.hide()
+                }
             }
         }
+        restoreAfterWindowExit()
     }
 
     private fun cancelPendingPipOverlayRestore() {
