@@ -109,6 +109,7 @@ import android.view.View.OnTouchListener
 import android.view.Window
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.view.inputmethod.InputMethodManager
@@ -230,6 +231,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
     private var virtualControllerVisibleBeforeStop: Boolean? = null
     private var pipFloatBallRestorePending = false
+    private var pendingPipExitSnapshot: PipInteractiveOverlaySnapshot? = null
+    private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -1263,7 +1266,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Reconcile OEM callback gaps after rapid PiP transitions.
-            applyPictureInPictureUiState(isInPictureInPictureMode)
+            applyPictureInPictureUiState(isInPictureInPictureMode, activityResumed = true)
         }
         if (audioVibrationService != null) {
             updateAudioHapticsRuntimeEnabled(true)
@@ -1334,10 +1337,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         applyPictureInPictureUiState(isInPictureInPictureMode)
     }
 
-    private fun applyPictureInPictureUiState(inPictureInPicture: Boolean) {
+    private fun applyPictureInPictureUiState(
+        inPictureInPicture: Boolean,
+        activityResumed: Boolean = lifecycle.currentState.isAtLeast(
+            androidx.lifecycle.Lifecycle.State.RESUMED
+        )
+    ) {
         if (inPictureInPicture) {
+            val pendingSnapshot = pendingPipExitSnapshot
+            if (pendingSnapshot != null) {
+                cancelPendingPipOverlayRestore()
+            }
             val isFirstEntry = pipInteractiveOverlayState.enter(
-                PipInteractiveOverlaySnapshot(
+                pendingSnapshot ?: PipInteractiveOverlaySnapshot(
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
                     microphoneButtonVisible = micButton?.visibility == View.VISIBLE,
@@ -1351,28 +1363,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return
         }
 
-        val snapshot = pipInteractiveOverlayState.exitIfResumed(
-            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
-        ) ?: return
+        val snapshot = pipInteractiveOverlayState.exitIfResumed(activityResumed) ?: return
         // onResume may arrive while the platform still reports PiP. In that
         // order, the later PiP exit callback must restore the floating window.
         if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
-            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+            activityResumed
         ) {
-            pipFloatBallRestorePending = true
-            window.decorView.postOnAnimation {
-                pipFloatBallRestorePending = false
-                if (isFinishing || isDestroyed ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode)
-                ) {
-                    return@postOnAnimation
-                }
-                if (snapshot.floatBallVisible) {
-                    floatBallHandler.show()
-                } else {
-                    floatBallHandler.hide()
-                }
-            }
+            schedulePipOverlayRestore(snapshot)
         }
 
         if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
@@ -1393,6 +1390,34 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         micButton?.visibility = if (snapshot.microphoneButtonVisible) View.VISIBLE else View.GONE
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
+    }
+
+    private fun schedulePipOverlayRestore(snapshot: PipInteractiveOverlaySnapshot) {
+        cancelPendingPipOverlayRestore()
+        pipFloatBallRestorePending = true
+        pendingPipExitSnapshot = snapshot
+        val generation = ++pipOverlayRestoreGeneration
+        window.decorView.doOnPreDraw {
+            if (generation != pipOverlayRestoreGeneration || isFinishing || isDestroyed ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode)
+            ) {
+                return@doOnPreDraw
+            }
+
+            pipFloatBallRestorePending = false
+            pendingPipExitSnapshot = null
+            if (snapshot.floatBallVisible) {
+                floatBallHandler.show()
+            } else {
+                floatBallHandler.hide()
+            }
+        }
+    }
+
+    private fun cancelPendingPipOverlayRestore() {
+        pipOverlayRestoreGeneration++
+        pipFloatBallRestorePending = false
+        pendingPipExitSnapshot = null
     }
 
     private fun enforcePictureInPictureUiState() {
