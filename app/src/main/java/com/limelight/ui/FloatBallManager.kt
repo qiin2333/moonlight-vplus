@@ -522,45 +522,6 @@ class FloatBallManager constructor(
         startAutoHideTimer()
     }
 
-    /**
-     * Shows the ball after a transient window mode change without resolving
-     * its normalized anchor again. PiP can report its smaller viewport briefly
-     * after the activity is resumed; re-resolving the anchor at that point
-     * moves the ball and also leaves an incorrect drag range. Keep the saved
-     * screen coordinate, then clamp it to the now-current viewport.
-     */
-    fun showFloatBallPreservingPosition() {
-        if (released) return
-        updateScreenSize()
-        val viewport = currentViewport()
-        val wasHalfShown = isHalfShown
-        val savedCoordinates = if (wasHalfShown) {
-            FloatingButtonCoordinates(lastSavedX, lastSavedY)
-        } else {
-            FloatingButtonPlacement.clampCustom(
-                layoutParams.x.toFloat(),
-                layoutParams.y.toFloat(),
-                viewport
-            )
-        }
-        val coordinates = FloatingButtonPlacement.clampCustom(
-            savedCoordinates.x.toFloat(),
-            savedCoordinates.y.toFloat(),
-            viewport
-        )
-        lastSavedX = coordinates.x
-        lastSavedY = coordinates.y
-        anchorPosition = FloatingButtonPlacement.normalize(coordinates, viewport)
-        isHalfShown = false
-        layoutParams.x = coordinates.x
-        layoutParams.y = coordinates.y
-        if (wasHalfShown && enableEdgeSnap) {
-            applyHalfShowPosition(updateView = false)
-        }
-        updateViewPosition()
-        startAutoHideTimer()
-    }
-
     fun hideFloatBall() {
         cancelSnapAnimation()
         handler.removeCallbacksAndMessages(null)

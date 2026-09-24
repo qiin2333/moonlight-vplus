@@ -81,9 +81,6 @@ class FloatBallHandler(private val game: Game, private val prefConfig: Preferenc
     fun show() = manager?.showFloatBall()
         ?.also { visible = true }
 
-    fun showPreservingPosition() = manager?.showFloatBallPreservingPosition()
-        ?.also { visible = true }
-
     fun hide() = manager?.hideFloatBall()
         ?.also { visible = false }
 

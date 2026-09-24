@@ -1368,7 +1368,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     return@postOnAnimation
                 }
                 if (snapshot.floatBallVisible) {
-                    floatBallHandler.showPreservingPosition()
+                    floatBallHandler.show()
                 } else {
                     floatBallHandler.hide()
                 }
