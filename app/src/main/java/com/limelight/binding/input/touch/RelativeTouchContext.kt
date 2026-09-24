@@ -41,6 +41,8 @@ class RelativeTouchContext(
     private var isDoubleClickDrag = false
     /** 标志位，表示当前手势可能是双击的第二次点击，处于"待定"状态 */
     private var isPotentialDoubleClick = false
+    /** 记录双击第二次点击的按下时间，用于按真实间隔回放第二击 */
+    private var potentialSecondTapDownTime: Long = 0
 
     private val handler: Handler = Handler(Looper.getMainLooper())
 
@@ -85,6 +87,8 @@ class RelativeTouchContext(
     private var singleTapRunnable: Runnable? = null
     //  用于处理"双击并按住"的计时器
     private var doubleTapHoldRunnable: Runnable? = null
+    //  待按真实间隔发送的第二击Runnable
+    private var pendingSecondClickRunnable: Runnable? = null
 
     // 本地光标渲染器 - 用于显示虚拟鼠标光标
     private var localCursorRenderer: LocalCursorRenderer? = null
@@ -215,9 +219,11 @@ class RelativeTouchContext(
                 if (actionIndex == 0 && timeSinceLastTap <= DOUBLE_TAP_TIME_THRESHOLD &&
                     xDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD && yDelta <= DOUBLE_TAP_MOVEMENT_THRESHOLD
                 ) {
-                    //  符合双击条件，取消第一次单击的发送，进入"待定"状态
+                    //  符合双击条件，取消第一次单击的发送，进入"待定"状态。
+                    //  若最终确认为"双击按住"，第一击将不会发给主机
                     cancelSingleTapTimer() // 关键：阻止第一次单击事件发送
                     isPotentialDoubleClick = true
+                    potentialSecondTapDownTime = eventTime
                     cancelDragTimer()
 
                     //  启动"按住确认拖拽"计时器
@@ -252,11 +258,17 @@ class RelativeTouchContext(
             sendMouseButtonDownProxy(buttonIndex) 
             sendMouseButtonUpProxy(buttonIndex)   
 
-            // 紧接着发送第二次点击
-            sendMouseButtonDownProxy(buttonIndex) 
-            val buttonUpRunnable = buttonUpRunnables[buttonIndex - 1]
-            handler.removeCallbacks(buttonUpRunnable)
-            handler.postDelayed(buttonUpRunnable, 100)
+            // 第二击：按第一次抬起至第二次按下的真实间隔延迟发送
+            val secondClickDelay = (potentialSecondTapDownTime - lastTapUpTime).coerceAtLeast(0L)
+            cancelPendingSecondClick()
+            pendingSecondClickRunnable = Runnable {
+                pendingSecondClickRunnable = null
+                sendMouseButtonDownProxy(buttonIndex) 
+                val buttonUpRunnable = buttonUpRunnables[buttonIndex - 1]
+                handler.removeCallbacks(buttonUpRunnable)
+                handler.postDelayed(buttonUpRunnable, 100)
+            }
+            handler.postDelayed(pendingSecondClickRunnable!!, secondClickDelay)
 
             // Invalidate the tap time to prevent a triple-tap from becoming a double-tap drag
             lastTapUpTime = 0
@@ -286,7 +298,7 @@ class RelativeTouchContext(
                 lastTapUpX = eventX
                 lastTapUpY = eventY
 
-                // 创建一个"单击"任务，并延迟执行
+                // 创建一个"单击"任务，并延迟执行；若后续确认为双击按住则被取消，不发给主机
                 singleTapRunnable = Runnable {
                     sendMouseButtonDownProxy(buttonIndex) 
                     val buttonUpRunnable = buttonUpRunnables[buttonIndex - 1]
@@ -324,7 +336,7 @@ class RelativeTouchContext(
             if (xDelta > DRAG_START_THRESHOLD || yDelta > DRAG_START_THRESHOLD) {
                 //  用户移动了，说明是拖拽，取消"按住确认拖拽"计时器
                 cancelDoubleTapHoldTimer()
-                // 确认是双击拖拽，此时才发送鼠标按下事件
+                //  确认是双击拖拽（不向主机发送双击），此时才发送鼠标按下
                 isPotentialDoubleClick = false
                 isDoubleClickDrag = true
                 confirmedMove = true // 标记为已移动，避免后续逻辑冲突
@@ -400,8 +412,9 @@ class RelativeTouchContext(
         cancelled = true
 
         cancelDragTimer()
-        //  取消手势时，清除待处理的单击任务
+        //  取消手势时，清除待处理的单击任务和第二击任务
         cancelSingleTapTimer()
+        cancelPendingSecondClick()
         //  取消手势时，也要清理这个新计时器
         cancelDoubleTapHoldTimer()
 
@@ -425,7 +438,7 @@ class RelativeTouchContext(
     private fun startDoubleTapHoldTimer() {
         cancelDoubleTapHoldTimer() // 防御性取消
         doubleTapHoldRunnable = Runnable {
-            // 计时器触发，说明用户按住不动，我们主动确认为拖拽
+            // 计时器触发，说明用户按住不动，确认为拖拽（不向主机发送双击，只发送按下）
             if (isPotentialDoubleClick) {
                 isPotentialDoubleClick = false
                 isDoubleClickDrag = true
@@ -455,6 +468,12 @@ class RelativeTouchContext(
     private fun cancelSingleTapTimer() {
         singleTapRunnable?.let { handler.removeCallbacks(it) }
         singleTapRunnable = null
+    }
+
+    //  用于取消待发送的第二击任务
+    private fun cancelPendingSecondClick() {
+        pendingSecondClickRunnable?.let { handler.removeCallbacks(it) }
+        pendingSecondClickRunnable = null
     }
 
     private fun checkForConfirmedMove(eventX: Int, eventY: Int) {
