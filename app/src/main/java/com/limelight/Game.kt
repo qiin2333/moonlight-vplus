@@ -1259,7 +1259,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
             !pipInteractiveOverlayState.isActive() &&
-            pendingPipExitSnapshot == null
+            pendingPipExitSnapshot == null &&
+            floatBallHandler.isRequestedVisible()
         ) {
             floatBallHandler.show()
         }
@@ -1352,7 +1353,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
                     microphoneButtonVisible = micButton?.visibility == View.VISIBLE,
-                    floatBallVisible = ::floatBallHandler.isInitialized && floatBallHandler.isVisible()
+                    floatBallVisible = ::floatBallHandler.isInitialized &&
+                            floatBallHandler.isRequestedVisible()
                 )
             )
             enforcePictureInPictureUiState()
@@ -1429,7 +1431,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         virtualController?.hide()
         controllerManager?.hide()
         micButton?.visibility = View.GONE
-        if (::floatBallHandler.isInitialized) floatBallHandler.hide()
+        if (::floatBallHandler.isInitialized) floatBallHandler.suppress()
         controllerShortcutHintView?.visibility = View.GONE
         hideStartHoldWheel()
         performanceOverlayManager?.hideOverlayImmediate()
@@ -1687,7 +1689,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         updateAudioHapticsRuntimeEnabled(false)
         audioVibrationService?.stop()
         if (::floatBallHandler.isInitialized) {
-            floatBallHandler.hide()
+            floatBallHandler.suppress()
         }
         KeyboardAccessibilityService.setIntercepting(false)
         KeyboardAccessibilityService.instance?.keyEventCallback = null
