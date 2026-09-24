@@ -18,6 +18,7 @@ class PipInteractiveOverlayStateTest {
         )
         assertTrue(state.enter(original))
         assertEquals(true, state.virtualControllerVisibleOrNull())
+        assertEquals(true, state.virtualControllerVisibleForStop(false))
         assertFalse(state.enter(
             PipInteractiveOverlaySnapshot(
                 virtualControllerVisible = false,
@@ -29,6 +30,7 @@ class PipInteractiveOverlayStateTest {
 
         assertEquals(original, state.exit())
         assertNull(state.virtualControllerVisibleOrNull())
+        assertEquals(false, state.virtualControllerVisibleForStop(false))
         assertFalse(state.isActive())
     }
 

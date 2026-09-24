@@ -1253,6 +1253,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        if (::floatBallHandler.isInitialized &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
+        ) {
+            floatBallHandler.show()
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Reconcile OEM callback gaps after rapid PiP transitions.
             applyPictureInPictureUiState(isInPictureInPictureMode)
@@ -1271,11 +1276,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
-        }
-        if (::floatBallHandler.isInitialized &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
-        ) {
-            floatBallHandler.show()
         }
     }
 
@@ -1767,8 +1767,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (!isFinishing) {
             virtualControllerVisibleBeforeStop =
-                pipInteractiveOverlayState.virtualControllerVisibleOrNull()
-                    ?: isVirtualControllerVisible()
+                pipInteractiveOverlayState.virtualControllerVisibleForStop(isVirtualControllerVisible())
         }
         if (virtualController != null) {
             virtualController?.hide()
@@ -2171,7 +2170,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onStart() {
         super.onStart()
 
-        restoreVirtualControllerAfterStop()
+        val stoppedVirtualControllerVisibility = restoreVirtualControllerAfterStop()
 
         if (!isStreamingActive && streamStartTime > 0) {
             lastActiveTime = System.currentTimeMillis()
@@ -2187,6 +2186,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 progressOverlay = null
             }
             hideSystemUi(500)
+            finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
             return
         }
 
@@ -2202,6 +2202,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 prepareConnection()
             } catch (e: Exception) {
                 LimeLog.severe("Failed to prepare connection: ${e.message}")
+                finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
                 finish()
                 return
             }
@@ -2214,19 +2215,22 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             streamView.requestLayout()
             streamView.invalidate()
         }
+        finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
     }
 
-    private fun restoreVirtualControllerAfterStop() {
-        val wasVisible = virtualControllerVisibleBeforeStop
-        if (wasVisible == true &&
-            prefConfig.onscreenController &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
-        ) {
+    private fun restoreVirtualControllerAfterStop(): Boolean? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) return null
+        return virtualControllerVisibleBeforeStop
+    }
+
+    private fun finalizeVirtualControllerAfterStop(wasVisible: Boolean?) {
+        if (wasVisible == null) return
+        if (wasVisible && prefConfig.onscreenController) {
             virtualController?.show()
+        } else {
+            virtualController?.hide()
         }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
-            virtualControllerVisibleBeforeStop = null
-        }
+        virtualControllerVisibleBeforeStop = null
     }
 
     override fun displayMessage(message: String) {
