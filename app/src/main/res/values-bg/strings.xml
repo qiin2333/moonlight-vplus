@@ -141,8 +141,8 @@
     <string name="title_checkbox_multi_controller">Автоматично откриване на наличен контролер</string>
     <string name="summary_checkbox_multi_controller">Премахването на отметката от тази опция принуждава контролер винаги да присъства</string>
     <string name="title_screen_combination_mode">Настройки за комбинация на екрани</string>
-    <string name="summary_screen_combination_mode">Управление на дисплеите на Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Отнася се за управлението на дисплеите на Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Управление на дисплеите на Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Отнася се за управлението на дисплеите на Foundation Sunshine</string>
     <string name="screen_mode_host_default">Следване на хоста</string>
     <string name="screen_mode_no_operation">Режим без действие</string>
     <string name="screen_mode_auto_activate">Режим на активиране</string>

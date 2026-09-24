@@ -714,7 +714,7 @@
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
     <string name="summary_checkbox_enable_spatializer">对 Moonlight 本机解码的音频使用 Android 空间化处理，需要 Android 13 和兼容的输出设备；直通音频会绕过此处理。</string>
     <string name="title_checkbox_enable_mic">启用麦克风</string>
-    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Sunshine Foundation 20260117 或更高版本。</string>
+    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Foundation Sunshine 2025.0720 或更高版本。</string>
     <string name="title_list_mic_initial_state">麦克风初始状态</string>
     <string name="summary_list_mic_initial_state">选择每次串流开始时的麦克风状态。</string>
     <string name="mic_initial_state_off">关闭</string>
@@ -1134,7 +1134,7 @@
 
     <!-- 屏幕组合模式 -->
     <string name="title_screen_combination_mode">主机显示器排列</string>
-    <string name="summary_screen_combination_mode">选择 Sunshine Base 如何排列或组合主机显示器，需要兼容的 Sunshine Base 主机。</string>
+    <string name="summary_screen_combination_mode">选择 Foundation Sunshine 如何排列或组合主机显示器，需要兼容的 Foundation Sunshine 主机。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
     <string name="screen_mode_host_default">跟随主机</string>
     <string name="screen_mode_no_operation">无操作模式</string>
@@ -1304,7 +1304,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">延迟:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">流量 (收/发):</string>
     <string name="layout_game_menu_super_empty_text_a7970">还没有炒鸡指令哦</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Sunshine 基地版 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Foundation Sunshine 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
     <string name="game_menu_super_commands">超级指令</string>
     <string name="layout_item_key_value_text_0952a">分区 1</string>
     <string name="layout_item_key_value_hint_dd44f">分区名称，为空时为键值名</string>

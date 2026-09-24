@@ -272,8 +272,8 @@
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
     <string name="title_screen_combination_mode">Einstellungen für Displaykombination</string>
-    <string name="summary_screen_combination_mode">Displaysteuerung für Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Gilt für die Displaysteuerung von Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Displaysteuerung für Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Gilt für die Displaysteuerung von Foundation Sunshine</string>
     <string name="screen_mode_host_default">Host folgen</string>
     <string name="screen_mode_no_operation">Modus ohne Aktion</string>
     <string name="screen_mode_auto_activate">Aktivierungsmodus</string>

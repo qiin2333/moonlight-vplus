@@ -269,8 +269,8 @@
     <string name="videoformat_av1always">Preferowany AV1 (eksperymentalny)</string>
     <string name="summary_setup_guide">Wyświetl instrukcje, jak skonfigurować komputer do gier do streamowania</string>
     <string name="title_screen_combination_mode">Ustawienia kombinacji ekranów</string>
-    <string name="summary_screen_combination_mode">Sterowanie ekranami Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Dotyczy sterowania ekranami Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Sterowanie ekranami Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Dotyczy sterowania ekranami Foundation Sunshine</string>
     <string name="screen_mode_host_default">Zgodnie z hostem</string>
     <string name="screen_mode_no_operation">Tryb bez operacji</string>
     <string name="screen_mode_auto_activate">Tryb aktywacji</string>

@@ -251,8 +251,8 @@
     <string name="title_analog_scrolling">Usar um stick analógico para fazer scroll</string>
     <string name="summary_analog_scrolling">Selecciona um stick analógico para fazer scroll quando a emulação de rato está ativada</string>
     <string name="title_screen_combination_mode">Configurações de combinação de telas</string>
-    <string name="summary_screen_combination_mode">Controle de telas do Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controle de telas do Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Controle de telas do Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controle de telas do Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir host</string>
     <string name="screen_mode_no_operation">Modo sem operação</string>
     <string name="screen_mode_auto_activate">Modo de ativação</string>

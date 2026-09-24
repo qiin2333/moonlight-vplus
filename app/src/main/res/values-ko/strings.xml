@@ -286,8 +286,8 @@
     <string name="title_list_audio_vibration_scene">장면 모드</string>
     <string name="summary_list_audio_vibration_scene">콘텐츠 유형에 맞춰 진동 패턴 최적화</string>
     <string name="title_screen_combination_mode">디스플레이 조합 설정</string>
-    <string name="summary_screen_combination_mode">Sunshine Foundation 디스플레이 제어</string>
-    <string name="screen_combination_mode_dialog_subtitle">Sunshine Foundation 디스플레이 제어에 적용</string>
+    <string name="summary_screen_combination_mode">Foundation Sunshine 디스플레이 제어</string>
+    <string name="screen_combination_mode_dialog_subtitle">Foundation Sunshine 디스플레이 제어에 적용</string>
     <string name="screen_mode_host_default">호스트 따르기</string>
     <string name="screen_mode_no_operation">작업 없음 모드</string>
     <string name="screen_mode_auto_activate">활성화 모드</string>
