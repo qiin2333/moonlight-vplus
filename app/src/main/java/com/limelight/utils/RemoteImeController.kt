@@ -36,8 +36,12 @@ class RemoteImeController(
     private var generation = 0L
     private val avoidanceSession = ImeAvoidanceSession()
     private val canAutoShow = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-    private var autoShown = false
+    // Records the activation that already received its automatic show chance, so
+    // later revisions of the same activation never re-open against a dismissal.
     private var autoShownActivationId = 0L
+    // True while the visible IME is owned by an automatic show; cleared when the
+    // IME is dismissed so a manually reopened keyboard is never auto-hidden.
+    private var autoOwned = false
 
     init {
         // Freeze the temporary offset on a real pan/scale, without changing the
@@ -69,8 +73,8 @@ class RemoteImeController(
                 latestContext = null
                 avoidanceSession.invalidateTarget()
                 if (!avoidanceSession.userControlled) panZoomHandler.setImeOffsetY(0f)
-                if (autoShown && autoShownActivationId == activeActivationId) {
-                    autoShown = false
+                if (autoOwned) {
+                    autoOwned = false
                     (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
                         ?.hideSoftInputFromWindow(streamView.windowToken, 0)
                 }
@@ -99,19 +103,32 @@ class RemoteImeController(
     }
 
     private fun maybeShow(context: RemoteTextContext, acceptedGeneration: Long) {
-        if (autoShown && autoShownActivationId == context.activationId) return
-        val imeVisible = ViewCompat.getRootWindowInsets(streamView)
-            ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-        if (imeVisible) return
-        autoShown = true
+        if (autoShownActivationId == context.activationId) return
+        if (ViewCompat.getRootWindowInsets(streamView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        ) {
+            // The open keyboard already covers this activation. While it is ours,
+            // rebind it so the new activation's deactivation hides it; a manual
+            // keyboard stays under the user's control.
+            if (autoOwned) autoShownActivationId = context.activationId
+            return
+        }
+        // Android needs both window and view focus for showSoftInput; without
+        // window focus the request is doomed, so retry on a later revision.
+        if (!streamView.hasWindowFocus()) return
         autoShownActivationId = context.activationId
+        autoOwned = true
         streamView.setTextInputEnabled(true)
         streamView.isFocusableInTouchMode = true
         streamView.requestFocus()
         streamView.post {
-            if (!disposed && generation == acceptedGeneration) {
-                (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
-                    ?.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
+            if (disposed || generation != acceptedGeneration) return@post
+            val shown = (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                ?.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT) == true
+            if (!shown) {
+                // Rejected outright; let a later revision of this activation retry.
+                autoOwned = false
+                autoShownActivationId = 0L
             }
         }
     }
@@ -143,6 +160,9 @@ class RemoteImeController(
             imeWasVisible = true
         } else if (imeWasVisible) {
             imeWasVisible = false
+            // Dismissal ends automatic ownership; the per-activation record stays
+            // so the same activation is not auto-shown against the user again.
+            autoOwned = false
             streamView.setTextInputEnabled(false)
         }
         avoidanceSession.updateVisibility(
@@ -187,7 +207,8 @@ class RemoteImeController(
         latestContext = null
         latestInsets = null
         imeWasVisible = false
-        autoShown = false
+        autoOwned = false
+        autoShownActivationId = 0L
         streamView.setTextInputEnabled(false)
         avoidanceSession.reset()
         panZoomHandler.onUserTransform = null
@@ -206,7 +227,12 @@ class RemoteImeController(
             latestRevision = -1L
             latestInsets = null
             imeWasVisible = false
-            autoShown = false
+            if (autoOwned) {
+                autoOwned = false
+                (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                    ?.hideSoftInputFromWindow(streamView.windowToken, 0)
+            }
+            autoShownActivationId = 0L
             streamView.setTextInputEnabled(false)
             avoidanceSession.reset()
             panZoomHandler.setImeOffsetY(0f)

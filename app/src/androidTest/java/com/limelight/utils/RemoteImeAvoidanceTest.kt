@@ -470,6 +470,58 @@ class RemoteImeAvoidanceTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 33)
+    fun manualReopenSurvivesTrustedDeactivation() {
+        val (_, stream, controller) = attachController(autoShowEnabled = true)
+        try {
+            rule.scenario.onActivity { controller.handle(context()) }
+            awaitIme(stream, visible = true)
+            rule.scenario.onActivity { activity ->
+                (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .hideSoftInputFromWindow(stream.windowToken, 0)
+            }
+            awaitIme(stream, visible = false)
+            // The user reopens the keyboard manually during the same activation.
+            rule.scenario.onActivity {
+                stream.setTextInputEnabled(true)
+                stream.isFocusableInTouchMode = true
+                stream.requestFocus()
+                (it.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .showSoftInput(stream, InputMethodManager.SHOW_IMPLICIT)
+            }
+            awaitIme(stream, visible = true)
+            rule.scenario.onActivity { controller.handle(deactivationContext(activationId = 2, revision = 2)) }
+            SystemClock.sleep(1200)
+            rule.scenario.onActivity {
+                val insets = ViewCompat.getRootWindowInsets(stream)
+                assertTrue("Deactivation must not hide a manually reopened keyboard",
+                    insets?.isVisible(WindowInsetsCompat.Type.ime()) == true)
+            }
+        } finally {
+            rule.scenario.onActivity { controller.dispose() }
+        }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
+    fun ownershipTransfersToNextActivationWhileVisible() {
+        val (_, stream, controller) = attachController(autoShowEnabled = true)
+        try {
+            rule.scenario.onActivity { controller.handle(context()) }
+            awaitIme(stream, visible = true)
+            // Activation 9 arrives while the auto-owned keyboard is still open.
+            rule.scenario.onActivity { controller.handle(context().copy(revision = 2, activationId = 9)) }
+            rule.scenario.onActivity { controller.handle(deactivationContext(activationId = 9, revision = 3)) }
+            awaitIme(stream, visible = false)
+            rule.scenario.onActivity {
+                assertFalse("Rebound activation deactivation must release the editor", stream.isTextInputEnabled())
+            }
+        } finally {
+            rule.scenario.onActivity { controller.dispose() }
+        }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
     fun autoShowDisabledKeepsHostObservationsAdvisoryOnly() {
         val (_, stream, controller) = attachController(autoShowEnabled = false)
         try {
