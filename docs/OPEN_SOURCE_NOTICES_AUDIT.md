@@ -18,9 +18,10 @@
 2. **预编译库来源。** `app/src/main/jniLibs` 被 Git 忽略。当前二进制可识别 EasyTier 2.6.4、iperf3 3.1.3，但仍需要记录其构建来源、补丁和可重建方式；Opus 静态库也需要这份记录。二进制字符串只证明内嵌版本声明，不能证明未修改的上游源码。
 3. **LGPL/GPL 分发材料。** usbipdcpp、libusb、EasyTier 与 `moonlight-common-c` 需要结合实际静态链接方式、修改和发布渠道复核对应源码、构建说明及适用时的重新链接材料。界面展示许可文本只是其中一部分。
 4. **发布变体复核。** 在最终发布 APK/AAB 上重复原生库、资源和运行时依赖盘点。当前检查使用的是 `nonRootDebug`，不能代替最终发布构件。
+5. **触觉 SDK 版本。** 当前清单的 `0.6.0` 来自本地 SDK 检出；Android CI 固定使用 `b3f97c3bb7500ea7b1985aea568e5c7b40308d3b`（`VERSION.txt` 为 `0.5.14`）。发布前应统一构建来源与清单版本，或在构建时生成对应版本，避免 APK 显示错误的 SDK 版本。
 
 ## 本次验证
 
 - `:app:assembleNonRootDebug --offline` 成功。
 - `notices.json` 22 个稳定 ID 无重复，每项引用的许可文件均存在；APK 内含清单和新增文本。
-- APK 已安装到连接的 Meizu 17（`Z81QAEXP389DR`）。
+- APK 已安装到连接的 Meizu 17。
