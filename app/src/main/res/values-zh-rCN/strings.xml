@@ -651,6 +651,15 @@
     <string name="about_dialog_bilibili_summary">关注账号，获取版本动态与功能演示</string>
     <string name="about_dialog_handbook_action">文档手册</string>
     <string name="about_dialog_ecosystem_action">基地生态</string>
+    <string name="about_dialog_open_source_action">开源许可</string>
+    <string name="open_source_title">开源许可</string>
+    <string name="open_source_intro">查看此应用所含开源组件的项目来源和许可文本</string>
+    <string name="open_source_back">返回</string>
+    <string name="open_source_component_details">组件详情</string>
+    <string name="open_source_version">版本：%1$s</string>
+    <string name="open_source_license">许可：%1$s</string>
+    <string name="open_source_project">项目地址：%1$s</string>
+    <string name="open_source_license_text">查看完整许可文本</string>
     <string name="about_dialog_ecosystem_title">基地生态</string>
     <string name="about_dialog_ecosystem_lead">从主机端到手机、平板、电视和桌面客户端，选择适合你的平台。</string>
     <string name="about_dialog_ecosystem_footer">项目将通过安全的外部浏览器打开。</string>

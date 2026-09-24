@@ -1137,6 +1137,10 @@
             android:key="about_us"
             android:title="@string/title_about_us" />
         <Preference
+            android:key="open_source_notices"
+            android:title="@string/open_source_title"
+            android:summary="@string/open_source_intro" />
+        <Preference
             android:key="check_for_updates"
             android:title="@string/check_for_updates"
             android:summary="@string/summary_check_for_updates" />

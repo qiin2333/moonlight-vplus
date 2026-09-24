@@ -774,6 +774,15 @@
     <string name="about_dialog_bilibili_summary">Follow for release news and feature demos</string>
     <string name="about_dialog_handbook_action">Documentation</string>
     <string name="about_dialog_ecosystem_action">Ecosystem</string>
+    <string name="about_dialog_open_source_action">Licenses</string>
+    <string name="open_source_title">Open source licenses</string>
+    <string name="open_source_intro">Open source components included with this app and their licenses</string>
+    <string name="open_source_back">Back</string>
+    <string name="open_source_component_details">Component details</string>
+    <string name="open_source_version">Version: %1$s</string>
+    <string name="open_source_license">License: %1$s</string>
+    <string name="open_source_project">Project: %1$s</string>
+    <string name="open_source_license_text">Full license text</string>
     <string name="about_dialog_ecosystem_title">AlkaidLab Ecosystem</string>
     <string name="about_dialog_ecosystem_lead">From the host to phones, tablets, TVs, and desktops, choose the client that fits your platform.</string>
     <string name="about_dialog_ecosystem_footer">Projects open in a secure external browser.</string>

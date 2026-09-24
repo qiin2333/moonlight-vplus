@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="open_source_title">開源授權</string>
+    <string name="about_dialog_open_source_action">開源授權</string>
+    <string name="open_source_intro">查看此應用所含開源元件的專案來源與授權條款</string>
+    <string name="open_source_back">返回</string>
+    <string name="open_source_component_details">元件詳情</string>
+    <string name="open_source_version">版本：%1$s</string>
+    <string name="open_source_license">授權：%1$s</string>
+    <string name="open_source_project">專案網址：%1$s</string>
+    <string name="open_source_license_text">查看完整授權條款</string>
     <string name="title_combine_joycons">合併 Joy-Con 左右控制器</string>
     <string name="joycon_system_capabilities">系統震動：%1$s · 陀螺儀：%2$s</string>
     <string name="joycon_capability_available">可用</string>

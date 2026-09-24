@@ -42,6 +42,7 @@ class AboutDialogInputTest {
                 versionInfo = "Version test",
                 onHandbook = {},
                 onEcosystem = { ecosystemOpened.set(true) },
+                onOpenSource = {},
                 onBilibili = {},
                 onGithub = {},
                 onQq = {},
