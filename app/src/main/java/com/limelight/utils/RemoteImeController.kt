@@ -204,10 +204,16 @@ class RemoteImeController(
     fun dispose() {
         disposed = true
         generation++
+        // restartInput() from setTextInputEnabled(false) rebinds but never hides
+        // the IME; issue the same dismissal resetSession uses before tearing down.
+        if (autoOwned) {
+            autoOwned = false
+            (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                ?.hideSoftInputFromWindow(streamView.windowToken, 0)
+        }
         latestContext = null
         latestInsets = null
         imeWasVisible = false
-        autoOwned = false
         autoShownActivationId = 0L
         streamView.setTextInputEnabled(false)
         avoidanceSession.reset()
