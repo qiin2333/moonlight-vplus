@@ -229,6 +229,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
     /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
     private var virtualControllerVisibleBeforeStop: Boolean? = null
+    private var pipFloatBallRestorePending = false
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -1255,7 +1256,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         super.onResume()
         if (::floatBallHandler.isInitialized &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
-            !pipInteractiveOverlayState.isActive()
+            !pipInteractiveOverlayState.isActive() &&
+            !pipFloatBallRestorePending
         ) {
             floatBallHandler.show()
         }
@@ -1357,7 +1359,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
             lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
         ) {
-            if (snapshot.floatBallVisible) floatBallHandler.show() else floatBallHandler.hide()
+            pipFloatBallRestorePending = true
+            window.decorView.postOnAnimation {
+                pipFloatBallRestorePending = false
+                if (isFinishing || isDestroyed ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode)
+                ) {
+                    return@postOnAnimation
+                }
+                if (snapshot.floatBallVisible) {
+                    floatBallHandler.showPreservingPosition()
+                } else {
+                    floatBallHandler.hide()
+                }
+            }
         }
 
         if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
