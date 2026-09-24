@@ -230,7 +230,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
     /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
     private var virtualControllerVisibleBeforeStop: Boolean? = null
-    private var pipFloatBallRestorePending = false
     private var pendingPipExitSnapshot: PipInteractiveOverlaySnapshot? = null
     private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
@@ -1260,7 +1259,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
             !pipInteractiveOverlayState.isActive() &&
-            !pipFloatBallRestorePending
+            pendingPipExitSnapshot == null
         ) {
             floatBallHandler.show()
         }
@@ -1387,14 +1386,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         notificationOverlayManager.setHiding(false)
         notificationOverlayManager.applyVisibility()
         microphoneManager?.setEnableMic(prefConfig.enableMic)
-        micButton?.visibility = if (snapshot.microphoneButtonVisible) View.VISIBLE else View.GONE
+        micButton?.visibility = if (
+            snapshot.microphoneButtonVisible && prefConfig.enableMic
+        ) View.VISIBLE else View.GONE
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
     }
 
     private fun schedulePipOverlayRestore(snapshot: PipInteractiveOverlaySnapshot) {
         cancelPendingPipOverlayRestore()
-        pipFloatBallRestorePending = true
         pendingPipExitSnapshot = snapshot
         val generation = ++pipOverlayRestoreGeneration
         fun restoreAfterWindowExit() {
@@ -1409,7 +1409,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     return@doOnPreDraw
                 }
 
-                pipFloatBallRestorePending = false
                 pendingPipExitSnapshot = null
                 if (snapshot.floatBallVisible) {
                     floatBallHandler.show()
@@ -1423,7 +1422,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     private fun cancelPendingPipOverlayRestore() {
         pipOverlayRestoreGeneration++
-        pipFloatBallRestorePending = false
         pendingPipExitSnapshot = null
     }
 

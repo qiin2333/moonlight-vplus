@@ -17,7 +17,6 @@ class PipInteractiveOverlayStateTest {
             floatBallVisible = true
         )
         assertTrue(state.enter(original))
-        assertEquals(true, state.virtualControllerVisibleOrNull())
         assertEquals(true, state.virtualControllerVisibleForStop(false))
         assertNull(state.exitIfResumed(false))
         assertTrue(state.isActive())
@@ -30,8 +29,7 @@ class PipInteractiveOverlayStateTest {
             )
         ))
 
-        assertEquals(original, state.exit())
-        assertNull(state.virtualControllerVisibleOrNull())
+        assertEquals(original, state.exitIfResumed(true))
         assertEquals(false, state.virtualControllerVisibleForStop(false))
         assertFalse(state.isActive())
     }
@@ -40,7 +38,7 @@ class PipInteractiveOverlayStateTest {
     fun exitWithoutEnterDoesNothing() {
         val state = PipInteractiveOverlayState()
 
-        assertNull(state.exit())
+        assertNull(state.exitIfResumed(true))
         assertFalse(state.isActive())
     }
 
@@ -50,11 +48,11 @@ class PipInteractiveOverlayStateTest {
         val first = PipInteractiveOverlaySnapshot(true, false, true, true)
         assertTrue(state.enter(first))
         assertTrue(state.isActive())
-        assertEquals(first, state.exit())
+        assertEquals(first, state.exitIfResumed(true))
 
         val next = PipInteractiveOverlaySnapshot(false, true, false, false)
         assertTrue(state.enter(next))
 
-        assertEquals(next, state.exit())
+        assertEquals(next, state.exitIfResumed(true))
     }
 }
