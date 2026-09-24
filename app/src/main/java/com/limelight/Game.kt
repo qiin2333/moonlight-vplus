@@ -43,6 +43,8 @@ import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.NvConnection
+import com.limelight.binding.input.touchpad.TouchpadCompatibilityDevices
+import com.limelight.binding.input.touchpad.CompatibilityTouchpadDispatch
 import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.HdrModePolicy
@@ -672,6 +674,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             override fun onExternalDisplayConnected(display: Display) {
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
+                inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
             }
 
@@ -680,6 +683,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
+                inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
             }
 
@@ -1475,6 +1479,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) {
+            compatibilityPointerDispatch.reset()
+            if (::touchInputHandler.isInitialized) touchInputHandler.cancelCompatibilityTouchpad()
+        }
         keyboardInputHandler.clearModifierState()
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
@@ -1559,6 +1567,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onDestroy() {
+        compatibilityPointerDispatch.reset()
+        if (::touchInputHandler.isInitialized) touchInputHandler.destroyCompatibilityTouchpad()
         destroying = true
         MoonBridge.detachConnectionListener(this)
         if (::streamView.isInitialized) {
@@ -1624,6 +1634,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onPause() {
+        if (::touchInputHandler.isInitialized) touchInputHandler.cancelCompatibilityTouchpad()
         crownConfigPicker?.dismiss()
         controllerManager?.elementController?.cancelDirectConfigSwitch()
         updateAudioHapticsRuntimeEnabled(false)
@@ -1869,6 +1880,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
+        if (!grab && ::touchInputHandler.isInitialized) touchInputHandler.cancelCompatibilityTouchpad()
         if (grab) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
@@ -1884,19 +1896,43 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         grabbedInput = grab
     }
 
+    private val compatibilityPointerDispatch = CompatibilityTouchpadDispatch()
+
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (usbForwarding?.consumes(event.device) == true) return true
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            compatibilityPointerDispatch.onTouchDown()
             controllerManager?.elementController?.cancelDirectConfigSwitch()
         }
         return try {
-            super.dispatchTouchEvent(event)
+            dispatchCompatibilityPointer(event, touch = true) { super.dispatchTouchEvent(it) }
         } finally {
             // The final UP reaches all old input receivers before a Crown layout is replaced.
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
                 controllerManager?.elementController?.finishStreamTouch(event.actionMasked)
             }
         }
+    }
+
+    private fun dispatchCompatibilityPointer(event: MotionEvent, touch: Boolean,
+                                             dispatchToViews: (MotionEvent) -> Boolean): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !::touchInputHandler.isInitialized ||
+            !TouchpadCompatibilityDevices.contains(this, event.device)) return dispatchToViews(event)
+        // Raw contact positions and captured deltas are not screen hit-test coordinates.
+        if (event.isFromSource(InputDevice.SOURCE_TOUCHPAD) || event.source == InputDevice.SOURCE_MOUSE_RELATIVE) {
+            return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || dispatchToViews(event)
+        }
+        return touchInputHandler.dispatchCompatibilityPointer(event) { position ->
+            compatibilityPointerDispatch.dispatch(event, touch, position, dispatchToViews)
+        }
+    }
+
+    private fun handleStreamMotionEvent(view: View, event: MotionEvent): Boolean =
+        compatibilityPointerDispatch.handleStream(event) { touchInputHandler.handleMotionEvent(view, it) }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (usbForwarding?.consumes(event.device) == true) return true
+        return dispatchCompatibilityPointer(event, touch = false) { super.dispatchGenericMotionEvent(it) }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -1979,6 +2015,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun enableNativeMousePointer(enable: Boolean) {
+        if (::touchInputHandler.isInitialized) touchInputHandler.cancelCompatibilityTouchpad()
         LimeLog.info("Setting native mouse pointer: $enable")
         prefConfig.enableNativeMousePointer = enable
 
@@ -2002,12 +2039,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         if (usbForwarding?.consumes(event.device) == true) return true
-        return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)
+        return handleStreamMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)
     }
 
     override fun onGenericMotion(view: View, event: MotionEvent): Boolean {
         if (usbForwarding?.consumes(event.device) == true) return true
-        return touchInputHandler.handleMotionEvent(view, event)
+        return handleStreamMotionEvent(view, event)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -2018,7 +2055,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 view.requestUnbufferedDispatch(event)
             }
         }
-        return touchInputHandler.handleMotionEvent(view, event)
+        return handleStreamMotionEvent(view, event)
     }
 
     override fun stageStarting(stage: String) {
@@ -2709,6 +2746,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun keyboardEvent(buttonDown: Boolean, keyCode: Short) {
         keyboardInputHandler.keyboardEvent(buttonDown, keyCode)
+    }
+
+    override fun cancelKeyboardEvent(keyCode: Short) {
+        keyboardInputHandler.cancelKeyboardEvent(keyCode)
     }
 
     override fun touchpadEvent(

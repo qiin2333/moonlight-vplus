@@ -5,6 +5,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CursorModePolicyTest {
+    @Test fun `compatibility uses the host cursor instead of a separate native or overlay cursor`() {
+        for (native in listOf(false, true)) {
+            assertFalse(CursorModePolicy.shouldUseLocalMode(
+                nativePointerSupported = true, nativePointerEnabled = native,
+                touchpadEnabled = true, localCursorEnabled = true, hasCursorOverlay = true,
+                compatibilityPointer = true))
+        }
+    }
+
     @Test
     fun `touchpad uses host cursor when local cursor is disabled`() {
         assertFalse(

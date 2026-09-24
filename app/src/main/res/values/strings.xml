@@ -528,6 +528,13 @@
     <string name="title_checkbox_absolute_mouse_mode">Remote desktop mouse mode</string>
     <string name="summary_checkbox_absolute_mouse_mode">This can make mouse acceleration behave more naturally for remote desktop usage, but it is incompatible with many games.</string>
     <string name="title_optimize_hardware_touchpad">Tablet touchpad support</string>
+    <string name="title_touchpad_compatibility">Touchpad compatibility</string>
+    <string name="summary_touchpad_compatibility">Select touchpads that stop responding when the mouse is captured</string>
+    <string name="title_touchpad_pointer_speed">Touchpad pointer speed</string>
+    <string name="summary_touchpad_pointer_speed">Host cursor speed, including dragging. Devices without relative motion keep their system speed. 100% is the default. Reconnect to apply.</string>
+    <string name="title_touchpad_scroll_speed">Touchpad scroll speed</string>
+    <string name="summary_touchpad_scroll_speed">Horizontal and vertical scrolling speed for selected compatibility touchpads. 100% is the default. Reconnect to apply.</string>
+    <string name="message_touchpad_compatibility">Connect and select a touchpad to enable taps, scrolling, pinch and three-finger window switching on existing hosts. Using a compatibility touchpad switches this stream to the host cursor. Mouse capture is disabled while a selected device is connected. Gestures reserved by Android remain local.</string>
     <string name="summary_optimize_hardware_touchpad">Use dedicated event handling for supported tablet keyboard touchpads. Available in both root and non-root builds.</string>
     <string name="title_checkbox_enable_esc_menu">Double-press key for stream menu</string>
     <string name="summary_checkbox_enable_esc_menu">Double-press the selected key to open the stream return menu; a single press is still sent to the host.</string>

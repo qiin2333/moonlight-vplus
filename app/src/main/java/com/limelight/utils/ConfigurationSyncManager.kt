@@ -3424,6 +3424,8 @@ class ConfigurationSyncManager(private val context: Context) {
             "seekbar_screen_offset_x",
             "seekbar_screen_offset_y",
             "seekbar_vibrate_fallback_strength",
+            "touchpad_pointer_speed",
+            "touchpad_scroll_speed",
             "video_format"
         )
 

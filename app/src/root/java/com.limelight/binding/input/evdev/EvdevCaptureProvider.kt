@@ -21,20 +21,34 @@ import kotlin.math.roundToInt
 
 class EvdevCaptureProvider(
     private val activity: Activity,
-    private val listener: EvdevListener,
+    private val targetListener: EvdevListener,
     private val optimizeHardwareTouchpad: Boolean
 ) : InputCaptureProvider() {
 
     private val libraryPath: String = activity.applicationInfo.nativeLibraryDir
 
-    private var shutdown = false
+    @Volatile private var shutdown = false
     private var evdevIn: InputStream? = null
-    private var evdevOut: OutputStream? = null
+    @Volatile private var evdevOut: OutputStream? = null
     private var su: Process? = null
     private var servSock: ServerSocket? = null
     private var evdevSock: Socket? = null
     private var started = false
     private val touchpadDevices = HashMap<Int, TouchpadDeviceState>()
+    private val inputLock = Any()
+    private val pressedButtons = HashSet<Int>()
+    private val pressedKeys = HashSet<Short>()
+    private var discardPendingMotion = false
+    private val listener = object : EvdevListener by targetListener {
+        override fun mouseButtonEvent(buttonId: Int, down: Boolean) {
+            if (down) pressedButtons.add(buttonId) else pressedButtons.remove(buttonId)
+            targetListener.mouseButtonEvent(buttonId, down)
+        }
+        override fun keyboardEvent(buttonDown: Boolean, keyCode: Short) {
+            if (buttonDown) pressedKeys.add(keyCode) else pressedKeys.remove(keyCode)
+            targetListener.keyboardEvent(buttonDown, keyCode)
+        }
+    }
 
     private val handlerThread = object : Thread() {
         override fun run() {
@@ -88,6 +102,8 @@ class EvdevCaptureProvider(
                 evdevSock = servSock!!.accept()
                 evdevIn = evdevSock!!.getInputStream()
                 evdevOut = evdevSock!!.getOutputStream()
+                // Capture may have been disabled while the root helper was starting.
+                updateGrabState()
             } catch (e: IOException) {
                 e.printStackTrace()
                 return
@@ -103,69 +119,77 @@ class EvdevCaptureProvider(
                 }
                 if (event == null) break
 
-                if (event.isTouchpad) {
-                    touchpadDevices.getOrPut(event.deviceId) {
-                        LimeLog.info(
-                            "Evdev touchpad detected: deviceId=${event.deviceId}, " +
-                                "x=${event.absXMin}..${event.absXMax}@${event.absXResolution}, " +
-                                "y=${event.absYMin}..${event.absYMax}@${event.absYResolution}"
-                        )
-                        TouchpadDeviceState(event, optimizeHardwareTouchpad)
-                    }.handleEvent(event, listener)
-                    continue
-                }
-
-                when (event.type) {
-                    EvdevEvent.EV_SYN -> {
-                        if (deltaX != 0 || deltaY != 0) {
-                            listener.mouseMove(deltaX, deltaY)
-                            deltaX = 0
-                            deltaY = 0
-                        }
-                        if (deltaVScroll.toInt() != 0) {
-                            listener.mouseVScroll(deltaVScroll)
-                            deltaVScroll = 0
-                        }
-                        if (deltaHScroll.toInt() != 0) {
-                            listener.mouseHScroll(deltaHScroll)
-                            deltaHScroll = 0
-                        }
+                synchronized(inputLock) {
+                    if (discardPendingMotion) {
+                        deltaX = 0; deltaY = 0; deltaVScroll = 0; deltaHScroll = 0
+                        discardPendingMotion = false
+                    }
+                    // The reader can still have queued packets after UNGRAB.
+                    if (!isCapturing || isCursorVisible) return@synchronized
+                    if (event.isTouchpad) {
+                        touchpadDevices.getOrPut(event.deviceId) {
+                            LimeLog.info(
+                                "Evdev touchpad detected: deviceId=${event.deviceId}, " +
+                                    "x=${event.absXMin}..${event.absXMax}@${event.absXResolution}, " +
+                                    "y=${event.absYMin}..${event.absYMax}@${event.absYResolution}"
+                            )
+                            TouchpadDeviceState(event, optimizeHardwareTouchpad)
+                        }.handleEvent(event, listener)
+                        return@synchronized
                     }
 
-                    EvdevEvent.EV_REL -> {
-                        when (event.code) {
-                            EvdevEvent.REL_X -> deltaX = event.value
-                            EvdevEvent.REL_Y -> deltaY = event.value
-                            EvdevEvent.REL_HWHEEL -> deltaHScroll = event.value.toByte()
-                            EvdevEvent.REL_WHEEL -> deltaVScroll = event.value.toByte()
-                        }
-                    }
-
-                    EvdevEvent.EV_KEY -> {
-                        when (event.code) {
-                            EvdevEvent.BTN_LEFT ->
-                                listener.mouseButtonEvent(EvdevListener.BUTTON_LEFT, event.value != 0)
-                            EvdevEvent.BTN_MIDDLE ->
-                                listener.mouseButtonEvent(EvdevListener.BUTTON_MIDDLE, event.value != 0)
-                            EvdevEvent.BTN_RIGHT ->
-                                listener.mouseButtonEvent(EvdevListener.BUTTON_RIGHT, event.value != 0)
-                            EvdevEvent.BTN_SIDE ->
-                                listener.mouseButtonEvent(EvdevListener.BUTTON_X1, event.value != 0)
-                            EvdevEvent.BTN_EXTRA ->
-                                listener.mouseButtonEvent(EvdevListener.BUTTON_X2, event.value != 0)
-                            EvdevEvent.BTN_FORWARD, EvdevEvent.BTN_BACK, EvdevEvent.BTN_TASK -> {
-                                // Other unhandled mouse buttons
+                    when (event.type) {
+                        EvdevEvent.EV_SYN -> {
+                            if (deltaX != 0 || deltaY != 0) {
+                                listener.mouseMove(deltaX, deltaY)
+                                deltaX = 0
+                                deltaY = 0
                             }
-                            else -> {
-                                val keyCode = EvdevTranslator.translateEvdevKeyCode(event.code)
-                                if (keyCode.toInt() != 0) {
-                                    listener.keyboardEvent(event.value != 0, keyCode)
+                            if (deltaVScroll.toInt() != 0) {
+                                listener.mouseVScroll(deltaVScroll)
+                                deltaVScroll = 0
+                            }
+                            if (deltaHScroll.toInt() != 0) {
+                                listener.mouseHScroll(deltaHScroll)
+                                deltaHScroll = 0
+                            }
+                        }
+
+                        EvdevEvent.EV_REL -> {
+                            when (event.code) {
+                                EvdevEvent.REL_X -> deltaX = event.value
+                                EvdevEvent.REL_Y -> deltaY = event.value
+                                EvdevEvent.REL_HWHEEL -> deltaHScroll = event.value.toByte()
+                                EvdevEvent.REL_WHEEL -> deltaVScroll = event.value.toByte()
+                            }
+                        }
+
+                        EvdevEvent.EV_KEY -> {
+                            when (event.code) {
+                                EvdevEvent.BTN_LEFT ->
+                                    listener.mouseButtonEvent(EvdevListener.BUTTON_LEFT, event.value != 0)
+                                EvdevEvent.BTN_MIDDLE ->
+                                    listener.mouseButtonEvent(EvdevListener.BUTTON_MIDDLE, event.value != 0)
+                                EvdevEvent.BTN_RIGHT ->
+                                    listener.mouseButtonEvent(EvdevListener.BUTTON_RIGHT, event.value != 0)
+                                EvdevEvent.BTN_SIDE ->
+                                    listener.mouseButtonEvent(EvdevListener.BUTTON_X1, event.value != 0)
+                                EvdevEvent.BTN_EXTRA ->
+                                    listener.mouseButtonEvent(EvdevListener.BUTTON_X2, event.value != 0)
+                                EvdevEvent.BTN_FORWARD, EvdevEvent.BTN_BACK, EvdevEvent.BTN_TASK -> {
+                                    // Other unhandled mouse buttons
+                                }
+                                else -> {
+                                    val keyCode = EvdevTranslator.translateEvdevKeyCode(event.code)
+                                    if (keyCode.toInt() != 0) {
+                                        listener.keyboardEvent(event.value != 0, keyCode)
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    EvdevEvent.EV_MSC -> { }
+                        EvdevEvent.EV_MSC -> { }
+                    }
                 }
             }
         }
@@ -546,7 +570,8 @@ class EvdevCaptureProvider(
             }
         }
 
-        private fun cancelAll(listener: EvdevListener) {
+        fun cancelAll(listener: EvdevListener) {
+            buttonState = 0
             pendingMoveFrame = null
             lastMoveFrameSentNs = 0L
 
@@ -816,38 +841,50 @@ class EvdevCaptureProvider(
     override fun showCursor() {
         super.showCursor()
         runInNetworkSafeContextSynchronously {
-            if (started && !shutdown && evdevOut != null) {
-                try {
-                    evdevOut!!.write(UNGRAB_REQUEST.toInt())
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
+            updateGrabState()
+            synchronized(inputLock) {
+                // Android cannot release buttons/contacts whose DOWN was sent by Evdev.
+                val buttons = pressedButtons.toList()
+                val keys = pressedKeys.toList()
+                val touchpads = touchpadDevices.values.toList()
+                pressedButtons.clear()
+                pressedKeys.clear()
+                touchpadDevices.clear()
+                discardPendingMotion = true
+                buttons.forEach { targetListener.mouseButtonEvent(it, false) }
+                keys.forEach(targetListener::cancelKeyboardEvent)
+                touchpads.forEach { it.cancelAll(targetListener) }
             }
         }
     }
 
     override fun hideCursor() {
         super.hideCursor()
-        runInNetworkSafeContextSynchronously {
-            if (started && !shutdown && evdevOut != null) {
-                try {
-                    evdevOut!!.write(REGRAB_REQUEST.toInt())
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
+        runInNetworkSafeContextSynchronously(::updateGrabState)
+    }
+
+    private fun updateGrabState() {
+        val output = evdevOut ?: return
+        synchronized(output) {
+            if (shutdown) return
+            try {
+                output.write(if (isCapturing && !isCursorVisible) REGRAB_REQUEST.toInt() else UNGRAB_REQUEST.toInt())
+            } catch (e: IOException) {
+                e.printStackTrace()
             }
         }
     }
 
     override fun enableCapture() {
-        if (!started) {
-            handlerThread.start()
-            started = true
-        }
         super.enableCapture()
+        if (!started) {
+            started = true
+            handlerThread.start()
+        }
     }
 
     override fun destroy() {
+        disableCapture()
         if (!started) return
 
         shutdown = true
