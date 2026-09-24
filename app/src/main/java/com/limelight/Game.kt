@@ -227,6 +227,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val startHoldWheelVisible = mutableStateOf(false)
     private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
+    /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
+    private var virtualControllerVisibleBeforeStop: Boolean? = null
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -1755,6 +1757,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         activeGameMenu?.dismiss()
         activeGameMenu = null
 
+        if (!isFinishing) {
+            virtualControllerVisibleBeforeStop = isVirtualControllerVisible()
+        }
         if (virtualController != null) {
             virtualController?.hide()
         }
@@ -2156,6 +2161,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onStart() {
         super.onStart()
 
+        restoreVirtualControllerAfterStop()
+
         if (!isStreamingActive && streamStartTime > 0) {
             lastActiveTime = System.currentTimeMillis()
             isStreamingActive = true
@@ -2196,6 +2203,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
             streamView.requestLayout()
             streamView.invalidate()
+        }
+    }
+
+    private fun restoreVirtualControllerAfterStop() {
+        val wasVisible = virtualControllerVisibleBeforeStop
+        if (wasVisible == true &&
+            prefConfig.onscreenController &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
+        ) {
+            virtualController?.show()
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
+            virtualControllerVisibleBeforeStop = null
         }
     }
 
