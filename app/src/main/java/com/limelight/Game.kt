@@ -1348,6 +1348,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         val snapshot = pipInteractiveOverlayState.exit() ?: return
+        // onResume may arrive while the platform still reports PiP. In that
+        // order, the later PiP exit callback must restore the floating window.
+        if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
+            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        ) {
+            floatBallHandler.show()
+        }
+
         if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
             virtualController?.show()
         } else {
