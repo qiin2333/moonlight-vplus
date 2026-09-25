@@ -11,7 +11,7 @@ import kotlin.math.roundToInt
 
 /** PC-card decorations using the current palette, with runtime radial gradients for compatibility. */
 object PcCardDecor {
-    private data class Key(val drawable: Int, val bucket: Int)
+    private data class Key(val id: Int, val bucket: Int)
     private val cache = HashMap<Key, Drawable.ConstantState>()
     private var cachedConfiguration: Configuration? = null
 
@@ -25,7 +25,6 @@ object PcCardDecor {
     fun glow(context: Context, bucket: Int): Drawable = radialDrawable(
         context,
         bucket,
-        R.drawable.pc_icon_glow,
         R.attr.pcDecorIconGlowStart,
         R.attr.pcDecorIconGlowCenter,
         R.attr.pcDecorIconGlowEnd,
@@ -35,7 +34,6 @@ object PcCardDecor {
     fun iconBg(context: Context, bucket: Int): Drawable = radialDrawable(
         context,
         bucket,
-        R.drawable.pc_item_icon_bg,
         R.attr.pcDecorIconBgStart,
         R.attr.pcDecorIconBgCenter,
         R.attr.pcDecorIconBgEnd,
@@ -51,7 +49,6 @@ object PcCardDecor {
     private fun radialDrawable(
         context: Context,
         bucket: Int,
-        resource: Int,
         startAttr: Int,
         centerAttr: Int,
         endAttr: Int,
@@ -64,8 +61,10 @@ object PcCardDecor {
             cache.clear()
             cachedConfiguration = Configuration(configuration)
         }
-        val key = Key(resource, if (bucket in 0..11) bucket else -1)
-        cache[key]?.let { return it.newDrawable(themed.resources, themed.theme).mutate() }
+        val key = Key(startAttr, if (bucket in 0..11) bucket else -1)
+        // The radius and stroke are already resolved to pixels for this density. Passing
+        // Resources here would make GradientDrawable scale those values a second time.
+        cache[key]?.let { return it.newDrawable().mutate() }
 
         val attrs = if (strokeAttr == null) {
             intArrayOf(startAttr, centerAttr, endAttr)
@@ -90,7 +89,7 @@ object PcCardDecor {
         }
         drawable.constantState?.let {
             cache[key] = it
-            return it.newDrawable(themed.resources, themed.theme).mutate()
+            return it.newDrawable().mutate()
         }
         return drawable
     }
