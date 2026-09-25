@@ -1410,6 +1410,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     window.decorView.postOnAnimation { restoreAfterWindowExit() }
                     return@doOnPreDraw
                 }
+                val activityResumed = lifecycle.currentState.isAtLeast(
+                    androidx.lifecycle.Lifecycle.State.RESUMED
+                )
+                if (!activityResumed) {
+                    pendingPipExitSnapshot = null
+                    return@doOnPreDraw
+                }
 
                 pendingPipExitSnapshot = null
                 if (snapshot.floatBallVisible) {
