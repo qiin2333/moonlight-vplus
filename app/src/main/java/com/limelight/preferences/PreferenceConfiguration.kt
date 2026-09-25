@@ -154,6 +154,8 @@ class PreferenceConfiguration {
     var swapQuitAndDisconnect = false
     var bindAllUsb = false
     var analogStickForScrolling: AnalogStickForScrolling = AnalogStickForScrolling.NONE
+    var controllerMouseSpeedPercent = 100
+    var controllerMouseDpadArrows = false
     var mouseNavButtons = false
     var unlockFps = false
     var gameRumbleMode = GameRumbleMode.CONTROLLER
@@ -322,6 +324,9 @@ class PreferenceConfiguration {
                 .putBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, enableAudioVibration)
                 .putInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, audioVibrationStrength)
                 .putString(AUDIO_VIBRATION_MODE_PREF_STRING, audioVibrationMode)
+                .putInt(CONTROLLER_MOUSE_SPEED_PREF_STRING, controllerMouseSpeedPercent)
+                .putString(CONTROLLER_MOUSE_DPAD_PREF_STRING,
+                    if (controllerMouseDpadArrows) "arrows" else "scroll")
                 .putString(AUDIO_VIBRATION_SCENE_PREF_STRING, audioVibrationScene.toString())
                 .putString(SCREEN_POSITION_PREF_STRING, positionString)
                 .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
@@ -522,6 +527,8 @@ class PreferenceConfiguration {
         copy.gyroInvertXAxis = this.gyroInvertXAxis
         copy.gyroInvertYAxis = this.gyroInvertYAxis
         copy.enableAudioVibration = this.enableAudioVibration
+        copy.controllerMouseSpeedPercent = this.controllerMouseSpeedPercent
+        copy.controllerMouseDpadArrows = this.controllerMouseDpadArrows
         copy.audioVibrationStrength = this.audioVibrationStrength
         copy.audioVibrationMode = this.audioVibrationMode
         copy.audioVibrationScene = this.audioVibrationScene
@@ -582,6 +589,8 @@ class PreferenceConfiguration {
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"
         private const val ANALOG_SCROLLING_PREF_STRING = "analog_scrolling"
+        const val CONTROLLER_MOUSE_SPEED_PREF_STRING = "controller_mouse_speed_percent"
+        const val CONTROLLER_MOUSE_DPAD_PREF_STRING = "controller_mouse_dpad_behavior"
         private const val MOUSE_NAV_BUTTONS_STRING = "checkbox_mouse_nav_buttons"
         private const val LEGACY_VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
         const val GAME_RUMBLE_MODE_PREF_STRING = "list_game_rumble_mode"
@@ -1371,6 +1380,8 @@ class PreferenceConfiguration {
             config.enableHostCadencePreciseSync = prefs.getBoolean(ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING, true)
 
             config.analogStickForScrolling = getAnalogStickForScrollingValue(context)
+            config.controllerMouseSpeedPercent = prefs.getInt(CONTROLLER_MOUSE_SPEED_PREF_STRING, 100).coerceIn(50, 200)
+            config.controllerMouseDpadArrows = prefs.getString(CONTROLLER_MOUSE_DPAD_PREF_STRING, "scroll") == "arrows"
 
             config.deadzonePercentage = prefs.getInt(DEADZONE_PREF_STRING, DEFAULT_DEADZONE)
 

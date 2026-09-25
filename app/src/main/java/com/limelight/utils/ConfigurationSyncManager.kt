@@ -3281,6 +3281,8 @@ class ConfigurationSyncManager(private val context: Context) {
 
         private val PORTABLE_DEFAULT_PREF_KEYS = setOf(
             "analog_scrolling",
+            "controller_mouse_speed_percent",
+            "controller_mouse_dpad_behavior",
             "background_image_url",
             "background_source",
             "checkbox_adaptive_bitrate",

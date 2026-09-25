@@ -141,6 +141,18 @@
     <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
     <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
     <string name="game_menu_controller_mouse">手柄鼠标</string>
+    <string name="title_controller_mouse_settings">手柄鼠标模式</string>
+    <string name="summary_controller_mouse_settings">指针速度、滚动摇杆和十字键功能</string>
+    <string name="controller_mouse_pointer_speed">指针速度</string>
+    <string name="controller_mouse_pointer_speed_summary">调整摇杆控制鼠标时的移动速度</string>
+    <string name="controller_mouse_scroll_stick">滚动摇杆</string>
+    <string name="controller_mouse_scroll_stick_summary">选择鼠标模式下负责滚动的摇杆</string>
+    <string name="controller_mouse_scroll_none">不滚动（双摇杆控制指针）</string>
+    <string name="controller_mouse_dpad_behavior">十字键功能</string>
+    <string name="controller_mouse_dpad_behavior_summary">仅在手柄鼠标模式下生效</string>
+    <string name="controller_mouse_dpad_scroll">滚动页面</string>
+    <string name="controller_mouse_dpad_arrows">方向键 ↑ ↓ ← →</string>
+    <string name="controller_mouse_speed_percent">%1$d%%</string>
     <string name="game_menu_disconnect"> 断开连接 </string>
     <string name="game_menu_disconnect_and_quit"> 断开并退出串流 </string>
     <string name="game_menu_cancel"> 取消 </string>
@@ -651,6 +663,15 @@
     <string name="about_dialog_bilibili_summary">关注账号，获取版本动态与功能演示</string>
     <string name="about_dialog_handbook_action">文档手册</string>
     <string name="about_dialog_ecosystem_action">基地生态</string>
+    <string name="about_dialog_open_source_action">开源许可</string>
+    <string name="open_source_title">开源许可</string>
+    <string name="open_source_intro">查看此应用所含开源组件的项目来源和许可文本</string>
+    <string name="open_source_back">返回</string>
+    <string name="open_source_component_details">组件详情</string>
+    <string name="open_source_version">版本：%1$s</string>
+    <string name="open_source_license">许可：%1$s</string>
+    <string name="open_source_project">项目地址：%1$s</string>
+    <string name="open_source_license_text">查看完整许可文本</string>
     <string name="about_dialog_ecosystem_title">基地生态</string>
     <string name="about_dialog_ecosystem_lead">从主机端到手机、平板、电视和桌面客户端，选择适合你的平台。</string>
     <string name="about_dialog_ecosystem_footer">项目将通过安全的外部浏览器打开。</string>
@@ -693,7 +714,7 @@
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
     <string name="summary_checkbox_enable_spatializer">对 Moonlight 本机解码的音频使用 Android 空间化处理，需要 Android 13 和兼容的输出设备；直通音频会绕过此处理。</string>
     <string name="title_checkbox_enable_mic">启用麦克风</string>
-    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Sunshine Foundation 20260117 或更高版本。</string>
+    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Foundation Sunshine 2025.0720 或更高版本。</string>
     <string name="title_list_mic_initial_state">麦克风初始状态</string>
     <string name="summary_list_mic_initial_state">选择每次串流开始时的麦克风状态。</string>
     <string name="mic_initial_state_off">关闭</string>
@@ -1113,7 +1134,7 @@
 
     <!-- 屏幕组合模式 -->
     <string name="title_screen_combination_mode">主机显示器排列</string>
-    <string name="summary_screen_combination_mode">选择 Sunshine Base 如何排列或组合主机显示器，需要兼容的 Sunshine Base 主机。</string>
+    <string name="summary_screen_combination_mode">选择 Foundation Sunshine 如何排列或组合主机显示器，需要兼容的 Foundation Sunshine 主机。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
     <string name="screen_mode_host_default">跟随主机</string>
     <string name="screen_mode_no_operation">无操作模式</string>
@@ -1283,7 +1304,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">延迟:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">流量 (收/发):</string>
     <string name="layout_game_menu_super_empty_text_a7970">还没有炒鸡指令哦</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Sunshine 基地版 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Foundation Sunshine 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
     <string name="game_menu_super_commands">超级指令</string>
     <string name="layout_item_key_value_text_0952a">分区 1</string>
     <string name="layout_item_key_value_hint_dd44f">分区名称，为空时为键值名</string>

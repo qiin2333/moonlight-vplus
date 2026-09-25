@@ -3735,6 +3735,12 @@ class StreamSettings : ThemedAppCompatActivity() {
                         true
                     }
 
+            findPreference<Preference>("open_source_notices")!!.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        OpenSourceNoticesActivity.open(requireActivity())
+                        true
+                    }
+
             // 添加检查更新选项的点击事件
             findPreference<Preference>("check_for_updates")!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
@@ -3753,6 +3759,12 @@ class StreamSettings : ThemedAppCompatActivity() {
             findPreference<Preference>("controller_diagnostic")!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
                         startActivity(Intent(requireActivity(), ControllerDiagnosticActivity::class.java))
+                        true
+                    }
+
+            findPreference<Preference>("controller_mouse_settings")!!.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        startActivity(Intent(requireActivity(), ControllerMouseSettingsActivity::class.java))
                         true
                     }
 

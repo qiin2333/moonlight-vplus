@@ -40,6 +40,7 @@ import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
@@ -85,6 +86,12 @@ class ControllerHandler(
 
         private val USB_MENU_DIRECTION_MASK = ControllerPacket.UP_FLAG or
             ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG
+        private val MOUSE_DPAD_MASK = USB_MENU_DIRECTION_MASK
+        private val MOUSE_BUTTON_MASK = ControllerPacket.A_FLAG or ControllerPacket.B_FLAG
+        private val MOUSE_DPAD_FLAGS = intArrayOf(
+            ControllerPacket.UP_FLAG, ControllerPacket.DOWN_FLAG,
+            ControllerPacket.LEFT_FLAG, ControllerPacket.RIGHT_FLAG
+        )
 
         private const val EMULATING_SPECIAL = 0x1
         private const val EMULATING_SELECT = 0x2
@@ -343,6 +350,9 @@ class ControllerHandler(
     // ========== Instance Fields ==========
 
     private val inputVector = Vector2d()
+    private val mouseKeyboardTranslator by lazy { KeyboardTranslator() }
+    private val emulatedDpadHolds = EmulatedButtonHolds()
+    private val emulatedMouseButtonHolds = EmulatedButtonHolds()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
@@ -1678,6 +1688,10 @@ class ControllerHandler(
         }
     }
 
+    internal fun withControllerInputLock(action: () -> Unit) {
+        synchronized(arrivalMetadataLock) { action() }
+    }
+
     internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean {
         for (i in 0 until inputDeviceContexts.size()) {
             val context = inputDeviceContexts.valueAt(i)
@@ -1764,45 +1778,22 @@ class ControllerHandler(
 
         if (originalContext.mouseEmulationActive) {
             val changedMask = inputMap xor originalContext.mouseEmulationLastInputMap
-
-            val aDown = (inputMap and ControllerPacket.A_FLAG) != 0
-            val bDown = (inputMap and ControllerPacket.B_FLAG) != 0
-
             originalContext.mouseEmulationLastInputMap = inputMap
-
-            if ((changedMask and ControllerPacket.A_FLAG) != 0) {
-                if (aDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                }
-            }
-            if ((changedMask and ControllerPacket.B_FLAG) != 0) {
-                if (bDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                }
-            }
-            if ((changedMask and ControllerPacket.UP_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.UP_FLAG) != 0) {
-                    conn.sendMouseScroll(1.toByte())
-                }
-            }
-            if ((changedMask and ControllerPacket.DOWN_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.DOWN_FLAG) != 0) {
-                    conn.sendMouseScroll((-1).toByte())
-                }
-            }
-            if ((changedMask and ControllerPacket.RIGHT_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.RIGHT_FLAG) != 0) {
-                    conn.sendMouseHScroll(1.toByte())
-                }
-            }
-            if ((changedMask and ControllerPacket.LEFT_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.LEFT_FLAG) != 0) {
-                    conn.sendMouseHScroll((-1).toByte())
-                }
+            updateEmulatedMouseButtonsLocked(originalContext,
+                if (forceNeutral) 0 else originalContext.inputMap and MOUSE_BUTTON_MASK)
+            if (prefConfig.controllerMouseDpadArrows) {
+                updateEmulatedDpadKeysLocked(originalContext,
+                    if (forceNeutral) 0 else originalContext.inputMap and MOUSE_DPAD_MASK)
+            } else {
+                updateEmulatedDpadKeysLocked(originalContext, 0)
+                if ((changedMask and ControllerPacket.UP_FLAG) != 0 &&
+                    (inputMap and ControllerPacket.UP_FLAG) != 0) conn.sendMouseScroll(1.toByte())
+                if ((changedMask and ControllerPacket.DOWN_FLAG) != 0 &&
+                    (inputMap and ControllerPacket.DOWN_FLAG) != 0) conn.sendMouseScroll((-1).toByte())
+                if ((changedMask and ControllerPacket.RIGHT_FLAG) != 0 &&
+                    (inputMap and ControllerPacket.RIGHT_FLAG) != 0) conn.sendMouseHScroll(1.toByte())
+                if ((changedMask and ControllerPacket.LEFT_FLAG) != 0 &&
+                    (inputMap and ControllerPacket.LEFT_FLAG) != 0) conn.sendMouseHScroll((-1).toByte())
             }
 
             conn.sendControllerInput(
@@ -1811,6 +1802,8 @@ class ControllerHandler(
                 0.toShort(), 0.toShort(), 0.toShort(), 0.toShort()
             )
         } else {
+            updateEmulatedMouseButtonsLocked(originalContext, 0)
+            updateEmulatedDpadKeysLocked(originalContext, 0)
             conn.sendControllerInput(
                 controllerNumber, getActiveControllerMask(),
                 inputMap,
@@ -2390,6 +2383,53 @@ class ControllerHandler(
 
     // ========== Mouse Emulation ==========
 
+    private fun updateEmulatedMouseButtonsLocked(context: GenericControllerContext, mask: Int) {
+        val changedMask = emulatedMouseButtonHolds.update(context, mask)
+        if ((changedMask and ControllerPacket.A_FLAG) != 0) {
+            if ((emulatedMouseButtonHolds.heldMask and ControllerPacket.A_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            }
+        }
+        if ((changedMask and ControllerPacket.B_FLAG) != 0) {
+            if ((emulatedMouseButtonHolds.heldMask and ControllerPacket.B_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+            }
+        }
+    }
+
+    internal fun releaseEmulatedMouseButtons(context: GenericControllerContext) {
+        withControllerInputLock { updateEmulatedMouseButtonsLocked(context, 0) }
+    }
+
+    private fun sendEmulatedDpadKey(flag: Int, pressed: Boolean) {
+        val keyCode = when (flag) {
+            ControllerPacket.UP_FLAG -> KeyEvent.KEYCODE_DPAD_UP
+            ControllerPacket.DOWN_FLAG -> KeyEvent.KEYCODE_DPAD_DOWN
+            ControllerPacket.LEFT_FLAG -> KeyEvent.KEYCODE_DPAD_LEFT
+            ControllerPacket.RIGHT_FLAG -> KeyEvent.KEYCODE_DPAD_RIGHT
+            else -> return
+        }
+        conn.sendKeyboardInput(mouseKeyboardTranslator.translate(keyCode, -1),
+            if (pressed) KeyboardPacket.KEY_DOWN else KeyboardPacket.KEY_UP, 0, 0)
+    }
+
+    private fun updateEmulatedDpadKeysLocked(context: GenericControllerContext, mask: Int) {
+        val changedMask = emulatedDpadHolds.update(context, mask)
+        for (flag in MOUSE_DPAD_FLAGS) {
+            if ((changedMask and flag) != 0) {
+                sendEmulatedDpadKey(flag, (emulatedDpadHolds.heldMask and flag) != 0)
+            }
+        }
+    }
+
+    internal fun releaseEmulatedDpadKeys(context: GenericControllerContext) {
+        withControllerInputLock { updateEmulatedDpadKeysLocked(context, 0) }
+    }
+
     private fun calibratedStickAxis(event: MotionEvent, axis: Int): Float {
         val value = event.getAxisValue(axis)
         val device = event.device ?: return value
@@ -2408,10 +2448,23 @@ class ControllerHandler(
         return vector
     }
 
-    internal fun sendEmulatedMouseMove(x: Short, y: Short) {
+    internal fun sendEmulatedMouseMove(context: GenericControllerContext, x: Short, y: Short) {
         val vector = convertRawStickAxisToPixelMovement(x, y)
         if (vector.magnitude >= 1) {
-            conn.sendMouseMove(vector.x.toInt().toShort(), (-vector.y).toInt().toShort())
+            if (prefConfig.controllerMouseSpeedPercent == 100) {
+                conn.sendMouseMove(vector.x.toInt().toShort(), (-vector.y).toInt().toShort())
+            } else {
+                val scale = prefConfig.controllerMouseSpeedPercent / 100.0
+                val scaledX = vector.x * scale + context.mouseEmulationRemainderX
+                val scaledY = -vector.y * scale + context.mouseEmulationRemainderY
+                val moveX = scaledX.toInt()
+                val moveY = scaledY.toInt()
+                context.mouseEmulationRemainderX = scaledX - moveX
+                context.mouseEmulationRemainderY = scaledY - moveY
+                if (moveX != 0 || moveY != 0) {
+                    conn.sendMouseMove(moveX.toShort(), moveY.toShort())
+                }
+            }
         }
     }
 

@@ -276,8 +276,8 @@
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Controlla sempre il mouse col touchpad</string>
     <string name="perf_overlay_hostprocessinglatency">Latenza di codifica da parte dell\'host min/max/average: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="title_screen_combination_mode">Impostazioni combinazione schermi</string>
-    <string name="summary_screen_combination_mode">Controllo display Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Si applica al controllo display Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Controllo display Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Si applica al controllo display Foundation Sunshine</string>
     <string name="screen_mode_host_default">Segui host</string>
     <string name="screen_mode_no_operation">Modalità nessuna operazione</string>
     <string name="screen_mode_auto_activate">Modalità attivazione</string>

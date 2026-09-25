@@ -748,6 +748,10 @@
             android:key="controller_diagnostic"
             android:title="@string/title_controller_diagnostic"
             android:summary="@string/summary_controller_diagnostic" />
+        <Preference
+            android:key="controller_mouse_settings"
+            android:title="@string/title_controller_mouse_settings"
+            android:summary="@string/summary_controller_mouse_settings" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_deadzone"
             android:defaultValue="7"
@@ -816,13 +820,6 @@
             android:title="@string/title_dualsense_wireless_bridge"
             android:summary="@string/summary_dualsense_wireless_bridge"
             android:defaultValue="false" />
-        <ListPreference
-            android:key="analog_scrolling"
-            android:title="@string/title_analog_scrolling"
-            android:summary="@string/summary_analog_scrolling"
-            android:entries="@array/analog_scrolling_names"
-            android:entryValues="@array/analog_scrolling_values"
-            android:defaultValue="right" />
         <ListPreference
             android:key="list_game_rumble_mode"
             android:title="@string/title_list_game_rumble_mode"
@@ -1136,6 +1133,10 @@
         <Preference
             android:key="about_us"
             android:title="@string/title_about_us" />
+        <Preference
+            android:key="open_source_notices"
+            android:title="@string/open_source_title"
+            android:summary="@string/open_source_intro" />
         <Preference
             android:key="check_for_updates"
             android:title="@string/check_for_updates"

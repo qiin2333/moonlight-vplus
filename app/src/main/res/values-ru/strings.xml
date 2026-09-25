@@ -272,7 +272,7 @@
     <string name="title_checkbox_control_only">Только управление</string>
     <string name="summary_checkbox_control_only">Подключение без видео и звука, только для удалённого ввода. Нужен Sunshine с поддержкой этого режима.</string>
     <string name="title_checkbox_enable_mic">Включить микрофон</string>
-    <string name="summary_checkbox_enable_mic">Передача звука микрофона на ПК. Нужен Sunshine Foundation 20260117 или новее.</string>
+    <string name="summary_checkbox_enable_mic">Передача звука микрофона на ПК. Нужен Foundation Sunshine 2025.0720 или новее.</string>
     <string name="title_list_mic_initial_state">Микрофон при запуске</string>
     <string name="summary_list_mic_initial_state">Состояние микрофона в начале каждой трансляции.</string>
     <string name="mic_initial_state_off">Выкл.</string>
@@ -613,8 +613,8 @@
     <string name="title_checkbox_clipboard_sync_image">Синхронизация изображений</string>
     <string name="summary_checkbox_clipboard_sync_image">Передавать изображения из буфера на ПК. Большие снимки экрана могут расходовать много трафика.</string>
     <string name="title_screen_combination_mode">Расположение экранов ПК</string>
-    <string name="summary_screen_combination_mode">Управление экранами и их объединением. Нужен совместимый Sunshine Base.</string>
-    <string name="screen_combination_mode_dialog_subtitle">Управление экранами Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Управление экранами и их объединением. Нужен совместимый Foundation Sunshine.</string>
+    <string name="screen_combination_mode_dialog_subtitle">Управление экранами Foundation Sunshine</string>
     <string name="screen_mode_host_default">Как на ПК</string>
     <string name="screen_mode_no_operation">Без изменений</string>
     <string name="screen_mode_auto_activate">Активировать</string>
@@ -980,7 +980,7 @@
     <string name="tip_volume_keys">💡 Wi-Fi 5 ГГц обеспечивает более быструю трансляцию.</string>
     <string name="tip_wallpaper_change">💡 В настройке API обоев можно указать источник случайных изображений или ссылку на одно изображение.</string>
     <string name="tip_5ghz_wifi">💡 Режим вывода кадров «Баланс» сочетает плавность и низкую задержку.</string>
-    <string name="tip_close_apps">💡 HDR улучшает цвет и контраст. В Sunshine Base можно привязать HDR-профиль для более точного соответствия экрану клиента.</string>
+    <string name="tip_close_apps">💡 HDR улучшает цвет и контраст. В Foundation Sunshine можно привязать HDR-профиль для более точного соответствия экрану клиента.</string>
     <string name="tip_home_saves">💡 Пять акул на главном экране позволяют сохранять и переключать настройки трансляции.</string>
     <string name="tip_hdr_colors">💡 Подберите разрешение для баланса качества и производительности.</string>
     <string name="tip_touch_modes">💡 Меняйте сенсорный режим в игровом меню. Улучшенный мультитач подходит для мобильных игр, тачпад — для работы.</string>
@@ -1401,7 +1401,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">Задержка:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">Трафик (Rx/Tx):</string>
     <string name="layout_game_menu_super_empty_text_a7970">Суперкоманд пока нет</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">Создайте суперкоманды в Sunshine Foundation Edition.</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">Создайте суперкоманды в Foundation Sunshine Edition.</string>
     <string name="game_menu_super_commands">Суперкоманды</string>
     <string name="layout_item_key_value_text_0952a">Раздел 1</string>
     <string name="layout_item_key_value_hint_dd44f">Имя раздела; пустое — имя клавиши</string>

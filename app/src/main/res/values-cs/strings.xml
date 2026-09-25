@@ -244,8 +244,8 @@
     <string name="summary_frame_pacing">Zvolte, jak vyvážit zpoždění videa a jeho plynulost</string>
     <string name="pacing_latency">Preferovat nejnižší zpoždění</string>
     <string name="title_screen_combination_mode">Nastavení kombinace obrazovek</string>
-    <string name="summary_screen_combination_mode">Ovládání displejů Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Platí pro ovládání displejů Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Ovládání displejů Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Platí pro ovládání displejů Foundation Sunshine</string>
     <string name="screen_mode_host_default">Řídit se hostitelem</string>
     <string name="screen_mode_no_operation">Režim bez zásahu</string>
     <string name="screen_mode_auto_activate">Režim aktivace</string>
