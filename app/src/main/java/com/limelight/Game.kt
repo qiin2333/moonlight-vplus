@@ -1550,6 +1550,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // Game was paused are silently dropped. Re-poll on focus regain.
             clipboardSyncManager?.onFocusGained()
         }
+        // The system USB permission dialog is a window of its own: this tells
+        // the prompt whether it still has the screen to itself.
+        usbForwarding?.onFocusChanged(hasFocus)
     }
 
     private fun selectDisplayModeForRendering(

@@ -21,7 +21,7 @@
     <string name="usb_forward_failed">USB 转发已停止，请检查主机和网络。</string>
     <string name="usb_forward_unconfigured">请先与此主机完成配对，再使用 USB 转发。</string>
     <string name="usb_forward_target">共享到：%1$s</string>
-    <string name="usb_forward_usage">共享期间设备交由电脑使用，结束串流后自动恢复本机使用。一次可共享一个 USB 设备。</string>
+    <string name="usb_forward_usage">共享期间设备交由电脑使用，结束串流后自动恢复本机使用。</string>
     <string name="usb_forward_empty">尚未发现 USB 设备，请直接连接外设或通过 USB 集线器接入。</string>
     <string name="usb_forward_local">本机可用</string>
     <string name="usb_forward_share">共享到电脑</string>
@@ -29,7 +29,10 @@
     <string name="usb_forward_detached">设备已拔出，共享已停止。</string>
     <string name="usb_forward_handoff">正在释放本地手柄驱动…</string>
     <string name="usb_forward_wireless_adapter">暂不支持转发蓝牙 USB 适配器。</string>
-    <string name="usb_forward_duplicate_device">存在厂商和产品 ID 相同的 USB 设备，请拔掉重复设备后再共享。</string>
+    <string name="usb_forward_duplicate_device">存在厂商和产品 ID 相同的其它已连接设备。Android 无法区分它们，共享其中一台时另一台在本机也不会收到输入。</string>
+    <string name="usb_forward_failed_short">共享失败</string>
+    <string name="usb_forward_host_releasing">主机仍在释放该设备，请稍后再试。</string>
+    <string name="usb_forward_host_attach_failed">主机未能挂载该设备，请在主机上重启 Sunshine 后重试。</string>
     <string name="usb_forward_experimental">实验性</string>
     <string name="usb_forward_toggle_title">USB 共享</string>
     <string name="usb_forward_toggle_hint">仅对此电脑启用</string>
