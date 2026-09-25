@@ -109,6 +109,7 @@ import android.view.View.OnTouchListener
 import android.view.Window
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.view.inputmethod.InputMethodManager
@@ -227,6 +228,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val startHoldWheelVisible = mutableStateOf(false)
     private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
+    /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
+    private var virtualControllerVisibleBeforeStop: Boolean? = null
+    private var pendingPipExitSnapshot: PipInteractiveOverlaySnapshot? = null
+    private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -1251,9 +1256,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        if (::floatBallHandler.isInitialized &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
+            !pipInteractiveOverlayState.isActive() &&
+            pendingPipExitSnapshot == null &&
+            floatBallHandler.isRequestedVisible()
+        ) {
+            floatBallHandler.show()
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Reconcile OEM callback gaps after rapid PiP transitions.
-            applyPictureInPictureUiState(isInPictureInPictureMode)
+            applyPictureInPictureUiState(isInPictureInPictureMode, activityResumed = true)
         }
         if (audioVibrationService != null) {
             updateAudioHapticsRuntimeEnabled(true)
@@ -1269,11 +1282,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
-        }
-        if (::floatBallHandler.isInitialized &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
-        ) {
-            floatBallHandler.show()
         }
     }
 
@@ -1329,13 +1337,24 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         applyPictureInPictureUiState(isInPictureInPictureMode)
     }
 
-    private fun applyPictureInPictureUiState(inPictureInPicture: Boolean) {
+    private fun applyPictureInPictureUiState(
+        inPictureInPicture: Boolean,
+        activityResumed: Boolean = lifecycle.currentState.isAtLeast(
+            androidx.lifecycle.Lifecycle.State.RESUMED
+        )
+    ) {
         if (inPictureInPicture) {
+            val pendingSnapshot = pendingPipExitSnapshot
+            if (pendingSnapshot != null) {
+                cancelPendingPipOverlayRestore()
+            }
             val isFirstEntry = pipInteractiveOverlayState.enter(
-                PipInteractiveOverlaySnapshot(
+                pendingSnapshot ?: PipInteractiveOverlaySnapshot(
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
-                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE
+                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE,
+                    floatBallVisible = ::floatBallHandler.isInitialized &&
+                            floatBallHandler.isRequestedVisible()
                 )
             )
             enforcePictureInPictureUiState()
@@ -1345,7 +1364,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return
         }
 
-        val snapshot = pipInteractiveOverlayState.exit() ?: return
+        val snapshot = pipInteractiveOverlayState.exitIfResumed(activityResumed) ?: return
+        // onResume may arrive while the platform still reports PiP. In that
+        // order, the later PiP exit callback must restore the floating window.
+        if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
+            activityResumed
+        ) {
+            schedulePipOverlayRestore(snapshot)
+        }
+
         if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
             virtualController?.show()
         } else {
@@ -1361,18 +1388,58 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         notificationOverlayManager.setHiding(false)
         notificationOverlayManager.applyVisibility()
         microphoneManager?.setEnableMic(prefConfig.enableMic)
-        if (!snapshot.microphoneButtonVisible) {
-            micButton?.visibility = View.GONE
-        }
+        micButton?.visibility = if (
+            snapshot.microphoneButtonVisible && prefConfig.enableMic
+        ) View.VISIBLE else View.GONE
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
+    }
+
+    private fun schedulePipOverlayRestore(snapshot: PipInteractiveOverlaySnapshot) {
+        cancelPendingPipOverlayRestore()
+        pendingPipExitSnapshot = snapshot
+        val generation = ++pipOverlayRestoreGeneration
+        fun restoreAfterWindowExit() {
+            window.decorView.doOnPreDraw {
+                if (generation != pipOverlayRestoreGeneration || isFinishing || isDestroyed) {
+                    return@doOnPreDraw
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) {
+                    // Some OEMs report the PiP exit callback before the window
+                    // leaves PiP. Keep waiting instead of losing the snapshot.
+                    window.decorView.postOnAnimation { restoreAfterWindowExit() }
+                    return@doOnPreDraw
+                }
+                val activityResumed = lifecycle.currentState.isAtLeast(
+                    androidx.lifecycle.Lifecycle.State.RESUMED
+                )
+                if (!activityResumed) {
+                    pendingPipExitSnapshot = null
+                    return@doOnPreDraw
+                }
+
+                pendingPipExitSnapshot = null
+                if (snapshot.floatBallVisible) {
+                    floatBallHandler.show()
+                } else {
+                    floatBallHandler.hide()
+                }
+            }
+        }
+        restoreAfterWindowExit()
+    }
+
+    private fun cancelPendingPipOverlayRestore() {
+        pipOverlayRestoreGeneration++
+        pendingPipExitSnapshot = null
     }
 
     private fun enforcePictureInPictureUiState() {
         virtualController?.hide()
         controllerManager?.hide()
         micButton?.visibility = View.GONE
-        if (::floatBallHandler.isInitialized) floatBallHandler.hide()
+        if (::floatBallHandler.isInitialized) floatBallHandler.suppress()
+        controllerShortcutHintView?.visibility = View.GONE
         hideStartHoldWheel()
         performanceOverlayManager?.hideOverlayImmediate()
         jitterMonitorManager?.hideImmediate()
@@ -1629,7 +1696,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         updateAudioHapticsRuntimeEnabled(false)
         audioVibrationService?.stop()
         if (::floatBallHandler.isInitialized) {
-            floatBallHandler.hide()
+            floatBallHandler.suppress()
         }
         KeyboardAccessibilityService.setIntercepting(false)
         KeyboardAccessibilityService.instance?.keyEventCallback = null
@@ -1755,6 +1822,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         activeGameMenu?.dismiss()
         activeGameMenu = null
 
+        if (!isFinishing) {
+            virtualControllerVisibleBeforeStop =
+                pipInteractiveOverlayState.virtualControllerVisibleForStop(isVirtualControllerVisible())
+        }
         if (virtualController != null) {
             virtualController?.hide()
         }
@@ -2156,6 +2227,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onStart() {
         super.onStart()
 
+        val stoppedVirtualControllerVisibility = restoreVirtualControllerAfterStop()
+
         if (!isStreamingActive && streamStartTime > 0) {
             lastActiveTime = System.currentTimeMillis()
             isStreamingActive = true
@@ -2170,6 +2243,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 progressOverlay = null
             }
             hideSystemUi(500)
+            finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
             return
         }
 
@@ -2185,6 +2259,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 prepareConnection()
             } catch (e: Exception) {
                 LimeLog.severe("Failed to prepare connection: ${e.message}")
+                finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
                 finish()
                 return
             }
@@ -2197,6 +2272,22 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             streamView.requestLayout()
             streamView.invalidate()
         }
+        finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
+    }
+
+    private fun restoreVirtualControllerAfterStop(): Boolean? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) return null
+        return virtualControllerVisibleBeforeStop
+    }
+
+    private fun finalizeVirtualControllerAfterStop(wasVisible: Boolean?) {
+        if (wasVisible == null) return
+        if (wasVisible && prefConfig.onscreenController) {
+            virtualController?.show()
+        } else {
+            virtualController?.hide()
+        }
+        virtualControllerVisibleBeforeStop = null
     }
 
     override fun displayMessage(message: String) {

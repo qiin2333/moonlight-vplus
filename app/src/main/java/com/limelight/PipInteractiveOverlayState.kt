@@ -3,7 +3,8 @@ package com.limelight
 internal data class PipInteractiveOverlaySnapshot(
     val virtualControllerVisible: Boolean,
     val crownControllerVisible: Boolean,
-    val microphoneButtonVisible: Boolean
+    val microphoneButtonVisible: Boolean,
+    val floatBallVisible: Boolean
 )
 
 internal class PipInteractiveOverlayState {
@@ -15,7 +16,11 @@ internal class PipInteractiveOverlayState {
         return true
     }
 
-    fun exit(): PipInteractiveOverlaySnapshot? = snapshot.also { snapshot = null }
+    fun exitIfResumed(isResumed: Boolean): PipInteractiveOverlaySnapshot? =
+        if (isResumed) snapshot?.also { snapshot = null } else null
+
+    fun virtualControllerVisibleForStop(currentVisible: Boolean): Boolean =
+        snapshot?.virtualControllerVisible ?: currentVisible
 
     fun isActive(): Boolean = snapshot != null
 }

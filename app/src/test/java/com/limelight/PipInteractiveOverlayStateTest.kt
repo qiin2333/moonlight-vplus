@@ -13,18 +13,24 @@ class PipInteractiveOverlayStateTest {
         val original = PipInteractiveOverlaySnapshot(
             virtualControllerVisible = true,
             crownControllerVisible = true,
-            microphoneButtonVisible = false
+            microphoneButtonVisible = false,
+            floatBallVisible = true
         )
         assertTrue(state.enter(original))
+        assertEquals(true, state.virtualControllerVisibleForStop(false))
+        assertNull(state.exitIfResumed(false))
+        assertTrue(state.isActive())
         assertFalse(state.enter(
             PipInteractiveOverlaySnapshot(
                 virtualControllerVisible = false,
                 crownControllerVisible = false,
-                microphoneButtonVisible = false
+                microphoneButtonVisible = false,
+                floatBallVisible = false
             )
         ))
 
-        assertEquals(original, state.exit())
+        assertEquals(original, state.exitIfResumed(true))
+        assertEquals(false, state.virtualControllerVisibleForStop(false))
         assertFalse(state.isActive())
     }
 
@@ -32,21 +38,21 @@ class PipInteractiveOverlayStateTest {
     fun exitWithoutEnterDoesNothing() {
         val state = PipInteractiveOverlayState()
 
-        assertNull(state.exit())
+        assertNull(state.exitIfResumed(true))
         assertFalse(state.isActive())
     }
 
     @Test
     fun rapidExitAndReentryCaptureFreshVisibility() {
         val state = PipInteractiveOverlayState()
-        val first = PipInteractiveOverlaySnapshot(true, false, true)
+        val first = PipInteractiveOverlaySnapshot(true, false, true, true)
         assertTrue(state.enter(first))
         assertTrue(state.isActive())
-        assertEquals(first, state.exit())
+        assertEquals(first, state.exitIfResumed(true))
 
-        val next = PipInteractiveOverlaySnapshot(false, true, false)
+        val next = PipInteractiveOverlaySnapshot(false, true, false, false)
         assertTrue(state.enter(next))
 
-        assertEquals(next, state.exit())
+        assertEquals(next, state.exitIfResumed(true))
     }
 }
