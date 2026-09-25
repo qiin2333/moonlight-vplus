@@ -1,22 +1,32 @@
 package com.limelight.utils
 
 import android.app.Activity
+import android.content.Context
+import android.os.Build
 import android.os.SystemClock
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewTreeObserver
+import android.view.inputmethod.InputMethodManager
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.limelight.LimeLog
 import com.limelight.nvstream.RemoteTextContext
 import com.limelight.nvstream.RemoteTextContextPolicy
 import com.limelight.nvstream.ImeAvoidanceSession
 import com.limelight.ui.StreamView
 
-/** Avoids a manually opened IME. Host observations never request keyboard display. */
+/**
+ * Avoids the open IME over the host's focused field. On API 33+ a trusted host
+ * activation may also open the keyboard; the view's auto-handwriting shield keeps
+ * stylus strokes on the video remote, so the temporary input connection stays safe.
+ */
 class RemoteImeController(
     private val activity: Activity,
     private val streamView: StreamView,
     private val panZoomHandler: PanZoomHandler,
+    // Defaults to false so direct constructions keep the advisory-only contract.
+    private val autoShowEnabled: Boolean = false,
 ) : ViewTreeObserver.OnGlobalLayoutListener {
     private var latestContext: RemoteTextContext? = null
     private var latestRevision = -1L
@@ -25,6 +35,13 @@ class RemoteImeController(
     @Volatile private var disposed = false
     private var generation = 0L
     private val avoidanceSession = ImeAvoidanceSession()
+    private val canAutoShow = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    // Records the activation that already received its automatic show chance, so
+    // later revisions of the same activation never re-open against a dismissal.
+    private var autoShownActivationId = 0L
+    // True while the visible IME is owned by an automatic show; cleared when the
+    // IME is dismissed so a manually reopened keyboard is never auto-hidden.
+    private var autoOwned = false
 
     init {
         // Freeze the temporary offset on a real pan/scale, without changing the
@@ -42,6 +59,11 @@ class RemoteImeController(
         if (disposed) return
         activity.runOnUiThread {
             if (disposed) return@runOnUiThread
+            LimeLog.info(
+                "RemoteIme: context rev=${context.revision} act=${context.activationId} " +
+                    "source=${context.source} cause=${context.cause} flags=0x" +
+                    Integer.toHexString(context.flags)
+            )
             val revision = context.revision.toLong() and 0xffff_ffffL
             if (latestRevision >= 0 && !RemoteTextContextPolicy.isNewerRevision(revision, latestRevision)) return@runOnUiThread
             val activeActivationId = latestContext?.activationId ?: 0L
@@ -51,6 +73,11 @@ class RemoteImeController(
                 latestContext = null
                 avoidanceSession.invalidateTarget()
                 if (!avoidanceSession.userControlled) panZoomHandler.setImeOffsetY(0f)
+                if (autoOwned) {
+                    autoOwned = false
+                    (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                        ?.hideSoftInputFromWindow(streamView.windowToken, 0)
+                }
                 return@runOnUiThread
             }
             if (!RemoteTextContextPolicy.isTrustedActivation(context)) return@runOnUiThread
@@ -63,13 +90,45 @@ class RemoteImeController(
                 context.hasFlag(RemoteTextContext.FLAG_PASSWORD),
                 context.hasFlag(RemoteTextContext.FLAG_MULTILINE),
             )
-            // UIA and InputPane are advisory geometry, not proof of editing intent.
-            // Do not steal focus or restart an ongoing manual IME composition.
+            // Geometry stays advisory: never restart an in-flight manual IME
+            // composition. Auto-show binds to a fresh trusted activation.
+            if (canAutoShow && autoShowEnabled) maybeShow(context, acceptedGeneration)
             ViewCompat.requestApplyInsets(streamView)
             streamView.post {
                 if (!disposed && generation == acceptedGeneration) {
                     updateAvoidance(ViewCompat.getRootWindowInsets(streamView))
                 }
+            }
+        }
+    }
+
+    private fun maybeShow(context: RemoteTextContext, acceptedGeneration: Long) {
+        if (autoShownActivationId == context.activationId) return
+        if (ViewCompat.getRootWindowInsets(streamView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        ) {
+            // The open keyboard already covers this activation. While it is ours,
+            // rebind it so the new activation's deactivation hides it; a manual
+            // keyboard stays under the user's control.
+            if (autoOwned) autoShownActivationId = context.activationId
+            return
+        }
+        // Android needs both window and view focus for showSoftInput; without
+        // window focus the request is doomed, so retry on a later revision.
+        if (!streamView.hasWindowFocus()) return
+        autoShownActivationId = context.activationId
+        autoOwned = true
+        streamView.setTextInputEnabled(true)
+        streamView.isFocusableInTouchMode = true
+        streamView.requestFocus()
+        streamView.post {
+            if (disposed || generation != acceptedGeneration) return@post
+            val shown = (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                ?.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT) == true
+            if (!shown) {
+                // Rejected outright; let a later revision of this activation retry.
+                autoOwned = false
+                autoShownActivationId = 0L
             }
         }
     }
@@ -101,6 +160,9 @@ class RemoteImeController(
             imeWasVisible = true
         } else if (imeWasVisible) {
             imeWasVisible = false
+            // Dismissal ends automatic ownership; the per-activation record stays
+            // so the same activation is not auto-shown against the user again.
+            autoOwned = false
             streamView.setTextInputEnabled(false)
         }
         avoidanceSession.updateVisibility(
@@ -142,9 +204,17 @@ class RemoteImeController(
     fun dispose() {
         disposed = true
         generation++
+        // restartInput() from setTextInputEnabled(false) rebinds but never hides
+        // the IME; issue the same dismissal resetSession uses before tearing down.
+        if (autoOwned) {
+            autoOwned = false
+            (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                ?.hideSoftInputFromWindow(streamView.windowToken, 0)
+        }
         latestContext = null
         latestInsets = null
         imeWasVisible = false
+        autoShownActivationId = 0L
         streamView.setTextInputEnabled(false)
         avoidanceSession.reset()
         panZoomHandler.onUserTransform = null
@@ -163,6 +233,12 @@ class RemoteImeController(
             latestRevision = -1L
             latestInsets = null
             imeWasVisible = false
+            if (autoOwned) {
+                autoOwned = false
+                (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                    ?.hideSoftInputFromWindow(streamView.windowToken, 0)
+            }
+            autoShownActivationId = 0L
             streamView.setTextInputEnabled(false)
             avoidanceSession.reset()
             panZoomHandler.setImeOffsetY(0f)

@@ -3293,6 +3293,11 @@ class StreamSettings : ThemedAppCompatActivity() {
                 category.removePreference(findPreference("checkbox_gamepad_motion_fallback")!!)
             }
 
+            // Remote text field auto-show needs the API 33 auto-handwriting shield.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                findPreference<Preference>("checkbox_remote_ime_auto_show")?.isVisible = false
+            }
+
             // Hide USB driver options on devices without USB host support
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
                 findPreference<Preference>("checkbox_experimental_haptic_protocols")?.isVisible = false
