@@ -109,7 +109,7 @@
     <string name="summary_checkbox_disable_warnings">Wyłączanie wyświetlanych na ekranie komunikatów ostrzegawczych o połączeniu podczas przesyłania strumieniowego</string>
     <string name="title_disable_frame_drop">Nigdy nie porzucaj klatek</string>
     <string name="title_video_format">Zmiana ustawień kodeka</string>
-    <string name="summary_video_format">Nie wiesz, co wybrać? HEVC jest zalecany dla większości nowoczesnych urządzeń i zwykle zapewnia dobry kompromis między jakością obrazu, przepustowością i HDR. AV1 może oszczędzać przepustowość, jeśli obsługują go obie strony, ale na niektórych urządzeniach może mieć większe opóźnienie dekodowania. H.264 ma najlepszą zgodność, ale wymaga większej przepustowości i nie obsługuje HDR.</string>
+    <string name="summary_video_format">Nie wiesz, co wybrać? Użyj opcji Automatycznie. HEVC jest zalecany dla większości nowoczesnych urządzeń i zwykle zapewnia dobry kompromis między jakością obrazu, przepustowością i HDR. AV1 może oszczędzać przepustowość, jeśli obsługują go obie strony, ale na niektórych urządzeniach może mieć większe opóźnienie dekodowania. H.264 ma najlepszą zgodność, ale wymaga większej przepustowości i nie obsługuje HDR.</string>
     <string name="summary_disable_frame_drop">Może zmniejszyć mikroprzycięcia na niektórych urządzeniach, ale może zwiększyć opóźnienia</string>
     <string name="title_enable_hdr">Włącz HDR (eksperymentalnie)</string>
     <string name="summary_enable_hdr">Przesyłaj strumieniowo HDR, gdy gra i procesor graficzny komputera obsługują tę funkcję. HDR wymaga GPU z obsługą kodowania HEVC Main 10.</string>

@@ -217,7 +217,7 @@
     <string name="summary_osc_opacity">Deixe os controles de tela mais/menos transparentes</string>
     <string name="title_reset_osc">Limpar o layout salvo dos controles de tela</string>
     <string name="title_video_format">Mudar configurações do HEVC</string>
-    <string name="summary_video_format">Não sabe qual escolher? O HEVC é recomendado para a maioria dos dispositivos modernos e normalmente equilibra qualidade de imagem, largura de banda e HDR. O AV1 pode economizar largura de banda se for compatível nos dois lados, mas pode apresentar maior latência de decodificação em alguns dispositivos. O H.264 tem a melhor compatibilidade, mas exige mais largura de banda e não oferece suporte a HDR.</string>
+    <string name="summary_video_format">Não sabe qual escolher? Use Automático. O HEVC é recomendado para a maioria dos dispositivos modernos e normalmente equilibra qualidade de imagem, largura de banda e HDR. O AV1 pode economizar largura de banda se for compatível nos dois lados, mas pode apresentar maior latência de decodificação em alguns dispositivos. O H.264 tem a melhor compatibilidade, mas exige mais largura de banda e não oferece suporte a HDR.</string>
     <string name="summary_checkbox_disable_warnings">Desativa as mensagens de aviso de conexão na tela durante a transmissão</string>
     <string name="title_disable_frame_drop">Nunca dropar quadros</string>
     <string name="summary_disable_frame_drop">Talvez reduza o micro-stuttering em alguns dispositivos, mas pode aumentar a latência</string>

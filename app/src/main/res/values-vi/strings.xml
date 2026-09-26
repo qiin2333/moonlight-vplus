@@ -4,7 +4,7 @@
     <string name="title_enable_post_stream_toast">Hiện thông báo độ trễ sau khi stream</string>
     <string name="summary_enable_hdr">Stream HDR khi trò chơi và GPU của PC hỗ trợ nó. HDR yêu cầu GPU GTX series 1000 hoặc mới hơn.</string>
     <string name="title_enable_hdr">Bật HDR (Thử nghiệm)</string>
-    <string name="summary_video_format">Không biết nên chọn gì? HEVC được khuyên dùng cho hầu hết thiết bị hiện đại và thường cân bằng tốt giữa chất lượng hình ảnh, băng thông và HDR. AV1 có thể tiết kiệm băng thông khi cả hai đầu đều hỗ trợ, nhưng có thể gây độ trễ giải mã cao hơn trên một số thiết bị. H.264 tương thích tốt nhất, nhưng cần nhiều băng thông hơn và không hỗ trợ HDR.</string>
+    <string name="summary_video_format">Không biết nên chọn gì? Hãy dùng Tự động. HEVC được khuyên dùng cho hầu hết thiết bị hiện đại và thường cân bằng tốt giữa chất lượng hình ảnh, băng thông và HDR. AV1 có thể tiết kiệm băng thông khi cả hai đầu đều hỗ trợ, nhưng có thể gây độ trễ giải mã cao hơn trên một số thiết bị. H.264 tương thích tốt nhất, nhưng cần nhiều băng thông hơn và không hỗ trợ HDR.</string>
     <string name="title_video_format">Thay đổi cài đặt HEVC</string>
     <string name="summary_disable_frame_drop">Có thể làm giảm sự khựng nhỏ trên một số thiết bị, nhưng có thể làm tăng độ trễ</string>
     <string name="title_disable_frame_drop">Không bao giờ giảm khung hình</string>

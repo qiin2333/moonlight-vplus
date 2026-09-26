@@ -163,7 +163,7 @@
     <string name="summary_enable_post_stream_toast">Vis en informasjonsmelding om latens etter at strømmen sluttføres</string>
     <string name="title_enable_post_stream_toast">Vis latensmelding etter strømming</string>
     <string name="title_enable_hdr">Skru på HDR (eksperimentelt)</string>
-    <string name="summary_video_format">Usikker på hva du bør velge? HEVC anbefales for de fleste moderne enheter og gir vanligvis en god balanse mellom bildekvalitet, båndbredde og HDR. AV1 kan spare båndbredde når begge sider støtter det, men kan gi høyere dekodingsforsinkelse på enkelte enheter. H.264 har best kompatibilitet, men krever mer båndbredde og støtter ikke HDR.</string>
+    <string name="summary_video_format">Usikker på hva du bør velge? Bruk Automatisk. HEVC anbefales for de fleste moderne enheter og gir vanligvis en god balanse mellom bildekvalitet, båndbredde og HDR. AV1 kan spare båndbredde når begge sider støtter det, men kan gi høyere dekodingsforsinkelse på enkelte enheter. H.264 har best kompatibilitet, men krever mer båndbredde og støtter ikke HDR.</string>
     <string name="summary_disable_frame_drop">Kan redusere mikro-hakking på noen enheter, men kan øke latens</string>
     <string name="summary_checkbox_disable_warnings">Skru av visning av tilkoblingsadvarsler på skjermen under strømming</string>
     <string name="summary_unlock_fps">Strømming i 90 eller 120 BPS kan redusere latens på flaggskipsenheter, men kan forårsake forsinkelser eller ustabilitet på enheter som ikke klarer det.</string>

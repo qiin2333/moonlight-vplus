@@ -107,7 +107,7 @@
     <string name="summary_checkbox_host_audio">Reproducir audio en el ordenador y en este dispositivo</string>
     <string name="category_advanced_settings">Configuración avanzada</string>
     <string name="title_video_format">Cambiar la configuración del códec</string>
-    <string name="summary_video_format">¿No sabes cuál elegir? HEVC se recomienda para la mayoría de dispositivos modernos y suele equilibrar calidad de imagen, ancho de banda y HDR; AV1 puede ahorrar ancho de banda si ambos extremos lo admiten, pero en algunos dispositivos puede tener mayor latencia de decodificación; H.264 ofrece la mejor compatibilidad, pero necesita más ancho de banda y no admite HDR.</string>
+    <string name="summary_video_format">¿No sabes cuál elegir? Usa Automático. HEVC se recomienda para la mayoría de dispositivos modernos y suele equilibrar calidad de imagen, ancho de banda y HDR; AV1 puede ahorrar ancho de banda si ambos extremos lo admiten, pero en algunos dispositivos puede tener mayor latencia de decodificación; H.264 ofrece la mejor compatibilidad, pero necesita más ancho de banda y no admite HDR.</string>
     <!-- Array strings -->
     <string name="videoformat_auto">Automático (Recomendado)</string>
     <string name="videoformat_hevcalways">Preferir HEVC</string>

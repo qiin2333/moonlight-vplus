@@ -183,7 +183,7 @@
     <string name="title_disable_frame_drop">Ne jamais perdre d\'images</string>
     <string name="summary_disable_frame_drop">Peut réduire les micro-saccades sur certains appareils, mais peut augmenter la latence</string>
     <string name="title_video_format">Modifier les paramètres de codec</string>
-    <string name="summary_video_format">Vous ne savez pas quoi choisir ? HEVC est recommandé pour la plupart des appareils modernes et offre généralement un bon équilibre entre qualité d’image, bande passante et HDR ; AV1 peut économiser de la bande passante si les deux côtés le prennent en charge, mais son décodage peut être plus lent sur certains appareils ; H.264 offre la meilleure compatibilité, mais nécessite davantage de bande passante et ne prend pas en charge le HDR.</string>
+    <string name="summary_video_format">Vous ne savez pas quoi choisir ? Utilisez Automatique. HEVC est recommandé pour la plupart des appareils modernes et offre généralement un bon équilibre entre qualité d’image, bande passante et HDR ; AV1 peut économiser de la bande passante si les deux côtés le prennent en charge, mais son décodage peut être plus lent sur certains appareils ; H.264 offre la meilleure compatibilité, mais nécessite davantage de bande passante et ne prend pas en charge le HDR.</string>
     <string name="title_enable_hdr">Activer le HDR (expérimental)</string>
     <string name="summary_enable_hdr">Diffuser du HDR lorsque le jeu et le processeur graphique du PC le prennent en charge. HDR nécessite un GPU série GTX 1000 ou une version ultérieure.</string>
     <string name="title_enable_post_stream_toast">Afficher le message de latence après la diffusion en continu</string>

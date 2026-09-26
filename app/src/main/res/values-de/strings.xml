@@ -190,7 +190,7 @@
     <string name="summary_checkbox_disable_warnings">On-Screen Warnmeldungen während des Streaming deaktivieren</string>
     <string name="summary_disable_frame_drop">Kann das Mikro-Ruckeln auf einigen Geräten reduzieren, allerdings erhöht dies gleichzeitig die Latenz</string>
     <string name="title_video_format">HEVC Einstellungen ändern</string>
-    <string name="summary_video_format">Unsicher, was du wählen sollst? HEVC wird für die meisten modernen Geräte empfohlen und bietet meist ein gutes Gleichgewicht aus Bildqualität, Bandbreite und HDR; AV1 kann bei Unterstützung auf beiden Seiten Bandbreite sparen, verursacht auf manchen Geräten aber eine höhere Dekodierlatenz; H.264 ist am kompatibelsten, benötigt jedoch mehr Bandbreite und unterstützt kein HDR.</string>
+    <string name="summary_video_format">Unsicher, was du wählen sollst? Verwende „Automatisch“. HEVC wird für die meisten modernen Geräte empfohlen und bietet meist ein gutes Gleichgewicht aus Bildqualität, Bandbreite und HDR; AV1 kann bei Unterstützung auf beiden Seiten Bandbreite sparen, verursacht auf manchen Geräten aber eine höhere Dekodierlatenz; H.264 ist am kompatibelsten, benötigt jedoch mehr Bandbreite und unterstützt kein HDR.</string>
     <string name="title_enable_hdr">HDR aktivieren (experimentell)</string>
     <string name="summary_enable_hdr">HDR-Streaming sofern dies von der Host-GPU unterstützt wird. HDR erfordert eine GPU der GTX 1000 Serie oder neuer.</string>
     <string name="title_enable_post_stream_toast">Zeige Latenz-Informationen nach dem Streaming</string>

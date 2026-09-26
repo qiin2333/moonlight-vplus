@@ -228,5 +228,5 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Peningkatan suara</string>
     <string name="summary_checkbox_mic_voice_enhancement">Mengurangi derau frekuensi rendah dan meningkatkan kejernihan ucapan. Tersedia dalam mode penguatan tetap dan penyeimbangan volume.</string>
-    <string name="summary_video_format">Bingung memilih yang mana? HEVC direkomendasikan untuk sebagian besar perangkat modern dan biasanya menyeimbangkan kualitas gambar, bandwidth, dan HDR; AV1 dapat menghemat bandwidth jika didukung kedua sisi, tetapi pada beberapa perangkat latensi dekodenya bisa lebih tinggi; H.264 paling kompatibel, tetapi memerlukan bandwidth lebih besar dan tidak mendukung HDR.</string>
+    <string name="summary_video_format">Bingung memilih yang mana? Gunakan Otomatis. HEVC direkomendasikan untuk sebagian besar perangkat modern dan biasanya menyeimbangkan kualitas gambar, bandwidth, dan HDR; AV1 dapat menghemat bandwidth jika didukung kedua sisi, tetapi pada beberapa perangkat latensi dekodenya bisa lebih tinggi; H.264 paling kompatibel, tetapi memerlukan bandwidth lebih besar dan tidak mendukung HDR.</string>
 </resources>

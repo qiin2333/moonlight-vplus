@@ -534,7 +534,7 @@
     <string name="title_disable_frame_drop"> 永不掉帧 </string>
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟。 </string>
     <string name="title_video_format">视频编解码器</string>
-    <string name="summary_video_format">不确定怎么选？大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
+    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
     <string name="title_enable_hdr">启用 HDR</string>
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用屏幕最高亮度</string>

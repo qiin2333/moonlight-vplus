@@ -19,6 +19,4 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">بهبود گفتار</string>
     <string name="summary_checkbox_mic_voice_enhancement">نویز فرکانس پایین را کاهش می‌دهد و وضوح گفتار را بهبود می‌بخشد. در حالت افزایش ثابت و متعادل‌سازی صدا در دسترس است.</string>
-    <string name="summary_seekbar_bitrate"></string>
-    <string name="summary_video_format"></string>
 </resources>

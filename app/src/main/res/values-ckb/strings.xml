@@ -19,6 +19,4 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">باشترکردنی دەنگ</string>
     <string name="summary_checkbox_mic_voice_enhancement">ژاوەژاوی نزم-فریکوێنسی کەم دەکاتەوە و ڕوونی قسەکردن باشتر دەکات. لە دۆخی زیادکردنی جێگیر و هاوسەنگکردنی دەنگ بەردەستە.</string>
-    <string name="summary_seekbar_bitrate"></string>
-    <string name="summary_video_format"></string>
 </resources>

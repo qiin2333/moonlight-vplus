@@ -4,7 +4,7 @@
     <string name="title_enable_post_stream_toast">A késleltetési üzenet megjelenítése streaming után</string>
     <string name="summary_enable_hdr">Streaming HDR, amikor a játék és a PC GPU támogatja. A HDR-hez GTX 1000 sorozatú vagy újabb verzió szükséges.</string>
     <string name="title_enable_hdr">HDR engedélyezése (kísérleti)</string>
-    <string name="summary_video_format">Nem tudja, mit válasszon? A legtöbb modern eszközhöz a HEVC ajánlott, mert általában jól egyensúlyoz a képminőség, a sávszélesség és a HDR között; az AV1 mindkét oldali támogatás esetén sávszélességet takaríthat meg, de egyes eszközökön nagyobb dekódolási késleltetést okozhat; a H.264 kompatibilitása a legjobb, de több sávszélességet igényel és nem támogatja a HDR-t.</string>
+    <string name="summary_video_format">Nem tudja, mit válasszon? Válassza az Automatikus lehetőséget. A legtöbb modern eszközhöz a HEVC ajánlott, mert általában jól egyensúlyoz a képminőség, a sávszélesség és a HDR között; az AV1 mindkét oldali támogatás esetén sávszélességet takaríthat meg, de egyes eszközökön nagyobb dekódolási késleltetést okozhat; a H.264 kompatibilitása a legjobb, de több sávszélességet igényel és nem támogatja a HDR-t.</string>
     <string name="title_video_format">Módosítsa a Kodek beállításait</string>
     <string name="summary_disable_frame_drop">Csökkentheti a mikrodadogást egyes eszközökön, de növelheti a késést</string>
     <string name="title_disable_frame_drop">Soha ne ejtse le a kereteket</string>

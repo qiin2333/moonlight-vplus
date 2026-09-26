@@ -707,7 +707,7 @@
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
     <string name="title_video_format">Video codec</string>
-    <string name="summary_video_format">Not sure what to choose? HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR.</string>
+    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
     <string name="title_enable_hdr_high_brightness">Maximum display brightness for HDR</string>

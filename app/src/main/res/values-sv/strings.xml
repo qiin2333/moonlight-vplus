@@ -159,7 +159,7 @@
     <string name="title_disable_frame_drop">Tappa aldrig bildramar</string>
     <string name="summary_disable_frame_drop">Kan minska mikrohack på vissa enheter, men kan öka latensen</string>
     <string name="title_video_format">Ändra codec-inställningar</string>
-    <string name="summary_video_format">Osäker på vad du ska välja? HEVC rekommenderas för de flesta moderna enheter och ger vanligtvis en bra balans mellan bildkvalitet, bandbredd och HDR. AV1 kan spara bandbredd när båda sidor stöder det, men kan ge högre avkodningsfördröjning på vissa enheter. H.264 har bäst kompatibilitet, men kräver mer bandbredd och stöder inte HDR.</string>
+    <string name="summary_video_format">Osäker på vad du ska välja? Använd Automatiskt. HEVC rekommenderas för de flesta moderna enheter och ger vanligtvis en bra balans mellan bildkvalitet, bandbredd och HDR. AV1 kan spara bandbredd när båda sidor stöder det, men kan ge högre avkodningsfördröjning på vissa enheter. H.264 har bäst kompatibilitet, men kräver mer bandbredd och stöder inte HDR.</string>
     <string name="title_enable_hdr">Sätt på HDR (Prövning)</string>
     <string name="summary_enable_hdr">Strömma HDR när spelet och datorns GPU stöder det. HDR kräver en GPU med stöd för HEVC Main 10-kodning.</string>
     <string name="title_full_range">Tvinga video med fullt omfång (Prövning)</string>

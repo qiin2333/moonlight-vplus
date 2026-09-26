@@ -205,5 +205,5 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Ses iyileştirme</string>
     <string name="summary_checkbox_mic_voice_enhancement">Düşük frekanslı gürültüyü azaltır ve konuşma netliğini artırır. Sabit kazanç ve ses düzeyi dengeleme modlarında kullanılabilir.</string>
-    <string name="summary_video_format">Hangisini seçeceğinizden emin değil misiniz? HEVC çoğu modern cihaz için önerilir ve görüntü kalitesi, bant genişliği ve HDR arasında genellikle iyi bir denge kurar. Her iki taraf da destekliyorsa AV1 bant genişliğinden tasarruf sağlayabilir, ancak bazı cihazlarda kod çözme gecikmesi daha yüksek olabilir. H.264 en iyi uyumluluğa sahiptir, ancak daha fazla bant genişliği gerektirir ve HDR\'yi desteklemez.</string>
+    <string name="summary_video_format">Hangisini seçeceğinizden emin değil misiniz? Otomatik seçeneğini kullanın. HEVC çoğu modern cihaz için önerilir ve görüntü kalitesi, bant genişliği ve HDR arasında genellikle iyi bir denge kurar. Her iki taraf da destekliyorsa AV1 bant genişliğinden tasarruf sağlayabilir, ancak bazı cihazlarda kod çözme gecikmesi daha yüksek olabilir. H.264 en iyi uyumluluğa sahiptir, ancak daha fazla bant genişliği gerektirir ve HDR\'yi desteklemez.</string>
 </resources>

@@ -135,7 +135,7 @@
     <string name="title_disable_frame_drop">Non saltare i fotogrammi</string>
     <string name="summary_disable_frame_drop">Potrebbe ridurre il micro-stuttering su alcuni dispositivi, ma può aumentare la latenza</string>
     <string name="title_video_format">Modifica impostazioni del codec</string>
-    <string name="summary_video_format">Non sai quale scegliere? HEVC è consigliato per la maggior parte dei dispositivi moderni e offre in genere un buon equilibrio tra qualità dell’immagine, banda e HDR; AV1 può ridurre il consumo di banda se supportato da entrambi i lati, ma su alcuni dispositivi può avere una latenza di decodifica maggiore; H.264 offre la compatibilità migliore, ma richiede più banda e non supporta HDR.</string>
+    <string name="summary_video_format">Non sai quale scegliere? Usa Automatico. HEVC è consigliato per la maggior parte dei dispositivi moderni e offre in genere un buon equilibrio tra qualità dell’immagine, banda e HDR; AV1 può ridurre il consumo di banda se supportato da entrambi i lati, ma su alcuni dispositivi può avere una latenza di decodifica maggiore; H.264 offre la compatibilità migliore, ma richiede più banda e non supporta HDR.</string>
     <string name="title_enable_hdr">Abilita HDR (sperimentale)</string>
     <string name="summary_enable_hdr">Utilizza l\'HDR quando il gioco e la scheda video del PC lo supportano. L\'HDR richiede una scheda video col supporto dell\'encoding HEVC Main 10.</string>
     <string name="suffix_osc_opacity">%</string>

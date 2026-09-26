@@ -236,7 +236,7 @@
     <string name="title_checkbox_enable_sops">Optimalizovat herní nastavení</string>
     <string name="summary_disable_frame_drop">Může na některých zařízeních snížit mikrozádrhy, ale může zvýšit zpoždění</string>
     <string name="title_video_format">Změnit nastavení HEVC</string>
-    <string name="summary_video_format">Nejste si jistí, co zvolit? HEVC doporučujeme pro většinu moderních zařízení a obvykle dobře vyvažuje kvalitu obrazu, datový tok a HDR; AV1 může při podpoře na obou stranách ušetřit datový tok, ale na některých zařízeních může mít vyšší latenci dekódování; H.264 má nejlepší kompatibilitu, potřebuje však více dat a nepodporuje HDR.</string>
+    <string name="summary_video_format">Nejste si jistí, co zvolit? Použijte možnost Automaticky. HEVC doporučujeme pro většinu moderních zařízení a obvykle dobře vyvažuje kvalitu obrazu, datový tok a HDR; AV1 může při podpoře na obou stranách ušetřit datový tok, ale na některých zařízeních může mít vyšší latenci dekódování; H.264 má nejlepší kompatibilitu, potřebuje však více dat a nepodporuje HDR.</string>
     <string name="title_enable_hdr">Povolit HDR (experimentální)</string>
     <string name="summary_enable_hdr">Streamovat v HDR, pokud jej hra a GPU počítače podporují. HDR vyžaduje GPU GTX 1000 nebo novější.</string>
     <string name="videoformat_hevcalways">Vždy použít HEVC (může padat)</string>

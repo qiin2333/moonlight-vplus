@@ -112,7 +112,7 @@
     <string name="summary_checkbox_host_audio">이 장치와 컴퓨터에서 소리를 재생합니다.</string>
     <string name="category_advanced_settings">고급 설정</string>
     <string name="title_video_format">코덱 설정 변경</string>
-    <string name="summary_video_format">무엇을 선택해야 할지 모르겠다면? 대부분의 최신 기기에는 HEVC를 권장하며 화질, 대역폭, HDR의 균형이 좋습니다. 양쪽 모두 지원하면 AV1은 같은 화질에서 대역폭을 절약할 수 있지만 일부 기기에서는 디코딩 지연이 더 클 수 있습니다. H.264는 호환성이 가장 좋지만 더 많은 대역폭이 필요하고 HDR을 지원하지 않습니다.</string>
+    <string name="summary_video_format">무엇을 선택해야 할지 모르겠다면 자동을 사용하세요. 대부분의 최신 기기에는 HEVC를 권장하며 화질, 대역폭, HDR의 균형이 좋습니다. 양쪽 모두 지원하면 AV1은 같은 화질에서 대역폭을 절약할 수 있지만 일부 기기에서는 디코딩 지연이 더 클 수 있습니다. H.264는 호환성이 가장 좋지만 더 많은 대역폭이 필요하고 HDR을 지원하지 않습니다.</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">PIP모드 활성화</string>
     <string name="summary_checkbox_touchscreen_trackpad">활성화시 터치 스크린이 트랙 패드처럼 작동합니다. 비활성화 된 경우 터치 스크린처럼 작동합니다.</string>

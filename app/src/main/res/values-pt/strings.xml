@@ -112,7 +112,7 @@
     <string name="summary_checkbox_reduce_refresh_rate">Taxas menores de atualização do display podem gravar energia ao custo de latência de video adicional</string>
     <string name="summary_checkbox_disable_warnings">Desativa as mensagens de aviso de conexão no ecrã durante a transmissão</string>
     <string name="summary_disable_frame_drop">Talvez reduza o micro-stuttering em alguns aparelhos, mas pode aumentar a latência</string>
-    <string name="summary_video_format">Não sabe qual escolher? O HEVC é recomendado para a maioria dos dispositivos modernos e normalmente equilibra qualidade de imagem, largura de banda e HDR. O AV1 pode poupar largura de banda se for suportado pelas duas partes, mas pode ter maior latência de descodificação em alguns dispositivos. O H.264 tem a melhor compatibilidade, mas requer mais largura de banda e não suporta HDR.</string>
+    <string name="summary_video_format">Não sabe qual escolher? Use Automático. O HEVC é recomendado para a maioria dos dispositivos modernos e normalmente equilibra qualidade de imagem, largura de banda e HDR. O AV1 pode poupar largura de banda se for suportado pelas duas partes, mas pode ter maior latência de descodificação em alguns dispositivos. O H.264 tem a melhor compatibilidade, mas requer mais largura de banda e não suporta HDR.</string>
     <string name="title_enable_hdr">Ativar HDR (Experimental)</string>
     <string name="summary_full_range">Isso causará perda de detalhes em áreas claras e escuras se o seu aparelho não exibir corretamente todo o conteúdo de vídeo em cores.</string>
     <string name="title_disable_frame_drop">Nunca dropar quadros</string>

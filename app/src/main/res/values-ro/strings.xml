@@ -166,7 +166,7 @@
     <string name="title_disable_frame_drop">Nu pierde cadre intenționat</string>
     <string name="summary_disable_frame_drop">Poate să reducă micro-stuttering pe anumite device-uri, dar s-ar putea să crească latența</string>
     <string name="title_video_format">Modifica setările HEVC</string>
-    <string name="summary_video_format">Nu știți ce să alegeți? HEVC este recomandat pentru majoritatea dispozitivelor moderne și oferă de obicei un echilibru bun între calitatea imaginii, lățimea de bandă și HDR. AV1 poate economisi lățime de bandă dacă este acceptat de ambele părți, dar pe unele dispozitive poate avea o latență de decodare mai mare. H.264 are cea mai bună compatibilitate, dar necesită mai multă lățime de bandă și nu acceptă HDR.</string>
+    <string name="summary_video_format">Nu știți ce să alegeți? Folosiți opțiunea Automat. HEVC este recomandat pentru majoritatea dispozitivelor moderne și oferă de obicei un echilibru bun între calitatea imaginii, lățimea de bandă și HDR. AV1 poate economisi lățime de bandă dacă este acceptat de ambele părți, dar pe unele dispozitive poate avea o latență de decodare mai mare. H.264 are cea mai bună compatibilitate, dar necesită mai multă lățime de bandă și nu acceptă HDR.</string>
     <string name="title_enable_hdr">Activează HDR (Experimental)</string>
     <string name="summary_enable_hdr">Folosește HDR daca aplicația si placa video suportă. Necesită o placa video seria GTX 1000 sau mai nouă.</string>
     <!-- Array strings -->
