@@ -130,7 +130,7 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_audio_config_list">Конфигурация на съраунд звук</string>
     <string name="summary_audio_config_list">Активиране на 5.1 или 7.1 съраунд звук за системи за домашно кино</string>
-    <string name="summary_seekbar_bitrate">Увеличете за по-добро качество на изображението. Намалете, за да подобрите производителността при по-бавни връзки.</string>
+    <string name="summary_seekbar_bitrate">По-високият битрейт подобрява качеството на изображението, но използва повече честотна лента; по-ниският е по-подходящ за бавни или нестабилни мрежи. Намалете го първо при насичане, а го увеличете, когато мрежата е стабилна, но изображението е неясно; за 1080p60 започнете с около 10–20 Mbps.</string>
     <string name="resolution_prefix_native_portrait">(Портрет)</string>
     <string name="title_checkbox_enable_audiofx">Активиране на поддръжката на системния еквалайзер</string>
     <string name="title_checkbox_stretch_video">Разтегляне на видеото на цял екран</string>
@@ -174,4 +174,5 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Подобряване на гласа</string>
     <string name="summary_checkbox_mic_voice_enhancement">Намалява нискочестотния шум и подобрява яснотата на речта. Налично е при фиксирано усилване и балансиране на звука.</string>
+    <string name="summary_video_format">Не сте сигурни какво да изберете? Използвайте „Автоматично“. HEVC е препоръчителен за повечето съвременни устройства и обикновено балансира качеството, честотната лента и HDR; AV1 може да спести честотна лента, когато и двете страни го поддържат, но при някои устройства декодирането може да е по-бавно; H.264 е най-съвместим, но изисква повече честотна лента и не поддържа HDR.</string>
 </resources>

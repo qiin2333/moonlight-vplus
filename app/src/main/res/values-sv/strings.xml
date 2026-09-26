@@ -159,7 +159,7 @@
     <string name="title_disable_frame_drop">Tappa aldrig bildramar</string>
     <string name="summary_disable_frame_drop">Kan minska mikrohack på vissa enheter, men kan öka latensen</string>
     <string name="title_video_format">Ändra codec-inställningar</string>
-    <string name="summary_video_format">Nyare codecs kan sänka videobandbreddskraven om din enhet stöder dem. Codec-val kan ignoreras om det inte stöds av värdprogramvaran eller GPU:n.</string>
+    <string name="summary_video_format">Osäker på vad du ska välja? Använd Automatiskt. HEVC rekommenderas för de flesta moderna enheter och ger vanligtvis en bra balans mellan bildkvalitet, bandbredd och HDR. AV1 kan spara bandbredd när båda sidor stöder det, men kan ge högre avkodningsfördröjning på vissa enheter. H.264 har bäst kompatibilitet, men kräver mer bandbredd och stöder inte HDR.</string>
     <string name="title_enable_hdr">Sätt på HDR (Prövning)</string>
     <string name="summary_enable_hdr">Strömma HDR när spelet och datorns GPU stöder det. HDR kräver en GPU med stöd för HEVC Main 10-kodning.</string>
     <string name="title_full_range">Tvinga video med fullt omfång (Prövning)</string>
@@ -220,7 +220,7 @@
 \nVi är inte ansvariga för eventuella problem som uppstår av att skapa en anpassad upplösning på din PC.
 \n
 \nDet kan vara så att din bildskärm inte stöder en nödvändig bildskärmskonfiguration. Om så är fallet kan du försöka ställa in en virtuell skärm. Slutligen, om din enhet eller värddator inte stöder streaming med en specifik upplösning eller uppdateringsfrekvens, har du tyvärr ingen tur.</string>
-    <string name="summary_seekbar_bitrate">Öka för bättre bildkvalitet. Minska för att förbättra prestandan på långsammare anslutningar.</string>
+    <string name="summary_seekbar_bitrate">Högre bithastighet förbättrar bildkvaliteten men använder mer bandbredd; lägre bithastighet passar bättre för långsamma eller instabila nätverk. Sänk den först om streamingen hackar och höj den när nätverket är stabilt men bilden är för oskarp; börja runt 10–20 Mbps för 1080p60.</string>
     <string name="title_checkbox_stretch_video">Sträck ut videon till helskärm</string>
     <string name="summary_audio_config_list">Aktivera 5.1 eller 7.1 surroundljud för hemmabiosystem</string>
     <string name="summary_checkbox_enable_audiofx">Ljudeffekter kan fungera under streaming, men kan öka ljudfördröjningen</string>

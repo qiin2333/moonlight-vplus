@@ -137,7 +137,7 @@
 \nמונלייט אינו אחראי לבעיות או נזקים שנגרמים כתוצאה משימוש ברזולוציה מותאמת אישית.
 \n
 \nהמכשיר שלך כנראה ואינו תומך ברזולוציה טבעית.</string>
-    <string name="summary_seekbar_bitrate">הגבר לשיפור איכות התמונה. הנמך בכדי לשפר ביצועים על גבי חיבור רשת איטי.</string>
+    <string name="summary_seekbar_bitrate">קצב סיביות גבוה יותר משפר את איכות התמונה אך משתמש ברוחב פס רב יותר; קצב נמוך יותר מתאים לרשתות איטיות או לא יציבות. אם הזרמת הווידאו מקרטעת, הנמיכו תחילה את קצב הסיביות; אם הרשת יציבה אך התמונה אינה חדה, העלו אותו; עבור 1080p60 התחילו בערך ב־10–20 Mbps.</string>
     <string name="summary_audio_config_list">הפעל קול היקפי בהגדרת 5.1 או 7.1 עבור מערכות קולנוע ביתי</string>
     <string name="summary_checkbox_enable_audiofx">אפשר לאפקטי סאונד לפעול בזמן הזרמה, יגרום להשהיית אודיו</string>
     <string name="conn_hardware_latency">זמן פענוח ממוצע:</string>
@@ -171,4 +171,5 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">שיפור קול</string>
     <string name="summary_checkbox_mic_voice_enhancement">הפחתת רעש בתדר נמוך ושיפור בהירות הדיבור. זמין במצבי הגבר קבוע ואיזון עוצמה.</string>
+    <string name="summary_video_format">לא בטוחים במה לבחור? השתמשו באפשרות «אוטומטי». HEVC מומלץ לרוב המכשירים המודרניים ובדרך כלל מאזן בין איכות התמונה, רוחב הפס ו־HDR; AV1 יכול לחסוך רוחב פס אם שני הצדדים תומכים בו, אך בחלק מהמכשירים זמן הפענוח וההשהיה עשויים להיות גבוהים יותר; H.264 מציע את התאימות הטובה ביותר, אך דורש יותר רוחב פס ואינו תומך ב־HDR.</string>
 </resources>

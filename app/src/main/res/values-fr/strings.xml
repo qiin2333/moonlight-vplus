@@ -125,7 +125,7 @@
     <string name="title_fps_list">Fréquence d\'images vidéo</string>
     <string name="summary_fps_list">Augmentez pour un flux vidéo plus fluide. Diminuez pour de meilleures performances sur les appareils bas de gamme.</string>
     <string name="title_seekbar_bitrate">Bitrate vidéo</string>
-    <string name="summary_seekbar_bitrate">Augmentez-le pour une meilleure qualité d’image. Diminuez-le pour améliorer les performances sur les connexions plus lentes.</string>
+    <string name="summary_seekbar_bitrate">Un débit plus élevé améliore la qualité d’image, mais utilise davantage de bande passante ; un débit plus faible convient mieux aux réseaux lents ou instables. Si le streaming saccade, réduisez-le d’abord et augmentez-le lorsque le réseau est stable mais que l’image manque de netteté ; pour le 1080p60, commencez autour de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Étirer la vidéo en plein écran</string>
     <string name="title_checkbox_disable_warnings">Désactiver les messages d\'avertissement</string>
     <string name="title_checkbox_enable_pip">Activer le mode observateur</string>
@@ -183,7 +183,7 @@
     <string name="title_disable_frame_drop">Ne jamais perdre d\'images</string>
     <string name="summary_disable_frame_drop">Peut réduire les micro-saccades sur certains appareils, mais peut augmenter la latence</string>
     <string name="title_video_format">Modifier les paramètres de codec</string>
-    <string name="summary_video_format">Les nouveaux codecs peuvent réduire la bande passante vidéo requise si votre appareil les prend en charge. Les codecs séléctionnés peuvent être ignorés si ils ne sont pas prises en charge par le logiciel hôte ou le GPU.</string>
+    <string name="summary_video_format">Vous ne savez pas quoi choisir ? Utilisez Automatique. HEVC est recommandé pour la plupart des appareils modernes et offre généralement un bon équilibre entre qualité d’image, bande passante et HDR ; AV1 peut économiser de la bande passante si les deux côtés le prennent en charge, mais son décodage peut être plus lent sur certains appareils ; H.264 offre la meilleure compatibilité, mais nécessite davantage de bande passante et ne prend pas en charge le HDR.</string>
     <string name="title_enable_hdr">Activer le HDR (expérimental)</string>
     <string name="summary_enable_hdr">Diffuser du HDR lorsque le jeu et le processeur graphique du PC le prennent en charge. HDR nécessite un GPU série GTX 1000 ou une version ultérieure.</string>
     <string name="title_enable_post_stream_toast">Afficher le message de latence après la diffusion en continu</string>

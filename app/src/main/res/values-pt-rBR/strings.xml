@@ -168,7 +168,7 @@
     <string name="title_fps_list">Taxa de quadros por segundo</string>
     <string name="summary_fps_list">Aumente para uma transmissão de vídeo mais suave. Diminua para melhor desempenho em dispositivos de baixo custo.</string>
     <string name="title_seekbar_bitrate">Taxa de bits</string>
-    <string name="summary_seekbar_bitrate">Aumente para uma melhor qualidade de imagem. Diminua para melhorar o desempenho em conexões mais lentas.</string>
+    <string name="summary_seekbar_bitrate">Uma taxa de bits mais alta melhora a qualidade da imagem, mas usa mais largura de banda; uma taxa mais baixa é melhor para redes lentas ou instáveis. Se a transmissão travar, reduza-a primeiro e aumente-a quando a rede estiver estável, mas a imagem continuar pouco nítida; para 1080p60, comece com cerca de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Esticar vídeo para tela cheia</string>
     <string name="resolution_prefix_native">Nativa</string>
     <string name="resolution_prefix_native_fullscreen">Nativa Tela Cheia</string>
@@ -217,7 +217,7 @@
     <string name="summary_osc_opacity">Deixe os controles de tela mais/menos transparentes</string>
     <string name="title_reset_osc">Limpar o layout salvo dos controles de tela</string>
     <string name="title_video_format">Mudar configurações do HEVC</string>
-    <string name="summary_video_format">HEVC reduz os requisitos de largura de banda de vídeo, mas requer um dispositivo mais atual</string>
+    <string name="summary_video_format">Não sabe qual escolher? Use Automático. O HEVC é recomendado para a maioria dos dispositivos modernos e normalmente equilibra qualidade de imagem, largura de banda e HDR. O AV1 pode economizar largura de banda se for compatível nos dois lados, mas pode apresentar maior latência de decodificação em alguns dispositivos. O H.264 tem a melhor compatibilidade, mas exige mais largura de banda e não oferece suporte a HDR.</string>
     <string name="summary_checkbox_disable_warnings">Desativa as mensagens de aviso de conexão na tela durante a transmissão</string>
     <string name="title_disable_frame_drop">Nunca dropar quadros</string>
     <string name="summary_disable_frame_drop">Talvez reduza o micro-stuttering em alguns dispositivos, mas pode aumentar a latência</string>

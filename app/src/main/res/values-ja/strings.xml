@@ -73,7 +73,7 @@
     <string name="title_resolution_list">解像度とフレームレート</string>
     <string name="summary_resolution_list">品質が高いほどラグとクラッシュが発生しやすくなります</string>
     <string name="title_seekbar_bitrate">映像のビットレート</string>
-    <string name="summary_seekbar_bitrate">ビットレートを低くすればカクつきが抑制され、高くすれば画質が向上します</string>
+    <string name="summary_seekbar_bitrate">高いビットレートは画質を向上させますが、より多くの帯域幅を使用します。低いビットレートは、遅いネットワークや不安定なネットワークに適しています。映像がカクつく場合はまず下げ、ネットワークが安定していて画質が不十分な場合に上げてください。1080p60 では 10～20 Mbps 程度から始めます。</string>
     <string name="title_checkbox_stretch_video">映像を全画面に拡大</string>
     <string name="title_checkbox_disable_warnings">警告を無効化</string>
     <string name="summary_checkbox_disable_warnings">ストリーミング中に画面に警告メッセージを表示しない</string>
@@ -99,7 +99,7 @@
     <string name="summary_checkbox_host_audio">音声をコンピュータとこのデバイスの両方で再生します</string>
     <string name="category_advanced_settings">高度な設定</string>
     <string name="title_video_format">HEVC</string>
-    <string name="summary_video_format">HEVCは動画に必要な帯域幅を圧縮します。この機能にはなるべく新しいデバイスが必要です</string>
+    <string name="summary_video_format">どれを選べばよいか分からない場合は、自動を選択してください。ほとんどの最新の端末では HEVC がおすすめで、画質・帯域幅・HDR のバランスに優れています。両端が対応していれば AV1 は同じ画質で帯域幅を節約できますが、一部の端末ではデコード遅延が大きくなることがあります。H.264 は互換性に優れますが、より多くの帯域幅が必要で HDR には対応しません。</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="dialog_title_osc_opacity">透過率</string>
     <string name="title_osc_opacity">透過率</string>

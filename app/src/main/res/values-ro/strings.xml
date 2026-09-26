@@ -112,7 +112,7 @@
     <string name="title_fps_list">Rata cadrelor</string>
     <string name="summary_fps_list">Crește-o pentru a îmbunătăți fluiditatea imaginilor. Descrește-o pentru dispozitive neperformante sau conexiune slabă.</string>
     <string name="title_seekbar_bitrate">Rata de biți</string>
-    <string name="summary_seekbar_bitrate">Crește-o pentru a îmbunătăți calitatea imaginilor. Descrește-o pentru dispozitive neperformante sau conexiune slabă.</string>
+    <string name="summary_seekbar_bitrate">O rată de biți mai mare îmbunătățește calitatea imaginii, dar folosește mai multă lățime de bandă; o rată mai mică este mai potrivită pentru rețele lente sau instabile. Dacă transmisia sacadează, reduceți-o mai întâi și creșteți-o când rețeaua este stabilă, dar imaginea este neclară; pentru 1080p60 începeți cu aproximativ 10–20 Mbps.</string>
     <string name="title_unlock_fps">Deblochează toate ratele de cadre posibile</string>
     <string name="summary_unlock_fps">Fluxul video de rate mai mari poate reduce latența folosind dispozitive performante, dar poate introduce erori daca nu sunt suportate.</string>
     <string name="title_checkbox_stretch_video">Întindeți video pe ecranul complet</string>
@@ -166,7 +166,7 @@
     <string name="title_disable_frame_drop">Nu pierde cadre intenționat</string>
     <string name="summary_disable_frame_drop">Poate să reducă micro-stuttering pe anumite device-uri, dar s-ar putea să crească latența</string>
     <string name="title_video_format">Modifica setările HEVC</string>
-    <string name="summary_video_format">HEVC funcționează cu o conexiune mai slaba, dar necesită un dispozitiv recent, performant</string>
+    <string name="summary_video_format">Nu știți ce să alegeți? Folosiți opțiunea Automat. HEVC este recomandat pentru majoritatea dispozitivelor moderne și oferă de obicei un echilibru bun între calitatea imaginii, lățimea de bandă și HDR. AV1 poate economisi lățime de bandă dacă este acceptat de ambele părți, dar pe unele dispozitive poate avea o latență de decodare mai mare. H.264 are cea mai bună compatibilitate, dar necesită mai multă lățime de bandă și nu acceptă HDR.</string>
     <string name="title_enable_hdr">Activează HDR (Experimental)</string>
     <string name="summary_enable_hdr">Folosește HDR daca aplicația si placa video suportă. Necesită o placa video seria GTX 1000 sau mai nouă.</string>
     <!-- Array strings -->

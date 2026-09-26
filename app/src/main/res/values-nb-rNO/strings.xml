@@ -151,7 +151,7 @@
     <string name="category_on_screen_controls_settings">Innstillinger for innstillingskontroller som vises på skjermen</string>
     <string name="summary_checkbox_usb_bind_all">Bruk Moonlight sin USB-driver for alle støttede spillkontrollere, selv når systemspesifikk kontrollerstøtte er tilgjengelig</string>
     <string name="summary_audio_config_list">Skru på for 5,1- eller 7,1-kringlyd for hjemmekinosystemer</string>
-    <string name="summary_seekbar_bitrate">Øk for bedret bildekvalitet. Senk for bedre ytelse på trege tilkoblinger.</string>
+    <string name="summary_seekbar_bitrate">Høyere bitrate gir bedre bildekvalitet, men bruker mer båndbredde; lavere bitrate passer bedre for trege eller ustabile nettverk. Senk den først hvis strømmingen hakker, og øk den når nettverket er stabilt, men bildet er for uklart; for 1080p60 kan du starte rundt 10–20 Mbps.</string>
     <string name="summary_fps_list">Øk for jevnere videostrøm. Senk for bedre ytelse på trege enheter.</string>
     <string name="video_decoder_init_failed">Klarte ikke å starte videodekoder. Enheten din støtter kanskje ikke valgt oppløsning eller bilderammetakt.</string>
     <string name="error_usb_prohibited">USB-tilgang har blitt forbudt av din enhetsadministrator. Sjekk dine Knox- eller MDM-innstillinger.</string>
@@ -163,7 +163,7 @@
     <string name="summary_enable_post_stream_toast">Vis en informasjonsmelding om latens etter at strømmen sluttføres</string>
     <string name="title_enable_post_stream_toast">Vis latensmelding etter strømming</string>
     <string name="title_enable_hdr">Skru på HDR (eksperimentelt)</string>
-    <string name="summary_video_format">HEVC senker båndbreddekravene, men krever en nyere enhet</string>
+    <string name="summary_video_format">Usikker på hva du bør velge? Bruk Automatisk. HEVC anbefales for de fleste moderne enheter og gir vanligvis en god balanse mellom bildekvalitet, båndbredde og HDR. AV1 kan spare båndbredde når begge sider støtter det, men kan gi høyere dekodingsforsinkelse på enkelte enheter. H.264 har best kompatibilitet, men krever mer båndbredde og støtter ikke HDR.</string>
     <string name="summary_disable_frame_drop">Kan redusere mikro-hakking på noen enheter, men kan øke latens</string>
     <string name="summary_checkbox_disable_warnings">Skru av visning av tilkoblingsadvarsler på skjermen under strømming</string>
     <string name="summary_unlock_fps">Strømming i 90 eller 120 BPS kan redusere latens på flaggskipsenheter, men kan forårsake forsinkelser eller ustabilitet på enheter som ikke klarer det.</string>
