@@ -79,7 +79,7 @@
     <string name="title_resolution_list">Seleccionar resolución</string>
     <string name="summary_resolution_list">Establecer unos valores demasiado altos puede causar retraso o cierres inesperados.</string>
     <string name="title_seekbar_bitrate">Seleccionar bitrate de vídeo</string>
-    <string name="summary_seekbar_bitrate">Usa bitrate bajo para reducir "parpadeo". Incrementa el bitrate para mayor calidad de imagen.</string>
+    <string name="summary_seekbar_bitrate">Una tasa de bits más alta mejora la calidad de imagen, pero consume más ancho de banda; una tasa más baja es mejor para redes lentas o inestables. Si la transmisión va a saltos, bájala primero y súbela cuando la red sea estable y la imagen no sea suficientemente nítida; para 1080p60, empieza con unos 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Ajustar vídeo a pantalla completa</string>
     <string name="title_checkbox_disable_warnings">Desactivar mensajes de advertencia</string>
     <string name="summary_checkbox_disable_warnings">Desactivar mensajes de advertencia en pantalla durante la transmisión</string>
@@ -107,7 +107,7 @@
     <string name="summary_checkbox_host_audio">Reproducir audio en el ordenador y en este dispositivo</string>
     <string name="category_advanced_settings">Configuración avanzada</string>
     <string name="title_video_format">Cambiar la configuración del códec</string>
-    <string name="summary_video_format">Los códecs más recientes pueden reducir los requisitos del ancho de banda del vídeo si tu dispositivo los admite. Las selecciones de los códecs pueden ignorarse si no son compatibles con el software del host o la GPU.</string>
+    <string name="summary_video_format">¿No sabes cuál elegir? HEVC se recomienda para la mayoría de dispositivos modernos y suele equilibrar calidad de imagen, ancho de banda y HDR; AV1 puede ahorrar ancho de banda si ambos extremos lo admiten, pero en algunos dispositivos puede tener mayor latencia de decodificación; H.264 ofrece la mejor compatibilidad, pero necesita más ancho de banda y no admite HDR.</string>
     <!-- Array strings -->
     <string name="videoformat_auto">Automático (Recomendado)</string>
     <string name="videoformat_hevcalways">Preferir HEVC</string>

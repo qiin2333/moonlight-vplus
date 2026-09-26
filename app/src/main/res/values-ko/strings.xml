@@ -86,7 +86,7 @@
     <string name="title_resolution_list">해상도 설정</string>
     <string name="summary_resolution_list">해상도가 높을수록 선명하지만 저사양기기를 사용하거나 네트워크 연결이 느리다면 해상도를 낮추십시오.</string>
     <string name="title_seekbar_bitrate">비트레이트 타겟 지정</string>
-    <string name="summary_seekbar_bitrate">낮은 비트레이트는 끊김을 줄이고, 높은 비트레이트는 품질을 높입니다.</string>
+    <string name="summary_seekbar_bitrate">높은 비트레이트는 화질을 높이지만 더 많은 대역폭을 사용합니다. 낮은 비트레이트는 느리거나 불안정한 네트워크에 적합합니다. 스트리밍이 끊기면 먼저 낮추고, 네트워크가 안정적인데 화질이 흐릴 때 높이세요. 1080p60은 약 10–20 Mbps부터 시작하세요.</string>
     <string name="title_checkbox_stretch_video">화면을 늘려 전체화면으로 사용</string>
     <string name="title_checkbox_disable_warnings">경고 메세지 끄기</string>
     <string name="summary_checkbox_disable_warnings">화면 상의 연결 경고 메세지를 스트리밍 중에 비활성화합니다.</string>
@@ -112,7 +112,7 @@
     <string name="summary_checkbox_host_audio">이 장치와 컴퓨터에서 소리를 재생합니다.</string>
     <string name="category_advanced_settings">고급 설정</string>
     <string name="title_video_format">코덱 설정 변경</string>
-    <string name="summary_video_format">최신 코덱은 장치에서 지원하는 경우 비디오 대역폭 요구 사항을 낮출 수 있습니다. 호스트 소프트웨어 또는 GPU에서 지원하지 않는 경우 코덱 선택을 무시할 수 있습니다.</string>
+    <string name="summary_video_format">무엇을 선택해야 할지 모르겠다면? 대부분의 최신 기기에는 HEVC를 권장하며 화질, 대역폭, HDR의 균형이 좋습니다. 양쪽 모두 지원하면 AV1은 같은 화질에서 대역폭을 절약할 수 있지만 일부 기기에서는 디코딩 지연이 더 클 수 있습니다. H.264는 호환성이 가장 좋지만 더 많은 대역폭이 필요하고 HDR을 지원하지 않습니다.</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">PIP모드 활성화</string>
     <string name="summary_checkbox_touchscreen_trackpad">활성화시 터치 스크린이 트랙 패드처럼 작동합니다. 비활성화 된 경우 터치 스크린처럼 작동합니다.</string>

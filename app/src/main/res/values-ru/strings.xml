@@ -215,7 +215,7 @@
     <string name="title_fps_list">Частота кадров</string>
     <string name="summary_fps_list">Повысьте для плавности. Снизьте для слабого устройства.</string>
     <string name="title_seekbar_bitrate">Битрейт видео</string>
-    <string name="summary_seekbar_bitrate">Повысьте для качества. Снизьте для медленной сети.</string>
+    <string name="summary_seekbar_bitrate">Более высокий битрейт улучшает качество изображения, но расходует больше трафика; более низкий подходит для медленных или нестабильных сетей. При рывках сначала снизьте битрейт, а повышайте его, когда сеть стабильна, но изображение недостаточно чёткое; для 1080p60 начните примерно с 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Адаптивный битрейт</string>
     <string name="summary_adaptive_bitrate">Автоподстройка по потерям пакетов и задержке. Если сервер не поддерживает ABR, битрейтом управляет клиент.</string>
@@ -637,7 +637,7 @@
     <string name="title_disable_frame_drop">Не пропускать кадры</string>
     <string name="summary_disable_frame_drop">Может уменьшить микрорывки на некоторых устройствах, но повысить задержку</string>
     <string name="title_video_format">Видеокодек</string>
-    <string name="summary_video_format">Новые кодеки могут снизить расход трафика при поддержке устройством. Если сервер или видеокарта не поддерживают кодек, выбор может игнорироваться.</string>
+    <string name="summary_video_format">Не знаете, что выбрать? HEVC рекомендуется для большинства современных устройств и обычно хорошо сочетает качество изображения, расход трафика и HDR. AV1 может сэкономить трафик при поддержке с обеих сторон, но на некоторых устройствах декодирование может иметь большую задержку. H.264 лучше всего совместим, но требует больше трафика и не поддерживает HDR.</string>
     <string name="title_enable_hdr">HDR (экспериментально)</string>
     <string name="summary_enable_hdr">HDR при поддержке игрой и видеокартой ПК. Нужна видеокарта с кодированием HEVC Main 10.</string>
     <string name="title_enable_hdr_high_brightness">Макс. яркость для HDR</string>

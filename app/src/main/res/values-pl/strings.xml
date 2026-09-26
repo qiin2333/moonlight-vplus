@@ -43,7 +43,7 @@
     <string name="title_native_res_dialog">Ostrzeżenie o rozdzielczości natywnej</string>
     <string name="title_fps_list">Częstotliwość odświeżania wideo</string>
     <string name="summary_fps_list">Zwiększ, aby uzyskać płynniejszy strumień wideo. Zmniejsz, aby uzyskać lepszą wydajność na słabszych urządzeniach.</string>
-    <string name="summary_seekbar_bitrate">Zwiększ, aby uzyskać lepszą jakość obrazu. Zmniejsz, aby poprawić wydajność na wolniejszych połączeniach.</string>
+    <string name="summary_seekbar_bitrate">Wyższy bitrate poprawia jakość obrazu, ale zużywa więcej przepustowości; niższy bitrate lepiej sprawdza się w wolnych lub niestabilnych sieciach. Jeśli transmisja się zacina, najpierw go zmniejsz, a zwiększ dopiero wtedy, gdy sieć jest stabilna, ale obraz nadal jest zbyt mało wyraźny; dla 1080p60 zacznij od około 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Rozciągnięcie wideo do pełnego ekranu</string>
     <string name="resolution_prefix_native">Natywna</string>
@@ -109,7 +109,7 @@
     <string name="summary_checkbox_disable_warnings">Wyłączanie wyświetlanych na ekranie komunikatów ostrzegawczych o połączeniu podczas przesyłania strumieniowego</string>
     <string name="title_disable_frame_drop">Nigdy nie porzucaj klatek</string>
     <string name="title_video_format">Zmiana ustawień kodeka</string>
-    <string name="summary_video_format">Nowsze kodeki mogą obniżyć wymagania dotyczące przepustowości wideo, jeśli urządzenie je obsługuje. Wybrane kodeki mogą zostać zignorowane, jeśli nie są obsługiwane przez oprogramowanie hosta lub procesor graficzny.</string>
+    <string name="summary_video_format">Nie wiesz, co wybrać? HEVC jest zalecany dla większości nowoczesnych urządzeń i zwykle zapewnia dobry kompromis między jakością obrazu, przepustowością i HDR. AV1 może oszczędzać przepustowość, jeśli obsługują go obie strony, ale na niektórych urządzeniach może mieć większe opóźnienie dekodowania. H.264 ma najlepszą zgodność, ale wymaga większej przepustowości i nie obsługuje HDR.</string>
     <string name="summary_disable_frame_drop">Może zmniejszyć mikroprzycięcia na niektórych urządzeniach, ale może zwiększyć opóźnienia</string>
     <string name="title_enable_hdr">Włącz HDR (eksperymentalnie)</string>
     <string name="summary_enable_hdr">Przesyłaj strumieniowo HDR, gdy gra i procesor graficzny komputera obsługują tę funkcję. HDR wymaga GPU z obsługą kodowania HEVC Main 10.</string>

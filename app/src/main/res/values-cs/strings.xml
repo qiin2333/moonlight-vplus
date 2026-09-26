@@ -217,7 +217,7 @@
     <string name="title_fps_list">Snímková frekvence videa</string>
     <string name="summary_fps_list">Zvyšte pro plynulejší video stream. Snižte pro lepší výkon na levnějších zařízeních.</string>
     <string name="title_seekbar_bitrate">Datový tok videa</string>
-    <string name="summary_seekbar_bitrate">Zvyšte pro lepší kvalitu obrazu. Snižte pro zlepšení výkonu u pomalých připojení.</string>
+    <string name="summary_seekbar_bitrate">Vyšší datový tok zlepšuje kvalitu obrazu, ale využívá více dat; nižší je vhodnější pro pomalejší nebo nestabilní sítě. Při trhání streamu ho nejprve snižte a zvyšte ho, až bude síť stabilní, ale obraz stále neostrý; pro 1080p60 začněte přibližně na 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Natáhnout video na celou obrazovku</string>
     <string name="resolution_prefix_native">Nativní</string>
@@ -236,7 +236,7 @@
     <string name="title_checkbox_enable_sops">Optimalizovat herní nastavení</string>
     <string name="summary_disable_frame_drop">Může na některých zařízeních snížit mikrozádrhy, ale může zvýšit zpoždění</string>
     <string name="title_video_format">Změnit nastavení HEVC</string>
-    <string name="summary_video_format">HEVC sníží datový přenos, ale vyžaduje novější zařízení</string>
+    <string name="summary_video_format">Nejste si jistí, co zvolit? HEVC doporučujeme pro většinu moderních zařízení a obvykle dobře vyvažuje kvalitu obrazu, datový tok a HDR; AV1 může při podpoře na obou stranách ušetřit datový tok, ale na některých zařízeních může mít vyšší latenci dekódování; H.264 má nejlepší kompatibilitu, potřebuje však více dat a nepodporuje HDR.</string>
     <string name="title_enable_hdr">Povolit HDR (experimentální)</string>
     <string name="summary_enable_hdr">Streamovat v HDR, pokud jej hra a GPU počítače podporují. HDR vyžaduje GPU GTX 1000 nebo novější.</string>
     <string name="videoformat_hevcalways">Vždy použít HEVC (může padat)</string>

@@ -76,7 +76,7 @@
     <string name="title_resolution_list">Роздільна здатність</string>
     <string name="summary_resolution_list">Вибір надто високого значення для свого пристрою може викликати сповільнення на нешвидких мережах, або вильоти на менш потужних пристроях.</string>
     <string name="title_seekbar_bitrate">Швидкість потоку відео</string>
-    <string name="summary_seekbar_bitrate">Збільшіть для якіснішої картинки. Зменшіть задля кращої продуктивності на повільних мережах.</string>
+    <string name="summary_seekbar_bitrate">Вищий бітрейт покращує якість зображення, але використовує більше пропускної здатності; нижчий краще підходить для повільних або нестабільних мереж. Якщо трансляція смикається, спочатку зменште бітрейт, а збільшуйте його, коли мережа стабільна, але зображення недостатньо чітке; для 1080p60 почніть приблизно з 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Розтягнути відео на весь екран</string>
     <string name="title_checkbox_disable_warnings">Вимкнути попередження</string>
     <string name="summary_checkbox_disable_warnings">Вимкнути мережні попередження під час трансляції</string>
@@ -101,7 +101,7 @@
     <string name="summary_checkbox_host_audio">Програвати звук на пристроях хоста та клієнта</string>
     <string name="category_advanced_settings">Розширені налаштування</string>
     <string name="title_video_format">Змінити налаштування кодека</string>
-    <string name="summary_video_format">Нові кодеки можуть знизити вимоги до пропускної здатності відео, якщо ваш пристрій їх підтримує. Вибрані кодеки можуть ігноруватися, якщо вони не підтримуються програмним забезпеченням хоста або графічним процесором.</string>
+    <string name="summary_video_format">Не знаєте, що вибрати? HEVC рекомендовано для більшості сучасних пристроїв: він зазвичай добре поєднує якість зображення, пропускну здатність і HDR. AV1 може заощадити пропускну здатність, якщо його підтримують обидві сторони, але на деяких пристроях може мати більшу затримку декодування. H.264 має найкращу сумісність, але потребує більшої пропускної здатності й не підтримує HDR.</string>
     <string name="category_on_screen_controls_settings">Налаштування екранних ґудзиків</string>
     <string name="title_checkbox_show_onscreen_controls">Показувати екранні ґудзики</string>
     <string name="summary_checkbox_show_onscreen_controls">Відображати віртуальні ґудзики контролера на екрані</string>

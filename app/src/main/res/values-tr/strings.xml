@@ -166,7 +166,7 @@
 \nBilgisayarınızda özel bir çözünürlük oluşturulmasından kaynaklanan herhangi bir sorundan sorumlu değiliz.
 \n
 \nSon olarak, cihazınız veya bilgisayarınız doğal çözünürlükte akışı desteklemiyor olabilir. Eğer cihazınızda çalışmıyorsa, ne yazık ki şansınız yok demektir.</string>
-    <string name="summary_seekbar_bitrate">Daha iyi görüntü kalitesi için artırın. Daha yavaş bağlantılarda performansı artırmak için azaltın.</string>
+    <string name="summary_seekbar_bitrate">Daha yüksek bit hızı görüntü kalitesini artırır, ancak daha fazla bant genişliği kullanır; daha düşük bit hızı yavaş veya kararsız ağlar için daha uygundur. Yayın takılıyorsa önce bit hızını azaltın; ağ sabit olduğu hâlde görüntü yeterince net değilse artırın. 1080p60 için yaklaşık 10–20 Mbps ile başlayın.</string>
     <string name="title_checkbox_stretch_video">Videoyu tam ekrana genişlet</string>
     <string name="summary_checkbox_usb_bind_all">Yerel Xbox oyun kumandası desteği mevcut olsa bile desteklenen tüm oyun kumandaları için Moonlight\'ın USB sürücüsünü kullan</string>
     <string name="summary_checkbox_flip_face_buttons">Oyun kumandaları ve ekran kontrolleri için A/B ve X/Y yüz düğmelerini değiştirir</string>
@@ -205,4 +205,5 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Ses iyileştirme</string>
     <string name="summary_checkbox_mic_voice_enhancement">Düşük frekanslı gürültüyü azaltır ve konuşma netliğini artırır. Sabit kazanç ve ses düzeyi dengeleme modlarında kullanılabilir.</string>
+    <string name="summary_video_format">Hangisini seçeceğinizden emin değil misiniz? HEVC çoğu modern cihaz için önerilir ve görüntü kalitesi, bant genişliği ve HDR arasında genellikle iyi bir denge kurar. Her iki taraf da destekliyorsa AV1 bant genişliğinden tasarruf sağlayabilir, ancak bazı cihazlarda kod çözme gecikmesi daha yüksek olabilir. H.264 en iyi uyumluluğa sahiptir, ancak daha fazla bant genişliği gerektirir ve HDR\'yi desteklemez.</string>
 </resources>

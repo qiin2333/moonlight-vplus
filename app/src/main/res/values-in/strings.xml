@@ -104,7 +104,7 @@
     <string name="title_fps_list">Kecepatan bingkai video</string>
     <string name="summary_fps_list">Tingkatkan untuk streaming video yang lebih lancar. Turunkan untuk kinerja yang lebih baik pada perangkat kelas bawah.</string>
     <string name="title_seekbar_bitrate">Kecepatan bit video</string>
-    <string name="summary_seekbar_bitrate">Tingkatkan untuk kualitas gambar yang lebih baik. Kurangi untuk meningkatkan kinerja pada koneksi yang lebih lambat.</string>
+    <string name="summary_seekbar_bitrate">Bitrate yang lebih tinggi meningkatkan kualitas gambar, tetapi menggunakan lebih banyak bandwidth; bitrate yang lebih rendah lebih cocok untuk jaringan yang lambat atau tidak stabil. Jika streaming tersendat, turunkan bitrate terlebih dahulu dan naikkan saat jaringan stabil tetapi gambar kurang tajam; untuk 1080p60, mulai dari sekitar 10–20 Mbps.</string>
     <string name="title_checkbox_flip_face_buttons">Balikkan tombol wajah</string>
     <string name="summary_checkbox_flip_face_buttons">Mengalihkan tombol wajah A/B dan X/Y untuk gamepad dan kontrol di layar</string>
     <string name="title_only_l3r3">Hanya tampilkan L3 dan R3</string>
@@ -228,4 +228,5 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Peningkatan suara</string>
     <string name="summary_checkbox_mic_voice_enhancement">Mengurangi derau frekuensi rendah dan meningkatkan kejernihan ucapan. Tersedia dalam mode penguatan tetap dan penyeimbangan volume.</string>
+    <string name="summary_video_format">Bingung memilih yang mana? HEVC direkomendasikan untuk sebagian besar perangkat modern dan biasanya menyeimbangkan kualitas gambar, bandwidth, dan HDR; AV1 dapat menghemat bandwidth jika didukung kedua sisi, tetapi pada beberapa perangkat latensi dekodenya bisa lebih tinggi; H.264 paling kompatibel, tetapi memerlukan bandwidth lebih besar dan tidak mendukung HDR.</string>
 </resources>

@@ -4,7 +4,7 @@
     <string name="title_enable_post_stream_toast">Hiện thông báo độ trễ sau khi stream</string>
     <string name="summary_enable_hdr">Stream HDR khi trò chơi và GPU của PC hỗ trợ nó. HDR yêu cầu GPU GTX series 1000 hoặc mới hơn.</string>
     <string name="title_enable_hdr">Bật HDR (Thử nghiệm)</string>
-    <string name="summary_video_format">HEVC làm giảm yêu cầu băng thông video nhưng yêu cầu một thiết bị mới hơn</string>
+    <string name="summary_video_format">Không biết nên chọn gì? HEVC được khuyên dùng cho hầu hết thiết bị hiện đại và thường cân bằng tốt giữa chất lượng hình ảnh, băng thông và HDR. AV1 có thể tiết kiệm băng thông khi cả hai đầu đều hỗ trợ, nhưng có thể gây độ trễ giải mã cao hơn trên một số thiết bị. H.264 tương thích tốt nhất, nhưng cần nhiều băng thông hơn và không hỗ trợ HDR.</string>
     <string name="title_video_format">Thay đổi cài đặt HEVC</string>
     <string name="summary_disable_frame_drop">Có thể làm giảm sự khựng nhỏ trên một số thiết bị, nhưng có thể làm tăng độ trễ</string>
     <string name="title_disable_frame_drop">Không bao giờ giảm khung hình</string>
@@ -61,7 +61,7 @@
     <string name="resolution_prefix_native">Gốc</string>
     <string name="title_checkbox_stretch_video">Kéo giãn video ra toàn màn hình</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="summary_seekbar_bitrate">Tăng để có chất lượng hình ảnh tốt hơn. Giảm để cải thiện hiệu năng trên các kết nối chậm hơn.</string>
+    <string name="summary_seekbar_bitrate">Bitrate cao hơn giúp cải thiện chất lượng hình ảnh nhưng dùng nhiều băng thông hơn; bitrate thấp hơn phù hợp với mạng chậm hoặc không ổn định. Nếu stream bị giật, hãy giảm bitrate trước; chỉ tăng khi mạng ổn định nhưng hình ảnh chưa đủ rõ. Với 1080p60, hãy bắt đầu khoảng 10–20 Mbps.</string>
     <string name="title_seekbar_bitrate">Tốc độ bit video</string>
     <string name="summary_fps_list">Tăng để stream video mượt mà hơn. Giảm để có hiệu năng tốt hơn trên các thiết bị tầm thấp hơn.</string>
     <string name="title_fps_list">Tốc độ khung hình video</string>

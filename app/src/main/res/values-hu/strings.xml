@@ -4,7 +4,7 @@
     <string name="title_enable_post_stream_toast">A késleltetési üzenet megjelenítése streaming után</string>
     <string name="summary_enable_hdr">Streaming HDR, amikor a játék és a PC GPU támogatja. A HDR-hez GTX 1000 sorozatú vagy újabb verzió szükséges.</string>
     <string name="title_enable_hdr">HDR engedélyezése (kísérleti)</string>
-    <string name="summary_video_format">Az újabb kodekek csökkenthetik a videó sávszélességigényét, ha a készülék támogatja őket. A codec-kiválasztások figyelmen kívül hagyhatók, ha a gazdaszoftver vagy a GPU nem támogatja őket.</string>
+    <string name="summary_video_format">Nem tudja, mit válasszon? A legtöbb modern eszközhöz a HEVC ajánlott, mert általában jól egyensúlyoz a képminőség, a sávszélesség és a HDR között; az AV1 mindkét oldali támogatás esetén sávszélességet takaríthat meg, de egyes eszközökön nagyobb dekódolási késleltetést okozhat; a H.264 kompatibilitása a legjobb, de több sávszélességet igényel és nem támogatja a HDR-t.</string>
     <string name="title_video_format">Módosítsa a Kodek beállításait</string>
     <string name="summary_disable_frame_drop">Csökkentheti a mikrodadogást egyes eszközökön, de növelheti a késést</string>
     <string name="title_disable_frame_drop">Soha ne ejtse le a kereteket</string>
@@ -64,7 +64,7 @@
     <string name="category_audio_settings">Hangbeállítások</string>
     <string name="title_checkbox_stretch_video">Nyújtsa a videót teljes képernyősre</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="summary_seekbar_bitrate">Növelje a jobb képminőség érdekében. Csökkenjen a lassabb kapcsolatok teljesítményének javítása érdekében.</string>
+    <string name="summary_seekbar_bitrate">A magasabb bitráta javítja a képminőséget, de több sávszélességet használ; az alacsonyabb bitráta jobb lassabb vagy instabil hálózatokon. Akadozás esetén először csökkentse, majd akkor növelje, ha a hálózat stabil, de a kép túl életlen; 1080p60 esetén kezdjen körülbelül 10–20 Mbps értékkel.</string>
     <string name="title_seekbar_bitrate">Videó bitráta</string>
     <string name="summary_fps_list">Növelje a gördülékenyebb videofolyamot. Csökkenjen a jobb teljesítmény érdekében az alsó kategóriás eszközökön.</string>
     <string name="title_fps_list">Videó képkockasebessége</string>

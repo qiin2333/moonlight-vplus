@@ -79,7 +79,7 @@
     <string name="title_resolution_list">Selecteer resolutie en FPS doel</string>
     <string name="summary_resolution_list">Te hoge instellingen kunnen crashes en haperingen veroorzaken.</string>
     <string name="title_seekbar_bitrate">Selecteer doel video bitsnelheid</string>
-    <string name="summary_seekbar_bitrate">Verlaag bitsnelheid om haperingen te verminderen. Verhoog de bitsnelheid voor een betere videokwaliteit.</string>
+    <string name="summary_seekbar_bitrate">Een hogere bitsnelheid verbetert de beeldkwaliteit, maar gebruikt meer bandbreedte; een lagere bitsnelheid is beter voor tragere of instabiele netwerken. Verlaag de bitsnelheid eerst bij haperingen en verhoog deze wanneer het netwerk stabiel is maar het beeld te onscherp blijft; begin voor 1080p60 met ongeveer 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Rek video uit tot volledig scherm</string>
     <string name="title_checkbox_disable_warnings">Verberg waarschuwingsberichten</string>
     <string name="summary_checkbox_disable_warnings">Verberg on-screen verbindingswaarschuwingen tijdens het streamen</string>
@@ -105,7 +105,7 @@
     <string name="summary_checkbox_host_audio">Speel audio af op de computer en op dit apparaat</string>
     <string name="category_advanced_settings">Geavanceerde Instellingen</string>
     <string name="title_video_format">Verander HEVC instellingen</string>
-    <string name="summary_video_format">HEVC verlaagt video bandbreedte vereisten maar benodigd een recent apparaat</string>
+    <string name="summary_video_format">Weet je niet wat je moet kiezen? HEVC wordt aanbevolen voor de meeste moderne apparaten en biedt meestal een goede balans tussen beeldkwaliteit, bandbreedte en HDR. AV1 kan bandbreedte besparen als beide kanten het ondersteunen, maar kan op sommige apparaten meer decodeervertraging geven. H.264 is het meest compatibel, maar vereist meer bandbreedte en ondersteunt geen HDR.</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="message_decoding_error">Moonlight is gecrasht door een compatibiliteitsprobleem met de video decoder van dit toestel. Zorg ervoor dat GeForce Experience bijgewerkt is naar de laatste versie op uw PC. Probeer de streamingsinstellingen te wijzigen bij blijvende crashes.</string>
     <string name="scut_deleted_pc">PC verwijderd</string>
