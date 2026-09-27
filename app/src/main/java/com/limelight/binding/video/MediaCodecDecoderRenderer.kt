@@ -1550,7 +1550,7 @@ class MediaCodecDecoderRenderer(
                                 decoderConfigurationDirty = false
                             }
                             codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                            framePacingController.updateDecoder(videoDecoder!!)
+                            videoDecoder?.let(framePacingController::updateDecoder)
                             codecRecoveryThreadQuiescedFlags = 0
                             (codecRecoveryMonitor as Object).notifyAll()
                             recoveryComplete = true
