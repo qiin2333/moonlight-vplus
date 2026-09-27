@@ -185,6 +185,17 @@
         <item>neverh265</item>
     </string-array>
 
+    <string-array name="decoder_input_buffer_mode_names">
+        <item>@string/decoder_input_buffer_mode_auto</item>
+        <item>@string/decoder_input_buffer_mode_force_enabled</item>
+        <item>@string/decoder_input_buffer_mode_force_disabled</item>
+    </string-array>
+    <string-array name="decoder_input_buffer_mode_values" translatable="false">
+        <item>auto</item>
+        <item>force_enabled</item>
+        <item>force_disabled</item>
+    </string-array>
+
     <!-- Adaptive Bitrate (ABR) modes -->
     <string-array name="abr_mode_names">
         <item>@string/abr_mode_quality</item>

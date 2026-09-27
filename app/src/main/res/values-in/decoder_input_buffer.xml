@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Buffer masukan dekoder</string>
+    <string name="summary_decoder_input_buffer_mode">Melengkapi buffer dekoder yang tidak tersedia atau terlalu kecil secara otomatis. Gunakan mode paksa hanya untuk pengujian kompatibilitas.</string>
+    <string name="decoder_input_buffer_mode_auto">Otomatis (disarankan)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Paksa aktif</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Paksa nonaktif</string>
+</resources>

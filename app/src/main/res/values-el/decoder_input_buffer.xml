@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Προσωρινή μνήμη εισόδου αποκωδικοποιητή</string>
+    <string name="summary_decoder_input_buffer_mode">Συμπληρώνει αυτόματα προσωρινές μνήμες που λείπουν ή είναι πολύ μικρές. Χρησιμοποιήστε τις εξαναγκασμένες λειτουργίες μόνο για έλεγχο συμβατότητας.</string>
+    <string name="decoder_input_buffer_mode_auto">Αυτόματα (προτείνεται)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Εξαναγκασμένη ενεργοποίηση</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Εξαναγκασμένη απενεργοποίηση</string>
+</resources>
