@@ -734,14 +734,22 @@ private fun SegmentIconView(
 }
 
 @Composable
-private fun screenModeCompactLabel(option: AppScreenCombinationOption): String = when (option.value) {
-    -1 -> stringResource(R.string.appview_screen_mode_host_short)
-    0 -> stringResource(R.string.appview_screen_mode_noop_short)
-    1 -> stringResource(R.string.appview_screen_mode_activate_short)
-    2 -> stringResource(R.string.appview_screen_mode_primary_short)
-    4 -> stringResource(R.string.appview_screen_mode_secondary_short)
-    3 -> stringResource(R.string.appview_screen_mode_exclusive_short)
-    else -> option.label
+private fun screenModeCompactLabel(option: AppScreenCombinationOption): String =
+    screenCombinationModeShortLabelRes(option.value)?.let { stringResource(it) } ?: option.label
+
+/**
+ * Returns the compact label resource shared by the quick-settings control and the
+ * app-page reminder. Unknown values deliberately fall back to the full
+ * server-provided label instead of hiding a setting we do not recognize yet.
+ */
+internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
+    -1 -> R.string.appview_screen_mode_host_short
+    0 -> R.string.appview_screen_mode_noop_short
+    1 -> R.string.appview_screen_mode_activate_short
+    2 -> R.string.appview_screen_mode_primary_short
+    4 -> R.string.appview_screen_mode_secondary_short
+    3 -> R.string.appview_screen_mode_exclusive_short
+    else -> null
 }
 
 private fun screenModeIcon(mode: Int): SegmentIcon = when (mode) {
