@@ -112,7 +112,7 @@
     <string name="summary_checkbox_reduce_refresh_rate">Taxas menores de atualização do display podem gravar energia ao custo de latência de video adicional</string>
     <string name="summary_checkbox_disable_warnings">Desativa as mensagens de aviso de conexão no ecrã durante a transmissão</string>
     <string name="summary_disable_frame_drop">Talvez reduza o micro-stuttering em alguns aparelhos, mas pode aumentar a latência</string>
-    <string name="summary_video_format">HEVC reduz os requisitos de largura de banda de vídeo, mas requer um aparelho mais atual</string>
+    <string name="summary_video_format">Não sabe qual escolher? Use Automático. O HEVC é recomendado para a maioria dos dispositivos modernos e normalmente equilibra qualidade de imagem, largura de banda e HDR. O AV1 pode poupar largura de banda se for suportado pelas duas partes, mas pode ter maior latência de descodificação em alguns dispositivos. O H.264 tem a melhor compatibilidade, mas requer mais largura de banda e não suporta HDR.</string>
     <string name="title_enable_hdr">Ativar HDR (Experimental)</string>
     <string name="summary_full_range">Isso causará perda de detalhes em áreas claras e escuras se o seu aparelho não exibir corretamente todo o conteúdo de vídeo em cores.</string>
     <string name="title_disable_frame_drop">Nunca dropar quadros</string>
@@ -181,7 +181,7 @@
     <string name="title_native_res_dialog">Alerta de Resolução Nativa</string>
     <string name="title_fps_list">Taxa de quadros por segundo</string>
     <string name="title_seekbar_bitrate">Taxa de bits</string>
-    <string name="summary_seekbar_bitrate">Aumente para uma melhor qualidade de imagem. Diminua para melhorar o desempenho em conexões mais lentas.</string>
+    <string name="summary_seekbar_bitrate">Uma taxa de bits mais alta melhora a qualidade da imagem, mas usa mais largura de banda; uma taxa mais baixa é melhor para redes lentas ou instáveis. Se a transmissão travar, reduza-a primeiro e aumente-a quando a rede estiver estável, mas a imagem continuar pouco nítida; para 1080p60, comece com cerca de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Esticar vídeo ao ecrã cheio</string>
     <string name="resolution_prefix_native">Nativa</string>
     <string name="resolution_prefix_native_fullscreen">Ecrã Cheio Nativo</string>
@@ -314,8 +314,13 @@
     <string name="summary_checkbox_enable_spatializer">Ativa experiência de áudio 3D imersiva usando o espacializador do Android. Requer Android 13+ e dispositivo de saída de áudio compatível.</string>
     <string name="title_checkbox_control_only">Modo somente controle</string>
     <string name="summary_checkbox_control_only">Estabelecer apenas conexão de controle sem streams de vídeo e áudio. Útil para controle de entrada remoto apenas.</string>
-    <string name="title_checkbox_enable_mic">Ativar redirecionamento de microfone</string>
-    <string name="summary_checkbox_enable_mic">Redirecionar o microfone do dispositivo para o computador host para chat de voz e comunicação.</string>
+    <string name="title_checkbox_enable_mic">Ativar microfone</string>
+    <string name="summary_checkbox_enable_mic">Enviar o áudio do microfone deste dispositivo para o host. Requer o Foundation Sunshine 2025.0720 ou posterior.</string>
+    <string name="title_list_mic_initial_state">Estado inicial do microfone</string>
+    <string name="summary_list_mic_initial_state">Escolha o estado do microfone ao iniciar cada transmissão.</string>
+    <string name="mic_initial_state_off">Desligado</string>
+    <string name="mic_initial_state_on">Ligado</string>
+    <string name="mic_initial_state_follow_last">Seguir o último estado</string>
     <string name="title_seekbar_mic_bitrate">Taxa de bits do microfone</string>
     <string name="summary_seekbar_mic_bitrate">Ajustar a qualidade de áudio do redirecionamento de microfone.</string>
     <string name="suffix_seekbar_mic_bitrate_kbps">kbps</string>
@@ -383,8 +388,8 @@
     
     <!-- Host settings -->
     <string name="title_screen_combination_mode">Definições de combinação de ecrãs</string>
-    <string name="summary_screen_combination_mode">Controlo de ecrãs do Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controlo de ecrãs do Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Controlo de ecrãs do Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controlo de ecrãs do Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir anfitrião</string>
     <string name="screen_mode_no_operation">Modo sem operação</string>
     <string name="screen_mode_auto_activate">Modo de ativação</string>
@@ -456,7 +461,7 @@
     <!-- Crown features -->
     <string name="category_crown_features">Área de recursos Crown</string>
     <string name="title_crown_super_features">Super recursos Crown</string>
-    <string name="summary_crown_super_features">Botões personalizados e configurações durante streaming, salvos em configurações personalizadas para troca rápida</string>
+    <string name="summary_crown_super_features">Uma solução de botões virtuais na tela. Alterne os botões na tela, as ações rápidas, o modo de toque e as configurações de vibração como perfis nomeados.</string>
     <string name="title_export_super_config">Exportar configuração</string>
     <string name="summary_export_super_config">Exportar arquivo de configuração de botões personalizados e configurações de streaming</string>
     <string name="title_import_super_config">Importar configuração</string>

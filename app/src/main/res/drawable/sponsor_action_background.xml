@@ -2,19 +2,19 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape>
-            <solid android:color="@color/theme_pink_dark" />
+            <solid android:color="?attr/appAccent80" />
             <corners android:radius="@dimen/corner_radius_small" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape>
-            <solid android:color="@color/theme_pink_secondary" />
+            <solid android:color="?attr/appAccent" />
             <corners android:radius="@dimen/corner_radius_small" />
         </shape>
     </item>
     <item>
         <shape>
-            <solid android:color="@color/theme_pink_primary" />
+            <solid android:color="?attr/appAccent" />
             <corners android:radius="@dimen/corner_radius_small" />
         </shape>
     </item>

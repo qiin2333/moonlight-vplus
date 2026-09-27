@@ -528,11 +528,11 @@ public class WheelPad extends Element {
                         displayName = getDisplayStringForValue(segmentValues.get(activeIndex));
                     }
                 } else {
-                    displayName = "预览"; // 备用
+                    displayName = getContext().getString(R.string.crown_preview); // 备用
                 }
             } else {
                 // 编辑模式下，显示固定的示例文本
-                displayName = "预览";
+                displayName = getContext().getString(R.string.crown_preview);
             }
 
             // 应用中心文字的颜色和大小 (这部分逻辑不变)

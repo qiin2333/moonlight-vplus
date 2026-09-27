@@ -1,66 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
-
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <!-- Phosphor Icons (MIT) fill/game-controller -->
     <path
-        android:strokeColor="#1DE9B6"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M20 15L24 19L28 15V4H20V15Z" />
-    <path
-        android:strokeColor="#1DE9B6"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M20 33L24 29L28 33V44H20V33Z" />
-    <path
-        android:strokeColor="#1DE9B6"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M33 28L29 24L33 20L44 20L44 28L33 28Z" />
-    <path
-        android:strokeColor="#1DE9B6"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M15 20L19 24L15 28L4 28L4 20L15 20Z" />
-
-    <!-- 虚线阴影层，稍微偏移，颜色更浅，去除虚线效果，改为实线 -->
-    <path
-        android:strokeColor="#80B2DFDB"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M22 17L26 21L30 17V6H22V17Z" />
-    <path
-        android:strokeColor="#80B2DFDB"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M22 35L26 31L30 35V46H22V35Z" />
-    <path
-        android:strokeColor="#80B2DFDB"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M35 30L31 26L35 22L46 22L46 30L35 30Z" />
-    <path
-        android:strokeColor="#80B2DFDB"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M17 22L21 26L17 30L6 30L6 22L17 22Z" />
+        android:fillColor="?attr/appAccent"
+        android:pathData="M 247.44 173.75 a 0.68 0.68 0 0 0 0 -0.14 L 231.05 89.44 c 0 -0.06 0 -0.12 0 -0.18 A 60.08 60.08 0 0 0 172 40 H 83.89 a 59.88 59.88 0 0 0 -59 49.52 L 8.58 173.61 a 0.68 0.68 0 0 0 0 0.14 36 36 0 0 0 60.9 31.71 l 0.35 -0.37 L 109.52 160 h 37 l 39.71 45.09 c 0.11 0.13 0.23 0.25 0.35 0.37 A 36.08 36.08 0 0 0 212 216 a 36 36 0 0 0 35.43 -42.25 Z M 104 112 H 96 v 8 a 8 8 0 0 1 -16 0 v -8 H 72 a 8 8 0 0 1 0 -16 h 8 V 88 a 8 8 0 0 1 16 0 v 8 h 8 a 8 8 0 0 1 0 16 Z m 40 -8 a 8 8 0 0 1 8 -8 h 24 a 8 8 0 0 1 0 16 H 152 A 8 8 0 0 1 144 104 Z m 84.37 87.47 a 19.84 19.84 0 0 1 -12.9 8.23 A 20.09 20.09 0 0 1 198 194.31 L 167.8 160 H 172 a 60 60 0 0 0 51 -28.38 l 8.74 45 A 19.82 19.82 0 0 1 228.37 191.47 Z" />
 </vector>

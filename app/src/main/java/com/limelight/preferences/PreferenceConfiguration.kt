@@ -1,6 +1,8 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.preferences
 
+import com.limelight.nvstream.HostGamepadSelection
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -119,13 +121,17 @@ class PreferenceConfiguration {
     var language: String = ""
     var smallIconMode = false
     var multiController = false
+    var combineJoyCons = true
     var usbDriver = false
+    var allowExperimentalHaptics = false
+    var hostGamepadSelection = HostGamepadSelection.AUTOMATIC
     var dualSenseWirelessBridge = false
     var dualSenseDirectBluetooth = false
     @JvmField var flipFaceButtons = false
     var onscreenController = false
     var onscreenKeyboard = false
     var enableCrownFeatures = false
+    @JvmField var oscLayout = "xbox"
     @JvmField var onlyL3R3 = false
     @JvmField var showGuideButton = false
     @JvmField var halfHeightOscPortrait = false
@@ -150,6 +156,8 @@ class PreferenceConfiguration {
     var swapQuitAndDisconnect = false
     var bindAllUsb = false
     var analogStickForScrolling: AnalogStickForScrolling = AnalogStickForScrolling.NONE
+    var controllerMouseSpeedPercent = 100
+    var controllerMouseDpadArrows = false
     var mouseNavButtons = false
     var unlockFps = false
     var gameRumbleMode = GameRumbleMode.CONTROLLER
@@ -176,6 +184,7 @@ class PreferenceConfiguration {
     var audioCodecBitrate: Int = 0
     /** AC3 passthrough AudioTrack buffer size in bytes — trade jitter resilience for latency. */
     var audioPassthroughBufferBytes: Int = 16 * 1024
+    var useAc3Iec61937: Boolean = false
     var framePacing = 0
     var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
@@ -217,6 +226,7 @@ class PreferenceConfiguration {
     var micBitrate = 0
     var micIconColor: String = ""
     var micMenuActionMode: String = MIC_MENU_ACTION_SHOW_BUTTON
+    var micInitialState: String = MicrophoneInitialState.OFF.preferenceValue
 
     // 麦克风音量增益及其平衡设置
     var micVolumeProcessingEnabled = false // 音量增益及其平衡总开关
@@ -317,6 +327,9 @@ class PreferenceConfiguration {
                 .putBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, enableAudioVibration)
                 .putInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, audioVibrationStrength)
                 .putString(AUDIO_VIBRATION_MODE_PREF_STRING, audioVibrationMode)
+                .putInt(CONTROLLER_MOUSE_SPEED_PREF_STRING, controllerMouseSpeedPercent)
+                .putString(CONTROLLER_MOUSE_DPAD_PREF_STRING,
+                    if (controllerMouseDpadArrows) "arrows" else "scroll")
                 .putString(AUDIO_VIBRATION_SCENE_PREF_STRING, audioVibrationScene.toString())
                 .putString(SCREEN_POSITION_PREF_STRING, positionString)
                 .putInt(SCREEN_OFFSET_X_PREF_STRING, screenOffsetX)
@@ -326,6 +339,7 @@ class PreferenceConfiguration {
                 .putInt(MIC_BITRATE_PREF_STRING, micBitrate)
                 .putString(MIC_ICON_COLOR_PREF_STRING, micIconColor)
                 .putString(MIC_MENU_ACTION_MODE_PREF_STRING, micMenuActionMode)
+                .putString(MIC_INITIAL_STATE_PREF_STRING, micInitialState)
                 .putString(
                     MIC_VOLUME_PROCESSING_MODE_PREF_STRING,
                     MicVolumeProcessingPolicy.modeFor(
@@ -494,6 +508,7 @@ class PreferenceConfiguration {
         copy.micBitrate = this.micBitrate
         copy.micIconColor = this.micIconColor
         copy.micMenuActionMode = this.micMenuActionMode
+        copy.micInitialState = this.micInitialState
         copy.micVolumeProcessingEnabled = this.micVolumeProcessingEnabled
         copy.micGainEnabled = this.micGainEnabled
         copy.micGainDb = this.micGainDb
@@ -516,6 +531,8 @@ class PreferenceConfiguration {
         copy.gyroInvertXAxis = this.gyroInvertXAxis
         copy.gyroInvertYAxis = this.gyroInvertYAxis
         copy.enableAudioVibration = this.enableAudioVibration
+        copy.controllerMouseSpeedPercent = this.controllerMouseSpeedPercent
+        copy.controllerMouseDpadArrows = this.controllerMouseDpadArrows
         copy.audioVibrationStrength = this.audioVibrationStrength
         copy.audioVibrationMode = this.audioVibrationMode
         copy.audioVibrationScene = this.audioVibrationScene
@@ -577,6 +594,8 @@ class PreferenceConfiguration {
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"
         private const val ANALOG_SCROLLING_PREF_STRING = "analog_scrolling"
+        const val CONTROLLER_MOUSE_SPEED_PREF_STRING = "controller_mouse_speed_percent"
+        const val CONTROLLER_MOUSE_DPAD_PREF_STRING = "controller_mouse_dpad_behavior"
         private const val MOUSE_NAV_BUTTONS_STRING = "checkbox_mouse_nav_buttons"
         private const val LEGACY_VIBRATE_FALLBACK_PREF_STRING = "checkbox_vibrate_fallback"
         const val GAME_RUMBLE_MODE_PREF_STRING = "list_game_rumble_mode"
@@ -610,6 +629,7 @@ class PreferenceConfiguration {
         private const val ENABLE_AUDIO_FX_PREF_STRING = "checkbox_enable_audiofx"
         private const val ENABLE_SPATIALIZER_PREF_STRING = "checkbox_enable_spatializer"
         private const val ENABLE_AUDIO_PASSTHROUGH_PREF_STRING = "checkbox_enable_audio_passthrough"
+        private const val AC3_IEC61937_PREF_STRING = "checkbox_ac3_iec61937"
         private const val DEFAULT_ENABLE_AUDIO_PASSTHROUGH = false
         private const val FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING = "checkbox_force_mtk_max_operating_rate"
         private const val DEFAULT_FORCE_MTK_MAX_OPERATING_RATE = false
@@ -637,6 +657,7 @@ class PreferenceConfiguration {
         private const val MIC_BITRATE_PREF_STRING = "seekbar_mic_bitrate_kbps"
         private const val MIC_ICON_COLOR_PREF_STRING = "list_mic_icon_color"
         const val MIC_MENU_ACTION_MODE_PREF_STRING = "list_mic_menu_action_mode"
+        const val MIC_INITIAL_STATE_PREF_STRING = "list_mic_initial_state"
 
         // 麦克风音量增益及其平衡设置
         const val MIC_VOLUME_PROCESSING_MODE_PREF_STRING = "list_mic_volume_processing_mode"
@@ -834,6 +855,7 @@ class PreferenceConfiguration {
         const val MIC_MENU_ACTION_SHOW_BUTTON = "show_button"
         const val MIC_MENU_ACTION_TOGGLE_MIC = "toggle_microphone"
         private const val DEFAULT_MIC_MENU_ACTION_MODE = MIC_MENU_ACTION_SHOW_BUTTON
+        private val DEFAULT_MIC_INITIAL_STATE = MicrophoneInitialState.OFF.preferenceValue
 
         // 麦克风音量增益及其平衡默认值
         private const val DEFAULT_MIC_GAIN_DB = 0
@@ -1317,6 +1339,7 @@ class PreferenceConfiguration {
 
             val enableAudioPassthrough = prefs.getBoolean(ENABLE_AUDIO_PASSTHROUGH_PREF_STRING, DEFAULT_ENABLE_AUDIO_PASSTHROUGH)
             config.enableAudioPassthrough = enableAudioPassthrough
+            config.useAc3Iec61937 = prefs.getBoolean(AC3_IEC61937_PREF_STRING, false)
 
             val audioConfig = prefs.getString(AUDIO_CONFIG_PREF_STRING, DEFAULT_AUDIO_CONFIG) ?: DEFAULT_AUDIO_CONFIG
             config.audioConfiguration = when (audioConfig) {
@@ -1366,6 +1389,8 @@ class PreferenceConfiguration {
             config.enableHostCadencePreciseSync = prefs.getBoolean(ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING, true)
 
             config.analogStickForScrolling = getAnalogStickForScrollingValue(context)
+            config.controllerMouseSpeedPercent = prefs.getInt(CONTROLLER_MOUSE_SPEED_PREF_STRING, 100).coerceIn(50, 200)
+            config.controllerMouseDpadArrows = prefs.getString(CONTROLLER_MOUSE_DPAD_PREF_STRING, "scroll") == "arrows"
 
             config.deadzonePercentage = prefs.getInt(DEADZONE_PREF_STRING, DEFAULT_DEADZONE)
 
@@ -1387,7 +1412,11 @@ class PreferenceConfiguration {
             config.playHostAudio = prefs.getBoolean(HOST_AUDIO_PREF_STRING, DEFAULT_HOST_AUDIO)
             config.smallIconMode = prefs.getBoolean(SMALL_ICONS_PREF_STRING, getDefaultSmallMode(context))
             config.multiController = prefs.getBoolean(MULTI_CONTROLLER_PREF_STRING, DEFAULT_MULTI_CONTROLLER)
+            config.combineJoyCons = prefs.getBoolean("checkbox_combine_joycons", true)
             config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER)
+            config.allowExperimentalHaptics = prefs.getBoolean("checkbox_experimental_haptic_protocols", false)
+            config.hostGamepadSelection = HostGamepadSelection.fromPreference(
+                prefs.getString("list_host_gamepad_selection", "automatic"))
             config.dualSenseWirelessBridge = prefs.getBoolean(
                 DUALSENSE_WIRELESS_BRIDGE_PREF_STRING,
                 DEFAULT_DUALSENSE_WIRELESS_BRIDGE
@@ -1399,6 +1428,7 @@ class PreferenceConfiguration {
             config.onscreenController = prefs.getBoolean(ONSCREEN_CONTROLLER_PREF_STRING, ONSCREEN_CONTROLLER_DEFAULT)
             config.enableCrownFeatures = prefs.getBoolean(ONSCREEN_KEYBOARD_PREF_STRING, ONSCREEN_KEYBOARD_DEFAULT)
             config.onscreenKeyboard = config.enableCrownFeatures
+            config.oscLayout = prefs.getString("list_osc_layout", "xbox") ?: "xbox"
             config.onlyL3R3 = prefs.getBoolean(ONLY_L3_R3_PREF_STRING, ONLY_L3_R3_DEFAULT)
             config.showGuideButton = prefs.getBoolean(SHOW_GUIDE_BUTTON_PREF_STRING, SHOW_GUIDE_BUTTON_DEFAULT)
             config.halfHeightOscPortrait = prefs.getBoolean(HALF_HEIGHT_OSC_PORTRAIT_PREF_STRING, HALF_HEIGHT_OSC_PORTRAIT_DEFAULT)
@@ -1531,6 +1561,9 @@ class PreferenceConfiguration {
             config.micBitrate = prefs.getInt(MIC_BITRATE_PREF_STRING, DEFAULT_MIC_BITRATE)
             config.micIconColor = prefs.getString(MIC_ICON_COLOR_PREF_STRING, DEFAULT_MIC_ICON_COLOR) ?: DEFAULT_MIC_ICON_COLOR
             config.micMenuActionMode = prefs.getString(MIC_MENU_ACTION_MODE_PREF_STRING, DEFAULT_MIC_MENU_ACTION_MODE) ?: DEFAULT_MIC_MENU_ACTION_MODE
+            config.micInitialState = MicrophoneInitialState.fromPreferenceValue(
+                prefs.getString(MIC_INITIAL_STATE_PREF_STRING, DEFAULT_MIC_INITIAL_STATE)
+            ).preferenceValue
 
             // Legacy flags remain authoritative so importing an old backup can override a
             // previously stored mode value. The settings UI keeps both representations synced.

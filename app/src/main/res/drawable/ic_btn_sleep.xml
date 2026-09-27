@@ -2,19 +2,10 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
-
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <!-- Phosphor Icons (MIT) fill/moon -->
     <path
-        android:strokeColor="#333"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:pathData="M16.8657 7.46924C16.3036 9.21181 16 11.0705 16 13C16 22.9411 24.0589 31 34 31C36.5346 31 38.9468 30.4762 41.1343 29.5308C38.8006 36.766 32.0116 42 24 42C14.0589 42 6 33.9411 6 24C6 16.5935 10.4734 10.2317 16.8657 7.46924Z" />
-    <path
-        android:fillColor="#000000"
-        android:strokeColor="#333"
-        android:strokeWidth="4"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:pathData="M31.6605 10H41L31 18H41" />
+        android:fillColor="?attr/appAccent"
+        android:pathData="M235.54,150.21a104.84,104.84,0,0,1-37,52.91A104,104,0,0,1,32,120,103.09,103.09,0,0,1,52.88,57.48a104.84,104.84,0,0,1,52.91-37,8,8,0,0,1,10,10,88.08,88.08,0,0,0,109.8,109.8,8,8,0,0,1,10,10Z" />
 </vector>

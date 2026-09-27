@@ -12,6 +12,7 @@ import android.view.animation.LinearInterpolator
 import androidx.core.content.ContextCompat
 import com.limelight.R
 import kotlin.math.min
+import com.limelight.utils.UiHelper
 
 /**
  * A small, self-contained discovery indicator for the empty PC screen.
@@ -27,7 +28,7 @@ class HostSearchRadarView @JvmOverloads constructor(
 
     private val density = resources.displayMetrics.density
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.add_pc_accent)
+        color = UiHelper.accentColor(context)
         style = Paint.Style.STROKE
         strokeWidth = 1.5f * density
         pathEffect = DashPathEffect(floatArrayOf(4f * density, 3f * density), 0f)
@@ -49,7 +50,7 @@ class HostSearchRadarView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
     private val moonOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.add_pc_accent)
+        color = UiHelper.accentColor(context)
         style = Paint.Style.STROKE
         strokeWidth = 1.4f * density
     }
@@ -57,6 +58,13 @@ class HostSearchRadarView @JvmOverloads constructor(
 
     private var phase = 0f
     private var animator: ValueAnimator? = null
+
+    fun refreshAccentColor() {
+        val accent = UiHelper.accentColor(context)
+        ringPaint.color = accent
+        moonOutlinePaint.color = accent
+        invalidate()
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)

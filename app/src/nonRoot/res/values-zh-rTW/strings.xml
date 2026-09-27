@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">為平板鍵盤觸控板啟用原生觸控板輸入適配。不需要 Root 權限；需要 Foundation Sunshine，並啟用「適配原生觸控板」選項。僅在部分 Xiaomi 平板上測試過。</string>
+</resources>

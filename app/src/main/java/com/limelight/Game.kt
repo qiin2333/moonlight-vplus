@@ -1,6 +1,11 @@
 @file:Suppress("DEPRECATION")
 package com.limelight
 
+import com.limelight.ui.ThemedComponentActivity
+import com.limelight.binding.input.driver.UsbWaveformBackends
+
+import android.hardware.usb.UsbManager
+
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.audio.AndroidAudioRenderer
 import com.limelight.binding.audio.AudioDiagnostics
@@ -102,6 +107,9 @@ import android.view.View.OnGenericMotionListener
 import android.view.View.OnSystemUiVisibilityChangeListener
 import android.view.View.OnTouchListener
 import android.view.Window
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.view.inputmethod.InputMethodManager
@@ -111,7 +119,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import androidx.annotation.RequiresApi
-import androidx.activity.ComponentActivity
 
 import java.io.ByteArrayInputStream
 import java.lang.reflect.InvocationTargetException
@@ -132,7 +139,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 
-class Game : ComponentActivity(), SurfaceHolder.Callback,
+class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
     OnSystemUiVisibilityChangeListener, GameGestures, GameMenuAxisSourceLifecycle,
     StreamView.InputCallbacks,
@@ -184,15 +191,14 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private var usbForwardingCreationPending = false
 
 
-    @SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
     fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
         if (!connected) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
-            if (!previousCleanup.isDone || previousCleanup.isCompletedExceptionally) {
+            if (!previousCleanup.isDone || previousCleanup.isFailed) {
                 if (!usbForwardingCreationPending) {
                     usbForwardingCreationPending = true
-                    previousCleanup.whenComplete { _, error ->
+                    previousCleanup.whenComplete { error ->
                         runOnUiThread {
                             usbForwardingCreationPending = false
                             if (!isDestroyed && connected) {
@@ -222,6 +228,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private val startHoldWheelVisible = mutableStateOf(false)
     private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
+    /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
+    private var virtualControllerVisibleBeforeStop: Boolean? = null
+    private var pendingPipExitSnapshot: PipInteractiveOverlaySnapshot? = null
+    private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
     private var surfaceCreated = false
     var attemptedConnection = false
@@ -512,6 +522,13 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         audioVibrationService = AudioVibrationService(this)
         audioVibrationService?.controllerHandler = controllerHandler
+        bindAudioHapticsTouchArbitration()
+        audioVibrationService?.detachSystemAudioHaptics = {
+            audioRenderer?.detachSystemAudioHaptics() == true
+        }
+        audioVibrationService?.attachSystemAudioHaptics = {
+            audioRenderer?.attachSystemAudioHaptics() == true
+        }
         audioVibrationService?.setSettings(
             prefConfig.enableAudioVibration,
             prefConfig.audioVibrationStrength,
@@ -575,7 +592,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             initializeControllerManager()
         }
 
-        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge) {
+        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) {
             bindUsbDriverService()
         }
 
@@ -586,7 +603,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             }
             Dialog.displayDialog(
                 this, resources.getString(R.string.conn_error_title),
-                "This device or ROM doesn't support hardware accelerated H.264 playback.", true
+                this.getString(R.string.error_h264_unsupported), true
             )
             return
         }
@@ -773,8 +790,11 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         )
         val config = streamConfigResult.config
 
+        // Keep connection callbacks localized on API 22-32 where setLocale() updates
+        // the Activity resources without changing the process application context.
+        val connectionContext = applicationContext.createConfigurationContext(Configuration(resources.configuration))
         conn = NvConnection(
-            applicationContext,
+            connectionContext,
             ComputerDetails.AddressTuple(host, port),
             httpsPort, uniqueId, pairName, config,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
@@ -788,6 +808,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
+        virtualController?.rebindControllerHandler(controllerHandler)
         // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
         // re-runs this path once it claims controller 0.
         controllerHandler.onSensorsReenabled()
@@ -880,10 +901,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                         MoonBridge.HDR_MODE_HDR10 -> "HDR10"
                         else -> "HDR"
                     }
-                    Toast.makeText(this, "Display mode does not support $requiredType", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, this.getString(R.string.error_display_hdr_format, requiredType), Toast.LENGTH_LONG).show()
                 }
             } else {
-                Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, this.getString(R.string.error_hdr_android_version), Toast.LENGTH_LONG).show()
             }
         }
 
@@ -992,7 +1013,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 MoonBridge.HDR_MODE_HDR10_PLUS -> if (hdr10PlusRequested) "HDR10+" else "HDR10"
                 else -> "HDR10"
             }
-            Toast.makeText(this, "Decoder does not support $requiredProfile profile", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_decoder_profile, requiredProfile), Toast.LENGTH_LONG).show()
         }
 
         // The renderer is constructed before this final decoder gate so that common-c can
@@ -1001,10 +1022,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         decoderRenderer?.setHdr10PlusRequested(willStreamHdr && hdr10PlusRequested)
 
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
-            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_no_hevc_decoder), Toast.LENGTH_LONG).show()
         }
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && decoderRenderer?.isAv1Supported() != true) {
-            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, this.getString(R.string.error_no_av1_decoder), Toast.LENGTH_LONG).show()
         }
 
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
@@ -1029,7 +1050,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 ||
                 prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_H264
             ) {
-                Toast.makeText(this, "Dolby Vision requires HEVC; ignoring codec preference", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, this.getString(R.string.error_dolby_requires_hevc), Toast.LENGTH_LONG).show()
             }
             LimeLog.info("Dolby Vision requested: restricting codec mask to HEVC")
         }
@@ -1069,6 +1090,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         negotiatedHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
         framegenInputHdrEnabled = negotiatedHdrEnabled
 
+        val waveformController = UsbWaveformBackends.hasEligibleController(
+            getSystemService(USB_SERVICE) as? UsbManager,
+            prefConfig.allowExperimentalHaptics)
+        val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
@@ -1089,6 +1114,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
             .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
+            .setAuthoredPcmHaptics(prefConfig.hostGamepadSelection.requestsAuthoredPcm(
+                waveformController,
+                prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE))
+            .setHostGamepad(hostGamepad)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
                 decoderRenderer?.getPreferredColorRange()
@@ -1158,6 +1187,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     )
 
     private fun prepareConnection() {
+        audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
         runOnUiThread {
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
@@ -1186,8 +1216,9 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         performanceOverlayManager?.recordStreamStart()
 
         audioVibrationService?.controllerHandler = controllerHandler
+        bindAudioHapticsTouchArbitration()
 
-        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge) {
+        if (prefConfig.usbDriver || prefConfig.dualSenseWirelessBridge || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) {
             bindUsbDriverService()
         } else {
             usbDriverServiceManager?.refreshListener()
@@ -1225,12 +1256,21 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        if (::floatBallHandler.isInitialized &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
+            !pipInteractiveOverlayState.isActive() &&
+            pendingPipExitSnapshot == null &&
+            floatBallHandler.isRequestedVisible()
+        ) {
+            floatBallHandler.show()
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Reconcile OEM callback gaps after rapid PiP transitions.
-            applyPictureInPictureUiState(isInPictureInPictureMode)
+            applyPictureInPictureUiState(isInPictureInPictureMode, activityResumed = true)
         }
         if (audioVibrationService != null) {
             updateAudioHapticsRuntimeEnabled(true)
+            if (connected) audioVibrationService?.resumeAfterForeground()
         }
         KeyboardAccessibilityService.setIntercepting(true)
         val service = KeyboardAccessibilityService.instance
@@ -1242,11 +1282,6 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
-        }
-        if (::floatBallHandler.isInitialized &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode)
-        ) {
-            floatBallHandler.show()
         }
     }
 
@@ -1302,13 +1337,24 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         applyPictureInPictureUiState(isInPictureInPictureMode)
     }
 
-    private fun applyPictureInPictureUiState(inPictureInPicture: Boolean) {
+    private fun applyPictureInPictureUiState(
+        inPictureInPicture: Boolean,
+        activityResumed: Boolean = lifecycle.currentState.isAtLeast(
+            androidx.lifecycle.Lifecycle.State.RESUMED
+        )
+    ) {
         if (inPictureInPicture) {
+            val pendingSnapshot = pendingPipExitSnapshot
+            if (pendingSnapshot != null) {
+                cancelPendingPipOverlayRestore()
+            }
             val isFirstEntry = pipInteractiveOverlayState.enter(
-                PipInteractiveOverlaySnapshot(
+                pendingSnapshot ?: PipInteractiveOverlaySnapshot(
                     virtualControllerVisible = isVirtualControllerVisible(),
                     crownControllerVisible = controllerManager?.isVisible() == true,
-                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE
+                    microphoneButtonVisible = micButton?.visibility == View.VISIBLE,
+                    floatBallVisible = ::floatBallHandler.isInitialized &&
+                            floatBallHandler.isRequestedVisible()
                 )
             )
             enforcePictureInPictureUiState()
@@ -1318,7 +1364,15 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             return
         }
 
-        val snapshot = pipInteractiveOverlayState.exit() ?: return
+        val snapshot = pipInteractiveOverlayState.exitIfResumed(activityResumed) ?: return
+        // onResume may arrive while the platform still reports PiP. In that
+        // order, the later PiP exit callback must restore the floating window.
+        if (prefConfig.enableFloatBall && ::floatBallHandler.isInitialized &&
+            activityResumed
+        ) {
+            schedulePipOverlayRestore(snapshot)
+        }
+
         if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
             virtualController?.show()
         } else {
@@ -1334,18 +1388,58 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         notificationOverlayManager.setHiding(false)
         notificationOverlayManager.applyVisibility()
         microphoneManager?.setEnableMic(prefConfig.enableMic)
-        if (!snapshot.microphoneButtonVisible) {
-            micButton?.visibility = View.GONE
-        }
+        micButton?.visibility = if (
+            snapshot.microphoneButtonVisible && prefConfig.enableMic
+        ) View.VISIBLE else View.GONE
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
+    }
+
+    private fun schedulePipOverlayRestore(snapshot: PipInteractiveOverlaySnapshot) {
+        cancelPendingPipOverlayRestore()
+        pendingPipExitSnapshot = snapshot
+        val generation = ++pipOverlayRestoreGeneration
+        fun restoreAfterWindowExit() {
+            window.decorView.doOnPreDraw {
+                if (generation != pipOverlayRestoreGeneration || isFinishing || isDestroyed) {
+                    return@doOnPreDraw
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) {
+                    // Some OEMs report the PiP exit callback before the window
+                    // leaves PiP. Keep waiting instead of losing the snapshot.
+                    window.decorView.postOnAnimation { restoreAfterWindowExit() }
+                    return@doOnPreDraw
+                }
+                val activityResumed = lifecycle.currentState.isAtLeast(
+                    androidx.lifecycle.Lifecycle.State.RESUMED
+                )
+                if (!activityResumed) {
+                    pendingPipExitSnapshot = null
+                    return@doOnPreDraw
+                }
+
+                pendingPipExitSnapshot = null
+                if (snapshot.floatBallVisible) {
+                    floatBallHandler.show()
+                } else {
+                    floatBallHandler.hide()
+                }
+            }
+        }
+        restoreAfterWindowExit()
+    }
+
+    private fun cancelPendingPipOverlayRestore() {
+        pipOverlayRestoreGeneration++
+        pendingPipExitSnapshot = null
     }
 
     private fun enforcePictureInPictureUiState() {
         virtualController?.hide()
         controllerManager?.hide()
         micButton?.visibility = View.GONE
-        if (::floatBallHandler.isInitialized) floatBallHandler.hide()
+        if (::floatBallHandler.isInitialized) floatBallHandler.suppress()
+        controllerShortcutHintView?.visibility = View.GONE
         hideStartHoldWheel()
         performanceOverlayManager?.hideOverlayImmediate()
         jitterMonitorManager?.hideImmediate()
@@ -1602,7 +1696,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         updateAudioHapticsRuntimeEnabled(false)
         audioVibrationService?.stop()
         if (::floatBallHandler.isInitialized) {
-            floatBallHandler.hide()
+            floatBallHandler.suppress()
         }
         KeyboardAccessibilityService.setIntercepting(false)
         KeyboardAccessibilityService.instance?.keyEventCallback = null
@@ -1621,6 +1715,19 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
         val featureEnabled = foreground && prefConfig.enableAudioVibration
         MoonBridge.setAudioHapticsOutputEnabled(featureEnabled)
+    }
+
+    private fun bindAudioHapticsTouchArbitration() {
+        val service = audioVibrationService ?: return
+        if (!::controllerHandler.isInitialized) return
+        controllerHandler.setDeviceTouchAudioCallbacks(
+            onPreemptRequested = service::preemptDeviceOutputForTouch,
+            onFinished = service::resumeDeviceOutputAfterTouch,
+        )
+    }
+
+    internal fun stopAudioHapticsForStream() {
+        audioVibrationService?.stop()
     }
 
     /**
@@ -1715,6 +1822,10 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
         activeGameMenu?.dismiss()
         activeGameMenu = null
 
+        if (!isFinishing) {
+            virtualControllerVisibleBeforeStop =
+                pipInteractiveOverlayState.virtualControllerVisibleForStop(isVirtualControllerVisible())
+        }
         if (virtualController != null) {
             virtualController?.hide()
         }
@@ -1914,9 +2025,22 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
 
     override fun toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay")
-        streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        inputManager.toggleSoftInput(0, 0)
+        val imeVisible = ViewCompat.getRootWindowInsets(streamView)
+            ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        if (imeVisible) {
+            inputManager.hideSoftInputFromWindow(streamView.windowToken, 0)
+            return
+        }
+
+        streamView.setTextInputEnabled(true)
+        streamView.isFocusableInTouchMode = true
+        streamView.requestFocus()
+        streamView.post {
+            if (!isFinishing && !isDestroyed) {
+                inputManager.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
     }
 
     override fun onRemoteTextContext(context: RemoteTextContext) {
@@ -2103,6 +2227,8 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
     override fun onStart() {
         super.onStart()
 
+        val stoppedVirtualControllerVisibility = restoreVirtualControllerAfterStop()
+
         if (!isStreamingActive && streamStartTime > 0) {
             lastActiveTime = System.currentTimeMillis()
             isStreamingActive = true
@@ -2117,6 +2243,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 progressOverlay = null
             }
             hideSystemUi(500)
+            finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
             return
         }
 
@@ -2132,6 +2259,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 prepareConnection()
             } catch (e: Exception) {
                 LimeLog.severe("Failed to prepare connection: ${e.message}")
+                finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
                 finish()
                 return
             }
@@ -2144,6 +2272,22 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
             streamView.requestLayout()
             streamView.invalidate()
         }
+        finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
+    }
+
+    private fun restoreVirtualControllerAfterStop(): Boolean? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) return null
+        return virtualControllerVisibleBeforeStop
+    }
+
+    private fun finalizeVirtualControllerAfterStop(wasVisible: Boolean?) {
+        if (wasVisible == null) return
+        if (wasVisible && prefConfig.onscreenController) {
+            virtualController?.show()
+        } else {
+            virtualController?.hide()
+        }
+        virtualControllerVisibleBeforeStop = null
     }
 
     override fun displayMessage(message: String) {
@@ -2496,6 +2640,7 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 enableAudioFx = prefConfig.enableAudioFx,
                 enableSpatializer = prefConfig.enableSpatializer,
                 passthroughBufferBytes = prefConfig.audioPassthroughBufferBytes,
+                useAc3Iec61937 = prefConfig.useAc3Iec61937,
                 enableSystemAudioHaptics = enableSystemAudioHaptics,
                 onSystemAudioHapticsActiveChanged = { active ->
                     audioVibrationService?.setSystemAudioCoupledDeviceActive(active)
@@ -2731,20 +2876,21 @@ class Game : ComponentActivity(), SurfaceHolder.Callback,
                 perfAttrs[getString(R.string.perf_decoder)] = performanceInfo.decoder ?: ""
                 perfAttrs[getString(R.string.perf_hdr_format)] = performanceInfo.hdrFormat.displayName
                 perfAttrs[getString(R.string.perf_resolution)] = "${performanceInfo.initialWidth}x${performanceInfo.initialHeight}"
-                perfAttrs[getString(R.string.perf_fps)] = String.format("%.0f", performanceInfo.totalFps)
-                perfAttrs[getString(R.string.perf_rx_fps)] = String.format("%.0f", performanceInfo.receivedFps)
-                perfAttrs[getString(R.string.perf_rd_fps)] = String.format("%.0f", performanceInfo.renderedFps)
+                perfAttrs[getString(R.string.perf_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.totalFps)
+                perfAttrs[getString(R.string.perf_rx_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.receivedFps)
+                perfAttrs[getString(R.string.perf_rd_fps)] = String.format(Locale.getDefault(), "%.0f", performanceInfo.renderedFps)
                 perfAttrs[getString(R.string.perf_fg_fps)] = if (performanceInfo.framegenFps > 0.5f) {
-                    String.format("%.0f", performanceInfo.framegenFps)
+                    String.format(Locale.getDefault(), "%.0f", performanceInfo.framegenFps)
                 } else {
                     "0"
                 }
-                perfAttrs[getString(R.string.perf_frame_loss)] = String.format("%.1f", performanceInfo.lostFrameRate)
-                perfAttrs[getString(R.string.perf_network_rtt)] = String.format("%d", (performanceInfo.rttInfo shr 32).toInt())
-                perfAttrs[getString(R.string.perf_host_latency)] = String.format("%.2f", performanceInfo.aveHostProcessingLatency)
-                perfAttrs[getString(R.string.perf_decode_time)] = String.format("%.2f", performanceInfo.decodeTimeMs)
+                perfAttrs[getString(R.string.perf_frame_loss)] = String.format(Locale.getDefault(), "%.1f", performanceInfo.lostFrameRate)
+                perfAttrs[getString(R.string.perf_network_rtt)] = String.format(Locale.getDefault(), "%d", (performanceInfo.rttInfo shr 32).toInt())
+                perfAttrs[getString(R.string.perf_host_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.aveHostProcessingLatency)
+                perfAttrs[getString(R.string.perf_decode_time)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
                 perfAttrs[getString(R.string.perf_bandwidth)] = performanceInfo.bandWidth ?: ""
-                perfAttrs[getString(R.string.perf_render_latency)] = String.format("%.2f", performanceInfo.renderingLatencyMs)
+                perfAttrs[getString(R.string.perf_render_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.renderingLatencyMs)
+                com.limelight.utils.PerformanceTemplateTokens.addCanonicalAliases(perfAttrs)
                 for (display in performanceInfoDisplays) {
                     display.display(perfAttrs)
                 }

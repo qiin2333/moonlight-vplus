@@ -64,10 +64,10 @@
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
-                android:progressTint="@color/theme_pink_primary"
+                android:progressTint="?attr/appAccent"
                 android:progressBackgroundTint="#33FFFFFF"
                 android:indeterminate="true"
-                android:indeterminateTint="@color/theme_pink_primary" />
+                android:indeterminateTint="?attr/appAccent" />
 
             <!-- 进度文字 -->
             <TextView

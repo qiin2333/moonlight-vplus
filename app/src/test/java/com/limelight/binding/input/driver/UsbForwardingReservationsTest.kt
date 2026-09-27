@@ -2,10 +2,10 @@ package com.limelight.binding.input.driver
 
 import org.junit.Assert.*
 import org.junit.Test
-import java.util.concurrent.CompletableFuture
+import com.limelight.utils.CompletionSignal
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
@@ -13,14 +13,14 @@ class UsbForwardingReservationsTest {
     @Test fun deferredRestoreReleasesOnlyAfterLateSuccessfulStop() {
         val registry = UsbForwardingReservations()
         val lease = registry.reserve("usb/a")
-        val stop = CompletableFuture<Void>()
+        val stop = CompletionSignal()
         lease.awaitStops(listOf(stop))
-        assertThrows(TimeoutException::class.java) { lease.ready.get(0, TimeUnit.MILLISECONDS) }
+        assertThrows(TimeoutException::class.java) { lease.ready.await(1) }
         var restores = 0
         lease.restoreWhenReady({ restores++ }, { throw AssertionError(it) })
         assertTrue(registry.contains("usb/a"))
         assertEquals(0, restores)
-        stop.complete(null)
+        stop.complete()
         assertEquals(1, restores)
         assertFalse(registry.contains("usb/a"))
         registry.reserve("usb/a")
@@ -29,12 +29,15 @@ class UsbForwardingReservationsTest {
     @Test fun deferredRestoreRetainsLateFailedStop() {
         val registry = UsbForwardingReservations()
         val lease = registry.reserve("usb/a")
-        val stop = CompletableFuture<Void>()
+        val stop = CompletionSignal()
         lease.awaitStops(listOf(stop))
-        assertThrows(TimeoutException::class.java) { lease.ready.get(0, TimeUnit.MILLISECONDS) }
+        assertThrows(TimeoutException::class.java) { lease.ready.await(1) }
         var restored = false
-        lease.restoreWhenReady({ restored = true }, { throw AssertionError(it) })
-        stop.completeExceptionally(IllegalStateException("release failed"))
+        var failure: Throwable? = null
+        lease.restoreWhenReady({ restored = true }, { failure = it })
+        val error = IllegalStateException("release failed")
+        stop.completeExceptionally(error)
+        assertSame(error, failure)
         assertFalse(restored)
         assertTrue(registry.contains("usb/a"))
         registry.reserve("usb/other")
@@ -44,7 +47,7 @@ class UsbForwardingReservationsTest {
         val registry = UsbForwardingReservations()
         for (fail in listOf(false, true)) {
             val lease = registry.reserve("usb/blocked/$fail")
-            val stopping = CompletableFuture<Void>()
+            val stopping = CompletionSignal()
             lease.awaitStops(listOf(stopping))
             if (fail) stopping.completeExceptionally(IllegalStateException("release failed"))
             assertFalse(lease.canRestore())
@@ -64,7 +67,7 @@ class UsbForwardingReservationsTest {
         stop.failed(IllegalStateException("driver release failed"))
         assertFalse(lease.ready.isDone)
         stop.finish()
-        assertTrue(lease.ready.isCompletedExceptionally)
+        assertTrue(lease.ready.isFailed)
         assertThrows(IllegalStateException::class.java) { lease.restore {} }
         assertTrue(registry.contains("usb/a"))
     }
@@ -76,7 +79,7 @@ class UsbForwardingReservationsTest {
         lease.awaitStops(listOf(stop.completion))
         assertFalse(lease.ready.isDone)
         stop.finish()
-        lease.ready.join()
+        lease.ready.await(1_000)
         lease.restore {}
         assertFalse(registry.contains("usb/a"))
     }
@@ -84,13 +87,13 @@ class UsbForwardingReservationsTest {
     @Test fun waitsForEveryLocalDriverAndRestoresOnlyOnce() {
         val registry = UsbForwardingReservations()
         val lease = registry.reserve("usb/a")
-        val first = CompletableFuture<Void>()
-        val second = CompletableFuture<Void>()
+        val first = CompletionSignal()
+        val second = CompletionSignal()
         lease.awaitStops(listOf(first, second))
-        first.complete(null)
+        first.complete()
         assertFalse(lease.ready.isDone)
         assertThrows(IllegalStateException::class.java) { lease.restore {} }
-        second.complete(null)
+        second.complete()
         var restores = 0
         lease.restore { restores++ }
         lease.restore { restores++ }
@@ -101,10 +104,10 @@ class UsbForwardingReservationsTest {
     @Test fun failedStopKeepsDeviceReserved() {
         val registry = UsbForwardingReservations()
         val lease = registry.reserve("usb/a")
-        val stop = CompletableFuture<Void>()
+        val stop = CompletionSignal()
         lease.awaitStops(listOf(stop))
         stop.completeExceptionally(IllegalStateException("USB close failed"))
-        assertTrue(lease.ready.isCompletedExceptionally)
+        assertTrue(lease.ready.isFailed)
         assertThrows(IllegalStateException::class.java) { lease.restore {} }
         assertTrue(registry.contains("usb/a"))
     }
@@ -139,5 +142,55 @@ class UsbForwardingReservationsTest {
         }
         assertTrue(finished.await(2, TimeUnit.SECONDS))
         assertFalse(canClaim)
+    }
+
+    @Test fun failedStopReportsFailureAndReplugAllowsSamePathWithoutRestoringOldDriver() {
+        val registry = UsbForwardingReservations()
+        val old = registry.reserve("usb/a")
+        val stop = CompletionSignal()
+        old.awaitStops(listOf(stop))
+        val error = IllegalStateException("connection close failed")
+        stop.completeExceptionally(error)
+        var failure: Throwable? = null
+        var restored = false
+        old.restoreWhenReady({ restored = true }, { failure = it })
+        assertSame(error, failure)
+        assertFalse(restored)
+        assertThrows(IllegalStateException::class.java) { registry.reserve("usb/a") }
+        registry.deviceDetached("usb/a")
+        val replacement = registry.reserve("usb/a")
+        old.restoreWhenReady({ restored = true }, {})
+        assertFalse(restored)
+        assertTrue(registry.contains("usb/a"))
+        replacement.awaitStops(emptyList())
+        replacement.restore {}
+    }
+
+    @Test fun detachDuringStopWaitsForAllOwnersBeforeRecoveringFailure() {
+        val registry = UsbForwardingReservations()
+        val lease = registry.reserve("usb/a")
+        val first = CompletionSignal()
+        val second = CompletionSignal()
+        lease.awaitStops(listOf(first, second))
+        registry.deviceDetached("usb/a")
+        first.completeExceptionally(IllegalStateException("close failed"))
+        assertTrue(registry.contains("usb/a"))
+        second.complete()
+        assertFalse(registry.contains("usb/a"))
+        registry.reserve("usb/a")
+    }
+
+    @Test fun detachDoesNotReleaseSuccessfulHandoffBeforeExporterCleanup() {
+        val registry = UsbForwardingReservations()
+        val lease = registry.reserve("usb/a")
+        val stop = CompletionSignal()
+        lease.awaitStops(listOf(stop))
+        registry.deviceDetached("usb/a")
+        stop.complete()
+        assertTrue(registry.contains("usb/a"))
+        registry.deviceDetached("usb/a")
+        assertTrue(registry.contains("usb/a"))
+        lease.restore {}
+        assertFalse(registry.contains("usb/a"))
     }
 }

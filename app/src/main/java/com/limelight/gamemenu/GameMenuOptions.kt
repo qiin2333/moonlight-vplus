@@ -55,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 
 @Composable
@@ -107,8 +109,8 @@ private fun MenuOptionRow(
     val danger = option.iconKey == "game_menu_disconnect" ||
         option.iconKey == "game_menu_disconnect_and_quit"
     val borderColor = when {
-        option.selected -> colorResource(R.color.game_menu_accent).copy(alpha = 0.70f)
-        option.isCrownControl -> colorResource(R.color.game_menu_accent).copy(alpha = 0.55f)
+        option.selected -> appAccentColor().copy(alpha = 0.70f)
+        option.isCrownControl -> appAccentColor().copy(alpha = 0.55f)
         else -> colorResource(R.color.game_menu_list_item_border)
     }
     val activate = {
@@ -166,7 +168,7 @@ private fun MenuOptionRow(
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = if (emphasizedCrownAction) colorResource(R.color.game_menu_accent) else Color.Unspecified,
+                tint = if (emphasizedCrownAction) appAccentColor() else Color.Unspecified,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(GameMenuDimens.section))
@@ -260,7 +262,7 @@ private fun MenuOptionRow(
         if (option.selected) {
             Text(
                 text = "✓",
-                color = colorResource(R.color.game_menu_accent),
+                color = appAccentColor(),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = GameMenuDimens.compact)
@@ -286,8 +288,8 @@ internal fun InlineToggle(
     modifier: Modifier = Modifier,
     onToggle: (() -> Unit)? = null
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
-    val track = if (checked) accent.copy(alpha = 0.82f) else colorResource(R.color.game_menu_button_border)
+    val accent = appAccentColor()
+    val track = if (checked) accent.copy(alpha = 0.82f) else appAccentSoftColor()
     val outline = if (checked) accent.copy(alpha = 0.46f) else colorResource(R.color.game_menu_list_item_border)
     val interactionModifier = if (onToggle != null) {
         Modifier
@@ -341,7 +343,7 @@ internal fun InlineSegmentedControl(
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     val focusRequesters = remember(segments.size) { List(segments.size) { FocusRequester() } }
     val usesDenseLabels = segments.size >= 5
     val labelHorizontalPadding = if (usesDenseLabels) 0.dp else 2.dp
@@ -489,7 +491,7 @@ private fun String.containsHanCodePoint(): Boolean {
 
 @Composable
 internal fun ActionTextBadge(text: String) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Box(
         modifier = Modifier
             .size(22.dp)
@@ -537,7 +539,7 @@ internal fun SuperOptionChip(
     option: GameMenu.MenuOption,
     onClick: () -> Unit
 ) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     ActionPill(
         backgroundColor = accent.copy(alpha = 0.07f),
         borderColor = accent.copy(alpha = 0.20f),
@@ -556,7 +558,7 @@ internal fun SuperOptionChip(
 
 @Composable
 internal fun EmptySuperCommandChip(onClick: () -> Unit) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     ActionPill(
         backgroundColor = Color.Transparent,
         borderColor = accent.copy(alpha = 0.34f),

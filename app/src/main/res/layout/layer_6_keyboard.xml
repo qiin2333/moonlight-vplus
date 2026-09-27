@@ -39,10 +39,10 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:padding="2dp">
-                <TextView android:id="@+id/btn_key_page_main" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Main" android:textSize="11sp"/>
-                <TextView android:id="@+id/btn_key_page_nav" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Nav" android:textSize="11sp"/>
-                <TextView android:id="@+id/btn_key_page_num" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Num" android:textSize="11sp"/>
-                <TextView android:id="@+id/btn_key_page_mini" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="Mini" android:textSize="11sp"/>
+                <TextView android:id="@+id/btn_key_page_main" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_main" android:textSize="11sp"/>
+                <TextView android:id="@+id/btn_key_page_nav" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_nav" android:textSize="11sp"/>
+                <TextView android:id="@+id/btn_key_page_num" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_num" android:textSize="11sp"/>
+                <TextView android:id="@+id/btn_key_page_mini" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="52dp" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_mini" android:textSize="11sp"/>
             </LinearLayout>
 
             <!-- Keyboard Page Container & Functional Strip -->
@@ -79,7 +79,7 @@
                     style="@style/KeyboardKeyRefined.Modifier"
                     android:layout_width="42dp"
                     android:layout_height="36dp"
-                    android:text="Hide"
+                    android:text="@string/keyboard_hide"
                     android:textSize="11sp"
                     android:layout_marginBottom="4dp"/>
                 <TextView
@@ -87,11 +87,11 @@
                     style="@style/KeyboardKeyRefined.Modifier"
                     android:layout_width="42dp"
                     android:layout_height="36dp"
-                    android:text="Size"
+                    android:text="@string/keyboard_size"
                     android:textSize="11sp"
                     android:layout_marginBottom="4dp"/>
                 <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Opacity" android:textColor="#88FFFFFF" android:textSize="8sp" android:gravity="center" android:layout_marginBottom="8dp"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/keyboard_opacity" android:textColor="#88FFFFFF" android:textSize="8sp" android:gravity="center" android:layout_marginBottom="8dp"/>
                 <SeekBar
                     android:id="@+id/float_keyboard_seekbar"
                     android:layout_width="160dp"

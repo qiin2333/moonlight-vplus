@@ -588,6 +588,12 @@
             android:entries="@array/audio_passthrough_buffer_names"
             android:entryValues="@array/audio_passthrough_buffer_values"
             android:defaultValue="normal" />
+        <CheckBoxPreference
+            android:key="checkbox_ac3_iec61937"
+            android:dependency="checkbox_enable_audio_passthrough"
+            android:title="@string/title_ac3_iec61937"
+            android:summary="@string/summary_ac3_iec61937"
+            android:defaultValue="false" />
         <!-- 以下为原“音频振动”分类合并进来的项目 -->
         <CheckBoxPreference
             android:key="checkbox_audio_vibration"
@@ -629,6 +635,14 @@
             android:title="@string/title_checkbox_enable_mic"
             android:summary="@string/summary_checkbox_enable_mic"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_mic_initial_state"
+            android:dependency="checkbox_enable_mic"
+            android:title="@string/title_list_mic_initial_state"
+            android:summary="@string/summary_list_mic_initial_state"
+            android:entries="@array/mic_initial_state_entries"
+            android:entryValues="@array/mic_initial_state_values"
+            android:defaultValue="off" />
         <ListPreference
             android:key="list_mic_menu_action_mode"
             android:dependency="checkbox_enable_mic"
@@ -741,6 +755,10 @@
             android:key="controller_diagnostic"
             android:title="@string/title_controller_diagnostic"
             android:summary="@string/summary_controller_diagnostic" />
+        <Preference
+            android:key="controller_mouse_settings"
+            android:title="@string/title_controller_mouse_settings"
+            android:summary="@string/summary_controller_mouse_settings" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_deadzone"
             android:defaultValue="7"
@@ -749,6 +767,15 @@
             android:summary="@string/summary_seekbar_deadzone"
             android:text="@string/suffix_seekbar_deadzone"
             android:title="@string/title_seekbar_deadzone"/>
+        <Preference
+            android:key="stick_calibration"
+            android:title="@string/stick_calibration_title"
+            android:summary="@string/stick_calibration_summary" />
+        <CheckBoxPreference
+            android:key="checkbox_combine_joycons"
+            android:title="@string/title_combine_joycons"
+            android:summary="@string/summary_combine_joycons"
+            android:defaultValue="true" />
         <CheckBoxPreference
             android:key="checkbox_multi_controller"
             android:title="@string/title_checkbox_multi_controller"
@@ -764,6 +791,18 @@
             android:title="@string/title_checkbox_xb1_driver"
             android:summary="@string/summary_checkbox_xb1_driver"
             android:defaultValue="true" />
+        <ListPreference
+            android:key="list_host_gamepad_selection"
+            android:title="@string/title_host_gamepad_selection"
+            android:summary="@string/summary_host_gamepad_selection"
+            android:entries="@array/host_gamepad_selection_names"
+            android:entryValues="@array/host_gamepad_selection_values"
+            android:defaultValue="automatic" />
+        <SwitchPreferenceCompat
+            android:key="checkbox_experimental_haptic_protocols"
+            android:title="@string/title_experimental_haptic_protocols"
+            android:summary="@string/summary_experimental_haptic_protocols"
+            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_usb_bind_all"
             android:dependency="checkbox_usb_driver"
@@ -788,13 +827,6 @@
             android:title="@string/title_dualsense_wireless_bridge"
             android:summary="@string/summary_dualsense_wireless_bridge"
             android:defaultValue="false" />
-        <ListPreference
-            android:key="analog_scrolling"
-            android:title="@string/title_analog_scrolling"
-            android:summary="@string/summary_analog_scrolling"
-            android:entries="@array/analog_scrolling_names"
-            android:entryValues="@array/analog_scrolling_values"
-            android:defaultValue="right" />
         <ListPreference
             android:key="list_game_rumble_mode"
             android:title="@string/title_list_game_rumble_mode"
@@ -995,6 +1027,14 @@
             android:key="checkbox_show_onscreen_controls"
             android:summary="@string/summary_checkbox_show_onscreen_controls"
             android:title="@string/title_checkbox_show_onscreen_controls" />
+        <ListPreference
+            android:key="list_osc_layout"
+            android:defaultValue="xbox"
+            android:dependency="checkbox_show_onscreen_controls"
+            android:title="@string/osc_layout_title"
+            android:summary="%s"
+            android:entries="@array/osc_layout_names"
+            android:entryValues="@array/osc_layout_values" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:dependency="checkbox_show_onscreen_controls"
@@ -1100,6 +1140,10 @@
         <Preference
             android:key="about_us"
             android:title="@string/title_about_us" />
+        <Preference
+            android:key="open_source_notices"
+            android:title="@string/open_source_title"
+            android:summary="@string/open_source_intro" />
         <Preference
             android:key="check_for_updates"
             android:title="@string/check_for_updates"

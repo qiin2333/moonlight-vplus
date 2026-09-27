@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Aktiverer tilpasning av innebygd styreflateinndata for styreflaten på et nettbrettastatur. Krever ikke root-tilgang. Krever Foundation Sunshine med alternativet «Tilpass innebygd styreflate» aktivert. Bare testet på enkelte Xiaomi-nettbrett.</string>
+</resources>

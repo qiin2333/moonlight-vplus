@@ -18,6 +18,7 @@ import android.os.VibratorManager
 import com.limelight.LimeLog
 import com.limelight.binding.input.driver.AbstractController
 import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
+import com.limelight.binding.input.haptics.SingleMotorRumbleFold
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 
@@ -239,10 +240,10 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         highFreqMotor: Short,
         durationMs: Long = 60_000L
     ) {
-        // Since we can only use a single amplitude value, compute the desired amplitude
-        // by taking 80% of the big motor and 33% of the small motor, then capping to 255.
+        // Since we can only use a single amplitude value, compute the desired amplitude with the
+        // shared single-motor fold (the one place that owns those weights).
         // NB: This value is now 0-255 as required by VibrationEffect.
-        val simulatedAmplitude = simulatedAmplitude(lowFreqMotor, highFreqMotor)
+        val simulatedAmplitude = SingleMotorRumbleFold.amplitude(lowFreqMotor, highFreqMotor)
         vibrateSingleAmplitude(vibrator, simulatedAmplitude, durationMs)
     }
 
@@ -322,12 +323,6 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             @Suppress("DEPRECATION")
             vibrator.vibrate(timings, -1, audioAttributes)
         }
-    }
-
-    private fun simulatedAmplitude(lowFreqMotor: Short, highFreqMotor: Short): Int {
-        val lowFreqMotorMSB = (lowFreqMotor.toInt() shr 8) and 0xFF
-        val highFreqMotorMSB = (highFreqMotor.toInt() shr 8) and 0xFF
-        return Math.min(255, ((lowFreqMotorMSB * 0.80) + (highFreqMotorMSB * 0.33)).toInt())
     }
 
     private fun usbRumbleOutput(device: AbstractController): UsbRumbleOutput =

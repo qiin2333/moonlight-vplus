@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Engedélyezi a natív érintőpados bevitel illesztését a táblagépes billentyűzet érintőpadjához. Nem igényel root jogosultságot. Foundation Sunshine szükséges, bekapcsolt „Natív érintőpad illesztése” beállítással. Csak néhány Xiaomi táblagépen lett tesztelve.</string>
+</resources>

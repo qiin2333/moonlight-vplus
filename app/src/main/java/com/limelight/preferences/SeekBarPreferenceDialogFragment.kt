@@ -14,13 +14,13 @@ import android.widget.TextView
 import android.widget.Toast
 
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDialogFragmentCompat
 
 import com.limelight.R
 import com.limelight.binding.input.isZeroControllerDeadzone
 import com.limelight.utils.AppDialogStyler
 import kotlin.math.roundToInt
+import com.limelight.utils.UiHelper
 
 class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
 
@@ -210,7 +210,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         val alert = dialog as? AlertDialog ?: return
         AppDialogStyler.tintTitle(alert, requireContext())
         AppDialogStyler.installDismissKeys(alert)
-        val accentColor = ContextCompat.getColor(requireContext(), R.color.app_dialog_accent_color)
+        val accentColor = UiHelper.accentColor(requireContext())
         listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
             .forEach { buttonId ->
                 alert.getButton(buttonId)?.setTextColor(accentColor)

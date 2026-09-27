@@ -79,7 +79,7 @@
     <string name="title_resolution_list">Seleccionar resolución</string>
     <string name="summary_resolution_list">Establecer unos valores demasiado altos puede causar retraso o cierres inesperados.</string>
     <string name="title_seekbar_bitrate">Seleccionar bitrate de vídeo</string>
-    <string name="summary_seekbar_bitrate">Usa bitrate bajo para reducir "parpadeo". Incrementa el bitrate para mayor calidad de imagen.</string>
+    <string name="summary_seekbar_bitrate">Una tasa de bits más alta mejora la calidad de imagen, pero consume más ancho de banda; una tasa más baja es mejor para redes lentas o inestables. Si la transmisión va a saltos, bájala primero y súbela cuando la red sea estable y la imagen no sea suficientemente nítida; para 1080p60, empieza con unos 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Ajustar vídeo a pantalla completa</string>
     <string name="title_checkbox_disable_warnings">Desactivar mensajes de advertencia</string>
     <string name="summary_checkbox_disable_warnings">Desactivar mensajes de advertencia en pantalla durante la transmisión</string>
@@ -107,7 +107,7 @@
     <string name="summary_checkbox_host_audio">Reproducir audio en el ordenador y en este dispositivo</string>
     <string name="category_advanced_settings">Configuración avanzada</string>
     <string name="title_video_format">Cambiar la configuración del códec</string>
-    <string name="summary_video_format">Los códecs más recientes pueden reducir los requisitos del ancho de banda del vídeo si tu dispositivo los admite. Las selecciones de los códecs pueden ignorarse si no son compatibles con el software del host o la GPU.</string>
+    <string name="summary_video_format">¿No sabes cuál elegir? Usa Automático. HEVC se recomienda para la mayoría de dispositivos modernos y suele equilibrar calidad de imagen, ancho de banda y HDR; AV1 puede ahorrar ancho de banda si ambos extremos lo admiten, pero en algunos dispositivos puede tener mayor latencia de decodificación; H.264 ofrece la mejor compatibilidad, pero necesita más ancho de banda y no admite HDR.</string>
     <!-- Array strings -->
     <string name="videoformat_auto">Automático (Recomendado)</string>
     <string name="videoformat_hevcalways">Preferir HEVC</string>
@@ -433,11 +433,15 @@
     <string name="summary_checkbox_enable_enhanced_touch">	</string>
     <string name="summary_checkbox_enable_esc_menu">Cuando está habilitado, presionar doble ESC abre el menú de retorno de transmisión, una sola presión de ESC se pasa al host</string>
     <string name="summary_checkbox_enable_keyboard_toggle_in_native_touch">	</string>
-    <string name="summary_checkbox_enable_mic">Redirigir el micrófono del dispositivo al computador host para chat de voz y comunicación, requiere versión Sunshine-Foundation 20250720 o superior en el host.</string>
+    <string name="summary_checkbox_enable_mic">Enviar el audio del micrófono de este dispositivo al host. Requiere Foundation Sunshine 2025.0720 o posterior.</string>
+    <string name="summary_list_mic_initial_state">Elegir el estado del micrófono al iniciar cada transmisión.</string>
+    <string name="mic_initial_state_off">Desactivado</string>
+    <string name="mic_initial_state_on">Activado</string>
+    <string name="mic_initial_state_follow_last">Seguir el último estado</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">Invertir zona de toque mejorada a la izquierda (predeterminado: en el lado derecho de la pantalla)</string>
     <string name="summary_checkbox_reverse_resolution">Intercambiar valores de ancho y alto para requisitos especiales de visualización</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
-    <string name="summary_crown_super_features">Botones y configuraciones personalizadas durante la transmisión, guardadas en configuraciones personalizadas para cambio rápido</string>
+    <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
     <string name="summary_custom_resolutions">Crear tus propias resoluciones personalizadas</string>
     <string name="summary_enable_analytics">Ayudar a mejorar la aplicación compartiendo estadísticas de uso anónimas</string>
     <string name="summary_enable_perf_overlay">Mostrar información de rendimiento de transmisión en tiempo real mientras transmites</string>
@@ -482,7 +486,8 @@
     <string name="title_checkbox_enable_enhanced_touch">Habilitar toque mejorado</string>
     <string name="title_checkbox_enable_esc_menu">Permitir tecla ESC para abrir menú de retorno</string>
     <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">Habilitar alternar teclado en modo de toque multi-punto </string>
-    <string name="title_checkbox_enable_mic">Habilitar redirección del micrófono</string>
+    <string name="title_checkbox_enable_mic">Activar micrófono</string>
+    <string name="title_list_mic_initial_state">Estado inicial del micrófono</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">Invertir zona de toque mejorada</string>
     <string name="title_checkbox_reverse_resolution">Resolución Inversa</string>
     <string name="title_checkbox_sync_touch_event_with_display">Sincronizar evento de toque con refresco de pantalla </string>
@@ -530,8 +535,8 @@
     <string name="width_hint">ej. 1920</string>
 
     <string name="title_screen_combination_mode">Configuración de combinación de pantallas</string>
-    <string name="summary_screen_combination_mode">Control de pantallas de Sunshine Foundation</string>
-    <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Control de pantallas de Foundation Sunshine</string>
+    <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir host</string>
     <string name="screen_mode_no_operation">Modo sin operación</string>
     <string name="screen_mode_auto_activate">Modo de activación</string>

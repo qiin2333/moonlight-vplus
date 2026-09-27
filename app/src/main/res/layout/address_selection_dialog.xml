@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Choose a connection address"
+        android:text="@string/address_selection_title"
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
@@ -19,7 +19,7 @@
         android:id="@+id/computer_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Host name"
+        android:text="@string/address_host_name"
         android:textSize="16sp"
         android:textColor="@android:color/black"
         android:gravity="center"

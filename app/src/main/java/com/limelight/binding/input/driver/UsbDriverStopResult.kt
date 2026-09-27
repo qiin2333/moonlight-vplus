@@ -1,12 +1,10 @@
 package com.limelight.binding.input.driver
 
-import android.annotation.SuppressLint
-import java.util.concurrent.CompletableFuture
+import com.limelight.utils.CompletionSignal
 
 /** One service stop operation; callers serialize updates with the session lock. */
-@SuppressLint("NewApi") // CompletableFuture is supplied by core library desugaring on API 22/23.
 internal class UsbDriverStopResult {
-    val completion = CompletableFuture<Void>()
+    val completion = CompletionSignal()
     private var failure: Throwable? = null
 
     fun failed(error: Throwable) {
@@ -15,7 +13,7 @@ internal class UsbDriverStopResult {
 
     fun finish() {
         val error = failure
-        if (error == null) completion.complete(null)
+        if (error == null) completion.complete()
         else completion.completeExceptionally(error)
     }
 }

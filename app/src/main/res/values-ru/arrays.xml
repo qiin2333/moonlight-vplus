@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="type_button">КНОПКА</string>
+    <string name="type_switch">ПЕРЕКЛ.</string>
+    <string name="type_movable_button">П-КНОПКА</string>
+    <string name="type_pad">ПАНЕЛЬ</string>
+    <string name="type_keyboard_pad">К-ПАД</string>
+    <string name="type_gamepad_pad">Г-ПАД</string>
+    <string name="type_keyboard_stick">КЛАВ. СТИК</string>
+    <string name="type_gamepad_stick">Г-СТИК</string>
+    <string name="type_keyboard_invisible_stick">СКР. К-СТИК</string>
+    <string name="type_gamepad_invisible_stick">СКР. Г-СТИК</string>
+    <string-array name="element_shape"><item>КРУГ</item><item>КВАДРАТ</item></string-array>
+</resources>

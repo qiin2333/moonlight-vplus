@@ -67,7 +67,7 @@
                         android:layout_height="42dp"
                         android:layout_gravity="center"
                         android:src="@drawable/phc_host"
-                        android:tint="@color/add_pc_accent" />
+                        android:tint="?attr/appAccent" />
                 </FrameLayout>
 
                 <FrameLayout
@@ -223,7 +223,7 @@
                         android:fontFamily="serif"
                         android:gravity="center"
                         android:text="@string/addpc_formula_brace"
-                        android:textColor="@color/add_pc_accent"
+                        android:textColor="?attr/appAccent"
                         android:textSize="28sp" />
 
                     <TextView
@@ -251,7 +251,7 @@
                         android:fontFamily="serif"
                         android:gravity="center"
                         android:text="@string/addpc_formula_brace"
-                        android:textColor="@color/add_pc_accent"
+                        android:textColor="?attr/appAccent"
                         android:textSize="28sp" />
 
                     <TextView

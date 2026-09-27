@@ -1,6 +1,5 @@
 package com.limelight
 
-import android.app.Activity
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
@@ -9,9 +8,10 @@ import android.webkit.WebViewClient
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 
+import com.limelight.ui.ThemedActivity
 import com.limelight.utils.SpinnerDialog
 
-class HelpActivity : Activity() {
+class HelpActivity : ThemedActivity() {
 
     private var loadingDialog: SpinnerDialog? = null
     private lateinit var webView: WebView

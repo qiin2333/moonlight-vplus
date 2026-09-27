@@ -60,8 +60,8 @@
         android:layout_height="25dp"
         android:max="500"
         android:min="1"
-        android:progressTint="@color/crown_accent"
-        android:thumbTint="@color/crown_accent"
+        android:progressTint="?attr/appAccent"
+        android:thumbTint="?attr/appAccent"
         android:progressBackgroundTint="@color/crown_input_border"
         android:progress="100"/>
 

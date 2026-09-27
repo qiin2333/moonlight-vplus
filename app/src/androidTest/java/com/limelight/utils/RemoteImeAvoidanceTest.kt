@@ -267,7 +267,10 @@ class RemoteImeAvoidanceTest {
             root.layout(0, 0, 1920, 1080)
             stream.layout(0, 0, 1920, 1080)
             cursor.layout(0, 0, 1920, 1080)
-            val pan = PanZoomHandler(activity, Game(), stream, cursor, PreferenceConfiguration())
+            // Scale completion updates PiP state; this detached Game needs real settings.
+            val settings = PreferenceConfiguration().apply { enablePip = false }
+            val game = Game().apply { prefConfig = settings }
+            val pan = PanZoomHandler(activity, game, stream, cursor, settings)
             pan.handleSurfaceChange()
 
             val start = SystemClock.uptimeMillis()
@@ -290,8 +293,10 @@ class RemoteImeAvoidanceTest {
             event(MotionEvent.ACTION_DOWN, 0, 700f)
             event(MotionEvent.ACTION_POINTER_DOWN or (1 shl 8), 30, 700f, 1100f)
             event(MotionEvent.ACTION_MOVE, 60, 500f, 1300f)
-            event(MotionEvent.ACTION_POINTER_UP or (1 shl 8), 90, 500f, 1300f)
-            event(MotionEvent.ACTION_UP, 120, 500f)
+            // The first move crosses scale slop; a subsequent sample performs scaling.
+            event(MotionEvent.ACTION_MOVE, 90, 300f, 1500f)
+            event(MotionEvent.ACTION_POINTER_UP or (1 shl 8), 120, 300f, 1500f)
+            event(MotionEvent.ACTION_UP, 150, 300f)
 
             val scale = stream.scaleX
             assertTrue("Pinch must enlarge the stream", scale > 1f)
@@ -335,6 +340,7 @@ class RemoteImeAvoidanceTest {
             controller.handle(context())
             assertFalse(ViewCompat.getRootWindowInsets(stream)?.isVisible(WindowInsetsCompat.Type.ime()) == true)
             // Explicit user action equivalent; no host-triggered show in the controller.
+            stream.setTextInputEnabled(true)
             stream.isFocusableInTouchMode = true
             stream.requestFocus()
             (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
@@ -369,6 +375,9 @@ class RemoteImeAvoidanceTest {
                     .hideSoftInputFromWindow(stream.windowToken, 0)
             }
             awaitKeyboard(false)
+            rule.scenario.onActivity {
+                assertFalse("Hidden IME must release the temporary text editor", stream.isTextInputEnabled())
+            }
         } finally {
             rule.scenario.onActivity { controller.dispose() }
         }

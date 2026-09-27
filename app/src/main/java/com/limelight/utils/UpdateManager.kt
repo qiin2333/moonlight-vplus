@@ -28,7 +28,6 @@ import android.widget.TextView
 import android.widget.Toast
 
 import androidx.annotation.RequiresApi
-import androidx.core.content.ContextCompat
 
 import com.limelight.R
 import com.limelight.handbook.HandbookLauncher
@@ -51,6 +50,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import com.limelight.utils.UiHelper
 
 object UpdateManager {
     private const val TAG = "UpdateManager"
@@ -355,7 +355,7 @@ object UpdateManager {
             version.text = "v$currentVersion"
 
             if (releaseNotes != null && releaseNotes.trim().isNotEmpty()) {
-                val accentColor = ContextCompat.getColor(context, R.color.app_dialog_accent_color)
+                val accentColor = UiHelper.accentColor(context)
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notes = view.findViewById<TextView>(R.id.update_notes)
@@ -393,7 +393,7 @@ object UpdateManager {
             version.text = "v$curVer → v${updateInfo.version}"
 
             if (!updateInfo.releaseNotes.isNullOrEmpty()) {
-                val accentColor = ContextCompat.getColor(context, R.color.app_dialog_accent_color)
+                val accentColor = UiHelper.accentColor(context)
                 val notesScroll = view.findViewById<ScrollView>(R.id.update_notes_scroll)
                 notesScroll.visibility = View.VISIBLE
                 val notesView = view.findViewById<TextView>(R.id.update_notes)

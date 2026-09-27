@@ -88,7 +88,7 @@
                 <ProgressBar
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:indeterminateTint="@color/crown_accent" />
+                    android:indeterminateTint="?attr/appAccent" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -124,7 +124,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="48dp"
                     android:layout_marginTop="18dp"
-                    android:backgroundTint="@color/crown_accent"
+                    android:backgroundTint="?attr/appAccent"
                     android:minWidth="132dp"
                     android:text="@string/handbook_retry"
                     android:textColor="@color/crown_panel_background" />

@@ -127,9 +127,9 @@
             <TextView style="@style/KeyboardKeyRefined.Normal" android:layout_width="0dp"
                 android:layout_weight="4" android:tag="k62" android:text="Space" />
             <TextView android:id="@+id/btn_keyboard_collapse_alpah" style="@style/KeyboardKeyRefined.Modifier"
-                android:layout_width="0dp" android:layout_weight="1" android:text="Hide" />
+                android:layout_width="0dp" android:layout_weight="1" android:text="@string/keyboard_hide" />
             <TextView android:id="@+id/btn_switch_full" style="@style/KeyboardKeyRefined.Modifier"
-                android:layout_width="0dp" android:layout_weight="1" android:text="Full" />
+                android:layout_width="0dp" android:layout_weight="1" android:text="@string/keyboard_full" />
             <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
                 android:layout_weight="1.5" android:tag="k66" android:text="↵"
                 android:textColor="#0a84ff" />
@@ -200,10 +200,10 @@
                 android:layout_weight="4" android:tag="k62" android:text="Space" />
             <TextView android:id="@+id/btn_keyboard_collapse_num_bottom"
                 style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
-                android:layout_weight="1" android:text="Hide" />
+                android:layout_weight="1" android:text="@string/keyboard_hide" />
             <TextView android:id="@+id/btn_switch_full_from_num"
                 style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
-                android:layout_weight="1" android:text="Full" />
+                android:layout_weight="1" android:text="@string/keyboard_full" />
             <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp"
                 android:layout_weight="1.5" android:tag="k66" android:text="↵"
                 android:textColor="#0a84ff" />

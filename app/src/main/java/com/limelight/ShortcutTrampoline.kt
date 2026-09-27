@@ -1,6 +1,5 @@
 package com.limelight
 
-import android.app.Activity
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
@@ -8,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 
+import com.limelight.ui.ThemedActivity
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.computers.ComputerManagerService
 import com.limelight.computers.PairStatePreflight
@@ -39,7 +39,7 @@ import java.io.IOException
 import java.io.StringReader
 import java.util.UUID
 
-class ShortcutTrampoline : Activity() {
+class ShortcutTrampoline : ThemedActivity() {
     private var uuidString: String? = null
     private var app: NvApp? = null
     private val intentStack = ArrayList<Intent>()

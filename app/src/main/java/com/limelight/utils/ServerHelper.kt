@@ -211,9 +211,7 @@ object ServerHelper {
                 }
             } catch (e: HostHttpResponseException) {
                 message = if (e.getErrorCode() == 599) {
-                    "This session wasn't started by this device," +
-                            " so it cannot be quit. End streaming on the original " +
-                            "device or the PC itself. (Error code: ${e.getErrorCode()})"
+                    parent.getString(R.string.connection_foreign_session_quit, e.getErrorCode())
                 } else {
                     e.message
                 }

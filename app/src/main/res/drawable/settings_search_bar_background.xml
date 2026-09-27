@@ -6,5 +6,5 @@
     <corners android:radius="@dimen/corner_radius_extra_large"/>
     <stroke
         android:width="1dp"
-        android:color="@color/ui_shell_accent_focus"/>
+        android:color="?attr/appAccentFocus"/>
 </shape>

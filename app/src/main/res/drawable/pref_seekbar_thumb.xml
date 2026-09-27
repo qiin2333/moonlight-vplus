@@ -29,7 +29,7 @@
         android:right="4dp"
         android:top="4dp">
         <shape android:shape="oval">
-            <solid android:color="@color/theme_pink_primary" />
+            <solid android:color="?attr/appAccent" />
             <size android:width="16dp" android:height="16dp" />
         </shape>
     </item>

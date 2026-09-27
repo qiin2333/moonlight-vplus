@@ -26,16 +26,13 @@ import java.io.FileNotFoundException
 import com.limelight.usbip.UsbIpBackend
 import com.limelight.usbip.UsbReverseTunnel
 import com.limelight.utils.AppActionSheet
+import com.limelight.utils.CompletionSignal
 import java.security.cert.X509Certificate
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 /** One foreground stream owns one export. Permission and UI state stay on the main
  * thread; blocking native cleanup is serialized behind export on the worker. */
-@SuppressLint("NewApi") // CompletableFuture is supplied on API 22/23 by desugaring.
 class UsbForwardingController(
     private val game: Game,
     private val host: String,
@@ -46,11 +43,11 @@ class UsbForwardingController(
 ) : AutoCloseable {
     companion object {
         private val cleanupLock = Any()
-        private var lastCleanup = CompletableFuture.completedFuture<Void>(null)
+        private var lastCleanup = CompletionSignal.completed()
 
-        fun previousCleanup(): CompletableFuture<Void> = synchronized(cleanupLock) { lastCleanup }
+        fun previousCleanup(): CompletionSignal = synchronized(cleanupLock) { lastCleanup }
 
-        private fun publishCleanup(cleanup: CompletableFuture<Void>): CompletableFuture<Void> = synchronized(cleanupLock) {
+        private fun publishCleanup(cleanup: CompletionSignal): CompletionSignal = synchronized(cleanupLock) {
             val previous = lastCleanup
             lastCleanup = cleanup
             previous
@@ -66,7 +63,7 @@ class UsbForwardingController(
     private val worker = Executors.newSingleThreadExecutor()
     private val lifecycleLock = Any()
     private val predecessorCleanup = previousCleanup()
-    private val closeCompletion = CompletableFuture<Void>()
+    private val closeCompletion = CompletionSignal()
     private val permissionAction = "${game.packageName}.USB_FORWARD_PERMISSION.${UUID.randomUUID()}"
     private var generation = 0L
     private var selected by mutableStateOf<UsbDevice?>(null)
@@ -84,6 +81,9 @@ class UsbForwardingController(
         override fun onReceive(context: Context, intent: Intent) {
             if (closed) return
             val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
+            if (intent.action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
+                UsbDriverService.forwardingDeviceDetached(device)
+            }
             refreshDevices()
             val active = selected
             if (intent.action == UsbManager.ACTION_USB_DEVICE_ATTACHED && active != null &&
@@ -221,21 +221,19 @@ class UsbForwardingController(
         }
     }
 
-    // The app enables core library desugaring, which provides CompletableFuture
-    // callbacks on API 22 and 23 even though the framework added them in API 24.
     private fun export(device: UsbDevice, operation: Long) {
         val credentials = capability ?: return
         enqueue {
             try {
                 // Activity recreation publishes its cleanup before a replacement
                 // controller can enqueue native work.
-                predecessorCleanup.get()
+                predecessorCleanup.await()
                 if (closed) return@enqueue
                 game.runOnUiThread {
                     if (!closed && generation == operation) message = R.string.usb_forward_handoff
                 }
                 localReservation = UsbDriverService.reserveForForwarding(device)
-                localReservation!!.ready.get(10, TimeUnit.SECONDS)
+                localReservation!!.ready.await(10_000)
                 if (closed) return@enqueue
                 check(hasUniqueIdentity(device)) { "USB identity changed during local driver handoff" }
                 val handle = backend.export(device).get()
@@ -245,8 +243,9 @@ class UsbForwardingController(
                     val transport = UsbReverseTunnel()
                     tunnel = transport
                     try {
-                        transport.start(host, credentials.port, credentials.token, handle, crypto.getClientCertificate(),
-                            crypto.getClientPrivateKey(), pinned).whenComplete { _, error ->
+                        transport.start(host, credentials.port, credentials.token, handle,
+                            crypto.getClientCertificate(), crypto.getClientPrivateKey(), pinned)
+                        transport.ready().whenComplete { error ->
                             game.runOnUiThread {
                                 if (!closed && generation == operation) {
                                     if (error != null) {
@@ -260,7 +259,7 @@ class UsbForwardingController(
                                 }
                             }
                         }
-                        transport.completion().whenComplete { _, _ ->
+                        transport.completion().whenComplete {
                             game.runOnUiThread {
                                 // Explicit release invalidates this operation before closing.
                                 // EOF here therefore also includes a late host attach failure.
@@ -311,18 +310,11 @@ class UsbForwardingController(
                 export?.let { backend.release(it).get() }
                 export = null
                 localReservation?.let { reservation ->
-                    val stopped = try {
-                        reservation.ready.get(10, TimeUnit.SECONDS)
-                        true
-                    } catch (_: TimeoutException) {
-                        // Native cleanup already succeeded. A slow local stop keeps
-                        // only this path reserved until its completion callback restores it.
-                        reservation.restoreWhenReady {
-                            LimeLog.warning("Unable to restore local USB driver: $it")
-                        }
-                        false
+                    // Native cleanup succeeded. Restore a clean handoff immediately,
+                    // or after a pending stop, without wedging the UI on local failure.
+                    reservation.restoreWhenReady {
+                        LimeLog.warning("Unable to restore local USB driver; reconnect the USB device: $it")
                     }
-                    if (stopped) reservation.restore()
                     localReservation = null
                 }
             }.isSuccess
@@ -345,7 +337,7 @@ class UsbForwardingController(
 
     override fun close() {
         val activeTunnel: UsbReverseTunnel?
-        val cleanupPredecessor: CompletableFuture<Void>
+        val cleanupPredecessor: CompletionSignal
         synchronized(lifecycleLock) {
             if (closed) return
             closed = true
@@ -360,7 +352,7 @@ class UsbForwardingController(
                 }
                 // Preserve the global native-owner order across consecutive
                 // Activity instances, including overlapping close callbacks.
-                cleanup { cleanupPredecessor.get() }
+                cleanup { cleanupPredecessor.await() }
                 cleanup { activeTunnel?.close() }
                 cleanup { backend.closeAsync().get() }
                 export = null
@@ -373,7 +365,7 @@ class UsbForwardingController(
                     localReservation = null
                 }
                 try {
-                    if (failure == null) closeCompletion.complete(null)
+                    if (failure == null) closeCompletion.complete()
                     else closeCompletion.completeExceptionally(failure!!)
                 } finally {
                     worker.shutdown()
@@ -386,7 +378,7 @@ class UsbForwardingController(
         game.unregisterReceiver(receiver)
     }
 
-    fun cleanupCompletion(): CompletableFuture<Void> = closeCompletion
+    fun cleanupCompletion(): CompletionSignal = closeCompletion
 
     private fun enqueue(action: () -> Unit): Boolean = synchronized(lifecycleLock) {
         if (closed) false else {

@@ -13,6 +13,9 @@
 -keep class com.limelight.utils.AboutDialogLauncher$DialogSnapshot { *; }
 
 # Instrumentation invokes these target-APK symbols after the debug APK is minified.
+-keep class com.limelight.grid.PcCardDecor { *; }
+-keep class com.limelight.utils.AppTheme { *; }
+-keep class com.limelight.utils.BgAccent { *; }
 -keep class com.limelight.gamemenu.TouchPointerSensitivity** { *; }
 -keep class com.limelight.gamemenu.TouchPointerPreset** { *; }
 -keep class com.limelight.gamemenu.GameMenuCardsKt { *; }
@@ -21,3 +24,13 @@
 -keep class com.limelight.UsbPanelDevice { *; }
 -keep class com.limelight.UsbDeviceType** { *; }
 -keep class com.limelight.utils.AppActionSheet** { *; }
+
+# Virtual-controller instrumentation calls across the target/test APK boundary.
+-keep class com.limelight.binding.input.virtual_controller.** { *; }
+
+# Instrumentation exercises constructors and IME metadata across the APK boundary.
+-keepclassmembers class com.limelight.ui.StreamView {
+    public <init>(...);
+    public void setTextInputEnabled(boolean);
+    public boolean isTextInputEnabled();
+}

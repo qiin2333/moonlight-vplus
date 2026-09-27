@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_move_buttons">Drag controls to move. Open the menu to finish editing or switch layouts.</string>
+    <string name="osc_resize_buttons">Drag controls to resize. Open the menu to finish editing or switch layouts.</string>
+    <string name="osc_dpad">Directional pad</string>
+    <string-array name="osc_layout_names">
+        <item>Xbox</item><item>DualSense (DS)</item><item>Nintendo Switch (NS)</item><item>Moonlight Classic</item>
+    </string-array>
+    <string-array name="osc_layout_values" translatable="false">
+        <item>xbox</item><item>ds</item><item>ns</item><item>classic</item>
+    </string-array>
+    <string name="osc_quick_menu">Controller layout and editing</string>
+    <string name="osc_action_move">Move controls</string>
+    <string name="osc_action_resize">Resize controls</string>
+    <string name="osc_action_done">Save and finish editing</string>
+</resources>

@@ -70,6 +70,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import com.limelight.R
+import com.limelight.utils.appAccentSoftColor
+import com.limelight.utils.appAccentColor
 
 
 @Composable
@@ -245,7 +247,7 @@ private fun QuickActionChip(
     val contentAlpha = if (action.enabled) 1f else 0.45f
     ActionPill(
         backgroundColor = colorResource(R.color.game_menu_card_background).copy(alpha = contentAlpha),
-        borderColor = colorResource(R.color.game_menu_button_border),
+        borderColor = appAccentSoftColor(),
         onClick = if (editMode) null else onClick,
         onLongClick = if (editMode) null else {
             {
@@ -292,7 +294,7 @@ private fun QuickActionChip(
 
 @Composable
 private fun QuickActionDragHandle(modifier: Modifier = Modifier) {
-    val accent = colorResource(R.color.game_menu_accent)
+    val accent = appAccentColor()
     Column(
         modifier = modifier
             .width(36.dp)
@@ -351,8 +353,8 @@ private fun ToolIconButton(
         modifier = Modifier
             .size(40.dp)
             .clip(shape)
-            .background(colorResource(R.color.game_menu_accent).copy(alpha = 0.08f))
-            .border(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_accent).copy(alpha = 0.20f), shape)
+            .background(appAccentColor().copy(alpha = 0.08f))
+            .border(GameMenuDimens.surfaceStroke, appAccentColor().copy(alpha = 0.20f), shape)
             .gamepadFocusOutline(shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -360,7 +362,7 @@ private fun ToolIconButton(
         Icon(
             painter = painterResource(iconRes),
             contentDescription = contentDescription,
-            tint = colorResource(R.color.game_menu_accent),
+            tint = appAccentColor(),
             modifier = Modifier.size(18.dp)
         )
     }

@@ -1,7 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.limelight.widget
 
-import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
@@ -14,11 +13,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
+import com.limelight.ui.ThemedActivity
 import com.limelight.R
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.nvstream.http.ComputerDetails
 
-class WidgetConfigurationActivity : Activity() {
+class WidgetConfigurationActivity : ThemedActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 

@@ -50,8 +50,20 @@ app/google-services.json
 
 # AI analysis docs & dev notes
 docs/*
+!docs/USER_GUIDE.md
+!docs/USER_GUIDE_EN.md
+!docs/COMPATIBILITY.md
+!docs/COMPATIBILITY_EN.md
+!docs/GETTING_STARTED.md
+!docs/GETTING_STARTED_EN.md
+!docs/BACKUP_AND_MIGRATION.md
+!docs/BACKUP_AND_MIGRATION_EN.md
+!docs/VPLUS_FEATURES.md
+!docs/VPLUS_FEATURES_EN.md
 !docs/DUALSENSE_WIRELESS_BRIDGE_IMPLEMENTATION.md
 !docs/REMOTE_TEXT_FOCUS_DETECTION_IMPLEMENTATION.md
+!docs/STYLUS_IME_HANDWRITING_ISOLATION.md
+!docs/controller-waveform-haptics.md
 
 # Kotlin build cache
 .kotlin/
@@ -59,8 +71,10 @@ docs/*
 # Gradle daemon config
 gradle/gradle-daemon-jvm.properties
 
-# Dev utility scripts
-scripts/
+# Dev utility scripts (keep the reproducible accent palette generator)
+scripts/*
+!scripts/generate_accent_variants.py
+!scripts/test_accent_palette.py
 
 # Local mock server generated certs/logs
 tools/mock-sunshine/.generated/

@@ -48,7 +48,7 @@ class Iperf3Tester(
 
     fun show() {
         val builder = AlertDialog.Builder(context, R.style.Iperf3DialogTheme)
-        builder.setTitle("iPerf3 Network Test")
+        builder.setTitle(R.string.network_bandwidth_test)
 
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_iperf3_test, null)
         builder.setView(dialogView)

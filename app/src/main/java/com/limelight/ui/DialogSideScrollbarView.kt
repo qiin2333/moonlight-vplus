@@ -9,8 +9,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.ScrollView
-import androidx.core.content.ContextCompat
 import com.limelight.R
+import com.limelight.utils.UiHelper
 
 /**
  * Views counterpart of the controller diagnostics scrollbar.
@@ -73,14 +73,14 @@ class DialogSideScrollbarView @JvmOverloads constructor(
         val radius = width / 2f
 
         bounds.set(0f, 0f, width.toFloat(), height.toFloat())
-        paint.color = ContextCompat.getColor(context, R.color.game_menu_button_border)
+        paint.color = UiHelper.accentSoftColor(context)
         paint.alpha = (255 * 0.35f).toInt()
         canvas.drawRoundRect(bounds, radius, radius, paint)
 
         val thumbHeight = height * visibleFraction
         val thumbTop = (height - thumbHeight) * progress
         bounds.set(0f, thumbTop, width.toFloat(), thumbTop + thumbHeight)
-        paint.color = ContextCompat.getColor(context, R.color.app_dialog_accent_color)
+        paint.color = UiHelper.accentColor(context)
         paint.alpha = (255 * 0.82f).toInt()
         canvas.drawRoundRect(bounds, radius, radius, paint)
     }

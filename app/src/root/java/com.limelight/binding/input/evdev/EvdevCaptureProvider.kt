@@ -795,7 +795,7 @@ class EvdevCaptureProvider(
 
     private fun reportDeviceNotRooted() {
         activity.runOnUiThread {
-            Toast.makeText(activity, "This device is not rooted - Mouse capture is unavailable", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, activity.getString(com.limelight.R.string.root_mouse_unavailable), Toast.LENGTH_LONG).show()
         }
     }
 

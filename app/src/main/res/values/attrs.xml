@@ -10,4 +10,12 @@
     <declare-styleable name="IconListPreference">
         <attr name="entryIcons" format="reference" />
     </declare-styleable>
+
+    <!--
+        首页背景强调色槽位。默认值指向品牌粉（ui_shell_accent 系）；
+        选择“跟随壁纸”后，由 YouAccentOverlayBg0..11 切换到背景对应的色相桶。
+    -->
+    <attr name="appAccent" format="color" />
+    <attr name="appAccentSoft" format="color" />
+    <attr name="appAccentFocus" format="color" />
 </resources>

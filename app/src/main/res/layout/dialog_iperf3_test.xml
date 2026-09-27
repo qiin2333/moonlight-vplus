@@ -65,7 +65,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/layout_dlg_iperf3_test_text_d5a73"
                 android:textColor="@color/app_dialog_text_primary"
-                android:buttonTint="@color/app_dialog_accent_color"
+                android:buttonTint="?attr/appAccent"
                 android:layout_marginEnd="16dp"
                 android:checked="true"/>
             <RadioButton
@@ -74,7 +74,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/layout_dlg_iperf3_test_text_f26ef"
                 android:textColor="@color/app_dialog_text_primary"
-                android:buttonTint="@color/app_dialog_accent_color"/>
+                android:buttonTint="?attr/appAccent"/>
         </RadioGroup>
     </LinearLayout>
 
@@ -100,8 +100,8 @@
             android:max="30"
             android:progress="5"
             android:min="1"
-            android:thumbTint="@color/app_dialog_accent_color"
-            android:progressTint="@color/app_dialog_accent_color"
+            android:thumbTint="?attr/appAccent"
+            android:progressTint="?attr/appAccent"
             android:layout_marginEnd="8dp"/>
         <TextView
             android:id="@+id/text_view_duration_value"
@@ -147,7 +147,7 @@
             android:layout_height="wrap_content"
             android:text="UDP"
             android:textColor="@color/app_dialog_text_primary"
-            android:buttonTint="@color/app_dialog_accent_color"/>
+            android:buttonTint="?attr/appAccent"/>
     </LinearLayout>
 
     <!-- UDP 带宽设置  -->

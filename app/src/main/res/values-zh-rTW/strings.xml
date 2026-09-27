@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="open_source_title">開源授權</string>
+    <string name="about_dialog_open_source_action">開源授權</string>
+    <string name="open_source_intro">查看此應用所含開源元件的專案來源與授權條款</string>
+    <string name="open_source_back">返回</string>
+    <string name="open_source_component_details">元件詳情</string>
+    <string name="open_source_version">版本：%1$s</string>
+    <string name="open_source_license">授權：%1$s</string>
+    <string name="open_source_project">專案網址：%1$s</string>
+    <string name="open_source_license_text">查看完整授權條款</string>
+    <string name="title_combine_joycons">合併 Joy-Con 左右控制器</string>
+    <string name="joycon_system_capabilities">系統震動：%1$s · 陀螺儀：%2$s</string>
+    <string name="joycon_capability_available">可用</string>
+    <string name="joycon_capability_missing">Android 未提供</string>
+    <string name="joycon_capability_unchecked">未檢測</string>
+    <string name="summary_combine_joycons">將一代左右 Joy-Con 直握合併為一位玩家。僅在左右各有一隻未配對控制器時自動配對，下次串流生效。</string>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc"> 電腦已刪除 </string>
     <string name="scut_not_paired"> 電腦未配對 </string>
@@ -115,7 +130,7 @@
     <string name="title_fps_list">串流影格率</string>
     <string name="summary_fps_list">提高影格速率以取得更順暢的視訊串流，降低可在低效能裝置上取得更好的串流體驗。</string>
     <string name="title_seekbar_bitrate">串流位元率</string>
-    <string name="summary_seekbar_bitrate">提高位元速率以提升圖像品質，降低可在較慢的網路中取得更好的串流體驗。</string>
+    <string name="summary_seekbar_bitrate">較高位元率可提升畫質，但會佔用更多頻寬；較低位元率適合較慢或不穩定的網路。串流卡頓時先降低位元率，網路穩定但畫質不夠清晰時再提高；1080p60 可先從 10–20 Mbps 試起。</string>
     <string name="title_unlock_fps">顯示高影格率選項</string>
     <string name="summary_unlock_fps">以 90 或 120 畫面更新率串流可能會減少在高效能裝置上的網路延時，但在不支援的裝置上會卡頓或不穩定的狀況</string>
     <string name="title_checkbox_stretch_video">將畫面延展至全螢幕</string>
@@ -164,6 +179,18 @@
     <string name="title_checkbox_usb_bind_all">覆寫原生 Xbox 手把支援</string>
     <string name="summary_checkbox_usb_bind_all">強制 Moonlight 的 USB 驅動程式接管所有受支援的原生 Xbox 控制器</string>
     <string name="title_controller_diagnostic">手把快捷鍵測試</string>
+    <string name="title_controller_mouse_settings">手把滑鼠模式</string>
+    <string name="summary_controller_mouse_settings">游標速度、捲動搖桿與十字鍵功能</string>
+    <string name="controller_mouse_pointer_speed">游標速度</string>
+    <string name="controller_mouse_pointer_speed_summary">調整搖桿控制滑鼠時的移動速度</string>
+    <string name="controller_mouse_scroll_stick">捲動搖桿</string>
+    <string name="controller_mouse_scroll_stick_summary">選擇滑鼠模式下負責捲動的搖桿</string>
+    <string name="controller_mouse_scroll_none">不捲動（雙搖桿控制游標）</string>
+    <string name="controller_mouse_dpad_behavior">十字鍵功能</string>
+    <string name="controller_mouse_dpad_behavior_summary">僅在手把滑鼠模式下生效</string>
+    <string name="controller_mouse_dpad_scroll">捲動頁面</string>
+    <string name="controller_mouse_dpad_arrows">方向鍵 ↑ ↓ ← →</string>
+    <string name="controller_mouse_speed_percent">%1$d%%</string>
     <string name="summary_controller_diagnostic">學習並測試用戶端手把快捷鍵</string>
     <string name="controller_diag_title">手把快捷鍵測試</string>
     <string name="title_checkbox_enable_start_key_menu">長按 Start 操作輪盤</string>
@@ -286,7 +313,7 @@
     <string name="title_disable_frame_drop">永不丟失影格</string>
     <string name="summary_disable_frame_drop">可能會減少在一些裝置上的卡頓，但會增加延時</string>
     <string name="title_video_format">視訊編解碼器</string>
-    <string name="summary_video_format">較新的轉碼器可以降低視訊頻寬需求 (若您的裝置支援)。如果主機軟體或 GPU 不支援，轉碼器選取項目可能會被忽略。</string>
+    <string name="summary_video_format">不確定怎麼選？請使用自動。大多數現代裝置建議使用 HEVC，通常能兼顧畫質、頻寬與 HDR；主機和裝置都支援時，AV1 可在相同畫質下節省頻寬，但部分裝置的解碼延遲可能更高；H.264 相容性最好，但需要更多頻寬且不支援 HDR。</string>
     <string name="title_enable_hdr">啟用 HDR (實驗性)</string>
     <string name="summary_enable_hdr">在遊戲和 GPU 支援時以 HDR 模式串流，HDR 模式需要支援 HEVC Main 10 編碼的 GPU。</string>
     <string name="title_perf_overlay_bg_opacity">效能統計背景不透明度</string>
@@ -416,7 +443,7 @@
     <string name="summary_list_float_ball_position">將懸浮球放到螢幕邊緣。拖曳位置會覆蓋預設，再次選擇預設即可清除。</string>
     <string name="title_seekbar_float_ball_auto_hide_delay">自動隱藏延遲</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">懸浮球自動隱藏到螢幕邊緣前的等待時間。</string>
-    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">毫秒</string>
+    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
 
     <!-- 懸浮球手勢動作 -->
     <string name="title_float_ball_single_click_action">單擊動作</string>
@@ -496,7 +523,7 @@
     <string name="title_framegen_present_real_first">運動節奏修正</string>
     <string name="summary_framegen_present_real_first">僅在畫面節奏不穩時嘗試，預設關閉。</string>
     <string name="title_screen_combination_mode">主機顯示器排列</string>
-    <string name="summary_screen_combination_mode">選擇 Sunshine Base 如何排列或組合主機顯示器，需要相容的 Sunshine Base 主機。</string>
+    <string name="summary_screen_combination_mode">選擇 Foundation Sunshine 如何排列或組合主機顯示器，需要相容的 Foundation Sunshine 主機。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地適用</string>
     <string name="screen_mode_host_default">跟隨主機</string>
     <string name="screen_mode_no_operation">無操作模式</string>
@@ -548,7 +575,7 @@
     <string name="feature_guide_quick_actions_title">快捷列也要我教嗎？</string>
     <string name="feature_guide_quick_actions_body">長按快捷按鈕就能新增、移除或拖曳排序。把常用操作排好，下次可別再手忙腳亂啦。</string>
     <string name="feature_guide_crown_title">給你的設定戴個皇冠吧</string>
-    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
+    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和振動回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">這次記住啦</string>
     <string name="feature_guide_skip">才不要看</string>
@@ -629,7 +656,7 @@
     <string name="title_force_mtk_max_operating_rate">強制聯發科解碼器最高運作速率（實驗性）</string>
     <string name="summary_force_mtk_max_operating_rate">僅用於聯發科解碼器的相容性選項。在部分裝置上可能降低延遲，也可能在其他裝置上造成嚴重延遲；除非正在排查已知聯發科解碼問題，否則請保持關閉。</string>
     <string name="title_hevc_low_latency_mode">HEVC 低延遲解碼</string>
-    <string name="summary_hevc_low_latency_mode">Amlogic 晶片電視盒子開啟解碼器低延遲模式後，HEVC 畫面可能變成幻燈片（幀率顯示正常但幾乎不重新整理）。自動：僅在 Amlogic HEVC 解碼器上略過低延遲選項（這些裝置多 1–2 幀延遲）；關閉：所有 HEVC 與杜比視界串流略過；開啟：恢復原有行為。</string>
+    <string name="summary_hevc_low_latency_mode">自動：對 Amlogic HEVC 解碼器使用相容設定；開啟：恢復低延遲選項；關閉：對所有 HEVC 和杜比視界串流使用相容設定。相容設定可能增加解碼延遲。</string>
     <string name="hevc_low_latency_auto">自動</string>
     <string name="hevc_low_latency_on">開啟</string>
     <string name="hevc_low_latency_off">關閉</string>
@@ -646,8 +673,13 @@
     <string name="config_sync_action_enable">啟用同步</string>
     <string name="title_seekbar_scale">主機渲染解析度比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例縮放所選串流解析度後再向主機請求。高於 100% 可增加來源畫面細節但會提高主機 GPU 負載；低於 100% 可減輕負載。主機必須支援縮放後的解析度。</string>
-    <string name="title_checkbox_enable_mic">將本機麥克風傳送到主機（實驗性）</string>
-    <string name="summary_checkbox_enable_mic">把本機麥克風音訊傳送到主機，需要 Sunshine Foundation 20250720 或更新版本。</string>
+    <string name="title_checkbox_enable_mic">啟用麥克風</string>
+    <string name="summary_checkbox_enable_mic">將本機麥克風音訊傳送到主機，需要 Foundation Sunshine 2025.0720 或更新版本。</string>
+    <string name="title_list_mic_initial_state">麥克風初始狀態</string>
+    <string name="summary_list_mic_initial_state">選擇每次串流開始時的麥克風狀態。</string>
+    <string name="mic_initial_state_off">關閉</string>
+    <string name="mic_initial_state_on">開啟</string>
+    <string name="mic_initial_state_follow_last">跟隨上次狀態</string>
     <string name="title_seekbar_long_press_flat_region">長按防抖半徑</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半徑內時持續傳送初始位置，以減少全螢幕長按抖動；設為 0 則關閉。</string>
     <string name="title_checkbox_enable_keyboard_toggle_in_native_touch">多指鍵盤快捷手勢</string>
@@ -687,7 +719,7 @@
     <string name="summary_screen_offset_y">把已對齊的串流畫面向上或向下移動。</string>
     <string name="category_crown_features">Crown</string>
     <string name="title_crown_super_features">啟用 Crown 設定檔</string>
-    <string name="summary_crown_super_features">把螢幕按鍵、快捷動作、觸控模式和回饋設定作為命名設定檔整套切換。</string>
+    <string name="summary_crown_super_features">虛擬螢幕按鍵解決方案。把螢幕按鍵、快捷動作、觸控模式和振動回饋設定作為命名設定檔整套切換。</string>
     <string name="title_use_external_display">把串流傳送到外接顯示器</string>
     <string name="summary_use_external_display">連接第二個顯示器時，在外接顯示器而不是本機螢幕上顯示串流。</string>
     <string name="title_background_image_api">自訂背景網址</string>
@@ -924,4 +956,36 @@
     <string name="decoder_input_buffer_mode_auto">自動（建議）</string>
     <string name="decoder_input_buffer_mode_force_enabled">強制啟用</string>
     <string name="decoder_input_buffer_mode_force_disabled">強制停用</string>
+    <string name="title_ac3_iec61937">AC3 IEC61937 相容輸出</string>
+    <string name="summary_ac3_iec61937">將 48 kHz AC3 封裝輸出，適用於原始直通被轉成 PCM 的裝置。需要 Android 7+，並開啟音訊直通、選擇 AC3；其他編碼不變。修改後請完全重新啟動用戶端。關閉可恢復原始 AC3。</string>
+    <string name="stick_calibration_title">搖桿中心校正</string>
+    <string name="stick_calibration_summary">將搖桿目前位置設為此控制器的中立位置</string>
+
+    <string name="osc_layout_title">虛擬手把配置</string>
+
+    <!-- Material You 强调色 -->
+
+    <string name="theme_appearance">明暗模式</string>
+    <string name="theme_accent_source">強調色來源</string>
+    <string name="theme_accent_pink">品牌粉</string>
+    <string name="theme_accent_background">跟隨首頁背景</string>
+    <string name="theme_summary">%1$s · %2$s</string>
+    <string name="title_experimental_haptic_protocols">允許實驗性觸覺協定</string>
+    <string name="summary_experimental_haptic_protocols">自動辨識控制器。允許嘗試已辨識但尚未驗證的波形協定；未知協定繼續使用一般震動。變更後請重新串流。</string>
+    <string name="waveform_status_ready">波形通道已就緒，播放需要觸覺內容。</string>
+    <string name="waveform_status_validation">已辨識候選波形協定，尚待驗證。目前維持一般震動。</string>
+    <string name="waveform_status_permission">波形輸出需要 USB 授權，一般震動仍可使用。</string>
+    <string name="waveform_status_association">等待唯一玩家關聯。請按下控制器按鍵；無法區分的同型裝置維持一般震動。</string>
+    <string name="waveform_status_initializing">正在建立波形通道…</string>
+    <string name="waveform_status_busy">波形通道已被占用，目前維持一般震動。</string>
+    <string name="waveform_status_failed">波形輸出失敗，已回退至一般震動；重新連接可重試。</string>
+    <string name="waveform_status_disconnected">控制器已斷線，目前維持一般震動。</string>
+    <string name="waveform_experimental">實驗性</string>
+    <string name="waveform_player">玩家 %1$d</string>
+    <string name="waveform_test_channels">測試左右觸覺</string>
+    <string name="waveform_card_title">波形觸覺</string>
+    <string name="waveform_test_cancel">停止觸覺測試</string>
+    <string name="title_host_gamepad_selection">主機虛擬控制器</string>
+    <string name="summary_host_gamepad_selection">選擇向 Sunshine 請求的控制器類型，對所有玩家生效。自動模式會為已辨識的波形控制器或螢幕觸控板請求 DS5。變更後請重新串流。</string>
+    <string-array name="host_gamepad_selection_names"><item>自動</item><item>遵循主機設定</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
 </resources>

@@ -6,7 +6,7 @@
         <layer-list>
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="#44FF6B9D" />
+                    <solid android:color="?attr/appAccent27" />
                     <corners android:radius="@dimen/corner_radius_medium" />
                 </shape>
             </item>
@@ -18,13 +18,13 @@
         <layer-list>
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="#22FF6B9D" />
+                    <solid android:color="?attr/appAccent10" />
                     <corners android:radius="@dimen/corner_radius_medium" />
                 </shape>
             </item>
             <item>
                 <shape android:shape="rectangle">
-                    <stroke android:width="1.5dp" android:color="#88FF6B9D" />
+                    <stroke android:width="1.5dp" android:color="?attr/appAccent50" />
                     <corners android:radius="@dimen/corner_radius_medium" />
                 </shape>
             </item>
@@ -34,7 +34,7 @@
     <!-- 选中状态 -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <solid android:color="#18FF6B9D" />
+            <solid android:color="?attr/appAccent10" />
             <corners android:radius="@dimen/corner_radius_medium" />
         </shape>
     </item>

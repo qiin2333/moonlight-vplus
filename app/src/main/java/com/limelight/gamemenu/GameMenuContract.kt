@@ -28,6 +28,7 @@ internal data class GameMenuComposeUiState(
     val visibleCards: GameMenuVisibleCards,
     val bitrate: BitrateCardState,
     val audioHaptics: AudioHapticsCardState,
+    val waveformHaptics: WaveformHapticsCardState,
     val gyro: GyroCardState,
     val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
@@ -125,5 +126,6 @@ internal data class GameMenuCallbacks(
     val onSaveTouchPointerSensitivityPreset: () -> Unit,
     val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
     val onManageTouchPointerSensitivityPresets: () -> Unit,
-    val onCustomKey: (CustomKeyData) -> Unit
+    val onCustomKey: (CustomKeyData) -> Unit,
+    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> }
 )

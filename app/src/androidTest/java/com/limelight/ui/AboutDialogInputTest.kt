@@ -42,6 +42,7 @@ class AboutDialogInputTest {
                 versionInfo = "Version test",
                 onHandbook = {},
                 onEcosystem = { ecosystemOpened.set(true) },
+                onOpenSource = {},
                 onBilibili = {},
                 onGithub = {},
                 onQq = {},
@@ -110,7 +111,6 @@ class AboutDialogInputTest {
 
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).assertIsFocused()
-        composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).requestFocus()
         composeTestRule.onNodeWithTag(AboutDialogTags.ecosystemItem(0)).performKeyInput {
             pressKey(Key.DirectionDown)
         }

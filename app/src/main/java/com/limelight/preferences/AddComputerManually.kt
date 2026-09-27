@@ -9,6 +9,7 @@ import java.net.URISyntaxException
 import java.util.Collections
 import java.util.concurrent.LinkedBlockingQueue
 
+import com.limelight.ui.ThemedActivity
 import com.limelight.R
 import com.limelight.computers.ComputerManagerService
 import com.limelight.nvstream.http.ComputerDetails
@@ -55,7 +56,7 @@ internal class AddComputerWorkerGenerationGate {
     fun isCurrent(candidate: Long): Boolean = candidate == generation
 }
 
-class AddComputerManually : Activity() {
+class AddComputerManually : ThemedActivity() {
     companion object {
         const val EXTRA_ADDED_COMPUTER_UUID = "com.limelight.extra.ADDED_COMPUTER_UUID"
         private const val CONNECTING_BUTTON_ALPHA = 0.55f
@@ -279,10 +280,7 @@ class AddComputerManually : Activity() {
             }
 
             if (isIPv6) {
-                dialogText += "\n\n提示：如果您使用的是IPv6地址，请检查：\n" +
-                        "1. 光猫防火墙是否放行了IPv6流量\n" +
-                        "2. 路由器是否启用了IPv6端口转发\n" +
-                        "3. 目标主机的IPv6防火墙设置"
+                dialogText += getString(R.string.addpc_ipv6_hint)
             }
 
             showAddFailure(generation, dialogText)

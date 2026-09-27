@@ -7,12 +7,12 @@
 
     <path
         android:fillColor="@android:color/transparent"
-        android:strokeColor="@color/app_dialog_choice_control_active"
+        android:strokeColor="?attr/appAccent80"
         android:strokeWidth="1.5"
         android:pathData="M7,4.5h10c1.38,0 2.5,1.12 2.5,2.5v10c0,1.38 -1.12,2.5 -2.5,2.5H7c-1.38,0 -2.5,-1.12 -2.5,-2.5V7c0,-1.38 1.12,-2.5 2.5,-2.5z" />
     <path
         android:fillColor="@android:color/transparent"
-        android:strokeColor="@color/app_dialog_choice_control_active"
+        android:strokeColor="?attr/appAccent80"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"

@@ -37,6 +37,7 @@ import com.limelight.R
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import com.limelight.utils.UiHelper
 
 data class ViewFeatureGuideStep(
     val targetProvider: () -> View?,
@@ -207,7 +208,7 @@ private class FeatureGuideOverlay(
     private val onRemembered: () -> Unit
 ) : FrameLayout(activity) {
     private val density = resources.displayMetrics.density
-    private val accent = ContextCompat.getColor(activity, R.color.game_menu_accent)
+    private val accent = UiHelper.accentColor(activity)
     private val ink = Color.rgb(76, 67, 70)
     private val mutedInk = Color.rgb(108, 96, 99)
     private val paper = Color.rgb(255, 248, 232)

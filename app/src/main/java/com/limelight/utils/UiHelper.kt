@@ -5,20 +5,21 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.GameManager
 import android.app.GameState
-import android.app.LocaleManager
 import android.app.UiModeManager
+import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.util.TypedValue
 import android.os.BatteryManager
 import android.os.Build
 import android.os.LocaleList
 import android.view.View
 import android.view.WindowManager
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
@@ -30,58 +31,43 @@ object UiHelper {
 
     private const val TV_VERTICAL_PADDING_DP = 15
     private const val TV_HORIZONTAL_PADDING_DP = 15
-    private const val APP_THEME_PREFS = "AppTheme"
-    private const val APP_THEME_MODE_KEY = "theme_mode"
-
-    const val THEME_MODE_SYSTEM = "system"
-    const val THEME_MODE_LIGHT = "light"
-    const val THEME_MODE_DARK = "dark"
-
     private var sGameManagerAvailable: Boolean? = null
 
-    fun applyStoredAppTheme(context: Context) {
-        applyAppThemeMode(context, getAppThemeMode(context))
-    }
-
-    fun getAppThemeMode(context: Context): String {
-        val storedMode = context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(APP_THEME_MODE_KEY, THEME_MODE_SYSTEM)
-            ?: THEME_MODE_SYSTEM
-        return normalizeThemeMode(storedMode)
-    }
-
-    fun setAppThemeMode(context: Context, mode: String) {
-        val normalizedMode = normalizeThemeMode(mode)
-        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .edit { putString(APP_THEME_MODE_KEY, normalizedMode) }
-        applyAppThemeMode(context, normalizedMode)
-    }
-
-    private fun normalizeThemeMode(mode: String): String {
-        return when (mode) {
-            THEME_MODE_LIGHT, THEME_MODE_DARK -> mode
-            else -> THEME_MODE_SYSTEM
-        }
-    }
-
-    private fun applyAppThemeMode(context: Context, mode: String) {
-        val appCompatMode = when (mode) {
-            THEME_MODE_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-            THEME_MODE_DARK -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        }
-        AppCompatDelegate.setDefaultNightMode(appCompatMode)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val platformMode = when (mode) {
-                THEME_MODE_LIGHT -> UiModeManager.MODE_NIGHT_NO
-                THEME_MODE_DARK -> UiModeManager.MODE_NIGHT_YES
-                else -> UiModeManager.MODE_NIGHT_AUTO
+    /**
+     * 解析强调色主题属性（?attr/appAccent*）。
+     * 代码里原本直接读 @color/ui_shell_accent 系静态色的位置改用这里，
+     * 使其在选择跟随壁纸后使用首页背景取色。解析失败回退到品牌粉静态色。
+     */
+    private fun resolveThemeColor(context: Context, attr: Int, fallback: Int): Int {
+        val tv = TypedValue()
+        if (context.theme.resolveAttribute(attr, tv, true)) {
+            return when (tv.type) {
+                TypedValue.TYPE_REFERENCE ->
+                    // @color 引用也需带着 theme 解析，以支持主题化 ColorStateList。
+                    ContextCompat.getColor(context, tv.resourceId)
+                TypedValue.TYPE_ATTRIBUTE -> {
+                    // 属性套属性的情况极少出现；递归解析一层
+                    val inner = TypedValue()
+                    if (context.theme.resolveAttribute(tv.data, inner, true)) {
+                        inner.data
+                    } else {
+                        ContextCompat.getColor(context, fallback)
+                    }
+                }
+                else -> tv.data
             }
-            context.getSystemService(UiModeManager::class.java)
-                ?.setApplicationNightMode(platformMode)
         }
+        return ContextCompat.getColor(context, fallback)
     }
+
+    fun accentColor(context: Context): Int =
+        resolveThemeColor(context, R.attr.appAccent, R.color.ui_shell_accent)
+
+    fun accentSoftColor(context: Context): Int =
+        resolveThemeColor(context, R.attr.appAccentSoft, R.color.ui_shell_accent_soft)
+
+    fun accentFocusColor(context: Context): Int =
+        resolveThemeColor(context, R.attr.appAccentFocus, R.color.ui_shell_accent_focus)
 
     @RequiresApi(Build.VERSION_CODES.S)
     private fun isGameManagerAvailable(context: Context): Boolean {

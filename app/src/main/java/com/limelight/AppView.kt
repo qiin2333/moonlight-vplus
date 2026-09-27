@@ -38,13 +38,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 import org.xmlpull.v1.XmlPullParserException
 
+import com.limelight.ui.ThemedComponentActivity
 import com.limelight.binding.PlatformBinding
 import com.limelight.computers.ComputerManagerService
 import com.limelight.computers.PairStatePreflight
@@ -69,6 +69,7 @@ import com.limelight.ui.TopPanelHandleController
 import com.limelight.ui.VIRTUAL_DISPLAY_ID
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
+import com.limelight.ui.screenCombinationModeShortLabelRes
 import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppBackgroundMode
@@ -82,6 +83,7 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.SoftBackgroundColorExtractor
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
+import com.limelight.utils.AppTheme
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,7 +108,7 @@ internal fun shouldScheduleAppViewFeatureGuide(
 
 internal fun shouldEnableAppViewResumeTitle(runningAppId: Int): Boolean = runningAppId != 0
 
-class AppView : ComponentActivity(), AdapterFragmentCallbacks {
+class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     // 主线程作用域，用于收集 ComputerManagerService 的 Flow。
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -191,6 +193,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private lateinit var lastSettingsInfo: LinearLayout
     private lateinit var lastSettingsText: TextView
     private lateinit var useLastSettingsCheckbox: CheckBox
+    private lateinit var appViewTargetReminder: TextView
 
     // ==================== UI 组件 - 顶部下拉面板 & 显示器选择 ====================
     private lateinit var topPanelScrim: View
@@ -457,6 +460,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         lastSettingsInfo = findViewById(R.id.lastSettingsInfo)
         lastSettingsText = findViewById(R.id.lastSettingsText)
         useLastSettingsCheckbox = findViewById(R.id.useLastSettingsCheckbox)
+        appViewTargetReminder = findViewById(R.id.appViewTargetReminder)
 
         // Initialize top dropdown panel
         topPanelScrim = findViewById(R.id.topPanelScrim)
@@ -485,7 +489,10 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 onBackgroundModeSelected = { selectAppBackgroundMode(it) },
                 onScreenCombinationClick = { showScreenCombinationModeView() },
                 onScreenCombinationSelected = { selectScreenCombinationMode(it) },
-                onDisplaySelected = { selectedDisplayId = it },
+                onDisplaySelected = {
+                    selectedDisplayId = it
+                    updateAppViewTargetReminder()
+                },
                 onClearDisplaySelection = { clearDisplaySelection() }
             )
         }
@@ -563,6 +570,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         val topPanelToggle = findViewById<TextView>(R.id.topPanelToggle)
         topPanelToggle.contentDescription = getString(R.string.appview_quick_settings_title)
         topPanelHandleController = TopPanelHandleController(topPanelToggle)
+        AppTheme.observeAccent(this, this) { topPanelHandleController.refreshAccentColor() }
         topPanelToggle.setOnClickListener { toggleTopPanel() }
         topPanelToggle.setOnKeyListener { _, keyCode, event ->
             when (keyCode) {
@@ -1046,6 +1054,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         if (computer == null || computer?.activeAddress == null || managerBinder == null) {
             displayOptions = emptyList()
             selectedDisplayId = null
+            updateAppViewTargetReminder()
             return
         }
 
@@ -1060,11 +1069,13 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 } else {
                     displayOptions = emptyList()
                     selectedDisplayId = null
+                    updateAppViewTargetReminder()
                 }
             } catch (e: Exception) {
                 LimeLog.warning("Failed to get displays: " + e.message)
                 displayOptions = emptyList()
                 selectedDisplayId = null
+                updateAppViewTargetReminder()
             }
         }
     }
@@ -1203,6 +1214,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
     private fun refreshScreenCombinationModeFromPreferences() {
         refreshScreenCombinationModeOptions()
         selectedScreenCombinationMode = PreferenceConfiguration.readPreferences(this).screenCombinationMode
+        updateAppViewTargetReminder()
     }
 
     private fun persistScreenCombinationMode() {
@@ -1215,11 +1227,41 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
         if (selectedScreenCombinationMode == mode) return
         selectedScreenCombinationMode = mode
         persistScreenCombinationMode()
+        updateAppViewTargetReminder()
     }
 
     private fun clearDisplaySelection() {
         selectedDisplayId = null
         refreshScreenCombinationModeFromPreferences()
+    }
+
+    /**
+     * Shows only the launch-time options that differ from their defaults. This is
+     * deliberately non-focusable so it cannot add a stop to D-pad navigation.
+     */
+    private fun updateAppViewTargetReminder() {
+        if (!::appViewTargetReminder.isInitialized) return
+
+        val screenModeLabel = selectedScreenCombinationMode
+            .takeIf { it != -1 }
+            ?.let { mode ->
+                screenCombinationModeShortLabelRes(mode)?.let { getString(it) }
+                    ?: screenCombinationOptions.firstOrNull { it.value == mode }?.label
+            }
+        val displayLabel = selectedDisplayId?.let { id ->
+            if (id == VIRTUAL_DISPLAY_ID) {
+                getString(R.string.appview_display_selection_virtual)
+            } else {
+                displayOptions.firstOrNull { it.id == id }?.label
+            }
+        }
+        val reminder = listOfNotNull(screenModeLabel, displayLabel)
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+
+        appViewTargetReminder.text = reminder
+        appViewTargetReminder.contentDescription = reminder.takeIf { it.isNotEmpty() }
+        appViewTargetReminder.visibility = if (reminder.isEmpty()) View.GONE else View.VISIBLE
     }
 
     /**
@@ -1728,7 +1770,7 @@ class AppView : ComponentActivity(), AdapterFragmentCallbacks {
                 }
 
                 if (!stillExists) {
-                    shortcutHelper.disableAppShortcut(computer!!, existingApp.app, "App removed from PC")
+                    shortcutHelper.disableAppShortcut(computer!!, existingApp.app, this.getString(R.string.shortcut_app_removed))
                 }
             }
 

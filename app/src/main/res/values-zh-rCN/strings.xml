@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="title_combine_joycons">合并 Joy-Con 左右手柄</string>
+    <string name="joycon_system_capabilities">系统振动：%1$s · 陀螺仪：%2$s</string>
+    <string name="joycon_capability_available">可用</string>
+    <string name="joycon_capability_missing">安卓未暴露</string>
+    <string name="joycon_capability_unchecked">未检测</string>
+    <string name="summary_combine_joycons">将一代左右 Joy-Con 竖握合并为一个玩家。仅在左右各有一只未配对手柄时自动配对，下次串流生效。</string>
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc"> 电脑已删除 </string>
     <string name="scut_not_paired"> 电脑未配对 </string>
@@ -135,6 +141,18 @@
     <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
     <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
     <string name="game_menu_controller_mouse">手柄鼠标</string>
+    <string name="title_controller_mouse_settings">手柄鼠标模式</string>
+    <string name="summary_controller_mouse_settings">指针速度、滚动摇杆和十字键功能</string>
+    <string name="controller_mouse_pointer_speed">指针速度</string>
+    <string name="controller_mouse_pointer_speed_summary">调整摇杆控制鼠标时的移动速度</string>
+    <string name="controller_mouse_scroll_stick">滚动摇杆</string>
+    <string name="controller_mouse_scroll_stick_summary">选择鼠标模式下负责滚动的摇杆</string>
+    <string name="controller_mouse_scroll_none">不滚动（双摇杆控制指针）</string>
+    <string name="controller_mouse_dpad_behavior">十字键功能</string>
+    <string name="controller_mouse_dpad_behavior_summary">仅在手柄鼠标模式下生效</string>
+    <string name="controller_mouse_dpad_scroll">滚动页面</string>
+    <string name="controller_mouse_dpad_arrows">方向键 ↑ ↓ ← →</string>
+    <string name="controller_mouse_speed_percent">%1$d%%</string>
     <string name="game_menu_disconnect"> 断开连接 </string>
     <string name="game_menu_disconnect_and_quit"> 断开并退出串流 </string>
     <string name="game_menu_cancel"> 取消 </string>
@@ -215,7 +233,7 @@
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate">串流码率</string>
-    <string name="summary_seekbar_bitrate">高码率提升图像质量，低码率提升在较慢网络中的串流体验。</string>
+    <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
     <string name="title_adaptive_bitrate">智能码率</string>
     <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
     <string name="title_abr_mode">智能码率模式</string>
@@ -516,7 +534,7 @@
     <string name="title_disable_frame_drop"> 永不掉帧 </string>
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟。 </string>
     <string name="title_video_format">视频编解码器</string>
-    <string name="summary_video_format">如果您的设备支持较新的编解码器，则可以降低视频带宽要求。如果主机软件或显卡不支持编解码器选择，则可能会忽略编解码器选择。</string>
+    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
     <string name="title_enable_hdr">启用 HDR</string>
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用屏幕最高亮度</string>
@@ -548,6 +566,7 @@
     <string name="pcview_theme_light">浅色</string>
     <string name="pcview_theme_dark">深色</string>
     <string name="pcview_theme_applied">主题已切换为%1$s</string>
+
     <string name="pcview_press_back_again_to_exit">再按一次返回键退出</string>
     <string name="title_enable_host_cadence_precise_sync">精确同步更顺滑</string>
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
@@ -644,6 +663,15 @@
     <string name="about_dialog_bilibili_summary">关注账号，获取版本动态与功能演示</string>
     <string name="about_dialog_handbook_action">文档手册</string>
     <string name="about_dialog_ecosystem_action">基地生态</string>
+    <string name="about_dialog_open_source_action">开源许可</string>
+    <string name="open_source_title">开源许可</string>
+    <string name="open_source_intro">查看此应用所含开源组件的项目来源和许可文本</string>
+    <string name="open_source_back">返回</string>
+    <string name="open_source_component_details">组件详情</string>
+    <string name="open_source_version">版本：%1$s</string>
+    <string name="open_source_license">许可：%1$s</string>
+    <string name="open_source_project">项目地址：%1$s</string>
+    <string name="open_source_license_text">查看完整许可文本</string>
     <string name="about_dialog_ecosystem_title">基地生态</string>
     <string name="about_dialog_ecosystem_lead">从主机端到手机、平板、电视和桌面客户端，选择适合你的平台。</string>
     <string name="about_dialog_ecosystem_footer">项目将通过安全的外部浏览器打开。</string>
@@ -685,8 +713,13 @@
     <string name="summary_checkbox_enable_audiofx">允许均衡器等系统效果处理 Moonlight 本机解码的音频；直通音频会绕过这些效果，此选项也可能增加延迟。</string>
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
     <string name="summary_checkbox_enable_spatializer">对 Moonlight 本机解码的音频使用 Android 空间化处理，需要 Android 13 和兼容的输出设备；直通音频会绕过此处理。</string>
-    <string name="title_checkbox_enable_mic">将本机麦克风发送到主机（实验性）</string>
-    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Sunshine Foundation 20250720 或更高版本。</string>
+    <string name="title_checkbox_enable_mic">启用麦克风</string>
+    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Foundation Sunshine 2025.0720 或更高版本。</string>
+    <string name="title_list_mic_initial_state">麦克风初始状态</string>
+    <string name="summary_list_mic_initial_state">选择每次串流开始时的麦克风状态。</string>
+    <string name="mic_initial_state_off">关闭</string>
+    <string name="mic_initial_state_on">开启</string>
+    <string name="mic_initial_state_follow_last">跟随上次状态</string>
     <string name="title_list_mic_menu_action_mode">串流菜单中的麦克风操作</string>
     <string name="summary_list_mic_menu_action_mode">选择串流返回菜单中的麦克风按钮执行什么操作。</string>
     <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
@@ -767,7 +800,7 @@
     <!-- Crown feature area -->
     <string name="category_crown_features">王冠</string>
     <string name="title_crown_super_features">启用 Crown 配置</string>
-    <string name="summary_crown_super_features">把屏幕按键、快捷动作、触控模式和反馈设置作为命名配置整套切换。</string>
+    <string name="summary_crown_super_features">虚拟屏幕按键解决方案。把屏幕按键、快捷动作、触控模式和振动反馈设置作为命名配置整套切换。</string>
     <string name="title_export_super_config">导出配置</string>
     <string name="summary_export_super_config">导出自定义按钮的和串流内设置的配置文件。</string>
     <string name="title_import_super_config">导入配置</string>
@@ -793,7 +826,7 @@
     <string name="game_menu_configure_crown_function">返回键打开王冠</string>
     <string name="crown_control_visibility_subtitle">临时收起或显示屏幕按键</string>
     <string name="crown_control_touch_subtitle">暂停或恢复当前档案的触控输入</string>
-    <string name="crown_control_profiles_subtitle">切换已保存的按键、触控和反馈档案</string>
+    <string name="crown_control_profiles_subtitle">切换当前按键、触控、振动反馈配置</string>
     <string name="crown_control_layout_subtitle">移动和调整屏幕按键</string>
     <string name="crown_control_back_key_subtitle">用返回键快速打开王冠面板</string>
     <string name="toast_elements_visible">按键已显示</string>
@@ -1101,7 +1134,7 @@
 
     <!-- 屏幕组合模式 -->
     <string name="title_screen_combination_mode">主机显示器排列</string>
-    <string name="summary_screen_combination_mode">选择 Sunshine Base 如何排列或组合主机显示器，需要兼容的 Sunshine Base 主机。</string>
+    <string name="summary_screen_combination_mode">选择 Foundation Sunshine 如何排列或组合主机显示器，需要兼容的 Foundation Sunshine 主机。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
     <string name="screen_mode_host_default">跟随主机</string>
     <string name="screen_mode_no_operation">无操作模式</string>
@@ -1271,7 +1304,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">延迟:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">流量 (收/发):</string>
     <string name="layout_game_menu_super_empty_text_a7970">还没有炒鸡指令哦</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Sunshine 基地版 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Foundation Sunshine 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
     <string name="game_menu_super_commands">超级指令</string>
     <string name="layout_item_key_value_text_0952a">分区 1</string>
     <string name="layout_item_key_value_hint_dd44f">分区名称，为空时为键值名</string>
@@ -1291,7 +1324,7 @@
     <string name="layout_page_analog_stick_text_4b292">字体按下颜色</string>
     <string name="page_config_section_profile">档案</string>
     <string name="page_config_section_touch">触控</string>
-    <string name="page_config_section_feedback">反馈</string>
+    <string name="page_config_section_feedback">振动反馈</string>
     <string name="crown_profile_name_title">档案名称</string>
     <string name="crown_profile_name_error">档案名称需为 1-10 个字符</string>
     <string name="layout_page_config_text_9eba2">当前档案</string>
@@ -1301,8 +1334,8 @@
     <string name="layout_page_device_text_mmo_true_text">仅鼠标移动</string>
     <string name="layout_page_device_text_mmo_false_text">鼠标移动+点击</string>
     <string name="layout_page_config_text_8ea81">多点触控</string>
-    <string name="layout_page_config_text_cd2c1">游戏反馈</string>
-    <string name="layout_page_config_text_f4651">按键反馈</string>
+    <string name="layout_page_config_text_cd2c1">设备同步振动</string>
+    <string name="layout_page_config_text_f4651">虚拟按键振动</string>
     <string name="layout_page_config_text_66ab5">新建</string>
     <string name="layout_page_config_text_df603">完成</string>
     <string name="layout_page_device_text_5f411">返回</string>
@@ -2023,7 +2056,7 @@
     <string name="feature_guide_quick_actions_title">快捷栏也要我教吗？</string>
     <string name="feature_guide_quick_actions_body">长按快捷按钮就能添加、移除或拖动排序。把常用操作摆好，下次可别再手忙脚乱啦。</string>
     <string name="feature_guide_crown_title">给你的配置戴个皇冠吧</string>
-    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和反馈设置都能存成皇冠配置。一键整套切换，这下杂鱼也不会弄乱啦。</string>
+    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和振动反馈设置都能存成皇冠配置。一键整套切换，这下杂鱼也不会弄乱啦。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">这次记住啦</string>
     <string name="feature_guide_skip">才不要看</string>
@@ -2082,7 +2115,7 @@
     <string name="title_force_mtk_max_operating_rate">强制联发科解码器最高运行速率（实验性）</string>
     <string name="summary_force_mtk_max_operating_rate">仅用于联发科解码器的兼容性选项。在部分设备上可能降低延迟，也可能在另一些设备上造成严重延迟；除非在排查已知联发科解码问题，否则请保持关闭。</string>
     <string name="title_hevc_low_latency_mode">HEVC 低延迟解码</string>
-    <string name="summary_hevc_low_latency_mode">Amlogic 芯片电视盒子开启解码器低延迟模式后，HEVC 画面可能变成幻灯片（帧率显示正常但几乎不刷新）。自动：仅在 Amlogic HEVC 解码器上跳过低延迟选项（这些设备多 1–2 帧延迟）；关闭：所有 HEVC 与杜比视界流跳过；开启：恢复原有行为。</string>
+    <string name="summary_hevc_low_latency_mode">自动：对 Amlogic HEVC 解码器使用兼容配置；开启：恢复低延迟选项；关闭：对所有 HEVC 和杜比视界串流使用兼容配置。兼容配置可能增加解码延迟。</string>
     <string name="hevc_low_latency_auto">自动</string>
     <string name="hevc_low_latency_on">开启</string>
     <string name="hevc_low_latency_off">关闭</string>
@@ -2149,4 +2182,33 @@
     <string name="decoder_input_buffer_mode_auto">自动（推荐）</string>
     <string name="decoder_input_buffer_mode_force_enabled">强制启用</string>
     <string name="decoder_input_buffer_mode_force_disabled">强制关闭</string>
+    <string name="title_ac3_iec61937">AC3 IEC61937 兼容输出</string>
+    <string name="summary_ac3_iec61937">将 48 kHz AC3 封装输出，适用于原始直通被转成 PCM 的设备。需要 Android 7+，并开启音频直通、选择 AC3；其他编码不变。修改后请彻底重启客户端。关闭可恢复原始 AC3。</string>
+    <string name="stick_calibration_title">摇杆中心校准</string>
+    <string name="stick_calibration_summary">将摇杆当前位置设为此控制器的中立位置</string>
+
+    <string name="osc_layout_title">虚拟手柄布局</string>
+    <string name="theme_appearance">明暗模式</string>
+    <string name="theme_accent_source">强调色来源</string>
+    <string name="theme_accent_pink">品牌粉</string>
+    <string name="theme_accent_background">跟随首页背景</string>
+    <string name="theme_summary">%1$s · %2$s</string>
+    <string name="title_experimental_haptic_protocols">允许实验性触觉协议</string>
+    <string name="summary_experimental_haptic_protocols">自动识别手柄。允许尝试已识别但尚未验证的波形协议；未知协议继续使用普通振动。更改后重新串流。</string>
+    <string name="waveform_status_ready">波形通道已就绪，播放仍需触觉内容。</string>
+    <string name="waveform_status_validation">已识别候选波形协议，尚待验证；当前保留普通振动。</string>
+    <string name="waveform_status_permission">波形输出需要 USB 授权，普通振动仍可使用。</string>
+    <string name="waveform_status_association">等待唯一玩家关联。请按下手柄按键；无法区分的同款设备保留普通振动。</string>
+    <string name="waveform_status_initializing">正在建立波形通道…</string>
+    <string name="waveform_status_busy">波形通道被占用，当前保留普通振动。</string>
+    <string name="waveform_status_failed">波形输出失败，已回退普通振动；重新连接可重试。</string>
+    <string name="waveform_status_disconnected">手柄已断开，当前保留普通振动。</string>
+    <string name="waveform_experimental">实验性</string>
+    <string name="waveform_player">玩家 %1$d</string>
+    <string name="waveform_test_channels">测试左右触觉</string>
+    <string name="waveform_card_title">波形触觉</string>
+    <string name="waveform_test_cancel">停止触觉测试</string>
+    <string name="title_host_gamepad_selection">主机虚拟手柄</string>
+    <string name="summary_host_gamepad_selection">选择向 Sunshine 请求的手柄类型，对所有玩家生效。自动模式会为已识别的波形手柄或屏幕触摸板请求 DS5。更改后重新串流。</string>
+    <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
 </resources>

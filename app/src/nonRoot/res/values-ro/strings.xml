@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Activează adaptarea intrării native pentru touchpadul tastaturii unei tablete. Nu sunt necesare permisiuni root. Necesită Foundation Sunshine cu opțiunea „Adaptare touchpad nativ” activată. Testat numai pe anumite tablete Xiaomi.</string>
+</resources>

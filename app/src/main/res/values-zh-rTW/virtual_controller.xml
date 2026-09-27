@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_move_buttons">拖動按鈕調整位置，開啟選單可結束編輯或切換配置</string>
+    <string name="osc_resize_buttons">拖動按鈕調整大小，開啟選單可結束編輯或切換配置</string>
+    <string name="osc_dpad">方向鍵</string>
+    <string name="osc_quick_menu">手把配置與編輯</string>
+    <string name="osc_action_move">調整位置</string>
+    <string name="osc_action_resize">調整大小</string>
+    <string name="osc_action_done">儲存並結束編輯</string>
+</resources>

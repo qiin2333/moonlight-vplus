@@ -124,8 +124,8 @@ public class SimplifyPerformance extends Element {
             try {
                 while (matcher.find()) {
                     String key = matcher.group(1);
-                    String replacement = performanceAttrs.getOrDefault(key, "N/A");
-                    matcher.appendReplacement(sb, replacement);
+                    String replacement = performanceAttrs.getOrDefault(com.limelight.utils.PerformanceTemplateTokens.canonicalize(key), "N/A");
+                    matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
                 }
                 matcher.appendTail(sb);
                 tempText = sb.toString();
@@ -383,8 +383,8 @@ public class SimplifyPerformance extends Element {
         });
 
         textResetButton.setOnClickListener(v -> {
-            setElementPreParseText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
-            textEditText.setText(SIMPLIFY_PERFORMANCE_TEXT_DEFAULT);
+            setElementPreParseText(getContext().getString(R.string.crown_performance_default));
+            textEditText.setText(getContext().getString(R.string.crown_performance_default));
             save();
         });
 
@@ -508,6 +508,12 @@ public class SimplifyPerformance extends Element {
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
         return false;
+    }
+
+    public static ContentValues getInitialInfo(Context context) {
+        ContentValues values = getInitialInfo();
+        values.put(COLUMN_INT_SIMPLIFY_PERFORMANCE_PRE_PARSE_TEXT, context.getString(R.string.crown_performance_default));
+        return values;
     }
 
     public static ContentValues getInitialInfo() {

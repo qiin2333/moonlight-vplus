@@ -11,14 +11,14 @@
         <shape android:shape="rectangle">
             <solid android:color="@color/ui_shell_surface_pressed" />
             <corners android:radius="@dimen/corner_radius_medium" />
-            <stroke android:width="1dp" android:color="@color/ui_shell_accent" />
+            <stroke android:width="1dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/ui_shell_surface_focused" />
+            <solid android:color="?attr/appAccent10" />
             <corners android:radius="@dimen/corner_radius_medium" />
-            <stroke android:width="2dp" android:color="@color/ui_shell_accent" />
+            <stroke android:width="2dp" android:color="?attr/appAccent" />
         </shape>
     </item>
     <item>

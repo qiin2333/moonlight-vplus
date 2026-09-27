@@ -38,7 +38,7 @@
         android:layout_height="24dp"
         android:layout_gravity="center_vertical"
         android:src="@drawable/ic_play"
-        android:tint="@color/theme_pink_primary"
+        android:tint="?attr/appAccent"
         android:contentDescription="@string/layout_address_list_item_cd_30f7d" />
 
 </LinearLayout>

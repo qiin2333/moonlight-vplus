@@ -21,6 +21,7 @@ class RemoteImeController(
     private var latestContext: RemoteTextContext? = null
     private var latestRevision = -1L
     private var latestInsets: WindowInsetsCompat? = null
+    private var imeWasVisible = false
     @Volatile private var disposed = false
     private var generation = 0L
     private val avoidanceSession = ImeAvoidanceSession()
@@ -95,6 +96,13 @@ class RemoteImeController(
             root.getWindowVisibleDisplayFrame(visible)
             RemoteTextContextPolicy.legacyVisibleBottom(rootTop, root.height, visible.bottom)
         } else null
+        val inputMethodVisible = if (insets != null) imeVisible else visibleBottom != null
+        if (inputMethodVisible) {
+            imeWasVisible = true
+        } else if (imeWasVisible) {
+            imeWasVisible = false
+            streamView.setTextInputEnabled(false)
+        }
         avoidanceSession.updateVisibility(
             if (insets != null) imeVisible else visibleBottom != null,
             SystemClock.elapsedRealtime(),
@@ -136,6 +144,8 @@ class RemoteImeController(
         generation++
         latestContext = null
         latestInsets = null
+        imeWasVisible = false
+        streamView.setTextInputEnabled(false)
         avoidanceSession.reset()
         panZoomHandler.onUserTransform = null
         val observer = streamView.rootView.viewTreeObserver
@@ -152,6 +162,8 @@ class RemoteImeController(
             latestContext = null
             latestRevision = -1L
             latestInsets = null
+            imeWasVisible = false
+            streamView.setTextInputEnabled(false)
             avoidanceSession.reset()
             panZoomHandler.setImeOffsetY(0f)
         }

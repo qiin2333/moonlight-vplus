@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Aktiviert die native Touchpad-Eingabe für das Tastatur-Touchpad eines Tablets. Keine Root-Rechte erforderlich. Erfordert Foundation Sunshine mit aktivierter Option „Natives Touchpad anpassen“. Nur auf einigen Xiaomi-Tablets getestet.</string>
+</resources>

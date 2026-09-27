@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stick_calibration_help">Подвигайте оба стика, отпустите их и нажмите «Сохранить центр» на экране или мышью. Ниже показан последний активный геймпад. При сохранении не трогайте стики. Значения сохраняются для этого геймпада Android; затем перезапустите трансляцию. Поддерживается системный ввод Android (Bluetooth и USB). Встроенный USB-драйвер и USB/IP обходят эту калибровку.</string>
+    <string name="stick_calibration_waiting">Ожидание движения стиков…</string>
+    <string name="stick_calibration_save">Сохранить центр</string>
+    <string name="stick_calibration_reset">Сбросить калибровку</string>
+    <string name="stick_calibration_close">Закрыть</string>
+    <string name="stick_calibration_saved">Центры стиков сохранены. Перезапустите трансляцию.</string>
+    <string name="stick_calibration_reset_done">Исходные центры восстановлены. Перезапустите трансляцию.</string>
+    <string name="stick_calibration_columns">Ось: ввод / центр / с поправкой (до мёртвой зоны)</string>
+</resources>

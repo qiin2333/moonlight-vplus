@@ -76,7 +76,7 @@
                         android:layout_width="70dp"
                         android:layout_height="44dp"
                         android:gravity="center"
-                        android:text="↑ UP"
+                        android:text="@string/direction_up_label"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         android:background="@drawable/crown_config_input_bg"/>
@@ -92,7 +92,7 @@
                             android:layout_width="70dp"
                             android:layout_height="44dp"
                             android:gravity="center"
-                            android:text="← LEFT"
+                            android:text="@string/direction_left_label"
                             android:textSize="12sp"
                             android:background="@drawable/crown_config_input_bg"/>
                         <View
@@ -104,7 +104,7 @@
                             android:layout_width="70dp"
                             android:layout_height="44dp"
                             android:gravity="center"
-                            android:text="RIGHT →"
+                            android:text="@string/direction_right_label"
                             android:textSize="12sp"
                             android:background="@drawable/crown_config_input_bg"/>
                     </LinearLayout>
@@ -115,7 +115,7 @@
                         android:layout_width="70dp"
                         android:layout_height="44dp"
                         android:gravity="center"
-                        android:text="↓ DOWN"
+                        android:text="@string/direction_down_label"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         android:background="@drawable/crown_config_input_bg"/>

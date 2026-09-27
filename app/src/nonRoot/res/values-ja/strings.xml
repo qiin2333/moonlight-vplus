@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">タブレット用キーボードのタッチパッドでネイティブタッチパッド入力の適応を有効にします。root 権限は不要です。Foundation Sunshine で「ネイティブタッチパッドに対応」オプションを有効にする必要があります。一部の Xiaomi タブレットでのみテスト済みです。</string>
+</resources>

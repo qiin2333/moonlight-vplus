@@ -192,6 +192,18 @@
     <string name="game_menu_toggle_mouse_on">Enable Controller Mouse Emulation</string>
     <string name="game_menu_toggle_mouse_off">Disable Controller Mouse Emulation</string>
     <string name="game_menu_controller_mouse">Controller Mouse</string>
+    <string name="title_controller_mouse_settings">Controller mouse mode</string>
+    <string name="summary_controller_mouse_settings">Pointer speed, scroll stick, and D-pad behavior</string>
+    <string name="controller_mouse_pointer_speed">Pointer speed</string>
+    <string name="controller_mouse_pointer_speed_summary">Adjust how fast the stick moves the pointer</string>
+    <string name="controller_mouse_scroll_stick">Scroll stick</string>
+    <string name="controller_mouse_scroll_stick_summary">Choose which stick scrolls in mouse mode</string>
+    <string name="controller_mouse_scroll_none">No scrolling (both sticks move the pointer)</string>
+    <string name="controller_mouse_dpad_behavior">D-pad behavior</string>
+    <string name="controller_mouse_dpad_behavior_summary">Applies only in controller mouse mode</string>
+    <string name="controller_mouse_dpad_scroll">Scroll</string>
+    <string name="controller_mouse_dpad_arrows">Arrow keys</string>
+    <string name="controller_mouse_speed_percent">%1$d%%</string>
     <string name="game_menu_disconnect">Disconnect</string>
     <string name="game_menu_disconnect_and_quit">Quit Game and Disconnect</string>
     <string name="game_menu_cancel">Cancel</string>
@@ -254,7 +266,7 @@
     <string name="title_fps_list">Stream frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
     <string name="title_seekbar_bitrate">Stream bitrate</string>
-    <string name="summary_seekbar_bitrate">Increase for better image quality. Decrease to improve performance on slower connections.</string>
+    <string name="summary_seekbar_bitrate">Higher bitrate improves image quality but uses more bandwidth; lower bitrate is better for slower or unstable networks. Lower it first if streaming stutters, and raise it when the image is too soft and the network is stable; for 1080p60, start around 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Adaptive bitrate</string>
     <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
@@ -312,8 +324,13 @@
     <string name="summary_checkbox_enable_spatializer">Use Android Spatializer for audio decoded by Moonlight. Requires Android 13 and compatible output; passthrough audio bypasses it.</string>
     <string name="title_checkbox_control_only">Control-only mode</string>
     <string name="summary_checkbox_control_only">Only establish control stream connection without video and audio streams. Useful for remote input control only. Requires Sunshine server with control-only mode support.</string>
-    <string name="title_checkbox_enable_mic">Send this device’s microphone to the host</string>
-    <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Sunshine Foundation build 20250720 or later.</string>
+    <string name="title_checkbox_enable_mic">Enable microphone</string>
+    <string name="summary_checkbox_enable_mic">Send this device\'s microphone audio to the host. Requires Foundation Sunshine 2025.0720 or later.</string>
+    <string name="title_list_mic_initial_state">Initial microphone state</string>
+    <string name="summary_list_mic_initial_state">Choose the microphone state when each stream starts.</string>
+    <string name="mic_initial_state_off">Off</string>
+    <string name="mic_initial_state_on">On</string>
+    <string name="mic_initial_state_follow_last">Follow last state</string>
     <string name="title_list_mic_menu_action_mode">Microphone action in the stream menu</string>
     <string name="summary_list_mic_menu_action_mode">Choose what the microphone button in the stream menu does</string>
     <string name="mic_menu_action_show_button">Show or hide floating microphone button</string>
@@ -353,6 +370,12 @@
     <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced frame pacing. A lower matching refresh rate can save power but may add video latency.</string>
 
     <string name="category_gamepad_settings">Gamepad</string>
+    <string name="title_combine_joycons">Combine Joy-Con controllers</string>
+    <string name="joycon_system_capabilities">System rumble: %1$s · Gyroscope: %2$s</string>
+    <string name="joycon_capability_available">Available</string>
+    <string name="joycon_capability_missing">Not exposed by Android</string>
+    <string name="joycon_capability_unchecked">Not checked</string>
+    <string name="summary_combine_joycons">Use a first-generation left and right Joy-Con as one player, held vertically. Automatically pairs only when one unpaired controller of each side is connected. Applies to the next stream.</string>
     <string name="title_checkbox_multi_controller">Separate controllers and players</string>
     <string name="summary_checkbox_multi_controller">Expose each connected controller as a separate controller on the host. Turn off to combine them as one.</string>
     <string name="title_list_game_rumble_mode">Host game rumble output</string>
@@ -659,8 +682,8 @@
     <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
     <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
     <string name="title_screen_combination_mode">Host display arrangement</string>
-    <string name="summary_screen_combination_mode">Choose how Sunshine Base arranges or combines host displays. Requires a compatible Sunshine Base host.</string>
-    <string name="screen_combination_mode_dialog_subtitle">Applies to Sunshine Foundation display control</string>
+    <string name="summary_screen_combination_mode">Choose how Foundation Sunshine arranges or combines host displays. Requires a compatible Foundation Sunshine host.</string>
+    <string name="screen_combination_mode_dialog_subtitle">Applies to Foundation Sunshine display control</string>
     <string name="screen_mode_host_default">Follow host</string>
     <string name="screen_mode_no_operation">No operation mode</string>
     <string name="screen_mode_auto_activate">Activate mode</string>
@@ -684,7 +707,7 @@
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
     <string name="title_video_format">Video codec</string>
-    <string name="summary_video_format">Newer codecs can lower video bandwidth requirements if your device supports them. Codec selections may be ignored if not supported by the host software or GPU.</string>
+    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
     <string name="title_enable_hdr_high_brightness">Maximum display brightness for HDR</string>
@@ -763,6 +786,15 @@
     <string name="about_dialog_bilibili_summary">Follow for release news and feature demos</string>
     <string name="about_dialog_handbook_action">Documentation</string>
     <string name="about_dialog_ecosystem_action">Ecosystem</string>
+    <string name="about_dialog_open_source_action">Licenses</string>
+    <string name="open_source_title">Open source licenses</string>
+    <string name="open_source_intro">Open source components included with this app and their licenses</string>
+    <string name="open_source_back">Back</string>
+    <string name="open_source_component_details">Component details</string>
+    <string name="open_source_version">Version: %1$s</string>
+    <string name="open_source_license">License: %1$s</string>
+    <string name="open_source_project">Project: %1$s</string>
+    <string name="open_source_license_text">Full license text</string>
     <string name="about_dialog_ecosystem_title">AlkaidLab Ecosystem</string>
     <string name="about_dialog_ecosystem_lead">From the host to phones, tablets, TVs, and desktops, choose the client that fits your platform.</string>
     <string name="about_dialog_ecosystem_footer">Projects open in a secure external browser.</string>
@@ -860,7 +892,7 @@
     <!-- Crown feature area -->
     <string name="category_crown_features">Crown</string>
     <string name="title_crown_super_features">Enable Crown profiles</string>
-    <string name="summary_crown_super_features">Switch on-screen buttons, quick actions, touch mode, and feedback settings together as named profiles.</string>
+    <string name="summary_crown_super_features">A virtual on-screen button solution. Switch on-screen buttons, quick actions, touch mode, and vibration feedback settings together as named profiles.</string>
     <string name="title_export_super_config">Export Configuration</string>
     <string name="summary_export_super_config">Export custom button and streaming settings configuration file</string>
     <string name="title_import_super_config">Import Configuration</string>
@@ -1001,7 +1033,7 @@
     <string name="game_menu_configure_crown_function">Open Crown with Back</string>
     <string name="crown_control_visibility_subtitle">Keep the on-screen buttons out of the way</string>
     <string name="crown_control_touch_subtitle">Pause or resume touch input</string>
-    <string name="crown_control_profiles_subtitle">Switch saved button and touch profiles</string>
+    <string name="crown_control_profiles_subtitle">Switch the current button, touch, and vibration feedback profile</string>
     <string name="crown_control_layout_subtitle">Move and resize the on-screen buttons</string>
     <string name="crown_control_back_key_subtitle">Use Back to reopen this Crown panel</string>
     <string name="toast_elements_visible">Buttons shown</string>
@@ -1332,6 +1364,7 @@
     <string name="pcview_theme_light">Light</string>
     <string name="pcview_theme_dark">Dark</string>
     <string name="pcview_theme_applied">Theme set to %1$s</string>
+
     <string name="pcview_press_back_again_to_exit">Press Back again to exit</string>
     <string name="save_to_scene">Save to Scene %1$d</string>
     <string name="overwrite_current_config">Overwrite current configuration?</string>
@@ -1363,7 +1396,7 @@
     <string name="title_force_mtk_max_operating_rate">Force MediaTek decoder maximum rate (Experimental)</string>
     <string name="summary_force_mtk_max_operating_rate">Compatibility override for MediaTek decoders only. It may reduce latency on some devices, but can cause severe delay on others. Leave off unless testing a known MediaTek decoder issue.</string>
     <string name="title_hevc_low_latency_mode">HEVC low-latency decoding</string>
-    <string name="summary_hevc_low_latency_mode">Amlogic-based TV boxes can turn HEVC video into a slideshow when decoder low-latency mode is enabled. Auto skips low-latency options on Amlogic HEVC decoders (adds 1–2 frames of latency on those devices only). Off disables them for all HEVC and Dolby Vision streams; On restores the previous behavior.</string>
+    <string name="summary_hevc_low_latency_mode">Auto uses compatibility settings for Amlogic HEVC decoders. On restores low-latency options; Off uses compatibility settings for all HEVC and Dolby Vision streams. Compatibility settings may increase decoding latency.</string>
     <string name="hevc_low_latency_auto">Auto</string>
     <string name="hevc_low_latency_on">On</string>
     <string name="hevc_low_latency_off">Off</string>
@@ -1587,7 +1620,7 @@ Tap again to replace it.</string>
     <string name="layout_dlg_peer_info_item_text_9d9a3">Latency:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">Traffic (Rx/Tx):</string>
     <string name="layout_game_menu_super_empty_text_a7970">No super commands yet</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">Create super commands in Sunshine Foundation Edition.</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">Create super commands in Foundation Sunshine.</string>
     <string name="game_menu_super_commands">Super Commands</string>
     <string name="layout_item_key_value_text_0952a">Section 1</string>
     <string name="layout_item_key_value_hint_dd44f">Section name, defaults to key name if empty</string>
@@ -1610,15 +1643,15 @@ Tap again to replace it.</string>
     <string name="layout_page_analog_stick_text_4b292">Font Pressed Color</string>
     <string name="page_config_section_profile">Profile</string>
     <string name="page_config_section_touch">Touch</string>
-    <string name="page_config_section_feedback">Feedback</string>
+    <string name="page_config_section_feedback">Vibration feedback</string>
     <string name="crown_profile_name_title">Profile Name</string>
     <string name="crown_profile_name_error">Profile name must be 1-10 characters</string>
     <string name="layout_page_config_text_9eba2">Current Profile</string>
     <string name="layout_page_config_text_83a23">Touch Input</string>
     <string name="layout_page_config_text_f4b7c">Touchpad</string>
     <string name="layout_page_config_text_8ea81">Multi-Touch</string>
-    <string name="layout_page_config_text_cd2c1">Game Rumble</string>
-    <string name="layout_page_config_text_f4651">Button Feedback</string>
+    <string name="layout_page_config_text_cd2c1">Device-synced vibration</string>
+    <string name="layout_page_config_text_f4651">Virtual button vibration</string>
     <string name="layout_page_config_text_66ab5">New</string>
     <string name="layout_page_config_text_df603">Done</string>
     <string name="layout_page_device_text_5f411">Back</string>
@@ -2116,7 +2149,7 @@ Tap again to replace it.</string>
     <string name="feature_guide_quick_actions_title">Need help with shortcuts too?</string>
     <string name="feature_guide_quick_actions_body">Press and hold a shortcut to add, remove, or rearrange it. Put your favorites in order so you don’t fumble next time.</string>
     <string name="feature_guide_crown_title">Give your setup a tiny Crown</string>
-    <string name="feature_guide_crown_body">Save controls, shortcuts, touch mode, and feedback as one Crown profile. Switch everything at once—even a little rookie can’t mess it up.</string>
+    <string name="feature_guide_crown_body">Save controls, shortcuts, touch mode, and vibration feedback as one Crown profile. Switch everything at once—even a little rookie can’t mess it up.</string>
     <string name="feature_guide_next">Teach me more</string>
     <string name="feature_guide_done">Got it this time!</string>
     <string name="feature_guide_skip">Nope, later</string>
@@ -2233,4 +2266,34 @@ Tap again to replace it.</string>
     <string name="decoder_input_buffer_mode_auto">Automatic (recommended)</string>
     <string name="decoder_input_buffer_mode_force_enabled">Force enabled</string>
     <string name="decoder_input_buffer_mode_force_disabled">Force disabled</string>
+    <string name="title_ac3_iec61937">AC3 IEC61937 compatibility output</string>
+    <string name="summary_ac3_iec61937">Wrap 48 kHz AC3 for receivers that get PCM from raw passthrough. Requires Android 7+. Enable audio passthrough and select AC3; other codecs are unchanged. Restart the client after changing. Disable to restore raw AC3.</string>
+    <string name="stick_calibration_title">Stick center calibration</string>
+    <string name="stick_calibration_summary">Use the current stick position as neutral for this controller</string>
+
+    <string name="osc_layout_title">Virtual controller layout</string>
+    <string name="theme_appearance">Appearance</string>
+    <string name="theme_accent_source">Accent color</string>
+    <string name="theme_accent_pink">Brand pink</string>
+    <string name="theme_accent_background">Follow home background</string>
+    <string name="theme_summary">%1$s · %2$s</string>
+    <string name="title_experimental_haptic_protocols">Allow experimental haptic protocols</string>
+    <string name="summary_experimental_haptic_protocols">Controllers are detected automatically. Allow attempts to use recognized but unverified waveform protocols. Unknown protocols keep ordinary vibration. Reconnect the stream after changing.</string>
+    <string name="waveform_status_ready">Waveform channel ready; playback requires haptic content.</string>
+    <string name="waveform_status_validation">Candidate waveform protocol needs validation. Using ordinary vibration.</string>
+    <string name="waveform_status_permission">Waveform output needs USB permission. Ordinary vibration remains available.</string>
+    <string name="waveform_status_association">Waiting for a unique player association. Press a controller button; indistinguishable devices keep ordinary vibration.</string>
+    <string name="waveform_status_initializing">Opening waveform channel…</string>
+    <string name="waveform_status_busy">Waveform channel is in use. Using ordinary vibration.</string>
+    <string name="waveform_status_failed">Waveform output failed. Using ordinary vibration; reconnect to retry.</string>
+    <string name="waveform_status_disconnected">Controller disconnected. Ordinary vibration remains available.</string>
+    <string name="waveform_experimental">Experimental</string>
+    <string name="waveform_player">Player %1$d</string>
+    <string name="waveform_test_channels">Test left / right haptics</string>
+    <string name="waveform_card_title">Waveform haptics</string>
+    <string name="waveform_test_cancel">Stop haptic test</string>
+    <string name="title_host_gamepad_selection">Host virtual controller</string>
+    <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
+    <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
 </resources>

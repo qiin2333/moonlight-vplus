@@ -1,38 +1,20 @@
-Diese App streamt Spiele, Programme oder den kompletten Desktop von NVIDIA GameStream-kompatiebelen PCs oder <a href="https://github.com/SunshineStream/Sunshine">Sunshine Stream</a> über das Lokale Netzwerk oder Internet. Gleichzeitig werden Maus-, Tastatur- und Gamepad-Eingaben von deinem Android Gerät zum PC übertragen.
+Moonlight V+ ist ein erweiterter Android-Client für Spiele- und Desktop-Streaming. Als Host empfehlen wir Foundation Sunshine, das zu Moonlight V+ passt. Standard-Streaming funktioniert auch mit Sunshine. Bild und Ton werden auf dein Android-Gerät übertragen; Eingaben von Touchscreen, Tastatur, Maus oder Controller gehen an den PC.
 
-Die Streamingqualität kann aufgrund des verwendeten Android Geräts und der Netzwerkgegebenheiten variieren. HDR Unterstützung setzt ein HRD10-fähiges Gerät, eine GTX-1000-series GPU und HDR10-kompatibles Spiele voraus.
+Funktionen:
+* Benutzerdefinierte Auflösungen und hohe Bildwiederholraten, sofern Host und Gerät sie unterstützen
+* H.264, HEVC und AV1 je nach Hardware und Host
+* HDR auf geeigneten Geräten
+* Bildschirmtasten, Touchpad-Modus und Controller-Unterstützung
+* Leistungsanzeige mit Bildrate, Bitrate und Latenz
+* Profile für verschiedene Streaming-Situationen
+* Mikrofonweiterleitung mit Foundation Sunshine 2025.0720 oder neuer
 
-'''Merkmale'''
-* Open-source und komplett freie Software (keine Werbung, InApp-Käufe, oder "Pro" Version)
-* Streamt Spiele unabhängig davon in welchem Store diese gekauft wurden
-* Funktioniert im Heimnetzwerk oder über eine Internet bzw. LTE-Verbindung
-* Bis zu 4K HDR Streaming mit 120 FPS und 5.1 Sourround Sound
-* Tastatur- und Mausznterstützung (mit Android 8.0 oder mit Root-Rechten)
-* Unterstützt PS3, PS4, Xbox 360, Xbox One und Android Gamepads
-* Force Feedback Unterstützung
-* Kooperatives lokales Spielen mit bis zu 4 verbundenen Eingabegeräten
-* Maussteuerung via Gamepad durch langes gedrückt halten der Starttaste
+Schnellstart:
+1. Foundation Sunshine auf dem PC installieren und die Einrichtung in der Weboberfläche abschließen.
+2. PC und Android-Gerät möglichst mit demselben lokalen Netzwerk verbinden.
+3. Den PC in Moonlight V+ auswählen und die angezeigte PIN in der Weboberfläche des Hosts eingeben.
+4. Zuerst 1080p bei 60 FPS mit H.264 und ohne HDR testen. Danach Auflösung, Bildrate und weitere Funktionen schrittweise erhöhen.
 
-'''PC Anforderungen mit NVIDIA'''
-* NVIDIA GeForce GTX/RTX Serie GPU (''GT-Serie und AMD GPUs werden nicht von NVIDIA GameStream unterstützt'')
-* Windows 7 oder neuer
-* NVIDIA GeForce Experience (GFE) 2.2.2 oder neuer
+Foundation Sunshine wird für neue Einrichtungen empfohlen. Standard-Sunshine und bestehende NVIDIA-GameStream-Installationen können für Standard-Streaming weiterhin funktionieren. Erweiterte V+-Funktionen benötigen einen Host, der das jeweilige Protokoll unterstützt.
 
-'''PC Anforderungen mit SunshineStream'''
-* Linux, MacOS, Windows
-* AMD, Nvidia GPUs oder Software-Kodierung
-
-'''Anleitung zur Schnellkonfiguration'''
-# Stellen sie sicher dass GeForce Experience auf ihrem PC installiert ist. Aktivieren sie GameStream in den SHIELD Einstellungen.
-# Wählen Sie den PC in Moonlight aus und tippen sie den PIN auf ihrem PC ein.
-# Streamen sie los!
-
-Für eine gutes Benutzungserlebnis benötigen sie einen mid- bist high-end WLAN-Router mit einer ungestörten Verbindung zu ihrem Android Gerät (5 GHz wird empfohlen) sowie eine gute Verbindung von ihrem PC zum Router (Ethernet empfohlen).
-
-'''detaillierte  Konfigurationsanleitung'''
-Besuchen die die vollständige Konfigurationsanleitung https://bit.ly/1skHFjN (Englisch) um:
-* Einen PC manuell hinzuzufügen (falls ihr PC nicht automatisch erkannt werden sollte)
-* Über das Internet bzw. LTE zu streamen
-* Eine Eingabegerät das direkt mit dem PC verbunden ist zu nutzen
-* Den kompletten Desktop zu streamen
-* Individuelle Apps zum Streamen hinzuzufügen
+Hilfe und aktuelle Anforderungen: https://github.com/qiin2333/moonlight-vplus/blob/master/README_EN.md

@@ -43,7 +43,7 @@
              android:id="@+id/computer_status"
              android:layout_width="match_parent"
              android:layout_height="wrap_content"
-             android:text="Online"
+             android:text="@string/pcview_menu_header_online"
              android:textSize="12sp"
              android:textColor="#B0BEC5"
              android:visibility="gone"/>

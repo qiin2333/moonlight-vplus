@@ -811,6 +811,9 @@ class NvHTTP(
             queryParams += "&customScreenMode=$customScreenMode"
         }
 
+        if (!context.isNvidiaServerSoftware) {
+            streamConfig.hostGamepad?.let { queryParams += "&gamepad=$it" }
+        }
         queryParams += MoonBridge.getLaunchUrlQueryParameters()
 
         val xmlStr = openHttpConnectionToString(

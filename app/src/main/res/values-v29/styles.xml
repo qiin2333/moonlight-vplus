@@ -4,5 +4,9 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <!-- Avoid some systems like MIUI which break the visibility of games title -->
         <item name="android:forceDarkAllowed">false</item>
+        <!-- 强调色槽位默认值（vXX 的 AppBaseTheme 是整包替换，默认值必须逐份声明） -->
+        <item name="appAccent">@color/ui_shell_accent</item>
+        <item name="appAccentSoft">@color/ui_shell_accent_soft</item>
+        <item name="appAccentFocus">@color/ui_shell_accent_focus</item>
     </style>
 </resources>

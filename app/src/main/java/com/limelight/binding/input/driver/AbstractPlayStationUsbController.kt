@@ -113,20 +113,17 @@ abstract class AbstractPlayStationUsbController(
         }
     }
 
-    private val ifaces = mutableListOf<UsbInterface>()
+    private val ifaces = UsbInterfaceClaims<UsbInterface> { it.id }
 
     override fun start(): Boolean {
         outEndpt = null
         inEndpt = null
-        ifaces.clear()
         Log.d(TAG, "start")
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
-            if (!connection.claimInterface(iface, true)) {
+            if (!ifaces.claim(iface) { connection.claimInterface(it, true) }) {
                 Log.d(TAG, "Failed to claim interface: $i")
                 return failStart()
-            } else {
-                ifaces.add(iface)
             }
         }
         Log.d(TAG, "getInterfaceCount:" + device.interfaceCount)
@@ -172,13 +169,7 @@ abstract class AbstractPlayStationUsbController(
     }
 
     private fun failStart(): Boolean {
-        synchronized(ifaces) {
-            for (iface in ifaces.asReversed()) {
-                runCatching { connection.releaseInterface(iface) }
-                    .onFailure { Log.w(TAG, "Failed to release interface after start failure", it) }
-            }
-            ifaces.clear()
-        }
+        releaseClaimedInterfaces()
         inEndpt = null
         outEndpt = null
         return false
@@ -246,16 +237,9 @@ abstract class AbstractPlayStationUsbController(
     private fun closeUsbTransport() {
         if (!transportClosed.compareAndSet(false, true)) return
 
-        if (ifaces.isNotEmpty()) {
-            synchronized(ifaces) {
-                for (iface in ifaces) {
-                    releaseUsbResource {
-                        check(connection.releaseInterface(iface)) { "USB interface release failed" }
-                    }
-                }
-                ifaces.clear()
-            }
-        }
+        // releaseInterface(false) does not mean close failed (e.g. disconnected USB).
+        // Only the final close failure must block exclusive forwarding handoff.
+        releaseClaimedInterfaces()
 
         synchronized(outputLock) {
             releaseUsbResource { connection.close() }
@@ -278,6 +262,13 @@ abstract class AbstractPlayStationUsbController(
             runCatching(callback).onFailure {
                 Log.w(TAG, "Controller stop callback failed", it)
             }
+        }
+    }
+
+    private fun releaseClaimedInterfaces() {
+        ifaces.releaseAll({ connection.releaseInterface(it) }) { iface, error ->
+            Log.w(TAG, "USB interface release failed: path=${device.deviceName} " +
+                "iface=${iface.id} alt=${iface.alternateSetting}; continuing transport close", error)
         }
     }
 

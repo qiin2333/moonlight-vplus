@@ -11,17 +11,29 @@ import java.util.concurrent.atomic.AtomicInteger
  * Game sources are mixed, touch feedback temporarily takes priority, and audio haptics can claim
  * the actuator exclusively. Native vibrator calls run on a dedicated latest-wins worker so a
  * blocked vendor Binder cannot stall the UI thread or create an unbounded executor queue.
+ *
+ * Start and stop edges are submitted without observing or replaying completed pulses. Held
+ * level replacements remain paced for vendor safety. A blocked native call cannot be preempted;
+ * newer state replaces pending work rather than accumulating late haptic events.
  */
 internal class DeviceVibrationCoordinator(
     private val postDelayed: (Runnable, Long) -> Unit,
     private val removeCallback: (Runnable) -> Unit,
     private val vibrateDevice: (Int, Long) -> Unit,
     private val cancelDeviceVibration: () -> Unit,
-    executor: ScheduledExecutorService = newWorker()
+    executor: ScheduledExecutorService = newWorker(),
+    minimumIntervalMs: Long = MINIMUM_DEVICE_INTERVAL_MS
 ) {
     enum class GameSource {
         ROUTED_GAME,
         LEGACY_OVERLAY
+    }
+
+    /** Result of an audio claim; ownership and write readiness are independent states. */
+    enum class AudioClaimResult {
+        REJECTED,
+        OWNED_NOT_READY,
+        OWNED_READY
     }
 
     private data class MotorState(val amplitude: Int)
@@ -31,6 +43,7 @@ internal class DeviceVibrationCoordinator(
         val durationMs: Long,
         val generation: Long,
         val sequence: Long,
+        val urgent: Boolean = false,
         val terminal: Boolean = false
     ) {
         val isZero: Boolean
@@ -40,12 +53,13 @@ internal class DeviceVibrationCoordinator(
     private val lock = Any()
     private val gameSources = mutableMapOf<GameSource, MotorState>()
     private val dispatcher = LatestWinsDispatcher(
-        minimumIntervalMs = MINIMUM_DEVICE_INTERVAL_MS,
+        minimumIntervalMs = minimumIntervalMs,
         executor = executor,
         dispatch = ::dispatch,
         onError = { error ->
             LimeLog.warning("Device vibration dispatch failed: ${error.message}")
-        }
+        },
+        isUrgent = { it.urgent }
     )
 
     @Volatile
@@ -59,55 +73,88 @@ internal class DeviceVibrationCoordinator(
     private var outputSequence = 0L
     private var lastGameCommandAmplitude = -1
     private var outputWriteInFlight = false
+    private var touchAudioPreempted = false
 
+    @Volatile
+    private var onAudioTouchPreemptRequested: (() -> Boolean)? = null
+
+    @Volatile
+    private var onAudioTouchFinished: (() -> Unit)? = null
+
+    private var levelAmplitude = 0
+
+    fun setAudioTouchCallbacks(
+        onPreemptRequested: (() -> Boolean)?,
+        onFinished: (() -> Unit)?
+    ) {
+        onAudioTouchPreemptRequested = onPreemptRequested
+        onAudioTouchFinished = onFinished
+    }
+
+    /**
+     * [targetAmplitude] is 0-255 and already carries every routing gain: callers fold the two
+     * motor channels through [SingleMotorRumbleFold] upstream, never here.
+     */
     fun submitGameRumble(
         source: GameSource,
-        lowFrequency: Short,
-        highFrequency: Short,
+        targetAmplitude: Int,
         strengthPercent: Int
     ) {
         val command = synchronized(lock) {
             if (closed) return
-            val previousAmplitude = gameSources[source]?.amplitude
+            // Keep the API's full amplitude range. Transport pacing belongs to the dispatcher,
+            // not a minimum level or history-dependent quantization of the authored signal.
             val state = MotorState(
-                quantizeGameAmplitude(
-                    simulatedAmplitude(
-                        lowFrequency.toInt() and 0xFFFF,
-                        highFrequency.toInt() and 0xFFFF,
-                        strengthPercent
-                    ),
-                    previousAmplitude
-                )
+                (targetAmplitude.coerceIn(0, 255) *
+                    strengthPercent.coerceIn(0, 200) / 100.0).toInt().coerceIn(0, 255)
             )
             if (state.amplitude == 0) {
                 gameSources.remove(source)
             } else {
                 gameSources[source] = state
             }
-            if (audioOwned || touchActive) null else currentGameCommandLocked()
+            if (audioOwned || touchActive) {
+                null
+            } else {
+                gameAmplitudeCommandLocked(mixedGameAmplitudeLocked())
+            }
         }
         command?.let(dispatcher::submit)
     }
 
     fun playTouchHaptic(lowFrequency: Short, highFrequency: Short, durationMs: Int) {
         val duration = durationMs.toLong().coerceIn(1L, MAXIMUM_TOUCH_DURATION_MS)
+        val audioWasOwned = synchronized(lock) {
+            if (closed) return
+            audioOwned
+        }
+        if (audioWasOwned && onAudioTouchPreemptRequested?.invoke() != true) return
+
         val command: VibrationCommand
         val completion: Runnable
         synchronized(lock) {
-            if (closed || audioOwned) return
+            if (closed) return
+            if (audioOwned) {
+                audioOwned = false
+                generation++
+                clearGameRefreshLocked()
+            }
+            touchAudioPreempted = touchAudioPreempted || audioWasOwned
             touchCompletion?.let(removeCallback)
             clearGameRefreshLocked()
             touchActive = true
             val epoch = ++touchEpoch
             val currentGeneration = ++generation
             command = VibrationCommand(
-                amplitude = simulatedAmplitude(
-                    lowFrequency.toInt() and 0xFFFF,
-                    highFrequency.toInt() and 0xFFFF
-                ),
+                amplitude = SingleMotorRumbleFold.amplitude(lowFrequency, highFrequency),
                 durationMs = duration,
                 generation = currentGeneration,
-                sequence = ++outputSequence
+                sequence = ++outputSequence,
+                // Touch feedback is a discrete edge, not a continuously refreshed game-rumble
+                // level. It must not inherit the 250 ms pacing used for long-running effects.
+                // The same single worker and latest-wins slot still serialize vendor calls and
+                // keep a blocked vibrator from creating an unbounded queue.
+                urgent = true
             )
             completion = Runnable { finishTouchHaptic(epoch) }
             touchCompletion = completion
@@ -118,10 +165,10 @@ internal class DeviceVibrationCoordinator(
     }
 
     /** Audio renderers call this before their first phone-motor write. */
-    fun claimForAudio(): Boolean {
+    fun claimForAudio(): AudioClaimResult {
         var ownershipChanged = false
-        val readyForAudio = synchronized(lock) {
-            if (closed) return false
+        val result = synchronized(lock) {
+            if (closed || touchActive) return AudioClaimResult.REJECTED
             if (!audioOwned) {
                 audioOwned = true
                 generation++
@@ -132,10 +179,14 @@ internal class DeviceVibrationCoordinator(
                 clearGameRefreshLocked()
                 ownershipChanged = true
             }
-            !outputWriteInFlight
+            if (outputWriteInFlight) {
+                AudioClaimResult.OWNED_NOT_READY
+            } else {
+                AudioClaimResult.OWNED_READY
+            }
         }
         if (ownershipChanged) dispatcher.clearPending()
-        return readyForAudio
+        return result
     }
 
     /** Restores the latest mixed game state after every audio backend has stopped. */
@@ -144,9 +195,9 @@ internal class DeviceVibrationCoordinator(
             if (closed || !audioOwned) return
             audioOwned = false
             generation++
-            currentGameCommandLocked(forceRefresh = true)
+            gameAmplitudeCommandLocked(mixedGameAmplitudeLocked(), forceWrite = true)
         }
-        dispatcher.submit(command)
+        command?.let(dispatcher::submit)
     }
 
     /** Stops without waiting for a possibly wedged vibrator Binder transaction. */
@@ -156,6 +207,7 @@ internal class DeviceVibrationCoordinator(
             closed = true
             audioOwned = false
             touchActive = false
+            touchAudioPreempted = false
             touchEpoch++
             touchCompletion?.let(removeCallback)
             touchCompletion = null
@@ -166,6 +218,7 @@ internal class DeviceVibrationCoordinator(
                 durationMs = GAME_SOURCE_LEASE_MS,
                 generation = ++generation,
                 sequence = ++outputSequence,
+                urgent = true,
                 terminal = true
             )
         }
@@ -174,31 +227,65 @@ internal class DeviceVibrationCoordinator(
     }
 
     private fun finishTouchHaptic(epoch: Long) {
+        var restoreAudio = false
         val command = synchronized(lock) {
             if (closed || audioOwned || !touchActive || epoch != touchEpoch) return
             touchActive = false
             touchCompletion = null
+            restoreAudio = touchAudioPreempted
+            touchAudioPreempted = false
             generation++
-            currentGameCommandLocked(forceRefresh = true)
+            gameAmplitudeCommandLocked(mixedGameAmplitudeLocked(), forceWrite = true)
         }
-        dispatcher.submit(command)
+        command?.let(dispatcher::submit)
+        if (restoreAudio) onAudioTouchFinished?.invoke()
     }
 
-    private fun currentGameCommandLocked(forceRefresh: Boolean = false): VibrationCommand {
+    private fun mixedGameAmplitudeLocked(): Int {
         var amplitude = 0
         gameSources.values.forEach { state ->
             amplitude = maxOf(amplitude, state.amplitude)
         }
-        scheduleGameRefreshLocked(amplitude)
-        if (forceRefresh || amplitude != lastGameCommandAmplitude) {
+        return amplitude
+    }
+
+    /** Restores ownership explicitly; equal levels otherwise only renew their finite lease. */
+    private fun gameAmplitudeCommandLocked(
+        amplitude: Int,
+        forceWrite: Boolean = false
+    ): VibrationCommand? {
+        val boundary = (levelAmplitude == 0) != (amplitude == 0)
+        levelAmplitude = amplitude
+        if (amplitude == 0) clearGameRefreshLocked()
+        if (!forceWrite && lastGameCommandAmplitude == amplitude) {
+            if (amplitude > 0) scheduleGameRefreshLocked(amplitude)
+            return null
+        }
+        return levelCommandLocked(
+            amplitude,
+            forceResubmit = forceWrite,
+            urgent = forceWrite || boundary || amplitude == 0
+        )
+    }
+
+    private fun levelCommandLocked(
+        amplitude: Int,
+        forceResubmit: Boolean = false,
+        urgent: Boolean = false
+    ): VibrationCommand {
+        if (forceResubmit || amplitude != lastGameCommandAmplitude) {
             outputSequence++
             lastGameCommandAmplitude = amplitude
+        }
+        if (amplitude > 0) {
+            scheduleGameRefreshLocked(amplitude)
         }
         return VibrationCommand(
             amplitude = amplitude,
             durationMs = GAME_SOURCE_LEASE_MS,
             generation = generation,
-            sequence = outputSequence
+            sequence = outputSequence,
+            urgent = urgent
         )
     }
 
@@ -223,7 +310,8 @@ internal class DeviceVibrationCoordinator(
         val command = synchronized(lock) {
             gameRefreshCallback = null
             if (closed || audioOwned || touchActive) return
-            currentGameCommandLocked(forceRefresh = true).takeUnless { it.isZero }
+            if (levelAmplitude == 0) return
+            levelCommandLocked(levelAmplitude, forceResubmit = true).takeUnless { it.isZero }
         }
         command?.let(dispatcher::submit)
     }
@@ -254,42 +342,16 @@ internal class DeviceVibrationCoordinator(
         }
     }
 
-    private fun simulatedAmplitude(
-        lowFrequency: Int,
-        highFrequency: Int,
-        strengthPercent: Int = 100
-    ): Int {
-        val mixedAmplitude =
-            ((lowFrequency ushr 8) * 0.80) + ((highFrequency ushr 8) * 0.33)
-        return minOf(
-            255,
-            (mixedAmplitude * strengthPercent.coerceIn(0, 200) / 100.0).toInt()
-        )
-    }
-
-    private fun quantizeGameAmplitude(rawAmplitude: Int, previousAmplitude: Int?): Int {
-        if (rawAmplitude == 0) return 0
-        if (previousAmplitude != null &&
-            kotlin.math.abs(rawAmplitude - previousAmplitude) < GAME_AMPLITUDE_HYSTERESIS
-        ) {
-            return previousAmplitude
-        }
-        return (
-            (rawAmplitude + GAME_AMPLITUDE_STEP / 2) / GAME_AMPLITUDE_STEP *
-                GAME_AMPLITUDE_STEP
-        ).coerceIn(GAME_AMPLITUDE_STEP, 255)
-    }
-
     private companion object {
         val THREAD_NUMBER = AtomicInteger()
         // Long one-shot effects are reprogrammed only four times per second. Some vendor
         // vibrator services deadlock when effects are replaced at controller packet rate.
+        // Start/stop edges bypass level pacing. Native writes stay serialized; hardware
+        // validation is still required for repeated edges on affected vendor services.
         const val MINIMUM_DEVICE_INTERVAL_MS = 250L
         const val GAME_SOURCE_LEASE_MS = 500L
         const val GAME_SOURCE_REFRESH_MS = 375L
         const val MAXIMUM_TOUCH_DURATION_MS = 1_000L
-        const val GAME_AMPLITUDE_STEP = 16
-        const val GAME_AMPLITUDE_HYSTERESIS = 12
 
         fun newWorker(): ScheduledExecutorService {
             val threadNumber = THREAD_NUMBER.incrementAndGet()

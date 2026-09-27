@@ -1,0 +1,179 @@
+[
+  {
+    "id": "amd-fsr",
+    "name": "AMD FidelityFX Super Resolution",
+    "version": "vendored shader headers",
+    "url": "https://github.com/GPUOpen-Effects/FidelityFX-FSR",
+    "license": "MIT",
+    "licenseFile": "amd-fsr-LICENSE.txt"
+  },
+  {
+    "id": "asio",
+    "name": "Asio",
+    "version": "1.30.2",
+    "url": "https://github.com/chriskohlhoff/asio",
+    "license": "Boost Software License 1.0",
+    "licenseFile": "asio-LICENSE.txt"
+  },
+  {
+    "id": "dxbc",
+    "name": "dxbc",
+    "version": "78ab59a8aaeb43cd1b0a5e91ba86722433a10b78",
+    "url": "https://github.com/PancakeTAS/dxbc",
+    "license": "zlib/libpng",
+    "licenseFile": "dxbc-LICENSE.txt"
+  },
+  {
+    "id": "easytier",
+    "name": "EasyTier",
+    "version": "2.6.4 (embedded binary version string)",
+    "url": "https://github.com/EasyTier/EasyTier/tree/v2.6.4",
+    "license": "LGPL-3.0-only",
+    "licenseFile": "easytier-NOTICES.txt"
+  },
+  {
+    "id": "enet",
+    "name": "ENet",
+    "version": "vendored in moonlight-common-c 31a2a458",
+    "url": "https://github.com/lsalzman/enet",
+    "license": "MIT",
+    "licenseFile": "enet-LICENSE.txt"
+  },
+  {
+    "id": "fmt",
+    "name": "fmt (bundled with spdlog)",
+    "version": "bundled with spdlog 1.15.3",
+    "url": "https://github.com/fmtlib/fmt",
+    "license": "MIT",
+    "licenseFile": "fmt-LICENSE.txt"
+  },
+  {
+    "id": "inter",
+    "name": "Inter (Moonlight Controller Medium subset)",
+    "version": "4.1",
+    "url": "https://github.com/rsms/inter/tree/v4.1",
+    "license": "OFL-1.1",
+    "licenseFile": "inter-OFL.txt"
+  },
+  {
+    "id": "iperf3",
+    "name": "iperf3",
+    "version": "3.1.3 (embedded binary version string)",
+    "url": "https://github.com/esnet/iperf/tree/3.1.3",
+    "license": "BSD-3-Clause",
+    "licenseFile": "iperf3-LICENSE.txt"
+  },
+  {
+    "id": "libfvad",
+    "name": "libfvad / WebRTC VAD",
+    "version": "532ab666c20d3cfda38bca63abbb0f152706c369",
+    "url": "https://github.com/dpirch/libfvad",
+    "license": "BSD-3-Clause + WebRTC PATENTS",
+    "licenseFile": "libfvad-NOTICES.txt"
+  },
+  {
+    "id": "libusb",
+    "name": "libusb",
+    "version": "1.0.29",
+    "url": "https://github.com/libusb/libusb",
+    "license": "LGPL-2.1-or-later",
+    "licenseFile": "libusb-COPYING.txt"
+  },
+  {
+    "id": "lsfg-vk-android",
+    "name": "lsfg-vk-android",
+    "version": "3e89e5439a98f55d5acb003d20039426ab24e69c",
+    "url": "https://github.com/FrankBarretta/lsfg-vk-android",
+    "license": "MIT",
+    "licenseFile": "lsfg-vk-android-LICENSE.txt"
+  },
+  {
+    "id": "lsfg-vk-framegen",
+    "name": "lsfg-vk-framegen",
+    "version": "bundled in lsfg-vk-android 3e89e543",
+    "url": "https://github.com/FrankBarretta/lsfg-vk-android/tree/3e89e5439a98f55d5acb003d20039426ab24e69c/framegen",
+    "license": "MIT",
+    "licenseFile": "lsfg-vk-framegen-LICENSE.txt"
+  },
+  {
+    "id": "audio-haptics",
+    "name": "Moonlight Audio Haptics SDK",
+    "version": "0.5.14 (b3f97c3bb7500ea7b1985aea568e5c7b40308d3b)",
+    "url": "https://github.com/AlkaidLab/moonlight-audio-haptics",
+    "license": "Apache-2.0",
+    "licenseFile": "audio-haptics-LICENSE.txt"
+  },
+  {
+    "id": "moonlight-common-c",
+    "name": "moonlight-common-c",
+    "version": "31a2a4589ea926988a08ca508bb317fbfbe2a177",
+    "url": "https://github.com/qiin2333/moonlight-common-c",
+    "license": "GPL-3.0-only",
+    "licenseFile": "moonlight-common-c-LICENSE.txt"
+  },
+  {
+    "id": "nanors",
+    "name": "nanors",
+    "version": "vendored in moonlight-common-c 31a2a458",
+    "url": "https://github.com/sleepybishop/nanors",
+    "license": "MIT",
+    "licenseFile": "nanors-LICENSE.txt"
+  },
+  {
+    "id": "openssl",
+    "name": "OpenSSL",
+    "version": "1.1.1q",
+    "url": "https://github.com/openssl/openssl/tree/OpenSSL_1_1_1q",
+    "license": "OpenSSL License + SSLeay License",
+    "licenseFile": "openssl-LICENSE.txt"
+  },
+  {
+    "id": "opus",
+    "name": "Opus",
+    "version": "1.5.2 (embedded static archive version string)",
+    "url": "https://opus-codec.org/",
+    "license": "BSD-3-Clause",
+    "licenseFile": "opus-COPYING.txt"
+  },
+  {
+    "id": "pe-parse",
+    "name": "pe-parse",
+    "version": "31ac5966503689d5693cd9fb520bd525a8710e17",
+    "url": "https://github.com/trailofbits/pe-parse",
+    "license": "MIT",
+    "licenseFile": "pe-parse-LICENSE.txt"
+  },
+  {
+    "id": "spdlog",
+    "name": "spdlog",
+    "version": "1.15.3",
+    "url": "https://github.com/gabime/spdlog",
+    "license": "MIT",
+    "licenseFile": "spdlog-LICENSE.txt"
+  },
+  {
+    "id": "toml11",
+    "name": "toml11",
+    "version": "be08ba2be2a964edcdb3d3e3ea8d100abc26f286",
+    "url": "https://github.com/ToruNiina/toml11",
+    "license": "MIT",
+    "licenseFile": "toml11-LICENSE.txt"
+  },
+  {
+    "id": "usbipdcpp",
+    "name": "usbipdcpp",
+    "version": "1355113f030c4c13404030e6e7426bceb6085276",
+    "url": "https://github.com/yunsmall/usbipdcpp",
+    "license": "LGPL-3.0-only",
+    "licenseFile": "usbipdcpp-NOTICES.txt",
+    "credit": "This product uses usbipdcpp (https://github.com/yunsmall/usbipdcpp), licensed under LGPLv3."
+  },
+  {
+    "id": "volk",
+    "name": "volk",
+    "version": "be3dbd49bf77052665e96b6c7484af855e7e5f67",
+    "url": "https://github.com/zeux/volk",
+    "license": "MIT",
+    "licenseFile": "volk-LICENSE.txt"
+  }
+]

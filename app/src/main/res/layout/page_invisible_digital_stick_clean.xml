@@ -58,7 +58,7 @@
                         android:layout_width="60dp"
                         android:layout_height="40dp"
                         android:gravity="center"
-                        android:text="UP"
+                        android:text="@string/direction_up"
                         android:layout_gravity="center_horizontal"
                         android:background="@drawable/enabled_square" />
                     <LinearLayout
@@ -72,14 +72,14 @@
                             android:layout_width="60dp"
                             android:layout_height="match_parent"
                             android:gravity="center"
-                            android:text="LEFT"
+                            android:text="@string/direction_left"
                             android:background="@drawable/enabled_square" />
                         <TextView
                             android:id="@+id/page_invisible_digital_stick_right_value"
                             android:layout_width="60dp"
                             android:layout_height="match_parent"
                             android:gravity="center"
-                            android:text="RIGHT"
+                            android:text="@string/direction_right"
                             android:layout_marginLeft="70dp"
                             android:background="@drawable/enabled_square" />
                     </LinearLayout>
@@ -88,7 +88,7 @@
                         android:layout_width="60dp"
                         android:layout_height="40dp"
                         android:gravity="center"
-                        android:text="DOWN"
+                        android:text="@string/direction_down"
                         android:layout_gravity="center_horizontal"
                         android:background="@drawable/enabled_square" />
                 </LinearLayout>

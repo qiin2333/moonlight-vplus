@@ -19,6 +19,10 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        # 必须显式给 packages：该 action 缺省安装的 'tools' 包已被 SDK 仓库移除，
+        # 会让 build-arm64 在装环境阶段直接失败；其余包由下一步自行安装。
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Install native toolchain
         run: sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1' 'platforms;android-36' 'build-tools;36.0.0'

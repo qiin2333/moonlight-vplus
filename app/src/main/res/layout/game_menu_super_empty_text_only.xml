@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:text="@string/layout_game_menu_super_empty_text_a7970"
         android:textSize="18sp"
-        android:textColor="@color/theme_pink_primary"
+        android:textColor="?attr/appAccent"
         android:gravity="center"
         android:textStyle="bold"
         android:layout_marginBottom="6dp"
@@ -25,7 +25,7 @@
         android:layout_height="wrap_content"
         android:text="@string/layout_game_menu_super_empty_text_fac9d"
         android:textSize="14sp"
-        android:textColor="@color/theme_pink_primary"
+        android:textColor="?attr/appAccent"
         android:gravity="center"
         android:layout_marginTop="2dp"
         />

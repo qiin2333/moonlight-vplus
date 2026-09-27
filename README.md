@@ -57,6 +57,8 @@ Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlig
 | | 音频震动 | 实时低频能量驱动触觉反馈（设备 / 手柄 / 双路） | `12.7.0` |
 | | | 三种场景模式：游戏（持续低频）、音乐（节拍脉冲）、自动识别 | |
 
+想按使用场景上手？请看 [Moonlight V+ 特色功能指引](docs/VPLUS_FEATURES.md)，从王冠配置、Foundation Sunshine 联动、显示器、触觉与插帧中选择适合自己的入口。
+
 ## 快速开始
 
 ### 系统要求
@@ -64,36 +66,64 @@ Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlig
 - Android 5.0+ (API 22)
 - 支持 HEVC / AV1 硬解的设备（推荐）
 - 局域网 5 GHz Wi-Fi 或有线连接
+- 推荐运行 [Foundation Sunshine](https://github.com/AlkaidLab/foundation-sunshine) 的主机；标准串流也兼容 [Sunshine](https://github.com/LizardByte/Sunshine)，旧版 NVIDIA GameStream 可供已有设备尝试
 
 ### 安装
 
 从 [Releases](https://github.com/qiin2333/moonlight-vplus/releases/latest) 下载最新 APK，安装后按应用内引导完成配对即可。
 
-如果遇到黑屏、卡顿、HDR、手柄、EasyTier 等问题，请先查看 [Moonlight V+ 常见问题](FAQ.md)。
+首次串流建议从 1080p、60 FPS、H.264 或自动编码、关闭 HDR、10–20 Mbps 开始，主机尽量使用有线网络。确认稳定后，再逐项提高分辨率、帧率、码率并启用 HEVC / AV1、HDR 等功能。
+
+### 选择主机端
+
+- **Foundation Sunshine（首推）**：与 Moonlight V+ 配套，提供标准串流及其支持的 V+ 扩展功能，例如麦克风重定向和主机显示控制；具体功能取决于主机端版本。
+- **Sunshine**：可用于标准 Moonlight 串流；部分 V+ 扩展功能需要 Foundation Sunshine。
+- **NVIDIA GameStream**：供仍在使用旧主机的用户尝试兼容；新安装建议选择 Foundation Sunshine。
+
+### 遇到问题
+
+- 黑屏或解码崩溃：先切换 H.264、关闭 HDR、降低分辨率与帧率，再重新连接。
+- 卡顿或提示连接慢：先降低码率，再查看性能覆盖层的丢包与延迟波动，并检查 Wi-Fi。
+- Android TV / 盒子：先验证 1080p60 H.264，再尝试 HEVC、AV1、HDR 或高刷新率。
+- 外网或虚拟局域网：先确认本地局域网串流正常，再排查 EasyTier、Tailscale 等网络路径。
+
+更多步骤见 [常见问题](FAQ.md) 和 [功能使用指南](docs/USER_GUIDE.md)。
+
+从头安装请看 [Foundation Sunshine 首次连接教程](docs/GETTING_STARTED.md)；需要确认某项增强功能的主机端条件，请看 [兼容矩阵](docs/COMPATIBILITY.md)。
 
 ### 从源码编译
 
+先安装 JDK 17、Android SDK 36、Build Tools 36.0.0、NDK 28.2.13676358 和 CMake 3.22.1。项目还需要两个 Git 子模块及单独的 [audio-haptics SDK](https://github.com/AlkaidLab/moonlight-audio-haptics)；其版本以 [CI 配置](.github/workflows/android-ci.yml) 为准。
+
 ```bash
-git clone https://github.com/qiin2333/moonlight-vplus.git
+git clone --recurse-submodules https://github.com/qiin2333/moonlight-vplus.git
 cd moonlight-vplus
-./gradlew assembleRelease
+git clone https://github.com/AlkaidLab/moonlight-audio-haptics.git ../moonlight-audio-haptics
+git -C ../moonlight-audio-haptics checkout b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
+./gradlew :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"
 ```
+
+Windows PowerShell 请将最后一行改为 `.\gradlew.bat :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"`。正式发布还需签名配置；缺少 `app/google-services.json` 时 Firebase 服务不会正常上报，普通本地构建不需要把该文件提交到仓库。
 
 ## Foundation Sunshine 增强功能
 
-以下功能需要搭配 **[Foundation Sunshine](https://github.com/qiin2333/foundation-sunshine)**（基地版 Sunshine）使用：
+以下功能需要搭配 **[Foundation Sunshine](https://github.com/AlkaidLab/foundation-sunshine)** 使用：
 
-| 功能 | 说明 | 最低版本 |
+| 功能 | 说明 | 主机端要求 |
 |------|------|----------|
-| 麦克风重定向 | 设备麦克风音频实时传输至主机，低延迟高音质 | 2025.0720+ |
+| 麦克风重定向 | 设备麦克风音频实时传输至主机 | Foundation Sunshine 2025.0720+ |
 | 实时码率调整 | 串流中动态调节码率，网络波动自动适应 | — |
 | 超级菜单指令 | 从串流菜单向主机发送高级控制指令 | — |
 | 应用桌面美化 | 自动同步主机应用图标，自定义排序与分组 | — |
 | 主机自动优化 | 自动协商分辨率/DPI、适配触屏键盘、状态记忆 | — |
 
+未列出最低版本的功能仍需核定最早可用的发布包；版本依据与核验方法见 [兼容矩阵](docs/COMPATIBILITY.md)。备份、恢复及配置分享的边界见 [备份与迁移指南](docs/BACKUP_AND_MIGRATION.md)。
+
 ## 贡献
 
 欢迎提交 Issue 和 Pull Request！
+
+提交问题前请先阅读 [常见问题](FAQ.md)；有关统计和崩溃报告的数据处理见 [隐私说明](PRIVACY_POLICY.md)。
 
 ### 贡献者
 

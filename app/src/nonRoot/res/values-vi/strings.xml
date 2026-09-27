@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_optimize_hardware_touchpad">Bật khả năng thích ứng đầu vào bàn di chuột gốc cho bàn di chuột trên bàn phím máy tính bảng. Không cần quyền root. Yêu cầu Foundation Sunshine và bật tùy chọn “Thích ứng bàn di chuột gốc”. Mới chỉ được thử nghiệm trên một số máy tính bảng Xiaomi.</string>
+</resources>
