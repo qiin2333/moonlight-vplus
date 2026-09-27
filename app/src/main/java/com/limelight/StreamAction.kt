@@ -178,6 +178,10 @@ class StreamActionExecutor(
                 game.floatBallHandler.toggleVisibility()
                 true
             }
+            "show_perf_overlay" -> {
+                game.showPerformanceOverlayDelayed()
+                true
+            }
             "send_win" -> sendKeys(shortArrayOf(KeyboardTranslator.VK_LWIN.toShortKey()))
             "send_esc" -> sendKeys(shortArrayOf(KeyboardTranslator.VK_ESCAPE.toShortKey()))
             "toggle_hdr" -> sendKeys(shortArrayOf(

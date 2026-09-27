@@ -34,6 +34,7 @@
         <item>打开虚拟键盘</item>
         <item>打开菜单</item>
         <item>切换悬浮球显隐</item>
+        <item>显示性能监控图层</item>
     </string-array>
 
     <!-- 画面位置选项 -->
@@ -80,6 +81,7 @@
         <item>🖥 主机延迟</item>
         <item>🔋 电池电量</item>
         <item>📉 1%Low帧 (帧率平滑性)</item>
+        <item>时钟</item>
     </string-array>
     <string-array name="framegen_quality_preset_names">
         <item>@string/framegen_quality_performance</item>

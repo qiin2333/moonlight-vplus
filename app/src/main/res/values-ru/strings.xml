@@ -536,6 +536,7 @@
     <string name="float_ball_action_open_keyboard">Экранная клавиатура</string>
     <string name="float_ball_action_open_menu">Игровое меню</string>
     <string name="float_ball_action_toggle_visibility">Показать/скрыть кнопку</string>
+    <string name="float_ball_action_show_perf_overlay">Показать слой мониторинга производительности</string>
     <string name="float_ball_action_screenshot">Снимок экрана</string>
     <string name="float_ball_action_lock_screen">Блок. экрана</string>
     <string name="category_ui_settings">Интерфейс</string>
@@ -666,6 +667,14 @@
     <string name="summary_enable_host_cadence_precise_sync">Уменьшает повторяющиеся микрорывки в стабильной сети, особенно при 90/120 FPS. Может добавить 1–3 мс задержки.</string>
     <string name="title_perf_overlay_orientation">Вид статистики</string>
     <string name="summary_perf_overlay_orientation">Горизонтальная строка или вертикальный столбец.</string>
+    <string name="title_perf_overlay_clock_format">Формат часов</string>
+    <string name="summary_perf_overlay_clock_format">Сначала включите «Часы» в показателях статистики.</string>
+    <string name="perf_overlay_clock_format_system_minutes">Системный формат, часы и минуты</string>
+    <string name="perf_overlay_clock_format_system_seconds">Системный формат, включая секунды</string>
+    <string name="perf_overlay_clock_format_24_minutes">24-часовой формат, часы и минуты</string>
+    <string name="perf_overlay_clock_format_24_seconds">24-часовой формат, включая секунды</string>
+    <string name="perf_overlay_clock_format_12_minutes">12-часовой формат, часы и минуты</string>
+    <string name="perf_overlay_clock_format_12_seconds">12-часовой формат, включая секунды</string>
     <string name="title_perf_overlay_position">Положение статистики</string>
     <string name="summary_perf_overlay_position">Строка сверху/снизу или столбец в углу экрана.</string>
     <string name="title_reset_perf_overlay_position">Сбросить позицию статистики</string>
@@ -1974,6 +1983,7 @@
     <string name="perf_stats_item_host_latency">🖥 Задержка обработки на ПК</string>
     <string name="perf_stats_item_battery">🔋 Заряд батареи</string>
     <string name="perf_stats_item_one_percent_low">📉 1% Low FPS (плавность)</string>
+    <string name="perf_stats_item_clock">Часы</string>
     <string name="mic_icon_color_gradient_blue">Синий градиент</string>
     <string name="mic_icon_color_gradient_purple">Фиолетовый градиент</string>
     <string name="mic_icon_color_gradient_green">Зелёный градиент</string>

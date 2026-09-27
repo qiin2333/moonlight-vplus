@@ -1647,6 +1647,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (::orientationManager.isInitialized) {
             orientationManager.cleanup()
         }
+        performanceOverlayManager?.cancelPendingTasks()
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.release()
         }
@@ -3124,6 +3125,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun disconnect() {
+        performanceOverlayManager?.cancelPendingTasks()
         finish()
     }
 
@@ -3140,6 +3142,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             PerformanceOverlayMode.LOCKED -> PerformanceOverlayMode.HIDDEN
         }
         setPerformanceOverlayMode(nextMode)
+    }
+
+    fun showPerformanceOverlayDelayed() {
+        performanceOverlayManager?.showPerformanceOverlayDelayed()
     }
 
     enum class PerformanceOverlayMode {

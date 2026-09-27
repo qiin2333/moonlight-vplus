@@ -148,6 +148,7 @@ class PreferenceConfiguration {
     var gameMenuOpacity = DEFAULT_GAME_MENU_OPACITY
     var perfOverlayOrientation: PerfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL
     var perfOverlayPosition: PerfOverlayPosition = PerfOverlayPosition.TOP
+    var perfOverlayClockFormat = "system_minutes"
     var enableSimplifyPerfOverlay = false
     var enableLatencyToast = false
     var enableStun = false
@@ -317,6 +318,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_JITTER_MONITOR_STRING, enableJitterMonitor)
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
+                .putString(PERF_OVERLAY_CLOCK_FORMAT_STRING, perfOverlayClockFormat)
                 .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
@@ -457,6 +459,7 @@ class PreferenceConfiguration {
                 .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putString(PERF_OVERLAY_ORIENTATION_STRING, getPerfOverlayOrientationPreferenceString(perfOverlayOrientation))
                 .putString(PERF_OVERLAY_POSITION_STRING, getPerfOverlayPositionPreferenceString(perfOverlayPosition))
+                .putString(PERF_OVERLAY_CLOCK_FORMAT_STRING, perfOverlayClockFormat)
                 .apply()
             true
         } catch (e: Exception) {
@@ -496,6 +499,7 @@ class PreferenceConfiguration {
         copy.gameMenuOpacity = this.gameMenuOpacity
         copy.perfOverlayOrientation = this.perfOverlayOrientation
         copy.perfOverlayPosition = this.perfOverlayPosition
+        copy.perfOverlayClockFormat = this.perfOverlayClockFormat
         copy.reverseResolution = this.reverseResolution
         copy.rotableScreen = this.rotableScreen
         copy.screenPosition = this.screenPosition
@@ -589,6 +593,7 @@ class PreferenceConfiguration {
         private const val ENABLE_JITTER_MONITOR_STRING = "checkbox_enable_jitter_monitor"
         private const val PERF_OVERLAY_LOCKED_STRING = "perf_overlay_locked"
         private const val PERF_OVERLAY_BG_OPACITY_STRING = "seekbar_perf_overlay_bg_opacity"
+        private const val PERF_OVERLAY_CLOCK_FORMAT_STRING = "list_perf_overlay_clock_format"
         const val GAME_MENU_OPACITY_PREF_STRING = "seekbar_game_menu_opacity"
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
@@ -816,6 +821,7 @@ class PreferenceConfiguration {
         const val MAX_GAME_MENU_OPACITY = 100
         private const val DEFAULT_PERF_OVERLAY_ORIENTATION = "horizontal"
         private const val DEFAULT_PERF_OVERLAY_POSITION = "top"
+        private const val DEFAULT_PERF_OVERLAY_CLOCK_FORMAT = "system_minutes"
         private const val DEFAULT_BIND_ALL_USB = false
         private const val DEFAULT_ANALOG_STICK_FOR_SCROLLING = "right"
         private const val DEFAULT_MOUSE_NAV_BUTTONS = false
@@ -1468,6 +1474,15 @@ class PreferenceConfiguration {
                 "bottom_left" -> PerfOverlayPosition.BOTTOM_LEFT
                 "bottom_right" -> PerfOverlayPosition.BOTTOM_RIGHT
                 else -> PerfOverlayPosition.TOP
+            }
+            val perfOverlayClockFormat = prefs.getString(
+                PERF_OVERLAY_CLOCK_FORMAT_STRING,
+                DEFAULT_PERF_OVERLAY_CLOCK_FORMAT
+            ) ?: DEFAULT_PERF_OVERLAY_CLOCK_FORMAT
+            config.perfOverlayClockFormat = when (perfOverlayClockFormat) {
+                "system_seconds", "24_minutes", "24_seconds", "12_minutes", "12_seconds" ->
+                    perfOverlayClockFormat
+                else -> DEFAULT_PERF_OVERLAY_CLOCK_FORMAT
             }
 
             config.bindAllUsb = prefs.getBoolean(BIND_ALL_USB_STRING, DEFAULT_BIND_ALL_USB)
