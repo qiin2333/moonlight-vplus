@@ -393,6 +393,23 @@
         <item>bottom_left</item>
         <item>bottom_right</item>
     </string-array>
+
+    <string-array name="perf_overlay_clock_format_names">
+        <item>@string/perf_overlay_clock_format_system_minutes</item>
+        <item>@string/perf_overlay_clock_format_system_seconds</item>
+        <item>@string/perf_overlay_clock_format_24_minutes</item>
+        <item>@string/perf_overlay_clock_format_24_seconds</item>
+        <item>@string/perf_overlay_clock_format_12_minutes</item>
+        <item>@string/perf_overlay_clock_format_12_seconds</item>
+    </string-array>
+    <string-array name="perf_overlay_clock_format_values" translatable="false">
+        <item>system_minutes</item>
+        <item>system_seconds</item>
+        <item>24_minutes</item>
+        <item>24_seconds</item>
+        <item>12_minutes</item>
+        <item>12_seconds</item>
+    </string-array>
     
     <!-- Performance overlay display items -->
     <string-array name="perf_overlay_display_items_names">
@@ -405,6 +422,7 @@
         <item>@string/perf_stats_item_host_latency</item>
         <item>@string/perf_stats_item_battery</item>
         <item>@string/perf_stats_item_one_percent_low</item>
+        <item>@string/perf_stats_item_clock</item>
     </string-array>
     <string-array name="perf_overlay_display_items_values" translatable="false">
         <item>resolution</item>
@@ -416,6 +434,7 @@
         <item>host_latency</item>
         <item>battery</item>
         <item>one_percent_low</item>
+        <item>clock</item>
     </string-array>
     <string-array name="mic_menu_action_mode_entries">
         <item>@string/mic_menu_action_show_button</item>
@@ -584,12 +603,14 @@
         <item>@string/float_ball_action_open_keyboard</item>
         <item>@string/float_ball_action_open_menu</item>
         <item>@string/float_ball_action_toggle_visibility</item>
+        <item>@string/float_ball_action_show_perf_overlay</item>
     </string-array>
     <string-array name="float_ball_action_values" translatable="false">
         <item>none</item>
         <item>open_keyboard</item>
         <item>open_menu</item>
         <item>toggle_visibility</item>
+        <item>show_perf_overlay</item>
     </string-array>
     <string-array name="float_ball_position_entries">
         <item>@string/mic_button_position_top_left</item>

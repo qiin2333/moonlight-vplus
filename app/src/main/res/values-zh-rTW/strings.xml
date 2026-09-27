@@ -706,6 +706,14 @@
     <string name="summary_hdr_mode">選擇 HDR10（PQ）、HDR10+、HLG、Dolby Vision 8.1（實驗性）或 Dolby Vision 8.4 HLG（選 8.1 無畫面時）。使用 HDR10+ 前需在 Sunshine 開啟動態中繼資料分析。</string>
     <string name="title_perf_overlay_orientation">效能統計版面</string>
     <string name="summary_perf_overlay_orientation">選擇橫向單列或縱向單欄。</string>
+    <string name="title_perf_overlay_clock_format">時鐘格式</string>
+    <string name="summary_perf_overlay_clock_format">請先在「效能統計指標」中開啟「時鐘」，再修改時鐘格式。</string>
+    <string name="perf_overlay_clock_format_system_minutes">跟隨系統，只顯示時分</string>
+    <string name="perf_overlay_clock_format_system_seconds">跟隨系統，顯示時分秒</string>
+    <string name="perf_overlay_clock_format_24_minutes">24 小時制，只顯示時分</string>
+    <string name="perf_overlay_clock_format_24_seconds">24 小時制，顯示時分秒</string>
+    <string name="perf_overlay_clock_format_12_minutes">12 小時制，只顯示時分</string>
+    <string name="perf_overlay_clock_format_12_seconds">12 小時制，顯示時分秒</string>
     <string name="title_perf_overlay_position">效能統計位置</string>
     <string name="summary_perf_overlay_position">橫向版面可放在頂部或底部，縱向版面可放在四角。</string>
     <string name="title_perf_overlay_display_items">效能統計指標</string>
@@ -769,6 +777,7 @@
     <string name="perf_stats_item_host_latency">🖥 主機處理延遲</string>
     <string name="perf_stats_item_battery">🔋 電量</string>
     <string name="perf_stats_item_one_percent_low">📉 1% 低影格率（流暢度）</string>
+    <string name="perf_stats_item_clock">時鐘</string>
     <string name="mic_icon_color_gradient_blue">藍色漸層</string>
     <string name="mic_icon_color_gradient_purple">紫色漸層</string>
     <string name="mic_icon_color_gradient_green">綠色漸層</string>

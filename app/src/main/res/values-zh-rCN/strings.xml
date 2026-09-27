@@ -153,8 +153,8 @@
     <string name="controller_mouse_dpad_scroll">滚动页面</string>
     <string name="controller_mouse_dpad_arrows">方向键 ↑ ↓ ← →</string>
     <string name="controller_mouse_speed_percent">%1$d%%</string>
-    <string name="game_menu_disconnect"> 断开连接 </string>
-    <string name="game_menu_disconnect_and_quit"> 断开并退出串流 </string>
+    <string name="game_menu_disconnect">暂停串流</string>
+    <string name="game_menu_disconnect_and_quit">退出串流</string>
     <string name="game_menu_cancel"> 取消 </string>
     <string name="game_menu_send_keys">发送特殊按键</string>
     <string name="game_menu_send_keys_esc">发送 ESC</string>
@@ -466,6 +466,7 @@
     <string name="float_ball_action_none">无动作</string>
     <string name="float_ball_action_open_keyboard">显示虚拟键盘</string>
     <string name="float_ball_action_open_menu">显示游戏菜单</string>
+    <string name="float_ball_action_show_perf_overlay">显示性能监控图层</string>
 
     <string name="category_ui_settings">界面</string>
     <string name="title_game_menu_cards">游戏菜单卡片</string>
@@ -572,6 +573,14 @@
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
     <string name="title_perf_overlay_orientation">性能统计布局</string>
     <string name="summary_perf_overlay_orientation">选择横向单行或纵向单列。</string>
+    <string name="title_perf_overlay_clock_format">时钟格式</string>
+    <string name="summary_perf_overlay_clock_format">先在“性能统计指标”中开启“时钟”，再修改时钟格式。</string>
+    <string name="perf_overlay_clock_format_system_minutes">跟随系统，仅显示时分</string>
+    <string name="perf_overlay_clock_format_system_seconds">跟随系统，显示时分秒</string>
+    <string name="perf_overlay_clock_format_24_minutes">24 小时制，仅显示时分</string>
+    <string name="perf_overlay_clock_format_24_seconds">24 小时制，显示时分秒</string>
+    <string name="perf_overlay_clock_format_12_minutes">12 小时制，仅显示时分</string>
+    <string name="perf_overlay_clock_format_12_seconds">12 小时制，显示时分秒</string>
     <string name="title_perf_overlay_position">性能统计位置</string>
     <string name="summary_perf_overlay_position">横向布局可放在顶部或底部，纵向布局可放在四角。</string>
     <string name="title_reset_perf_overlay_position">重置性能图层位置</string>
@@ -2141,6 +2150,7 @@
     <string name="perf_stats_item_host_latency">🖥 主机处理延迟</string>
     <string name="perf_stats_item_battery">🔋 电量</string>
     <string name="perf_stats_item_one_percent_low">📉 1% 低帧率（流畅度）</string>
+    <string name="perf_stats_item_clock">时钟</string>
     <string name="mic_icon_color_gradient_blue">蓝色渐变</string>
     <string name="mic_icon_color_gradient_purple">紫色渐变</string>
     <string name="mic_icon_color_gradient_green">绿色渐变</string>

@@ -3222,6 +3222,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             setupConfigSyncPreferences()
             setupMicVolumeProcessingPreferences()
             setupInputModePresetPreference()
+            setupPerfOverlayPreferences()
             setupMicrophoneButtonPositionPreference()
             setupFloatBallPositionPreference()
             setupLegacyBackedModeSelectors()
@@ -4587,6 +4588,26 @@ class StreamSettings : ThemedAppCompatActivity() {
             positionPreference.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { _, _ ->
                     positionStore.clearCustomPosition()
+                    true
+                }
+        }
+
+        private fun setupPerfOverlayPreferences() {
+            val metricsPreference = findPreference<PerfOverlayDisplayItemsPreference>(
+                "perf_overlay_display_items"
+            ) ?: return
+            val clockFormatPreference = findPreference<Preference>(
+                "list_perf_overlay_clock_format"
+            ) ?: return
+
+            fun updateClockFormatEnabled(selectedItems: Set<*>?) {
+                clockFormatPreference.isEnabled = selectedItems?.contains("clock") == true
+            }
+
+            updateClockFormatEnabled(metricsPreference.values)
+            metricsPreference.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    updateClockFormatEnabled(newValue as? Set<*>)
                     true
                 }
         }

@@ -10,10 +10,13 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.format.DateFormat
 import android.text.style.ForegroundColorSpan
 import android.text.style.ImageSpan
 import android.text.style.RelativeSizeSpan
@@ -49,6 +52,7 @@ import com.limelight.utils.formatBandwidthSpeed
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.EnumMap
 import java.util.Locale
 import java.util.TimeZone
@@ -63,7 +67,35 @@ class PerformanceOverlayManager(
 ) {
 
     private var performanceOverlayView: LinearLayout? = null
+    private var performanceClockView: TextView? = null
     private lateinit var streamView: StreamView
+
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private var delayedShowPending = false
+    private val delayedShowRunnable = Runnable {
+        delayedShowPending = false
+        val overlay = performanceOverlayView ?: return@Runnable
+        if (activity.isFinishing || (activity as? Game)?.connected != true ||
+            overlay.windowToken == null
+        ) return@Runnable
+
+        prefConfig.enablePerfOverlay = true
+        configurePerformanceOverlay()
+        applyOverlayState()
+        prefConfig.writePreferences(activity)
+    }
+    private val clockUpdateRunnable = object : Runnable {
+        override fun run() {
+            val overlay = performanceOverlayView
+            if (overlay == null || requestedPerformanceOverlayVisibility != View.VISIBLE ||
+                overlay.visibility != View.VISIBLE || performanceClockView?.visibility != View.VISIBLE
+            ) {
+                return
+            }
+            updateClockText()
+            uiHandler.postDelayed(this, clockUpdateDelayMs())
+        }
+    }
 
     private val overlayPrefs: SharedPreferences by lazy {
         activity.getSharedPreferences("performance_overlay", Activity.MODE_PRIVATE)
@@ -125,7 +157,8 @@ class PerformanceOverlayManager(
         DECODE_LATENCY(R.id.perfDecodeLatency, "decode_latency"),
         HOST_LATENCY(R.id.perfHostLatency, "host_latency"),
         BATTERY(R.id.perfBattery, "battery"),
-        ONE_PERCENT_LOW(R.id.perfOnePercentLow, "one_percent_low")
+        ONE_PERCENT_LOW(R.id.perfOnePercentLow, "one_percent_low"),
+        CLOCK(R.id.perfClock, "clock")
     }
 
     /**
@@ -148,11 +181,14 @@ class PerformanceOverlayManager(
     // 解码器类型信息类
     private class DecoderTypeInfo(val fullName: String, val shortName: String)
 
+    private data class ClockFormat(val pattern: String, val includesSeconds: Boolean)
+
     /**
      * 初始化性能覆盖层
      */
     fun initialize() {
         performanceOverlayView = activity.findViewById(R.id.performanceOverlay)
+        performanceClockView = activity.findViewById(R.id.perfClock)
         streamView = activity.findViewById(R.id.surfaceView)
 
         initializePerformanceItems()
@@ -194,15 +230,24 @@ class PerformanceOverlayManager(
             PerformanceItem.HOST_LATENCY -> Runnable { showHostLatencyInfo() }
             PerformanceItem.BATTERY -> Runnable { showBatteryInfo() }
             PerformanceItem.ONE_PERCENT_LOW -> Runnable { showOnePercentLowInfo() }
+            PerformanceItem.CLOCK -> Runnable { showMoonPhaseInfo() }
         }
     }
 
     fun hideOverlayImmediate() {
+        cancelDelayedShow()
+        stopClockUpdates()
         performanceOverlayView?.visibility = View.GONE
     }
 
     fun applyRequestedVisibility() {
-        performanceOverlayView?.visibility = requestedPerformanceOverlayVisibility
+        val overlay = performanceOverlayView ?: return
+        overlay.visibility = requestedPerformanceOverlayVisibility
+        if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
+            startClockUpdates()
+        } else {
+            stopClockUpdates()
+        }
     }
 
     fun isPerfOverlayVisible(): Boolean {
@@ -212,24 +257,92 @@ class PerformanceOverlayManager(
     fun togglePerformanceOverlay() {
         val overlay = performanceOverlayView ?: return
 
+        cancelDelayedShow()
+
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
             requestedPerformanceOverlayVisibility = View.GONE
             hasShownPerfOverlay = false
+            stopClockUpdates()
             fadeOutAndHide(overlay)
         } else {
             requestedPerformanceOverlayVisibility = View.VISIBLE
             hasShownPerfOverlay = true
             overlay.visibility = View.VISIBLE
             overlay.alpha = 1.0f
+            startClockUpdates()
         }
     }
 
+    fun showPerformanceOverlayDelayed() {
+        if (performanceOverlayView == null) return
+        if (requestedPerformanceOverlayVisibility == View.VISIBLE || delayedShowPending) return
+
+        delayedShowPending = true
+        uiHandler.postDelayed(delayedShowRunnable, DELAYED_SHOW_MS)
+    }
+
+    fun cancelPendingTasks() {
+        cancelDelayedShow()
+        stopClockUpdates()
+    }
+
+    private fun cancelDelayedShow() {
+        if (!delayedShowPending) return
+        delayedShowPending = false
+        uiHandler.removeCallbacks(delayedShowRunnable)
+    }
+
+    private fun startClockUpdates() {
+        uiHandler.removeCallbacks(clockUpdateRunnable)
+        if (performanceClockView?.visibility != View.VISIBLE) return
+        updateClockText()
+        uiHandler.post(clockUpdateRunnable)
+    }
+
+    private fun stopClockUpdates() {
+        uiHandler.removeCallbacks(clockUpdateRunnable)
+    }
+
+    private fun updateClockText() {
+        val clock = performanceClockView ?: return
+        val format = clockFormat()
+        clock.text = SimpleDateFormat(format.pattern, Locale.getDefault()).format(Date())
+    }
+
+    private fun clockFormat(): ClockFormat {
+        val systemIs24Hour = DateFormat.is24HourFormat(activity)
+        return when (prefConfig.perfOverlayClockFormat) {
+            "system_seconds" -> if (systemIs24Hour) {
+                ClockFormat("HH:mm:ss", true)
+            } else {
+                ClockFormat("h:mm:ss a", true)
+            }
+            "24_minutes" -> ClockFormat("HH:mm", false)
+            "24_seconds" -> ClockFormat("HH:mm:ss", true)
+            "12_minutes" -> ClockFormat("h:mm a", false)
+            "12_seconds" -> ClockFormat("h:mm:ss a", true)
+            else -> if (systemIs24Hour) {
+                ClockFormat("HH:mm", false)
+            } else {
+                ClockFormat("h:mm a", false)
+            }
+        }
+    }
+
+    private fun clockUpdateDelayMs(): Long {
+        if (clockFormat().includesSeconds) return CLOCK_SECOND_UPDATE_MS
+        val remainder = System.currentTimeMillis() % CLOCK_MINUTE_MS
+        return (CLOCK_MINUTE_MS - remainder).coerceAtLeast(1L)
+    }
+
     fun applyOverlayState() {
+        cancelDelayedShow()
         val overlay = performanceOverlayView ?: return
 
         if (!prefConfig.enablePerfOverlay) {
             requestedPerformanceOverlayVisibility = View.GONE
             hasShownPerfOverlay = false
+            stopClockUpdates()
             fadeOutAndHide(overlay)
             return
         }
@@ -242,10 +355,12 @@ class PerformanceOverlayManager(
             hasShownPerfOverlay = true
         }
 
+        startClockUpdates()
         setupPerformanceOverlayDragging()
     }
 
     private fun fadeOutAndHide(overlay: View) {
+        stopClockUpdates()
         val anim = AnimationUtils.loadAnimation(activity, R.anim.perf_overlay_fadeout)
         overlay.startAnimation(anim)
         anim.setAnimationListener(object : Animation.AnimationListener {
@@ -347,6 +462,7 @@ class PerformanceOverlayManager(
             performanceOverlayView?.visibility = View.VISIBLE
             performanceOverlayView?.alpha = 1.0f
             hasShownPerfOverlay = true
+            startClockUpdates()
             setupPerformanceOverlayDragging()
         }
     }
@@ -436,6 +552,7 @@ class PerformanceOverlayManager(
             PerformanceItem.HOST_LATENCY -> updateHostLatencyText(itemInfo.view!!, performanceInfo)
             PerformanceItem.BATTERY -> Unit
             PerformanceItem.ONE_PERCENT_LOW -> updateOnePercentLowText(itemInfo.view!!, performanceInfo)
+            PerformanceItem.CLOCK -> Unit
         }
     }
 
@@ -771,6 +888,10 @@ class PerformanceOverlayManager(
             R.id.perfPacketLoss, R.id.perfNetworkLatency, R.id.perfDecodeLatency,
             R.id.perfHostLatency, R.id.perfBattery, R.id.perfOnePercentLow -> {
                 textView.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+                textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodySize)
+            }
+            R.id.perfClock -> {
+                textView.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodySize)
             }
         }
@@ -1375,6 +1496,9 @@ class PerformanceOverlayManager(
     companion object {
         private const val CLICK_THRESHOLD = 10
         private const val DOUBLE_CLICK_TIMEOUT = 300
+        private const val DELAYED_SHOW_MS = 1000L
+        private const val CLOCK_SECOND_UPDATE_MS = 1000L
+        private const val CLOCK_MINUTE_MS = 60_000L
         private const val BATTERY_UPDATE_INTERVAL_MS = 15000L
         private const val OVERLAY_BACKGROUND_RGB = 0x16
 

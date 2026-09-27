@@ -187,6 +187,20 @@
             android:includeFontPadding="false"
             android:gravity="center_vertical" />
 
+        <TextView
+            android:id="@+id/perfClock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:fontFeatureSettings="tnum"
+            android:layout_marginStart="12dp"
+            android:textColor="#FFD0D0D0"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.01"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical" />
+
     </LinearLayout>
 
     <androidx.cardview.widget.CardView
