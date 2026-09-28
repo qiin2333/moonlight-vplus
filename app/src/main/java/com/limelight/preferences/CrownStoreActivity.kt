@@ -318,6 +318,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val storeGridState = rememberLazyStaggeredGridState()
         var storeQuery by rememberSaveable { mutableStateOf("") }
         var storeSort by rememberSaveable { mutableStateOf(StoreSort.STORE_ORDER) }
+        LaunchedEffect(storeQuery, storeSort) { storeGridState.scrollToItem(0) }
         BackHandler(enabled = selectedProfile != null) {
             closeStoreProfileDetail()
         }
@@ -485,7 +486,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 StoreSort.NAME_DESC -> matches.sortedByDescending { it.name.lowercase(Locale.ROOT) }
             }
         }
-        LaunchedEffect(query, sort) { gridState.scrollToItem(0) }
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(2),
             state = gridState,
