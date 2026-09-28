@@ -113,6 +113,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.text.DateFormat
+import java.text.ParsePosition
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -2414,28 +2415,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         return SimpleDateFormat(pattern, Locale.getDefault()).format(parsedDate)
     }
 
-    private fun parseStoreUpdatedAt(updatedAt: String): Date? {
-        val utcPatterns = listOf(
-            "yyyy-MM-dd'T'HH:mm:ss'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-        )
-        for (pattern in utcPatterns) {
-            val date = runCatching {
-                SimpleDateFormat(pattern, Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                    isLenient = false
-                }.parse(updatedAt)
-            }.getOrNull()
-            if (date != null) return date
-        }
-
-        return runCatching {
-            SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-                isLenient = false
-            }.parse(updatedAt)
-        }.getOrNull()
-    }
-
     private fun openUrl(url: String) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -2509,4 +2488,25 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             "payloadSha256"
         )
     }
+}
+
+internal fun parseStoreUpdatedAt(updatedAt: String): Date? {
+    val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ssXX",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXX",
+        "yyyy-MM-dd"
+    )
+    for (pattern in patterns) {
+        val position = ParsePosition(0)
+        val date = SimpleDateFormat(pattern, Locale.US).apply {
+            if (pattern.contains("'Z'")) timeZone = TimeZone.getTimeZone("UTC")
+            isLenient = false
+        }.parse(updatedAt, position)
+        if (date != null && position.index == updatedAt.length) return date
+    }
+    return null
 }
