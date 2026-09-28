@@ -54,6 +54,7 @@ object GitHubDeviceAuthorization {
         }
     }
 
+    @Synchronized
     fun loadPendingDeviceCode(ctx: Context): GitHubStarVerifier.DeviceCode? {
         val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
         val expiresAtMs = prefs.getLong(DeveloperUnlockSettings.PREF_PENDING_EXPIRES_AT_MS, 0L)
