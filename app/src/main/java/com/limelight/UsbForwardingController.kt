@@ -48,8 +48,9 @@ class UsbForwardingController(
          *  answered prompt is never mistaken for a dismissed one. */
         private const val PROMPT_DISMISS_GRACE_MS = 400L
 
-        /** Backstop for a prompt whose dialog never hands focus back, which is
-         *  the only thing left to tell a dismissal from an open dialog by. */
+        /** Backstop for a prompt whose dialog never hands focus back. It is
+         *  re-checked against focus, so it never settles a dialog that is still
+         *  on screen. */
         private const val PROMPT_TIMEOUT_MS = 30_000L
 
         private val cleanupLock = Any()
@@ -329,13 +330,21 @@ class UsbForwardingController(
         }, PROMPT_DISMISS_GRACE_MS)
     }
 
-    /** Backstop for a prompt whose dialog never hands focus back at all. */
+    /** Backstop for a prompt whose dialog never hands focus back at all. It
+     *  only settles prompts we still believe have the screen, so a dialog the
+     *  user is simply reading for longer than the timeout is left alone: the
+     *  system finishes it when they answer or dismiss it, and settling it early
+     *  would both drop their answer and open the next device's dialog on top.
+     *  While the dialog is up it re-arms instead. */
     private fun schedulePromptTimeout(request: Int) {
         clearPromptTimeout()
         val timeout = Runnable {
             promptTimeout = null
-            if (closed) return@Runnable
-            if (pendingPermission?.request != request) return@Runnable
+            if (closed || pendingPermission?.request != request) return@Runnable
+            if (!hasFocus) {
+                schedulePromptTimeout(request)
+                return@Runnable
+            }
             LimeLog.warning("USB permission prompt $request was never answered; treating it as not granted")
             completePermission(request, false)
         }
