@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="crown_store_background">#FFF8F6FA</color>
+    <color name="crown_store_panel_background">#FFFFFFFF</color>
+    <color name="crown_store_section_background">#FFFFFFFF</color>
+    <color name="crown_store_section_border">#FFE5E0E8</color>
+    <color name="crown_store_input_background">#FFF1EDF3</color>
+    <color name="crown_store_input_border">#FFD7D1DA</color>
+    <color name="crown_store_text_primary">#FF24232A</color>
+    <color name="crown_store_text_secondary">#FF65616D</color>
+</resources>
