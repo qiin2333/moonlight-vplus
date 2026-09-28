@@ -932,7 +932,7 @@
     <string name="crown_store_action_open">Open</string>
     <string name="crown_store_action_import_package">Import package</string>
     <string name="crown_store_action_refresh">Refresh</string>
-    <string name="crown_store_search_hint">Search crowns, games, authors, tags</string>
+    <string name="crown_store_search_hint">Search crowns</string>
     <string name="crown_store_clear_search">Clear search</string>
     <string name="crown_store_sort_by">Sort: %1$s</string>
     <string name="crown_store_sort_store_order">Store order</string>

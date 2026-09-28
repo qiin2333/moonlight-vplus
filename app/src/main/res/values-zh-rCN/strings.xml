@@ -1721,7 +1721,7 @@
     <string name="crown_store_action_open">打开</string>
     <string name="crown_store_action_import_package">导入分享包</string>
     <string name="crown_store_action_refresh">刷新一下</string>
-    <string name="crown_store_search_hint">搜索王冠、游戏、作者或标签</string>
+    <string name="crown_store_search_hint">搜索王冠</string>
     <string name="crown_store_clear_search">清除搜索</string>
     <string name="crown_store_sort_by">排序：%1$s</string>
     <string name="crown_store_sort_store_order">超市原顺序</string>

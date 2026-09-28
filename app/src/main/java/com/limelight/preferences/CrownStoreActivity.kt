@@ -520,7 +520,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         OutlinedTextField(
                             value = query,
                             onValueChange = onQueryChange,
-                            label = { Text(stringResource(R.string.crown_store_search_hint)) },
+                            placeholder = { Text(stringResource(R.string.crown_store_search_hint)) },
                             leadingIcon = {
                                 Icon(
                                     painterResource(R.drawable.ic_search_stylish),
@@ -538,21 +538,21 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             }} else null,
                             singleLine = true,
                             shape = AppShapes.medium,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).height(48.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = colorResource(R.color.crown_text_primary),
                                 unfocusedTextColor = colorResource(R.color.crown_text_primary),
                                 focusedBorderColor = appAccentColor(),
                                 unfocusedBorderColor = colorResource(R.color.crown_text_secondary),
-                                focusedLabelColor = appAccentColor(),
-                                unfocusedLabelColor = colorResource(R.color.crown_text_secondary)
+                                focusedPlaceholderColor = colorResource(R.color.crown_text_secondary),
+                                unfocusedPlaceholderColor = colorResource(R.color.crown_text_secondary)
                             )
                         )
                         Box {
                             IconButton(
                                 onClick = { sortMenuExpanded = true },
                                 modifier = Modifier
-                                    .size(56.dp)
+                                    .size(48.dp)
                                     .background(colorResource(R.color.crown_input_background), AppShapes.medium)
                             ) {
                                 Icon(
