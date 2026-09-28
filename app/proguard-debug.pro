@@ -34,3 +34,8 @@
     public void setTextInputEnabled(boolean);
     public boolean isTextInputEnabled();
 }
+
+# Remote-IME instrumentation constructs the controller via default arguments and
+# copies RemoteTextContext fixtures across the APK boundary.
+-keep class com.limelight.utils.RemoteImeController { <init>(...); }
+-keep class com.limelight.nvstream.RemoteTextContext { *; }
