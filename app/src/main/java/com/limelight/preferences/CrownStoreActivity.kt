@@ -85,7 +85,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -376,7 +375,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = dimensionResource(R.dimen.crown_store_top_bar_padding_top))
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -514,52 +512,70 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = onQueryChange,
-                        label = { Text(stringResource(R.string.crown_store_search_hint)) },
-                        leadingIcon = {
-                            Icon(painterResource(R.drawable.ic_search_stylish), contentDescription = null)
-                        },
-                        trailingIcon = if (query.isNotEmpty()) {{
-                            IconButton(onClick = { onQueryChange("") }) {
+                    var sortMenuExpanded by remember { mutableStateOf(false) }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            label = { Text(stringResource(R.string.crown_store_search_hint)) },
+                            leadingIcon = {
                                 Icon(
-                                    painterResource(R.drawable.ic_close_stylish),
-                                    contentDescription = stringResource(R.string.crown_store_clear_search)
+                                    painterResource(R.drawable.ic_search_stylish),
+                                    contentDescription = null,
+                                    tint = appAccentColor()
+                                )
+                            },
+                            trailingIcon = if (query.isNotEmpty()) {{
+                                IconButton(onClick = { onQueryChange("") }) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_close_stylish),
+                                        contentDescription = stringResource(R.string.crown_store_clear_search)
+                                    )
+                                }
+                            }} else null,
+                            singleLine = true,
+                            shape = AppShapes.medium,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = colorResource(R.color.crown_text_primary),
+                                unfocusedTextColor = colorResource(R.color.crown_text_primary),
+                                focusedBorderColor = appAccentColor(),
+                                unfocusedBorderColor = colorResource(R.color.crown_text_secondary),
+                                focusedLabelColor = appAccentColor(),
+                                unfocusedLabelColor = colorResource(R.color.crown_text_secondary)
+                            )
+                        )
+                        Box {
+                            IconButton(
+                                onClick = { sortMenuExpanded = true },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(colorResource(R.color.crown_input_background), AppShapes.medium)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_crown_sort),
+                                    contentDescription = stringResource(R.string.crown_store_sort_by, storeSortLabel(sort)),
+                                    tint = if (sort == StoreSort.STORE_ORDER) {
+                                        colorResource(R.color.crown_text_primary)
+                                    } else appAccentColor()
                                 )
                             }
-                        }} else null,
-                        singleLine = true,
-                        shape = AppShapes.medium,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = colorResource(R.color.crown_text_primary),
-                            unfocusedTextColor = colorResource(R.color.crown_text_primary),
-                            focusedBorderColor = appAccentColor(),
-                            unfocusedBorderColor = colorResource(R.color.crown_text_secondary),
-                            focusedLabelColor = appAccentColor(),
-                            unfocusedLabelColor = colorResource(R.color.crown_text_secondary)
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    var sortMenuExpanded by remember { mutableStateOf(false) }
-                    Box {
-                        CrownActionButton(
-                            text = stringResource(R.string.crown_store_sort_by, storeSortLabel(sort)),
-                            iconRes = R.drawable.phc_list
-                        ) { sortMenuExpanded = true }
-                        DropdownMenu(
-                            expanded = sortMenuExpanded,
-                            onDismissRequest = { sortMenuExpanded = false }
-                        ) {
-                            StoreSort.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(storeSortLabel(option)) },
-                                    onClick = {
-                                        onSortChange(option)
-                                        sortMenuExpanded = false
-                                    }
-                                )
+                            DropdownMenu(
+                                expanded = sortMenuExpanded,
+                                onDismissRequest = { sortMenuExpanded = false }
+                            ) {
+                                StoreSort.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(storeSortLabel(option)) },
+                                        onClick = {
+                                            onSortChange(option)
+                                            sortMenuExpanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
