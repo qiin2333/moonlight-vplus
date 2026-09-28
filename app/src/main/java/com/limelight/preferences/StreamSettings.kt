@@ -2402,14 +2402,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                 return
             }
 
-            val accessToken = PreferenceManager.getDefaultSharedPreferences(ctx)
-                    .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            if (accessToken.isNullOrBlank() ||
-                    !DeveloperUnlockSettings.hasAccessTokenScope(
-                            prefs,
-                            GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
-                    )) {
+            if (GitHubDeviceAuthorization.accessToken(
+                    ctx, GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+                ) == null) {
                 showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
                 return
             }
@@ -2530,14 +2525,10 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         private fun publishCrownStoreProfile(request: GitHubCrownProfileStorePublisher.PublishRequest) {
             val appContext = requireContext().applicationContext
-            val accessToken = PreferenceManager.getDefaultSharedPreferences(appContext)
-                    .getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            val prefs = PreferenceManager.getDefaultSharedPreferences(appContext)
-            if (accessToken.isNullOrBlank() ||
-                    !DeveloperUnlockSettings.hasAccessTokenScope(
-                            prefs,
-                            GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
-                    )) {
+            val accessToken = GitHubDeviceAuthorization.accessToken(
+                    appContext, GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
+            )
+            if (accessToken == null) {
                 showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
                 return
             }
@@ -2550,26 +2541,24 @@ class StreamSettings : ThemedAppCompatActivity() {
 
                 Handler(Looper.getMainLooper()).post {
                     if (!isAdded) return@post
-                    result
-                            .onSuccess { publishResult ->
-                                showCrownStorePublishSuccessDialog(publishResult)
-                            }
-                            .onFailure { error ->
-                                Log.e("CrownStore", "Failed to publish Crown Store profile", error)
-                                if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
-                                        error.authorizationFailure) {
-                                    showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = true)
-                                } else {
-                                    Toast.makeText(
-                                            appContext,
-                                            getString(
-                                                    R.string.toast_crown_store_publish_failed_with_error,
-                                                    error.message ?: error.javaClass.simpleName
-                                            ),
-                                            Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
+                    result.onSuccess { publishResult ->
+                        showCrownStorePublishSuccessDialog(publishResult)
+                    }.onFailure { error ->
+                        if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
+                                error.authorizationFailure) {
+                            showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = true)
+                        } else {
+                            Log.e("CrownStore", "Failed to publish Crown Store profile", error)
+                            Toast.makeText(
+                                appContext,
+                                getString(
+                                    R.string.toast_crown_store_publish_failed_with_error,
+                                    error.message ?: error.javaClass.simpleName
+                                ),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
                 }
             }
         }
@@ -2577,12 +2566,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean) {
             val ctx = requireContext()
             if (clearSavedToken) {
-                PreferenceManager.getDefaultSharedPreferences(ctx).edit {
-                    remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN)
-                    remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN_SCOPE)
-                    remove(DeveloperUnlockSettings.PREF_UNLOCKED)
-                    remove(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS)
-                }
+                GitHubDeviceAuthorization.clearCredentials(ctx)
                 refreshDeveloperFeatureGateState()
             }
 
@@ -4717,7 +4701,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             scope: GitHubStarVerifier.OAuthScope = GitHubStarVerifier.OAuthScope.STAR_VERIFICATION
         ) {
             val ctx = requireContext().applicationContext
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
             if (developerUnlockVerificationRunning) {
                 Toast.makeText(ctx, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
                 return
@@ -4727,12 +4710,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 return
             }
 
-            val savedToken = prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null)
-            val savedTokenCanBeUsed = !savedToken.isNullOrBlank() &&
-                    DeveloperUnlockSettings.hasAccessTokenScope(prefs, scope)
-            if (!savedTokenCanBeUsed) {
-                val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
-                if (pendingDeviceCode?.scope == scope) {
+            GitHubDeviceAuthorization.pendingDeviceCode(ctx, scope)?.let { pendingDeviceCode ->
+                if (GitHubDeviceAuthorization.accessToken(ctx, scope) == null) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
                     pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
@@ -4744,30 +4723,22 @@ class StreamSettings : ThemedAppCompatActivity() {
             Toast.makeText(ctx, R.string.toast_developer_verification_started, Toast.LENGTH_LONG).show()
             thread(name = "DeveloperGitHubStarVerify") {
                 try {
-                    if (savedTokenCanBeUsed) {
+                    val savedToken = GitHubDeviceAuthorization.accessToken(ctx, scope)
+                    if (savedToken != null) {
                         completeDeveloperUnlockVerification(
-                            ctx = ctx,
-                            accessToken = savedToken,
-                            starCheck = GitHubStarVerifier.checkStar(savedToken),
-                            scope = scope
+                            ctx, savedToken, GitHubStarVerifier.checkStar(savedToken), scope
                         )
-                        return@thread
-                    }
-
-                    val deviceCode = GitHubStarVerifier.requestDeviceCode(scope)
-                    developerPendingDeviceCode = deviceCode
-                    GitHubDeviceAuthorization.savePendingDeviceCode(ctx, deviceCode)
-                    Log.i(
-                        "DeveloperUnlock",
-                        "GitHub star device code requested: userCode=${deviceCode.userCode}, " +
-                            "interval=${deviceCode.intervalSeconds}s, expires=${deviceCode.expiresInSeconds}s"
-                    )
-                    activity?.runOnUiThread {
-                        if (isAdded) {
-                            showDeveloperDeviceCodeDialog(deviceCode)
+                    } else {
+                        val deviceCode = GitHubDeviceAuthorization.pendingDeviceCode(ctx, scope)
+                            ?: GitHubStarVerifier.requestDeviceCode(scope).also {
+                                GitHubDeviceAuthorization.savePendingDeviceCode(ctx, it)
+                            }
+                        developerPendingDeviceCode = deviceCode
+                        activity?.runOnUiThread {
+                            if (isAdded) showDeveloperDeviceCodeDialog(deviceCode)
                         }
+                        developerUnlockVerificationRunning = false
                     }
-                    developerUnlockVerificationRunning = false
                 } catch (e: Exception) {
                     Log.e("DeveloperUnlock", "GitHub star verification failed", e)
                     failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
@@ -4781,7 +4752,8 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean, enforceThrottle: Boolean) {
             val ctx = requireContext().applicationContext
-            val deviceCode = developerPendingDeviceCode ?: GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
+            val deviceCode = developerPendingDeviceCode
+                ?: GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
             if (deviceCode == null) {
                 if (showPendingToast) {
                     Toast.makeText(ctx, R.string.toast_developer_verification_expired, Toast.LENGTH_LONG).show()
@@ -4827,10 +4799,11 @@ class StreamSettings : ThemedAppCompatActivity() {
                             }
                         }
                         is GitHubStarVerifier.TokenPollResult.SlowDown -> {
-                            Log.i("DeveloperUnlock", "GitHub star foreground poll slowed down to ${poll.intervalSeconds}s")
-                            if (showPendingToast) {
-                                showDeveloperUnlockToastIfActive(deviceCode)
+                            GitHubDeviceAuthorization.updatePendingPollInterval(ctx, deviceCode, poll.intervalSeconds)
+                            runIfDeveloperAttemptActive(deviceCode) {
+                                developerPendingDeviceCode = deviceCode.copy(intervalSeconds = poll.intervalSeconds)
                             }
+                            if (showPendingToast) showDeveloperUnlockToastIfActive(deviceCode)
                         }
                         is GitHubStarVerifier.TokenPollResult.Failed -> {
                             runIfDeveloperAttemptActive(deviceCode) {
@@ -4846,7 +4819,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 } finally {
                     activity?.runOnUiThread {
                         developerForegroundPollRunning = false
-                        if (developerPendingDeviceCode == deviceCode) {
+                        if (developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
                             developerUnlockVerificationRunning = false
                         }
                     }
@@ -4859,7 +4832,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             action: () -> Unit
         ) {
             activity?.runOnUiThread {
-                if (isAdded && developerPendingDeviceCode == deviceCode) {
+                if (isAdded && developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
                     action()
                 }
             }

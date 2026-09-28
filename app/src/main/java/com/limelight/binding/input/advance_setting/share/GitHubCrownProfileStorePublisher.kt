@@ -1,9 +1,9 @@
 package com.limelight.binding.input.advance_setting.share
 
+import com.limelight.preferences.GitHubHttpClient
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 import java.util.Base64
 import java.util.Locale
@@ -13,9 +13,9 @@ object GitHubCrownProfileStorePublisher {
     const val STORE_REPO = "crown-profiles"
     const val STORE_BRANCH = "main"
     private const val API_ROOT = "https://api.github.com"
-    private const val API_VERSION = "2022-11-28"
     private const val INDEX_PATH = "index/v1.json"
     private const val HTTP_UNPROCESSABLE_ENTITY = 422
+    private val http = GitHubHttpClient()
 
     data class PublishRequest(
         val profileName: String,
@@ -234,37 +234,16 @@ object GitHubCrownProfileStorePublisher {
     }
 
     @Throws(IOException::class)
-    private fun request(accessToken: String, method: String, urlString: String, body: String? = null): HttpResponse {
-        val connection = URL(urlString).openConnection() as HttpURLConnection
-        connection.requestMethod = method
-        connection.connectTimeout = 10000
-        connection.readTimeout = 20000
-        connection.setRequestProperty("Accept", "application/vnd.github+json")
-        connection.setRequestProperty("Authorization", "Bearer $accessToken")
-        connection.setRequestProperty("User-Agent", "Moonlight-VPlus-Crown-Store")
-        connection.setRequestProperty("X-GitHub-Api-Version", API_VERSION)
-        if (body != null) {
-            connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.outputStream.use { output ->
-                output.write(body.toByteArray(Charsets.UTF_8))
-            }
-        }
-
-        val code = connection.responseCode
-        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-        val responseBody = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-        connection.disconnect()
-        return HttpResponse(code, responseBody)
-    }
+    private fun request(accessToken: String, method: String, urlString: String, body: String? = null): GitHubHttpClient.Result =
+        http.api(urlString, accessToken, method, body)
 
     @Throws(IOException::class)
-    private fun ensureSuccess(response: HttpResponse, fallback: String) {
+    private fun ensureSuccess(response: GitHubHttpClient.Result, fallback: String) {
         if (response.code in 200..299) return
         throw apiException(response, fallback)
     }
 
-    private fun apiException(response: HttpResponse, fallback: String): GitHubCrownStoreException {
+    internal fun apiException(response: GitHubHttpClient.Result, fallback: String): GitHubCrownStoreException {
         val message = if (response.body.isBlank()) {
             fallback
         } else {
@@ -272,10 +251,17 @@ object GitHubCrownProfileStorePublisher {
                 JSONObject(response.body).optString("message").takeIf { it.isNotBlank() }
             }.getOrNull() ?: fallback
         }
+        val rateLimited = response.code == 429 ||
+            (response.code == HttpURLConnection.HTTP_FORBIDDEN &&
+                (response.rateLimitRemaining == "0" || response.retryAfter != null ||
+                    message.contains("rate limit", ignoreCase = true)))
+        val detail = if (rateLimited && response.retryAfter != null) {
+            "$message; retry after ${response.retryAfter} seconds"
+        } else message
         return GitHubCrownStoreException(
-            "$message (${response.code})",
+            "$detail (${response.code})",
             authorizationFailure = response.code == HttpURLConnection.HTTP_UNAUTHORIZED ||
-                    response.code == HttpURLConnection.HTTP_FORBIDDEN
+                (response.code == HttpURLConnection.HTTP_FORBIDDEN && !rateLimited)
         )
     }
 
@@ -293,6 +279,5 @@ object GitHubCrownProfileStorePublisher {
     private fun urlEncode(value: String): String =
         URLEncoder.encode(value, Charsets.UTF_8.name())
 
-    private data class HttpResponse(val code: Int, val body: String)
     private data class GitHubContent(val sha: String, val text: String)
 }

@@ -4,17 +4,15 @@ import com.limelight.BuildConfig
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 import kotlin.math.max
 
 object GitHubStarVerifier {
     private const val DEVICE_CODE_URL = "https://github.com/login/device/code"
     private const val ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
     private const val API_USER_URL = "https://api.github.com/user"
-    private const val API_VERSION = "2022-11-28"
     private const val REPO_OWNER = "qiin2333"
     private const val REPO_NAME = "moonlight-vplus"
+    private val http = GitHubHttpClient()
 
     enum class OAuthScope(val preferenceValue: String, val requestValue: String) {
         STAR_VERIFICATION("star", ""),
@@ -65,7 +63,7 @@ object GitHubStarVerifier {
         if (scope.requestValue.isNotBlank()) {
             formValues["scope"] = scope.requestValue
         }
-        val response = postForm(
+        val response = http.form(
             DEVICE_CODE_URL,
             formValues
         )
@@ -88,7 +86,7 @@ object GitHubStarVerifier {
     @Throws(IOException::class)
     fun pollAccessToken(deviceCode: DeviceCode): TokenPollResult {
         ensureConfigured()
-        val response = postForm(
+        val response = http.form(
             ACCESS_TOKEN_URL,
             mapOf(
                 "client_id" to BuildConfig.GITHUB_OAUTH_CLIENT_ID,
@@ -115,7 +113,7 @@ object GitHubStarVerifier {
     @Throws(IOException::class)
     fun checkStar(accessToken: String): StarCheck {
         val login = fetchLogin(accessToken)
-        val response = get(
+        val response = http.api(
             "https://api.github.com/user/starred/$REPO_OWNER/$REPO_NAME",
             accessToken
         )
@@ -130,7 +128,7 @@ object GitHubStarVerifier {
 
     private fun fetchLogin(accessToken: String): String? {
         return try {
-            val response = get(API_USER_URL, accessToken)
+            val response = http.api(API_USER_URL, accessToken)
             if (response.code == HttpURLConnection.HTTP_OK && response.body.isNotBlank()) {
                 JSONObject(response.body).optString("login").takeIf { it.isNotBlank() }
             } else {
@@ -148,44 +146,6 @@ object GitHubStarVerifier {
         }
     }
 
-    @Throws(IOException::class)
-    private fun postForm(urlString: String, values: Map<String, String>): HttpResponse {
-        val body = values.entries.joinToString("&") { (key, value) ->
-            "${urlEncode(key)}=${urlEncode(value)}"
-        }
-        val connection = URL(urlString).openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.connectTimeout = 10000
-        connection.readTimeout = 15000
-        connection.doOutput = true
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.outputStream.use { output ->
-            output.write(body.toByteArray(Charsets.UTF_8))
-        }
-        return connection.readResponse()
-    }
-
-    @Throws(IOException::class)
-    private fun get(urlString: String, accessToken: String): HttpResponse {
-        val connection = URL(urlString).openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.connectTimeout = 10000
-        connection.readTimeout = 15000
-        connection.setRequestProperty("Accept", "application/vnd.github+json")
-        connection.setRequestProperty("Authorization", "Bearer $accessToken")
-        connection.setRequestProperty("X-GitHub-Api-Version", API_VERSION)
-        return connection.readResponse()
-    }
-
-    private fun HttpURLConnection.readResponse(): HttpResponse {
-        val responseCode = responseCode
-        val stream = if (responseCode in 200..299) inputStream else errorStream
-        val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-        disconnect()
-        return HttpResponse(responseCode, body)
-    }
-
     private fun errorMessage(body: String, fallback: String): String {
         if (body.isBlank()) {
             return fallback
@@ -200,8 +160,4 @@ object GitHubStarVerifier {
         }
     }
 
-    private fun urlEncode(value: String): String =
-        URLEncoder.encode(value, Charsets.UTF_8.name())
-
-    private data class HttpResponse(val code: Int, val body: String)
 }
