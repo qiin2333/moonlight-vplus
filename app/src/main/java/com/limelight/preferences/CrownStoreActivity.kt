@@ -318,7 +318,11 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val storeGridState = rememberLazyStaggeredGridState()
         var storeQuery by rememberSaveable { mutableStateOf("") }
         var storeSort by rememberSaveable { mutableStateOf(StoreSort.STORE_ORDER) }
-        LaunchedEffect(storeQuery, storeSort) { storeGridState.scrollToItem(0) }
+        var filterInitialized by remember { mutableStateOf(false) }
+        LaunchedEffect(storeQuery, storeSort) {
+            if (filterInitialized) storeGridState.scrollToItem(0)
+            filterInitialized = true
+        }
         BackHandler(enabled = selectedProfile != null) {
             closeStoreProfileDetail()
         }
@@ -473,15 +477,22 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val profiles = state.storeProfiles
         val visibleProfiles = remember(profiles, query, sort) {
             val terms = query.trim().lowercase(Locale.ROOT).split(Regex("\\s+")).filter { it.isNotEmpty() }
-            val matches = profiles.orEmpty().filter { profile ->
+            val matches = if (terms.isEmpty()) profiles.orEmpty() else profiles.orEmpty().filter { profile ->
                 val searchable = (listOf(profile.name, profile.summary, profile.author, profile.game) + profile.tags)
                     .joinToString(" ").lowercase(Locale.ROOT)
                 terms.all(searchable::contains)
             }
             when (sort) {
                 StoreSort.STORE_ORDER -> matches
-                StoreSort.NEWEST -> matches.sortedByDescending { parseStoreUpdatedAt(it.updatedAt)?.time ?: Long.MIN_VALUE }
-                StoreSort.OLDEST -> matches.sortedBy { parseStoreUpdatedAt(it.updatedAt)?.time ?: Long.MAX_VALUE }
+                StoreSort.NEWEST, StoreSort.OLDEST -> {
+                    val dated = matches.map { it to parseStoreUpdatedAt(it.updatedAt)?.time }
+                    val sorted = if (sort == StoreSort.NEWEST) {
+                        dated.sortedByDescending { it.second ?: Long.MIN_VALUE }
+                    } else {
+                        dated.sortedBy { it.second ?: Long.MAX_VALUE }
+                    }
+                    sorted.map { it.first }
+                }
                 StoreSort.NAME_ASC -> matches.sortedBy { it.name.lowercase(Locale.ROOT) }
                 StoreSort.NAME_DESC -> matches.sortedByDescending { it.name.lowercase(Locale.ROOT) }
             }
