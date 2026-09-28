@@ -21,15 +21,17 @@ object GitHubDeviceAuthorization {
     fun pendingDeviceCode(ctx: Context, scope: GitHubStarVerifier.OAuthScope): GitHubStarVerifier.DeviceCode? =
         loadPendingDeviceCode(ctx)?.takeIf { it.scope == scope }
 
-    fun clearCredentials(ctx: Context, expectedToken: String? = null) {
+    @Synchronized
+    fun clearCredentials(ctx: Context, expectedToken: String? = null): Boolean {
         val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-        if (expectedToken != null && prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null) != expectedToken) return
+        if (expectedToken != null && prefs.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null) != expectedToken) return false
         prefs.edit {
             remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN)
             remove(DeveloperUnlockSettings.PREF_ACCESS_TOKEN_SCOPE)
             remove(DeveloperUnlockSettings.PREF_UNLOCKED)
             remove(DeveloperUnlockSettings.PREF_VERIFIED_AT_MS)
         }
+        return true
     }
 
     fun savePendingDeviceCode(ctx: Context, deviceCode: GitHubStarVerifier.DeviceCode) {
@@ -133,6 +135,7 @@ object GitHubDeviceAuthorization {
         }
     }
 
+    @Synchronized
     fun saveAuthorizedAccount(
         ctx: Context,
         accessToken: String,

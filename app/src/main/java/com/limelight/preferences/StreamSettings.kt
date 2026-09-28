@@ -18,6 +18,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.Vibrator
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -2546,7 +2547,10 @@ class StreamSettings : ThemedAppCompatActivity() {
                     }.onFailure { error ->
                         if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
                                 error.authorizationFailure) {
-                            showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = true)
+                            showCrownStoreGitHubAuthorizationRequiredDialog(
+                                clearSavedToken = true,
+                                failedToken = accessToken
+                            )
                         } else {
                             Log.e("CrownStore", "Failed to publish Crown Store profile", error)
                             Toast.makeText(
@@ -2563,10 +2567,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
         }
 
-        private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean) {
+        private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean, failedToken: String? = null) {
             val ctx = requireContext()
             if (clearSavedToken) {
-                GitHubDeviceAuthorization.clearCredentials(ctx)
+                if (failedToken == null || !GitHubDeviceAuthorization.clearCredentials(ctx, failedToken)) return
                 refreshDeveloperFeatureGateState()
             }
 
@@ -4673,7 +4677,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 if (pendingDeviceCode?.scope == GitHubStarVerifier.OAuthScope.STAR_VERIFICATION) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
-                    pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
+                    pollDeveloperPendingDeviceCode(showPendingToast = false)
                     return
                 }
             }
@@ -4714,7 +4718,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 if (GitHubDeviceAuthorization.accessToken(ctx, scope) == null) {
                     developerPendingDeviceCode = pendingDeviceCode
                     showDeveloperDeviceCodeDialog(pendingDeviceCode)
-                    pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
+                    pollDeveloperPendingDeviceCode(showPendingToast = false)
                     return
                 }
             }
@@ -4753,10 +4757,10 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         private fun resumeDeveloperUnlockVerificationIfPending() {
-            pollDeveloperPendingDeviceCode(showPendingToast = false, enforceThrottle = true)
+            pollDeveloperPendingDeviceCode(showPendingToast = false)
         }
 
-        private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean, enforceThrottle: Boolean) {
+        private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean) {
             val ctx = requireContext().applicationContext
             val deviceCode = developerPendingDeviceCode
                 ?: GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
@@ -4767,7 +4771,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 return
             }
             developerPendingDeviceCode = deviceCode
-            developerUnlockVerificationRunning = true
             if (developerForegroundPollRunning) {
                 if (showPendingToast) {
                     Toast.makeText(ctx, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
@@ -4775,12 +4778,16 @@ class StreamSettings : ThemedAppCompatActivity() {
                 return
             }
 
-            val nowMs = System.currentTimeMillis()
-            if (enforceThrottle && nowMs - developerLastForegroundPollMs < 1500L) {
+            val nowMs = SystemClock.elapsedRealtime()
+            if (nowMs - developerLastForegroundPollMs < deviceCode.intervalSeconds * 1000L) {
+                if (showPendingToast) {
+                    Toast.makeText(ctx, R.string.toast_developer_authorization_pending, Toast.LENGTH_LONG).show()
+                }
                 return
             }
             developerLastForegroundPollMs = nowMs
             developerForegroundPollRunning = true
+            developerUnlockVerificationRunning = true
 
             thread(name = "DeveloperGitHubStarVerifyResume") {
                 try {
@@ -4902,7 +4909,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                     openDeveloperUrl(GitHubDeviceAuthorization.authorizationUrl(deviceCode))
                 }
                 dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                    pollDeveloperPendingDeviceCode(showPendingToast = true, enforceThrottle = false)
+                    pollDeveloperPendingDeviceCode(showPendingToast = true)
                 }
             }
             dialog.setOnDismissListener {

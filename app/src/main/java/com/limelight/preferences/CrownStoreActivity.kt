@@ -1573,7 +1573,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 }.onFailure { error ->
                     if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
                         error.authorizationFailure) {
-                        showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = true)
+                        showCrownStoreGitHubAuthorizationRequiredDialog(
+                            clearSavedToken = true,
+                            failedToken = accessToken
+                        )
                     } else {
                         Log.e("CrownStore", "Failed to publish Crown Store profile", error)
                         Toast.makeText(
@@ -1590,9 +1593,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         }
     }
 
-    private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean) {
-        if (clearSavedToken) {
-            GitHubDeviceAuthorization.clearCredentials(this)
+    private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean, failedToken: String? = null) {
+        if (clearSavedToken && (failedToken == null || !GitHubDeviceAuthorization.clearCredentials(this, failedToken))) {
+            return
         }
 
         AlertDialog.Builder(this, R.style.AppDialogStyle)
@@ -1802,7 +1805,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             } finally {
                 mainHandler.post {
                     developerForegroundPollRunning = false
-                    if (developerPendingDeviceCode == deviceCode) {
+                    if (developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
                         developerUnlockVerificationRunning = false
                     }
                 }
