@@ -50,8 +50,12 @@ class UsbForwardingController(
 
         /** Backstop for a prompt whose dialog never hands focus back. It is
          *  re-checked against focus, so it never settles a dialog that is still
-         *  on screen. */
+         *  on screen - except on a phone whose permission window takes no focus
+         *  at all, where a late answer is honoured instead. */
         private const val PROMPT_TIMEOUT_MS = 30_000L
+
+        /** Settled prompts kept so a late answer can still land. */
+        private const val SETTLED_PROMPT_LIMIT = 4
 
         private val cleanupLock = Any()
         private var lastCleanup = CompletionSignal.completed()
@@ -117,6 +121,11 @@ class UsbForwardingController(
     /** One system permission dialog at a time; everything else waits in here. */
     private val permissionQueue = ArrayDeque<Forwarding>()
     private var pendingPermission: Forwarding? = null
+    /** Prompts settled on our own side (backstop or dismissal) whose system
+     *  dialog may still be up: this phone's permission window takes no window
+     *  focus and answers arrive late, so an answer has to be able to land after
+     *  we already released the device. Kept short, newest last. */
+    private val settledPrompts = LinkedHashMap<Int, UsbDevice>()
     private val promptHandler = Handler(Looper.getMainLooper())
     private var promptTimeout: Runnable? = null
     /** Whether the stream activity holds window focus, i.e. no system dialog
@@ -295,11 +304,20 @@ class UsbForwardingController(
         }
     }
 
-    private fun completePermission(request: Int, granted: Boolean) {
-        val pending = pendingPermission ?: return
-        if (request != pending.request) return
+    private fun completePermission(requestId: Int, granted: Boolean) {
+        val pending = pendingPermission
+        if (pending == null || requestId != pending.request) {
+            // An answer to a prompt we settled ourselves while its dialog was
+            // still up. The device was released on our side, so a grant has to
+            // take it back: the user asked for exactly this device.
+            settledPrompts.remove(requestId)?.let { if (granted) request(it) }
+            return
+        }
         clearPromptTimeout()
         pendingPermission = null
+        // A device the user released while its dialog was up does not want that
+        // dialog's late answer honoured.
+        if (!pending.cancelled) rememberSettled(requestId, pending.device)
         game.onUsbPermissionPromptCompleted()
         if (pending.cancelled) {
             // Released while its dialog was up: the answer no longer applies.
@@ -350,6 +368,14 @@ class UsbForwardingController(
         }
         promptTimeout = timeout
         promptHandler.postDelayed(timeout, PROMPT_TIMEOUT_MS)
+    }
+
+    /** Keeps the last few settled prompts so a late answer can still land. */
+    private fun rememberSettled(request: Int, device: UsbDevice) {
+        settledPrompts[request] = device
+        while (settledPrompts.size > SETTLED_PROMPT_LIMIT) {
+            settledPrompts.remove(settledPrompts.keys.first())
+        }
     }
 
     private fun clearPromptTimeout() {
