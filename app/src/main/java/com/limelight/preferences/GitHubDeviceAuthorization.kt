@@ -34,6 +34,7 @@ object GitHubDeviceAuthorization {
         return true
     }
 
+    @Synchronized
     fun savePendingDeviceCode(ctx: Context, deviceCode: GitHubStarVerifier.DeviceCode) {
         val expiresAtMs = System.currentTimeMillis() + deviceCode.expiresInSeconds * 1000L
         PreferenceManager.getDefaultSharedPreferences(ctx).edit {
@@ -88,6 +89,7 @@ object GitHubDeviceAuthorization {
         )
     }
 
+    @Synchronized
     fun clearPendingDeviceCode(ctx: Context) {
         PreferenceManager.getDefaultSharedPreferences(ctx).edit {
             remove(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE)
@@ -100,6 +102,7 @@ object GitHubDeviceAuthorization {
         }
     }
 
+    @Synchronized
     fun updatePendingPollInterval(ctx: Context, deviceCode: GitHubStarVerifier.DeviceCode, intervalSeconds: Int) {
         val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
         if (prefs.getString(DeveloperUnlockSettings.PREF_PENDING_DEVICE_CODE, null) == deviceCode.deviceCode) {
