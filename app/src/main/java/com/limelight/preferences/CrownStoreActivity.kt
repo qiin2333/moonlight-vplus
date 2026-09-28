@@ -58,17 +58,26 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -120,6 +129,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         STORE,
         MINE
     }
+
+    private enum class StoreSort { STORE_ORDER, NEWEST, OLDEST, NAME_ASC, NAME_DESC }
 
     private data class LocalCrownProfile(
         val id: String,
@@ -303,6 +314,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val background = colorResource(R.color.advance_setting_background)
         val selectedProfile = state.selectedStoreProfile
         val storeGridState = rememberLazyStaggeredGridState()
+        var storeQuery by rememberSaveable { mutableStateOf("") }
+        var storeSort by rememberSaveable { mutableStateOf(StoreSort.STORE_ORDER) }
         BackHandler(enabled = selectedProfile != null) {
             closeStoreProfileDetail()
         }
@@ -330,6 +343,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             CrownTab.STORE -> CrownStoreTabContent(
                                 state = state,
                                 gridState = storeGridState,
+                                query = storeQuery,
+                                onQueryChange = { storeQuery = it },
+                                sort = storeSort,
+                                onSortChange = { storeSort = it },
                                 modifier = Modifier.padding(innerPadding)
                             )
                             CrownTab.MINE -> Column(
@@ -445,9 +462,29 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private fun CrownStoreTabContent(
         state: CrownStoreUiState,
         gridState: LazyStaggeredGridState,
+        query: String,
+        onQueryChange: (String) -> Unit,
+        sort: StoreSort,
+        onSortChange: (StoreSort) -> Unit,
         modifier: Modifier = Modifier
     ) {
         val profiles = state.storeProfiles
+        val visibleProfiles = remember(profiles, query, sort) {
+            val terms = query.trim().lowercase(Locale.ROOT).split(Regex("\\s+")).filter { it.isNotEmpty() }
+            val matches = profiles.orEmpty().filter { profile ->
+                val searchable = (listOf(profile.name, profile.summary, profile.author, profile.game) + profile.tags)
+                    .joinToString(" ").lowercase(Locale.ROOT)
+                terms.all(searchable::contains)
+            }
+            when (sort) {
+                StoreSort.STORE_ORDER -> matches
+                StoreSort.NEWEST -> matches.sortedByDescending { parseStoreUpdatedAt(it.updatedAt)?.time ?: Long.MIN_VALUE }
+                StoreSort.OLDEST -> matches.sortedBy { parseStoreUpdatedAt(it.updatedAt)?.time ?: Long.MAX_VALUE }
+                StoreSort.NAME_ASC -> matches.sortedBy { it.name.lowercase(Locale.ROOT) }
+                StoreSort.NAME_DESC -> matches.sortedByDescending { it.name.lowercase(Locale.ROOT) }
+            }
+        }
+        LaunchedEffect(query, sort) { gridState.scrollToItem(0) }
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(2),
             state = gridState,
@@ -475,6 +512,60 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         ) {
                             showCrownShareUrlImportDialog()
                         }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        label = { Text(stringResource(R.string.crown_store_search_hint)) },
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.ic_search_stylish), contentDescription = null)
+                        },
+                        trailingIcon = if (query.isNotEmpty()) {{
+                            IconButton(onClick = { onQueryChange("") }) {
+                                Icon(
+                                    painterResource(R.drawable.ic_close_stylish),
+                                    contentDescription = stringResource(R.string.crown_store_clear_search)
+                                )
+                            }
+                        }} else null,
+                        singleLine = true,
+                        shape = AppShapes.medium,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = colorResource(R.color.crown_text_primary),
+                            unfocusedTextColor = colorResource(R.color.crown_text_primary),
+                            focusedBorderColor = appAccentColor(),
+                            unfocusedBorderColor = colorResource(R.color.crown_text_secondary),
+                            focusedLabelColor = appAccentColor(),
+                            unfocusedLabelColor = colorResource(R.color.crown_text_secondary)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    var sortMenuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        CrownActionButton(
+                            text = stringResource(R.string.crown_store_sort_by, storeSortLabel(sort)),
+                            iconRes = R.drawable.phc_list
+                        ) { sortMenuExpanded = true }
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false }
+                        ) {
+                            StoreSort.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(storeSortLabel(option)) },
+                                    onClick = {
+                                        onSortChange(option)
+                                        sortMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    if (profiles != null && !state.storeLoading && state.storeError == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        CrownBodyText(stringResource(R.string.crown_store_results_count, visibleProfiles.size))
                     }
                 }
             }
@@ -509,7 +600,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         loadStoreProfiles(force = true)
                     }
                 }
-                else -> items(profiles) { profile ->
+                visibleProfiles.isEmpty() -> item(span = StaggeredGridItemSpan.FullLine) {
+                    CrownStateCard(
+                        title = stringResource(R.string.crown_store_no_search_results),
+                        message = stringResource(R.string.crown_store_try_another_search)
+                    )
+                }
+                else -> items(visibleProfiles) { profile ->
                     CrownStoreProfileCard(
                         profile = profile,
                         modifier = Modifier.clickable { openStoreProfileDetail(profile) }
@@ -518,6 +615,15 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             }
         }
     }
+
+    @Composable
+    private fun storeSortLabel(sort: StoreSort): String = stringResource(when (sort) {
+        StoreSort.STORE_ORDER -> R.string.crown_store_sort_store_order
+        StoreSort.NEWEST -> R.string.crown_store_sort_newest
+        StoreSort.OLDEST -> R.string.crown_store_sort_oldest
+        StoreSort.NAME_ASC -> R.string.crown_store_sort_name_asc
+        StoreSort.NAME_DESC -> R.string.crown_store_sort_name_desc
+    })
 
     @Composable
     private fun CrownMineTabContent(profiles: List<LocalCrownProfile>) {

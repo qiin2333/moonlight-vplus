@@ -1721,6 +1721,17 @@
     <string name="crown_store_action_open">打开</string>
     <string name="crown_store_action_import_package">导入分享包</string>
     <string name="crown_store_action_refresh">刷新一下</string>
+    <string name="crown_store_search_hint">搜索王冠、游戏、作者或标签</string>
+    <string name="crown_store_clear_search">清除搜索</string>
+    <string name="crown_store_sort_by">排序：%1$s</string>
+    <string name="crown_store_sort_store_order">超市原顺序</string>
+    <string name="crown_store_sort_newest">最近更新</string>
+    <string name="crown_store_sort_oldest">最早更新</string>
+    <string name="crown_store_sort_name_asc">名称 A–Z</string>
+    <string name="crown_store_sort_name_desc">名称 Z–A</string>
+    <string name="crown_store_results_count">%1$d 套王冠</string>
+    <string name="crown_store_no_search_results">没有匹配的王冠</string>
+    <string name="crown_store_try_another_search">换个配置名、游戏、作者或标签试试。</string>
     <string name="crown_store_action_import_profile">收下这套</string>
     <string name="crown_store_action_report_profile">举报</string>
     <string name="crown_store_action_edit_publish">补充信息并投稿</string>
