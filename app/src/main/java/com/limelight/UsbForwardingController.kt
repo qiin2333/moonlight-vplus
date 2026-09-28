@@ -9,8 +9,6 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.view.InputDevice
 import android.widget.Toast
 import androidx.compose.runtime.getValue
@@ -44,13 +42,6 @@ class UsbForwardingController(
     private val httpProvider: () -> NvHTTP?
 ) : AutoCloseable {
     companion object {
-        /** Covers the result broadcast the dialog sends as it finishes, so an
-         *  answered prompt is never mistaken for a dismissed one. */
-        private const val PROMPT_DISMISS_GRACE_MS = 400L
-
-        /** Settled prompts kept so a late answer can still land. */
-        private const val SETTLED_PROMPT_LIMIT = 4
-
         private val cleanupLock = Any()
         private var lastCleanup = CompletionSignal.completed()
 
@@ -115,14 +106,6 @@ class UsbForwardingController(
     /** One system permission dialog at a time; everything else waits in here. */
     private val permissionQueue = ArrayDeque<Forwarding>()
     private var pendingPermission: Forwarding? = null
-    /** Prompts we settled ourselves - a dismissal the dialog never answered -
-     *  whose dialog may still be up: an answer has to be able to land after we
-     *  already released the device. Kept short, newest last. */
-    private val settledPrompts = LinkedHashMap<Int, UsbDevice>()
-    private val promptHandler = Handler(Looper.getMainLooper())
-    /** Whether the stream activity holds window focus, i.e. no system dialog
-     *  is on top of it; the stream starts focused. */
-    private var hasFocus = true
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -296,18 +279,11 @@ class UsbForwardingController(
     }
 
     private fun completePermission(requestId: Int, granted: Boolean) {
-        val pending = pendingPermission
-        if (pending == null || requestId != pending.request) {
-            // An answer to a prompt we settled ourselves while its dialog was
-            // still up. The device was released on our side, so a grant has to
-            // take it back: the user asked for exactly this device.
-            settledPrompts.remove(requestId)?.let { if (granted) request(it) }
-            return
-        }
+        // One prompt is outstanding at a time and the queue only moves on once
+        // its answer is in, so anything else is a stray broadcast.
+        val pending = pendingPermission ?: return
+        if (requestId != pending.request) return
         pendingPermission = null
-        // A device the user released while its dialog was up does not want that
-        // dialog's late answer honoured.
-        if (!pending.cancelled) rememberSettled(requestId, pending.device)
         game.onUsbPermissionPromptCompleted()
         if (pending.cancelled) {
             // Released while its dialog was up: the answer no longer applies.
@@ -317,33 +293,6 @@ class UsbForwardingController(
         if (granted && manager.hasPermission(pending.device)) export(pending)
         else releaseGroup(listOf(pending), R.string.usb_forward_permission_denied)
         pumpPermissionQueue()
-    }
-
-    /** Called when the stream regains window focus, which means any system
-     *  dialog on top of it is gone. A prompt with no answer by then was
-     *  dismissed rather than decided: settle it as not granted, or it would
-     *  block every later request until the app restarted. The grace covers the
-     *  result broadcast, which the dialog sends as it finishes, and focus is
-     *  re-checked when it expires: losing it again means the dialog is only
-     *  late, not dismissed - our own sheet closing hands focus back before the
-     *  system dialog has taken it. */
-    fun onFocusChanged(focused: Boolean) {
-        hasFocus = focused
-        if (closed || !focused) return
-        val request = pendingPermission?.request ?: return
-        promptHandler.postDelayed({
-            if (closed || !hasFocus || pendingPermission?.request != request) return@postDelayed
-            LimeLog.warning("USB permission prompt $request was dismissed; treating it as not granted")
-            completePermission(request, false)
-        }, PROMPT_DISMISS_GRACE_MS)
-    }
-
-    /** Keeps the last few settled prompts so a late answer can still land. */
-    private fun rememberSettled(request: Int, device: UsbDevice) {
-        settledPrompts[request] = device
-        while (settledPrompts.size > SETTLED_PROMPT_LIMIT) {
-            settledPrompts.remove(settledPrompts.keys.first())
-        }
     }
 
     /** Drops a device that is waiting for permission. A dialog that is already on
