@@ -1,5 +1,6 @@
 package com.limelight.binding.input.advance_setting.share
 
+import com.limelight.preferences.GitHubHttpClient
 import com.limelight.utils.MathUtils
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -7,6 +8,42 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GitHubCrownProfileStorePublisherTest {
+    @Test
+    fun rateLimitedResponseDoesNotInvalidateAuthorization() {
+        val response = GitHubHttpClient.Result(
+            403, "{\"message\":\"secondary rate limit\"}", "60", "0"
+        )
+        val error = GitHubCrownProfileStorePublisher.apiException(response, "request failed")
+
+        assertEquals(false, error.authorizationFailure)
+        assertTrue(error.message.orEmpty().contains("retry after 60 seconds"))
+    }
+
+    @Test
+    fun unauthorizedResponseInvalidatesAuthorization() {
+        val response = GitHubHttpClient.Result(401, "{\"message\":\"Bad credentials\"}", null, null)
+        val error = GitHubCrownProfileStorePublisher.apiException(response, "request failed")
+
+        assertTrue(error.authorizationFailure)
+    }
+
+    @Test
+    fun forbiddenPermissionResponseRequestsReauthorization() {
+        val response = GitHubHttpClient.Result(403, "{\"message\":\"Resource not accessible\"}", null, "100")
+        val error = GitHubCrownProfileStorePublisher.apiException(response, "request failed")
+
+        assertTrue(error.authorizationFailure)
+    }
+
+    @Test
+    fun tooManyRequestsDoesNotInvalidateAuthorization() {
+        val response = GitHubHttpClient.Result(429, "{\"message\":\"Too many requests\"}", "30", null)
+        val error = GitHubCrownProfileStorePublisher.apiException(response, "request failed")
+
+        assertEquals(false, error.authorizationFailure)
+        assertTrue(error.message.orEmpty().contains("retry after 30 seconds"))
+    }
+
     @Test
     fun buildProfilePathUsesGameNameAndBundleHash() {
         val request = publishRequest(profileName = "Apex FPS Layout", game = "Apex Legends")

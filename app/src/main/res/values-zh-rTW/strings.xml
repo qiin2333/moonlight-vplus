@@ -928,6 +928,7 @@
     <string name="background_source_local">本機圖片</string>
     <string name="background_source_none">不顯示背景</string>
     <string name="float_ball_action_toggle_visibility">切換懸浮球顯示或隱藏</string>
+    <string name="float_ball_action_show_perf_overlay">顯示效能監控圖層</string>
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需要動態中繼資料分析）</string>
     <string name="hdr_mode_hlg">HLG（混合對數伽瑪）</string>
