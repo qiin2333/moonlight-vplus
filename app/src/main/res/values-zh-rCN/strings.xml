@@ -1730,6 +1730,8 @@
     <string name="crown_store_sort_name_asc">名称 A–Z</string>
     <string name="crown_store_sort_name_desc">名称 Z–A</string>
     <string name="crown_store_results_count">%1$d 套王冠</string>
+    <string name="crown_store_card_game">游戏：%1$s</string>
+    <string name="crown_store_card_author">作者：%1$s</string>
     <string name="crown_store_no_search_results">没有匹配的王冠</string>
     <string name="crown_store_try_another_search">换个配置名、游戏、作者或标签试试。</string>
     <string name="crown_store_action_import_profile">收下这套</string>

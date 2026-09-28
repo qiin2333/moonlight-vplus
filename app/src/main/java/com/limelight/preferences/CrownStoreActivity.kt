@@ -27,6 +27,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button as ComposeButton
 import androidx.compose.material3.ButtonDefaults
@@ -66,8 +68,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -82,12 +82,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -310,7 +312,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
     @Composable
     private fun CrownStoreScreen(state: CrownStoreUiState) {
-        val background = colorResource(R.color.advance_setting_background)
+        val background = colorResource(R.color.crown_store_background)
         val selectedProfile = state.selectedStoreProfile
         val storeGridState = rememberLazyStaggeredGridState()
         var storeQuery by rememberSaveable { mutableStateOf("") }
@@ -371,7 +373,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             CrownTab.STORE -> stringResource(R.string.crown_store_tab_store)
             CrownTab.MINE -> stringResource(R.string.crown_store_tab_mine)
         }
-        val textColor = colorResource(R.color.crown_text_primary)
+        val textColor = colorResource(R.color.crown_store_text_primary)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -408,9 +410,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
     @Composable
     private fun CrownStoreBottomBar(selectedTab: CrownTab) {
-        val container = colorResource(R.color.crown_panel_background)
+        val container = colorResource(R.color.crown_store_panel_background)
         val selected = appAccentColor()
-        val unselected = colorResource(R.color.crown_text_secondary)
+        val unselected = colorResource(R.color.crown_store_text_secondary)
         NavigationBar(
             containerColor = container,
             tonalElevation = 0.dp,
@@ -517,49 +519,59 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
+                        val searchHint = stringResource(R.string.crown_store_search_hint)
+                        val searchTextColor = colorResource(R.color.crown_store_text_primary)
+                        val searchHintColor = colorResource(R.color.crown_store_text_secondary)
+                        BasicTextField(
                             value = query,
                             onValueChange = onQueryChange,
-                            placeholder = { Text(stringResource(R.string.crown_store_search_hint)) },
-                            leadingIcon = {
-                                Icon(
-                                    painterResource(R.drawable.ic_search_stylish),
-                                    contentDescription = null,
-                                    tint = appAccentColor()
-                                )
-                            },
-                            trailingIcon = if (query.isNotEmpty()) {{
-                                IconButton(onClick = { onQueryChange("") }) {
-                                    Icon(
-                                        painterResource(R.drawable.ic_close_stylish),
-                                        contentDescription = stringResource(R.string.crown_store_clear_search)
-                                    )
-                                }
-                            }} else null,
                             singleLine = true,
-                            shape = AppShapes.medium,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = colorResource(R.color.crown_text_primary),
-                                unfocusedTextColor = colorResource(R.color.crown_text_primary),
-                                focusedBorderColor = appAccentColor(),
-                                unfocusedBorderColor = colorResource(R.color.crown_text_secondary),
-                                focusedPlaceholderColor = colorResource(R.color.crown_text_secondary),
-                                unfocusedPlaceholderColor = colorResource(R.color.crown_text_secondary)
-                            )
+                            textStyle = TextStyle(color = searchTextColor, fontSize = 14.sp, lineHeight = 20.sp),
+                            cursorBrush = SolidColor(appAccentColor()),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .border(1.dp, searchHintColor, AppShapes.medium)
+                                .padding(horizontal = 12.dp),
+                            decorationBox = { innerTextField ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_search_stylish),
+                                        contentDescription = null,
+                                        tint = appAccentColor(),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                                        if (query.isEmpty()) {
+                                            Text(searchHint, color = searchHintColor, fontSize = 14.sp)
+                                        }
+                                        innerTextField()
+                                    }
+                                    if (query.isNotEmpty()) {
+                                        IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(40.dp)) {
+                                            Icon(
+                                                painterResource(R.drawable.ic_close_stylish),
+                                                contentDescription = stringResource(R.string.crown_store_clear_search),
+                                                tint = searchHintColor
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         )
                         Box {
                             IconButton(
                                 onClick = { sortMenuExpanded = true },
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .background(colorResource(R.color.crown_input_background), AppShapes.medium)
+                                    .background(colorResource(R.color.crown_store_input_background), AppShapes.medium)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_crown_sort),
                                     contentDescription = stringResource(R.string.crown_store_sort_by, storeSortLabel(sort)),
                                     tint = if (sort == StoreSort.STORE_ORDER) {
-                                        colorResource(R.color.crown_text_primary)
+                                        colorResource(R.color.crown_store_text_primary)
                                     } else appAccentColor()
                                 )
                             }
@@ -695,7 +707,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.crown_store_my_workspace_title),
-                        color = colorResource(R.color.crown_text_primary),
+                        color = colorResource(R.color.crown_store_text_primary),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -706,7 +718,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Box(
                     modifier = Modifier
                         .background(
-                            color = colorResource(R.color.crown_input_background),
+                            color = colorResource(R.color.crown_store_input_background),
                             shape = AppShapes.medium
                         )
                         .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -721,7 +733,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         )
                         Text(
                             text = stringResource(R.string.crown_store_profile_unit),
-                            color = colorResource(R.color.crown_text_secondary),
+                            color = colorResource(R.color.crown_store_text_secondary),
                             fontSize = 10.sp
                         )
                     }
@@ -768,7 +780,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,
-                color = colorResource(R.color.crown_text_primary),
+                color = colorResource(R.color.crown_store_text_primary),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
@@ -776,11 +788,11 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             if (!countText.isNullOrBlank()) {
                 Text(
                     text = countText,
-                    color = colorResource(R.color.crown_text_secondary),
+                    color = colorResource(R.color.crown_store_text_secondary),
                     fontSize = 11.sp,
                     modifier = Modifier
                         .background(
-                            color = colorResource(R.color.crown_input_background),
+                            color = colorResource(R.color.crown_store_input_background),
                             shape = RoundedCornerShape(50)
                         )
                         .padding(horizontal = 9.dp, vertical = 4.dp)
@@ -799,14 +811,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Icon(
                     painter = painterResource(R.drawable.phc_list),
                     contentDescription = null,
-                    tint = colorResource(R.color.crown_text_secondary),
+                    tint = colorResource(R.color.crown_store_text_secondary),
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.crown_config_action_import_legacy),
-                        color = colorResource(R.color.crown_text_primary),
+                        color = colorResource(R.color.crown_store_text_primary),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -832,13 +844,24 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     ) {
         CrownProfileCard(modifier) {
             CrownCardTitle(profile.name, maxLines = 2)
-            val subtitle = listOf(profile.game, profile.author)
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .joinToString(" · ")
-            if (subtitle.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                CrownMetaText(subtitle, strong = false)
+            if (profile.game.isNotBlank() || profile.author.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    if (profile.game.isNotBlank()) {
+                        CrownMetaText(
+                            stringResource(R.string.crown_store_card_game, profile.game),
+                            strong = false,
+                            maxLines = 2
+                        )
+                    }
+                    if (profile.author.isNotBlank()) {
+                        CrownMetaText(
+                            stringResource(R.string.crown_store_card_author, profile.author),
+                            strong = false,
+                            maxLines = 2
+                        )
+                    }
+                }
             }
             if (profile.summary.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -890,7 +913,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             CrownProfileCard {
                 Text(
                     text = profile.name,
-                    color = colorResource(R.color.crown_text_primary),
+                    color = colorResource(R.color.crown_store_text_primary),
                     fontSize = 20.sp,
                     lineHeight = 25.sp,
                     fontWeight = FontWeight.Bold
@@ -1022,12 +1045,12 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             modifier = modifier.fillMaxWidth(),
             shape = AppShapes.large,
             colors = CardDefaults.cardColors(
-                containerColor = colorResource(R.color.crown_section_background)
+                containerColor = colorResource(R.color.crown_store_section_background)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             border = BorderStroke(
                 width = 1.dp,
-                color = colorResource(R.color.crown_section_border)
+                color = colorResource(R.color.crown_store_section_border)
             )
         ) {
             Column(
@@ -1066,13 +1089,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Icon(
                     painter = painterResource(R.drawable.phc_info),
                     contentDescription = null,
-                    tint = colorResource(R.color.crown_text_primary),
+                    tint = colorResource(R.color.crown_store_text_primary),
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = title,
-                    color = colorResource(R.color.crown_text_primary),
+                    color = colorResource(R.color.crown_store_text_primary),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1095,7 +1118,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private fun CrownCardTitle(text: String, maxLines: Int = 2) {
         Text(
             text = text,
-            color = colorResource(R.color.crown_text_primary),
+            color = colorResource(R.color.crown_store_text_primary),
             fontSize = 15.4.sp,
             fontWeight = FontWeight.Bold,
             maxLines = maxLines,
@@ -1107,7 +1130,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private fun CrownBodyText(text: String, maxLines: Int = Int.MAX_VALUE) {
         Text(
             text = text,
-            color = colorResource(R.color.crown_text_secondary),
+            color = colorResource(R.color.crown_store_text_secondary),
             fontSize = 13.5.sp,
             lineHeight = 18.sp,
             maxLines = maxLines,
@@ -1121,7 +1144,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = label,
-            color = colorResource(R.color.crown_text_primary),
+            color = colorResource(R.color.crown_store_text_primary),
             fontSize = 11.6.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.alpha(0.7f)
@@ -1129,7 +1152,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            color = colorResource(R.color.crown_text_secondary),
+            color = colorResource(R.color.crown_store_text_secondary),
             fontSize = 13.5.sp,
             lineHeight = 19.sp
         )
@@ -1141,7 +1164,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = text,
-            color = colorResource(R.color.crown_text_secondary),
+            color = colorResource(R.color.crown_store_text_secondary),
             fontSize = 12.sp,
             lineHeight = 17.sp,
             modifier = Modifier.alpha(0.72f)
@@ -1149,48 +1172,37 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownMetaText(text: String, strong: Boolean) {
+    private fun CrownMetaText(text: String, strong: Boolean, maxLines: Int = 1) {
         Text(
             text = text,
-            color = if (strong) colorResource(R.color.crown_text_primary) else colorResource(R.color.crown_text_secondary),
+            color = if (strong) colorResource(R.color.crown_store_text_primary) else colorResource(R.color.crown_store_text_secondary),
             fontSize = if (strong) 12.2.sp else 11.6.sp,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.alpha(if (strong) 0.84f else 0.76f)
+            modifier = Modifier.alpha(if (strong) 0.9f else 1f)
         )
     }
 
     @Composable
-    private fun CrownFootnote(text: String, modifier: Modifier = Modifier) {
+    private fun CrownFootnote(text: String) {
         Text(
             text = text,
-            color = colorResource(R.color.crown_text_secondary),
+            color = colorResource(R.color.crown_store_text_secondary),
             fontSize = 10.8.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier.alpha(0.62f)
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
     }
 
     @Composable
     private fun CrownStoreCardFooter(layoutBasis: String, updatedAt: String) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             if (layoutBasis.isNotBlank()) {
-                CrownFootnote(
-                    text = layoutBasis,
-                    modifier = Modifier.weight(1f)
-                )
+                CrownFootnote(text = layoutBasis)
             }
             if (updatedAt.isNotBlank()) {
-                CrownFootnote(
-                    text = updatedAt,
-                    modifier = if (layoutBasis.isBlank()) Modifier.weight(1f) else Modifier
-                )
+                CrownFootnote(text = updatedAt)
             }
         }
     }
@@ -1215,7 +1227,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             modifier = modifier
                 .height(25.dp)
                 .background(
-                    color = colorResource(R.color.crown_input_background),
+                    color = colorResource(R.color.crown_store_input_background),
                     shape = AppShapes.small
                 )
                 .padding(horizontal = 7.dp),
@@ -1223,7 +1235,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         ) {
             Text(
                 text = text,
-                color = colorResource(R.color.crown_text_secondary),
+                color = colorResource(R.color.crown_store_text_secondary),
                 fontSize = 10.4.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1266,8 +1278,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         compact: Boolean = false,
         onClick: () -> Unit
     ) {
-        val container = if (primary) appAccentColor() else colorResource(R.color.crown_input_background)
-        val content = if (primary) colorResource(R.color.app_dialog_title_color) else colorResource(R.color.crown_text_primary)
+        val container = if (primary) appAccentColor() else colorResource(R.color.crown_store_input_background)
+        val content = if (primary) colorResource(R.color.app_dialog_title_color) else colorResource(R.color.crown_store_text_primary)
         ComposeButton(
             onClick = onClick,
             modifier = modifier.height(if (compact) 38.dp else 44.dp),
@@ -1281,7 +1293,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 color = if (primary) {
                     appAccentColor().copy(alpha = 0.75f)
                 } else {
-                    colorResource(R.color.crown_input_border)
+                    colorResource(R.color.crown_store_input_border)
                 }
             ),
             contentPadding = if (compact) {

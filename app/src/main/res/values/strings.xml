@@ -941,6 +941,8 @@
     <string name="crown_store_sort_name_asc">Name A–Z</string>
     <string name="crown_store_sort_name_desc">Name Z–A</string>
     <string name="crown_store_results_count">%1$d crowns</string>
+    <string name="crown_store_card_game">Game: %1$s</string>
+    <string name="crown_store_card_author">By %1$s</string>
     <string name="crown_store_no_search_results">No matching crowns</string>
     <string name="crown_store_try_another_search">Try another name, game, author, or tag.</string>
     <string name="crown_store_action_import_profile">Bring Home</string>
