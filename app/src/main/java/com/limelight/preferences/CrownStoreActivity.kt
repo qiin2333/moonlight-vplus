@@ -1646,8 +1646,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         thread(name = "CrownStoreGitHubDeviceCode") {
             try {
                 val savedToken = GitHubDeviceAuthorization.accessToken(appContext, scope)
-                if (savedToken != null) {
-                    val starCheck = GitHubStarVerifier.checkStar(savedToken)
+                val starCheck = try {
+                    savedToken?.let(GitHubStarVerifier::checkStar)
+                } catch (_: GitHubStarVerifier.AuthorizationExpiredException) {
+                    GitHubDeviceAuthorization.clearCredentials(appContext, savedToken)
+                    null
+                }
+                if (savedToken != null && starCheck != null) {
                     mainHandler.post {
                         developerUnlockVerificationRunning = false
                         completeDeveloperUnlockVerification(

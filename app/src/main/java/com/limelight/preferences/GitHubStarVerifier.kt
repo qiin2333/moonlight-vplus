@@ -7,6 +7,7 @@ import java.net.HttpURLConnection
 import kotlin.math.max
 
 object GitHubStarVerifier {
+    class AuthorizationExpiredException : IOException("GitHub authorization expired")
     private const val DEVICE_CODE_URL = "https://github.com/login/device/code"
     private const val ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
     private const val API_USER_URL = "https://api.github.com/user"
@@ -120,7 +121,7 @@ object GitHubStarVerifier {
         return when (response.code) {
             HttpURLConnection.HTTP_NO_CONTENT -> StarCheck(starred = true, login = login)
             HttpURLConnection.HTTP_NOT_FOUND -> StarCheck(starred = false, login = login)
-            HttpURLConnection.HTTP_UNAUTHORIZED -> throw IOException("GitHub authorization expired")
+            HttpURLConnection.HTTP_UNAUTHORIZED -> throw AuthorizationExpiredException()
             HttpURLConnection.HTTP_FORBIDDEN -> throw IOException(errorMessage(response.body, "GitHub denied the star check"))
             else -> throw IOException(errorMessage(response.body, "GitHub star check failed (${response.code})"))
         }

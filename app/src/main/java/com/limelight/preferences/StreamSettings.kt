@@ -4724,9 +4724,15 @@ class StreamSettings : ThemedAppCompatActivity() {
             thread(name = "DeveloperGitHubStarVerify") {
                 try {
                     val savedToken = GitHubDeviceAuthorization.accessToken(ctx, scope)
-                    if (savedToken != null) {
+                    val starCheck = try {
+                        savedToken?.let(GitHubStarVerifier::checkStar)
+                    } catch (_: GitHubStarVerifier.AuthorizationExpiredException) {
+                        GitHubDeviceAuthorization.clearCredentials(ctx, savedToken)
+                        null
+                    }
+                    if (savedToken != null && starCheck != null) {
                         completeDeveloperUnlockVerification(
-                            ctx, savedToken, GitHubStarVerifier.checkStar(savedToken), scope
+                            ctx, savedToken, starCheck, scope
                         )
                     } else {
                         val deviceCode = GitHubDeviceAuthorization.pendingDeviceCode(ctx, scope)
