@@ -3,8 +3,6 @@ package com.limelight.utils
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -83,18 +81,25 @@ class Dialog private constructor(
         titleView.text = title
         contentView.text = formatDetailsMessage(message)
 
-        copyButton.setOnClickListener {
-            val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText(
-                activity.getString(R.string.copy_details),
-                contentView.text.toString()
-            )
-            clipboard.setPrimaryClip(clip)
-            Toast.makeText(activity, activity.getString(R.string.copy_success), Toast.LENGTH_SHORT).show()
+        val clipboard = ClipboardServiceCompat.get(activity)
+        if (clipboard == null) {
+            copyButton.visibility = View.GONE
         }
-
+        copyButton.setOnClickListener {
+            val copied = ClipboardServiceCompat.setPrimaryClip(
+                activity,
+                ClipData.newPlainText(
+                    activity.getString(R.string.copy_details),
+                    contentView.text.toString()
+                )
+            )
+            if (copied) {
+                Toast.makeText(activity, activity.getString(R.string.copy_success), Toast.LENGTH_SHORT).show()
+            }
+        }
         copyButton.isFocusable = true
         copyButton.isFocusableInTouchMode = true
+
         contentView.isFocusable = true
         contentView.isFocusableInTouchMode = true
 
@@ -122,7 +127,7 @@ class Dialog private constructor(
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_UP -> {
-                        copyButton.requestFocus()
+                        if (clipboard != null) copyButton.requestFocus()
                         true
                     }
                     else -> false
@@ -134,7 +139,7 @@ class Dialog private constructor(
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        copyButton.requestFocus()
+                        if (clipboard != null) copyButton.requestFocus()
                         true
                     }
                     else -> false
@@ -163,7 +168,7 @@ class Dialog private constructor(
         }
 
         alert.setOnShowListener {
-            copyButton.requestFocus()
+            if (clipboard != null) copyButton.requestFocus() else contentView.requestFocus()
         }
 
         alert.setOnKeyListener { _, keyCode, event ->

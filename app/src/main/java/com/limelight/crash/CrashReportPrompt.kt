@@ -3,8 +3,6 @@ package com.limelight.crash
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -18,6 +16,7 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 
 import com.limelight.R
+import com.limelight.utils.ClipboardServiceCompat
 import com.limelight.preferences.BackgroundSource
 import com.limelight.utils.AppDialogStyler
 
@@ -63,7 +62,7 @@ object CrashReportPrompt {
             builder.setNeutralButton(R.string.crash_report_photo) { _, _ ->
                 showPhotoSummary(activity)
             }
-        } else {
+        } else if (ClipboardServiceCompat.get(activity) != null) {
             builder.setNeutralButton(R.string.crash_report_copy) { _, _ ->
                 copyReport(activity)
                 // 复制后保留报告文件，方便用户多次粘贴或最终分享
@@ -213,9 +212,12 @@ object CrashReportPrompt {
         } catch (_: Exception) {
             return
         }
-        val cm = activity.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-        cm.setPrimaryClip(ClipData.newPlainText(
-            activity.getString(R.string.crash_report_subject), text))
-        Toast.makeText(activity, R.string.crash_report_copied, Toast.LENGTH_SHORT).show()
+        val copied = ClipboardServiceCompat.setPrimaryClip(
+            activity,
+            ClipData.newPlainText(activity.getString(R.string.crash_report_subject), text)
+        )
+        if (copied) {
+            Toast.makeText(activity, R.string.crash_report_copied, Toast.LENGTH_SHORT).show()
+        }
     }
 }

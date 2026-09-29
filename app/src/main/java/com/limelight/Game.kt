@@ -65,7 +65,9 @@ import com.limelight.ui.GameGestures
 import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
+import com.limelight.ui.StartHoldWheelNativeView
 import com.limelight.utils.Dialog
+import com.limelight.utils.ClipboardServiceCompat
 import com.limelight.utils.PanZoomHandler
 import com.limelight.utils.RemoteImeController
 import com.limelight.utils.FullscreenProgressOverlay
@@ -224,7 +226,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var activeGameMenu: GameMenu? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
-    private var startHoldWheelView: ComposeView? = null
+    private var startHoldWheelView: View? = null
+    private var startHoldWheelNativeView: StartHoldWheelNativeView? = null
     private val startHoldWheelVisible = mutableStateOf(false)
     private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
@@ -2191,7 +2194,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         )
         runCatching { mgr.start() }
             .onFailure { LimeLog.warning("Clipboard sync start failed: ${it.message}") }
-            .onSuccess { clipboardSyncManager = mgr }
+            .onSuccess { started -> if (started) clipboardSyncManager = mgr }
     }
 
     /** 启动智能码率（如设置已开启）。在连接建立后调用。*/
@@ -2953,6 +2956,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             BackKeyMenuMode.NO_MENU_LOCKED -> false
             BackKeyMenuMode.GAME_MENU -> {
+                if (ClipboardServiceCompat.get(this) == null) {
+                    // GameMenu is Compose-based; on TV firmware without a clipboard service,
+                    // Compose crashes while attaching its root view.
+                    return false
+                }
                 val existingMenu = activeGameMenu
                 if (existingMenu?.isShowing() == true) {
                     true
@@ -3068,24 +3076,34 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun installStartHoldWheelOverlay(parent: FrameLayout) {
-        startHoldWheelView = ComposeView(this).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        val nativeFallback = ClipboardServiceCompat.get(this) == null
+        val wheelView = if (nativeFallback) {
+            StartHoldWheelNativeView(this)
+        } else {
+            ComposeView(this).apply {
+                setViewCompositionStrategy(
+                    ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+                )
+                setContent {
+                    StartHoldWheelOverlay(
+                        visible = startHoldWheelVisible.value,
+                        selectedAction = startHoldWheelSelection.value,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+        startHoldWheelNativeView = wheelView as? StartHoldWheelNativeView
+        startHoldWheelView = wheelView.apply {
             isFocusable = false
             isFocusableInTouchMode = false
             isClickable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             visibility = View.GONE
             setOnTouchListener { _, _ -> false }
-            setContent {
-                StartHoldWheelOverlay(
-                    visible = startHoldWheelVisible.value,
-                    selectedAction = startHoldWheelSelection.value,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
         }
         parent.addView(
-            startHoldWheelView,
+            wheelView,
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -3104,6 +3122,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun updateStartHoldWheelSelection(action: StartWheelAction) {
         runOnUiThread {
             startHoldWheelSelection.value = action
+            startHoldWheelNativeView?.setSelectedAction(action)
         }
     }
 
@@ -3111,6 +3130,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         runOnUiThread {
             startHoldWheelVisible.value = false
             startHoldWheelSelection.value = StartWheelAction.CONTINUE
+            startHoldWheelNativeView?.setSelectedAction(StartWheelAction.CONTINUE)
             startHoldWheelView?.visibility = View.GONE
         }
     }

@@ -1,13 +1,13 @@
 package com.limelight.preferences
 
 import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.limelight.R
+import com.limelight.utils.ClipboardServiceCompat
 
 object GitHubDeviceAuthorization {
     private const val LOG_TAG = "DeveloperUnlock"
@@ -122,20 +122,22 @@ object GitHubDeviceAuthorization {
         deviceCode: GitHubStarVerifier.DeviceCode,
         showToast: Boolean = true
     ) {
-        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-        runCatching {
-            clipboard.setPrimaryClip(
-                ClipData.newPlainText(
-                    ctx.getString(R.string.developer_device_code_clip_label),
-                    deviceCode.userCode
-                )
+        val copied = ClipboardServiceCompat.setPrimaryClip(
+            ctx,
+            ClipData.newPlainText(
+                ctx.getString(R.string.developer_device_code_clip_label),
+                deviceCode.userCode
             )
-        }.onSuccess {
-            if (showToast) {
-                Toast.makeText(ctx, R.string.toast_developer_device_code_copied, Toast.LENGTH_SHORT).show()
-            }
-        }.onFailure {
-            Log.w(LOG_TAG, "Failed to copy GitHub device code", it)
+        )
+        if (copied && showToast) {
+            Toast.makeText(
+                ctx,
+                R.string.toast_developer_device_code_copied,
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        if (!copied) {
+            Log.w(LOG_TAG, "Failed to copy GitHub device code")
         }
     }
 

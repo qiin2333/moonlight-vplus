@@ -3,7 +3,6 @@ package com.limelight.preferences
 
 import android.annotation.SuppressLint
 import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
@@ -102,6 +101,7 @@ import com.limelight.binding.input.resolveControllerPageRightStickYAxis
 import com.limelight.ui.UiDialogKeyHandler
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.HdrCapabilityHelper
+import com.limelight.utils.ClipboardServiceCompat
 import com.limelight.utils.UiHelper
 import kotlinx.coroutines.launch
 import com.limelight.utils.appAccentColor
@@ -118,7 +118,6 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
     private var controllerScrollSequence by mutableIntStateOf(0)
     private var controllerScrollDirection by mutableIntStateOf(0)
     private var controllerScrollDeviceId: Int? = null
-
     private fun tr(@StringRes id: Int, vararg args: Any): String {
         return if (args.isEmpty()) getString(id) else getString(id, *args)
     }
@@ -138,18 +137,26 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
         plainTextReport = StringBuilder()
         val cards = generateReport()
+        val copyAvailable = ClipboardServiceCompat.get(this) != null
 
         setContent {
             CapabilityDiagnosticScreen(
                     cards = cards,
                     controllerScrollSequence = controllerScrollSequence,
                     controllerScrollDirection = controllerScrollDirection,
+                    copyAvailable = copyAvailable,
                     onBack = { finish() },
                     onCopy = {
-                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                        clipboard?.setPrimaryClip(
-                                ClipData.newPlainText(tr(R.string.diag_report_clip_label), plainTextReport.toString()))
-                        Toast.makeText(this, R.string.copy_success, Toast.LENGTH_SHORT).show()
+                        val copied = ClipboardServiceCompat.setPrimaryClip(
+                                this,
+                                ClipData.newPlainText(
+                                        tr(R.string.diag_report_clip_label),
+                                        plainTextReport.toString()
+                                )
+                        )
+                        if (copied) {
+                            Toast.makeText(this, R.string.copy_success, Toast.LENGTH_SHORT).show()
+                        }
                     }
             )
         }
@@ -707,6 +714,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             cards: List<DiagnosticCard>,
             controllerScrollSequence: Int,
             controllerScrollDirection: Int,
+            copyAvailable: Boolean,
             onBack: () -> Unit,
             onCopy: () -> Unit
     ) {
@@ -718,6 +726,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
         val reportFocusRequester = remember { FocusRequester() }
         val backFocusRequester = remember { FocusRequester() }
         val copyFocusRequester = remember { FocusRequester() }
+        val rightFocusRequester = if (copyAvailable) copyFocusRequester else reportFocusRequester
         val listState = rememberLazyListState()
         val scope = rememberCoroutineScope()
         val scrollStep = with(LocalDensity.current) { 88.dp.toPx() }
@@ -775,6 +784,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                             reportFocusRequester = reportFocusRequester,
                             backFocusRequester = backFocusRequester,
                             copyFocusRequester = copyFocusRequester,
+                            copyAvailable = copyAvailable,
                             onFocusTargetRequested = { requestedFocusTarget = it },
                             onBack = onBack,
                             onCopy = onCopy
@@ -788,7 +798,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                         up = reportFocusRequester
                                         down = reportFocusRequester
                                         left = backFocusRequester
-                                        right = copyFocusRequester
+                                        right = rightFocusRequester
                                     }
                                     .onPreviewKeyEvent { event ->
                                         val nativeEvent = event.nativeKeyEvent
@@ -814,7 +824,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                                 true
                                             }
                                             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                                if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                                                if (nativeEvent.action == KeyEvent.ACTION_DOWN && copyAvailable) {
                                                     requestedFocusTarget = CapabilityDiagnosticFocusTarget.COPY
                                                 }
                                                 true
@@ -862,6 +872,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             reportFocusRequester: FocusRequester,
             backFocusRequester: FocusRequester,
             copyFocusRequester: FocusRequester,
+            copyAvailable: Boolean,
             onFocusTargetRequested: (CapabilityDiagnosticFocusTarget) -> Unit,
             onBack: () -> Unit,
             onCopy: () -> Unit
@@ -893,7 +904,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                     up = backFocusRequester
                                     down = reportFocusRequester
                                     left = backFocusRequester
-                                    right = copyFocusRequester
+                                    right = if (copyAvailable) copyFocusRequester else backFocusRequester
                                 }
                                 .onFocusChanged {
                                     backFocused = it.isFocused
@@ -906,7 +917,11 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                     handleCapabilityTopBarKey(
                                             event = event.nativeKeyEvent,
                                             horizontalKeyCode = KeyEvent.KEYCODE_DPAD_RIGHT,
-                                            horizontalTarget = CapabilityDiagnosticFocusTarget.COPY,
+                                            horizontalTarget = if (copyAvailable) {
+                                                CapabilityDiagnosticFocusTarget.COPY
+                                            } else {
+                                                null
+                                            },
                                             onFocusTargetRequested = onFocusTargetRequested,
                                             onDismiss = onBack,
                                             onConfirm = onBack
@@ -942,46 +957,48 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                     )
                 }
 
-                TextButton(
-                        onClick = onCopy,
-                        colors = ButtonDefaults.textButtonColors(
-                                containerColor = accent.copy(alpha = 0.18f),
-                                contentColor = primary
-                        ),
-                        shape = copyShape,
-                        modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .focusRequester(copyFocusRequester)
-                                .focusProperties {
-                                    up = copyFocusRequester
-                                    down = reportFocusRequester
-                                    left = backFocusRequester
-                                    right = copyFocusRequester
-                                }
-                                .onFocusChanged {
-                                    copyFocused = it.isFocused
-                                }
-                                .then(
-                                        if (copyFocused) Modifier.border(2.dp, accent, copyShape)
-                                        else Modifier
-                                )
-                                .onPreviewKeyEvent { event ->
-                                    handleCapabilityTopBarKey(
-                                            event = event.nativeKeyEvent,
-                                            horizontalKeyCode = KeyEvent.KEYCODE_DPAD_LEFT,
-                                            horizontalTarget = CapabilityDiagnosticFocusTarget.BACK,
-                                            onFocusTargetRequested = onFocusTargetRequested,
-                                            onDismiss = onBack,
-                                            onConfirm = onCopy
+                if (copyAvailable) {
+                    TextButton(
+                            onClick = onCopy,
+                            colors = ButtonDefaults.textButtonColors(
+                                    containerColor = accent.copy(alpha = 0.18f),
+                                    contentColor = primary
+                            ),
+                            shape = copyShape,
+                            modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .focusRequester(copyFocusRequester)
+                                    .focusProperties {
+                                        up = copyFocusRequester
+                                        down = reportFocusRequester
+                                        left = backFocusRequester
+                                        right = copyFocusRequester
+                                    }
+                                    .onFocusChanged {
+                                        copyFocused = it.isFocused
+                                    }
+                                    .then(
+                                            if (copyFocused) Modifier.border(2.dp, accent, copyShape)
+                                            else Modifier
                                     )
-                                }
-                                .testTag(CapabilityDiagnosticTags.COPY)
-                ) {
-                    Text(
-                            text = stringResource(R.string.layout_capability_diagnostic_text_79d3a),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                    )
+                                    .onPreviewKeyEvent { event ->
+                                        handleCapabilityTopBarKey(
+                                                event = event.nativeKeyEvent,
+                                                horizontalKeyCode = KeyEvent.KEYCODE_DPAD_LEFT,
+                                                horizontalTarget = CapabilityDiagnosticFocusTarget.BACK,
+                                                onFocusTargetRequested = onFocusTargetRequested,
+                                                onDismiss = onBack,
+                                                onConfirm = onCopy
+                                        )
+                                    }
+                                    .testTag(CapabilityDiagnosticTags.COPY)
+                    ) {
+                        Text(
+                                text = stringResource(R.string.layout_capability_diagnostic_text_79d3a),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -1288,13 +1305,13 @@ internal enum class CapabilityDiagnosticFocusTarget {
 private fun handleCapabilityTopBarKey(
     event: KeyEvent,
     horizontalKeyCode: Int,
-    horizontalTarget: CapabilityDiagnosticFocusTarget,
+    horizontalTarget: CapabilityDiagnosticFocusTarget?,
     onFocusTargetRequested: (CapabilityDiagnosticFocusTarget) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ): Boolean = when (event.keyCode) {
     horizontalKeyCode -> {
-        if (event.action == KeyEvent.ACTION_DOWN) {
+        if (event.action == KeyEvent.ACTION_DOWN && horizontalTarget != null) {
             onFocusTargetRequested(horizontalTarget)
         }
         true

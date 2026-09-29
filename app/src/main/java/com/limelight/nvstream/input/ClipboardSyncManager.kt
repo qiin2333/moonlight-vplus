@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.content.FileProvider
 import com.limelight.LimeLog
+import com.limelight.utils.ClipboardServiceCompat
 import com.limelight.nvstream.http.ClipboardBlobUploadResult
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.jni.MoonBridge
@@ -58,7 +59,7 @@ class ClipboardSyncManager(
     private val nvHttpProvider: (() -> NvHTTP?)? = null,
 ) : MoonBridge.ClipboardListener {
 
-    private val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    private val clipboard = ClipboardServiceCompat.get(context)
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val recentSentTokens = ArrayDeque<TokenEntry>()
@@ -81,19 +82,24 @@ class ClipboardSyncManager(
         }
     }
 
-    fun start() {
-        if (!syncText && !syncImage) return
+    fun start(): Boolean {
+        if (!syncText && !syncImage) return false
+        val clipboard = clipboard ?: run {
+            LimeLog.warning("Clipboard sync disabled because the device has no clipboard service")
+            return false
+        }
         if (blobExecutor == null && nvHttpProvider != null) {
             blobExecutor = Executors.newSingleThreadExecutor { r ->
                 Thread(r, "ClipboardBlobIO").apply { isDaemon = true }
             }
         }
-        MoonBridge.setClipboardListener(this)
         clipboard.addPrimaryClipChangedListener(primaryClipListener)
+        MoonBridge.setClipboardListener(this)
+        return true
     }
 
     fun stop() {
-        clipboard.removePrimaryClipChangedListener(primaryClipListener)
+        clipboard?.removePrimaryClipChangedListener(primaryClipListener)
         MoonBridge.setClipboardListener(null)
         synchronized(recentSentTokens) { recentSentTokens.clear() }
         blobExecutor?.shutdownNow()
@@ -127,7 +133,7 @@ class ClipboardSyncManager(
             pendingSelfWrites--
             return
         }
-        val clip = clipboard.primaryClip ?: return
+        val clip = clipboard?.primaryClip ?: return
         if (clip.itemCount == 0) return
         val item = clip.getItemAt(0)
         val desc = clip.description ?: return
@@ -415,6 +421,7 @@ class ClipboardSyncManager(
     }
 
     private inline fun postToClipboard(crossinline build: () -> ClipData) {
+        val clipboard = clipboard ?: return
         mainHandler.post {
             pendingSelfWrites++
             runCatching { clipboard.setPrimaryClip(build()) }
