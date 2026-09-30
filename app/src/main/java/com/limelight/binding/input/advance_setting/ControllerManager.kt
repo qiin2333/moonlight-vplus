@@ -13,6 +13,8 @@ import com.limelight.binding.input.advance_setting.superpage.SuperPagesControlle
 class ControllerManager(layout: FrameLayout, context: Context) {
     private val advanceSettingView: FrameLayout?
     private val fatherLayout: FrameLayout?
+    private val virtualElementsLayer: FrameLayout?
+    private var virtualElementsVisibilityBeforeKeyboard: Int? = null
     var pageConfigController: PageConfigController? = null
         get() {
             if (field == null) {
@@ -87,6 +89,10 @@ class ControllerManager(layout: FrameLayout, context: Context) {
                         override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) {
                             elementController?.rumbleSingleVibrator(lowFreq, highFreq, duration)
                         }
+
+                        override fun onKeyboardVisibilityChanged(visible: Boolean) {
+                            setVirtualElementsSuppressedByKeyboard(visible)
+                        }
                     }, context)
                 }
             }
@@ -96,6 +102,7 @@ class ControllerManager(layout: FrameLayout, context: Context) {
 
     init {
         advanceSettingView = layout.findViewById<FrameLayout?>(R.id.advance_setting_view)
+        virtualElementsLayer = advanceSettingView?.findViewById(R.id.layer_2_element)
         this.fatherLayout = layout
         this.context = context
         pageSuperMenuController = PageSuperMenuController(context, this)
@@ -125,4 +132,18 @@ class ControllerManager(layout: FrameLayout, context: Context) {
     }
 
     fun isVisible(): Boolean = advanceSettingView?.visibility == View.VISIBLE
+
+    fun setVirtualElementsSuppressedByKeyboard(suppressed: Boolean) {
+        val layer = virtualElementsLayer ?: return
+        if (suppressed) {
+            if (virtualElementsVisibilityBeforeKeyboard == null) {
+                virtualElementsVisibilityBeforeKeyboard = layer.visibility
+            }
+            layer.visibility = View.GONE
+        } else {
+            val previousVisibility = virtualElementsVisibilityBeforeKeyboard ?: return
+            virtualElementsVisibilityBeforeKeyboard = null
+            layer.visibility = previousVisibility
+        }
+    }
 }
