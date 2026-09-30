@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import androidx.test.core.app.ApplicationProvider
@@ -103,6 +104,43 @@ class KeyboardUIControllerTouchTest {
                 down.recycle()
                 up.recycle()
             }
+        }
+    }
+
+    @Test
+    fun keyboardVisibilityChangesAreReportedToListener() {
+        val visibilityEvents = mutableListOf<Boolean>()
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) = Unit
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+
+                override fun onKeyboardVisibilityChanged(visible: Boolean) {
+                    visibilityEvents.add(visible)
+                }
+            }
+            val controller = KeyboardUIController(parent, listener, activity)
+            controller.show()
+            controller.hide()
+        }
+        assertEquals(listOf(true, false), visibilityEvents)
+    }
+
+    @Test
+    fun virtualKeyboardSuppressionHidesAndRestoresCrownElementLayer() {
+        activityRule.scenario.onActivity { activity ->
+            val parent = LayoutInflater.from(activity)
+                .inflate(R.layout.activity_game, null, false) as FrameLayout
+            val crownElementLayer = parent.findViewById<View>(R.id.layer_2_element)
+            val manager = ControllerManager(parent, activity)
+
+            manager.setVirtualElementsSuppressedByKeyboard(true)
+            assertEquals(View.GONE, crownElementLayer.visibility)
+
+            manager.setVirtualElementsSuppressedByKeyboard(false)
+            assertEquals(View.VISIBLE, crownElementLayer.visibility)
         }
     }
 

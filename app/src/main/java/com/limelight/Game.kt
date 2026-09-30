@@ -736,6 +736,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) {
                 controllerManager?.elementController?.rumbleSingleVibrator(lowFreq, highFreq, duration)
             }
+
+            override fun onKeyboardVisibilityChanged(visible: Boolean) {
+                controllerManager?.setVirtualElementsSuppressedByKeyboard(visible)
+            }
         }
     }
 
@@ -3214,6 +3218,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (manager.keyboardUIController == null) {
             manager.keyboardUIController = getOrCreateKeyboardUIController()
         }
+        manager.setVirtualElementsSuppressedByKeyboard(
+            manager.keyboardUIController?.isVisible == true
+        )
         manager.refreshLayout()
     }
 
