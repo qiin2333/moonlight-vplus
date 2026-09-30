@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import androidx.test.core.app.ApplicationProvider
@@ -131,8 +130,18 @@ class KeyboardUIControllerTouchTest {
     @Test
     fun virtualKeyboardSuppressionHidesAndRestoresCrownElementLayer() {
         activityRule.scenario.onActivity { activity ->
-            val parent = LayoutInflater.from(activity)
-                .inflate(R.layout.activity_game, null, false) as FrameLayout
+            // activity_game.xml uses a <merge> root, so construct only the hierarchy
+            // required by ControllerManager instead of inflating the full game screen.
+            val parent = FrameLayout(activity).apply {
+                id = R.id.advance_setting_view
+                addView(FrameLayout(activity).apply {
+                    id = R.id.layer_2_element
+                    visibility = View.VISIBLE
+                })
+                addView(FrameLayout(activity).apply {
+                    id = R.id.super_pages_box
+                })
+            }
             val crownElementLayer = parent.findViewById<View>(R.id.layer_2_element)
             val manager = ControllerManager(parent, activity)
 
@@ -141,6 +150,11 @@ class KeyboardUIControllerTouchTest {
 
             manager.setVirtualElementsSuppressedByKeyboard(false)
             assertEquals(View.VISIBLE, crownElementLayer.visibility)
+
+            crownElementLayer.visibility = View.INVISIBLE
+            manager.setVirtualElementsSuppressedByKeyboard(true)
+            manager.setVirtualElementsSuppressedByKeyboard(false)
+            assertEquals(View.INVISIBLE, crownElementLayer.visibility)
         }
     }
 
