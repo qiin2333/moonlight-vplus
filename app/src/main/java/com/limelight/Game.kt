@@ -2956,11 +2956,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             BackKeyMenuMode.NO_MENU_LOCKED -> false
             BackKeyMenuMode.GAME_MENU -> {
-                if (ClipboardServiceCompat.get(this) == null) {
-                    // GameMenu is Compose-based; on TV firmware without a clipboard service,
-                    // Compose crashes while attaching its root view.
-                    return false
-                }
                 val existingMenu = activeGameMenu
                 if (existingMenu?.isShowing() == true) {
                     true
@@ -3076,7 +3071,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun installStartHoldWheelOverlay(parent: FrameLayout) {
-        val nativeFallback = ClipboardServiceCompat.get(this) == null
+        val nativeFallback = ClipboardServiceCompat.getAvailable(this) == null
         val wheelView = if (nativeFallback) {
             StartHoldWheelNativeView(this)
         } else {

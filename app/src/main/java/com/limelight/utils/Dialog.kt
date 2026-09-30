@@ -81,7 +81,7 @@ class Dialog private constructor(
         titleView.text = title
         contentView.text = formatDetailsMessage(message)
 
-        val clipboard = ClipboardServiceCompat.get(activity)
+        val clipboard = ClipboardServiceCompat.getAvailable(activity)
         if (clipboard == null) {
             copyButton.visibility = View.GONE
         }

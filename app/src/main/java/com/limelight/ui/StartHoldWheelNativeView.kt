@@ -21,9 +21,9 @@ import kotlin.math.roundToInt
 /**
  * Plain-view implementation for the start-hold wheel.
  *
- * Some TV firmware does not expose a clipboard service, which makes Compose UI 1.x crash
- * while attaching AbstractComposeView. The wheel does not use the clipboard; this regular
- * View is selected only as the fallback on those affected devices.
+ * Some TV firmware exposes an unusable clipboard backend while the rest of Compose can
+ * still attach. The wheel is required during stream startup, so it uses this regular View
+ * when the clipboard backend cannot be probed successfully.
  */
 internal class StartHoldWheelNativeView @JvmOverloads constructor(
     context: Context,

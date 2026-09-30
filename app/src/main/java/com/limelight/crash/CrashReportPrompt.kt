@@ -62,7 +62,7 @@ object CrashReportPrompt {
             builder.setNeutralButton(R.string.crash_report_photo) { _, _ ->
                 showPhotoSummary(activity)
             }
-        } else if (ClipboardServiceCompat.get(activity) != null) {
+        } else if (ClipboardServiceCompat.getAvailable(activity) != null) {
             builder.setNeutralButton(R.string.crash_report_copy) { _, _ ->
                 copyReport(activity)
                 // 复制后保留报告文件，方便用户多次粘贴或最终分享

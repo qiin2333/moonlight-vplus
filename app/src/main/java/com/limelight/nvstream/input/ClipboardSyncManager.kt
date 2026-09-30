@@ -59,7 +59,7 @@ class ClipboardSyncManager(
     private val nvHttpProvider: (() -> NvHTTP?)? = null,
 ) : MoonBridge.ClipboardListener {
 
-    private val clipboard = ClipboardServiceCompat.get(context)
+    private val clipboard = ClipboardServiceCompat.getAvailable(context)
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val recentSentTokens = ArrayDeque<TokenEntry>()

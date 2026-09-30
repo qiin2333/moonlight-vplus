@@ -14,6 +14,18 @@ object ClipboardServiceCompat {
         }
     }
 
+    fun getAvailable(context: Context): ClipboardManager? {
+        val clipboard = get(context) ?: return null
+        return try {
+            // Some TV firmware returns a manager whose backing binder is unavailable.
+            // A read-only probe distinguishes that state from a merely non-null wrapper.
+            clipboard.hasPrimaryClip()
+            clipboard
+        } catch (_: RuntimeException) {
+            null
+        }
+    }
+
     fun setPrimaryClip(context: Context, clip: ClipData): Boolean {
         val clipboard = get(context) ?: return false
         return try {

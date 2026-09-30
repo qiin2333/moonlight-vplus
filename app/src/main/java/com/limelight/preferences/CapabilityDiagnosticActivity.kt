@@ -137,7 +137,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
         plainTextReport = StringBuilder()
         val cards = generateReport()
-        val copyAvailable = ClipboardServiceCompat.get(this) != null
+        val copyAvailable = ClipboardServiceCompat.getAvailable(this) != null
 
         setContent {
             CapabilityDiagnosticScreen(
