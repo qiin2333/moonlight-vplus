@@ -301,6 +301,7 @@ public class InvisibleDigitalStick extends Element {
 
             @Override
             public void onDoubleClick() {
+                elementController.buttonVibrator();
                 middleValueSendHandler.sendEvent(true);
             }
 
