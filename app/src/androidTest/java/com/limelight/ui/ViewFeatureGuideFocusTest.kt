@@ -135,7 +135,7 @@ class ViewFeatureGuideFocusTest {
 
         tapGuideButton(R.string.feature_guide_skip)
 
-        assertGuideDismissedAndRemembered("touch_skip_test")
+        assertGuideDismissedAndRemembered("touch_skip_test", requireTargetFocus = false)
     }
 
     @Test
@@ -145,8 +145,12 @@ class ViewFeatureGuideFocusTest {
         press(KeyEvent.KEYCODE_DPAD_LEFT)
         tapGuideButton(R.string.feature_guide_next)
 
-        assertFocusedText(R.string.feature_guide_done)
         activityRule.scenario.onActivity { activity ->
+            val done = findTextView(
+                activity.findViewById(android.R.id.content),
+                activity.getString(R.string.feature_guide_done)
+            )
+            assertTrue("Touching Next once must advance to Done", done != null)
             assertTrue(
                 FeatureGuideStore(activity).shouldShow(
                     FeatureGuideSpec("touch_next_test", revision = 1)
@@ -221,6 +225,9 @@ class ViewFeatureGuideFocusTest {
             )
         }
         waitForIdle()
+        // Leave touch mode before checking the initial hardware focus. The
+        // guide action is intentionally not focusable in touch mode.
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
         assertFocusedText(R.string.feature_guide_next)
     }
 
@@ -285,9 +292,12 @@ class ViewFeatureGuideFocusTest {
         return null
     }
 
-    private fun assertGuideDismissedAndRemembered(id: String) {
+    private fun assertGuideDismissedAndRemembered(
+        id: String,
+        requireTargetFocus: Boolean = true
+    ) {
         activityRule.scenario.onActivity { activity ->
-            assertTrue(target.get().hasFocus())
+            if (requireTargetFocus) assertTrue(target.get().hasFocus())
             assertFalse(FeatureGuideStore(activity).shouldShow(FeatureGuideSpec(id, revision = 1)))
         }
     }
