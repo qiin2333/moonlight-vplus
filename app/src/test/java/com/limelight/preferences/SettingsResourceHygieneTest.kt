@@ -84,6 +84,7 @@ class SettingsResourceHygieneTest {
             "perf_overlay_position_vertical_names",
             "perf_overlay_display_items_names",
             "mic_icon_color_entries",
+            "mouse_axis_correction_names",
             "audio_vibration_mode_names",
             "audio_vibration_scene_names",
         )

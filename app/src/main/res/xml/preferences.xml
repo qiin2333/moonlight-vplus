@@ -965,6 +965,13 @@
             android:title="@string/title_checkbox_absolute_mouse_mode"
             android:summary="@string/summary_checkbox_absolute_mouse_mode"
             android:defaultValue="false" />
+        <ListPreference
+            android:key="list_mouse_axis_correction"
+            android:title="@string/title_list_mouse_axis_correction"
+            android:summary="@string/summary_list_mouse_axis_correction"
+            android:entries="@array/mouse_axis_correction_names"
+            android:entryValues="@array/mouse_axis_correction_values"
+            android:defaultValue="off" />
         <CheckBoxPreference
             android:key="checkbox_enable_esc_menu"
             android:title="@string/title_checkbox_enable_esc_menu"
