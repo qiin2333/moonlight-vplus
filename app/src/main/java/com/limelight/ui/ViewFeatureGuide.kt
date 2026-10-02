@@ -717,8 +717,9 @@ private class FeatureGuideOverlay(
         minHeight = dpInt(45f)
         setPadding(dpInt(12f), 0, dpInt(12f), 0)
         isClickable = true
+        // Keep D-pad/remote focus without making the first touch only a focus change.
+        isFocusableInTouchMode = false
         isFocusable = true
-        isFocusableInTouchMode = true
         background = selectableBackground()
         setOnClickListener { onClick() }
         setOnKeyListener { _, keyCode, event ->
