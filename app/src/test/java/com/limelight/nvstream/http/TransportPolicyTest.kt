@@ -253,7 +253,7 @@ class TransportPolicyTest {
         }
     }
     @Test fun optionalNetworkStatisticsNeverCorruptValidControlReceipts() {
-        val samples = org.json.JSONArray(javaClass.getResource("/transport-policy-pc-reconnect.json")!!.readText())
+        val samples = pcReconnectSamples()
         val status = samples.getJSONObject(0)
         assertNull(TransportPolicyCodec.status(status).networkStatistics)
         val fixtures = JSONObject(javaClass.getResource("/network-statistics-v1.json")!!.readText())
@@ -270,7 +270,7 @@ class TransportPolicyTest {
     @Test fun actualPcReconnectCaptureKeepsAndroidMirrorsScopedToTheirConnection() {
         // Exact phase-31 paired HTTPS samples; this exercises the Android codec/controller,
         // not an Android media session or its Activity lifecycle.
-        val samples = org.json.JSONArray(javaClass.getResource("/transport-policy-pc-reconnect.json")!!.readText())
+        val samples = pcReconnectSamples()
         assertEquals(44, samples.length())
         val epochs = (0 until samples.length()).map { TransportPolicyCodec.status(samples.getJSONObject(it)) }
             .groupBy { it.connectionEpoch }.values.toList()
@@ -324,6 +324,20 @@ class TransportPolicyTest {
             if (name == "final") assertTrue(s.receipts.any { it.encoderApplied && it.firstSentFrame != null })
         }
     }
+    private fun pcReconnectSamples(): org.json.JSONArray {
+        // Store identical host replies once while preserving every sample and its order.
+        val capture = JSONObject(javaClass.getResource("/transport-policy-pc-reconnect.json")!!.readText())
+        assertEquals(1, capture.getInt("version"))
+        val snapshots = capture.getJSONArray("snapshots")
+        val timeline = capture.getJSONArray("timeline")
+        return org.json.JSONArray().apply {
+            for (i in 0 until timeline.length()) {
+                // Tests mutate replies: each occurrence must have independent ownership.
+                put(JSONObject(snapshots.getJSONObject(timeline.getInt(i)).toString()))
+            }
+        }
+    }
+
     private fun policy(revision: String = "2", epoch: String = "1") = JSONObject("""{
         "revision":"$revision","controlEpoch":"$epoch","controlSource":"manual",
         "budgetBasis":"normalized","encoderCeilingKbps":null,
