@@ -224,6 +224,16 @@ class UsbForwardingController(
         it.device.vendorId == device.vendorId && it.device.productId == device.productId
     }
 
+    /** How many devices Android cannot tell apart from this one, connected or
+     *  still forwarding: their input is suppressed together, so the warning has
+     *  to count all of them, not just the ones already shared. */
+    private fun identicalCount(device: UsbDevice): Int = maxOf(
+        siblings(device).size,
+        manager.deviceList.values.count {
+            it.vendorId == device.vendorId && it.productId == device.productId
+        },
+    )
+
     private fun request(device: UsbDevice) {
         if (closed || busy || !game.connected || !enabled || capability?.available != true) return
         if (forwarding.containsKey(device.deviceName)) return
@@ -240,7 +250,7 @@ class UsbForwardingController(
         }
         val state = Forwarding(device)
         forwarding = forwarding + (device.deviceName to state)
-        if (siblings(device).size > 1) message = R.string.usb_forward_duplicate_device
+        if (identicalCount(device) > 1) message = R.string.usb_forward_duplicate_device
         if (manager.hasPermission(device)) {
             export(state)
         } else {
