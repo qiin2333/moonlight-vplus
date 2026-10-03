@@ -117,7 +117,7 @@ class ComputerManagerService : Service() {
                 // 都不会触发 mDNS 自动发现（onResume 的 startPolling 因 polling 已激活而早退）。
                 if (pollingActive) {
                     LimeLog.info("DiscoveryService connected after polling active; starting deferred discovery")
-                    privateBinder.startDiscovery(MDNS_QUERY_PERIOD_MS)
+                    startDiscoverySafely(privateBinder)
                 }
                 (this as Object).notifyAll()
             }
@@ -190,7 +190,7 @@ class ComputerManagerService : Service() {
 
     private fun startPollingInternal() {
         pollingActive = true
-        discoveryBinder?.startDiscovery(MDNS_QUERY_PERIOD_MS)
+        discoveryBinder?.let { startDiscoverySafely(it) }
 
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
@@ -203,6 +203,16 @@ class ComputerManagerService : Service() {
                     tuple.job = createPollingJob(tuple)
                 }
             }
+        }
+    }
+
+    private fun startDiscoverySafely(binder: DiscoveryService.DiscoveryBinder) {
+        try {
+            binder.startDiscovery(MDNS_QUERY_PERIOD_MS)
+        } catch (error: RuntimeException) {
+            // mDNS is optional: a broken OEM network stack must not terminate the
+            // ComputerManagerService or the foreground activity during startup.
+            LimeLog.warning("mDNS discovery could not be started (${error.message})")
         }
     }
 
