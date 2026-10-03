@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: AlkaidLab/moonlight-audio-haptics
-          ref: 21aae5018e36397d45b3dffff4005c952592ec0b
+          ref: b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
           path: audio-haptics-sdk
           persist-credentials: false
       - uses: actions/setup-java@v5
