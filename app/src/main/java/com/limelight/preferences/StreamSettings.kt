@@ -1449,6 +1449,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             (activity as? StreamSettings)?.clearSearchQuery()
         }
 
+        @SuppressLint("RestrictedApi")
         private fun refreshSearchPresentation() {
             val adapter = listView?.adapter as? PreferenceGroupAdapter
             if (adapter != null) {
@@ -1466,6 +1467,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
         }
 
+        @SuppressLint("RestrictedApi")
         private fun bindCategoryOpenAction(child: View) {
             val open = child.findViewById<TextView>(R.id.settings_category_open) ?: return
             val recyclerView = listView
