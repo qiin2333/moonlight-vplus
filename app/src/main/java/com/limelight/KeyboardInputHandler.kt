@@ -87,6 +87,7 @@ class KeyboardInputHandler(private val game: Game) {
                         }
                         game.cursorVisible = !game.cursorVisible
                         if (game.cursorVisible) {
+                            game.touchInputHandler.cancelCompatibilityTouchpad()
                             game.inputCaptureProvider.showCursor()
                         } else {
                             game.inputCaptureProvider.hideCursor()
@@ -491,5 +492,13 @@ class KeyboardInputHandler(private val game: Game) {
                 game.conn?.sendKeyboardInput(keyMap, KeyboardPacket.KEY_UP, getModifierState(), 0.toByte())
             }
         }
+    }
+
+    fun cancelKeyboardEvent(keyCode: Short) {
+        // Forced Evdev releases update modifiers and the host without completing
+        // a local shortcut or re-entering a capture change already in progress.
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        waitingForAllModifiersUp = false
+        keyboardEvent(false, keyCode)
     }
 }

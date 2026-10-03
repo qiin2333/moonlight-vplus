@@ -5,8 +5,8 @@ import android.view.MotionEvent
 
 open class InputCaptureProvider {
 
-    protected var isCapturing = false
-    protected var isCursorVisible = false
+    @Volatile protected var isCapturing = false
+    @Volatile protected var isCursorVisible = false
 
     open fun enableCapture() {
         isCapturing = true
@@ -23,6 +23,9 @@ open class InputCaptureProvider {
     open fun isCapturingEnabled(): Boolean = isCapturing
 
     open fun isCapturingActive(): Boolean = isCapturing
+
+    /** Mouse input may also be delivered without OS capture in an explicit compatibility mode. */
+    open fun isPointerInputActive(): Boolean = isCapturingActive()
 
     open fun showCursor() {
         isCursorVisible = true
