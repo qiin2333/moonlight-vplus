@@ -1,0 +1,70 @@
+name: Transport policy validation
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main, codex/adaptive-fec-policy]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: transport-policy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Checkout the public haptics SDK
+        uses: actions/checkout@v6
+        with:
+          repository: AlkaidLab/moonlight-audio-haptics
+          ref: b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
+          path: audio-haptics-sdk
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+          cache-dependency-path: |
+            **/*.gradle*
+            gradle/libs.versions.toml
+            gradle/wrapper/gradle-wrapper.properties
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358 cmake;3.22.1
+      - name: Test policy and lifecycle
+        run: |
+          chmod +x gradlew
+          ./gradlew -PaudioHapticsSdkDir="$GITHUB_WORKSPACE/audio-haptics-sdk" \
+            :app:testNonRootDebugUnitTest \
+            --tests com.limelight.nvstream.ConnectionLifecycleTest \
+            --tests com.limelight.nvstream.ConnectionCallbackGuardTest \
+            --tests com.limelight.nvstream.http.TransportPolicyTest \
+            --tests com.limelight.nvstream.http.AdaptiveBitrateServiceTest \
+            --tests com.limelight.nvstream.http.LegacyControlHttpTest \
+            --tests com.limelight.nvstream.http.LegacyTransportScopeTest \
+            --tests com.limelight.gamemenu.BitrateCardControllerTest \
+            --tests com.limelight.nvstream.jni.TransportPolicyStatusNoticeTest \
+            --no-daemon --console plain --max-workers=2
+      - name: Compile application and instrumentation APKs
+        run: |
+          ./gradlew -PaudioHapticsSdkDir="$GITHUB_WORKSPACE/audio-haptics-sdk" \
+            :app:assembleNonRootDebug :app:assembleNonRootDebugAndroidTest \
+            --no-daemon --console plain --max-workers=2
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: transport-policy-unit-results
+          path: app/build/test-results/testNonRootDebugUnitTest/
+          if-no-files-found: warn

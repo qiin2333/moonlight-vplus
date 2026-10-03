@@ -127,5 +127,8 @@ internal data class GameMenuCallbacks(
     val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
     val onManageTouchPointerSensitivityPresets: () -> Unit,
     val onCustomKey: (CustomKeyData) -> Unit,
-    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> }
+    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> },
+    val onTransportBitrate: (Boolean) -> Unit = {},
+    val onTransportFec: (Boolean) -> Unit = {},
+    val onTransportManual: () -> Unit = {}
 )

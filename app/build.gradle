@@ -22,6 +22,13 @@ def escapeBuildConfigString = { value ->
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
+
+// Opt-in package isolation for transport validation; normal package IDs stay unchanged.
+def transportValidationApplicationId = project.findProperty("transportValidationApplicationId")?.toString()?.trim()
+if (transportValidationApplicationId != null &&
+        !(transportValidationApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
+    throw new GradleException("transportValidationApplicationId must be a valid dotted Android application ID")
+}
 def audioHapticsAppLabel = "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
@@ -233,6 +240,16 @@ android {
     externalNativeBuild {
         ndkBuild {
             path "src/main/jni/Android.mk"
+        }
+    }
+}
+
+if (transportValidationApplicationId != null) {
+    androidComponents {
+        onVariants(selector().withBuildType("debug")) { variant ->
+            // Root and nonRoot APKs remain separately installable when both are built.
+            def validationRootSuffix = variant.flavorName == "root" ? ".root" : ""
+            variant.applicationId.set(transportValidationApplicationId + validationRootSuffix)
         }
     }
 }

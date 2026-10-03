@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transport_stats_raw_loss">Raw video packet loss: %1$s</string>
+    <string name="transport_stats_window">Window: %1$d ms, %2$d packets</string>
+    <string name="transport_stats_no_feedback">No feedback</string>
+    <string name="transport_stats_no_samples">No samples</string>
+    <string name="transport_stats_expired">Feedback expired</string>
+    <string name="transport_stats_truncated">History truncated</string>
+    <string name="transport_stats_incomplete">Incomplete coverage</string>
+    <string name="transport_stats_unavailable">Unavailable</string>
+</resources>

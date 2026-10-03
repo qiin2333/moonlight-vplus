@@ -69,6 +69,16 @@
             android:entryValues="@array/abr_mode_values"
             android:defaultValue="balanced"
             android:dependency="checkbox_adaptive_bitrate" />
+        <CheckBoxPreference
+            android:key="checkbox_video_packet_feedback"
+            android:title="@string/title_video_packet_feedback"
+            android:summary="@string/summary_video_packet_feedback"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_video_packet_control"
+            android:title="@string/title_video_packet_control"
+            android:summary="@string/summary_video_packet_control"
+            android:defaultValue="false" />
         <ListPreference
             android:key="frame_pacing"
             android:title="@string/title_frame_pacing"

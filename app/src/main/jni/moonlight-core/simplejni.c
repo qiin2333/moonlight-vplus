@@ -335,6 +335,101 @@ Java_com_limelight_nvstream_jni_MoonBridge_getRtpVideoBytesReceived(JNIEnv *env,
     return (jlong)LiGetRTPVideoBytesReceived();
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setVideoNetworkObservationEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
+    (void)env;
+    (void)clazz;
+    return LiSetVideoNetworkObservationEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlongArray JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getVideoNetworkSnapshotNative(JNIEnv *env, jclass clazz) {
+    (void)clazz;
+    LI_VIDEO_NETWORK_SNAPSHOT snapshot;
+    if (!LiGetVideoNetworkSnapshot(&snapshot)) {
+        return NULL;
+    }
+    const jlong values[] = {
+        (jlong)snapshot.version,
+        (jlong)snapshot.connectionEpoch,
+        (jlong)snapshot.sequenceEpoch,
+        (jlong)snapshot.sampleTimeUs,
+        (jlong)snapshot.observationDurationUs,
+        (jlong)snapshot.firstExtendedSequence,
+        (jlong)snapshot.highestExtendedSequence,
+        (jlong)snapshot.settledThroughExclusive,
+        (jlong)snapshot.uniquePackets,
+        (jlong)snapshot.uniqueUdpBytes,
+        (jlong)snapshot.duplicatePackets,
+        (jlong)snapshot.reorderedPackets,
+        (jlong)snapshot.missingCandidates,
+        (jlong)snapshot.latePackets,
+        (jlong)snapshot.settledReceivedPackets,
+        (jlong)snapshot.unknownCandidates,
+        (jlong)snapshot.coverageResets,
+        (jlong)snapshot.untrackedPackets,
+        (jlong)snapshot.authenticationFailures,
+        (jlong)snapshot.invalidPackets,
+        (jlong)snapshot.completedBlocks,
+        (jlong)snapshot.failedObservedBlocks,
+        (jlong)snapshot.recoveredDataPackets,
+        (jlong)snapshot.completedFrames,
+        snapshot.hasSequence ? 1 : 0,
+    };
+    jlongArray result = (*env)->NewLongArray(env, sizeof(values) / sizeof(values[0]));
+    if (result != NULL) {
+        (*env)->SetLongArrayRegion(env, result, 0, sizeof(values) / sizeof(values[0]), values);
+    }
+    return result;
+}
+
+static jlong transportPolicyJniBits(uint64_t value) {
+    _Static_assert(sizeof(jlong) == sizeof(uint64_t), "JNI long must preserve uint64 bits");
+    jlong result;
+    memcpy(&result, &value, sizeof(result));
+    return result;
+}
+
+JNIEXPORT jlongArray JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getTransportPolicyStatusNoticeNative(JNIEnv *env, jclass clazz) {
+    (void)clazz;
+    TPS_STATUS_NOTICE notice;
+    if (!LiGetTransportPolicyStatusNotice(&notice)) return NULL;
+    const jlong values[] = {
+        TPS_STATUS_VERSION, notice.sessionId,
+        transportPolicyJniBits(notice.connectionEpoch), transportPolicyJniBits(notice.noticeSequence),
+        transportPolicyJniBits(notice.controlEpoch), transportPolicyJniBits(notice.acceptedRevision),
+        transportPolicyJniBits(notice.encoderAppliedRevision), transportPolicyJniBits(notice.firstSentRevision),
+        transportPolicyJniBits(notice.firstSentFrame), notice.flags, notice.controlSource, notice.failure
+    };
+    jlongArray result = (*env)->NewLongArray(env, 12);
+    if (result == NULL) return NULL;
+    (*env)->SetLongArrayRegion(env, result, 0, 12, values);
+    if ((*env)->ExceptionCheck(env)) return NULL;
+    return result;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setVideoPacketFeedbackEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
+    (void)env;
+    (void)clazz;
+    return LiSetVideoPacketFeedbackEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setVideoPacketControlEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
+    (void)env;
+    (void)clazz;
+    return LiSetVideoPacketControlEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getVideoPacketControlNegotiated(JNIEnv *env, jclass clazz) {
+    (void)env;
+    (void)clazz;
+    return LiGetVideoPacketControlNegotiated() ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT jstring JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getLaunchUrlQueryParameters(JNIEnv *env, jclass clazz) {
     return (*env)->NewStringUTF(env, LiGetLaunchUrlQueryParameters());

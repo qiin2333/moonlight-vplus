@@ -1,0 +1,2147 @@
+{
+  "version": 1,
+  "snapshots": [
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "0",
+          "automaticBitrate": false,
+          "automaticFec": false,
+          "maximumTotalKbps": 10000
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "1",
+        "controlSource": "legacy",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 6138,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "2",
+        "wireBudgetKbps": 10000
+      },
+      "acceptedRevision": "2",
+      "confirmed": null,
+      "connectionEpoch": "4368612028630741659",
+      "controlEpoch": "1",
+      "controlOwner": "server",
+      "controlSource": "legacy",
+      "encoderAppliedRevision": null,
+      "encoderReady": false,
+      "experimentalControllerActive": false,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": true,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": false,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 5000,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": false,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "2",
+          "wireBudgetKbps": 10000
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "0",
+          "automaticBitrate": false,
+          "automaticFec": false,
+          "maximumTotalKbps": 10000
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "2",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 6138,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "3",
+        "wireBudgetKbps": 10000
+      },
+      "acceptedRevision": "3",
+      "confirmed": {
+        "automaticControl": {
+          "activationEpoch": "0",
+          "automaticBitrate": false,
+          "automaticFec": false,
+          "maximumTotalKbps": 10000
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "2",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 6138,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "3",
+        "wireBudgetKbps": 10000
+      },
+      "connectionEpoch": "4368612028630741659",
+      "controlEpoch": "2",
+      "controlOwner": "server",
+      "controlSource": "googcc",
+      "encoderAppliedRevision": "3",
+      "encoderReady": true,
+      "experimentalControllerActive": true,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 5000,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "1",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "2",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "3",
+          "wireBudgetKbps": 10000
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": null,
+        "budgetBasis": "normalized",
+        "controlEpoch": "3",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "4",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "4",
+      "confirmed": {
+        "automaticControl": null,
+        "budgetBasis": "normalized",
+        "controlEpoch": "3",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "4",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "4368612028630741659",
+      "controlEpoch": "3",
+      "controlOwner": "server",
+      "controlSource": "manual",
+      "encoderAppliedRevision": "4",
+      "encoderReady": true,
+      "experimentalControllerActive": false,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 5000,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "1",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "2",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "3",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": null,
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "96",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "4",
+          "automaticBitrate": false,
+          "automaticFec": true,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "4",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "5",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "5",
+      "confirmed": {
+        "automaticControl": {
+          "activationEpoch": "4",
+          "automaticBitrate": false,
+          "automaticFec": true,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "4",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "5",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "4368612028630741659",
+      "controlEpoch": "4",
+      "controlOwner": "server",
+      "controlSource": "manual",
+      "encoderAppliedRevision": "5",
+      "encoderReady": true,
+      "experimentalControllerActive": false,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 5000,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "1",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "2",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "3",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": null,
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "96",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "4",
+            "automaticBitrate": false,
+            "automaticFec": true,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "4",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "5",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "4",
+          "automaticBitrate": false,
+          "automaticFec": true,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "5",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "6",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "6",
+      "confirmed": {
+        "automaticControl": {
+          "activationEpoch": "4",
+          "automaticBitrate": false,
+          "automaticFec": true,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "5",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "6",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "4368612028630741659",
+      "controlEpoch": "5",
+      "controlOwner": "server",
+      "controlSource": "googcc",
+      "encoderAppliedRevision": "6",
+      "encoderReady": true,
+      "experimentalControllerActive": true,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 5000,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "1",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "2",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "3",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": null,
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "96",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "4",
+            "automaticBitrate": false,
+            "automaticFec": true,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "4",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "178",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "5",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "4",
+            "automaticBitrate": false,
+            "automaticFec": true,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "5",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "182",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "6",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": null,
+        "budgetBasis": "normalized",
+        "controlEpoch": "6",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "7",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "7",
+      "confirmed": {
+        "automaticControl": null,
+        "budgetBasis": "normalized",
+        "controlEpoch": "6",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2472,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 500
+        },
+        "revision": "7",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "4368612028630741659",
+      "controlEpoch": "6",
+      "controlOwner": "server",
+      "controlSource": "manual",
+      "encoderAppliedRevision": "7",
+      "encoderReady": true,
+      "experimentalControllerActive": false,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 5000,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "1",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "2",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 10000
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 6138,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "3",
+          "wireBudgetKbps": 10000
+        },
+        {
+          "automaticControl": null,
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "96",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "4",
+            "automaticBitrate": false,
+            "automaticFec": true,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "4",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "178",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "5",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "4",
+            "automaticBitrate": false,
+            "automaticFec": true,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "5",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "182",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "6",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": null,
+          "budgetBasis": "normalized",
+          "controlEpoch": "6",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2472,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "272",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 500
+          },
+          "revision": "7",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "0",
+          "automaticBitrate": false,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "1",
+        "controlSource": "legacy",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "2",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "2",
+      "confirmed": null,
+      "connectionEpoch": "3118891743319235872",
+      "controlEpoch": "1",
+      "controlOwner": "server",
+      "controlSource": "legacy",
+      "encoderAppliedRevision": null,
+      "encoderReady": false,
+      "experimentalControllerActive": false,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": true,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": false,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2250,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": false,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "2",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "0",
+          "automaticBitrate": false,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "2",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "3",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "3",
+      "confirmed": {
+        "automaticControl": {
+          "activationEpoch": "0",
+          "automaticBitrate": false,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "2",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "3",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "3118891743319235872",
+      "controlEpoch": "2",
+      "controlOwner": "server",
+      "controlSource": "googcc",
+      "encoderAppliedRevision": "3",
+      "encoderReady": true,
+      "experimentalControllerActive": true,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2250,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "2",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "9",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "3",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "3",
+          "automaticBitrate": true,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "4",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "5",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "5",
+      "confirmed": {
+        "automaticControl": {
+          "activationEpoch": "3",
+          "automaticBitrate": true,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "4",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "5",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "3118891743319235872",
+      "controlEpoch": "4",
+      "controlOwner": "server",
+      "controlSource": "googcc",
+      "encoderAppliedRevision": "5",
+      "encoderReady": true,
+      "experimentalControllerActive": true,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2250,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "2",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "9",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "3",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "3",
+            "automaticBitrate": true,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "58",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "3",
+            "automaticBitrate": true,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "4",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "5",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": {
+          "activationEpoch": "3",
+          "automaticBitrate": true,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "4",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "5",
+        "wireBudgetKbps": 4500
+      },
+      "acceptedRevision": "5",
+      "confirmed": {
+        "automaticControl": {
+          "activationEpoch": "3",
+          "automaticBitrate": true,
+          "automaticFec": false,
+          "maximumTotalKbps": 4500
+        },
+        "budgetBasis": "normalized",
+        "controlEpoch": "4",
+        "controlSource": "googcc",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2505,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "5",
+        "wireBudgetKbps": 4500
+      },
+      "connectionEpoch": "3118891743319235872",
+      "controlEpoch": "4",
+      "controlOwner": "server",
+      "controlSource": "googcc",
+      "encoderAppliedRevision": "5",
+      "encoderReady": true,
+      "experimentalControllerActive": true,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2250,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "2",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "9",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "3",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "3",
+            "automaticBitrate": true,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "58",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "3",
+            "automaticBitrate": true,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "4",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "62",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "5",
+          "wireBudgetKbps": 4500
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    },
+    {
+      "accepted": {
+        "automaticControl": null,
+        "budgetBasis": "normalized",
+        "controlEpoch": "5",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2172,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "6",
+        "wireBudgetKbps": 4000
+      },
+      "acceptedRevision": "6",
+      "confirmed": {
+        "automaticControl": null,
+        "budgetBasis": "normalized",
+        "controlEpoch": "5",
+        "controlSource": "manual",
+        "encoderCeilingKbps": null,
+        "encoderKbps": 2172,
+        "fec": {
+          "base": 50,
+          "key": 50,
+          "recovery": 50
+        },
+        "reservesKbps": {
+          "otherTraffic": 292,
+          "probe": 0,
+          "repair": 0,
+          "videoOverhead": 450
+        },
+        "revision": "6",
+        "wireBudgetKbps": 4000
+      },
+      "connectionEpoch": "3118891743319235872",
+      "controlEpoch": "5",
+      "controlOwner": "server",
+      "controlSource": "manual",
+      "encoderAppliedRevision": "6",
+      "encoderReady": true,
+      "experimentalControllerActive": false,
+      "experimentalLiveControlAvailable": true,
+      "experimentalPacketControlNegotiated": true,
+      "experimentalVideoPacerEnabled": true,
+      "pacerAvailable": false,
+      "packetControlAvailable": false,
+      "pending": false,
+      "receipts": [
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "legacy",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2250,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": null,
+          "reservesKbps": {
+            "otherTraffic": 0,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 0
+          },
+          "revision": "1",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "1",
+          "controlSource": "legacy",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "3",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "2",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "0",
+            "automaticBitrate": false,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "2",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "9",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "3",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "3",
+            "automaticBitrate": true,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "3",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "58",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "4",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": {
+            "activationEpoch": "3",
+            "automaticBitrate": true,
+            "automaticFec": false,
+            "maximumTotalKbps": 4500
+          },
+          "budgetBasis": "normalized",
+          "controlEpoch": "4",
+          "controlSource": "googcc",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2505,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "62",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "5",
+          "wireBudgetKbps": 4500
+        },
+        {
+          "automaticControl": null,
+          "budgetBasis": "normalized",
+          "controlEpoch": "5",
+          "controlSource": "manual",
+          "encoderApplied": true,
+          "encoderCeilingKbps": null,
+          "encoderKbps": 2172,
+          "failure": "none",
+          "fec": {
+            "base": 50,
+            "key": 50,
+            "recovery": 50
+          },
+          "firstSentFrame": "133",
+          "reservesKbps": {
+            "otherTraffic": 292,
+            "probe": 0,
+            "repair": 0,
+            "videoOverhead": 450
+          },
+          "revision": "6",
+          "wireBudgetKbps": 4000
+        }
+      ],
+      "sessionId": "1",
+      "stopped": false,
+      "version": 2,
+      "wireBudgetEnforced": false
+    }
+  ],
+  "timeline": [
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    3,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    7,
+    7,
+    8,
+    9,
+    9,
+    9,
+    9,
+    9,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ]
+}
