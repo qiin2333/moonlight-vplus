@@ -57,6 +57,8 @@ Moonlight V+ extends [moonlight-android](https://github.com/moonlight-stream/moo
 | | Audio vibration | Real-time bass energy drives haptic feedback (device / gamepad / both) | `12.7.0` |
 | | | Three scene modes: Game (sustained rumble), Music (beat pulses), Auto | |
 
+To choose a feature by what you want to do, see the [Moonlight V+ feature guide](docs/VPLUS_FEATURES_EN.md): Crown profiles, Foundation Sunshine actions, displays, haptics, and frame generation.
+
 ## Getting Started
 
 ### Requirements
@@ -64,7 +66,7 @@ Moonlight V+ extends [moonlight-android](https://github.com/moonlight-stream/moo
 - Android 5.0+ (API 22)
 - Device with HEVC / AV1 hardware decoding (recommended)
 - 5 GHz / 6 GHz Wi-Fi or wired LAN connection
-- A host PC running [Sunshine](https://github.com/LizardByte/Sunshine), [Foundation Sunshine](https://github.com/qiin2333/foundation-sunshine), or legacy NVIDIA GameStream
+- A host PC running [Foundation Sunshine](https://github.com/AlkaidLab/foundation-sunshine) (recommended). Standard streaming also works with [Sunshine](https://github.com/LizardByte/Sunshine); legacy NVIDIA GameStream may work on existing setups.
 
 ### Installation
 
@@ -82,9 +84,9 @@ After that is stable, raise resolution, frame rate, bitrate, HEVC / AV1, HDR, an
 
 ### Host Choice
 
-- **Sunshine**: recommended for most users and compatible with standard Moonlight streaming.
-- **Foundation Sunshine**: recommended if you want V+ enhanced features such as microphone redirection, host display control, live bitrate control, app desktop polish, and super commands.
-- **GeForce Experience / NVIDIA GameStream**: legacy path. It may still work on old setups, but Sunshine is the safer default for new users.
+- **Foundation Sunshine (recommended)**: the companion host for Moonlight V+, providing standard streaming and supported V+ extensions such as microphone forwarding and host display control. Feature availability depends on the host version.
+- **Sunshine**: supports standard Moonlight streaming; some V+ extensions need Foundation Sunshine.
+- **GeForce Experience / NVIDIA GameStream**: a legacy compatibility path for existing setups. Choose Foundation Sunshine for a new installation.
 
 ### If Something Goes Wrong
 
@@ -98,30 +100,44 @@ Useful references:
 - [Moonlight V+ Q&A](FAQ_EN.md)
 - [Moonlight setup guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide)
 - [Moonlight troubleshooting guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting)
+- [V+ feature guide](docs/USER_GUIDE_EN.md)
+- [First connection with Foundation Sunshine](docs/GETTING_STARTED_EN.md)
+- [Foundation Sunshine compatibility matrix](docs/COMPATIBILITY_EN.md)
+- [Backups and migration](docs/BACKUP_AND_MIGRATION_EN.md)
 
 ### Building from Source
 
+Install JDK 17, Android SDK 36, Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1 first. The build also needs two Git submodules and a separate [audio-haptics SDK](https://github.com/AlkaidLab/moonlight-audio-haptics) checkout; see [CI](.github/workflows/android-ci.yml) for the pinned revision.
+
 ```bash
-git clone https://github.com/qiin2333/moonlight-vplus.git
+git clone --recurse-submodules https://github.com/qiin2333/moonlight-vplus.git
 cd moonlight-vplus
-./gradlew assembleRelease
+git clone https://github.com/AlkaidLab/moonlight-audio-haptics.git ../moonlight-audio-haptics
+git -C ../moonlight-audio-haptics checkout b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
+./gradlew :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"
 ```
+
+On Windows PowerShell, use `.\gradlew.bat :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"` for the last line. Release distribution also requires signing. A local build can omit `app/google-services.json`, but Firebase reporting will not work without it.
 
 ## Foundation Sunshine Enhanced Features
 
-The following features require **[Foundation Sunshine](https://github.com/qiin2333/foundation-sunshine)** on the host side:
+The following features require **[Foundation Sunshine](https://github.com/AlkaidLab/foundation-sunshine)** on the host side:
 
-| Feature | Description | Min Version |
+| Feature | Description | Host requirement |
 |---------|-------------|-------------|
-| Mic redirect | Low-latency microphone audio forwarding to the host | 2025.0720+ |
+| Mic redirect | Microphone audio forwarding to the host | Foundation Sunshine 2025.0720+ |
 | Live bitrate adjustment | Dynamically tune video bitrate during a session | — |
 | Super menu commands | Send advanced control commands to the host from the in-stream menu | — |
 | App desktop polish | Sync host app icons; custom sorting and grouping | — |
 | Host auto-optimization | Auto-negotiate resolution/DPI, touch keyboard, and state memory | — |
 
+Features without a listed minimum still need release-build verification. See the [compatibility matrix](docs/COMPATIBILITY_EN.md) for version evidence and how to update it.
+
 ## Contributing
 
 Issues and Pull Requests are welcome!
+
+Before reporting a problem, check the [Q&A](FAQ_EN.md). See the [privacy notice](PRIVACY_POLICY_EN.md) for analytics and crash-report handling.
 
 ### Contributors
 

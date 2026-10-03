@@ -91,6 +91,7 @@ internal object AboutDialogTags {
     const val QQ = "about_qq"
     const val SITE = "about_site"
     const val CLOSE = "about_close"
+    const val OPEN_SOURCE = "about_open_source"
     const val ECOSYSTEM_CLOSE = "about_ecosystem_close"
 
     fun ecosystemItem(index: Int) = "about_ecosystem_item_$index"
@@ -339,6 +340,7 @@ internal fun AboutDialogContent(
     versionInfo: String,
     onHandbook: () -> Unit,
     onEcosystem: () -> Unit,
+    onOpenSource: () -> Unit,
     onBilibili: () -> Unit,
     onGithub: () -> Unit,
     onQq: () -> Unit,
@@ -348,7 +350,7 @@ internal fun AboutDialogContent(
     focusRequestGeneration: Int = 0,
     onFocusChanged: (Int) -> Unit = {}
 ) {
-    val focusRequesters = remember { List(7) { FocusRequester() } }
+    val focusRequesters = remember { List(8) { FocusRequester() } }
     val targetIndex = initialFocusIndex.takeIf { it in focusRequesters.indices } ?: 6
 
     LaunchedEffect(targetIndex, focusRequestGeneration) {
@@ -366,6 +368,7 @@ internal fun AboutDialogContent(
                 3 -> AboutDialogTags.GITHUB
                 4 -> AboutDialogTags.QQ
                 5 -> AboutDialogTags.SITE
+                7 -> AboutDialogTags.OPEN_SOURCE
                 else -> AboutDialogTags.CLOSE
             },
             onFocused = { onFocusChanged(index) },
@@ -390,10 +393,12 @@ internal fun AboutDialogContent(
                         versionInfo = versionInfo,
                         onHandbook = onHandbook,
                         onEcosystem = onEcosystem,
+                        onOpenSource = onOpenSource,
                         onBilibili = onBilibili,
                         handbookFocus = focusModifier(0, 6, 2, 0, 1),
-                        ecosystemFocus = focusModifier(1, 6, 2, 0, 1),
-                        bilibiliFocus = focusModifier(2, 0, 3, 2, 2)
+                        ecosystemFocus = focusModifier(1, 6, 2, 0, 7),
+                        openSourceFocus = focusModifier(7, 6, 2, 1, 7),
+                        bilibiliFocus = focusModifier(2, 7, 3, 2, 2)
                     )
                 } else {
                     Column(
@@ -466,13 +471,19 @@ internal fun AboutDialogContent(
                                 stringResource(R.string.about_dialog_ecosystem_action),
                                 onEcosystem,
                                 modifier = Modifier.weight(1f),
-                                focusModifier = focusModifier(1, 6, 2, 0, 1)
+                                focusModifier = focusModifier(1, 6, 2, 0, 7)
+                            )
+                            AccentTextButton(
+                                stringResource(R.string.about_dialog_open_source_action),
+                                onOpenSource,
+                                modifier = Modifier.weight(1f),
+                                focusModifier = focusModifier(7, 6, 2, 1, 7)
                             )
                         }
 
                         BilibiliCard(
                             onClick = onBilibili,
-                            focusModifier = focusModifier(2, 0, 3, 2, 2)
+                            focusModifier = focusModifier(2, 7, 3, 2, 2)
                         )
                     }
                 }
@@ -538,9 +549,11 @@ private fun LandscapeAboutContent(
     versionInfo: String,
     onHandbook: () -> Unit,
     onEcosystem: () -> Unit,
+    onOpenSource: () -> Unit,
     onBilibili: () -> Unit,
     handbookFocus: Modifier,
     ecosystemFocus: Modifier,
+    openSourceFocus: Modifier,
     bilibiliFocus: Modifier
 ) {
     Row(
@@ -624,6 +637,12 @@ private fun LandscapeAboutContent(
                     onEcosystem,
                     modifier = Modifier.weight(1f),
                     focusModifier = ecosystemFocus
+                )
+                AccentTextButton(
+                    stringResource(R.string.about_dialog_open_source_action),
+                    onOpenSource,
+                    modifier = Modifier.weight(1f),
+                    focusModifier = openSourceFocus
                 )
             }
 

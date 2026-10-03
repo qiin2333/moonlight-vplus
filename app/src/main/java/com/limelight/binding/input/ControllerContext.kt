@@ -66,8 +66,10 @@ open class GenericControllerContext(
 
     var startDownTime: Long = 0
 
-    var mouseEmulationActive: Boolean = false
+    @Volatile var mouseEmulationActive: Boolean = false
     var mouseEmulationLastInputMap: Int = 0
+    var mouseEmulationRemainderX: Double = 0.0
+    var mouseEmulationRemainderY: Double = 0.0
     val mouseEmulationReportPeriod: Int = 50
 
     val mouseEmulationRunnable: Runnable = object : Runnable {
@@ -79,14 +81,14 @@ open class GenericControllerContext(
             if (!isLocalInputCaptureActive()) {
                 // Send mouse events from analog sticks
                 if (handler.prefConfig.analogStickForScrolling == PreferenceConfiguration.AnalogStickForScrolling.RIGHT) {
-                    handler.sendEmulatedMouseMove(leftStickX, leftStickY)
+                    handler.sendEmulatedMouseMove(this@GenericControllerContext, leftStickX, leftStickY)
                     handler.sendEmulatedMouseScroll(rightStickX, rightStickY)
                 } else if (handler.prefConfig.analogStickForScrolling == PreferenceConfiguration.AnalogStickForScrolling.LEFT) {
-                    handler.sendEmulatedMouseMove(rightStickX, rightStickY)
+                    handler.sendEmulatedMouseMove(this@GenericControllerContext, rightStickX, rightStickY)
                     handler.sendEmulatedMouseScroll(leftStickX, leftStickY)
                 } else {
-                    handler.sendEmulatedMouseMove(leftStickX, leftStickY)
-                    handler.sendEmulatedMouseMove(rightStickX, rightStickY)
+                    handler.sendEmulatedMouseMove(this@GenericControllerContext, leftStickX, leftStickY)
+                    handler.sendEmulatedMouseMove(this@GenericControllerContext, rightStickX, rightStickY)
                 }
             }
 
@@ -122,18 +124,28 @@ open class GenericControllerContext(
     }
 
     internal fun setMouseEmulation(enabled: Boolean) {
-        handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
-        mouseEmulationActive = enabled
-        if (enabled) {
-            handler.mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod.toLong())
+        handler.withControllerInputLock {
+            handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
+            if (!enabled) {
+                handler.releaseEmulatedMouseButtons(this)
+                handler.releaseEmulatedDpadKeys(this)
+            }
+            if (mouseEmulationActive != enabled) {
+                mouseEmulationLastInputMap = 0
+                mouseEmulationRemainderX = 0.0
+                mouseEmulationRemainderY = 0.0
+            }
+            mouseEmulationActive = enabled
+            if (enabled) {
+                handler.mainThreadHandler.postDelayed(mouseEmulationRunnable, mouseEmulationReportPeriod.toLong())
+            }
         }
     }
 
     protected open fun onMouseEmulationChanged() = Unit
 
     open fun destroy() {
-        mouseEmulationActive = false
-        handler.mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
+        setMouseEmulation(false)
     }
 
     open fun sendControllerArrival(): Int = 0

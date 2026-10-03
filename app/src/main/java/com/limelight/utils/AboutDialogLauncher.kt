@@ -22,6 +22,7 @@ import com.limelight.handbook.HandbookLauncher
 import com.limelight.ui.AboutDialogContent
 import com.limelight.ui.EcosystemDialogContent
 import com.limelight.ui.EcosystemProject
+import com.limelight.preferences.OpenSourceNoticesActivity
 import java.lang.ref.WeakReference
 import java.util.Locale
 
@@ -95,6 +96,10 @@ object AboutDialogLauncher {
                     HandbookLauncher.openIndex(context)
                 },
                 onEcosystem = { showEcosystemDialog(context) },
+                onOpenSource = {
+                    d.dismiss()
+                    OpenSourceNoticesActivity.open(context)
+                },
                 onBilibili = { if (BrowserOnlyLauncher.open(context, BILIBILI_URL)) d.dismiss() },
                 onGithub = { if (BrowserOnlyLauncher.open(context, GITHUB_URL)) d.dismiss() },
                 onQq = { if (openQqGroup(context)) d.dismiss() },

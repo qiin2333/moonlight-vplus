@@ -78,8 +78,10 @@ class PcCardDecorTest {
         preferences.edit().putString("theme_mode", "system").commit()
         val lowDensity = PcCardDecor.glow(configured(false, 160), 0) as GradientDrawable
         val highDensity = PcCardDecor.glow(configured(false, 320), 0) as GradientDrawable
+        val cachedHighDensity = PcCardDecor.glow(configured(false, 320), 0) as GradientDrawable
         assertEquals(95f, lowDensity.gradientRadius, .01f)
         assertEquals(190f, highDensity.gradientRadius, .01f)
+        assertEquals(highDensity.gradientRadius, cachedHighDensity.gradientRadius, .01f)
         val light = PcCardDecor.selector(configured(false), 0).current as GradientDrawable
         val dark = PcCardDecor.selector(configured(true), 0).current as GradientDrawable
         assertFalse(light.colors!!.contentEquals(dark.colors!!))

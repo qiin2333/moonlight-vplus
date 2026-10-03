@@ -141,8 +141,20 @@
     <string name="game_menu_toggle_mouse_on"> 手柄模拟鼠标-打开 </string>
     <string name="game_menu_toggle_mouse_off"> 手柄模拟鼠标-关闭 </string>
     <string name="game_menu_controller_mouse">手柄鼠标</string>
-    <string name="game_menu_disconnect"> 断开连接 </string>
-    <string name="game_menu_disconnect_and_quit"> 断开并退出串流 </string>
+    <string name="title_controller_mouse_settings">手柄鼠标模式</string>
+    <string name="summary_controller_mouse_settings">指针速度、滚动摇杆和十字键功能</string>
+    <string name="controller_mouse_pointer_speed">指针速度</string>
+    <string name="controller_mouse_pointer_speed_summary">调整摇杆控制鼠标时的移动速度</string>
+    <string name="controller_mouse_scroll_stick">滚动摇杆</string>
+    <string name="controller_mouse_scroll_stick_summary">选择鼠标模式下负责滚动的摇杆</string>
+    <string name="controller_mouse_scroll_none">不滚动（双摇杆控制指针）</string>
+    <string name="controller_mouse_dpad_behavior">十字键功能</string>
+    <string name="controller_mouse_dpad_behavior_summary">仅在手柄鼠标模式下生效</string>
+    <string name="controller_mouse_dpad_scroll">滚动页面</string>
+    <string name="controller_mouse_dpad_arrows">方向键 ↑ ↓ ← →</string>
+    <string name="controller_mouse_speed_percent">%1$d%%</string>
+    <string name="game_menu_disconnect">暂停串流</string>
+    <string name="game_menu_disconnect_and_quit">退出串流</string>
     <string name="game_menu_cancel"> 取消 </string>
     <string name="game_menu_send_keys">发送特殊按键</string>
     <string name="game_menu_send_keys_esc">发送 ESC</string>
@@ -221,7 +233,7 @@
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate">串流码率</string>
-    <string name="summary_seekbar_bitrate">高码率提升图像质量，低码率提升在较慢网络中的串流体验。</string>
+    <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
     <string name="title_adaptive_bitrate">智能码率</string>
     <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
     <string name="title_abr_mode">智能码率模式</string>
@@ -264,6 +276,8 @@
     <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。如果禁用，则启用多点触控模式。</string>
     <string name="title_checkbox_touch_keyboard_auto_invoke">自动弹出电脑触摸键盘</string>
     <string name="summary_checkbox_touch_keyboard_auto_invoke">启用后，串流的电脑在文本框获得焦点时会自动弹出其触摸键盘（需要带有虚拟触摸屏的 Sunshine 主机）。</string>
+    <string name="title_checkbox_remote_ime_auto_show">远程文本框自动弹出本地键盘</string>
+    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 13 及以上）。画面上的笔划仍作为远程输入发送。</string>
 
     <string name="title_seekbar_long_press_flat_region">长按防抖半径</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半径内时持续发送初始位置，以减少全屏长按抖动；设为 0 则关闭。</string>
@@ -454,6 +468,7 @@
     <string name="float_ball_action_none">无动作</string>
     <string name="float_ball_action_open_keyboard">显示虚拟键盘</string>
     <string name="float_ball_action_open_menu">显示游戏菜单</string>
+    <string name="float_ball_action_show_perf_overlay">显示性能监控图层</string>
 
     <string name="category_ui_settings">界面</string>
     <string name="title_game_menu_cards">游戏菜单卡片</string>
@@ -522,7 +537,7 @@
     <string name="title_disable_frame_drop"> 永不掉帧 </string>
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟。 </string>
     <string name="title_video_format">视频编解码器</string>
-    <string name="summary_video_format">如果您的设备支持较新的编解码器，则可以降低视频带宽要求。如果主机软件或显卡不支持编解码器选择，则可能会忽略编解码器选择。</string>
+    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
     <string name="title_enable_hdr">启用 HDR</string>
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用屏幕最高亮度</string>
@@ -560,6 +575,14 @@
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
     <string name="title_perf_overlay_orientation">性能统计布局</string>
     <string name="summary_perf_overlay_orientation">选择横向单行或纵向单列。</string>
+    <string name="title_perf_overlay_clock_format">时钟格式</string>
+    <string name="summary_perf_overlay_clock_format">先在“性能统计指标”中开启“时钟”，再修改时钟格式。</string>
+    <string name="perf_overlay_clock_format_system_minutes">跟随系统，仅显示时分</string>
+    <string name="perf_overlay_clock_format_system_seconds">跟随系统，显示时分秒</string>
+    <string name="perf_overlay_clock_format_24_minutes">24 小时制，仅显示时分</string>
+    <string name="perf_overlay_clock_format_24_seconds">24 小时制，显示时分秒</string>
+    <string name="perf_overlay_clock_format_12_minutes">12 小时制，仅显示时分</string>
+    <string name="perf_overlay_clock_format_12_seconds">12 小时制，显示时分秒</string>
     <string name="title_perf_overlay_position">性能统计位置</string>
     <string name="summary_perf_overlay_position">横向布局可放在顶部或底部，纵向布局可放在四角。</string>
     <string name="title_reset_perf_overlay_position">重置性能图层位置</string>
@@ -651,6 +674,15 @@
     <string name="about_dialog_bilibili_summary">关注账号，获取版本动态与功能演示</string>
     <string name="about_dialog_handbook_action">文档手册</string>
     <string name="about_dialog_ecosystem_action">基地生态</string>
+    <string name="about_dialog_open_source_action">开源许可</string>
+    <string name="open_source_title">开源许可</string>
+    <string name="open_source_intro">查看此应用所含开源组件的项目来源和许可文本</string>
+    <string name="open_source_back">返回</string>
+    <string name="open_source_component_details">组件详情</string>
+    <string name="open_source_version">版本：%1$s</string>
+    <string name="open_source_license">许可：%1$s</string>
+    <string name="open_source_project">项目地址：%1$s</string>
+    <string name="open_source_license_text">查看完整许可文本</string>
     <string name="about_dialog_ecosystem_title">基地生态</string>
     <string name="about_dialog_ecosystem_lead">从主机端到手机、平板、电视和桌面客户端，选择适合你的平台。</string>
     <string name="about_dialog_ecosystem_footer">项目将通过安全的外部浏览器打开。</string>
@@ -693,7 +725,7 @@
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
     <string name="summary_checkbox_enable_spatializer">对 Moonlight 本机解码的音频使用 Android 空间化处理，需要 Android 13 和兼容的输出设备；直通音频会绕过此处理。</string>
     <string name="title_checkbox_enable_mic">启用麦克风</string>
-    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Sunshine Foundation 20260117 或更高版本。</string>
+    <string name="summary_checkbox_enable_mic">把本机麦克风音频发送到主机，需要 Foundation Sunshine 2025.0720 或更高版本。</string>
     <string name="title_list_mic_initial_state">麦克风初始状态</string>
     <string name="summary_list_mic_initial_state">选择每次串流开始时的麦克风状态。</string>
     <string name="mic_initial_state_off">关闭</string>
@@ -1113,7 +1145,7 @@
 
     <!-- 屏幕组合模式 -->
     <string name="title_screen_combination_mode">主机显示器排列</string>
-    <string name="summary_screen_combination_mode">选择 Sunshine Base 如何排列或组合主机显示器，需要兼容的 Sunshine Base 主机。</string>
+    <string name="summary_screen_combination_mode">选择 Foundation Sunshine 如何排列或组合主机显示器，需要兼容的 Foundation Sunshine 主机。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
     <string name="screen_mode_host_default">跟随主机</string>
     <string name="screen_mode_no_operation">无操作模式</string>
@@ -1283,7 +1315,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">延迟:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">流量 (收/发):</string>
     <string name="layout_game_menu_super_empty_text_a7970">还没有炒鸡指令哦</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Sunshine 基地版 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Foundation Sunshine 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
     <string name="game_menu_super_commands">超级指令</string>
     <string name="layout_item_key_value_text_0952a">分区 1</string>
     <string name="layout_item_key_value_hint_dd44f">分区名称，为空时为键值名</string>
@@ -1689,6 +1721,19 @@
     <string name="crown_store_action_open">打开</string>
     <string name="crown_store_action_import_package">导入分享包</string>
     <string name="crown_store_action_refresh">刷新一下</string>
+    <string name="crown_store_search_hint">搜索王冠</string>
+    <string name="crown_store_clear_search">清除搜索</string>
+    <string name="crown_store_sort_by">排序：%1$s</string>
+    <string name="crown_store_sort_store_order">超市原顺序</string>
+    <string name="crown_store_sort_newest">最近更新</string>
+    <string name="crown_store_sort_oldest">最早更新</string>
+    <string name="crown_store_sort_name_asc">名称 A–Z</string>
+    <string name="crown_store_sort_name_desc">名称 Z–A</string>
+    <string name="crown_store_results_count">%1$d 套王冠</string>
+    <string name="crown_store_card_game">游戏：%1$s</string>
+    <string name="crown_store_card_author">作者：%1$s</string>
+    <string name="crown_store_no_search_results">没有匹配的王冠</string>
+    <string name="crown_store_try_another_search">换个配置名、游戏、作者或标签试试。</string>
     <string name="crown_store_action_import_profile">收下这套</string>
     <string name="crown_store_action_report_profile">举报</string>
     <string name="crown_store_action_edit_publish">补充信息并投稿</string>
@@ -2120,6 +2165,7 @@
     <string name="perf_stats_item_host_latency">🖥 主机处理延迟</string>
     <string name="perf_stats_item_battery">🔋 电量</string>
     <string name="perf_stats_item_one_percent_low">📉 1% 低帧率（流畅度）</string>
+    <string name="perf_stats_item_clock">时钟</string>
     <string name="mic_icon_color_gradient_blue">蓝色渐变</string>
     <string name="mic_icon_color_gradient_purple">紫色渐变</string>
     <string name="mic_icon_color_gradient_green">绿色渐变</string>
@@ -2156,6 +2202,11 @@
     <string name="summary_seekbar_bitrate_baseline">智能码率从此数值开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">启用音频直通时不可用，因为直通会绕过系统音频效果。</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">启用音频直通时不可用，因为直通会绕过 Android 空间音频。</string>
+    <string name="title_decoder_input_buffer_mode">解码输入缓冲区</string>
+    <string name="summary_decoder_input_buffer_mode">自动补足缺失或过小的解码缓冲区；仅在兼容性排查时使用强制模式。</string>
+    <string name="decoder_input_buffer_mode_auto">自动（推荐）</string>
+    <string name="decoder_input_buffer_mode_force_enabled">强制启用</string>
+    <string name="decoder_input_buffer_mode_force_disabled">强制关闭</string>
     <string name="title_ac3_iec61937">AC3 IEC61937 兼容输出</string>
     <string name="summary_ac3_iec61937">将 48 kHz AC3 封装输出，适用于原始直通被转成 PCM 的设备。需要 Android 7+，并开启音频直通、选择 AC3；其他编码不变。修改后请彻底重启客户端。关闭可恢复原始 AC3。</string>
     <string name="stick_calibration_title">摇杆中心校准</string>

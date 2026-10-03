@@ -1,6 +1,6 @@
 Moonlight V+ is an enhanced version of the popular Moonlight game streaming app, featuring advanced capabilities and optimizations for the ultimate streaming experience.
 
-This app streams games, programs, or your full desktop from your PC or <a href="https://github.com/LizardByte/Sunshine">Sunshine</a> on your local network or the Internet. Mouse, keyboard, and controller input is sent from your Android device to the PC.
+Pair Moonlight V+ with <a href="https://github.com/AlkaidLab/foundation-sunshine">Foundation Sunshine</a>, our recommended host, to stream games, programs, or your desktop over a local network or the Internet. Standard streaming also works with <a href="https://github.com/LizardByte/Sunshine">Sunshine</a>. Mouse, keyboard, and controller input is sent from your Android device to the PC.
 
 Streaming performance may vary based on your client device and network setup. HDR requires an HDR10-capable device, a GPU that can encode HEVC Main 10, and an HDR10-enabled game.
 
@@ -12,7 +12,7 @@ Streaming performance may vary based on your client device and network setup. HD
 * 🎯 **Gyro Assistant**: Built-in gyroscope support for motion controls and aiming
 * 📊 **Performance Monitoring**: Real-time FPS, bitrate, latency, and packet loss display
 * 🎛️ **Scene Presets**: Save and switch between different streaming configurations
-* 🎤 **Microphone Redirection**: High-quality remote voice chat (requires Sunshine 2025.0720+)
+* 🎤 **Microphone Redirection**: Remote voice chat with Foundation Sunshine 2025.0720 or later
 * 🖥️ **Desktop Enhancement**: Beautiful app thumbnails and custom sorting
 * 🔧 **Smart Updates**: Automatic update checking with intelligent notifications
 
@@ -29,21 +29,18 @@ Streaming performance may vary based on your client device and network setup. HD
 * Force feedback and gamepad motion sensor support
 * Mouse control via gamepad by long-pressing Start
 
-'''Quick Setup Host Instructions for GeForce Experience (NVIDIA-only)'''
-# Make sure GeForce Experience is open on your PC. Turn on GameStream in the SHIELD settings page.
-# Tap on the PC in Moonlight and type the PIN on your PC
+'''Quick Setup with Foundation Sunshine'''
+# Install Foundation Sunshine on your PC from https://github.com/AlkaidLab/foundation-sunshine/releases
+# Complete first-time setup in its web interface
+# Select the PC in Moonlight V+ and enter the displayed PIN in the host web interface
 # Start streaming!
 
-'''Quick Setup Host Instructions for Sunshine (all GPUs)'''
-# Install Sunshine on your PC from https://github.com/LizardByte/Sunshine/releases
-# Navigate to the Sunshine Web UI on your PC for first-time setup
-# Tap on the PC in Moonlight and type the PIN in the Sunshine Web UI on your PC
-# Start streaming!
+Foundation Sunshine is recommended for the full V+ experience, including supported extensions such as microphone redirection. Standard Sunshine remains available for standard streaming; older NVIDIA GameStream setups may still work.
 
 To have a good experience, you need a mid to high-end wireless router with a good wireless connection to your Android device (5 GHz highly recommended) and a good connection from your PC to your router (Ethernet highly recommended).
 
 '''Detailed Setup Instructions'''
-See the full setup guide https://bit.ly/1skHFjN for:
+See https://github.com/qiin2333/moonlight-vplus/blob/master/README_EN.md and the linked Q&A for:
 * Adding a PC manually (if your PC is not detected)
 * Streaming over the Internet or LTE
 * Using a controller connected directly to your PC

@@ -23,6 +23,7 @@ class KeyboardUIController(
     interface OnKeyboardEventListener {
         fun sendKeyEvent(down: Boolean, keyCode: Short)
         fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int)
+        fun onKeyboardVisibilityChanged(visible: Boolean) {}
     }
     private val keyboardLayout: FrameLayout
     private val keyboardContent: View
@@ -597,11 +598,13 @@ class KeyboardUIController(
     fun show() {
         keyboardLayout.setVisibility(View.VISIBLE)
         parentContainer.setVisibility(View.VISIBLE)
+        listener.onKeyboardVisibilityChanged(true)
     }
 
     fun hide() {
         keyboardLayout.setVisibility(View.GONE)
         parentContainer.setVisibility(View.GONE)
+        listener.onKeyboardVisibilityChanged(false)
     }
 
     val isVisible: Boolean

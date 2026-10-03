@@ -121,6 +121,32 @@
         android:focusable="true"
         android:background="@drawable/appview_focusable_entry_bg" />
 
+    <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示，不参与遥控器焦点导航。 -->
+    <TextView
+        android:id="@+id/appViewTargetReminder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/appListText"
+        android:layout_marginStart="@dimen/appview_content_margin"
+        android:layout_marginEnd="@dimen/appview_content_margin"
+        android:gravity="end"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:textColor="@color/control_highlight_color"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:lineSpacingExtra="1dp"
+        android:shadowColor="@color/appview_text_shadow"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"
+        android:focusable="false"
+        android:clickable="false"
+        android:importantForAccessibility="yes"
+        android:visibility="gone" />
+
     <!-- 底部信息容器 -->
     <LinearLayout
         android:id="@+id/bottomInfoContainer"

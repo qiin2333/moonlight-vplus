@@ -33,7 +33,6 @@
                 android:layout_width="180dp"
                 android:layout_height="180dp"
                 android:layout_centerInParent="true"
-                android:background="@drawable/pc_icon_glow"
                 android:alpha="0.5" />
 
             <!-- 图标背景装饰 -->
@@ -42,7 +41,6 @@
                 android:layout_width="160dp"
                 android:layout_height="160dp"
                 android:layout_centerInParent="true"
-                android:background="@drawable/pc_item_icon_bg"
                 android:alpha="0.75" />
             
             <!-- 闪烁光效层 -->

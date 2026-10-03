@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">Входной буфер декодера</string>
+    <string name="summary_decoder_input_buffer_mode">Автоматически дополняет отсутствующие или слишком маленькие буферы. Принудительные режимы используйте только для проверки совместимости.</string>
+    <string name="decoder_input_buffer_mode_auto">Автоматически (рекомендуется)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">Принудительно включить</string>
+    <string name="decoder_input_buffer_mode_force_disabled">Принудительно выключить</string>
+</resources>

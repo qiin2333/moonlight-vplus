@@ -106,6 +106,58 @@ class KeyboardUIControllerTouchTest {
         }
     }
 
+    @Test
+    fun keyboardVisibilityChangesAreReportedToListener() {
+        val visibilityEvents = mutableListOf<Boolean>()
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) = Unit
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+
+                override fun onKeyboardVisibilityChanged(visible: Boolean) {
+                    visibilityEvents.add(visible)
+                }
+            }
+            val controller = KeyboardUIController(parent, listener, activity)
+            controller.show()
+            controller.hide()
+        }
+        assertEquals(listOf(true, false), visibilityEvents)
+    }
+
+    @Test
+    fun virtualKeyboardSuppressionHidesAndRestoresCrownElementLayer() {
+        activityRule.scenario.onActivity { activity ->
+            // activity_game.xml uses a <merge> root, so construct only the hierarchy
+            // required by ControllerManager instead of inflating the full game screen.
+            val parent = FrameLayout(activity).apply {
+                id = R.id.advance_setting_view
+                addView(FrameLayout(activity).apply {
+                    id = R.id.layer_2_element
+                    visibility = View.VISIBLE
+                })
+                addView(FrameLayout(activity).apply {
+                    id = R.id.super_pages_box
+                })
+            }
+            val crownElementLayer = parent.findViewById<View>(R.id.layer_2_element)
+            val manager = ControllerManager(parent, activity)
+
+            manager.setVirtualElementsSuppressedByKeyboard(true)
+            assertEquals(View.GONE, crownElementLayer.visibility)
+
+            manager.setVirtualElementsSuppressedByKeyboard(false)
+            assertEquals(View.VISIBLE, crownElementLayer.visibility)
+
+            crownElementLayer.visibility = View.INVISIBLE
+            manager.setVirtualElementsSuppressedByKeyboard(true)
+            manager.setVirtualElementsSuppressedByKeyboard(false)
+            assertEquals(View.INVISIBLE, crownElementLayer.visibility)
+        }
+    }
+
     private object NoOpKeyboardListener : KeyboardUIController.OnKeyboardEventListener {
         override fun sendKeyEvent(down: Boolean, keyCode: Short) = Unit
 

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_decoder_input_buffer_mode">디코더 입력 버퍼</string>
+    <string name="summary_decoder_input_buffer_mode">누락되거나 너무 작은 디코더 버퍼를 자동으로 보완합니다. 강제 모드는 호환성 확인에만 사용하세요.</string>
+    <string name="decoder_input_buffer_mode_auto">자동(권장)</string>
+    <string name="decoder_input_buffer_mode_force_enabled">강제로 사용</string>
+    <string name="decoder_input_buffer_mode_force_disabled">강제로 사용 안 함</string>
+</resources>

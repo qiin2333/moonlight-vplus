@@ -215,7 +215,7 @@
     <string name="title_fps_list">Частота кадров</string>
     <string name="summary_fps_list">Повысьте для плавности. Снизьте для слабого устройства.</string>
     <string name="title_seekbar_bitrate">Битрейт видео</string>
-    <string name="summary_seekbar_bitrate">Повысьте для качества. Снизьте для медленной сети.</string>
+    <string name="summary_seekbar_bitrate">Более высокий битрейт улучшает качество изображения, но расходует больше трафика; более низкий подходит для медленных или нестабильных сетей. При рывках сначала снизьте битрейт, а повышайте его, когда сеть стабильна, но изображение недостаточно чёткое; для 1080p60 начните примерно с 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Адаптивный битрейт</string>
     <string name="summary_adaptive_bitrate">Автоподстройка по потерям пакетов и задержке. Если сервер не поддерживает ABR, битрейтом управляет клиент.</string>
@@ -272,7 +272,7 @@
     <string name="title_checkbox_control_only">Только управление</string>
     <string name="summary_checkbox_control_only">Подключение без видео и звука, только для удалённого ввода. Нужен Sunshine с поддержкой этого режима.</string>
     <string name="title_checkbox_enable_mic">Включить микрофон</string>
-    <string name="summary_checkbox_enable_mic">Передача звука микрофона на ПК. Нужен Sunshine Foundation 20260117 или новее.</string>
+    <string name="summary_checkbox_enable_mic">Передача звука микрофона на ПК. Нужен Foundation Sunshine 2025.0720 или новее.</string>
     <string name="title_list_mic_initial_state">Микрофон при запуске</string>
     <string name="summary_list_mic_initial_state">Состояние микрофона в начале каждой трансляции.</string>
     <string name="mic_initial_state_off">Выкл.</string>
@@ -536,6 +536,7 @@
     <string name="float_ball_action_open_keyboard">Экранная клавиатура</string>
     <string name="float_ball_action_open_menu">Игровое меню</string>
     <string name="float_ball_action_toggle_visibility">Показать/скрыть кнопку</string>
+    <string name="float_ball_action_show_perf_overlay">Показать слой мониторинга производительности</string>
     <string name="float_ball_action_screenshot">Снимок экрана</string>
     <string name="float_ball_action_lock_screen">Блок. экрана</string>
     <string name="category_ui_settings">Интерфейс</string>
@@ -613,8 +614,8 @@
     <string name="title_checkbox_clipboard_sync_image">Синхронизация изображений</string>
     <string name="summary_checkbox_clipboard_sync_image">Передавать изображения из буфера на ПК. Большие снимки экрана могут расходовать много трафика.</string>
     <string name="title_screen_combination_mode">Расположение экранов ПК</string>
-    <string name="summary_screen_combination_mode">Управление экранами и их объединением. Нужен совместимый Sunshine Base.</string>
-    <string name="screen_combination_mode_dialog_subtitle">Управление экранами Sunshine Foundation</string>
+    <string name="summary_screen_combination_mode">Управление экранами и их объединением. Нужен совместимый Foundation Sunshine.</string>
+    <string name="screen_combination_mode_dialog_subtitle">Управление экранами Foundation Sunshine</string>
     <string name="screen_mode_host_default">Как на ПК</string>
     <string name="screen_mode_no_operation">Без изменений</string>
     <string name="screen_mode_auto_activate">Активировать</string>
@@ -637,7 +638,7 @@
     <string name="title_disable_frame_drop">Не пропускать кадры</string>
     <string name="summary_disable_frame_drop">Может уменьшить микрорывки на некоторых устройствах, но повысить задержку</string>
     <string name="title_video_format">Видеокодек</string>
-    <string name="summary_video_format">Новые кодеки могут снизить расход трафика при поддержке устройством. Если сервер или видеокарта не поддерживают кодек, выбор может игнорироваться.</string>
+    <string name="summary_video_format">Не знаете, что выбрать? Используйте «Автоматически». HEVC рекомендуется для большинства современных устройств и обычно хорошо сочетает качество изображения, расход трафика и HDR. AV1 может сэкономить трафик при поддержке с обеих сторон, но на некоторых устройствах декодирование может иметь большую задержку. H.264 лучше всего совместим, но требует больше трафика и не поддерживает HDR.</string>
     <string name="title_enable_hdr">HDR (экспериментально)</string>
     <string name="summary_enable_hdr">HDR при поддержке игрой и видеокартой ПК. Нужна видеокарта с кодированием HEVC Main 10.</string>
     <string name="title_enable_hdr_high_brightness">Макс. яркость для HDR</string>
@@ -666,6 +667,14 @@
     <string name="summary_enable_host_cadence_precise_sync">Уменьшает повторяющиеся микрорывки в стабильной сети, особенно при 90/120 FPS. Может добавить 1–3 мс задержки.</string>
     <string name="title_perf_overlay_orientation">Вид статистики</string>
     <string name="summary_perf_overlay_orientation">Горизонтальная строка или вертикальный столбец.</string>
+    <string name="title_perf_overlay_clock_format">Формат часов</string>
+    <string name="summary_perf_overlay_clock_format">Сначала включите «Часы» в показателях статистики.</string>
+    <string name="perf_overlay_clock_format_system_minutes">Системный формат, часы и минуты</string>
+    <string name="perf_overlay_clock_format_system_seconds">Системный формат, включая секунды</string>
+    <string name="perf_overlay_clock_format_24_minutes">24-часовой формат, часы и минуты</string>
+    <string name="perf_overlay_clock_format_24_seconds">24-часовой формат, включая секунды</string>
+    <string name="perf_overlay_clock_format_12_minutes">12-часовой формат, часы и минуты</string>
+    <string name="perf_overlay_clock_format_12_seconds">12-часовой формат, включая секунды</string>
     <string name="title_perf_overlay_position">Положение статистики</string>
     <string name="summary_perf_overlay_position">Строка сверху/снизу или столбец в углу экрана.</string>
     <string name="title_reset_perf_overlay_position">Сбросить позицию статистики</string>
@@ -980,7 +989,7 @@
     <string name="tip_volume_keys">💡 Wi-Fi 5 ГГц обеспечивает более быструю трансляцию.</string>
     <string name="tip_wallpaper_change">💡 В настройке API обоев можно указать источник случайных изображений или ссылку на одно изображение.</string>
     <string name="tip_5ghz_wifi">💡 Режим вывода кадров «Баланс» сочетает плавность и низкую задержку.</string>
-    <string name="tip_close_apps">💡 HDR улучшает цвет и контраст. В Sunshine Base можно привязать HDR-профиль для более точного соответствия экрану клиента.</string>
+    <string name="tip_close_apps">💡 HDR улучшает цвет и контраст. В Foundation Sunshine можно привязать HDR-профиль для более точного соответствия экрану клиента.</string>
     <string name="tip_home_saves">💡 Пять акул на главном экране позволяют сохранять и переключать настройки трансляции.</string>
     <string name="tip_hdr_colors">💡 Подберите разрешение для баланса качества и производительности.</string>
     <string name="tip_touch_modes">💡 Меняйте сенсорный режим в игровом меню. Улучшенный мультитач подходит для мобильных игр, тачпад — для работы.</string>
@@ -1401,7 +1410,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">Задержка:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">Трафик (Rx/Tx):</string>
     <string name="layout_game_menu_super_empty_text_a7970">Суперкоманд пока нет</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">Создайте суперкоманды в Sunshine Foundation Edition.</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">Создайте суперкоманды в Foundation Sunshine Edition.</string>
     <string name="game_menu_super_commands">Суперкоманды</string>
     <string name="layout_item_key_value_text_0952a">Раздел 1</string>
     <string name="layout_item_key_value_hint_dd44f">Имя раздела; пустое — имя клавиши</string>
@@ -1974,6 +1983,7 @@
     <string name="perf_stats_item_host_latency">🖥 Задержка обработки на ПК</string>
     <string name="perf_stats_item_battery">🔋 Заряд батареи</string>
     <string name="perf_stats_item_one_percent_low">📉 1% Low FPS (плавность)</string>
+    <string name="perf_stats_item_clock">Часы</string>
     <string name="mic_icon_color_gradient_blue">Синий градиент</string>
     <string name="mic_icon_color_gradient_purple">Фиолетовый градиент</string>
     <string name="mic_icon_color_gradient_green">Зелёный градиент</string>
