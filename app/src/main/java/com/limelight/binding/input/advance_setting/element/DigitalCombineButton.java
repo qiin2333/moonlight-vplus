@@ -186,11 +186,13 @@ public class DigitalCombineButton extends Element {
 
             @Override
             public void onRelease() {
-                value1SendHandler.sendEvent(false);
-                value2SendHandler.sendEvent(false);
-                value3SendHandler.sendEvent(false);
-                value4SendHandler.sendEvent(false);
+                // Release combinations in reverse order so modifiers remain held
+                // until every non-modifier key has been released.
                 value5SendHandler.sendEvent(false);
+                value4SendHandler.sendEvent(false);
+                value3SendHandler.sendEvent(false);
+                value2SendHandler.sendEvent(false);
+                value1SendHandler.sendEvent(false);
             }
         };
     }
