@@ -200,7 +200,8 @@ private fun CompactGameMenuSlider(
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val colors = SliderDefaults.colors()
     val interactionSource = remember { MutableInteractionSource() }
@@ -209,6 +210,7 @@ private fun CompactGameMenuSlider(
         onValueChange = onValueChange,
         onValueChangeFinished = onValueChangeFinished,
         valueRange = valueRange,
+        enabled = enabled,
         colors = colors,
         interactionSource = interactionSource,
         thumb = {
@@ -613,11 +615,13 @@ private fun BitrateCard(
         },
         onLongClick = onConfigure
     ) {
-        Text(
-            text = currentLabel,
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 10.sp
-        )
+        if (state.packetControl) {
+            TransportPolicyControls(state.transport, callbacks.onTransportBitrate,
+                callbacks.onTransportFec, callbacks.onTransportManual)
+        } else {
+            Text(text = currentLabel, color = colorResource(R.color.game_menu_text_secondary), fontSize = 10.sp)
+        }
+        NetworkStatisticsSummary(state.transport)
         Text(
             text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
             color = appAccentColor(),
@@ -634,8 +638,9 @@ private fun BitrateCard(
             },
             onValueChangeFinished = callbacks.onBitrateApply,
             valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+            enabled = !state.packetControl || state.transport?.canSubmit == true,
             modifier = Modifier
-                .focusProperties { canFocus = true }
+                .focusProperties { canFocus = !state.packetControl || state.transport?.canSubmit == true }
                 .fillMaxWidth()
                 .height(GameMenuSliderSpec.height)
                 .gamepadFocusOutline(GameMenuControlShape)

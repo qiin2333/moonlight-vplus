@@ -5,7 +5,7 @@
  *   1. 优先让 Sunshine 服务端做码率决策（ABR API feedback 模式）
  *   2. 服务端不支持时回退到客户端本地控制器（PID 风格）
  *
- * 客户端每秒上报网络指标 → 服务端返回码率调整指令 → 客户端执行
+ * 客户端每秒上报网络指标 → 服务端提交码率目标 → 客户端同步目标镜像
  */
 package com.limelight.nvstream.http
 
@@ -15,12 +15,26 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-class AdaptiveBitrateService(
-    private val nvHttpFactory: () -> NvHTTP,
+class AdaptiveBitrateService internal constructor(
+    private val transportFactory: () -> AbrTransport,
     private val statsProvider: () -> AbrStats?,
-    /** 码率成功调整后的回调（已在 service 线程发到服务端）。仅用于更新本地 prefConfig / UI。*/
-    private val onBitrateChanged: (bitrateKbps: Int, reason: String) -> Unit
+    /** 旧 API 已提交的目标镜像。仅更新本地配置，不代表编码器生效回执。 */
+    private val onBitrateChanged: (bitrateKbps: Int, reason: String) -> Unit,
+    private val executor: ScheduledExecutorService
 ) {
+    constructor(
+        nvHttpFactory: () -> NvHTTP,
+        statsProvider: () -> AbrStats?,
+        onBitrateChanged: (bitrateKbps: Int, reason: String) -> Unit
+    ) : this(
+        { NvHttpAbrTransport(nvHttpFactory()) },
+        statsProvider,
+        onBitrateChanged,
+        Executors.newSingleThreadScheduledExecutor { r ->
+            Thread(r, "AdaptiveBitrateService").apply { isDaemon = true }
+        }
+    )
+
     data class AbrStats(
         val packetLoss: Float,    // %
         val rttMs: Int,           // 网络 RTT
@@ -28,12 +42,10 @@ class AdaptiveBitrateService(
         val droppedFrames: Int    // 累计丢帧
     )
 
-    private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { r ->
-        Thread(r, "AdaptiveBitrateService").apply { isDaemon = true }
-    }
     private var future: ScheduledFuture<*>? = null
 
-    @Volatile private var nvHttp: NvHTTP? = null
+    @Volatile private var transport: AbrTransport? = null
+    @Volatile private var closed = false
     @Volatile var enabled: Boolean = false
         private set
     @Volatile var serverSupported: Boolean = false
@@ -63,8 +75,8 @@ class AdaptiveBitrateService(
      * 启动 ABR。会在后台线程探测服务端能力。
      * @param initialBitrate 当前码率（kbps），ABR 围绕此值上下浮动
      */
-    fun start(initialBitrate: Int, mode: String) {
-        if (enabled) return
+    @Synchronized fun start(initialBitrate: Int, mode: String) {
+        if (enabled || closed) return
         this.initialBitrate = initialBitrate
         this.currentBitrate = initialBitrate
         this.mode = mode
@@ -74,11 +86,15 @@ class AdaptiveBitrateService(
 
         executor.execute {
             try {
-                val http = nvHttpFactory()
-                nvHttp = http
+                if (!enabled) return@execute
+                val http = transportFactory()
+                transport = http
                 val caps = http.getAbrCapabilities()
-                serverSupported = caps.supported
-                if (caps.supported) serverEnableRetries = 1
+                synchronized(this) {
+                    if (!enabled) return@execute
+                    serverSupported = caps.supported
+                    if (caps.supported) serverEnableRetries = 1
+                }
                 LimeLog.info("[ABR] 启动: bitrate=${initialBitrate}kbps, mode=$mode, server=${caps.supported} (v${caps.version})")
             } catch (e: Exception) {
                 LimeLog.warning("[ABR] 服务端能力探测失败: ${e.message}")
@@ -88,6 +104,7 @@ class AdaptiveBitrateService(
         // 使用 scheduleWithFixedDelay 而非 scheduleAtFixedRate：
         // Android 进程被 cached 后唤醒时，fixedRate 会"补跑"积压的几百上千次 tick，
         // 而 fixedDelay 只在每次执行完成后再等待 1 秒，避免突发风暴。
+        if (closed) return
         future = executor.scheduleWithFixedDelay({
             try {
                 tick()
@@ -98,7 +115,7 @@ class AdaptiveBitrateService(
     }
 
     /** 用户手动调了码率（如游戏菜单滑块），ABR 同步基准并重置探测状态。*/
-    fun notifyManualOverride(kbps: Int) {
+    @Synchronized fun notifyManualOverride(kbps: Int) {
         if (!enabled) return
         currentBitrate = kbps
         stableSeconds = 0
@@ -107,20 +124,24 @@ class AdaptiveBitrateService(
         LimeLog.info("[ABR] 手动覆盖码率 -> ${kbps}kbps")
     }
 
-    fun stop() {
-        if (!enabled) return
+    @Synchronized fun stop() {
+        if (closed) return
+        closed = true
+        val wasServerSupported = serverSupported
         enabled = false
+        serverSupported = false
+        bitrateListener = null
         future?.cancel(false)
         future = null
 
         // 通知服务端关闭并恢复初始码率
         executor.execute {
             try {
-                if (serverSupported) {
-                    nvHttp?.setAbrMode(AbrConfig(false, 0, 0, MODE_BALANCED))
+                if (wasServerSupported) {
+                    transport?.setAbrMode(AbrConfig(false, 0, 0, MODE_BALANCED))
                 }
                 if (currentBitrate != initialBitrate) {
-                    applyBitrateInternal(initialBitrate, "restore")
+                    applyBitrateInternal(initialBitrate, "restore", allowStopped = true)
                 }
             } catch (e: Exception) {
                 LimeLog.warning("[ABR] stop 异常: ${e.message}")
@@ -129,6 +150,9 @@ class AdaptiveBitrateService(
         }
         executor.shutdown()
     }
+
+    /** Teardown waits off the UI thread before allowing another host negotiation. */
+    fun awaitStopped(timeout: Long, unit: TimeUnit): Boolean = executor.awaitTermination(timeout, unit)
 
     /** 用于性能面板显示当前 ABR 状态。*/
     fun getStatusText(): String {
@@ -172,14 +196,17 @@ class AdaptiveBitrateService(
     }
 
     private fun tick() {
-        val http = nvHttp ?: return
+        if (!enabled) return
+        val http = transport ?: return
         val stats = statsProvider() ?: return
+        if (!enabled) return
 
         // 服务端启用惰性重试
         if (serverSupported && serverEnableRetries > 0) {
             if (++serverRetryTickCounter >= SERVER_RETRY_INTERVAL_TICKS) {
                 serverRetryTickCounter = 0
                 val ok = http.setAbrMode(AbrConfig(true, minBitrate, maxBitrate, mode))
+                if (!enabled) return
                 if (ok) {
                     LimeLog.info("[ABR] 服务端 ABR 启用成功（第 $serverEnableRetries 次）")
                     serverEnableRetries = 0
@@ -190,6 +217,7 @@ class AdaptiveBitrateService(
             }
         }
 
+        if (!enabled) return
         if (serverSupported && serverEnableRetries == 0) {
             tickServer(http, stats)
         } else {
@@ -197,7 +225,7 @@ class AdaptiveBitrateService(
         }
     }
 
-    private fun tickServer(http: NvHTTP, stats: AbrStats) {
+    private fun tickServer(http: AbrTransport, stats: AbrStats) {
         val feedback = NetworkFeedback(
             packetLoss = stats.packetLoss,
             rttMs = stats.rttMs,
@@ -206,28 +234,36 @@ class AdaptiveBitrateService(
             currentBitrate = currentBitrate
         )
         val action = http.reportNetworkFeedback(feedback) ?: return
+        if (!enabled) return
         val newBitrate = action.newBitrate ?: return
-        if (newBitrate == currentBitrate) return
-        val clamped = newBitrate.coerceIn(minBitrate, maxBitrate)
-        applyBitrateInternal(clamped, action.reason ?: "server", source = "server")
+        if (action.bitrateApplied == false || newBitrate <= 0 || newBitrate == currentBitrate) return
+        // /api/abr/feedback 已向会话提交此目标；再次 setBitrate 会重复执行。
+        // 主机上限可能低于本地 minBitrate，镜像须保留主机实际返回的目标。
+        updateBitrateMirror(newBitrate, action.reason ?: "server", source = "server")
     }
 
     /** 内部统一码率应用：复用缓存的 nvHttp 实例，避免每次新建 OkHttpClient + TLS。*/
-    private fun applyBitrateInternal(kbps: Int, reason: String, source: String = "local"): Boolean {
-        val http = nvHttp ?: return false
-        val from = currentBitrate
+    private fun applyBitrateInternal(kbps: Int, reason: String, source: String = "local", allowStopped: Boolean = false): Boolean {
+        if (!enabled && !allowStopped) return false
+        val http = transport ?: return false
         return try {
             if (http.setBitrate(kbps)) {
-                currentBitrate = kbps
-                LimeLog.info("[ABR][$source] ${from}kbps -> ${kbps}kbps ($reason)")
-                onBitrateChanged(kbps, reason)
-                try { bitrateListener?.invoke(kbps, reason) } catch (_: Exception) {}
+                updateBitrateMirror(kbps, reason, source, allowStopped)
                 true
             } else false
         } catch (e: Exception) {
             LimeLog.warning("[ABR] setBitrate 失败: ${e.message}")
             false
         }
+    }
+
+    @Synchronized private fun updateBitrateMirror(kbps: Int, reason: String, source: String, allowStopped: Boolean = false) {
+        if (!enabled && !allowStopped) return
+        val from = currentBitrate
+        currentBitrate = kbps
+        LimeLog.info("[ABR][$source] target ${from}kbps -> ${kbps}kbps ($reason)")
+        onBitrateChanged(kbps, reason)
+        try { bitrateListener?.invoke(kbps, reason) } catch (_: Exception) {}
     }
 
     private fun tickLocal(stats: AbrStats) {
@@ -297,4 +333,18 @@ class AdaptiveBitrateService(
         private const val DIR_UP = 1
         private const val DIR_DOWN = -1
     }
+}
+
+internal interface AbrTransport {
+    fun getAbrCapabilities(): AbrCapabilities
+    fun setAbrMode(config: AbrConfig): Boolean
+    fun reportNetworkFeedback(feedback: NetworkFeedback): AbrAction?
+    fun setBitrate(kbps: Int): Boolean
+}
+
+private class NvHttpAbrTransport(private val http: NvHTTP) : AbrTransport {
+    override fun getAbrCapabilities() = http.getAbrCapabilities()
+    override fun setAbrMode(config: AbrConfig) = http.setAbrMode(config)
+    override fun reportNetworkFeedback(feedback: NetworkFeedback) = http.reportNetworkFeedback(feedback)
+    override fun setBitrate(kbps: Int) = http.setBitrate(kbps)
 }
