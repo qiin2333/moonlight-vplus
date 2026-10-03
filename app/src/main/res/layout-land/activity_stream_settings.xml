@@ -43,14 +43,27 @@
                 android:paddingTop="@dimen/activity_safearea_top"
                 android:elevation="4dp">
 
+                <ImageView
+                    android:id="@+id/settings_back"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="4dp"
+                    android:src="@drawable/ic_arrow_back_24"
+                    app:tint="@color/ui_shell_text_primary"
+                    android:background="@drawable/menu_button_background_stylish"
+                    android:scaleType="center"
+                    android:padding="10dp"
+                    android:contentDescription="@string/addpc_back" />
+
                 <!-- 顶部品牌区域（紧凑） -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center_horizontal"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="12dp">
+                    android:paddingTop="8dp"
+                    android:paddingBottom="10dp">
 
                     <!-- 圆形品牌图标 -->
                     <androidx.cardview.widget.CardView
@@ -67,6 +80,54 @@
                             android:scaleType="centerCrop" />
 
                     </androidx.cardview.widget.CardView>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/settings_search_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/settings_search_bar_background"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="4dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        app:srcCompat="@drawable/ic_search_stylish"
+                        android:layout_marginEnd="6dp"
+                        android:contentDescription="@string/settings_search_hint" />
+
+                    <EditText
+                        android:id="@+id/settings_search_input"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@android:color/transparent"
+                        android:hint="@string/settings_search_hint"
+                        android:textColor="@color/ui_shell_text_primary"
+                        android:textColorHint="@color/ui_shell_text_secondary"
+                        android:textSize="13sp"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:maxLines="1"
+                        android:importantForAutofill="no" />
+
+                    <ImageView
+                        android:id="@+id/settings_search_close"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_close_stylish"
+                        android:scaleType="center"
+                        android:padding="5dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/settings_search_close" />
 
                 </LinearLayout>
 

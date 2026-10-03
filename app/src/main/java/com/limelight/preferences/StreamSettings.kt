@@ -42,6 +42,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.view.animation.AnimationUtils
 
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -132,7 +133,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     private val categories: MutableList<CategoryItem> = ArrayList()
     private var selectedCategoryIndex = 0
 
-    // 搜索栏相关（仅竖屏 layout 提供，横屏 layout 不渲染搜索控件）
+    // 搜索栏：竖屏是可展开按钮，横屏常驻在分类栏 Logo 下方
     private var searchBar: View? = null
     private var searchInput: EditText? = null
     private var searchToggle: ImageView? = null
@@ -336,9 +337,20 @@ class StreamSettings : ThemedAppCompatActivity() {
         categoryList = findViewById(R.id.category_list)
 
         setupMenuToggle()
+        setupBackButton()
         setupCategoryList()
         setupDrawerListener()
         setupSearchBar()
+    }
+
+    /**
+     * 横屏分类栏顶部的返回。竖屏用系统返回和抽屉，没有这个按钮。
+     */
+    private fun setupBackButton() {
+        val backButton = findViewById<ImageView>(R.id.settings_back) ?: return
+        backButton.setOnClickListener { onBackPressed() }
+        backButton.isFocusable = true
+        backButton.isFocusableInTouchMode = false
     }
 
     /**
@@ -352,8 +364,8 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     /**
-     * 设置浮动搜索按钮 + 顶部搜索栏（仅竖屏 layout 提供这些 view，
-     * 横屏 layout 不包含搜索控件，findViewById 返回 null，自动跳过）。
+     * 竖屏：浮动搜索按钮展开顶部搜索栏。
+     * 横屏：搜索框常驻在分类栏 Logo 下方，没有展开按钮，清空按钮只清内容。
      */
     private fun setupSearchBar() {
         searchBar = findViewById(R.id.settings_search_bar)
@@ -362,11 +374,16 @@ class StreamSettings : ThemedAppCompatActivity() {
         menuToggleView = findViewById(R.id.settings_menu_toggle)
         val closeBtn = findViewById<ImageView?>(R.id.settings_search_close)
 
-        // 横屏布局没有这些控件
-        if (searchBar == null || searchInput == null || searchToggle == null) return
+        if (searchBar == null || searchInput == null) return
 
         searchToggle?.setOnClickListener { showSearchBar() }
-        closeBtn?.setOnClickListener { hideSearchBar() }
+        closeBtn?.setOnClickListener {
+            if (searchToggle == null) {
+                clearSearchQuery()
+            } else {
+                hideSearchBar()
+            }
+        }
 
         searchInput?.doAfterTextChanged { applyFilterToFragment(it?.toString().orEmpty()) }
 
@@ -380,7 +397,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private val isSearchBarVisible: Boolean
-        get() = searchBar?.visibility == View.VISIBLE
+        get() = searchToggle != null && searchBar?.visibility == View.VISIBLE
 
     private fun fadeIn(v: View?) {
         v ?: return
@@ -404,11 +421,15 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun hideSearchBar() {
-        searchInput?.setText("")
-        applyFilterToFragment("")
+        clearSearchQuery()
         fadeOut(searchBar)
         fadeIn(searchToggle)
         fadeIn(menuToggleView)
+    }
+
+    private fun clearSearchQuery() {
+        searchInput?.setText("")
+        applyFilterToFragment("")
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.hideSoftInputFromWindow(searchInput?.windowToken, 0)
     }
@@ -676,16 +697,21 @@ class StreamSettings : ThemedAppCompatActivity() {
      * 通知 Activity 分类已加载
      */
     fun onCategoriesLoaded(loadedCategories: List<CategoryItem>) {
+        val hadCategories = categories.isNotEmpty()
         val selectedKey = categories.getOrNull(selectedCategoryIndex)?.key
         categories.clear()
         categories.addAll(loadedCategories)
 
-        selectedCategoryIndex = selectedKey
+        val keptIndex = selectedKey
             ?.let { key -> categories.indexOfFirst { it.key == key } }
             ?.takeIf { it >= 0 }
-            ?: selectedCategoryIndex.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
+        selectedCategoryIndex = keptIndex ?: 0
 
         categoryAdapter?.notifyDataSetChanged()
+        if (hadCategories && keptIndex == null && categories.isNotEmpty()) {
+            categoryList?.scrollToPosition(selectedCategoryIndex)
+            categories.getOrNull(selectedCategoryIndex)?.let { scrollToCategory(it.key) }
+        }
     }
 
     /**
@@ -1338,6 +1364,13 @@ class StreamSettings : ThemedAppCompatActivity() {
                 val recyclerView = listView
                 if (recyclerView != null) {
                     setupScrollListener(recyclerView, settingsActivity)
+                    recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+                        override fun onChildViewAttachedToWindow(view: View) {
+                            bindCategoryOpenAction(view)
+                        }
+
+                        override fun onChildViewDetachedFromWindow(view: View) = Unit
+                    })
                 }
             }
         }
@@ -1362,6 +1395,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 onCategoryEligibilityChanged = { rebuildCategoryList() },
             )
         }
+        private var pendingCategoryRevealKey: String? = null
+        private var revealAfterListRebuild = false
 
         private val modeStore by lazy {
             LegacySettingsModeStore(
@@ -1376,7 +1411,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             val items = ArrayList<CategoryItem>()
             for (i in 0 until screen.preferenceCount) {
                 val category = screen.getPreference(i) as? PreferenceCategory ?: continue
-                val eligible = visibilityController.isRuntimeVisible(category)
+                val eligible = visibilityController.isListed(category)
                 val title = category.title?.toString() ?: continue
                 if (!eligible) continue
                 val key = category.key ?: "category_$i"
@@ -1385,6 +1420,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
             categoryPositionsValid = false
             settingsActivity.onCategoriesLoaded(items)
+            if (revealAfterListRebuild) {
+                revealAfterListRebuild = false
+                listView?.post { revealPendingCategory() }
+            }
         }
 
         private fun updateRuntimeVisibility(preference: Preference?, visible: Boolean) {
@@ -1393,10 +1432,76 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         /**
          * 应用搜索过滤。空查询恢复全部可见性 + 原始折叠状态；
-         * 非空查询仅显示匹配的项，匹配类的整组也展开。
+         * 非空查询匹配标题、说明和下拉选项文案。分类名命中时整组展开。
          */
         fun applySearchFilter(query: String) {
             visibilityController.applySearch(query)
+            refreshSearchPresentation()
+        }
+
+        /**
+         * 退出搜索并回到这个分类的完整内容。分类标题上的「在分类中查看」走这里，
+         * 设置项本身的点击仍然直接修改。
+         */
+        fun openCategoryFromSearch(categoryKey: String) {
+            pendingCategoryRevealKey = categoryKey
+            revealAfterListRebuild = true
+            (activity as? StreamSettings)?.clearSearchQuery()
+        }
+
+        private fun refreshSearchPresentation() {
+            val adapter = listView?.adapter as? PreferenceGroupAdapter
+            if (adapter != null) {
+                for (index in 0 until adapter.itemCount) {
+                    val preference = adapter.getItem(index)
+                    if (preference is ListPreference || preference is MultiSelectListPreference) {
+                        adapter.notifyItemChanged(index)
+                    }
+                }
+            }
+            listView?.let { recycler ->
+                for (index in 0 until recycler.childCount) {
+                    bindCategoryOpenAction(recycler.getChildAt(index))
+                }
+            }
+        }
+
+        private fun bindCategoryOpenAction(child: View) {
+            val open = child.findViewById<TextView>(R.id.settings_category_open) ?: return
+            val recyclerView = listView
+            val adapter = recyclerView?.adapter as? PreferenceGroupAdapter
+            val position = recyclerView?.getChildAdapterPosition(child) ?: RecyclerView.NO_POSITION
+            val category = if (adapter != null && position >= 0) {
+                adapter.getItem(position) as? PreferenceCategory
+            } else {
+                null
+            }
+            val categoryKey = category?.key
+            if (!visibilityController.isSearching() ||
+                categoryKey.isNullOrEmpty() ||
+                visibilityController.categoryNameMatches(category)
+            ) {
+                open.visibility = View.GONE
+                open.setOnClickListener(null)
+            } else {
+                open.visibility = View.VISIBLE
+                open.setOnClickListener { openCategoryFromSearch(categoryKey) }
+            }
+        }
+
+        private fun revealPendingCategory() {
+            val categoryKey = pendingCategoryRevealKey ?: return
+            if (visibilityController.isSearching()) return
+            pendingCategoryRevealKey = null
+            val index = categoryList.indexOfFirst { it.key == categoryKey }
+            if (index < 0) return
+            scrollToCategoryAtIndex(index)
+            (activity as? StreamSettings)?.updateSelectedCategory(index)
+            listView?.post {
+                val position = findAdapterPositionForPreference(categoryList.getOrNull(index))
+                val holder = if (position >= 0) listView?.findViewHolderForAdapterPosition(position) else null
+                holder?.itemView?.startAnimation(AnimationUtils.loadAnimation(requireContext(), R.anim.settings_category_reveal))
+            }
         }
 
         /**
@@ -1484,8 +1589,28 @@ class StreamSettings : ThemedAppCompatActivity() {
                 if (description != null) {
                     builder.append('\n').append(description)
                 }
+                searchMatchNote(p)?.let { note ->
+                    val noteStart = builder.length
+                    builder.append('\n').append(note)
+                    builder.setSpan(
+                        ForegroundColorSpan(UiHelper.accentColor(requireActivity())),
+                        noteStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    builder.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        noteStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
                 builder
             }
+        }
+
+        private fun searchMatchNote(preference: Preference): String? {
+            if (!visibilityController.isSearching()) return null
+            val matches = visibilityController.matchedDropdownLabels(preference)
+            if (matches.isEmpty()) return null
+            return getString(
+                R.string.settings_search_contains,
+                matches.joinToString(getString(R.string.settings_search_match_separator))
+            )
         }
 
         /**
