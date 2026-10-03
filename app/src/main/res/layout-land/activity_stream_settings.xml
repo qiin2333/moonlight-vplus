@@ -43,33 +43,18 @@
                 android:paddingTop="@dimen/activity_safearea_top"
                 android:elevation="4dp">
 
-                <ImageView
-                    android:id="@+id/settings_back"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="4dp"
-                    android:src="@drawable/ic_arrow_back_24"
-                    app:tint="@color/ui_shell_text_primary"
-                    android:background="@drawable/menu_button_background_stylish"
-                    android:scaleType="center"
-                    android:padding="10dp"
-                    android:contentDescription="@string/addpc_back" />
-
-                <!-- 顶部品牌区域（紧凑） -->
-                <LinearLayout
+                <!-- 返回贴左，品牌图标居中放大，避免返回单独占出一条空白 -->
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center_horizontal"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="10dp">
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp">
 
-                    <!-- 圆形品牌图标 -->
                     <androidx.cardview.widget.CardView
-                        android:layout_width="52dp"
-                        android:layout_height="52dp"
-                        app:cardCornerRadius="26dp"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:layout_gravity="center_horizontal"
+                        app:cardCornerRadius="36dp"
                         app:cardElevation="4dp"
                         app:cardBackgroundColor="#222222">
 
@@ -81,7 +66,20 @@
 
                     </androidx.cardview.widget.CardView>
 
-                </LinearLayout>
+                    <ImageView
+                        android:id="@+id/settings_back"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_gravity="start|center_vertical"
+                        android:layout_marginStart="8dp"
+                        android:src="@drawable/ic_arrow_back_24"
+                        app:tint="@color/ui_shell_text_primary"
+                        android:background="@drawable/menu_button_background_stylish"
+                        android:scaleType="center"
+                        android:padding="10dp"
+                        android:contentDescription="@string/addpc_back" />
+
+                </FrameLayout>
 
                 <LinearLayout
                     android:id="@+id/settings_search_bar"
