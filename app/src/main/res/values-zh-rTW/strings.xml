@@ -400,6 +400,12 @@
     <string name="toast_zero_deadzone_warning" formatted="false">0% 死區會傳送所有非零搖桿位移，手把漂移可能導致意外移動。</string>
     <string name="title_checkbox_absolute_mouse_mode">遠端桌面滑鼠模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">這可以讓滑鼠在遠端桌面使用中的加速表現更加自然，但與很多遊戲不相容。</string>
+    <string name="title_list_mouse_axis_correction">滑鼠方向修正</string>
+    <string name="summary_list_mouse_axis_correction">傳送到主機前旋轉已擷取的滑鼠移動。僅在部分 Android 裝置錯誤旋轉滑鼠軸時修改。</string>
+    <string name="mouse_axis_correction_off">關閉</string>
+    <string name="mouse_axis_correction_90">旋轉 90 度</string>
+    <string name="mouse_axis_correction_180">旋轉 180 度</string>
+    <string name="mouse_axis_correction_270">旋轉 270 度</string>
     <string name="title_checkbox_enable_audiofx">使用系統音訊效果</string>
     <string name="summary_checkbox_enable_audiofx">允許等化器等系統效果處理 Moonlight 本機解碼的音訊；直通音訊會略過這些效果，此選項也可能增加延遲。</string>
     <string name="resolution_prefix_native_landscape">(橫向)</string>
