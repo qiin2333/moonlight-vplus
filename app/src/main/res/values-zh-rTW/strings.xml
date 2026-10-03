@@ -817,6 +817,10 @@
     <string name="custom_resolution_tag_portrait">直向</string>
     <string name="custom_resolution_delete_contentdesc">刪除 %1$d×%2$d</string>
     <string name="title_adaptive_bitrate">自適應位元率</string>
+    <string name="title_video_packet_feedback">逐包回饋測量（實驗）</string>
+    <string name="title_video_packet_control">自動網路保護（實驗）</string>
+    <string name="summary_video_packet_control">下次連線時請求主機依網路狀況調整視訊位元率與丟包保護，同時請求逐包回饋測量。需要相容主機及視訊加密支援；未協商成功時自動保護保持關閉，串流繼續。協商成功後優先於智慧位元率。</string>
+    <string name="summary_video_packet_feedback">下次連線時請求加密視訊封包回饋。僅在主機支援且允許視訊加密時啟用，否則繼續一般串流。會增加網路與處理負擔；此選項不會啟用自動位元率或 FEC 控制。</string>
     <string name="summary_adaptive_bitrate">依照封包遺失與延遲自動調整位元率；主機不支援伺服器端控制時，改用本機控制器。</string>
     <string name="title_abr_mode">自適應位元率模式</string>
     <string name="summary_abr_mode">畫質優先會維持較高位元率；低延遲會在封包遺失時更快降低位元率。</string>
@@ -1037,4 +1041,22 @@
     <string name="pyrowave_diag_copy_success">報告已複製到剪貼簿</string>
     <string name="pyrowave_diag_unavailable">無法取得</string>
     <string name="tip_double_tap_mouse">提示：在主機清單頁面長按頂部空白區域，可儲存目前的背景圖片。</string>
+    <string name="transport_total_limit">總網路上限（Mbps）</string>
+    <string name="transport_applied_values">最近編碼策略：總目標 %1$d / 編碼 %2$d kbps；FEC %3$d/%4$d/%5$d%%</string>
+    <string name="transport_unavailable">即時網路控制無法使用</string>
+    <string name="transport_requesting">正在提交請求…</string>
+    <string name="transport_status_unknown">狀態暫無法確認，正在更新…</string>
+    <string name="transport_failed">請求失敗或已被取代</string>
+    <string name="transport_receipt_missing">請求已接受，套用回執暫無法查詢</string>
+    <string name="transport_first_sent">首包已提交（接收尚未確認）</string>
+    <string name="transport_sdk_applied">編碼器已套用，等待首包提交</string>
+    <string name="transport_pending">已接受，等待編碼器套用</string>
+    <string name="transport_ready">已讀取目前主機策略</string>
+    <string name="transport_auto_bitrate">自動位元率</string>
+    <string name="transport_auto_fec">自動 FEC</string>
+    <string name="transport_manual">以所選上限手動接管</string>
+    <string name="transport_request_failed">請求無法確認，請核對主機狀態後重新操作</string>
+    <string name="transport_host_automatic">主機自動控制</string>
+    <string name="transport_host_manual">主機啟動或手動控制</string>
+    <string name="transport_last_operation">上次操作：%1$s</string>
 </resources>

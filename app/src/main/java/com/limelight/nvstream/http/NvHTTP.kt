@@ -63,7 +63,8 @@ class NvHTTP(
     clientName: String,
     serverCert: X509Certificate?,
     private val cryptoProvider: LimelightCryptoProvider,
-    private val timeoutConfig: TimeoutConfig = TimeoutConfig.DEFAULT
+    private val timeoutConfig: TimeoutConfig = TimeoutConfig.DEFAULT,
+    private val legacyScope: LegacyTransportScope? = null
 ) {
     private var uniqueId: String = "0123456789ABCDEF"
     val pairingManager: PairingManager
@@ -76,6 +77,8 @@ class NvHTTP(
     private lateinit var httpClientLongConnectTimeout: OkHttpClient
     private lateinit var httpClientLongConnectNoReadTimeout: OkHttpClient
     private lateinit var httpClientShortConnectTimeout: OkHttpClient
+    private lateinit var legacyHttpClient: OkHttpClient
+    private fun legacyControlClient(): OkHttpClient = legacyHttpClient
     private val activeNetworkProbeCall = AtomicReference<okhttp3.Call?>()
 
     private lateinit var defaultTrustManager: X509TrustManager
@@ -257,12 +260,14 @@ class NvHTTP(
         httpClientLongConnectNoReadTimeout = httpClientLongConnectTimeout.newBuilder()
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .build()
+        legacyHttpClient = legacyControlClient(httpClientLongConnectTimeout)
     }
 
     @Synchronized
     private fun rebuildHttpClientsAfterTlsFailure(failedClient: OkHttpClient): OkHttpClient {
         val wasShortConnectClient = failedClient === httpClientShortConnectTimeout
         val wasNoReadTimeoutClient = failedClient === httpClientLongConnectNoReadTimeout
+        val wasLegacyControlClient = failedClient === legacyHttpClient
 
         httpClientLongConnectTimeout.dispatcher.cancelAll()
         httpClientLongConnectTimeout.connectionPool.evictAll()
@@ -274,6 +279,7 @@ class NvHTTP(
         initializeHttpState(cryptoProvider)
 
         return when {
+            wasLegacyControlClient -> legacyHttpClient
             wasShortConnectClient -> httpClientShortConnectTimeout
             wasNoReadTimeoutClient -> httpClientLongConnectNoReadTimeout
             else -> httpClientLongConnectTimeout
@@ -513,8 +519,25 @@ class NvHTTP(
         }
     }
 
+    /** Uses the existing pinned server certificate and paired client certificate. */
+    fun getTransportPolicy(sessionId: String, connectionEpoch: String?): TransportPolicyStatus {
+        require(TransportPolicyCodec.isIdentity(sessionId, "4294967295", nonzero = true))
+        val query = "sessionId=$sessionId" + (connectionEpoch?.let {
+            require(TransportPolicyCodec.isIdentity(it, nonzero = true))
+            "&connectionEpoch=$it"
+        } ?: "")
+        return TransportPolicyCodec.status(JSONObject(openHttpConnectionToString(
+            httpClientShortConnectTimeout, getHttpsUrl(true), "api/v2/transport-policy", query)))
+    }
+
+    fun postTransportPolicy(path: String, body: JSONObject): TransportPolicySubmission {
+        require(path == "api/v2/transport-control" || path == "api/v2/transport-policy")
+        return TransportPolicyCodec.submission(JSONObject(openHttpConnectionPost(
+            httpClientShortConnectTimeout, getHttpsUrl(true), path, body.toString(), expectedCode = 202)))
+    }
+
     @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnectionPost(client: OkHttpClient, baseUrl: HttpUrl, path: String, jsonData: String): String {
+    private fun openHttpConnectionPost(client: OkHttpClient, baseUrl: HttpUrl, path: String, jsonData: String, expectedCode: Int? = null): String {
         val completeUrl = getCompleteUrl(baseUrl, path, null)
 
         val body = jsonData.toRequestBody(
@@ -530,7 +553,7 @@ class NvHTTP(
         val response = client.newCall(request).execute()
         val responseBody = response.body
 
-        if (response.isSuccessful) {
+        if (response.isSuccessful && (expectedCode == null || response.code == expectedCode)) {
             val respString = responseBody.string()
             responseBody.close()
 
@@ -761,6 +784,8 @@ class NvHTTP(
 
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun launchApp(context: ConnectionContext, verb: String, appId: Int, enableHdr: Boolean): Boolean {
+        context.transportSessionId = null
+        context.legacyTransportScope = null
         if (appId == NvApp.DESKTOP_APP_ID && !context.supportsDesktopSpecialApp) {
             LimeLog.warning("Refusing Desktop special app launch without DesktopSpecialAppSupport")
             return false
@@ -781,7 +806,7 @@ class NvHTTP(
             }
         }
 
-        var queryParams = "appid=$appId" +
+        var queryParams = "appid=$appId&transportScope=1" +
             "&mode=${streamConfig.reqWidth}x${streamConfig.reqHeight}x$fps" +
             "&additionalStates=1&sops=${if (enableSops) 1 else 0}" +
             "&resolutionScale=${streamConfig.resolutionScale}" +
@@ -827,6 +852,9 @@ class NvHTTP(
             (verb == "resume" && getXmlString(xmlStr, "resume", true) != "0")
         ) {
             context.rtspSessionUrl = getXmlString(xmlStr, "sessionUrl0", false)
+            context.transportSessionId = getXmlString(xmlStr, "transportSessionId", false)
+                ?.takeIf { TransportPolicyCodec.isIdentity(it, "4294967295", nonzero = true) }
+            context.legacyTransportScope = readLegacyTransportScope(xmlStr)
             true
         } else {
             false
@@ -862,12 +890,12 @@ class NvHTTP(
     @SuppressLint("DefaultLocale")
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun setBitrate(bitrateKbps: Int): Boolean {
-        val query = String.format("bitrate=%d", bitrateKbps)
+        val query = String.format("bitrate=%d", bitrateKbps) + (legacyScope?.querySuffix() ?: "")
         val xmlStr = openHttpConnectionToString(
-            httpClientLongConnectNoReadTimeout,
+            legacyControlClient(),
             getHttpsUrl(true), "bitrate", query
         )
-        return getXmlString(xmlStr, "bitrate", true) != "0"
+        return getXmlString(xmlStr, "bitrate", true) == "1"
     }
 
     // ---------------------------------------------------------------------------
@@ -877,7 +905,7 @@ class NvHTTP(
     /** ABR HTTPS GET 助手；返回响应正文或 null。*/
     private fun abrGet(pathSegments: String): String? = try {
         val url = getHttpsUrl(true).newBuilder().addPathSegments(pathSegments).build()
-        httpClientLongConnectTimeout.newCall(Request.Builder().url(url).get().build())
+        legacyControlClient().newCall(Request.Builder().url(url).get().build())
             .execute()
             .use { if (it.isSuccessful) it.body.string() else null }
     } catch (e: Exception) { null }
@@ -885,9 +913,9 @@ class NvHTTP(
     /** ABR HTTPS POST 助手；返回响应正文或 null（失败/非 2xx 也返回 null）。*/
     private fun abrPost(pathSegments: String, payload: JSONObject): String? = try {
         val url = getHttpsUrl(true).newBuilder().addPathSegments(pathSegments).build()
-        val body = payload.toString()
+        val body = (legacyScope?.attach(payload) ?: payload).toString()
             .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-        httpClientLongConnectTimeout.newCall(Request.Builder().url(url).post(body).build())
+        legacyControlClient().newCall(Request.Builder().url(url).post(body).build())
             .execute()
             .use { if (it.isSuccessful) it.body.string() else null }
     } catch (e: Exception) { null }
@@ -1057,7 +1085,7 @@ class NvHTTP(
         return abrPost("api/abr", payload) != null
     }
 
-    /** 上报客户端网络指标，可能返回服务端建议的新码率。*/
+    /** 上报旧 ABR 指标；返回服务端提交的目标，不是编码器生效回执。 */
     fun reportNetworkFeedback(feedback: NetworkFeedback): AbrAction? {
         val payload = JSONObject().apply {
             put("packetLoss", feedback.packetLoss)
@@ -1070,10 +1098,7 @@ class NvHTTP(
             ?: return null
         return try {
             val json = JSONObject(body)
-            AbrAction(
-                if (json.has("newBitrate")) json.optInt("newBitrate") else null,
-                if (json.has("reason")) json.optString("reason") else null
-            )
+            AbrAction.fromJson(json)
         } catch (e: Exception) {
             null
         }
@@ -1171,6 +1196,10 @@ class NvHTTP(
     }
 
     companion object {
+        /** Reused by initial TLS setup and recovery; read progress cannot evade the call deadline. */
+        internal fun legacyControlClient(base: OkHttpClient): OkHttpClient = base.newBuilder()
+            .readTimeout(5, TimeUnit.SECONDS).callTimeout(5, TimeUnit.SECONDS).build()
+
         const val DEFAULT_HTTPS_PORT = 47984
         const val DEFAULT_HTTP_PORT = 47989
         const val SHORT_CONNECTION_TIMEOUT = 3000
@@ -1205,6 +1234,24 @@ class NvHTTP(
             }
 
             throw IllegalStateException("No X509 trust manager found")
+        }
+
+        internal fun readLegacyTransportScope(xml: String): LegacyTransportScope? {
+            val parser = XmlPullParserFactory.newInstance().apply { isNamespaceAware = true }.newPullParser()
+            parser.setInput(StringReader(xml))
+            val fields = mutableMapOf<String, String>()
+            val names = setOf("transportScope", "transportSessionId", "transportConnectionEpoch")
+            var event = parser.eventType
+            while (event != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG && parser.depth == 2 && parser.name in names) {
+                    val name = parser.name
+                    require(!fields.containsKey(name)) { "Duplicate launch identity" }
+                    fields[name] = parser.nextText()
+                }
+                event = parser.next()
+            }
+            return LegacyTransportScope.fromLaunch(fields["transportScope"], fields["transportSessionId"],
+                fields["transportConnectionEpoch"])
         }
 
         @Throws(XmlPullParserException::class, IOException::class)
@@ -1442,8 +1489,18 @@ data class NetworkFeedback(
 
 data class AbrAction(
     val newBitrate: Int?,
-    val reason: String?
-)
+    val reason: String?,
+    /** 旧服务端的会话提交结果；缺失表示旧主机未提供此字段。 */
+    val bitrateApplied: Boolean? = null
+) {
+    companion object {
+        internal fun fromJson(json: JSONObject): AbrAction = AbrAction(
+            if (json.has("newBitrate")) json.optInt("newBitrate") else null,
+            if (json.has("reason")) json.optString("reason") else null,
+            if (json.has("bitrateApplied")) json.optBoolean("bitrateApplied", false) else null
+        )
+    }
+}
 
 // ---------------------------------------------------------------------------
 // 剪贴板 blob 通道 (Sunshine /api/v1/clipboard/blob)
@@ -1459,4 +1516,3 @@ data class ClipboardBlobUploadResult(
     val mime: String,
     val size: Long,
 )
-

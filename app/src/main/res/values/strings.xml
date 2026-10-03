@@ -269,6 +269,10 @@
     <string name="summary_seekbar_bitrate">Higher bitrate improves image quality but uses more bandwidth; lower bitrate is better for slower or unstable networks. Lower it first if streaming stutters, and raise it when the image is too soft and the network is stable; for 1080p60, start around 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Adaptive bitrate</string>
+    <string name="title_video_packet_feedback">Packet feedback measurement (experimental)</string>
+    <string name="title_video_packet_control">Automatic network protection (experimental)</string>
+    <string name="summary_video_packet_control">Request host adjustment of video bitrate and loss protection on the next connection. Also requests packet feedback measurement. Requires a compatible host and video encryption. If unavailable, automatic protection stays off and streaming continues. When negotiated, it takes priority over adaptive bitrate.</string>
+    <string name="summary_video_packet_feedback">Request encrypted video packet feedback on the next connection. Requires host support and permission for video encryption; otherwise regular streaming continues. Adds network and processing overhead. This option does not enable automatic bitrate or FEC control.</string>
     <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
     <string name="title_abr_mode">ABR mode</string>
     <string name="summary_abr_mode">Quality prefers higher bitrate; Low-latency drops faster on packet loss.</string>
@@ -2357,4 +2361,22 @@ Tap again to replace it.</string>
     <string name="pyrowave_diag_copy">Copy</string>
     <string name="pyrowave_diag_copy_success">Report copied to clipboard</string>
     <string name="pyrowave_diag_unavailable">Unavailable</string>
+    <string name="transport_total_limit">Total network limit (Mbps)</string>
+    <string name="transport_applied_values">Last encoder policy: total target %1$d / encoder %2$d kbps; FEC %3$d/%4$d/%5$d%%</string>
+    <string name="transport_unavailable">Live network control unavailable</string>
+    <string name="transport_requesting">Submitting request…</string>
+    <string name="transport_status_unknown">Status unavailable; refreshing…</string>
+    <string name="transport_failed">Request failed or superseded</string>
+    <string name="transport_receipt_missing">Request accepted; application receipt unavailable</string>
+    <string name="transport_first_sent">First packet submitted (delivery unconfirmed)</string>
+    <string name="transport_sdk_applied">Encoder applied; first send pending</string>
+    <string name="transport_pending">Accepted; awaiting encoder application</string>
+    <string name="transport_ready">Current host policy loaded</string>
+    <string name="transport_auto_bitrate">Automatic bitrate</string>
+    <string name="transport_auto_fec">Automatic FEC</string>
+    <string name="transport_manual">Take manual control at selected limit</string>
+    <string name="transport_request_failed">Request could not be confirmed; review host state before retrying</string>
+    <string name="transport_host_automatic">Host automatic control</string>
+    <string name="transport_host_manual">Host startup or manual control</string>
+    <string name="transport_last_operation">Last operation: %1$s</string>
 </resources>

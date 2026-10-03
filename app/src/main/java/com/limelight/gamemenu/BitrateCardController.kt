@@ -15,7 +15,9 @@ internal data class BitrateCardState(
     val abrStatus: String?,
     val hapticMode: BitrateCardController.HapticMode,
     val maxProgress: Int,
-    val maxBitrateKbps: Int
+    val maxBitrateKbps: Int,
+    val transport: com.limelight.nvstream.http.TransportPolicyView? = null,
+    val packetControl: Boolean = false
 ) {
     val selectedBitrateKbps: Int
         get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
@@ -97,8 +99,10 @@ internal class BitrateCardController(
         }
     }
 
+    private var transportListener: ((com.limelight.nvstream.http.TransportPolicyView) -> Unit)? = null
     private var abrListener: ((Int, String) -> Unit)? = null
     private var onStateChanged: ((BitrateCardState) -> Unit)? = null
+    private var generation = 0L
     private var userTracking = false
     private var bitrateToast: Toast? = null
     private val maxProgress = maxProgressFor(supportsExtendedBitrate)
@@ -109,14 +113,33 @@ internal class BitrateCardController(
 
     fun start(onStateChanged: (BitrateCardState) -> Unit) {
         dispose()
+        val activeGeneration = generation
         this.onStateChanged = onStateChanged
         state = createState(conn.currentBitrate)
         emitState()
 
+        (game.transportPolicyService ?: game.transportStatisticsService)?.let { service ->
+            val listener: (com.limelight.nvstream.http.TransportPolicyView) -> Unit = { view ->
+                game.runOnUiThread {
+                    if (generation == activeGeneration && onStateChanged != null &&
+                        (game.transportPolicyService ?: game.transportStatisticsService) === service &&
+                        (!view.readOnly || game.isCurrentLegacyBitrateConnection(conn))) {
+                        val policy = view.status?.accepted
+                        val selected = policy?.automatic?.maximumKbps ?: policy?.totalKbps
+                        state = state.copy(transport = view,
+                            progress = if (!view.readOnly && !userTracking && selected != null) bitrateToProgress(selected).toFloat() else state.progress)
+                        emitState()
+                    }
+                }
+            }
+            transportListener = listener
+            service.listener = listener
+            listener(service.view)
+        }
         val abrService = game.adaptiveBitrateService ?: return
         val listener: (Int, String) -> Unit = { kbps, _ ->
             game.runOnUiThread {
-                if (!userTracking) {
+                if (generation == activeGeneration && !userTracking) {
                     state = state.copy(
                         progress = bitrateToProgress(kbps, maxProgress).toFloat(),
                         currentBitrateKbps = kbps,
@@ -132,6 +155,7 @@ internal class BitrateCardController(
 
     /** Returns whether this progress change should produce a haptic tick. */
     fun previewProgress(progress: Float): Boolean {
+        if (state.packetControl && state.transport?.canSubmit != true) return false
         val bounded = progress.coerceIn(0f, maxProgress.toFloat())
         val previousStep = state.progress.roundToInt()
         val currentStep = bounded.roundToInt()
@@ -149,7 +173,31 @@ internal class BitrateCardController(
 
     fun applySelectedBitrate() {
         userTracking = false
-        adjustBitrate(state.selectedBitrateKbps)
+        if (state.packetControl) {
+            val view = state.transport
+            val automatic = view?.status?.accepted?.automatic
+            val service = game.transportPolicyService
+            val queued = if (automatic?.bitrate == true || automatic?.fec == true)
+                service?.setModes(automatic.bitrate, automatic.fec, state.selectedBitrateKbps)
+            else service?.setManualBudget(state.selectedBitrateKbps)
+            if (queued != true) showBitrateToast(game.getString(R.string.transport_unavailable))
+        } else adjustBitrate(state.selectedBitrateKbps)
+    }
+
+    fun setAutomaticBitrate(enabled: Boolean) {
+        val p = state.transport?.status?.accepted ?: return
+        game.transportPolicyService?.setModes(enabled, p.automatic?.fec == true,
+            p.automatic?.maximumKbps ?: p.totalKbps)
+    }
+
+    fun setAutomaticFec(enabled: Boolean) {
+        val p = state.transport?.status?.accepted ?: return
+        game.transportPolicyService?.setModes(p.automatic?.bitrate == true, enabled,
+            p.automatic?.maximumKbps ?: p.totalKbps)
+    }
+
+    fun takeManualControl() {
+        game.transportPolicyService?.setManualBudget(state.selectedBitrateKbps)
     }
 
     fun cycleHapticMode() {
@@ -161,6 +209,13 @@ internal class BitrateCardController(
     }
 
     fun dispose() {
+        generation++
+        val transport = transportListener
+        val service = game.transportPolicyService ?: game.transportStatisticsService
+        if (transport != null && service?.listener === transport) {
+            service.listener = null
+        }
+        transportListener = null
         val listener = abrListener
         if (listener != null && game.adaptiveBitrateService?.bitrateListener === listener) {
             game.adaptiveBitrateService?.bitrateListener = null
@@ -178,7 +233,9 @@ internal class BitrateCardController(
             abrStatus = abrService?.takeIf { it.enabled }?.getStatusText(),
             hapticMode = getHapticMode(game),
             maxProgress = maxProgress,
-            maxBitrateKbps = maxBitrateKbps
+            maxBitrateKbps = maxBitrateKbps,
+            transport = (game.transportPolicyService ?: game.transportStatisticsService)?.view,
+            packetControl = com.limelight.nvstream.jni.MoonBridge.getVideoPacketControlNegotiated()
         )
     }
 
@@ -192,13 +249,16 @@ internal class BitrateCardController(
     }
 
     private fun adjustBitrate(bitrateKbps: Int) {
+        if (!game.isCurrentLegacyBitrateConnection(conn)) return
+        val requestGeneration = generation
         try {
             showBitrateToast(game.getString(R.string.toast_adjusting_bitrate))
             conn.setBitrate(bitrateKbps, object : NvConnection.BitrateAdjustmentCallback {
                 override fun onSuccess(newBitrate: Int) {
                     game.runOnUiThread {
-                        game.prefConfig.bitrate = newBitrate
+                        if (!game.acknowledgeLegacyBitrate(conn, newBitrate)) return@runOnUiThread
                         game.adaptiveBitrateService?.notifyManualOverride(newBitrate)
+                        if (generation != requestGeneration || onStateChanged == null) return@runOnUiThread
                         state = state.copy(
                             progress = bitrateToProgress(newBitrate, maxProgress).toFloat(),
                             currentBitrateKbps = newBitrate,
@@ -213,6 +273,8 @@ internal class BitrateCardController(
 
                 override fun onFailure(errorMessage: String) {
                     game.runOnUiThread {
+                        if (!game.isCurrentLegacyBitrateConnection(conn) || generation != requestGeneration ||
+                            onStateChanged == null) return@runOnUiThread
                         val actualBitrate = conn.currentBitrate
                         state = state.copy(
                             progress = bitrateToProgress(actualBitrate, maxProgress).toFloat(),
@@ -227,6 +289,8 @@ internal class BitrateCardController(
             })
         } catch (e: Exception) {
             game.runOnUiThread {
+                if (!game.isCurrentLegacyBitrateConnection(conn) || generation != requestGeneration ||
+                    onStateChanged == null) return@runOnUiThread
                 showBitrateToast(
                     game.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.message
                 )
