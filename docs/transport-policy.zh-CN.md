@@ -16,6 +16,6 @@
 
 设置中的逐包反馈及逐包控制复选框默认关闭，控制请求同时启用反馈。状态通知和 JNI 快照绑定原 NvConnection；Game/主线程回调通过原连接所有权校验，旧连接不能停止或改写新连接。迁移保留最新 master 的本地化连接上下文、麦克风初始状态、控制器重绑定及触觉参数。
 
-构建需要公共 haptics SDK：`AlkaidLab/moonlight-audio-haptics` 的 `21aae5018e36397d45b3dffff4005c952592ec0b`。以 `-PaudioHapticsSdkDir=<本地 SDK 目录>` 指定，Java、Android SDK/NDK 版本及完整子模块按项目配置准备。执行 `:app:testNonRootDebugUnitTest` 的策略/生命周期测试、`:app:assembleNonRootDebug` 和 `:app:assembleNonRootDebugAndroidTest`；[验证工作流](../.github/workflows/transport-validation.yml)记录固定依赖与具体命令。
+构建沿用当前 master CI 固定的公共 haptics SDK：`AlkaidLab/moonlight-audio-haptics` 的 `b3f97c3bb7500ea7b1985aea568e5c7b40308d3b`。以 `-PaudioHapticsSdkDir=<本地 SDK 目录>` 指定，Java、Android SDK/NDK 版本及完整子模块按项目配置准备。执行 `:app:testNonRootDebugUnitTest` 的策略/生命周期测试、`:app:assembleNonRootDebug` 和 `:app:assembleNonRootDebugAndroidTest`；[验证工作流](../.github/workflows/transport-validation.yml)记录固定依赖与具体命令。
 
 `-PtransportValidationApplicationId=com.limelight.vplus.transportvalidation` 只隔离 Debug 验证包，普通包 ID 保持原设置。编译 instrumentation APK 不证明测试已经在设备执行；设备串流、Game/JNI 重连与回调、CPU/温升和体验仍需单独验证。
