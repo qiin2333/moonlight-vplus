@@ -265,6 +265,7 @@ public class InvisibleDigitalStick extends Element {
             @Override
             public void onMovement(float x, float y) {
                 if (x < -deadZoneRadius * 0.01 && !leftIsPressed) {
+                    elementController.buttonVibrator();
                     leftValueSendHandler.sendEvent(true);
                     leftIsPressed = true;
                 } else if (x > -deadZoneRadius * 0.01 && leftIsPressed) {
@@ -272,6 +273,7 @@ public class InvisibleDigitalStick extends Element {
                     leftIsPressed = false;
                 }
                 if (x > deadZoneRadius * 0.01 && !rightIsPressed) {
+                    elementController.buttonVibrator();
                     rightValueSendHandler.sendEvent(true);
                     rightIsPressed = true;
                 } else if (x < deadZoneRadius * 0.01 && rightIsPressed) {
@@ -279,6 +281,7 @@ public class InvisibleDigitalStick extends Element {
                     rightIsPressed = false;
                 }
                 if (y < -deadZoneRadius * 0.01 && !downIsPressed) {
+                    elementController.buttonVibrator();
                     downValueSendHandler.sendEvent(true);
                     downIsPressed = true;
                 } else if (y > -deadZoneRadius * 0.01 && downIsPressed) {
@@ -286,6 +289,7 @@ public class InvisibleDigitalStick extends Element {
                     downIsPressed = false;
                 }
                 if (y > deadZoneRadius * 0.01 && !upIsPressed) {
+                    elementController.buttonVibrator();
                     upValueSendHandler.sendEvent(true);
                     upIsPressed = true;
                 } else if (y < deadZoneRadius * 0.01 && upIsPressed) {
@@ -301,6 +305,7 @@ public class InvisibleDigitalStick extends Element {
 
             @Override
             public void onDoubleClick() {
+                elementController.buttonVibrator();
                 middleValueSendHandler.sendEvent(true);
             }
 
