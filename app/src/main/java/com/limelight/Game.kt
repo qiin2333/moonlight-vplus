@@ -69,6 +69,7 @@ import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
 import com.limelight.utils.RemoteImeController
 import com.limelight.utils.FullscreenProgressOverlay
+import com.limelight.utils.StreamReconnectBackdrop
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
 import com.limelight.utils.AnalyticsManager
@@ -77,6 +78,7 @@ import com.limelight.utils.AppSettingsManager
 import com.limelight.services.KeyboardAccessibilityService
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.app.PictureInPictureParams
 import android.content.ComponentName
 import android.content.Intent
@@ -84,16 +86,24 @@ import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.Point
 import android.graphics.Rect
+import android.view.PixelCopy
 import android.hardware.input.InputManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.preference.PreferenceManager
 import android.util.Rational
 import android.view.Display
@@ -717,6 +727,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         computer.name = pcName
         computer.uuid = intent.getStringExtra(EXTRA_PC_UUID)
         progressOverlay?.computer = computer
+        val reconnectBackdrop = StreamReconnectBackdrop.consume()
+        reconnectBackdrop?.let { progressOverlay?.setAppPoster(it) }
         progressOverlay?.show(
             resources.getString(R.string.conn_establishing_title),
             resources.getString(R.string.conn_establishing_msg)
@@ -1792,7 +1804,63 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun changeResolution() {
         isChangingResolution = true
-        this.recreate()
+        val view = activeStreamView
+        if (view == null) {
+            recreate()
+            return
+        }
+        view.post {
+            view.post {
+                stageReconnectBackdrop()
+                recreate()
+            }
+        }
+    }
+
+    /** Saves the current stream frame before the surface is destroyed. Failure still rebuilds. */
+    private fun stageReconnectBackdrop() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
+        val view = activeStreamView ?: return
+        if (view.width <= 0 || view.height <= 0 || !view.holder.surface.isValid) return
+        if (!canStageReconnectBackdrop(view.width, view.height)) return
+        val frame = view.holder.surfaceFrame
+        LimeLog.info(
+            "Reconnect backdrop capture view=${view.width}x${view.height} " +
+                "buffer=${frame.width()}x${frame.height()}"
+        )
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val thread = HandlerThread("reconnect-backdrop")
+        thread.start()
+        try {
+            PixelCopy.request(view, bitmap, { result ->
+                thread.quitSafely()
+                if (result == PixelCopy.SUCCESS) {
+                    StreamReconnectBackdrop.stage(bitmap)
+                    progressOverlay?.setAppPoster(bitmap)
+                } else {
+                    bitmap.recycle()
+                }
+            }, Handler(thread.looper))
+        } catch (_: Exception) {
+            bitmap.recycle()
+            thread.quitSafely()
+        }
+    }
+
+    /** A full-screen copy needs contiguous memory; low-memory devices keep the app poster. */
+    private fun canStageReconnectBackdrop(width: Int, height: Int): Boolean {
+        val memory = getSystemService(ACTIVITY_SERVICE) as? ActivityManager ?: return false
+        val info = ActivityManager.MemoryInfo()
+        memory.getMemoryInfo(info)
+        val requiredBytes = width.toLong() * height.toLong() * 4L
+        val available = !info.lowMemory && info.availMem > requiredBytes * 2L
+        if (!available) {
+            LimeLog.info(
+                "Reconnect backdrop skipped: lowMemory=${info.lowMemory} " +
+                    "available=${info.availMem} required=${requiredBytes}"
+            )
+        }
+        return available
     }
 
     override fun onStop() {
