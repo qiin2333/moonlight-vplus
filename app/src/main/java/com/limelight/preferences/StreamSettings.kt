@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -306,10 +307,40 @@ class StreamSettings : ThemedAppCompatActivity() {
         findViewById<View>(R.id.settingsBackgroundOverlay)?.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.settings_background_overlay)
         )
+        // 横屏侧栏背景在布局创建时解析。深浅切换不重建 Activity，需要按当前主题重设。
+        findViewById<View>(R.id.drawer_menu)?.setBackgroundColor(
+                ContextCompat.getColor(this, R.color.settings_drawer_background_landscape)
+        )
+        findViewById<ImageView>(R.id.settings_back)?.setColorFilter(
+                ContextCompat.getColor(this, R.color.ui_shell_text_primary)
+        )
+        applySearchBarTheme()
         val useDarkSystemIcons = !isNightMode()
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = useDarkSystemIcons
             isAppearanceLightNavigationBars = useDarkSystemIcons
+        }
+    }
+
+    /** 搜索框的底色、描边、图标和文字都在创建时解析，深浅切换时按当前主题重设。 */
+    private fun applySearchBarTheme() {
+        val searchBar = findViewById<View>(R.id.settings_search_bar) ?: return
+        val background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = resources.getDimension(R.dimen.corner_radius_extra_large)
+            setColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_surface_elevated))
+            setStroke(
+                (resources.displayMetrics.density).toInt().coerceAtLeast(1),
+                UiHelper.accentFocusColor(this@StreamSettings)
+            )
+        }
+        searchBar.background = background
+        val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
+        searchBar.findViewById<ImageView>(R.id.settings_search_icon)?.imageTintList = accent
+        searchBar.findViewById<ImageView>(R.id.settings_search_close)?.imageTintList = accent
+        searchBar.findViewById<TextView>(R.id.settings_search_input)?.apply {
+            setTextColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_primary))
+            setHintTextColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary))
         }
     }
 

@@ -95,6 +95,7 @@
                     android:paddingEnd="4dp">
 
                     <ImageView
+                        android:id="@+id/settings_search_icon"
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         app:srcCompat="@drawable/ic_search_stylish"
