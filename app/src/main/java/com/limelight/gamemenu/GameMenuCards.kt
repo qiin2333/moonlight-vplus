@@ -17,9 +17,11 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
@@ -56,6 +61,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.testTag
@@ -69,7 +76,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -162,21 +173,24 @@ internal fun GameMenuCard(
             verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = title,
                         color = colorResource(R.color.game_menu_text_primary),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     titleAccessory?.let {
                         Spacer(Modifier.width(GameMenuDimens.tight))
                         it()
                     }
                 }
-                Spacer(Modifier.weight(1f))
                 if (trailing != null) {
                     trailing()
                 } else status?.let {
@@ -200,6 +214,7 @@ private fun CompactGameMenuSlider(
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val colors = SliderDefaults.colors()
@@ -209,6 +224,7 @@ private fun CompactGameMenuSlider(
         onValueChange = onValueChange,
         onValueChangeFinished = onValueChangeFinished,
         valueRange = valueRange,
+        enabled = enabled,
         colors = colors,
         interactionSource = interactionSource,
         thumb = {
@@ -502,7 +518,7 @@ private fun SensitivityPresetSection(
 }
 
 @Composable
-private fun SensitivityPresetButton(
+internal fun SensitivityPresetButton(
     name: String,
     selected: Boolean,
     onClick: () -> Unit,
@@ -588,69 +604,143 @@ private fun SensitivityPresetActionButton(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BitrateCard(
+internal fun BitrateCard(
     state: BitrateCardState,
     callbacks: GameMenuCallbacks,
     onSliderGesture: (Boolean) -> Unit,
-    onConfigure: () -> Unit
+    onConfigure: () -> Unit,
+    showDisplayEntry: Boolean = true
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
-    var tipVisible by remember { mutableStateOf(false) }
-    val currentLabel = stringResource(
-        R.string.game_menu_bitrate_current,
-        state.currentBitrateKbps / 1000
-    )
+    val displaySettingsDescription = stringResource(R.string.game_menu_display_settings)
+    val sliderEnabled = true
+    val displayEntryFocusRequester = remember { FocusRequester() }
+    val adaptiveFocusRequester = remember { FocusRequester() }
     GameMenuCard(
-        title = stringResource(R.string.game_menu_tab_bitrate),
-        status = state.abrStatus,
-        titleAccessory = {
-            BitrateHelpButton(
-                tipVisible = tipVisible,
-                onToggleTip = { tipVisible = !tipVisible },
-                onDismissTip = { tipVisible = false },
-                onLongClick = callbacks.onBitrateHapticMode
-            )
-        },
+        title = stringResource(
+            if (showDisplayEntry) {
+                R.string.game_menu_display_settings
+            } else {
+                R.string.game_menu_tab_bitrate
+            }
+        ),
         onLongClick = onConfigure
     ) {
-        Text(
-            text = currentLabel,
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 10.sp
-        )
-        Text(
-            text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
-            color = appAccentColor(),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        CompactGameMenuSlider(
-            value = state.progress,
-            onValueChange = { value ->
-                if (callbacks.onBitrateProgress(value)) {
-                    hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                }
-            },
-            onValueChangeFinished = callbacks.onBitrateApply,
-            valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
-            modifier = Modifier
-                .focusProperties { canFocus = true }
-                .fillMaxWidth()
-                .height(GameMenuSliderSpec.height)
-                .gamepadFocusOutline(GameMenuControlShape)
-                .handleSliderDpad(
-                    value = state.progress,
-                    step = 1f,
-                    valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
-                    onValueChange = { value ->
-                        if (callbacks.onBitrateProgress(value)) {
-                            hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        }
-                    },
-                    onValueChangeFinished = callbacks.onBitrateApply
+        if (showDisplayEntry) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 32.dp)
+                    .clip(AppShapes.small)
+                    .focusRequester(displayEntryFocusRequester)
+                    .focusProperties {
+                        canFocus = true
+                        down = adaptiveFocusRequester
+                    }
+                    .gamepadFocusOutline(AppShapes.small)
+                    .clickable(role = Role.Button) { callbacks.onOpenDisplaySettings() }
+                    .semantics { contentDescription = displaySettingsDescription }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.game_menu_display_summary,
+                        state.resolutionLabel,
+                        state.fpsLabel
+                    ),
+                    color = colorResource(R.color.game_menu_text_primary),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .padding(horizontal = GameMenuDimens.compact)
                 )
-                .lockParentScrollDuringGesture(onSliderGesture)
+                Spacer(Modifier.width(GameMenuDimens.tight))
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_right),
+                    contentDescription = null,
+                    tint = colorResource(R.color.game_menu_text_secondary),
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = GameMenuDimens.section)
+                .zIndex(1f)
+        ) {
+            var controlsWidth by remember { mutableStateOf(IntSize.Zero) }
+            val density = LocalDensity.current
+            val bitrateLabel = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps)
+            val controlsDp = with(density) { controlsWidth.width.toDp() }
+            val labelWidth = 72.dp
+            val centered = controlsDp + GameMenuDimens.compact + labelWidth <= maxWidth / 2
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = if (centered) {
+                    Modifier.align(Alignment.Center)
+                } else {
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = GameMenuDimens.compact)
+                }
+            ) {
+                Text(
+                    text = bitrateLabel,
+                    color = appAccentColor(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = BitrateCardController.formatBitrateMbps(state.currentBitrateKbps),
+                    color = colorResource(R.color.game_menu_text_secondary),
+                    fontSize = 9.sp,
+                    maxLines = 1
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = GameMenuDimens.compact)
+                    .onSizeChanged { controlsWidth = it },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.title_adaptive_bitrate),
+                    color = colorResource(R.color.game_menu_text_secondary),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
+                )
+                Spacer(Modifier.width(GameMenuDimens.tight))
+                AdaptiveBitrateHelpButton(onLongClick = callbacks.onBitrateHapticMode)
+                Spacer(Modifier.width(GameMenuDimens.compact))
+                InlineToggle(
+                    checked = state.adaptiveBitrate,
+                    contentDescription = stringResource(R.string.title_adaptive_bitrate),
+                    onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) },
+                    modifier = Modifier
+                        .focusRequester(adaptiveFocusRequester)
+                        .focusProperties {
+                            if (showDisplayEntry) up = displayEntryFocusRequester
+                        }
+                )
+                if (state.adaptiveBitrate) {
+                    Spacer(Modifier.width(GameMenuDimens.tight))
+                    AbrModeMenu(state.abrMode, callbacks.onAbrMode)
+                }
+            }
+        }
+        BitrateSlider(
+            state = state,
+            callbacks = callbacks,
+            enabled = sliderEnabled,
+            onSliderGesture = onSliderGesture
         )
         Row {
             Text("0.5 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
@@ -660,46 +750,82 @@ private fun BitrateCard(
     }
 }
 
+@Composable
+internal fun BitrateSlider(
+    state: BitrateCardState,
+    callbacks: GameMenuCallbacks,
+    enabled: Boolean,
+    onSliderGesture: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    CompactGameMenuSlider(
+        value = state.progress,
+        onValueChange = { value ->
+            if (callbacks.onBitrateProgress(value)) {
+                hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            }
+        },
+        onValueChangeFinished = callbacks.onBitrateApply,
+        enabled = enabled,
+        valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+        modifier = modifier
+            .alpha(if (enabled) 1f else 0.38f)
+            .focusProperties { canFocus = enabled }
+            .fillMaxWidth()
+            .height(GameMenuSliderSpec.height)
+            .gamepadFocusOutline(GameMenuControlShape)
+            .handleSliderDpad(
+                value = state.progress,
+                step = 1f,
+                valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+                onValueChange = { value ->
+                    if (callbacks.onBitrateProgress(value)) {
+                        hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
+                },
+                onValueChangeFinished = callbacks.onBitrateApply
+            )
+            .lockParentScrollDuringGesture(onSliderGesture)
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BitrateHelpButton(
-    tipVisible: Boolean,
-    onToggleTip: () -> Unit,
-    onDismissTip: () -> Unit,
-    onLongClick: () -> Unit
-) {
+private fun AdaptiveBitrateHelpButton(onLongClick: () -> Unit) {
+    var tipVisible by remember { mutableStateOf(false) }
     val accent = appAccentColor()
-    val helpDescription = stringResource(R.string.game_menu_bitrate_tip)
+    val helpDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip)
     Box(
         modifier = Modifier
-            .size(24.dp)
+            .size(16.dp)
             .clip(CircleShape)
             .focusProperties { canFocus = true }
             .gamepadFocusOutline(CircleShape)
             .semantics { contentDescription = helpDescription }
             .combinedClickable(
-                onClick = onToggleTip,
+                onClick = { tipVisible = !tipVisible },
                 onLongClick = onLongClick
             ),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(18.dp)
+                .size(14.dp)
                 .border(1.dp, accent, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             VisuallyCenteredBadgeText(
                 text = "?",
                 color = accent,
-                fontSize = 12.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold
             )
         }
         if (tipVisible) {
             Popup(
-                alignment = Alignment.TopEnd,
-                onDismissRequest = onDismissTip,
+                alignment = Alignment.TopStart,
+                onDismissRequest = { tipVisible = false },
                 properties = PopupProperties(focusable = true)
             ) {
                 Surface(
@@ -709,13 +835,72 @@ private fun BitrateHelpButton(
                     modifier = Modifier.widthIn(max = 260.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.game_menu_bitrate_tip),
+                        text = helpDescription,
                         color = colorResource(R.color.game_menu_text_primary),
                         fontSize = 11.sp,
                         lineHeight = 15.sp,
                         modifier = Modifier.padding(GameMenuDimens.outer)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AbrModeMenu(
+    selectedMode: String,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val accent = appAccentColor()
+    val names = stringArrayResource(R.array.abr_mode_names)
+    val values = stringArrayResource(R.array.abr_mode_values)
+    val selectedLabel = names.getOrElse(values.indexOf(selectedMode)) { names.firstOrNull().orEmpty() }
+    Box {
+        Row(
+            modifier = Modifier
+                .height(28.dp)
+                .clip(AppShapes.small)
+                .focusProperties { canFocus = true }
+                .gamepadFocusOutline(AppShapes.small)
+                .clickable { expanded = true }
+                .padding(horizontal = GameMenuDimens.compact),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = selectedLabel,
+                color = accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
+            Spacer(Modifier.width(GameMenuDimens.tight))
+            Icon(
+                painter = painterResource(R.drawable.ic_arrow_right),
+                contentDescription = null,
+                tint = colorResource(R.color.game_menu_text_secondary),
+                modifier = Modifier.size(10.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            values.forEachIndexed { index, value ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = names.getOrElse(index) { value },
+                            color = if (value == selectedMode) accent else colorResource(R.color.game_menu_text_primary),
+                            fontSize = 12.sp
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(value)
+                    }
+                )
             }
         }
     }
@@ -1089,9 +1274,10 @@ internal fun Modifier.lockParentScrollDuringGesture(
 @Composable
 internal fun Modifier.gamepadFocusOutline(shape: Shape): Modifier {
     var focused by remember { mutableStateOf(false) }
+    val hardwareInput = LocalInputModeManager.current.inputMode == InputMode.Keyboard
     val focusColor = appAccentColor()
     return onFocusChanged { focused = it.isFocused }
-        .then(if (focused) Modifier.border(2.dp, focusColor, shape) else Modifier)
+        .then(if (focused && hardwareInput) Modifier.border(2.dp, focusColor, shape) else Modifier)
 }
 
 private fun Modifier.handleSliderDpad(

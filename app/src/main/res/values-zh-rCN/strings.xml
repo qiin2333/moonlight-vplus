@@ -171,6 +171,11 @@
     <string name="game_menu_bitrate_adjustment_success">码率调整成功至 %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
+    <string name="custom_list_save">保存</string>
+    <string name="custom_list_discard_title">放弃更改</string>
+    <string name="custom_list_discard_message">要放弃这次对列表的更改吗？</string>
+    <string name="custom_list_discard">放弃</string>
+    <string name="game_menu_apply_display">应用</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
     <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
@@ -230,6 +235,9 @@
     <string name="custom_resolution_empty_title">还没有自定义分辨率</string>
     <string name="custom_resolution_empty_hint">在上方输入宽和高，或点一个预设快速填入</string>
     <string name="custom_resolution_tag_ultrawide">带鱼屏</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_portrait">竖屏</string>
     <string name="custom_resolution_delete_contentdesc">删除 %1$d×%2$d</string>
     <string name="title_fps_list">串流帧率</string>
@@ -633,7 +641,7 @@
     <string name="pcview_menu_header_unknown">刷新中</string>
     <string name="pcview_menu_header_offline">离线</string>
     <string name="pcview_menu_header_online">在线</string>
-    <string name="resolution_prefix_native">本地</string>
+    <string name="resolution_prefix_native">原生</string>
     <string name="text_native_res_dialog">流媒体服务器可能不支持原始分辨率或者 FPS。您可能需要手动为主机配置匹配的自定义显示模式。
 \n
 \n如果您选择在 NVIDIA 控制面板中创建与屏幕设置相匹配的自定义分辨率，请确保您已阅读并理解 NVIDIA 关于显示器可能损坏、电脑不稳定和其他潜在问题的警告。
@@ -641,7 +649,7 @@
 \n我们不对因在电脑上创建自定义分辨率而导致的任何问题负责。
 \n
 \n您的显示器可能不支持必要的显示配置。如果是这样，您可以尝试设置虚拟显示器。最后，如果您的设备或主机不支持以特定分辨率或刷新率进行流式传输，那就很不幸了。</string>
-    <string name="title_native_res_dialog">本地分辨率警告</string>
+    <string name="title_native_res_dialog">原生分辨率警告</string>
     <string name="applist_menu_hide_app">隐藏游戏</string>
     <string name="check_ports_msg">请检查您的防火墙和端口转发规则中的端口：</string>
     <string name="early_termination_error">开始串流时您的主机电脑出了点问题。
@@ -1171,10 +1179,13 @@
     <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
 
     <string name="game_menu_change_resolution">更改分辨率</string>
+    <string name="game_menu_display_settings">显示设置</string>
+    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_resolution_current">%1$s（当前）</string>
     <string name="game_menu_resolution_custom">%1$s（自定义）</string>
     <string name="game_menu_resolution_custom_current">%1$s（自定义、当前）</string>
     <string name="game_menu_resolution_restarting">分辨率已设为 %1$s，正在重启串流…</string>
+    <string name="game_menu_screen_mode_restart_confirm">更改显示器排列需要重启串流。要现在重启吗？</string>
     <string name="notification_content_streaming">正在串流： %1$s (%2$s)</string>
 
     <!-- 音频振动设置 -->

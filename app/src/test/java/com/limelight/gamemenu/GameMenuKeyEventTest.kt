@@ -84,7 +84,7 @@ class GameMenuKeyEventTest {
             !shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 1,
                 guideActive = false,
-                hasOptions = true,
+                hasFocusTarget = true,
                 menuContentLaidOut = false,
                 menuHasFocus = false
             )
@@ -93,7 +93,7 @@ class GameMenuKeyEventTest {
             shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 1,
                 guideActive = false,
-                hasOptions = true,
+                hasFocusTarget = true,
                 menuContentLaidOut = true,
                 menuHasFocus = false
             )
@@ -106,7 +106,7 @@ class GameMenuKeyEventTest {
             !shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 2,
                 guideActive = false,
-                hasOptions = true,
+                hasFocusTarget = true,
                 menuContentLaidOut = true,
                 menuHasFocus = true
             )

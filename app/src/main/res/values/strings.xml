@@ -222,6 +222,11 @@
     <string name="game_menu_bitrate_adjustment_success">Bitrate set to %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">Couldn\'t adjust bitrate</string>
     <string name="game_menu_ok">OK</string>
+    <string name="custom_list_save">Save</string>
+    <string name="custom_list_discard_title">Discard changes</string>
+    <string name="custom_list_discard_message">Discard the changes made to this list?</string>
+    <string name="custom_list_discard">Discard</string>
+    <string name="game_menu_apply_display">Apply</string>
     <string name="game_menu_bitrate_range">Bitrate Range:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
     <string name="game_menu_bitrate_tip">Drag the slider to adjust bitrate in real time. Higher values improve image quality but require a faster, more stable connection.</string>
@@ -1501,10 +1506,13 @@ Tap again to replace it.</string>
     <string name="settings_search_close">Close search</string>
     <string name="settings_search_no_results">No matching settings</string>
     <string name="game_menu_change_resolution">Resolution</string>
+    <string name="game_menu_display_settings">Display settings</string>
+    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_resolution_current">%1$s (Current)</string>
     <string name="game_menu_resolution_custom">%1$s (Custom)</string>
     <string name="game_menu_resolution_custom_current">%1$s (Custom, Current)</string>
     <string name="game_menu_resolution_restarting">Resolution set to %1$s. Restarting the stream...</string>
+    <string name="game_menu_screen_mode_restart_confirm">Changing the display arrangement restarts the stream. Restart now?</string>
     <string name="notification_content_streaming">Streaming in progress: %1$s (%2$s)</string>
 
     <!-- Audio Vibration Settings -->
