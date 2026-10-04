@@ -308,7 +308,8 @@ object UpdateManager {
             }
 
             DownloadManager.STATUS_RUNNING,
-            DownloadManager.STATUS_PAUSED -> {
+            DownloadManager.STATUS_PAUSED,
+            DownloadManager.STATUS_PENDING -> {
                 restoreClaimedDownload(context, downloadId, completion)
                 Log.d(TAG, "下载仍在进行，保留下载状态，downloadId=$downloadId status=${queryResult.status}")
             }
