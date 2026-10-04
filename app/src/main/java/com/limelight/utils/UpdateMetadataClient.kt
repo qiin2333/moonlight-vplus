@@ -48,7 +48,8 @@ internal object UpdateMetadataClient {
     private const val READ_TIMEOUT_MS = 5_000L
     private const val CALL_TIMEOUT_MS = 7_000L
     private const val OFFICIAL_GROUP_DEADLINE_MS = 12_000L
-    private const val MAX_METADATA_BYTES = 512 * 1024L
+    // Keep this aligned with the release metadata generator's 1 MiB document limit.
+    private const val MAX_METADATA_BYTES = 1 * 1024 * 1024L
 
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
