@@ -12,7 +12,7 @@
 
 ## 当前验收边界
 
-本轮能力收敛通过 79 项 JVM 测试（其中 38 项策略测试）、普通 Debug、隔离 Debug 与对应 instrumentation APK 构建；新增控件测试覆盖 FEC 禁用而自动码率仍可操作。设备测试尚未执行，保留既有系统安装限制及真机验收边界。下文的自动 FEC 运行结果仅描述旧版本。
+本轮能力收敛通过完整的 886 项 JVM 测试（其中 38 项策略测试）、普通 Debug、隔离 Debug 与对应 instrumentation APK 构建；新增控件测试覆盖 FEC 禁用而自动码率仍可操作。设备测试尚未执行，保留既有系统安装限制及真机验收边界。下文的自动 FEC 运行结果仅描述旧版本。
 
 策略与生命周期单元测试不能替代完整应用、真实控制会话、弱网故障和设备验收。源码 `9201f86`、common c `53116f5`、haptics SDK `b3f97c3` 的组合已通过 8 类共 78 项 JVM 回归，普通 Debug、隔离 Debug 及对应 instrumentation APK 构建通过。隔离包的 application ID 已核对；正常 ADB 安装返回 `INSTALL_FAILED_USER_RESTRICTED`，设备测试未执行。此前工作区的运行结果不直接视作本提交通过。
 
