@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.nvstream.http.TransportPolicyView
@@ -61,16 +63,20 @@ internal fun TransportPolicyControls(
             }
             Text(stringResource(R.string.transport_last_operation, stringResource(operation)), fontSize = 10.sp)
         }
+        val automaticBitrateLabel = stringResource(R.string.transport_auto_bitrate)
+        val automaticFecLabel = stringResource(R.string.transport_auto_fec)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.transport_auto_bitrate), modifier = Modifier.weight(1f), fontSize = 11.sp)
+            Text(automaticBitrateLabel, modifier = Modifier.weight(1f), fontSize = 11.sp)
             Switch(checked = policy?.automatic?.bitrate == true, onCheckedChange = onAutomaticBitrate,
-                enabled = view?.canSubmit == true, modifier = Modifier.testTag("transportAutomaticBitrate"))
+                enabled = view?.canSubmit == true, modifier = Modifier.testTag("transportAutomaticBitrate")
+                    .semantics { contentDescription = automaticBitrateLabel })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.transport_auto_fec), modifier = Modifier.weight(1f), fontSize = 11.sp)
+            Text(automaticFecLabel, modifier = Modifier.weight(1f), fontSize = 11.sp)
             Switch(checked = policy?.automatic?.fec == true, onCheckedChange = onAutomaticFec,
                 enabled = view?.canSubmit == true && view.status?.automaticFecAvailable == true,
-                modifier = Modifier.testTag("transportAutomaticFec"))
+                modifier = Modifier.testTag("transportAutomaticFec")
+                    .semantics { contentDescription = automaticFecLabel })
         }
         TextButton(onClick = onManual, enabled = view?.canSubmit == true,
             modifier = Modifier.testTag("transportManualControl")) {

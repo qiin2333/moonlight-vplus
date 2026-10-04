@@ -1236,6 +1236,7 @@ class NvHTTP(
             throw IllegalStateException("No X509 trust manager found")
         }
 
+        @Throws(XmlPullParserException::class, IOException::class)
         internal fun readLegacyTransportScope(xml: String): LegacyTransportScope? {
             val parser = XmlPullParserFactory.newInstance().apply { isNamespaceAware = true }.newPullParser()
             parser.setInput(StringReader(xml))
@@ -1245,13 +1246,19 @@ class NvHTTP(
             while (event != XmlPullParser.END_DOCUMENT) {
                 if (event == XmlPullParser.START_TAG && parser.depth == 2 && parser.name in names) {
                     val name = parser.name
-                    require(!fields.containsKey(name)) { "Duplicate launch identity" }
+                    if (fields.containsKey(name)) {
+                        throw XmlPullParserException("Duplicate launch identity", parser, null)
+                    }
                     fields[name] = parser.nextText()
                 }
                 event = parser.next()
             }
-            return LegacyTransportScope.fromLaunch(fields["transportScope"], fields["transportSessionId"],
-                fields["transportConnectionEpoch"])
+            return try {
+                LegacyTransportScope.fromLaunch(fields["transportScope"], fields["transportSessionId"],
+                    fields["transportConnectionEpoch"])
+            } catch (e: IllegalArgumentException) {
+                throw XmlPullParserException("Invalid transport launch scope", parser, e)
+            }
         }
 
         @Throws(XmlPullParserException::class, IOException::class)

@@ -31,6 +31,10 @@ class TransportPolicyControlsTest {
         }
         compose.onNodeWithTag("transportAutomaticFec").assertIsNotEnabled()
         compose.onNodeWithTag("transportAutomaticBitrate").assertIsEnabled()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.transport_auto_fec))
+            .assertIsNotEnabled()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.transport_auto_bitrate))
+            .assertIsEnabled()
     }
 
     @Test fun fourIndependentModesAndManualActionUseCurrentHostState() {
