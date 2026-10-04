@@ -352,6 +352,7 @@ class TransportPolicyTest {
             .put("acceptedRevision", revision).put("encoderAppliedRevision", JSONObject.NULL)
             .put("accepted", p).put("confirmed", JSONObject.NULL).put("encoderReady", true).put("pending", true)
             .put("stopped", false).put("experimentalLiveControlAvailable", true)
+            .put("experimentalAutomaticFecAvailable", true)
             .put("receipts", org.json.JSONArray().put(JSONObject(p.toString()).put("encoderApplied", false)
                 .put("firstSentFrame", JSONObject.NULL).put("failure", "none")))
     }
@@ -370,6 +371,20 @@ class TransportPolicyTest {
             TransportPolicyCodec.status(json().put("experimentalLiveControlAvailable", "true"))
         }
     }
+    @Test fun unavailableAutomaticFecFailsClosedWithoutDisablingBitrate() {
+        val missing = json().apply { remove("experimentalAutomaticFecAvailable") }
+        assertFalse(TransportPolicyCodec.status(missing).automaticFecAvailable)
+        for (capability in listOf<Any>(false, "true", 1)) {
+            val s = TransportPolicyCodec.status(json().put("experimentalAutomaticFecAvailable", capability))
+            assertFalse(s.automaticFecAvailable)
+            assertThrows(IllegalArgumentException::class.java) {
+                TransportPolicyCodec.control(s, "fec", false, true, 7000)
+            }
+            assertTrue(TransportPolicyCodec.control(s, "bitrate", true, false, 7000)
+                .getBoolean("automaticBitrate"))
+        }
+    }
+
     @Test fun exactRequestsRetainIdentityAndManualReservesWithoutReadOnlyFields() {
         val s = status()
         for (bitrate in listOf(false, true)) for (fec in listOf(false, true)) {

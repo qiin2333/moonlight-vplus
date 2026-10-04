@@ -169,8 +169,11 @@ class TransportPolicyService internal constructor(
         try { query() }
         catch (e: Exception) { publish(view.copy(refreshing = true, error = e.message ?: "Query failed")) }
     }
-    fun setModes(bitrate: Boolean, fec: Boolean, maximumKbps: Int) = submit { s, id ->
-        "api/v2/transport-control" to TransportPolicyCodec.control(s, id, bitrate, fec, maximumKbps)
+    @Synchronized fun setModes(bitrate: Boolean, fec: Boolean, maximumKbps: Int): Boolean {
+        if (fec && view.status?.automaticFecAvailable != true) return false
+        return submit { s, id ->
+            "api/v2/transport-control" to TransportPolicyCodec.control(s, id, bitrate, fec, maximumKbps)
+        }
     }
     fun setManualBudget(totalKbps: Int) = submit { s, id ->
         "api/v2/transport-policy" to TransportPolicyCodec.manual(s, id, totalKbps)

@@ -69,7 +69,8 @@ internal fun TransportPolicyControls(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.transport_auto_fec), modifier = Modifier.weight(1f), fontSize = 11.sp)
             Switch(checked = policy?.automatic?.fec == true, onCheckedChange = onAutomaticFec,
-                enabled = view?.canSubmit == true, modifier = Modifier.testTag("transportAutomaticFec"))
+                enabled = view?.canSubmit == true && view.status?.automaticFecAvailable == true,
+                modifier = Modifier.testTag("transportAutomaticFec"))
         }
         TextButton(onClick = onManual, enabled = view?.canSubmit == true,
             modifier = Modifier.testTag("transportManualControl")) {

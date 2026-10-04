@@ -22,7 +22,16 @@ class TransportPolicyControlsTest {
     private fun view(applied: Boolean = false, sent: String? = null, failure: String = "none") =
         TransportPolicyView(status = TransportPolicyStatus("1", "18446744073709551615", "2", p,
             if (applied) p else null, true, !applied && failure == "none", false, true,
-            listOf(TransportPolicyReceipt(p, applied, sent, failure))), refreshing = false, requestRevision = "3")
+            listOf(TransportPolicyReceipt(p, applied, sent, failure)), automaticFecAvailable = true), refreshing = false, requestRevision = "3")
+
+    @Test fun unavailableAutomaticFecIsDisabledWhileBitrateRemainsActionable() {
+        val current = view().let { it.copy(status = it.status!!.copy(automaticFecAvailable = false)) }
+        compose.setContent {
+            MaterialTheme { TransportPolicyControls(current, {}, { fail("Unavailable FEC callback") }, {}) }
+        }
+        compose.onNodeWithTag("transportAutomaticFec").assertIsNotEnabled()
+        compose.onNodeWithTag("transportAutomaticBitrate").assertIsEnabled()
+    }
 
     @Test fun fourIndependentModesAndManualActionUseCurrentHostState() {
         val current = mutableStateOf(view())

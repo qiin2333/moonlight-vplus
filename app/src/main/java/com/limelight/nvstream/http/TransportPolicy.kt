@@ -28,7 +28,8 @@ data class TransportPolicyStatus(
     val accepted: TransportFramePolicy, val confirmed: TransportFramePolicy?,
     val encoderReady: Boolean, val pending: Boolean, val stopped: Boolean,
     val liveControlAvailable: Boolean, val receipts: List<TransportPolicyReceipt>,
-    val networkStatistics: TransportNetworkStatistics? = null
+    val networkStatistics: TransportNetworkStatistics? = null,
+    val automaticFecAvailable: Boolean = false
 )
 data class TransportPolicySubmission(val requestId: String, val requestRevision: String,
                                      val status: TransportPolicyStatus)
@@ -245,7 +246,7 @@ object TransportPolicyCodec {
             j.optJSONObject("networkStatistics")?.let { value ->
                 // Optional statistics degrade independently of valid control receipts.
                 runCatching { networkStatistics(value,id(j,"connectionEpoch")) }.getOrNull()
-            })
+            }, j.opt("experimentalAutomaticFecAvailable") == true)
     }
     fun submission(j: JSONObject): TransportPolicySubmission {
         val requestId = j.getString("requestId")
@@ -264,6 +265,7 @@ object TransportPolicyCodec {
     }
     fun control(s: TransportPolicyStatus, requestId: String, bitrate: Boolean, fec: Boolean, maximumKbps: Int): JSONObject {
         require(maximumKbps in 1..800_000)
+        require(!fec || s.automaticFecAvailable) { "Automatic FEC unavailable" }
         return identity(s, requestId).put("automaticBitrate", bitrate).put("automaticFec", fec).put("maximumTotalKbps", maximumKbps)
     }
     fun manual(s: TransportPolicyStatus, requestId: String, totalKbps: Int): JSONObject {

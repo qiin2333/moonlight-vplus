@@ -177,16 +177,18 @@ internal class BitrateCardController(
             val view = state.transport
             val automatic = view?.status?.accepted?.automatic
             val service = game.transportPolicyService
-            val queued = if (automatic?.bitrate == true || automatic?.fec == true)
-                service?.setModes(automatic.bitrate, automatic.fec, state.selectedBitrateKbps)
+            val fec = view?.status?.automaticFecAvailable == true && automatic?.fec == true
+            val queued = if (automatic?.bitrate == true || fec)
+                service?.setModes(automatic?.bitrate == true, fec, state.selectedBitrateKbps)
             else service?.setManualBudget(state.selectedBitrateKbps)
             if (queued != true) showBitrateToast(game.getString(R.string.transport_unavailable))
         } else adjustBitrate(state.selectedBitrateKbps)
     }
 
     fun setAutomaticBitrate(enabled: Boolean) {
-        val p = state.transport?.status?.accepted ?: return
-        game.transportPolicyService?.setModes(enabled, p.automatic?.fec == true,
+        val status = state.transport?.status ?: return
+        val p = status.accepted
+        game.transportPolicyService?.setModes(enabled, status.automaticFecAvailable && p.automatic?.fec == true,
             p.automatic?.maximumKbps ?: p.totalKbps)
     }
 
