@@ -249,6 +249,8 @@
     <string name="custom_resolution_error_empty_width">Введите ширину</string>
     <string name="custom_resolution_error_empty_height">Введите высоту</string>
     <string name="custom_resolution_error_range_width">Ширина: от 320 до 7680</string>
+    <string name="custom_frame_rate_error_empty">Введите частоту кадров</string>
+    <string name="custom_frame_rate_error_range">Частота кадров: от 1 до 500</string>
     <string name="custom_resolution_error_range_height">Высота: от 240 до 4320</string>
     <string name="custom_resolution_error_even_width">Ширина должна быть чётной</string>
     <string name="custom_resolution_error_even_height">Высота должна быть чётной</string>

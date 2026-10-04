@@ -222,6 +222,8 @@
     <string name="custom_resolution_error_empty_width">请输入宽度</string>
     <string name="custom_resolution_error_empty_height">请输入高度</string>
     <string name="custom_resolution_error_range_width">宽度需在 320–7680 之间</string>
+    <string name="custom_frame_rate_error_empty">请输入帧率</string>
+    <string name="custom_frame_rate_error_range">帧率需在 1–500 之间</string>
     <string name="custom_resolution_error_range_height">高度需在 240–4320 之间</string>
     <string name="custom_resolution_error_even_width">宽度必须为偶数</string>
     <string name="custom_resolution_error_even_height">高度必须为偶数</string>

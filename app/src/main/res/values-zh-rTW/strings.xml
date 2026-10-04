@@ -807,6 +807,8 @@
     <string name="custom_resolution_error_empty_width">請輸入寬度</string>
     <string name="custom_resolution_error_empty_height">請輸入高度</string>
     <string name="custom_resolution_error_range_width">寬度需在 320–7680 之間</string>
+    <string name="custom_frame_rate_error_empty">請輸入幀率</string>
+    <string name="custom_frame_rate_error_range">幀率需在 1–500 之間</string>
     <string name="custom_resolution_error_range_height">高度需在 240–4320 之間</string>
     <string name="custom_resolution_error_even_width">寬度必須為偶數</string>
     <string name="custom_resolution_error_even_height">高度必須為偶數</string>

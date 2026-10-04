@@ -15,14 +15,24 @@ object CustomResolutionsStore {
 
     /** 读取全部自定义分辨率,按宽、高升序;无法解析的脏数据会被丢弃。 */
     fun load(context: Context): List<Resolution> {
-        val stored = prefs(context).getStringSet(PREFS_KEY, null).orEmpty()
+        val stored = prefs(context).getStringSet(PREFS_KEY, null)
+            ?: return defaultResolutions()
         return stored.mapNotNull(ResolutionValidator::parseResolution).sortedWith(resolutionOrder)
+    }
+
+    private fun defaultResolutions(): List<Resolution> {
+        return listOf(
+            Resolution(1280, 720),
+            Resolution(1920, 1080),
+            Resolution(2560, 1440),
+            Resolution(3840, 2160)
+        )
     }
 
     fun save(context: Context, resolutions: List<Resolution>) {
         prefs(context).edit()
             .putStringSet(PREFS_KEY, resolutions.map(Resolution::toString).toSet())
-            .apply()
+            .commit()
     }
 
     /** 添加一条(已存在时忽略),返回是否实际写入。 */
