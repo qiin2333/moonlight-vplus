@@ -234,6 +234,7 @@
     <string name="custom_resolution_delete_contentdesc">删除 %1$d×%2$d</string>
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
+    <string name="title_custom_fps">自定义帧率</string>
     <string name="title_seekbar_bitrate">串流码率</string>
     <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
     <string name="title_adaptive_bitrate">智能码率</string>

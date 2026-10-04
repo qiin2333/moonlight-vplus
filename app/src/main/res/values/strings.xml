@@ -264,6 +264,7 @@
     <string name="title_native_res_dialog">Native Resolution Warning</string>
     <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You may need to configure a matching custom display mode on the host PC.\n\nIf you create a custom resolution in NVIDIA Control Panel, read NVIDIA\'s warning about possible monitor damage, PC instability, and other risks first.\n\nMoonlight cannot prevent problems caused by an unsupported custom display mode. If the physical monitor does not support the required mode, try a virtual display. Streaming still requires both the client and host to support the selected resolution and refresh rate.</string>
     <string name="title_fps_list">Stream frame rate</string>
+    <string name="title_custom_fps">Custom frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
     <string name="title_seekbar_bitrate">Stream bitrate</string>
     <string name="summary_seekbar_bitrate">Higher bitrate improves image quality but uses more bandwidth; lower bitrate is better for slower or unstable networks. Lower it first if streaming stutters, and raise it when the image is too soft and the network is stable; for 1080p60, start around 10–20 Mbps.</string>

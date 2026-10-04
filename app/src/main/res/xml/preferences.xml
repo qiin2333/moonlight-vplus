@@ -16,6 +16,18 @@
             android:entries="@array/resolution_names"
             android:entryValues="@array/resolution_values"
             android:defaultValue="1920x1080" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_resolutions_scale"
+            android:dialogMessage="@string/summary_seekbar_scale"
+            seekbar:min="50"
+            android:max="400"
+            android:defaultValue="100"
+            seekbar:step="10"
+            seekbar:keyStep="50"
+            seekbar:divisor="1"
+            android:summary="@string/summary_seekbar_scale"
+            android:text="%"
+            android:title="@string/title_seekbar_scale" />
         <ListPreference
             android:key="list_fps"
             android:title="@string/title_fps_list"
@@ -34,28 +46,6 @@
             android:summary="@string/summary_seekbar_bitrate"
             android:text="@string/suffix_seekbar_bitrate_mbps"
             android:title="@string/title_seekbar_bitrate" />
-        <com.limelight.preferences.SeekBarPreference
-            android:key="seekbar_resolutions_scale"
-            android:dialogMessage="@string/summary_seekbar_scale"
-            seekbar:min="50"
-            android:max="400"
-            android:defaultValue="100"
-            seekbar:step="10"
-            seekbar:keyStep="50"
-            seekbar:divisor="1"
-            android:summary="@string/summary_seekbar_scale"
-            android:text="%"
-            android:title="@string/title_seekbar_scale" />
-        <com.limelight.preferences.CustomResolutionsPreference
-                android:key="custom_resolutions"
-                android:summary="@string/summary_custom_resolutions"
-                android:title="@string/title_custom_resolutions" />
-    </PreferenceCategory>
-    <PreferenceCategory android:title="@string/category_advanced_features"
-        android:key="category_advanced_features"
-        android:order="4"
-        android:layout="@layout/preference_category_material"
-        app:initialExpandedChildrenCount="6">
         <CheckBoxPreference
             android:key="checkbox_adaptive_bitrate"
             android:title="@string/title_adaptive_bitrate"
@@ -69,6 +59,12 @@
             android:entryValues="@array/abr_mode_values"
             android:defaultValue="balanced"
             android:dependency="checkbox_adaptive_bitrate" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_advanced_features"
+        android:key="category_advanced_features"
+        android:order="4"
+        android:layout="@layout/preference_category_material"
+        app:initialExpandedChildrenCount="6">
         <ListPreference
             android:key="frame_pacing"
             android:title="@string/title_frame_pacing"
@@ -81,16 +77,6 @@
             android:title="@string/title_enable_host_cadence_precise_sync"
             android:summary="@string/summary_enable_host_cadence_precise_sync"
             android:defaultValue="true" />
-        <CheckBoxPreference
-            android:key="checkbox_unlock_fps"
-            android:title="@string/title_unlock_fps"
-            android:summary="@string/summary_unlock_fps"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_show_low_resolution_presets"
-            android:title="@string/title_show_low_resolution_presets"
-            android:summary="@string/summary_show_low_resolution_presets"
-            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_reduce_refresh_rate"
             android:title="@string/title_checkbox_reduce_refresh_rate"
