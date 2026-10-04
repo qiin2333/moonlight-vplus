@@ -23,6 +23,14 @@ class EasyTierTomlCodecTest {
     }
 
     @Test
+    fun dhcpProfileOmitsStaticIpv4() {
+        val toml = EasyTierTomlCodec.build(EasyTierConfigUiState(dhcp = true))
+
+        assertTrue(toml.contains("dhcp = true"))
+        assertTrue(!toml.contains("ipv4 ="))
+    }
+
+    @Test
     fun stringsRoundTripEscapedCharacters() {
         val original = EasyTierConfigUiState(
                 networkName = "easy\"tier\\name",

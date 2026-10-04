@@ -53,6 +53,7 @@ class EasyTierVpnService : VpnService() {
             try {
                 val ipv4Address = intent.getStringExtra("ipv4_address")
                 val proxyCidrs = intent.getStringArrayListExtra("proxy_cidrs")
+                val allowedRemoteHost = intent.getStringExtra("allowed_remote_host")
                 instanceName = intent.getStringExtra("instance_name")
 
                 if (ipv4Address == null || instanceName == null) {
@@ -60,7 +61,7 @@ class EasyTierVpnService : VpnService() {
                     return@Thread
                 }
 
-                setupVpnInterface(ipv4Address, proxyCidrs ?: ArrayList())
+                setupVpnInterface(ipv4Address, proxyCidrs ?: ArrayList(), allowedRemoteHost)
             } catch (t: Throwable) {
                 Log.e(TAG, "VPN设置线程失败", t)
                 cleanupAndStop()
@@ -71,25 +72,38 @@ class EasyTierVpnService : VpnService() {
         return START_NOT_STICKY
     }
 
-    private fun setupVpnInterface(ipv4Address: String, proxyCidrs: List<String>) {
+    private fun setupVpnInterface(
+        ipv4Address: String,
+        proxyCidrs: List<String>,
+        allowedRemoteHost: String?
+    ) {
         try {
             val addressInfo = parseIpv4Address(ipv4Address)
 
-            val builder = Builder()
-            builder.setSession("EasyTier VPN")
-                .addAddress(addressInfo.ip, addressInfo.networkLength)
-                .addDnsServer("223.5.5.5")
+            val builder = Builder().setSession("EasyTier VPN")
 
-            try {
-                builder.addAddress("fd00::1", 128)
-                Log.i(TAG, "已激活 VPN 接口 IPv6 协议栈 (fd00::1/128) 以支持双栈通信")
-            } catch (e: Exception) {
-                Log.w(TAG, "添加 IPv6 地址失败", e)
+            if (allowedRemoteHost != null) {
+                // A host-issued profile may reach exactly one overlay host and nothing else.
+                requireValidIpv4(allowedRemoteHost)
+                builder.addAddress(addressInfo.ip, 32)
+                    .addRoute(allowedRemoteHost, 32)
+                Log.i(TAG, "为主机签发配置添加唯一允许路由：$allowedRemoteHost/32")
+            } else {
+                builder.addAddress(addressInfo.ip, addressInfo.networkLength)
+                    .addRoute(networkAddress(addressInfo.ip, addressInfo.networkLength), addressInfo.networkLength)
+                Log.i(TAG, "为虚拟网络添加了VPN路由：${addressInfo.ip}/${addressInfo.networkLength}")
             }
 
-            Log.i(TAG, "为虚拟网络添加了VPN路由：${addressInfo.ip}/${addressInfo.networkLength}")
+            if (allowedRemoteHost == null) {
+                try {
+                    builder.addAddress("fd00::1", 128)
+                    Log.i(TAG, "已激活 VPN 接口 IPv6 协议栈 (fd00::1/128) 以支持双栈通信")
+                } catch (e: Exception) {
+                    Log.w(TAG, "添加 IPv6 地址失败", e)
+                }
+            }
 
-            for (cidr in proxyCidrs) {
+            for (cidr in if (allowedRemoteHost == null) proxyCidrs else emptyList()) {
                 Log.i(TAG, "为虚拟网络添加代理CIDR：$cidr")
                 try {
                     val routeInfo = parseCidr(cidr)
@@ -160,6 +174,23 @@ class EasyTierVpnService : VpnService() {
         val parts = cidr.split("/")
         require(parts.size == 2) { "Invalid CIDR: $cidr" }
         return IpAddressInfo(parts[0], parts[1].toInt())
+    }
+
+    private fun networkAddress(ip: String, prefixLength: Int): String {
+        require(prefixLength in 0..32) { "Invalid IPv4 prefix length" }
+        val value = ip.split('.').fold(0L) { result, octet ->
+            val parsed = octet.toInt()
+            require(parsed in 0..255) { "Invalid IPv4 address" }
+            (result shl 8) or parsed.toLong()
+        }
+        val mask = if (prefixLength == 0) 0L else (0xffffffffL shl (32 - prefixLength)) and 0xffffffffL
+        val network = value and mask
+        return "${(network shr 24) and 0xff}.${(network shr 16) and 0xff}.${(network shr 8) and 0xff}.${network and 0xff}"
+    }
+
+    private fun requireValidIpv4(ip: String) {
+        require(ip.split('.').size == 4) { "Invalid IPv4 address" }
+        ip.split('.').forEach { octet -> require(octet.toIntOrNull() in 0..255) { "Invalid IPv4 address" } }
     }
 
     companion object {
