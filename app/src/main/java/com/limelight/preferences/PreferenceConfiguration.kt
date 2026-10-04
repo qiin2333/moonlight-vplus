@@ -406,6 +406,36 @@ class PreferenceConfiguration {
         }
     }
 
+    /**
+     * Persist the display settings owned by the in-game bitrate card.
+     * These keys match the settings page, and unrelated preferences stay untouched.
+     */
+    fun writeDisplayPreferences(context: Context): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context) ?: return false
+        return try {
+            val editor = prefs.edit()
+            DisplayPreferenceValues.of(
+                nativeResolution = isNativeResolution,
+                width = width,
+                height = height,
+                fps = fps,
+                bitrate = bitrate,
+                adaptiveBitrate = enableAdaptiveBitrate,
+                screenCombinationMode = screenCombinationMode
+            ).forEach { (key, value) ->
+                when (value) {
+                    is String -> editor.putString(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Boolean -> editor.putBoolean(key, value)
+                }
+            }
+            editor.commit()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     /** Persist only the split direct-touch fields owned by sensitivity presets. */
     fun writeTouchPointerPreferences(context: Context, synchronous: Boolean = false): Boolean {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context) ?: return false
@@ -563,7 +593,7 @@ class PreferenceConfiguration {
         private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
 
         private const val BITRATE_PREF_OLD_STRING = "seekbar_bitrate"
-        private const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
+        const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
         private const val ABR_MODE_PREF_STRING = "list_abr_mode"
         private const val STRETCH_PREF_STRING = "checkbox_stretch_video"
         private const val SOPS_PREF_STRING = "checkbox_enable_sops"
@@ -619,7 +649,7 @@ class PreferenceConfiguration {
         private const val ENABLE_STUN_PREF_STRING = "checkbox_enable_stun"
         private const val LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING = "checkbox_lock_screen_after_disconnect"
         private const val SWAP_QUIT_AND_DISCONNECT_PERF_STRING = "checkbox_swap_quit_and_disconnect"
-        private const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
+        const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
         const val FRAME_PACING_PREF_STRING = "frame_pacing"
         const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
         private const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
@@ -724,6 +754,13 @@ class PreferenceConfiguration {
         // ---- Package-private pref key constants (promoted to public for Kotlin interop) ----
         const val FPS_PREF_STRING = "list_fps"
         const val BITRATE_PREF_STRING = "seekbar_bitrate_kbps"
+        val DISPLAY_PREFERENCE_KEYS = setOf(
+            RESOLUTION_PREF_STRING,
+            FPS_PREF_STRING,
+            BITRATE_PREF_STRING,
+            ADAPTIVE_BITRATE_PREF_STRING,
+            SCREEN_COMBINATION_MODE_PREF_STRING
+        )
         const val HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale"
         const val LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels"
         const val SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display"
@@ -937,6 +974,17 @@ class PreferenceConfiguration {
                 RES_360P, RES_480P, "360x640", "480x854" -> true
                 else -> false
             }
+        }
+
+        /** Hidden low presets stay hidden unless the setting or current value asks for them. */
+        fun includeLowResolutionPreset(
+            resolution: String,
+            currentResolution: String,
+            showLowResolutionPresets: Boolean
+        ): Boolean {
+            return showLowResolutionPresets ||
+                isLowResolutionPreset(currentResolution) ||
+                !isLowResolutionPreset(resolution)
         }
 
         // ---- Public static methods ----

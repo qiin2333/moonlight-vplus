@@ -98,7 +98,7 @@ private data class DisplaySegmentOption(
     val enabled: Boolean = true
 )
 
-private enum class SegmentIcon {
+internal enum class SegmentIcon {
     Artwork,
     Acrylic,
     SoftColor,
@@ -752,7 +752,7 @@ internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
     else -> null
 }
 
-private fun screenModeIcon(mode: Int): SegmentIcon = when (mode) {
+internal fun screenModeIcon(mode: Int): SegmentIcon = when (mode) {
     -1 -> SegmentIcon.FollowHost
     0 -> SegmentIcon.NoOperation
     1 -> SegmentIcon.Activate
@@ -763,7 +763,7 @@ private fun screenModeIcon(mode: Int): SegmentIcon = when (mode) {
 }
 
 @Composable
-private fun ScreenCombinationSegmentedControl(
+internal fun ScreenCombinationSegmentedControl(
     options: List<AppScreenCombinationOption>,
     selectedMode: Int,
     isDarkTheme: Boolean,

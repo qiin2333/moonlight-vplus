@@ -271,6 +271,7 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Adaptive bitrate</string>
     <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
+    <string name="game_menu_adaptive_bitrate_tip">Auto-adjust bitrate based on packet loss and latency, preferring Sunshine server-side control. Adaptive bitrate starts from the baseline bitrate and adjusts around it. The selected ABR mode controls the minimum and maximum range.</string>
     <string name="title_abr_mode">ABR mode</string>
     <string name="summary_abr_mode">Quality prefers higher bitrate; Low-latency drops faster on packet loss.</string>
     <string name="abr_mode_quality">Quality</string>
@@ -313,6 +314,9 @@
     <string name="custom_resolution_tag_4k">4K</string>
     <string name="custom_resolution_tag_2k">2K</string>
     <string name="custom_resolution_tag_1080p">1080p</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_ultrawide">Ultrawide</string>
     <string name="custom_resolution_tag_portrait">Portrait</string>
     <string name="custom_resolution_delete_contentdesc">Delete %1$d×%2$d</string>
