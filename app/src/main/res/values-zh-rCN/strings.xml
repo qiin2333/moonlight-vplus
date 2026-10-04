@@ -1516,6 +1516,7 @@
     <string name="menu">菜单</string>
     <string name="settings_search_hint">搜索设置项…</string>
     <string name="settings_search_close">关闭搜索</string>
+    <string name="settings_search_clear">清除搜索</string>
     <string name="settings_search_no_results">没有匹配的设置</string>
     <string name="settings_search_open_category">在分类中查看</string>
     <string name="settings_search_contains">包含：%1$s</string>

@@ -56,6 +56,7 @@ import androidx.preference.ListPreference
 import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
+import androidx.preference.PreferenceScreen
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceGroupAdapter
@@ -1364,13 +1365,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 val recyclerView = listView
                 if (recyclerView != null) {
                     setupScrollListener(recyclerView, settingsActivity)
-                    recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
-                        override fun onChildViewAttachedToWindow(view: View) {
-                            bindCategoryOpenAction(view)
-                        }
 
-                        override fun onChildViewDetachedFromWindow(view: View) = Unit
-                    })
                 }
             }
         }
@@ -1402,6 +1397,55 @@ class StreamSettings : ThemedAppCompatActivity() {
             LegacySettingsModeStore(
                 PreferenceManager.getDefaultSharedPreferences(requireContext())
             )
+        }
+
+        /**
+         * XML 里的普通分类换成会在绑定后自己挂点击的分类。
+         * 外部补挂会被 Preference 的重绑清掉，标题命中时整组重绑，点击就丢了。
+         */
+        private fun replaceSearchableCategories(group: PreferenceGroup) {
+            val pending = ArrayList<PreferenceCategory>()
+            for (index in 0 until group.preferenceCount) {
+                val category = group.getPreference(index) as? PreferenceCategory ?: continue
+                if (category !is SearchablePreferenceCategory) pending.add(category)
+            }
+            for (category in pending) {
+                val order = category.order
+                val children = ArrayList<androidx.preference.Preference>()
+                for (index in 0 until category.preferenceCount) children.add(category.getPreference(index))
+                category.removeAll()
+                group.removePreference(category)
+
+                val replacement = SearchablePreferenceCategory(requireContext())
+                replacement.key = category.key
+                replacement.title = category.title
+                replacement.summary = category.summary
+                replacement.layoutResource = category.layoutResource
+                replacement.isVisible = category.isVisible
+                replacement.isIconSpaceReserved = category.isIconSpaceReserved
+                replacement.order = order
+                group.addPreference(replacement)
+                children.forEach { child ->
+                    replacement.addPreference(child)
+                    if (child is PreferenceGroup) replaceSearchableCategories(child)
+                }
+            }
+        }
+
+        private fun updateSearchCategoryActions(group: PreferenceGroup) {
+            for (index in 0 until group.preferenceCount) {
+                val child = group.getPreference(index)
+                if (child is SearchablePreferenceCategory) {
+                    val wasOpenable = child.searchOpenHandler != null
+                    child.searchOpenHandler = if (visibilityController.isSearching()) {
+                        { openCategoryFromSearch(it) }
+                    } else {
+                        null
+                    }
+                    if (wasOpenable != (child.searchOpenHandler != null)) child.refreshSearchAction()
+                }
+                if (child is PreferenceGroup) updateSearchCategoryActions(child)
+            }
         }
 
         private fun rebuildCategoryList() {
@@ -1436,6 +1480,7 @@ class StreamSettings : ThemedAppCompatActivity() {
          */
         fun applySearchFilter(query: String) {
             visibilityController.applySearch(query)
+            preferenceScreen?.let { updateSearchCategoryActions(it) }
             refreshSearchPresentation()
         }
 
@@ -1459,35 +1504,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                         adapter.notifyItemChanged(index)
                     }
                 }
-            }
-            listView?.let { recycler ->
-                for (index in 0 until recycler.childCount) {
-                    bindCategoryOpenAction(recycler.getChildAt(index))
-                }
-            }
-        }
-
-        @SuppressLint("RestrictedApi")
-        private fun bindCategoryOpenAction(child: View) {
-            val open = child.findViewById<TextView>(R.id.settings_category_open) ?: return
-            val recyclerView = listView
-            val adapter = recyclerView?.adapter as? PreferenceGroupAdapter
-            val position = recyclerView?.getChildAdapterPosition(child) ?: RecyclerView.NO_POSITION
-            val category = if (adapter != null && position >= 0) {
-                adapter.getItem(position) as? PreferenceCategory
-            } else {
-                null
-            }
-            val categoryKey = category?.key
-            if (!visibilityController.isSearching() ||
-                categoryKey.isNullOrEmpty() ||
-                visibilityController.categoryNameMatches(category)
-            ) {
-                open.visibility = View.GONE
-                open.setOnClickListener(null)
-            } else {
-                open.visibility = View.VISIBLE
-                open.setOnClickListener { openCategoryFromSearch(categoryKey) }
             }
         }
 
@@ -1528,8 +1544,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                 when {
                     child is PreferenceGroup -> applyHighlightedSummariesRecursively(child, valueText, disabledAccent)
                     // IconListPreference 自己重写 setSummary 维护 "(当前：xxx)"，
-                    // 装 SummaryProvider 会与其 super.setSummary 调用互斥，跳过。
-                    child is IconListPreference -> Unit
+                    // 装 SummaryProvider 会与其 super.setSummary 调用互斥。
+                    // 命中说明改由它在拼接时询问，避免被当成新的原始说明保存。
+                    child is IconListPreference -> child.searchMatchNoteProvider = { searchMatchNote(child) }
                     child is ListPreference -> applyHighlightedSummary(child, valueText, disabledAccent) {
                         val entry = it.entry?.toString()
                         if (entry.isNullOrBlank()) "—" else entry
@@ -1538,6 +1555,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                         val display = it.formatDisplayValue(it.currentValue)
                         val suffix = it.suffix?.takeIf { s -> s.isNotBlank() }
                         if (suffix != null) "$display $suffix" else display
+                    }
+                    child is MultiSelectListPreference -> applyHighlightedSummary(child, valueText, disabledAccent) {
+                        selectedMultiSelectLabels(it)
                     }
                 }
             }
@@ -1603,6 +1623,19 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
                 builder
             }
+        }
+
+        /** 多选没有「当前值」行，搜索时用已选项顶上，避免说明只剩命中备注。 */
+        private fun selectedMultiSelectLabels(preference: MultiSelectListPreference): String {
+            val selected = preference.values ?: emptySet()
+            val labels = preference.entryValues
+                ?.mapIndexedNotNull { index, value ->
+                    preference.entries?.getOrNull(index)?.takeIf { selected.contains(value.toString()) }
+                }
+                .orEmpty()
+            return if (labels.isEmpty()) "—" else labels.joinToString(
+                getString(R.string.settings_search_match_separator)
+            )
         }
 
         private fun searchMatchNote(preference: Preference): String? {
@@ -3330,6 +3363,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             initializeTouchModeDefaultsIfNeeded()
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
+            replaceSearchableCategories(screen)
 
             setupLowResolutionPresetVisibility()
 

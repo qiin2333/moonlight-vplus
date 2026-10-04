@@ -125,7 +125,7 @@
                         android:scaleType="center"
                         android:padding="5dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/settings_search_close" />
+                        android:contentDescription="@string/settings_search_clear" />
 
                 </LinearLayout>
 

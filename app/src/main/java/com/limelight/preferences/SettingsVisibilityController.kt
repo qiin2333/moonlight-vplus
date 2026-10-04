@@ -26,12 +26,6 @@ internal class SettingsVisibilityController(
 
     fun isSearching(): Boolean = activeQuery.trim().isNotEmpty()
 
-    /** 分类名本身命中时，右侧已经展开整组，不必再提供「在分类中查看」。 */
-    fun categoryNameMatches(category: Preference): Boolean {
-        val query = activeQuery.trim().lowercase(Locale.getDefault())
-        return query.isNotEmpty() && matches(category, query)
-    }
-
     /** 标题没命中、但下拉文案命中时，返回用户能看到的选项名。 */
     fun matchedDropdownLabels(preference: Preference): List<String> {
         val query = activeQuery.trim().lowercase(Locale.getDefault())

@@ -1492,6 +1492,7 @@ Tap again to replace it.</string>
     <string name="menu">Menu</string>
     <string name="settings_search_hint">Search settings…</string>
     <string name="settings_search_close">Close search</string>
+    <string name="settings_search_clear">Clear search</string>
     <string name="settings_search_no_results">No matching settings</string>
     <string name="settings_search_open_category">View in category</string>
     <string name="settings_search_contains">Includes: %1$s</string>
