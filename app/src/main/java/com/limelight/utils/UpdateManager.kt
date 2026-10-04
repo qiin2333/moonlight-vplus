@@ -240,22 +240,24 @@ object UpdateManager {
             return
         }
 
-        val status = try {
-            val query = DownloadManager.Query().apply { setFilterById(downloadId) }
-            dm.query(query)?.use { cursor ->
-                if (!cursor.moveToFirst()) {
-                    null
-                } else {
-                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    statusIndex.takeIf { it >= 0 }?.let(cursor::getInt)
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "查询下载状态失败: ${e.message}")
-            null
+        val queryResult = queryDownloadStatus(dm, downloadId)
+        if (queryResult.error != null) {
+            Log.w(TAG, "查询下载状态失败: ${queryResult.error.message}")
+            restoreClaimedDownload(context, downloadId, completion)
+            return
+        }
+        if (!queryResult.rowFound) {
+            retryOrNotifyDownload(
+                context,
+                dm,
+                downloadId,
+                completion,
+                R.string.toast_download_failed_try_browser
+            )
+            return
         }
 
-        when (status) {
+        when (queryResult.status) {
             DownloadManager.STATUS_SUCCESSFUL -> {
                 val downloadedUri = dm.getUriForDownloadedFile(downloadId)
                 if (downloadedUri == null) {
@@ -305,7 +307,39 @@ object UpdateManager {
                 )
             }
 
-            else -> Log.w(TAG, "下载可能失败，downloadId=$downloadId status=$status")
+            DownloadManager.STATUS_RUNNING,
+            DownloadManager.STATUS_PAUSED -> {
+                restoreClaimedDownload(context, downloadId, completion)
+                Log.d(TAG, "下载仍在进行，保留下载状态，downloadId=$downloadId status=${queryResult.status}")
+            }
+
+            null -> {
+                restoreClaimedDownload(context, downloadId, completion)
+                Log.w(TAG, "下载状态不可用，保留下载状态，downloadId=$downloadId")
+            }
+
+            else -> Log.w(TAG, "下载可能失败，downloadId=$downloadId status=${queryResult.status}")
+        }
+    }
+
+    private fun queryDownloadStatus(dm: DownloadManager, downloadId: Long): DownloadQueryResult {
+        return try {
+            val query = DownloadManager.Query().apply { setFilterById(downloadId) }
+            val cursor = dm.query(query)
+                ?: return DownloadQueryResult(rowFound = false)
+            cursor.use {
+                if (!it.moveToFirst()) {
+                    DownloadQueryResult(rowFound = false)
+                } else {
+                    val statusIndex = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    DownloadQueryResult(
+                        rowFound = true,
+                        status = statusIndex.takeIf { index -> index >= 0 }?.let(it::getInt)
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            DownloadQueryResult(rowFound = false, error = e)
         }
     }
 
@@ -316,6 +350,10 @@ object UpdateManager {
         completion: DownloadCompletionInfo,
         finalMessageResId: Int
     ) {
+        if (!isCurrentDownloadOwner(context, downloadId)) {
+            Log.d(TAG, "Skipping stale download completion for downloadId=$downloadId")
+            return
+        }
         if (retryNextDownloadSource(
                 context,
                 dm,
@@ -329,6 +367,52 @@ object UpdateManager {
             postDownloadToast(context, R.string.update_progress_switching_source)
         } else {
             postDownloadToast(context, finalMessageResId)
+        }
+    }
+
+    private fun isCurrentDownloadOwner(context: Context, downloadId: Long): Boolean {
+        synchronized(downloadCompletionLock) {
+            val currentId = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                .getLong(PREF_DOWNLOAD_ID, -1L)
+            return currentId == -1L || currentId == downloadId
+        }
+    }
+
+    private fun restoreClaimedDownload(
+        context: Context,
+        downloadId: Long,
+        completion: DownloadCompletionInfo
+    ) {
+        synchronized(downloadCompletionLock) {
+            val prefs = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+            val currentId = prefs.getLong(PREF_DOWNLOAD_ID, -1L)
+            if (currentId != -1L && currentId != downloadId) {
+                return
+            }
+            saveDownloadCompletion(context, downloadId, completion)
+        }
+    }
+
+    private fun saveDownloadCompletion(
+        context: Context,
+        downloadId: Long,
+        completion: DownloadCompletionInfo
+    ) {
+        context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE).edit {
+            putLong(PREF_DOWNLOAD_ID, downloadId)
+                .putString(PREF_DOWNLOAD_APK_NAME, completion.apkName)
+                .putString(PREF_DOWNLOAD_CANDIDATES, joinStrings(completion.candidates))
+                .putInt(PREF_DOWNLOAD_CANDIDATE_INDEX, completion.candidateIndex)
+            if (completion.expectedSha256 != null) {
+                putString(PREF_DOWNLOAD_SHA256, completion.expectedSha256)
+            } else {
+                remove(PREF_DOWNLOAD_SHA256)
+            }
+            if (completion.expectedSize > 0L) {
+                putLong(PREF_DOWNLOAD_EXPECTED_SIZE, completion.expectedSize)
+            } else {
+                remove(PREF_DOWNLOAD_EXPECTED_SIZE)
+            }
         }
     }
 
@@ -650,22 +734,24 @@ object UpdateManager {
             Log.d(TAG, "已启动下载，ID: $downloadId, candidateCount=${downloadCandidates.size}")
 
             // 保存下载信息到 SharedPreferences（供 BroadcastReceiver 和备用源重试使用）
-            val prefs = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
-            prefs.edit {
-                putLong(PREF_DOWNLOAD_ID, downloadId)
-                    .putString(PREF_DOWNLOAD_APK_NAME, fileName)
-                    // 保存当前下载源列表，用于下载失败后的状态恢复
-                    .putString(PREF_DOWNLOAD_CANDIDATES, joinStrings(downloadCandidates))
-                    .putInt(PREF_DOWNLOAD_CANDIDATE_INDEX, 0)
-                if (info.expectedSha256 != null) {
-                    putString(PREF_DOWNLOAD_SHA256, info.expectedSha256)
-                } else {
-                    remove(PREF_DOWNLOAD_SHA256)
-                }
-                if (info.expectedSize != null) {
-                    putLong(PREF_DOWNLOAD_EXPECTED_SIZE, info.expectedSize)
-                } else {
-                    remove(PREF_DOWNLOAD_EXPECTED_SIZE)
+            synchronized(downloadCompletionLock) {
+                val prefs = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                prefs.edit {
+                    putLong(PREF_DOWNLOAD_ID, downloadId)
+                        .putString(PREF_DOWNLOAD_APK_NAME, fileName)
+                        // 保存当前下载源列表，用于下载失败后的状态恢复
+                        .putString(PREF_DOWNLOAD_CANDIDATES, joinStrings(downloadCandidates))
+                        .putInt(PREF_DOWNLOAD_CANDIDATE_INDEX, 0)
+                    if (info.expectedSha256 != null) {
+                        putString(PREF_DOWNLOAD_SHA256, info.expectedSha256)
+                    } else {
+                        remove(PREF_DOWNLOAD_SHA256)
+                    }
+                    if (info.expectedSize != null) {
+                        putLong(PREF_DOWNLOAD_EXPECTED_SIZE, info.expectedSize)
+                    } else {
+                        remove(PREF_DOWNLOAD_EXPECTED_SIZE)
+                    }
                 }
             }
 
@@ -1364,22 +1450,32 @@ object UpdateManager {
             try {
                 try { dm.remove(oldDownloadId) } catch (_: Exception) {}
 
-                val newDownloadId = dm.enqueue(createUpdateDownloadRequest(context, nextUrl, apkName))
-                context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE).edit {
-                    putLong(PREF_DOWNLOAD_ID, newDownloadId)
-                        .putString(PREF_DOWNLOAD_APK_NAME, apkName)
-                        .putString(PREF_DOWNLOAD_CANDIDATES, joinStrings(candidates))
-                        .putInt(PREF_DOWNLOAD_CANDIDATE_INDEX, nextIndex)
-                    if (expectedSha256 != null) {
-                        putString(PREF_DOWNLOAD_SHA256, expectedSha256)
-                    } else {
-                        remove(PREF_DOWNLOAD_SHA256)
+                val newDownloadId = synchronized(downloadCompletionLock) {
+                    val prefs = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                    val currentId = prefs.getLong(PREF_DOWNLOAD_ID, -1L)
+                    if (currentId != -1L && currentId != oldDownloadId) {
+                        Log.d(TAG, "Skipping retry because a newer download owns the update state")
+                        return false
                     }
-                    if (expectedSize > 0L) {
-                        putLong(PREF_DOWNLOAD_EXPECTED_SIZE, expectedSize)
-                    } else {
-                        remove(PREF_DOWNLOAD_EXPECTED_SIZE)
+
+                    val id = dm.enqueue(createUpdateDownloadRequest(context, nextUrl, apkName))
+                    prefs.edit {
+                        putLong(PREF_DOWNLOAD_ID, id)
+                            .putString(PREF_DOWNLOAD_APK_NAME, apkName)
+                            .putString(PREF_DOWNLOAD_CANDIDATES, joinStrings(candidates))
+                            .putInt(PREF_DOWNLOAD_CANDIDATE_INDEX, nextIndex)
+                        if (expectedSha256 != null) {
+                            putString(PREF_DOWNLOAD_SHA256, expectedSha256)
+                        } else {
+                            remove(PREF_DOWNLOAD_SHA256)
+                        }
+                        if (expectedSize > 0L) {
+                            putLong(PREF_DOWNLOAD_EXPECTED_SIZE, expectedSize)
+                        } else {
+                            remove(PREF_DOWNLOAD_EXPECTED_SIZE)
+                        }
                     }
+                    id
                 }
                 Log.d(TAG, "Retrying update download with candidate[$nextIndex]")
                 return true
@@ -1465,6 +1561,12 @@ object UpdateManager {
         val expectedSize: Long,
         val candidates: List<String>,
         val candidateIndex: Int
+    )
+
+    private data class DownloadQueryResult(
+        val rowFound: Boolean,
+        val status: Int? = null,
+        val error: Exception? = null
     )
 
     private class UpdateInfo(

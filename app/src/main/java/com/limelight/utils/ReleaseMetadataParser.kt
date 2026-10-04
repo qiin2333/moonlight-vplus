@@ -1,5 +1,6 @@
 package com.limelight.utils
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import java.util.Locale
 
@@ -71,7 +72,10 @@ internal object ReleaseMetadataParser {
         return normalized.takeIf { it.isNotBlank() }
     }
 
-    private fun isHttpsUrl(value: String): Boolean = value.startsWith("https://")
+    private fun isHttpsUrl(value: String): Boolean {
+        val url = value.toHttpUrlOrNull() ?: return false
+        return url.scheme == "https" && url.host.isNotBlank()
+    }
 
     private val SHA256_PATTERN = Regex("[a-f0-9]{64}")
 }

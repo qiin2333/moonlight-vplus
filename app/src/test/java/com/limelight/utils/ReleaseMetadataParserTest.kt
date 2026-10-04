@@ -65,6 +65,16 @@ class ReleaseMetadataParserTest {
         assertNull(ReleaseMetadataParser.parse(insecureUrl, "moonlight-vplus", "latest", "android-apk"))
     }
 
+    @Test
+    fun rejectsHostlessHttpsUrl() {
+        val hostlessUrl = metadataJson().replace(
+            "https://cnb.example/release.apk",
+            "https://"
+        )
+
+        assertNull(ReleaseMetadataParser.parse(hostlessUrl, "moonlight-vplus", "latest", "android-apk"))
+    }
+
     private fun metadataJson(): String = """
         {
           "schema": 1,
