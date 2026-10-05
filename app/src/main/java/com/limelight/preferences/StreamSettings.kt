@@ -300,6 +300,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         applySearchBarTheme()
         val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
         findViewById<ImageView>(R.id.settings_search_toggle)?.imageTintList = accent
+        applySearchBarTheme()
         findViewById<TextView>(R.id.drawer_version)?.setTextColor(
             androidx.core.graphics.ColorUtils.setAlphaComponent(UiHelper.accentColor(this), 69))
     }
