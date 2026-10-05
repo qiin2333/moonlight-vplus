@@ -468,6 +468,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
 
     override fun onDestroy() {
         AboutDialogLauncher.release(this)
+        UpdateManager.cleanup()
         super.onDestroy()
 
         uiScope.cancel()

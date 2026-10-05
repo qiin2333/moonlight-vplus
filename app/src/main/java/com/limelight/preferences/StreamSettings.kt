@@ -959,6 +959,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     override fun onDestroy() {
         AboutDialogLauncher.release(this)
+        UpdateManager.cleanup()
         super.onDestroy()
         externalDisplayManager?.cleanup()
         externalDisplayManager = null

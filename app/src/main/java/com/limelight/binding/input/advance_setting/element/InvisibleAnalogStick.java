@@ -263,6 +263,7 @@ public class InvisibleAnalogStick extends Element {
 
             @Override
             public void onDoubleClick() {
+                elementController.buttonVibrator();
                 middleValueSendHandler.sendEvent(true);
             }
 
