@@ -297,6 +297,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         val fragment = supportFragmentManager.findFragmentById(R.id.preference_container) as? SettingsFragment
         fragment?.view?.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
             ?.adapter?.notifyDataSetChanged()
+        applySearchBarTheme()
         val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
         findViewById<ImageView>(R.id.settings_search_toggle)?.imageTintList = accent
         findViewById<TextView>(R.id.drawer_version)?.setTextColor(
@@ -730,6 +731,7 @@ class StreamSettings : ThemedAppCompatActivity() {
      */
     fun onCategoriesLoaded(loadedCategories: List<CategoryItem>) {
         val hadCategories = categories.isNotEmpty()
+        val restoredIndex = selectedCategoryIndex
         val selectedKey = categories.getOrNull(selectedCategoryIndex)?.key
         categories.clear()
         categories.addAll(loadedCategories)
@@ -737,7 +739,13 @@ class StreamSettings : ThemedAppCompatActivity() {
         val keptIndex = selectedKey
             ?.let { key -> categories.indexOfFirst { it.key == key } }
             ?.takeIf { it >= 0 }
-        selectedCategoryIndex = keptIndex ?: 0
+        selectedCategoryIndex = when {
+            keptIndex != null -> keptIndex
+            !hadCategories && categories.isNotEmpty() ->
+                restoredIndex.coerceIn(categories.indices)
+            hadCategories && categories.isNotEmpty() -> 0
+            else -> restoredIndex
+        }
 
         categoryAdapter?.notifyDataSetChanged()
         if (hadCategories && keptIndex == null && categories.isNotEmpty()) {
@@ -1532,8 +1540,14 @@ class StreamSettings : ThemedAppCompatActivity() {
             if (adapter != null) {
                 for (index in 0 until adapter.itemCount) {
                     val preference = adapter.getItem(index)
-                    if (preference is ListPreference || preference is MultiSelectListPreference) {
-                        adapter.notifyItemChanged(index)
+                    when {
+                        preference is IconListPreference -> {
+                            preference.refreshSearchMatchNote()
+                            adapter.notifyItemChanged(index)
+                        }
+                        preference is ListPreference || preference is MultiSelectListPreference -> {
+                            adapter.notifyItemChanged(index)
+                        }
                     }
                 }
             }

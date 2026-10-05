@@ -19,6 +19,10 @@ class IconListPreference(context: Context, attrs: AttributeSet?) : ListPreferenc
      * 不能从外部 setSummary 追加：那样会被当成新的原始说明保存下来。
      */
     var searchMatchNoteProvider: (() -> CharSequence?)? = null
+        set(value) {
+            field = value
+            refreshSearchMatchNote()
+        }
 
     init {
         context.withStyledAttributes(attrs, R.styleable.IconListPreference) {
@@ -76,6 +80,11 @@ class IconListPreference(context: Context, attrs: AttributeSet?) : ListPreferenc
         } finally {
             writingOwnSummary = false
         }
+    }
+
+    /** Rebuilds the summary after the settings search query changes. */
+    fun refreshSearchMatchNote() {
+        updateSummary(value)
     }
 
     private fun buildSearchSummary(base: CharSequence?, note: CharSequence): CharSequence {
