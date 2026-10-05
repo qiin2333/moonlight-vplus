@@ -84,6 +84,17 @@ class BitrateCardControllerTest {
 
         assertEquals(PreferenceConfiguration.DISPLAY_PREFERENCE_KEYS, values.keys)
         assertEquals("1920x1080", values["list_resolution"])
+        val reversed = DisplayPreferenceValues.of(
+            nativeResolution = false,
+            width = 1080,
+            height = 1920,
+            fps = 60,
+            bitrate = 20_000,
+            adaptiveBitrate = true,
+            screenCombinationMode = 2,
+            reverseResolution = true
+        )
+        assertEquals("1920x1080", reversed["list_resolution"])
         assertEquals("60", values["list_fps"])
         assertEquals(20_000, values["seekbar_bitrate_kbps"])
         assertEquals(true, values["checkbox_adaptive_bitrate"])

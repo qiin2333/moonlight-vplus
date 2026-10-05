@@ -6,6 +6,7 @@ internal object DisplayPreferenceValues {
         nativeResolution: Boolean,
         width: Int,
         height: Int,
+        reverseResolution: Boolean = false,
         fps: Int,
         bitrate: Int,
         adaptiveBitrate: Boolean,
@@ -14,7 +15,13 @@ internal object DisplayPreferenceValues {
         return PreferenceConfiguration.DISPLAY_PREFERENCE_KEYS.associateWith { key ->
             when (key) {
                 PreferenceConfiguration.RESOLUTION_PREF_STRING ->
-                    if (nativeResolution) PreferenceConfiguration.RES_NATIVE else "${width}x${height}"
+                    if (nativeResolution) {
+                        PreferenceConfiguration.RES_NATIVE
+                    } else {
+                        val storedWidth = if (reverseResolution) height else width
+                        val storedHeight = if (reverseResolution) width else height
+                        "${storedWidth}x${storedHeight}"
+                    }
                 PreferenceConfiguration.FPS_PREF_STRING -> fps.toString()
                 PreferenceConfiguration.BITRATE_PREF_STRING -> bitrate
                 PreferenceConfiguration.ADAPTIVE_BITRATE_PREF_STRING -> adaptiveBitrate
