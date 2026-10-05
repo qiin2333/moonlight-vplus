@@ -1150,10 +1150,8 @@ private fun ScreenCombinationPanel(
             fontSize = 11.sp
         )
         ScreenCombinationSegmentedControl(
-            options = state.screenModes.mapNotNull { choice ->
-                choice.value.toIntOrNull()?.let { value ->
-                    AppScreenCombinationOption(value, choice.label)
-                }
+            options = state.screenModes.map { choice ->
+                AppScreenCombinationOption(choice.value.toInt(), choice.label)
             },
             selectedMode = state.screenModes.firstOrNull { it.selected }?.value?.toIntOrNull() ?: -1,
             isDarkTheme = isSystemInDarkTheme(),
