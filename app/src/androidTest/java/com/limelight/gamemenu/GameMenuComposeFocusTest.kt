@@ -198,7 +198,7 @@ class GameMenuComposeFocusTest {
                 if (shouldRequestGameMenuFocus(
                         hardwareFocusRequestToken = focusRequestToken,
                         guideActive = false,
-                        hasOptions = true,
+                        hasFocusTarget = true,
                         menuContentLaidOut = contentLaidOut,
                         menuHasFocus = menuHasFocus
                     )
