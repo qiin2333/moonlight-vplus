@@ -23,7 +23,10 @@ class UpdateDownloadReceiver : BroadcastReceiver() {
         }
 
         Log.d(TAG, "收到下载完成广播, downloadId=$downloadId")
-        UpdateManager.onDownloadComplete(context, downloadId)
+        val pendingResult = goAsync()
+        UpdateManager.onDownloadComplete(context, downloadId) {
+            pendingResult.finish()
+        }
     }
 
     companion object {
