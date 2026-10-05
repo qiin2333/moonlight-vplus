@@ -97,12 +97,9 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.os.HandlerThread
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.preference.PreferenceManager
 import android.util.Rational
@@ -1806,44 +1803,71 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         isChangingResolution = true
         val view = activeStreamView
         if (view == null) {
-            recreate()
+            recreateAfterResolutionChange()
             return
         }
         view.post {
             view.post {
-                stageReconnectBackdrop()
-                recreate()
+                stageReconnectBackdrop(::recreateAfterResolutionChange)
             }
         }
     }
 
     /** Saves the current stream frame before the surface is destroyed. Failure still rebuilds. */
-    private fun stageReconnectBackdrop() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
-        val view = activeStreamView ?: return
-        if (view.width <= 0 || view.height <= 0 || !view.holder.surface.isValid) return
-        if (!canStageReconnectBackdrop(view.width, view.height)) return
+    private fun stageReconnectBackdrop(onComplete: () -> Unit) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            onComplete()
+            return
+        }
+        val view = activeStreamView
+        if (view == null || view.width <= 0 || view.height <= 0 || !view.holder.surface.isValid) {
+            onComplete()
+            return
+        }
+        if (!canStageReconnectBackdrop(view.width, view.height)) {
+            onComplete()
+            return
+        }
         val frame = view.holder.surfaceFrame
         LimeLog.info(
             "Reconnect backdrop capture view=${view.width}x${view.height} " +
                 "buffer=${frame.width()}x${frame.height()}"
         )
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        val thread = HandlerThread("reconnect-backdrop")
-        thread.start()
+        val bitmap = try {
+            Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        } catch (_: OutOfMemoryError) {
+            onComplete()
+            return
+        }
+        val completed = AtomicBoolean(false)
         try {
             PixelCopy.request(view, bitmap, { result ->
-                thread.quitSafely()
-                if (result == PixelCopy.SUCCESS) {
-                    StreamReconnectBackdrop.stage(bitmap)
-                    progressOverlay?.setAppPoster(bitmap)
-                } else {
-                    bitmap.recycle()
+                if (completed.compareAndSet(false, true)) {
+                    if (result == PixelCopy.SUCCESS && !isFinishing &&
+                        (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !isDestroyed)
+                    ) {
+                        StreamReconnectBackdrop.stage(bitmap)
+                    } else if (!bitmap.isRecycled) {
+                        bitmap.recycle()
+                    }
+                    onComplete()
                 }
-            }, Handler(thread.looper))
+            }, Handler(Looper.getMainLooper()))
         } catch (_: Exception) {
-            bitmap.recycle()
-            thread.quitSafely()
+            if (completed.compareAndSet(false, true)) {
+                bitmap.recycle()
+                onComplete()
+            }
+        }
+    }
+
+    private fun recreateAfterResolutionChange() {
+        runOnUiThread {
+            if (!isFinishing &&
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !isDestroyed)
+            ) {
+                recreate()
+            }
         }
     }
 

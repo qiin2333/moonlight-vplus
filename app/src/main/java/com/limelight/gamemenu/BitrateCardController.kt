@@ -256,8 +256,8 @@ internal data class ResolutionSelection(
     }
 
     fun stageCustomFrameRate(value: String) {
-        val fps = value.toIntOrNull()
         val digits = value.filter(Char::isDigit).take(3)
+        val fps = digits.toIntOrNull()
         draft = draft.copy(customFrameRate = digits)
         if (fps != null && fps > 0 && value.endsWith("\n")) {
             CustomFrameRatesStore.add(game, fps)
@@ -283,7 +283,8 @@ internal data class ResolutionSelection(
                 game.prefConfig.height
             ) ?: return false
         }
-        val frameRate = draft.frameRate.toIntOrNull()?.takeIf { fps ->
+        val frameRate = (draft.customFrameRate.toIntOrNull()?.takeIf { it > 0 }
+            ?: draft.frameRate.toIntOrNull())?.takeIf { fps ->
             fps > 0 && fps.toString() != appliedDraft.frameRate
         }
         val screenMode = draft.screenMode.toIntOrNull()?.takeIf { mode ->

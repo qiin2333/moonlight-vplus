@@ -129,7 +129,6 @@ object CustomResolutionsDialog {
                     onCommit = { current = it },
                     onCancel = { discardChanges() },
                     onConfirm = {
-                        onCommit(current)
                         dialog.dismiss()
                     }
                 )
@@ -184,14 +183,6 @@ object CustomResolutionsDialog {
             }
         }
         activeCustomDialogController = dialogController
-        dialog.setOnDismissListener {
-            if (activeCustomDialogController === dialogController) {
-                activeCustomDialogController = null
-            }
-            if (cancelled) onCommit(initial)
-            else onCommit(current)
-            onClosed()
-        }
         dialog.window?.decorView?.setOnGenericMotionListener { _, event ->
             dialogController.dispatchAxes(event)
         }

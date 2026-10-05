@@ -416,8 +416,8 @@ class PreferenceConfiguration {
             val editor = prefs.edit()
             DisplayPreferenceValues.of(
                 nativeResolution = isNativeResolution,
-                width = width,
-                height = height,
+                width = if (reverseResolution) height else width,
+                height = if (reverseResolution) width else height,
                 fps = fps,
                 bitrate = bitrate,
                 adaptiveBitrate = enableAdaptiveBitrate,
