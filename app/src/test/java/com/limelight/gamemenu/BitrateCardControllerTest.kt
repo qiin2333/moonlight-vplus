@@ -79,6 +79,7 @@ class BitrateCardControllerTest {
             fps = 60,
             bitrate = 20_000,
             adaptiveBitrate = true,
+            abrMode = "balanced",
             screenCombinationMode = 2
         )
 
@@ -91,6 +92,7 @@ class BitrateCardControllerTest {
             fps = 60,
             bitrate = 20_000,
             adaptiveBitrate = true,
+            abrMode = "balanced",
             screenCombinationMode = 2,
             reverseResolution = true
         )
@@ -98,6 +100,7 @@ class BitrateCardControllerTest {
         assertEquals("60", values["list_fps"])
         assertEquals(20_000, values["seekbar_bitrate_kbps"])
         assertEquals(true, values["checkbox_adaptive_bitrate"])
+        assertEquals("balanced", values["list_abr_mode"])
         assertEquals("2", values["list_screen_combination_mode"])
     }
 

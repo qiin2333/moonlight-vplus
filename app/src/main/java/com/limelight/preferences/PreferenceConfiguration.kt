@@ -422,6 +422,7 @@ class PreferenceConfiguration {
                 fps = fps,
                 bitrate = bitrate,
                 adaptiveBitrate = enableAdaptiveBitrate,
+                abrMode = abrMode,
                 screenCombinationMode = screenCombinationMode
             ).forEach { (key, value) ->
                 when (value) {
@@ -595,7 +596,7 @@ class PreferenceConfiguration {
 
         private const val BITRATE_PREF_OLD_STRING = "seekbar_bitrate"
         const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
-        private const val ABR_MODE_PREF_STRING = "list_abr_mode"
+        const val ABR_MODE_PREF_STRING = "list_abr_mode"
         private const val STRETCH_PREF_STRING = "checkbox_stretch_video"
         private const val SOPS_PREF_STRING = "checkbox_enable_sops"
         private const val DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings"
@@ -760,6 +761,7 @@ class PreferenceConfiguration {
             FPS_PREF_STRING,
             BITRATE_PREF_STRING,
             ADAPTIVE_BITRATE_PREF_STRING,
+            ABR_MODE_PREF_STRING,
             SCREEN_COMBINATION_MODE_PREF_STRING
         )
         const val HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale"

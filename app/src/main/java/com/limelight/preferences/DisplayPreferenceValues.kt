@@ -10,6 +10,7 @@ internal object DisplayPreferenceValues {
         fps: Int,
         bitrate: Int,
         adaptiveBitrate: Boolean,
+        abrMode: String,
         screenCombinationMode: Int
     ): Map<String, Any> {
         return PreferenceConfiguration.DISPLAY_PREFERENCE_KEYS.associateWith { key ->
@@ -25,6 +26,7 @@ internal object DisplayPreferenceValues {
                 PreferenceConfiguration.FPS_PREF_STRING -> fps.toString()
                 PreferenceConfiguration.BITRATE_PREF_STRING -> bitrate
                 PreferenceConfiguration.ADAPTIVE_BITRATE_PREF_STRING -> adaptiveBitrate
+                PreferenceConfiguration.ABR_MODE_PREF_STRING -> abrMode
                 PreferenceConfiguration.SCREEN_COMBINATION_MODE_PREF_STRING ->
                     screenCombinationMode.toString()
                 else -> error("Unexpected display preference: $key")
