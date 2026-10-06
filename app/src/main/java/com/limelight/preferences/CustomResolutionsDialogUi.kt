@@ -12,6 +12,8 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -126,8 +129,9 @@ private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
 /** 焦点指示跟随当前输入模式：触控不显示，手柄或键盘切回后立即显示。 */
 @Composable
 private fun focusIndicationVisible(focused: Boolean): Boolean {
-    val hardwareInput = LocalInputModeManager.current.inputMode == InputMode.Keyboard
-    return focused && hardwareInput
+    val view = LocalView.current
+    val inputMode = LocalInputModeManager.current.inputMode
+    return focused && (inputMode == InputMode.Keyboard || !view.isInTouchMode)
 }
 
 /**
@@ -391,6 +395,8 @@ private fun NumberField(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val focusManager = LocalFocusManager.current
+    val hostView = LocalView.current
+    val inputModeManager = LocalInputModeManager.current
     val outline = colorResource(R.color.app_dialog_outline)
     val accent = appAccentColor()
     val danger = colorResource(R.color.app_action_sheet_danger)
@@ -430,6 +436,18 @@ private fun NumberField(
                 .focusRequester(focus)
                 .onPreviewKeyEvent { event ->
                     val nativeEvent = event.nativeKeyEvent
+                    if (nativeEvent.keyCode == KeyEvent.KEYCODE_TAB) {
+                        if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                            val backward = nativeEvent.isShiftPressed
+                            val target = if (backward) leftTarget ?: upTarget else rightTarget ?: downTarget
+                            hostView.isFocusableInTouchMode = false
+                            inputModeManager.requestInputMode(InputMode.Keyboard)
+                            target?.requestFocus() ?: focusManager.moveFocus(
+                                if (backward) FocusDirection.Previous else FocusDirection.Next
+                            )
+                        }
+                        return@onPreviewKeyEvent true
+                    }
                     val direction = when (nativeEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
                         KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
@@ -457,6 +475,7 @@ private fun NumberField(
                     down = downTarget
                     if (upTarget != null) up = upTarget
                     if (leftTarget != null) left = leftTarget
+                    if (rightTarget != null) right = rightTarget
                 },
             decorationBox = { innerTextField ->
                 Box(
@@ -594,17 +613,41 @@ internal fun FrameRateComposer(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun FrameRatePresetRow(onPreset: (Int) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FRAME_RATE_PRESETS.forEach { fps ->
-            TextPresetChip(label = fps.toString(), onClick = { onPreset(fps) })
+internal fun FrameRatePresetRow(
+    nativeFrameRates: List<Int>,
+    focusFor: (Int) -> FocusRequester,
+    upTarget: FocusRequester,
+    onPreset: (Int) -> Unit
+) {
+    val values = (nativeFrameRates + FRAME_RATE_PRESETS).distinct().sorted()
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        values.forEachIndexed { index, fps ->
+            TextPresetChip(
+                label = fps.toString(),
+                focus = focusFor(index),
+                previous = values.getOrNull(index - 1)?.let { focusFor(index - 1) },
+                next = values.getOrNull(index + 1)?.let { focusFor(index + 1) },
+                upTarget = upTarget,
+                onClick = { onPreset(fps) }
+            )
         }
     }
 }
 
 @Composable
-private fun TextPresetChip(label: String, onClick: () -> Unit) {
+private fun TextPresetChip(
+    label: String,
+    focus: FocusRequester,
+    previous: FocusRequester?,
+    next: FocusRequester?,
+    upTarget: FocusRequester,
+    onClick: () -> Unit
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
@@ -612,6 +655,25 @@ private fun TextPresetChip(label: String, onClick: () -> Unit) {
     val accent = appAccentColor()
     Box(
         modifier = Modifier
+            .focusRequester(focus)
+            .focusProperties {
+                up = upTarget
+                if (previous != null) left = previous
+                if (next != null) right = next
+            }
+            .onPreviewKeyEvent { event ->
+                val nativeEvent = event.nativeKeyEvent
+                if (nativeEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                val target = when (nativeEvent.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> previous
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> next
+                    KeyEvent.KEYCODE_DPAD_UP -> upTarget
+                    KeyEvent.KEYCODE_TAB -> if (nativeEvent.isShiftPressed) previous ?: upTarget else next
+                    else -> null
+                } ?: return@onPreviewKeyEvent false
+                target.requestFocus()
+                true
+            }
             .clip(CircleShape)
             .then(
                 focusHighlight(
@@ -635,11 +697,37 @@ private fun TextPresetChip(label: String, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun PresetRow(onPreset: (Preset) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        PRESETS.forEach { preset ->
-            PresetChip(preset = preset, onClick = { onPreset(preset) })
+internal fun PresetRow(
+    nativePresets: List<Resolution>,
+    focusFor: (Int) -> FocusRequester,
+    upTarget: FocusRequester,
+    onPreset: (Preset) -> Unit
+) {
+    val nativeLabel = stringResource(R.string.resolution_prefix_native)
+    val presets = nativePresets.map { resolution ->
+        Preset(resolution.width, resolution.height, R.string.resolution_prefix_native)
+    } + PRESETS
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        val visiblePresets = presets.distinctBy { it.width to it.height }
+        visiblePresets.forEachIndexed { index, preset ->
+            val label = if (preset.labelRes == R.string.resolution_prefix_native) {
+                "$nativeLabel ${preset.width}×${preset.height}"
+            } else {
+                stringResource(preset.labelRes)
+            }
+            TextPresetChip(
+                label = label,
+                focus = focusFor(index),
+                previous = visiblePresets.getOrNull(index - 1)?.let { focusFor(index - 1) },
+                next = visiblePresets.getOrNull(index + 1)?.let { focusFor(index + 1) },
+                upTarget = upTarget,
+                onClick = { onPreset(preset) }
+            )
         }
     }
 }
@@ -700,7 +788,6 @@ internal fun ResolutionList(
     focusFor: (Resolution) -> FocusRequester,
     rightNeighbor: FocusRequester?,
     onDelete: (Resolution) -> Unit,
-    protectedResolution: Resolution? = null,
     modifier: Modifier = Modifier
 ) {
     if (resolutions.isEmpty()) {
@@ -708,7 +795,7 @@ internal fun ResolutionList(
         return
     }
     LazyColumn(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().heightIn(max = 10_000.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         itemsIndexed(resolutions, key = { _, resolution -> "${resolution.width}x${resolution.height}" }) { index, resolution ->
@@ -721,8 +808,7 @@ internal fun ResolutionList(
                 upNeighbor = resolutions.getOrNull(index - 1)?.let(focusFor),
                 downNeighbor = resolutions.getOrNull(index + 1)?.let(focusFor),
                 rightNeighbor = rightNeighbor,
-                onDelete = onDelete,
-                protected = resolution == protectedResolution
+                onDelete = onDelete
             )
         }
     }
@@ -738,8 +824,7 @@ private fun ResolutionRow(
     upNeighbor: FocusRequester?,
     downNeighbor: FocusRequester?,
     rightNeighbor: FocusRequester?,
-    onDelete: (Resolution) -> Unit,
-    protected: Boolean
+    onDelete: (Resolution) -> Unit
 ) {
     val rowShape = AppShapes.medium
     val outline = colorResource(R.color.app_dialog_outline)
@@ -786,13 +871,7 @@ private fun ResolutionRow(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = when {
-                    frameRate -> "${resolution.width} FPS"
-                    protected -> stringResource(
-                        R.string.resolution_prefix_native
-                    ) + " ${resolution.width}×${resolution.height}"
-                    else -> "${resolution.width}×${resolution.height}"
-                },
+                text = if (frameRate) "${resolution.width} FPS" else "${resolution.width}×${resolution.height}",
                 color = colorResource(R.color.app_dialog_text_primary),
                 fontSize = if (compact) 13.5.sp else 15.5.sp,
                 fontWeight = FontWeight.Bold
@@ -822,7 +901,7 @@ private fun ResolutionRow(
             }
         }
         val protectedFrameRate = resolution.height == 0 && resolution.width == 60
-        if (!protected && !protectedFrameRate) {
+        if (!protectedFrameRate) {
             DeleteButton(
                 resolution = resolution,
                 focus = deleteFocus,
