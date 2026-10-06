@@ -25,7 +25,6 @@ import android.text.Spanned
 import android.text.InputType
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
-import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
 import android.view.Display
@@ -976,8 +975,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             private const val CUSTOM_FRAME_RATE_MANAGER_VALUE = "__custom_frame_rate_manager__"
         }
 
-        private var nativeResolutionStartIndex = Int.MAX_VALUE
-        private var nativeFramerateShown = false
+
 
         private var exportConfigString: String = ""
         private var pendingCrownShareExportString: String = ""
@@ -1081,124 +1079,67 @@ class StreamSettings : ThemedAppCompatActivity() {
             pref.value = value
         }
 
-        private fun appendPreferenceEntry(pref: ListPreference, newEntryName: String, newEntryValue: String) {
-            val newEntries = pref.entries.copyOf(pref.entries.size + 1)
-            val newValues = pref.entryValues.copyOf(pref.entryValues.size + 1)
-
-            // Add the new option
-            newEntries[newEntries.size - 1] = newEntryName
-            newValues[newValues.size - 1] = newEntryValue
-
-            pref.entries = newEntries
-            pref.entryValues = newValues
-        }
-
-        private fun addNativeResolutionEntry(nativeWidth: Int, nativeHeight: Int, insetsRemoved: Boolean, portrait: Boolean) {
-            val pref = findPreference<ListPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
-
-            var newName: String = if (insetsRemoved) {
-                resources.getString(R.string.resolution_prefix_native_fullscreen)
-            } else {
-                resources.getString(R.string.resolution_prefix_native)
-            }
-
-            if (PreferenceConfiguration.isSquarishScreen(nativeWidth, nativeHeight)) {
-                newName += if (portrait) {
-                    " " + resources.getString(R.string.resolution_prefix_native_portrait)
-                } else {
-                    " " + resources.getString(R.string.resolution_prefix_native_landscape)
-                }
-            }
-
-            newName += " (${nativeWidth}x${nativeHeight})"
-
-            val newValue = PreferenceConfiguration.RES_NATIVE
-
-            // Check if the native resolution is already present
-            if (pref.entryValues.any { it.toString() == newValue }) {
-                return
-            }
-
-            if (pref.entryValues.size < nativeResolutionStartIndex) {
-                nativeResolutionStartIndex = pref.entryValues.size
-            }
-            appendPreferenceEntry(pref, newName, newValue)
-        }
-
-        private fun addNativeResolutionEntries(nativeWidth: Int, nativeHeight: Int, insetsRemoved: Boolean) {
-            if (PreferenceConfiguration.isSquarishScreen(nativeWidth, nativeHeight)) {
-                addNativeResolutionEntry(nativeHeight, nativeWidth, insetsRemoved, true)
-            }
-            addNativeResolutionEntry(nativeWidth, nativeHeight, insetsRemoved, false)
-        }
-
-        private fun addCustomResolutionManagerEntry() {
-            val pref = findPreference<ListPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
-            appendPreferenceEntry(
-                pref,
-                getString(R.string.title_custom_resolutions),
-                CUSTOM_RESOLUTION_MANAGER_VALUE
-            )
-        }
-
-        private fun addCustomFrameRateManagerEntry() {
-            val pref = findPreference<ListPreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
-            appendPreferenceEntry(
-                pref,
-                getString(R.string.title_custom_fps),
-                CUSTOM_FRAME_RATE_MANAGER_VALUE
-            )
-        }
-
         private fun replaceSavedResolutionEntries() {
-            val pref = findPreference<ListPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
+            val pref = findPreference<ChoiceGridPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
             val names = resources.getStringArray(R.array.resolution_names)
             val values = resources.getStringArray(R.array.resolution_values)
             val labels = values.indices.associate { index ->
                 values[index] to names.getOrElse(index) { values[index] }
             }
             val resolutions = CustomResolutionsStore.load(requireActivity())
-            pref.entries = resolutions.map { resolution ->
-                labels[resolution.toString()] ?: resolution.toString()
-            }.toTypedArray()
-            pref.entryValues = resolutions.map(Resolution::toString).toTypedArray()
-            nativeResolutionStartIndex = pref.entryValues.size
+            val choiceValues = resolutions.map(Resolution::toString)
+            pref.replaceChoices(
+                resolutions.map { labels[it.toString()] ?: it.toString() } +
+                    getString(R.string.title_custom_resolutions),
+                choiceValues + CUSTOM_RESOLUTION_MANAGER_VALUE,
+                availableSelection(pref, choiceValues, PreferenceConfiguration.DEFAULT_RESOLUTION)
+            )
         }
 
         private fun replaceSavedFrameRateEntries() {
-            val pref = findPreference<ListPreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
+            val pref = findPreference<ChoiceGridPreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
             val names = resources.getStringArray(R.array.fps_names)
             val values = resources.getStringArray(R.array.fps_values)
             val labels = values.indices.associate { index ->
                 values[index] to names.getOrElse(index) { values[index] }
             }
             val frameRates = CustomFrameRatesStore.load(requireActivity())
-            pref.entries = frameRates.map { fps ->
-                labels[fps.toString()] ?: "$fps ${resources.getString(R.string.fps_suffix_fps)}"
-            }.toTypedArray()
-            pref.entryValues = frameRates.map(Int::toString).toTypedArray()
-            nativeFramerateShown = false
+            val choiceValues = frameRates.map(Int::toString)
+            pref.replaceChoices(
+                frameRates.map { labels[it.toString()] ?: "$it ${resources.getString(R.string.fps_suffix_fps)}" } +
+                    getString(R.string.title_custom_fps),
+                choiceValues + CUSTOM_FRAME_RATE_MANAGER_VALUE,
+                availableSelection(pref, choiceValues, PreferenceConfiguration.DEFAULT_FPS)
+            )
         }
 
-        private fun addNativeFrameRateEntry(framerate: Float) {
-            val frameRateRounded = framerate.roundToInt()
-            if (frameRateRounded == 0) {
-                return
+        private fun availableSelection(
+            preference: ChoiceGridPreference,
+            values: List<String>,
+            fallback: String
+        ): String {
+            val current = preference.sharedPreferences?.getString(preference.key, null)
+            if (current != null && current in values) return current
+            val replacement = values.lastOrNull { choicePrecedes(it, current) }
+                ?: values.firstOrNull()
+                ?: fallback
+            preference.sharedPreferences?.edit()?.putString(preference.key, replacement)?.apply()
+            return replacement
+        }
+
+        private fun choicePrecedes(candidate: String, current: String?): Boolean {
+            if (current == null) return false
+            val candidateResolution = ResolutionValidator.parseResolution(candidate)
+            val currentResolution = ResolutionValidator.parseResolution(current)
+            if (candidateResolution != null && currentResolution != null) {
+                return candidateResolution.width < currentResolution.width ||
+                    (candidateResolution.width == currentResolution.width &&
+                        candidateResolution.height < currentResolution.height)
             }
-
-            val pref = findPreference<ListPreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
-            val fpsValue = frameRateRounded.toString()
-            val fpsName = resources.getString(R.string.resolution_prefix_native) +
-                    " (" + fpsValue + " " + resources.getString(R.string.fps_suffix_fps) + ")"
-
-            // Check if the native frame rate is already present
-            if (pref.entryValues.any { it.toString() == fpsValue }) {
-                nativeFramerateShown = false
-                return
-            }
-
-            appendPreferenceEntry(pref, fpsName, fpsValue)
-            nativeFramerateShown = true
+            val candidateFrameRate = candidate.toIntOrNull()
+            val currentFrameRate = current.toIntOrNull()
+            return candidateFrameRate != null && currentFrameRate != null &&
+                candidateFrameRate < currentFrameRate
         }
 
         private fun removeValue(preferenceKey: String, value: String, onMatched: Runnable) {
@@ -3289,76 +3230,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
 
             // 获取目标显示器（优先使用外接显示器）
-            val display = getTargetDisplay()
-            var maxSupportedFps = display.refreshRate
             replaceSavedResolutionEntries()
             replaceSavedFrameRateEntries()
-
-            // Hide non-supported resolution/FPS combinations
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // Add a native resolution with any insets included for users that don't want content
-                // behind the notch of their display
-                var hasInsets = false
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val cutout: DisplayCutout? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        // Use the much nicer Display.getCutout() API on Android 10+
-                        display.cutout
-                    } else {
-                        // Android 9 only
-                        displayCutoutP
-                    }
-
-                    if (cutout != null) {
-                        val widthInsets = cutout.safeInsetLeft + cutout.safeInsetRight
-                        val heightInsets = cutout.safeInsetBottom + cutout.safeInsetTop
-
-                        if (widthInsets != 0 || heightInsets != 0) {
-                            val metrics = DisplayMetrics()
-                            display.getRealMetrics(metrics)
-
-                            val width =
-                                (metrics.widthPixels - widthInsets).coerceAtLeast(metrics.heightPixels - heightInsets)
-                            val height =
-                                (metrics.widthPixels - widthInsets).coerceAtMost(metrics.heightPixels - heightInsets)
-
-                            addNativeResolutionEntries(width, height, false)
-                            hasInsets = true
-                        }
-                    }
-                }
-
-                // Always allow resolutions that are smaller or equal to the active
-                // display resolution because decoders can report total non-sense to us.
-                for (candidate in display.supportedModes) {
-                    // Some devices report their dimensions in the portrait orientation
-                    // where height > width. Normalize these to the conventional width > height
-                    // arrangement before we process them.
-
-                    val width = candidate.physicalWidth.coerceAtLeast(candidate.physicalHeight)
-                    val height = candidate.physicalWidth.coerceAtMost(candidate.physicalHeight)
-
-                    // Some TVs report strange values here, so let's avoid native resolutions on a TV
-                    // unless they report greater than 4K resolutions.
-                    if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
-                            (width > 3840 || height > 2160)) {
-                        addNativeResolutionEntries(width, height, hasInsets)
-                    }
-
-                    if (candidate.refreshRate > maxSupportedFps) {
-                        maxSupportedFps = candidate.refreshRate
-                    }
-                }
-            } else {
-                // We can get the true metrics via the getRealMetrics() function (unlike the lies
-                // that getWidth() and getHeight() tell to us).
-                val metrics = DisplayMetrics()
-                display.getRealMetrics(metrics)
-                val width = metrics.widthPixels.coerceAtLeast(metrics.heightPixels)
-                val height = metrics.widthPixels.coerceAtMost(metrics.heightPixels)
-                addNativeResolutionEntries(width, height, false)
-            }
-
-            addNativeFrameRateEntry(maxSupportedFps)
 
             // Remove HDR preference for devices below Nougat
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
@@ -3494,31 +3367,29 @@ class StreamSettings : ThemedAppCompatActivity() {
             // Add a listener to the FPS and resolution preference
             // so the bitrate can be auto-adjusted
             findPreference<Preference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { preference, newValue ->
+                    Preference.OnPreferenceChangeListener { _, newValue ->
                         val prefs = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireActivity())
                         val valueStr = newValue as String
                         if (valueStr == CUSTOM_RESOLUTION_MANAGER_VALUE) {
+                            val preference = findPreference<ChoiceGridPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
+                            val restoreFocus = preference.isChoiceFocused(valueStr)
                             customResolutionsDialog?.dismiss()
                             customResolutionsDialog = CustomResolutionsDialog.show(
                                 requireContext(),
                                 onClosed = {
                                     customResolutionsDialog = null
-                                    (activity as? StreamSettings)?.reloadSettings()
+                                    if (isAdded) {
+                                        replaceSavedResolutionEntries()
+                                        if (restoreFocus) preference.restoreChoiceFocus(valueStr)
+                                    }
                                 }
                             )
                             return@OnPreferenceChangeListener false
                         }
 
-                        // Detect if this value is the native resolution option
-                        val values = (preference as ListPreference).entryValues
-                        var isNativeRes = true
-                        for (i in values.indices) {
-                            // Look for a match prior to the start of the native resolution entries
-                            if (valueStr == values[i].toString() && i < nativeResolutionStartIndex) {
-                                isNativeRes = false
-                                break
-                            }
-                        }
+                        val isNativeRes = ResolutionValidator.parseResolution(valueStr)?.let { resolution ->
+                            resolution in CustomResolutionsDialog.nativeResolutionPresets(requireContext())
+                        } == true
 
                         // If this is native resolution, show the warning dialog
                         if (isNativeRes) {
@@ -3535,28 +3406,24 @@ class StreamSettings : ThemedAppCompatActivity() {
                         true
                     }
             findPreference<Preference>(PreferenceConfiguration.FPS_PREF_STRING)!!.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { preference, newValue ->
+                    Preference.OnPreferenceChangeListener { _, newValue ->
                         val prefs = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireActivity())
                         val valueStr = newValue as String
                         if (valueStr == CUSTOM_FRAME_RATE_MANAGER_VALUE) {
+                            val preference = findPreference<ChoiceGridPreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
+                            val restoreFocus = preference.isChoiceFocused(valueStr)
                             customResolutionsDialog?.dismiss()
                             customResolutionsDialog = CustomFrameRatesDialog.show(
                                 requireContext(),
                                 onClosed = {
                                     customResolutionsDialog = null
-                                    (activity as? StreamSettings)?.reloadSettings()
+                                    if (isAdded) {
+                                        replaceSavedFrameRateEntries()
+                                        if (restoreFocus) preference.restoreChoiceFocus(valueStr)
+                                    }
                                 }
                             )
                             return@OnPreferenceChangeListener false
-                        }
-
-                        // If this is native frame rate, show the warning dialog
-                        val values = (preference as ListPreference).entryValues
-                        if (nativeFramerateShown && values[values.size - 1].toString() == newValue) {
-                            Dialog.displayDialog(requireActivity(),
-                                    resources.getString(R.string.title_native_fps_dialog),
-                                    resources.getString(R.string.text_native_res_dialog),
-                                    false)
                         }
 
                         // Write the new bitrate value
@@ -3570,9 +3437,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                         startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
                         true
                     }
-
-            addCustomResolutionManagerEntry()
-            addCustomFrameRateManagerEntry()
 
             findPreference<Preference>("documentation_handbook")!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {

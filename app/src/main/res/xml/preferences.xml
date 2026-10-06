@@ -9,12 +9,10 @@
         android:key="category_basic_settings"
         android:order="0"
         android:layout="@layout/preference_category_material">
-        <ListPreference
+        <com.limelight.preferences.ChoiceGridPreference
             android:key="list_resolution"
             android:title="@string/title_resolution_list"
             android:summary="@string/summary_resolution_list"
-            android:entries="@array/resolution_names"
-            android:entryValues="@array/resolution_values"
             android:defaultValue="1920x1080" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_resolutions_scale"
@@ -28,12 +26,10 @@
             android:summary="@string/summary_seekbar_scale"
             android:text="%"
             android:title="@string/title_seekbar_scale" />
-        <ListPreference
+        <com.limelight.preferences.ChoiceGridPreference
             android:key="list_fps"
             android:title="@string/title_fps_list"
             android:summary="@string/summary_fps_list"
-            android:entries="@array/fps_names"
-            android:entryValues="@array/fps_values"
             android:defaultValue="60" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_bitrate_kbps"

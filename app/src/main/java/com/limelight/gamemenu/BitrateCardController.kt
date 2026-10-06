@@ -1,9 +1,6 @@
 package com.limelight.gamemenu
 
 import android.content.Context
-import android.util.DisplayMetrics
-import android.view.Display
-import android.hardware.display.DisplayManager
 import android.widget.Toast
 import androidx.core.content.edit
 import com.limelight.Game
@@ -436,7 +433,7 @@ internal data class ResolutionSelection(
     }
 
     private fun resolutionChoices(selected: String): List<DisplayChoice> {
-        val custom = CustomResolutionsStore.load(game).map { resolution ->
+        return CustomResolutionsStore.load(game).map { resolution ->
             val value = resolution.toString()
             DisplayChoice(
                 value = value,
@@ -444,24 +441,6 @@ internal data class ResolutionSelection(
                 selected = value == selected
             )
         }
-        val nativeLabel = game.getString(R.string.resolution_prefix_native) +
-            " (${deviceResolutionLabel()})"
-        val native = DisplayChoice(
-            value = PreferenceConfiguration.RES_NATIVE,
-            label = nativeLabel,
-            selected = selected == PreferenceConfiguration.RES_NATIVE
-        )
-        return custom + native
-    }
-
-    private fun deviceResolutionLabel(): String {
-        val display = (game.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
-            ?.getDisplay(Display.DEFAULT_DISPLAY)
-        val metrics = DisplayMetrics()
-        display?.getRealMetrics(metrics)
-        val width = metrics.widthPixels.takeIf { it > 0 } ?: game.resources.displayMetrics.widthPixels
-        val height = metrics.heightPixels.takeIf { it > 0 } ?: game.resources.displayMetrics.heightPixels
-        return "${width}x${height}"
     }
 
     private fun resourceChoices(
