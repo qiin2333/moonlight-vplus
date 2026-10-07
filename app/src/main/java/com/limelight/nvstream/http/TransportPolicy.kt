@@ -229,8 +229,11 @@ object TransportPolicyCodec {
             val failure = r.getString("failure")
             require(failure in setOf("none", "unsupported", "backend_failure", "superseded", "stopped"))
             require(r.has("firstSentFrame")) { "Missing send receipt" }
-            TransportPolicyReceipt(p, bool(r, "encoderApplied"),
-                if (r.isNull("firstSentFrame")) null else id(r, "firstSentFrame", nonzero = false), failure)
+            val encoderApplied = bool(r, "encoderApplied")
+            val firstSentFrame = if (r.isNull("firstSentFrame")) null else id(r, "firstSentFrame", nonzero = false)
+            require(firstSentFrame == null || encoderApplied) { "First send requires encoder application" }
+            require(!encoderApplied || failure == "none") { "Failed receipt cannot be encoder-applied" }
+            TransportPolicyReceipt(p, encoderApplied, firstSentFrame, failure)
         }
         require(receipts.map { it.policy.revision }.distinct().size == receipts.size)
         val policies = listOf(accepted) + listOfNotNull(confirmed) + receipts.map { it.policy }

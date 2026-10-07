@@ -411,6 +411,18 @@ class TransportPolicyTest {
         val duplicate = json()
         duplicate.getJSONArray("receipts").put(duplicate.getJSONArray("receipts").get(0))
         assertThrows(IllegalArgumentException::class.java) { TransportPolicyCodec.status(duplicate) }
+        for (variant in 0..2) {
+            val state = JSONObject(javaClass.getResource("/transport-policy-final.json")!!.readText())
+            state.getJSONArray("receipts").getJSONObject(0)
+                .put("encoderApplied", variant == 1)
+                .put("firstSentFrame", if (variant == 0) "0" else JSONObject.NULL)
+                .put("failure", if (variant == 0) "none" else "backend_failure")
+            if (variant < 2) {
+                assertThrows(IllegalArgumentException::class.java) { TransportPolicyCodec.status(state) }
+            } else {
+                assertFalse(TransportPolicyCodec.status(state).receipts.first().encoderApplied)
+            }
+        }
     }
     @Test fun acceptedSdkAndFirstSendRemainSeparate() {
         val f = Fixture()
