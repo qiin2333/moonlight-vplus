@@ -27,6 +27,8 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/src/Platform.c \
                    moonlight-common-c/src/PlatformCrypto.c \
                    moonlight-common-c/src/PlatformSockets.c \
+                   moonlight-common-c/src/PyrowaveProtocol.c \
+                   moonlight-common-c/src/PyrowaveReassembly.c \
                    moonlight-common-c/src/RtpAudioQueue.c \
                    moonlight-common-c/src/RtpVideoQueue.c \
                    moonlight-common-c/src/RtspConnection.c \
@@ -51,6 +53,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/enet/win32.c \
                    simplejni.c \
                    callbacks.c \
+                   pyrowave_decoder_bridge.cpp \
                    minisdl.c \
                    OpusEncoder.c \
                    audio_haptics_android_adapter_bridge.cpp
@@ -63,6 +66,9 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/moonlight-common-c/enet/include \
                     $(AUDIO_HAPTICS_SDK_DIR)/platform/android/src/main/cpp/include
 
 LOCAL_CFLAGS := -DHAS_SOCKLEN_T=1 -DLC_ANDROID -DHAVE_CLOCK_GETTIME=1
+# The optional PyroWave bridge catches allocation/runtime exceptions before
+# they reach JNI. Keep this enabled for the C++ sources in this module.
+LOCAL_CPPFLAGS += -fexceptions
 
 ifeq ($(NDK_DEBUG),1)
 LOCAL_CFLAGS += -DLC_DEBUG

@@ -53,12 +53,22 @@ add_subdirectory("${LSFGVK_ROOT}/framegen" framegen_build EXCLUDE_FROM_ALL)
 add_library(moonlight-framegen SHARED
     jni_bridge.cpp
     framegen_pipeline.cpp
+    pyrowave_vulkan_decoder.cpp
     fsr_upscaler.cpp
     "${LSFGVK_ROOT}/src/config/config.cpp"
     "${LSFGVK_ROOT}/src/extract/extract.cpp"
     "${LSFGVK_ROOT}/src/extract/trans.cpp")
 
+# The framegen Vulkan decoder and the app CPU bridge must compile against the
+# same PyroWave ABI contract headers. Gradle passes this path explicitly; the
+# normalized fallback only serves direct CMake invocations.
+if(NOT DEFINED MOONLIGHT_NATIVE_INCLUDE_DIR)
+    cmake_path(SET MOONLIGHT_NATIVE_INCLUDE_DIR NORMALIZE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../../app/src/main/jni/moonlight-core")
+endif()
+
 target_include_directories(moonlight-framegen PRIVATE
+    "${MOONLIGHT_NATIVE_INCLUDE_DIR}"
     "${LSFGVK_ROOT}"                 # <thirdparty/spirv.hpp>
     "${LSFGVK_ROOT}/include"         # extract/trans.hpp 等
     "${LSFGVK_ROOT}/framegen/public"   # LSFG_3_1 / LSFG_3_1P 公共 API
@@ -103,6 +113,9 @@ endfunction()
 framegen_compile_shader(yuv_to_rgba)
 framegen_compile_shader(yuv_to_rgba16f)
 framegen_compile_shader(yuv_to_rgb10a2)
+framegen_compile_shader(pyrowave_yuv_to_rgba)
+framegen_compile_shader(pyrowave_yuv_to_rgba16f)
+framegen_compile_shader(pyrowave_yuv_to_rgb10a2)
 framegen_compile_shader(rgba_fsr_easu)
 framegen_compile_shader(rgba_fsr_easu16f)
 framegen_compile_shader(rgba_fsr_rcas)

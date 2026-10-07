@@ -13,16 +13,19 @@ internal data class BitrateCardState(
     val progress: Float,
     val currentBitrateKbps: Int,
     val abrStatus: String?,
-    val hapticMode: BitrateCardController.HapticMode
+    val hapticMode: BitrateCardController.HapticMode,
+    val maxProgress: Int,
+    val maxBitrateKbps: Int
 ) {
     val selectedBitrateKbps: Int
-        get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt())
+        get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
 }
 
 /** Owns bitrate card state and stream-side effects without depending on Android Views. */
 internal class BitrateCardController(
     private val game: Game,
-    private val conn: NvConnection
+    private val conn: NvConnection,
+    supportsExtendedBitrate: Boolean = false
 ) {
     enum class HapticMode {
         ALL,
@@ -42,8 +45,13 @@ internal class BitrateCardController(
 
     companion object {
         const val MAX_PROGRESS = 59
+        const val PYROWAVE_MAX_PROGRESS = 83
         private const val PREF_HAPTIC_MODE = "bitrate_seekbar_haptic_mode"
         private val SEGMENT_BOUNDARIES = setOf(0, 9, 24, 39, 49, MAX_PROGRESS)
+
+        fun maxProgressFor(supportsExtendedBitrate: Boolean): Int {
+            return if (supportsExtendedBitrate) PYROWAVE_MAX_PROGRESS else MAX_PROGRESS
+        }
 
         fun getHapticMode(context: Context): HapticMode {
             val prefs = context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
@@ -56,24 +64,28 @@ internal class BitrateCardController(
                 .edit { putInt(PREF_HAPTIC_MODE, mode.ordinal) }
         }
 
-        fun progressToBitrateKbps(progress: Int): Int {
+        fun progressToBitrateKbps(progress: Int, maxProgress: Int = MAX_PROGRESS): Int {
+            val boundedProgress = progress.coerceIn(0, maxProgress)
             return when {
-                progress <= 9 -> 500 + progress * 500
-                progress <= 24 -> 5000 + (progress - 9) * 1000
-                progress <= 39 -> 20000 + (progress - 24) * 2000
-                progress <= 49 -> 50000 + (progress - 39) * 5000
-                else -> 100000 + (progress - 49) * 10000
+                boundedProgress <= 9 -> 500 + boundedProgress * 500
+                boundedProgress <= 24 -> 5000 + (boundedProgress - 9) * 1000
+                boundedProgress <= 39 -> 20000 + (boundedProgress - 24) * 2000
+                boundedProgress <= 49 -> 50000 + (boundedProgress - 39) * 5000
+                boundedProgress <= MAX_PROGRESS -> 100000 + (boundedProgress - 49) * 10000
+                else -> 200000 + (boundedProgress - MAX_PROGRESS) * 25000
             }
         }
 
-        fun bitrateToProgress(kbps: Int): Int {
-            return when {
-                kbps <= 5000 -> ((kbps - 500) / 500).coerceIn(0, 9)
-                kbps <= 20000 -> (9 + (kbps - 5000 + 500) / 1000).coerceIn(10, 24)
-                kbps <= 50000 -> (24 + (kbps - 20000 + 1000) / 2000).coerceIn(25, 39)
-                kbps <= 100000 -> (39 + (kbps - 50000 + 2500) / 5000).coerceIn(40, 49)
-                else -> (49 + (kbps - 100000 + 5000) / 10000).coerceIn(50, MAX_PROGRESS)
+        fun bitrateToProgress(kbps: Int, maxProgress: Int = MAX_PROGRESS): Int {
+            val unboundedProgress = when {
+                kbps <= 5000 -> (kbps - 500) / 500
+                kbps <= 20000 -> 9 + (kbps - 5000 + 500) / 1000
+                kbps <= 50000 -> 24 + (kbps - 20000 + 1000) / 2000
+                kbps <= 100000 -> 39 + (kbps - 50000 + 2500) / 5000
+                kbps <= 200000 -> 49 + (kbps - 100000 + 5000) / 10000
+                else -> MAX_PROGRESS + (kbps - 200000 + 12500) / 25000
             }
+            return unboundedProgress.coerceIn(0, maxProgress)
         }
 
         fun formatBitrateMbps(kbps: Int): String {
@@ -89,6 +101,8 @@ internal class BitrateCardController(
     private var onStateChanged: ((BitrateCardState) -> Unit)? = null
     private var userTracking = false
     private var bitrateToast: Toast? = null
+    private val maxProgress = maxProgressFor(supportsExtendedBitrate)
+    private val maxBitrateKbps = progressToBitrateKbps(maxProgress, maxProgress)
     private var state = createState(conn.currentBitrate)
 
     fun snapshot(): BitrateCardState = state
@@ -104,7 +118,7 @@ internal class BitrateCardController(
             game.runOnUiThread {
                 if (!userTracking) {
                     state = state.copy(
-                        progress = bitrateToProgress(kbps).toFloat(),
+                        progress = bitrateToProgress(kbps, maxProgress).toFloat(),
                         currentBitrateKbps = kbps,
                         abrStatus = abrService.getStatusText()
                     )
@@ -118,16 +132,17 @@ internal class BitrateCardController(
 
     /** Returns whether this progress change should produce a haptic tick. */
     fun previewProgress(progress: Float): Boolean {
-        val bounded = progress.coerceIn(0f, MAX_PROGRESS.toFloat())
+        val bounded = progress.coerceIn(0f, maxProgress.toFloat())
         val previousStep = state.progress.roundToInt()
         val currentStep = bounded.roundToInt()
         val changed = currentStep != previousStep
         userTracking = true
         state = state.copy(progress = bounded)
         emitState()
+        val keyNodes = SEGMENT_BOUNDARIES + maxProgress
         return changed && when (state.hapticMode) {
             HapticMode.ALL -> true
-            HapticMode.KEY_NODES -> currentStep in SEGMENT_BOUNDARIES
+            HapticMode.KEY_NODES -> currentStep in keyNodes
             HapticMode.NONE -> false
         }
     }
@@ -158,10 +173,12 @@ internal class BitrateCardController(
     private fun createState(kbps: Int): BitrateCardState {
         val abrService = game.adaptiveBitrateService
         return BitrateCardState(
-            progress = bitrateToProgress(kbps).toFloat(),
+            progress = bitrateToProgress(kbps, maxProgress).toFloat(),
             currentBitrateKbps = kbps,
             abrStatus = abrService?.takeIf { it.enabled }?.getStatusText(),
-            hapticMode = getHapticMode(game)
+            hapticMode = getHapticMode(game),
+            maxProgress = maxProgress,
+            maxBitrateKbps = maxBitrateKbps
         )
     }
 
@@ -183,7 +200,7 @@ internal class BitrateCardController(
                         game.prefConfig.bitrate = newBitrate
                         game.adaptiveBitrateService?.notifyManualOverride(newBitrate)
                         state = state.copy(
-                            progress = bitrateToProgress(newBitrate).toFloat(),
+                            progress = bitrateToProgress(newBitrate, maxProgress).toFloat(),
                             currentBitrateKbps = newBitrate,
                             abrStatus = game.adaptiveBitrateService?.takeIf { it.enabled }?.getStatusText()
                         )
@@ -198,7 +215,7 @@ internal class BitrateCardController(
                     game.runOnUiThread {
                         val actualBitrate = conn.currentBitrate
                         state = state.copy(
-                            progress = bitrateToProgress(actualBitrate).toFloat(),
+                            progress = bitrateToProgress(actualBitrate, maxProgress).toFloat(),
                             currentBitrateKbps = actualBitrate
                         )
                         emitState()

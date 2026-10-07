@@ -1,0 +1,41 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D uY;
+layout(set = 0, binding = 1) uniform sampler2D uU;
+layout(set = 0, binding = 2) uniform sampler2D uV;
+layout(set = 0, binding = 3, rgba16f) uniform writeonly image2D uDst;
+
+layout(push_constant) uniform PushConstants {
+    vec2 srcUvScale;
+    float fullRange;
+    float reserved;
+} pc;
+
+vec3 yuvToRgb(vec3 yuv) {
+    float y = yuv.x;
+    float u = yuv.y - 0.5;
+    float v = yuv.z - 0.5;
+    return vec3(
+        y + 1.4746 * v,
+        y - 0.16455 * u - 0.57135 * v,
+        y + 1.8814 * u);
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(uDst);
+    if (coord.x >= size.x || coord.y >= size.y) return;
+    vec2 uv = ((vec2(coord) + vec2(0.5)) / vec2(size)) * pc.srcUvScale;
+    vec3 yuv = vec3(
+        texture(uY, clamp(uv, vec2(0.0), pc.srcUvScale)).r,
+        texture(uU, clamp(uv, vec2(0.0), pc.srcUvScale)).r,
+        texture(uV, clamp(uv, vec2(0.0), pc.srcUvScale)).r);
+    if (pc.fullRange < 0.5) {
+        yuv.x = (yuv.x - 64.0 / 1023.0) * (1023.0 / 876.0);
+        yuv.yz = (yuv.yz - vec2(512.0 / 1023.0)) * (1023.0 / 896.0) + vec2(0.5);
+    }
+    vec3 rgb = yuvToRgb(yuv);
+    imageStore(uDst, coord, vec4(max(rgb, vec3(0.0)), 1.0));
+}

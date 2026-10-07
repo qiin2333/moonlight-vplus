@@ -315,7 +315,7 @@
     <string name="title_disable_frame_drop">永不丟失影格</string>
     <string name="summary_disable_frame_drop">可能會減少在一些裝置上的卡頓，但會增加延時</string>
     <string name="title_video_format">視訊編解碼器</string>
-    <string name="summary_video_format">不確定怎麼選？請使用自動。大多數現代裝置建議使用 HEVC，通常能兼顧畫質、頻寬與 HDR；主機和裝置都支援時，AV1 可在相同畫質下節省頻寬，但部分裝置的解碼延遲可能更高；H.264 相容性最好，但需要更多頻寬且不支援 HDR。</string>
+    <string name="summary_video_format">不確定怎麼選？請使用自動。大多數現代裝置建議使用 HEVC，通常能兼顧畫質、頻寬與 HDR；主機和裝置都支援時，AV1 可在相同畫質下節省頻寬，但部分裝置的解碼延遲可能更高；H.264 相容性最好，但需要更多頻寬且不支援 HDR；PyroWave 會在相容的 Sunshine 主機上使用實驗性 Vulkan 路徑，顏色範圍跟隨目前設定，且不支援幀生成。</string>
     <string name="title_enable_hdr">啟用 HDR (實驗性)</string>
     <string name="summary_enable_hdr">在遊戲和 GPU 支援時以 HDR 模式串流，HDR 模式需要支援 HEVC Main 10 編碼的 GPU。</string>
     <string name="title_perf_overlay_bg_opacity">效能統計背景不透明度</string>
@@ -370,6 +370,7 @@
     <string name="audioconf_51surround">5.1 環場音效</string>
     <string name="audioconf_71surround">7.1 環場音效</string>
     <string name="videoformat_auto">自動 (建議)</string>
+    <string name="videoformat_pyrowave">PyroWave（實驗性，不支援幀生成）</string>
     <string name="videoformat_hevcalways">優先使用 HEVC</string>
     <string name="resolution_4k">4K</string>
     <string name="fps_30">30 FPS</string>
