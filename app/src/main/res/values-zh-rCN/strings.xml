@@ -2252,7 +2252,7 @@
     <string name="pyrowave_diag_storage_path">8 位存储或大容量纹素缓冲</string>
     <string name="pyrowave_diag_gpu_backend">GPU 呈现基础条件</string>
     <string name="pyrowave_diag_staging_backend">SDR 备用路径基础条件</string>
-    <string name="pyrowave_diag_subgroup_range">wave4–wave128 完整计算线程组</string>
+    <string name="pyrowave_diag_subgroup_range">wave4–wave128 完整计算子组</string>
     <string name="pyrowave_diag_max_workgroup">工作组最大线程数</string>
     <string name="pyrowave_diag_shared_memory">工作组共享内存</string>
     <string name="pyrowave_diag_queue">图形与计算组合队列</string>
@@ -2261,10 +2261,10 @@
     <string name="pyrowave_diag_present">已提供</string>
     <string name="pyrowave_diag_absent">未提供</string>
     <string name="pyrowave_diag_vulkan_loader">Vulkan 加载器</string>
-    <string name="pyrowave_diag_subgroup_ops">线程组操作位</string>
-    <string name="pyrowave_diag_subgroup_size">线程组大小</string>
-    <string name="pyrowave_diag_subgroup_limits">线程组最小 / 最大值</string>
-    <string name="pyrowave_diag_required_subgroup">所需线程组操作</string>
+    <string name="pyrowave_diag_subgroup_ops">子组操作位</string>
+    <string name="pyrowave_diag_subgroup_size">子组大小</string>
+    <string name="pyrowave_diag_subgroup_limits">子组最小 / 最大值</string>
+    <string name="pyrowave_diag_required_subgroup">所需子组操作</string>
     <string name="pyrowave_diag_texel_limit">纹素缓冲最大元素数</string>
     <string name="pyrowave_diag_back">返回</string>
     <string name="pyrowave_diag_copy">复制</string>
