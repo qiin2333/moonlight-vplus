@@ -81,7 +81,6 @@ class TransportPolicyService internal constructor(
     /** Atomically freeze the last authoritative budget and revoke this connection's view. */
     @Synchronized fun stopAndGetReconnectBudget(): Int? {
         if (!stopped) {
-            reconnectBudgetKbps = if (readOnly) null else view.status?.accepted?.totalKbps
             stopped = true
             listener = null
             view = TransportPolicyView(refreshing = true, error = "Connection stopped", readOnly = readOnly)
@@ -150,6 +149,9 @@ class TransportPolicyService internal constructor(
         while (knownPolicies.size > 64) knownPolicies.remove(knownPolicies.keys.first())
         while (knownReceipts.size > 64) knownReceipts.remove(knownReceipts.keys.first())
         connectionEpoch = next.connectionEpoch
+        // An accepted request can fail application. Retain the last applied
+        // budget through pending requests and temporary encoder rebuilds.
+        if (!readOnly && next.confirmed != null) reconnectBudgetKbps = next.confirmed.totalKbps
         publish(view.copy(status = next, refreshing = false, error = null, networkDeadlineNs = networkDeadlineNs))
     }
     private fun http(): TransportPolicyTransport = transport ?: factory().also { transport = it }

@@ -2402,7 +2402,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         } else service.stop()
     }
 
-    /** Stop the old controller while retaining its last accepted network budget for reconnect. */
+    /** Stop the old controller while retaining its last applied network budget for reconnect. */
     fun stopAdaptiveBitrate() {
         transportStatisticsService?.stop()
         transportStatisticsService = null

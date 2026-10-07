@@ -305,7 +305,7 @@ class TransportPolicyTest {
                 assertNull(service.view.requestRevision)
                 executor.tick()
                 assertNull(service.view.status)
-                assertEquals(last.accepted.totalKbps, service.stopAndGetReconnectBudget())
+                assertEquals(last.confirmed?.totalKbps, service.stopAndGetReconnectBudget())
                 assertTrue(http.writes.isEmpty())
             } finally { service.stop() }
         }
@@ -531,11 +531,11 @@ class TransportPolicyTest {
         missing.remove("confirmed")
         assertThrows(IllegalArgumentException::class.java) { TransportPolicyCodec.status(missing) }
     }
-    @Test fun stopFreezesAcceptedBudgetWithoutAutomaticAuthorityOrRequestState() {
+    @Test fun stopWithOnlyAcceptedPolicyDoesNotInventAnAppliedBudget() {
         val f = Fixture()
         assertEquals(15000, f.service.view.status!!.accepted.automatic!!.maximumKbps)
-        assertEquals(12000, f.service.stopAndGetReconnectBudget())
-        assertEquals(12000, f.service.stopAndGetReconnectBudget())
+        assertNull(f.service.stopAndGetReconnectBudget())
+        assertNull(f.service.stopAndGetReconnectBudget())
         assertNull(f.service.view.status)
         assertNull(f.service.view.requestRevision)
         assertFalse(f.service.view.canSubmit)
@@ -552,6 +552,7 @@ class TransportPolicyTest {
     }
     @Test fun lateQueryCannotReplaceTheFrozenReconnectBudget() {
         val f = Fixture()
+        confirmCurrent(f)
         var captured: Int? = null
         val next = json("3", "2")
         next.getJSONObject("accepted").put("wireBudgetKbps", 6000)
@@ -566,6 +567,7 @@ class TransportPolicyTest {
     }
     @Test fun unknownWriteOutcomeCannotBecomeTheReconnectBudget() {
         val f = Fixture()
+        confirmCurrent(f)
         f.http.failure = IOException("reply lost")
         assertTrue(f.service.setManualBudget(6500))
         assertNotNull(f.service.view.requestError)
@@ -581,6 +583,7 @@ class TransportPolicyTest {
     }
     @Test fun aNewControllerStartsWithItsOwnEpochAndNoOldPendingOperation() {
         val old = Fixture()
+        confirmCurrent(old)
         assertTrue(old.service.setManualBudget(6500))
         assertEquals("3", old.service.view.requestRevision)
         val budget = old.service.stopAndGetReconnectBudget()
@@ -654,6 +657,33 @@ class TransportPolicyTest {
             assertNull(f.service.view.status!!.confirmed)
             assertTrue(f.service.view.canSubmit)
         } finally { f.service.stop() }
+    }
+    @Test fun failedOrUnappliedPoliciesCannotReplaceConfirmedReconnectBudget() {
+        for (failure in listOf("none", "backend_failure")) {
+            val f = Fixture()
+            confirmCurrent(f)
+            val applied = f.http.current
+            val requested = applied.accepted.copy(revision = "3", controlEpoch = "2",
+                totalKbps = 800000, encoderKbps = 700000, automatic = null)
+            f.http.current = applied.copy(accepted = requested, controlEpoch = "2",
+                pending = failure == "none", receipts = applied.receipts +
+                    TransportPolicyReceipt(requested, false, null, failure))
+            f.executor.tick()
+            assertEquals(800000, f.service.view.status!!.accepted.totalKbps)
+            assertEquals(12000, f.service.view.status!!.confirmed!!.totalKbps)
+            // A rebuild can temporarily omit confirmed state; it cannot erase
+            // the last successfully applied budget or promote the failed one.
+            f.http.current = f.http.current.copy(confirmed = null, encoderReady = false)
+            f.executor.tick()
+            assertEquals(12000, f.service.stopAndGetReconnectBudget())
+            assertEquals(12000, f.service.stopAndGetReconnectBudget())
+        }
+    }
+    private fun confirmCurrent(f: Fixture) {
+        val s = f.http.current
+        f.http.current = s.copy(confirmed = s.accepted, pending = false,
+            receipts = s.receipts.map { if (it.policy == s.accepted) it.copy(encoderApplied = true) else it })
+        f.executor.tick()
     }
     private inner class Fixture {
         val http = FakeTransport()
