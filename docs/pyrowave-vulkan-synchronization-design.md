@@ -60,7 +60,7 @@ decode 返回成功表示提交已完成，不表示 CPU 可以读取平面。�
 4. 输出图像转为 `PRESENT_SRC_KHR`。
 5. YUV 平面恢复为下一帧解码可写入的 `GENERAL`。
 
-`VkSubmitInfo` 同时等待 `decode_complete_semaphore` 和 `acquire_semaphore`，等待阶段为转换使用的 compute 阶段。提交关联 `submit_fence`。
+`VkSubmitInfo` 同时等待 `decode_complete_semaphore` 和 `acquire_semaphore`，等待阶段覆盖平面写入阶段与转换使用的 compute 阶段。compute 解码使用 `COMPUTE_SHADER`；fragment 解码还包含 `COLOR_ATTACHMENT_OUTPUT`，使布局转换的源阶段与 Semaphore wait 形成依赖链，不能提前转换尚未写完或尚未获取的图像。提交关联 `submit_fence`。
 
 只有 `vkQueueSubmit` 成功后，转换提交才接管对解码 Semaphore 的 wait，客户端才清除 `decode_signal_pending`。不能在录制完成或尝试提交时提前清除。
 

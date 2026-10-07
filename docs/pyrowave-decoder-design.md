@@ -36,7 +36,7 @@ flowchart TD
 
 预检使用与实际创建相同的尺寸、HDR 模式、范围和 Surface，创建候选会话后释放。只探测默认 Vulkan 设备或库的符号，不足以证明目标 Surface 可以呈现。
 
-Vulkan 呈现后端检查 Vulkan 1.3、graphics/compute/present queue、subgroup 能力、storage image、所需 Surface 格式和 HDR 扩展。可用性结果还受实际设备和窗口能力限制。
+Vulkan 呈现后端检查 Vulkan 1.3、graphics/compute/present queue、subgroup 能力、storage image、所需 Surface 格式和 HDR 扩展。YUV 平面格式还必须支持 optimal-tiling sampled image、线性过滤及实际使用的 storage/color-attachment 用法；不支持时在 Surface 预检中拒绝该 GPU 后端。可用性结果还受实际设备和窗口能力限制。
 
 实现的分配边界：GPU 路径宽高均为正偶数且不大于 8192；CPU staging 宽高均不大于 4096、总像素不超过 4096×2160。边界是资源校验上限，不是对设备性能的承诺。
 

@@ -787,6 +787,16 @@ struct PyrowaveVulkanDecoder::impl {
     bool create_planes() {
         const bool high_precision = hdr_mode != 0;
         const VkFormat format = high_precision ? VK_FORMAT_R16_UNORM : VK_FORMAT_R8_UNORM;
+        VkFormatProperties properties{};
+        vkGetPhysicalDeviceFormatProperties(physical_device, format, &properties);
+        constexpr VkFormatFeatureFlags required_features = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+            VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT |
+            VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+        if ((properties.optimalTilingFeatures & required_features) != required_features) {
+            LOGW("PyroWave Vulkan plane format %d lacks required features (available=0x%x, required=0x%x)",
+                 static_cast<int>(format), properties.optimalTilingFeatures, required_features);
+            return false;
+        }
         for (std::size_t i = 0; i < planes.size(); ++i) {
             const std::uint32_t w = static_cast<std::uint32_t>(i == 0 ? width : width / 2);
             const std::uint32_t h = static_cast<std::uint32_t>(i == 0 ? height : height / 2);
@@ -1147,8 +1157,8 @@ struct PyrowaveVulkanDecoder::impl {
         }
         std::array<VkSemaphore, 2> wait_semaphores{ decode_complete_semaphore, acquire_semaphore };
         std::array<VkPipelineStageFlags, 2> wait_stages{
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            plane_write_stage | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            plane_write_stage | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         };
         VkSubmitInfo submit{ .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .waitSemaphoreCount = static_cast<std::uint32_t>(wait_semaphores.size()),
