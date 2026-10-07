@@ -14,6 +14,9 @@ internal class VideoStats {
     var maxHostProcessingLatency: Char = 0.toChar()
     var totalHostProcessingLatency: Int = 0
     var framesWithHostProcessingLatency: Int = 0
+    var pyrowaveDecodeTimeUs: Long = 0
+    var pyrowavePresentTimeUs: Long = 0
+    var pyrowaveTimingFrames: Int = 0
     var measurementStartTimestamp: Long = 0
     var renderingTimeMs: Long = 0 // 渲染时间
 
@@ -37,6 +40,9 @@ internal class VideoStats {
         maxHostProcessingLatency = maxOf(maxHostProcessingLatency, other.maxHostProcessingLatency)
         totalHostProcessingLatency += other.totalHostProcessingLatency
         framesWithHostProcessingLatency += other.framesWithHostProcessingLatency
+        pyrowaveDecodeTimeUs += other.pyrowaveDecodeTimeUs
+        pyrowavePresentTimeUs += other.pyrowavePresentTimeUs
+        pyrowaveTimingFrames += other.pyrowaveTimingFrames
 
         if (measurementStartTimestamp == 0L) {
             measurementStartTimestamp = other.measurementStartTimestamp
@@ -57,6 +63,9 @@ internal class VideoStats {
         maxHostProcessingLatency = other.maxHostProcessingLatency
         totalHostProcessingLatency = other.totalHostProcessingLatency
         framesWithHostProcessingLatency = other.framesWithHostProcessingLatency
+        pyrowaveDecodeTimeUs = other.pyrowaveDecodeTimeUs
+        pyrowavePresentTimeUs = other.pyrowavePresentTimeUs
+        pyrowaveTimingFrames = other.pyrowaveTimingFrames
         measurementStartTimestamp = other.measurementStartTimestamp
 
         // 复制渲染时间
@@ -75,6 +84,9 @@ internal class VideoStats {
         maxHostProcessingLatency = 0.toChar()
         totalHostProcessingLatency = 0
         framesWithHostProcessingLatency = 0
+        pyrowaveDecodeTimeUs = 0
+        pyrowavePresentTimeUs = 0
+        pyrowaveTimingFrames = 0
         measurementStartTimestamp = 0
         renderingTimeMs = 0
     }

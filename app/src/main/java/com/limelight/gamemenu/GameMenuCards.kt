@@ -633,7 +633,7 @@ private fun BitrateCard(
                 }
             },
             onValueChangeFinished = callbacks.onBitrateApply,
-            valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+            valueRange = 0f..state.maxProgress.toFloat(),
             modifier = Modifier
                 .focusProperties { canFocus = true }
                 .fillMaxWidth()
@@ -642,7 +642,7 @@ private fun BitrateCard(
                 .handleSliderDpad(
                     value = state.progress,
                     step = 1f,
-                    valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+                    valueRange = 0f..state.maxProgress.toFloat(),
                     onValueChange = { value ->
                         if (callbacks.onBitrateProgress(value)) {
                             hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -655,7 +655,11 @@ private fun BitrateCard(
         Row {
             Text("0.5 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
             Spacer(Modifier.weight(1f))
-            Text("200 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
+            Text(
+                BitrateCardController.formatBitrateMbps(state.maxBitrateKbps),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 9.sp
+            )
         }
     }
 }

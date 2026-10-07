@@ -48,6 +48,14 @@
     "licenseFile": "fmt-LICENSE.txt"
   },
   {
+    "id": "granite",
+    "name": "Granite",
+    "version": "1b2d1801d2910fb09ebcded2f0bb3a3a781103b (PyroWave Android runtime)",
+    "url": "https://github.com/Themaister/Granite",
+    "license": "MIT",
+    "licenseFile": "granite-LICENSE.txt"
+  },
+  {
     "id": "inter",
     "name": "Inter (Moonlight Controller Medium subset)",
     "version": "4.1",
@@ -144,6 +152,14 @@
     "licenseFile": "pe-parse-LICENSE.txt"
   },
   {
+    "id": "pyrowave",
+    "name": "PyroWave",
+    "version": "43c8316c31f9bbe4b26822e70ff73254ebba7fcc",
+    "url": "https://github.com/AlkaidLab/pyrowave",
+    "license": "MIT AND GPL-3.0-only",
+    "licenseFile": "pyrowave-LICENSE.txt"
+  },
+  {
     "id": "spdlog",
     "name": "spdlog",
     "version": "1.15.3",
@@ -167,6 +183,14 @@
     "license": "LGPL-3.0-only",
     "licenseFile": "usbipdcpp-NOTICES.txt",
     "credit": "This product uses usbipdcpp (https://github.com/yunsmall/usbipdcpp), licensed under LGPLv3."
+  },
+  {
+    "id": "vulkan-headers",
+    "name": "Vulkan-Headers",
+    "version": "6802bb4733b63ed5efd3adb308a6c885ef180ea1",
+    "url": "https://github.com/KhronosGroup/Vulkan-Headers",
+    "license": "Apache-2.0 OR MIT",
+    "licenseFile": "vulkan-headers-LICENSE.txt"
   },
   {
     "id": "volk",

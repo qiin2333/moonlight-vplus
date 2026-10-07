@@ -218,6 +218,54 @@ open class NvConnection(
         }
     }
 
+    /**
+     * Validate the complete Surface-backed PyroWave path before asking the
+     * renderer for capabilities. This method is called from the connection
+     * worker, never from the Activity's Surface callbacks.
+     */
+    private fun preparePyrowaveForSurface(videoDecoderRenderer: VideoDecoderRenderer): Boolean {
+        if ((context.streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_PYROWAVE) == 0) {
+            videoDecoderRenderer.setPyrowavePreflightResult(false)
+            return true
+        }
+        val fullRange = ColorRangePolicy.isFullRange(context.streamConfig.colorRange)
+        val available = videoDecoderRenderer.canInitializePyrowave(
+                context.streamConfig.width,
+                context.streamConfig.height,
+                context.streamConfig.hdrMode,
+                fullRange,
+            )
+        videoDecoderRenderer.setPyrowavePreflightResult(available)
+        if (!available) {
+            LimeLog.warning("PyroWave renderer Surface/device preflight failed; refusing codec fallback")
+        }
+        return available
+    }
+
+    /** Start the native connection with the current negotiated session state. */
+    private fun startNativeConnection(ib: ByteBuffer): Int =
+        MoonBridge.startConnection(
+            context.serverAddress.address,
+            context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
+            context.serverCodecModeSupport,
+            context.negotiatedWidth, context.negotiatedHeight,
+            context.streamConfig.refreshRate, context.streamConfig.bitrate,
+            context.negotiatedPacketSize, context.negotiatedRemoteStreaming,
+            context.streamConfig.audioConfiguration.toInt(),
+            context.streamConfig.supportedVideoFormats,
+            context.streamConfig.clientRefreshRateX100,
+            context.riKey.encoded, ib.array(),
+            context.videoCapabilities,
+            context.streamConfig.colorSpace,
+            context.streamConfig.colorRange,
+            context.streamConfig.hdrMode,
+            context.streamConfig.getEnableMic(),
+            context.streamConfig.getControlOnly(),
+            context.streamConfig.audioCodec,
+            context.streamConfig.audioBitrate,
+            context.streamConfig.authoredPcmHaptics
+        )
+
     @Throws(XmlPullParserException::class, IOException::class, InterruptedException::class)
     private fun startApp(): Boolean {
         val h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
@@ -244,8 +292,13 @@ open class NvConnection(
 
         context.serverCodecModeSupport = h.getServerCodecModeSupport(serverInfo).toInt()
 
-        context.negotiatedHdr = (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0
-        if ((context.serverCodecModeSupport and 0x20200) == 0 && context.negotiatedHdr) {
+        val pyrowaveHdrRequested =
+            (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_PYROWAVE) != 0 &&
+                streamConfig.hdrMode != MoonBridge.HDR_MODE_SDR
+        context.negotiatedHdr =
+            (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 ||
+                pyrowaveHdrRequested
+        if ((context.serverCodecModeSupport and 0x20200) == 0 && context.negotiatedHdr && !pyrowaveHdrRequested) {
             connListener.displayTransientMessage(appContext.getString(R.string.connection_hdr_unsupported))
             context.negotiatedHdr = false
         }
@@ -256,7 +309,8 @@ open class NvConnection(
             connListener.displayMessage(appContext.getString(R.string.connection_above_4k_host))
             return false
         } else if ((streamConfig.reqWidth > 4096 || streamConfig.reqHeight > 4096) &&
-            (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_H264.inv()) == 0
+            ((streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_PYROWAVE.inv()) and
+                MoonBridge.VIDEO_FORMAT_MASK_H264.inv()) == 0
         ) {
             connListener.displayMessage(appContext.getString(R.string.connection_above_4k_client))
             return false
@@ -398,9 +452,15 @@ open class NvConnection(
     fun start(audioRenderer: AudioRenderer, videoDecoderRenderer: VideoDecoderRenderer, connectionListener: NvConnectionListener) {
         Thread {
             context.connListener = connectionListener
-            context.videoCapabilities = videoDecoderRenderer.getCapabilities()
-
             val appName = context.streamConfig.app.appName
+            // The preflight creates and tears down the Vulkan/Surface candidate.
+            // Keep it on this worker so Surface callbacks remain responsive,
+            // and complete it before capability/RTSP negotiation begins.
+            if (!preparePyrowaveForSurface(videoDecoderRenderer)) {
+                context.connListener.stageFailed(appName, 0, 0)
+                return@Thread
+            }
+            context.videoCapabilities = videoDecoderRenderer.getCapabilities()
 
             context.connListener.stageStarting(appName)
 
@@ -462,27 +522,7 @@ open class NvConnection(
                     context.streamConfig.dynamicHdrPreference,
                 )
                 val ret = timeConnectionStep("native connection") {
-                    MoonBridge.startConnection(
-                        context.serverAddress.address,
-                        context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
-                        context.serverCodecModeSupport,
-                        context.negotiatedWidth, context.negotiatedHeight,
-                        context.streamConfig.refreshRate, context.streamConfig.bitrate,
-                        context.negotiatedPacketSize, context.negotiatedRemoteStreaming,
-                        context.streamConfig.audioConfiguration.toInt(),
-                        context.streamConfig.supportedVideoFormats,
-                        context.streamConfig.clientRefreshRateX100,
-                        context.riKey.encoded, ib.array(),
-                        context.videoCapabilities,
-                        context.streamConfig.colorSpace,
-                        context.streamConfig.colorRange,
-                        context.streamConfig.hdrMode,
-                        context.streamConfig.getEnableMic(),
-                        context.streamConfig.getControlOnly(),
-                        context.streamConfig.audioCodec,
-                        context.streamConfig.audioBitrate,
-                        context.streamConfig.authoredPcmHaptics
-                    )
+                    startNativeConnection(ib)
                 }
                 if (ret != 0) {
                     connectionAllowed.release()
