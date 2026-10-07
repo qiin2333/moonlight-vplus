@@ -342,47 +342,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_setVideoNetworkObservationEnabled(JNI
     return LiSetVideoNetworkObservationEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT jlongArray JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_getVideoNetworkSnapshotNative(JNIEnv *env, jclass clazz) {
-    (void)clazz;
-    LI_VIDEO_NETWORK_SNAPSHOT snapshot;
-    if (!LiGetVideoNetworkSnapshot(&snapshot)) {
-        return NULL;
-    }
-    const jlong values[] = {
-        (jlong)snapshot.version,
-        (jlong)snapshot.connectionEpoch,
-        (jlong)snapshot.sequenceEpoch,
-        (jlong)snapshot.sampleTimeUs,
-        (jlong)snapshot.observationDurationUs,
-        (jlong)snapshot.firstExtendedSequence,
-        (jlong)snapshot.highestExtendedSequence,
-        (jlong)snapshot.settledThroughExclusive,
-        (jlong)snapshot.uniquePackets,
-        (jlong)snapshot.uniqueUdpBytes,
-        (jlong)snapshot.duplicatePackets,
-        (jlong)snapshot.reorderedPackets,
-        (jlong)snapshot.missingCandidates,
-        (jlong)snapshot.latePackets,
-        (jlong)snapshot.settledReceivedPackets,
-        (jlong)snapshot.unknownCandidates,
-        (jlong)snapshot.coverageResets,
-        (jlong)snapshot.untrackedPackets,
-        (jlong)snapshot.authenticationFailures,
-        (jlong)snapshot.invalidPackets,
-        (jlong)snapshot.completedBlocks,
-        (jlong)snapshot.failedObservedBlocks,
-        (jlong)snapshot.recoveredDataPackets,
-        (jlong)snapshot.completedFrames,
-        snapshot.hasSequence ? 1 : 0,
-    };
-    jlongArray result = (*env)->NewLongArray(env, sizeof(values) / sizeof(values[0]));
-    if (result != NULL) {
-        (*env)->SetLongArrayRegion(env, result, 0, sizeof(values) / sizeof(values[0]), values);
-    }
-    return result;
-}
-
 static jlong transportPolicyJniBits(uint64_t value) {
     _Static_assert(sizeof(jlong) == sizeof(uint64_t), "JNI long must preserve uint64 bits");
     jlong result;

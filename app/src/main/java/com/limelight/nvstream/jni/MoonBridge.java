@@ -670,19 +670,11 @@ public class MoonBridge {
     /** Actual RTSP-confirmed control permission, never inferred from the requested setting. */
     public static native boolean getVideoPacketControlNegotiated();
 
-    private static native long[] getVideoNetworkSnapshotNative();
-
     private static native long[] getTransportPolicyStatusNoticeNative();
 
     public static TransportPolicyStatusNotice getTransportPolicyStatusNotice() {
         long[] values = getTransportPolicyStatusNoticeNative();
         return values != null ? new TransportPolicyStatusNotice(values) : null;
-    }
-
-    /** @return A consistent original-packet snapshot, or null when sampling is unavailable. */
-    public static VideoNetworkSnapshot getVideoNetworkSnapshot() {
-        long[] values = getVideoNetworkSnapshotNative();
-        return values != null ? new VideoNetworkSnapshot(values) : null;
     }
 
     public static native String getLaunchUrlQueryParameters();
