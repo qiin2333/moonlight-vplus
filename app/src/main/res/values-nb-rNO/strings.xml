@@ -222,4 +222,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Stemmeforbedring</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduserer lavfrekvent støy og forbedrer taletydeligheten. Tilgjengelig med fast forsterkning og volumbalansering.</string>
+    <string name="title_pyrowave_capability_diagnostic">Kontroll av PyroWave-egenskaper</string>
+    <string name="summary_pyrowave_capability_diagnostic">Se Vulkan-egenskaper og kravene til den gjeldende PyroWave-dekoderen.</string>
+    <string name="pyrowave_diag_loading">Kontrollerer PyroWave-egenskaper…</string>
+    <string name="pyrowave_diag_runtime">API for det medfølgende PyroWave-biblioteket</string>
+    <string name="pyrowave_diag_gpu_frontend">GPU-visningsmodul</string>
+    <string name="pyrowave_diag_gpu_gate">GPU-visning krever Android 10+, arm64-v8a og Vulkan 1.3. SDR-reserveløsningen krever Vulkan 1.2 og dekoderfunksjonene nedenfor; den dekoder ikke bare på CPU-en.</string>
+    <string name="pyrowave_diag_ready">De kontrollerte kravene er oppfylt</string>
+    <string name="pyrowave_diag_missing">Krav til den gjeldende implementasjonen mangler</string>
+    <string name="pyrowave_diag_scope">Denne rapporten kontrollerer bare egenskapene driveren oppgir. Vindusvisning, bildeformater, måloppløsning, HDR-utgang og dekodingsytelse må fortsatt testes ved strømming.</string>
+    <string name="pyrowave_diag_loader_missing">Ingen tilgjengelig Vulkan-laster</string>
+    <string name="pyrowave_diag_no_devices">Ingen fysisk Vulkan-enhet funnet</string>
+    <string name="pyrowave_diag_query_failed">Kunne ikke lese Vulkan-egenskaper. Dette bekrefter ikke at støtte mangler.</string>
+    <string name="pyrowave_diag_storage_path">8-bits lagring eller store texelbuffere</string>
+    <string name="pyrowave_diag_gpu_backend">Krav til GPU-visning</string>
+    <string name="pyrowave_diag_staging_backend">Krav til SDR-reserveløsningen</string>
+    <string name="pyrowave_diag_subgroup_range">Fullstendige beregningsundergrupper innen wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Tråder per arbeidsgruppe</string>
+    <string name="pyrowave_diag_shared_memory">Delt minne for arbeidsgruppen</string>
+    <string name="pyrowave_diag_queue">Felles kø for grafikk og beregninger</string>
+    <string name="pyrowave_diag_android_surface">Android Vulkan Surface-utvidelser</string>
+    <string name="pyrowave_diag_copy_failed">Kunne ikke kopiere rapporten</string>
+    <string name="pyrowave_diag_present">Tilgjengelig</string>
+    <string name="pyrowave_diag_absent">Ikke tilgjengelig</string>
+    <string name="pyrowave_diag_vulkan_loader">Vulkan-laster</string>
+    <string name="pyrowave_diag_subgroup_ops">Undergruppeoperasjoner</string>
+    <string name="pyrowave_diag_subgroup_size">Undergruppestørrelse</string>
+    <string name="pyrowave_diag_subgroup_limits">Min. / maks. undergruppestørrelse</string>
+    <string name="pyrowave_diag_required_subgroup">Nødvendige undergruppeoperasjoner</string>
+    <string name="pyrowave_diag_texel_limit">Maksimalt antall texelbufferelementer</string>
+    <string name="pyrowave_diag_back">Tilbake</string>
+    <string name="pyrowave_diag_copy">Kopier</string>
+    <string name="pyrowave_diag_copy_success">Rapporten er kopiert til utklippstavlen</string>
+    <string name="pyrowave_diag_unavailable">Kan ikke hentes</string>
 </resources>

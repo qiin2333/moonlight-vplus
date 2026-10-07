@@ -238,4 +238,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Spraakverbetering</string>
     <string name="summary_checkbox_mic_voice_enhancement">Vermindert laagfrequente ruis en verbetert de spraakhelderheid. Beschikbaar met vaste versterking en volumebalans.</string>
+    <string name="title_pyrowave_capability_diagnostic">PyroWave-mogelijkheden controleren</string>
+    <string name="summary_pyrowave_capability_diagnostic">Bekijk Vulkan-mogelijkheden en vereisten van de huidige PyroWave-decoder.</string>
+    <string name="pyrowave_diag_loading">PyroWave-mogelijkheden controleren…</string>
+    <string name="pyrowave_diag_runtime">API van de meegeleverde PyroWave-bibliotheek</string>
+    <string name="pyrowave_diag_gpu_frontend">GPU-weergavemodule</string>
+    <string name="pyrowave_diag_gpu_gate">GPU-weergave vereist Android 10+, arm64-v8a en Vulkan 1.3. Het SDR-terugvalpad vereist Vulkan 1.2 en de onderstaande decoderfuncties; het decodeert niet uitsluitend op de CPU.</string>
+    <string name="pyrowave_diag_ready">De gecontroleerde vereisten zijn aanwezig</string>
+    <string name="pyrowave_diag_missing">Vereisten voor de huidige implementatie ontbreken</string>
+    <string name="pyrowave_diag_scope">Dit rapport controleert alleen wat de driver opgeeft. Vensterweergave, beeldformaten, doelresolutie, HDR-uitvoer en decodeerprestaties moeten nog tijdens streaming worden getest.</string>
+    <string name="pyrowave_diag_loader_missing">Geen toegankelijke Vulkan-loader</string>
+    <string name="pyrowave_diag_no_devices">Geen fysiek Vulkan-apparaat gevonden</string>
+    <string name="pyrowave_diag_query_failed">Vulkan-mogelijkheden konden niet worden gelezen. Dit bevestigt niet dat ondersteuning ontbreekt.</string>
+    <string name="pyrowave_diag_storage_path">8-bits opslag of grote texelbuffers</string>
+    <string name="pyrowave_diag_gpu_backend">Vereisten voor GPU-weergave</string>
+    <string name="pyrowave_diag_staging_backend">Vereisten voor het SDR-terugvalpad</string>
+    <string name="pyrowave_diag_subgroup_range">Volledige rekensubgroepen binnen wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Threads per werkgroep</string>
+    <string name="pyrowave_diag_shared_memory">Gedeeld geheugen van de werkgroep</string>
+    <string name="pyrowave_diag_queue">Gecombineerde wachtrij voor graphics en berekeningen</string>
+    <string name="pyrowave_diag_android_surface">Android Vulkan Surface-extensies</string>
+    <string name="pyrowave_diag_copy_failed">Rapport kon niet worden gekopieerd</string>
+    <string name="pyrowave_diag_present">Aanwezig</string>
+    <string name="pyrowave_diag_absent">Niet aanwezig</string>
+    <string name="pyrowave_diag_vulkan_loader">Vulkan-loader</string>
+    <string name="pyrowave_diag_subgroup_ops">Subgroepbewerkingen</string>
+    <string name="pyrowave_diag_subgroup_size">Subgroepgrootte</string>
+    <string name="pyrowave_diag_subgroup_limits">Min. / max. subgroepgrootte</string>
+    <string name="pyrowave_diag_required_subgroup">Vereiste subgroepbewerkingen</string>
+    <string name="pyrowave_diag_texel_limit">Maximumaantal texelbufferelementen</string>
+    <string name="pyrowave_diag_back">Terug</string>
+    <string name="pyrowave_diag_copy">Kopiëren</string>
+    <string name="pyrowave_diag_copy_success">Rapport naar het klembord gekopieerd</string>
+    <string name="pyrowave_diag_unavailable">Niet beschikbaar</string>
 </resources>

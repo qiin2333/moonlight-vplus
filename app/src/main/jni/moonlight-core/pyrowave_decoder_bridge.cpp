@@ -16,6 +16,7 @@
 #include <vulkan/vulkan.h>
 
 #include "pyrowave_api.h"
+#include "pyrowave_capabilities.h"
 
 #include <algorithm>
 #include <chrono>
@@ -295,6 +296,17 @@ bool can_create_decoder(api_t &api, int width, int height) {
 }
 
 }  // namespace
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_pyrowaveGetCapabilities(JNIEnv *env, jclass) {
+  bool runtime_available = false;
+  try {
+    api_t api;
+    runtime_available = api.load();
+  } catch (...) {
+  }
+  return query_pyrowave_capabilities(env, runtime_available);
+}
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_pyrowaveIsAvailableFor(

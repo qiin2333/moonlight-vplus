@@ -699,6 +699,7 @@ public class MoonBridge {
 
     // Optional PyroWave Vulkan decoder. The implementation is loaded at runtime
     // so builds without the codec library keep the legacy renderer unchanged.
+    public static native android.os.Bundle pyrowaveGetCapabilities();
     public static native boolean pyrowaveIsAvailableFor(int width, int height);
     public static native long pyrowaveCreate(int width, int height, int hdrMode, boolean fullRange);
     public static native void pyrowaveSetSurface(long decoder, android.view.Surface surface);

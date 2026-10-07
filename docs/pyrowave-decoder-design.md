@@ -40,6 +40,16 @@ Vulkan 呈现后端检查 Vulkan 1.3、graphics/compute/present queue、subgroup
 
 实现的分配边界：GPU 路径宽高均为正偶数且不大于 8192；CPU staging 宽高均不大于 4096、总像素不超过 4096×2160。边界是资源校验上限，不是对设备性能的承诺。
 
+### 2.1 设置中的能力检测
+
+“PyroWave 能力检测”位于“视频能力报告”下方，复用报告页的布局、方向导航、复制和系统栏适配，不保存设置值，也不改变编码器选择或协商策略。
+
+[只读探测](../app/src/main/jni/moonlight-core/pyrowave_capabilities.cpp)在页面打开后的 IO 线程中创建独立 Vulkan instance，读取实际 loader/device 版本、扩展、队列、subgroup 操作和大小控制、8 位存储及现有 texel-buffer 替代路径。各 GPU 分别判断，不能拼接不同设备的能力；实例和运行库引用在探测结束时释放，不复用活动串流的 GPU 对象。
+
+检测不创建 logical device、Surface 或 decoder，也不执行 shader。报告中的“基础条件满足”仅表示已检查的必要条件满足，不能代替上面的完整串流预检；图像格式、窗口呈现、目标尺寸、HDR 和性能仍需实际验证。读取失败与缺少能力是不同结果，不能将失败显示为设备不支持。
+
+Vulkan 按需动态加载；没有可用 loader 的旧 Android 设备可以显示无法检测的结果，不因此提高应用的最低系统版本。页面销毁会取消 UI 后续更新，但同步驱动调用只能在返回后清理原生资源，不能由协程强行中断。
+
 ## 3. 视频数据流
 
 ~~~mermaid

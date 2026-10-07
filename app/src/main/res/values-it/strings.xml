@@ -308,4 +308,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Ottimizzazione voce</string>
     <string name="summary_checkbox_mic_voice_enhancement">Riduce il rumore a bassa frequenza e migliora la chiarezza della voce. Disponibile con guadagno fisso e bilanciamento del volume.</string>
+    <string name="title_pyrowave_capability_diagnostic">Verifica delle capacità PyroWave</string>
+    <string name="summary_pyrowave_capability_diagnostic">Esamina le capacità Vulkan e i requisiti del decoder PyroWave attuale.</string>
+    <string name="pyrowave_diag_loading">Verifica delle capacità PyroWave…</string>
+    <string name="pyrowave_diag_runtime">API della libreria PyroWave inclusa</string>
+    <string name="pyrowave_diag_gpu_frontend">Modulo di presentazione GPU</string>
+    <string name="pyrowave_diag_gpu_gate">La presentazione GPU richiede Android 10+, arm64-v8a e Vulkan 1.3. Il percorso SDR di riserva richiede Vulkan 1.2 e le funzioni del decoder indicate sotto; non decodifica solo sulla CPU.</string>
+    <string name="pyrowave_diag_ready">I requisiti verificati sono soddisfatti</string>
+    <string name="pyrowave_diag_missing">Mancano requisiti dell’implementazione attuale</string>
+    <string name="pyrowave_diag_scope">Questo rapporto verifica solo le capacità dichiarate dal driver. Presentazione nella finestra, formati delle immagini, risoluzione di destinazione, uscita HDR e prestazioni di decodifica devono ancora essere verificati durante lo streaming.</string>
+    <string name="pyrowave_diag_loader_missing">Nessun loader Vulkan accessibile</string>
+    <string name="pyrowave_diag_no_devices">Nessun dispositivo fisico Vulkan trovato</string>
+    <string name="pyrowave_diag_query_failed">Impossibile leggere le capacità Vulkan. Questo non conferma l’assenza di supporto.</string>
+    <string name="pyrowave_diag_storage_path">Memoria a 8 bit o buffer di texel di grandi dimensioni</string>
+    <string name="pyrowave_diag_gpu_backend">Requisiti di presentazione GPU</string>
+    <string name="pyrowave_diag_staging_backend">Requisiti del percorso SDR di riserva</string>
+    <string name="pyrowave_diag_subgroup_range">Sottogruppi di calcolo completi nell’intervallo wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Thread per gruppo di lavoro</string>
+    <string name="pyrowave_diag_shared_memory">Memoria condivisa del gruppo di lavoro</string>
+    <string name="pyrowave_diag_queue">Coda combinata di grafica e calcolo</string>
+    <string name="pyrowave_diag_android_surface">Estensioni Vulkan Surface di Android</string>
+    <string name="pyrowave_diag_copy_failed">Impossibile copiare il rapporto</string>
+    <string name="pyrowave_diag_present">Presente</string>
+    <string name="pyrowave_diag_absent">Assente</string>
+    <string name="pyrowave_diag_vulkan_loader">Loader Vulkan</string>
+    <string name="pyrowave_diag_subgroup_ops">Operazioni dei sottogruppi</string>
+    <string name="pyrowave_diag_subgroup_size">Dimensione del sottogruppo</string>
+    <string name="pyrowave_diag_subgroup_limits">Dimensione min. / max. del sottogruppo</string>
+    <string name="pyrowave_diag_required_subgroup">Operazioni dei sottogruppi richieste</string>
+    <string name="pyrowave_diag_texel_limit">Numero massimo di elementi del buffer di texel</string>
+    <string name="pyrowave_diag_back">Indietro</string>
+    <string name="pyrowave_diag_copy">Copia</string>
+    <string name="pyrowave_diag_copy_success">Rapporto copiato negli appunti</string>
+    <string name="pyrowave_diag_unavailable">Non disponibile</string>
 </resources>
