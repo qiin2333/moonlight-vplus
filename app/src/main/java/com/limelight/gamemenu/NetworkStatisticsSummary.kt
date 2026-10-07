@@ -19,9 +19,13 @@ import java.util.Locale
 internal fun NetworkStatisticsSummary(view: TransportPolicyView?) {
     var nowNs by remember { mutableLongStateOf(System.nanoTime()) }
     LaunchedEffect(view) {
-        while (true) { nowNs = System.nanoTime(); delay(100) }
+        nowNs = System.nanoTime()
+        while (view?.networkStatistics(nowNs)?.rawLossPercent != null) {
+            delay(100)
+            nowNs = System.nanoTime()
+        }
     }
-    val statistics = remember(view, nowNs) { view?.networkStatistics() }
+    val statistics = remember(view, nowNs) { view?.networkStatistics(nowNs) }
     val loss = statistics?.rawLossPercent?.let { String.format(Locale.getDefault(), "%.2f%%", it) }
         ?: stringResource(when (statistics?.reason) {
             "not_negotiated" -> R.string.transport_stats_no_feedback

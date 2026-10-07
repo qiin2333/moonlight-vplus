@@ -819,7 +819,7 @@
     <string name="title_adaptive_bitrate">自適應位元率</string>
     <string name="title_video_packet_feedback">逐包回饋測量（實驗）</string>
     <string name="title_video_packet_control">自動網路保護（實驗）</string>
-    <string name="summary_video_packet_control">下次連線時請求主機依網路狀況調整視訊位元率與丟包保護，同時請求逐包回饋測量。需要相容主機及視訊加密支援；未協商成功時自動保護保持關閉，串流繼續。協商成功後優先於智慧位元率。</string>
+    <string name="summary_video_packet_control">下次連線時請求主機依網路狀況調整視訊位元率，同時請求逐包回饋測量。需要相容主機及視訊加密支援；未協商成功時自動保護保持關閉，串流繼續。協商成功後優先於智慧位元率。</string>
     <string name="summary_video_packet_feedback">下次連線時請求加密視訊封包回饋。僅在主機支援且允許視訊加密時啟用，否則繼續一般串流。會增加網路與處理負擔；此選項不會啟用自動位元率或 FEC 控制。</string>
     <string name="summary_adaptive_bitrate">依照封包遺失與延遲自動調整位元率；主機不支援伺服器端控制時，改用本機控制器。</string>
     <string name="title_abr_mode">自適應位元率模式</string>

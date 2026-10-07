@@ -271,7 +271,7 @@
     <string name="title_adaptive_bitrate">Adaptive bitrate</string>
     <string name="title_video_packet_feedback">Packet feedback measurement (experimental)</string>
     <string name="title_video_packet_control">Automatic network protection (experimental)</string>
-    <string name="summary_video_packet_control">Request host adjustment of video bitrate and loss protection on the next connection. Also requests packet feedback measurement. Requires a compatible host and video encryption. If unavailable, automatic protection stays off and streaming continues. When negotiated, it takes priority over adaptive bitrate.</string>
+    <string name="summary_video_packet_control">Request host adjustment of video bitrate on the next connection. Also requests packet feedback measurement. Requires a compatible host and video encryption. If unavailable, automatic protection stays off and streaming continues. When negotiated, it takes priority over adaptive bitrate.</string>
     <string name="summary_video_packet_feedback">Request encrypted video packet feedback on the next connection. Requires host support and permission for video encryption; otherwise regular streaming continues. Adds network and processing overhead. This option does not enable automatic bitrate or FEC control.</string>
     <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
     <string name="title_abr_mode">ABR mode</string>

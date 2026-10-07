@@ -237,7 +237,7 @@
     <string name="title_adaptive_bitrate">智能码率</string>
     <string name="title_video_packet_feedback">逐包反馈测量（实验）</string>
     <string name="title_video_packet_control">自动网络保护（实验）</string>
-    <string name="summary_video_packet_control">下次连接时请求主机根据网络状况调整视频码率与丢包保护，同时请求逐包反馈测量。需要兼容主机及视频加密支持；未协商成功时自动保护保持关闭，串流继续。协商成功后优先于智能码率。</string>
+    <string name="summary_video_packet_control">下次连接时请求主机根据网络状况调整视频码率，同时请求逐包反馈测量。需要兼容主机及视频加密支持；未协商成功时自动保护保持关闭，串流继续。协商成功后优先于智能码率。</string>
     <string name="summary_video_packet_feedback">下次连接时请求加密视频包反馈。仅在主机支持且允许视频加密时启用，否则继续普通串流。会增加网络与处理开销；此选项不会启用自动码率或 FEC 控制。</string>
     <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
     <string name="title_abr_mode">智能码率模式</string>
