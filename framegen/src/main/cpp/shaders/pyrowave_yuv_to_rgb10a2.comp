@@ -1,4 +1,5 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -10,8 +11,14 @@ layout(set = 0, binding = 3, rgb10_a2) uniform writeonly image2D uDst;
 layout(push_constant) uniform PushConstants {
     vec2 srcUvScale;
     float fullRange;
-    float reserved;
+    float dynamicEnabled;
+    float hdrMode;
+    float sourcePeakNits;
+    float targetPeakNits;
+    float padding;
 } pc;
+
+#include "pyrowave_dynamic_hdr.glsl"
 
 vec3 yuvToRgb(vec3 yuv) {
     float u = yuv.y - 0.5;
@@ -40,6 +47,6 @@ void main() {
         yuv.x = (yuv.x - 64.0 / 1023.0) * (1023.0 / 876.0);
         yuv.yz = (yuv.yz - vec2(512.0 / 1023.0)) * (1023.0 / 896.0) + vec2(0.5);
     }
-    vec3 rgb = yuvToRgb(yuv);
+    vec3 rgb = applyDynamicHdr(yuvToRgb(yuv));
     imageStore(uDst, coord, vec4(clamp(rgb, vec3(0.0), vec3(1.0)), 1.0));
 }

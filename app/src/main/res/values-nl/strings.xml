@@ -274,4 +274,5 @@
     <string name="image_saved_successfully">Afbeelding opgeslagen in: Picture/vplus</string>
     <string name="image_save_failed_with_error">Afbeelding opslaan mislukt: %1$s</string>
     <string name="tip_double_tap_mouse">Tip: houd het lege gebied bovenaan de computerlijst ingedrukt om de huidige achtergrondafbeelding op te slaan.</string>
+    <string name="pyrowave_negotiation_fallback">De PyroWave-onderhandeling is mislukt. Er wordt overgeschakeld naar %1$s.</string>
 </resources>

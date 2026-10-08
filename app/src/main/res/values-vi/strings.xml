@@ -284,4 +284,5 @@
     <string name="image_saved_successfully">Đã lưu ảnh vào: Picture/vplus</string>
     <string name="image_save_failed_with_error">Không thể lưu ảnh: %1$s</string>
     <string name="tip_double_tap_mouse">Mẹo: nhấn và giữ vùng trống phía trên danh sách máy tính để lưu ảnh nền hiện tại.</string>
+    <string name="pyrowave_negotiation_fallback">Thương lượng PyroWave thất bại. Chuyển sang %1$s.</string>
 </resources>

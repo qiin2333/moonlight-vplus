@@ -67,6 +67,7 @@ docs/*
 !docs/pyrowave-client-contract.md
 !docs/pyrowave-decoder-design.md
 !docs/pyrowave-vulkan-synchronization-design.md
+!docs/pyrowave-dynamic-hdr.md
 
 # Kotlin build cache
 .kotlin/

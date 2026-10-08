@@ -319,4 +319,5 @@
     <string name="image_saved_successfully">Imagem salva com sucesso em: Picture/vplus</string>
     <string name="image_save_failed_with_error">Falha ao salvar imagem: %1$s</string>
     <string name="tip_double_tap_mouse">Dica: mantenha pressionada a área vazia no topo da lista de computadores para salvar a imagem de fundo atual.</string>
+    <string name="pyrowave_negotiation_fallback">A negociação do PyroWave falhou. Alternando para %1$s.</string>
 </resources>

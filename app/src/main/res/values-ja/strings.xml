@@ -221,4 +221,5 @@
     <string name="image_saved_successfully">画像を保存しました：Picture/vplus</string>
     <string name="image_save_failed_with_error">画像の保存に失敗しました：%1$s</string>
     <string name="tip_double_tap_mouse">ヒント：PC 一覧の上部にある空白部分を長押しすると、現在の背景画像を保存できます。</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave のネゴシエーションに失敗しました。%1$s に切り替えます。</string>
 </resources>

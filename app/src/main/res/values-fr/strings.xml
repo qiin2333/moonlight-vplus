@@ -350,4 +350,5 @@
     <string name="image_saved_successfully">Image enregistrée dans : Picture/vplus</string>
     <string name="image_save_failed_with_error">Échec de l\'enregistrement de l\'image : %1$s</string>
     <string name="tip_double_tap_mouse">Conseil : maintenez une pression sur la zone vide en haut de la liste des ordinateurs pour enregistrer l\'image de fond actuelle.</string>
+    <string name="pyrowave_negotiation_fallback">La négociation PyroWave a échoué. Basculement vers %1$s.</string>
 </resources>

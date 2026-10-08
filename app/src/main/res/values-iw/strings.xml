@@ -208,4 +208,5 @@
     <string name="image_saved_successfully">התמונה נשמרה בהצלחה בנתיב: Picture/vplus</string>
     <string name="image_save_failed_with_error">שמירת התמונה נכשלה: %1$s</string>
     <string name="tip_double_tap_mouse">טיפ: כדי לשמור את תמונת הרקע הנוכחית, לחצו לחיצה ארוכה על האזור הריק בראש רשימת המחשבים.</string>
+    <string name="pyrowave_negotiation_fallback">משא ומתן עם PyroWave נכשל. מעבר ל־%1$s.</string>
 </resources>

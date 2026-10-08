@@ -55,4 +55,5 @@
     <string name="image_saved_successfully">تصویر با موفقیت در این مسیر ذخیره شد: Picture/vplus</string>
     <string name="image_save_failed_with_error">ذخیرهٔ تصویر ناموفق بود: %1$s</string>
     <string name="tip_double_tap_mouse">نکته: برای ذخیرهٔ تصویر پس‌زمینهٔ فعلی، قسمت خالی بالای فهرست رایانه‌ها را لمس کنید و نگه دارید.</string>
+    <string name="pyrowave_negotiation_fallback">مذاکرهٔ PyroWave ناموفق بود. از %1$s استفاده می‌شود.</string>
 </resources>

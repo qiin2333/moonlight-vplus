@@ -72,14 +72,15 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun pyrowaveDiagnosticStringsCoverEveryExistingLocale() {
+    fun pyrowaveDiagnosticAndFallbackStringsCoverEveryExistingLocale() {
         val defaultEntries = parse(File(resourceDir, "values/strings.xml"))
             .documentElement.childNodes.asElementSequence()
             .filter { it.tagName == "string" && it.getAttribute("translatable") != "false" }
             .filter {
                 it.getAttribute("name").startsWith("pyrowave_diag_") ||
                     it.getAttribute("name") in setOf(
-                        "title_pyrowave_capability_diagnostic", "summary_pyrowave_capability_diagnostic"
+                        "title_pyrowave_capability_diagnostic", "summary_pyrowave_capability_diagnostic",
+                        "pyrowave_negotiation_fallback",
                     )
             }.associate { it.getAttribute("name") to it.textContent }
         assertTrue("No PyroWave strings found", defaultEntries.isNotEmpty())

@@ -258,4 +258,5 @@
     <string name="image_saved_successfully">Bildet er lagret i: Picture/vplus</string>
     <string name="image_save_failed_with_error">Kunne ikke lagre bildet: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: Trykk og hold på det tomme området øverst i datamaskinlisten for å lagre det gjeldende bakgrunnsbildet.</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave-forhandlingen mislyktes. Bytter til %1$s.</string>
 </resources>
