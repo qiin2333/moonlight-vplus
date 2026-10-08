@@ -193,4 +193,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Îmbunătățire voce</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce zgomotul de joasă frecvență și îmbunătățește claritatea vocii. Disponibilă cu amplificare fixă și echilibrare a volumului.</string>
+    <string name="title_pyrowave_capability_diagnostic">Verificarea capabilităților PyroWave</string>
+    <string name="summary_pyrowave_capability_diagnostic">Consultă capabilitățile Vulkan și cerințele decodorului PyroWave actual.</string>
+    <string name="pyrowave_diag_loading">Se verifică capabilitățile PyroWave…</string>
+    <string name="pyrowave_diag_runtime">API-ul bibliotecii PyroWave incluse</string>
+    <string name="pyrowave_diag_gpu_frontend">Modul de afișare GPU</string>
+    <string name="pyrowave_diag_gpu_gate">Afișarea GPU necesită Android 10+, arm64-v8a și Vulkan 1.3. Ruta SDR de rezervă necesită Vulkan 1.2 și funcțiile decodorului de mai jos; nu decodează doar pe CPU.</string>
+    <string name="pyrowave_diag_ready">Cerințele verificate sunt îndeplinite</string>
+    <string name="pyrowave_diag_missing">Lipsesc cerințe ale implementării actuale</string>
+    <string name="pyrowave_diag_scope">Acest raport verifică doar capabilitățile declarate de driver. Afișarea în fereastră, formatele imaginilor, rezoluția țintă, ieșirea HDR și performanța decodării necesită în continuare verificare în timpul streamingului.</string>
+    <string name="pyrowave_diag_loader_missing">Nu există un încărcător Vulkan accesibil</string>
+    <string name="pyrowave_diag_no_devices">Nu s-a găsit niciun dispozitiv fizic Vulkan</string>
+    <string name="pyrowave_diag_query_failed">Nu se pot citi capabilitățile Vulkan. Aceasta nu confirmă lipsa suportului.</string>
+    <string name="pyrowave_diag_storage_path">Stocare pe 8 biți sau buffere mari de texeli</string>
+    <string name="pyrowave_diag_gpu_backend">Cerințe de afișare GPU</string>
+    <string name="pyrowave_diag_staging_backend">Cerințe pentru ruta SDR de rezervă</string>
+    <string name="pyrowave_diag_subgroup_range">Subgrupuri de calcul complete în intervalul wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Fire de execuție pe grup de lucru</string>
+    <string name="pyrowave_diag_shared_memory">Memorie partajată a grupului de lucru</string>
+    <string name="pyrowave_diag_queue">Coadă comună pentru grafică și calcul</string>
+    <string name="pyrowave_diag_android_surface">Extensii Vulkan Surface pentru Android</string>
+    <string name="pyrowave_diag_copy_failed">Nu se poate copia raportul</string>
+    <string name="pyrowave_diag_present">Prezent</string>
+    <string name="pyrowave_diag_absent">Absent</string>
+    <string name="pyrowave_diag_vulkan_loader">Încărcător Vulkan</string>
+    <string name="pyrowave_diag_subgroup_ops">Operații ale subgrupurilor</string>
+    <string name="pyrowave_diag_subgroup_size">Dimensiunea subgrupului</string>
+    <string name="pyrowave_diag_subgroup_limits">Dimensiunea min. / max. a subgrupului</string>
+    <string name="pyrowave_diag_required_subgroup">Operații necesare ale subgrupurilor</string>
+    <string name="pyrowave_diag_texel_limit">Numărul maxim de elemente ale bufferului de texeli</string>
+    <string name="pyrowave_diag_back">Înapoi</string>
+    <string name="pyrowave_diag_copy">Copiază</string>
+    <string name="pyrowave_diag_copy_success">Raport copiat în clipboard</string>
+    <string name="pyrowave_diag_unavailable">Indisponibil</string>
 </resources>

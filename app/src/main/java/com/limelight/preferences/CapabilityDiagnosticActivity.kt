@@ -17,11 +17,13 @@ import android.view.Display
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -65,6 +67,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -72,7 +75,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,6 +95,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import com.limelight.ui.ThemedComponentActivity
 import com.limelight.R
@@ -113,7 +116,13 @@ import com.limelight.utils.appAccentColor
  */
 class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
+    companion object {
+        const val EXTRA_PYROWAVE_REPORT = "pyrowave_report"
+    }
+
     private lateinit var plainTextReport: StringBuilder
+    @StringRes private var reportLabel = R.string.diag_report_clip_label
+    private var reportCards by mutableStateOf<List<DiagnosticCard>>(emptyList())
     private val controllerPageScrollState = ControllerPageScrollState()
     private var controllerScrollSequence by mutableIntStateOf(0)
     private var controllerScrollDirection by mutableIntStateOf(0)
@@ -136,25 +145,128 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
         UiHelper.setLocale(this)
 
+        val pyrowaveReport = intent.getBooleanExtra(EXTRA_PYROWAVE_REPORT, false)
+        val title = if (pyrowaveReport) R.string.title_pyrowave_capability_diagnostic
+            else R.string.layout_capability_diagnostic_text_a5e80
+        val subtitle = if (pyrowaveReport) R.string.pyrowave_diag_subtitle
+            else R.string.layout_capability_diagnostic_text_41b60
+        reportLabel = if (pyrowaveReport) title else R.string.diag_report_clip_label
         plainTextReport = StringBuilder()
-        val cards = generateReport()
+        if (pyrowaveReport) {
+            plainTextReport.append(tr(R.string.pyrowave_diag_loading))
+            reportCards = listOf(DiagnosticCard("GPU", tr(title)).apply {
+                badge(tr(R.string.pyrowave_diag_loading), DiagnosticTone.Info)
+            })
+        } else {
+            reportCards = generateReport()
+        }
 
         setContent {
-            CapabilityDiagnosticScreen(
-                    cards = cards,
-                    controllerScrollSequence = controllerScrollSequence,
-                    controllerScrollDirection = controllerScrollDirection,
-                    onBack = { finish() },
-                    onCopy = {
-                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                        clipboard?.setPrimaryClip(
-                                ClipData.newPlainText(tr(R.string.diag_report_clip_label), plainTextReport.toString()))
-                        Toast.makeText(this, R.string.copy_success, Toast.LENGTH_SHORT).show()
-                    }
-            )
+            val direction = if (LocalConfiguration.current.layoutDirection == View.LAYOUT_DIRECTION_RTL)
+                LayoutDirection.Rtl else LayoutDirection.Ltr
+            CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                CapabilityDiagnosticScreen(
+                        cards = reportCards,
+                        title = title,
+                        subtitle = subtitle,
+                        controllerScrollSequence = controllerScrollSequence,
+                        controllerScrollDirection = controllerScrollDirection,
+                        onBack = { finish() },
+                        onCopy = ::copyReport
+                )
+            }
         }
 
         UiHelper.notifyNewRootView(this)
+        if (pyrowaveReport) {
+            lifecycleScope.launch {
+                val capabilities = PyrowaveCapabilityProbe.collect()
+                if (!isFinishing) reportCards = generatePyrowaveReport(capabilities)
+            }
+        }
+    }
+
+    private fun copyReport() {
+        val copied = try {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            if (clipboard == null) false else {
+                clipboard.setPrimaryClip(ClipData.newPlainText(tr(reportLabel), plainTextReport.toString()))
+                true
+            }
+        } catch (_: RuntimeException) {
+            false
+        }
+        Toast.makeText(this, if (copied) R.string.pyrowave_diag_copy_success else R.string.pyrowave_diag_copy_failed,
+            Toast.LENGTH_SHORT).show()
+    }
+
+    private fun generatePyrowaveReport(capabilities: PyrowaveCapabilities): List<DiagnosticCard> {
+        val cards = mutableListOf<DiagnosticCard>()
+        val summary = DiagnosticCard("GPU", tr(R.string.title_pyrowave_capability_diagnostic))
+        cards += summary
+        when (capabilities.failure) {
+            PyrowaveProbeFailure.LOADER_UNAVAILABLE -> summary.badge(tr(R.string.pyrowave_diag_loader_missing), DiagnosticTone.Warning)
+            PyrowaveProbeFailure.NO_DEVICES -> summary.badge(tr(R.string.pyrowave_diag_no_devices), DiagnosticTone.Warning)
+            PyrowaveProbeFailure.QUERY_FAILED -> summary.badge(tr(R.string.pyrowave_diag_query_failed), DiagnosticTone.Error)
+            null -> summary.badge(
+                tr(if (capabilities.hasAnyPrerequisites) R.string.pyrowave_diag_ready else R.string.pyrowave_diag_missing),
+                if (capabilities.hasAnyPrerequisites) DiagnosticTone.Success else DiagnosticTone.Warning
+            )
+        }
+        summary.status(tr(R.string.pyrowave_diag_runtime), capabilities.runtimeAvailable)
+        summary.status(tr(R.string.pyrowave_diag_gpu_frontend), capabilities.gpuFrontendAvailable)
+        summary.keyValue("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        summary.keyValue(tr(R.string.pyrowave_diag_vulkan_loader), if (capabilities.loaderVersion == 0) tr(R.string.pyrowave_diag_unavailable)
+            else vulkanVersionString(capabilities.loaderVersion))
+        capabilities.vkResult?.let { summary.keyValue("VkResult", it.toString()) }
+        summary.badge(tr(R.string.pyrowave_diag_gpu_gate), DiagnosticTone.Info)
+        summary.badge(tr(R.string.pyrowave_diag_scope), DiagnosticTone.Info)
+
+        capabilities.devices.forEachIndexed { index, gpu ->
+            val card = DiagnosticCard("VK", tr(R.string.pyrowave_diag_gpu_title, index + 1))
+            cards += card
+            card.keyValue("GPU", gpu.name)
+            card.keyValue("Vulkan", vulkanVersionString(gpu.apiVersion))
+            card.status(tr(R.string.pyrowave_diag_gpu_backend), capabilities.hasSurfacePrerequisites(gpu))
+            card.status(tr(R.string.pyrowave_diag_staging_backend), capabilities.hasStagingPrerequisites(gpu))
+            card.divider()
+            card.status("${tr(R.string.pyrowave_diag_required_subgroup)} (BASIC / VOTE / ARITHMETIC / BALLOT / SHUFFLE / SHUFFLE_RELATIVE)", gpu.hasSubgroupOperations)
+            card.keyValue(tr(R.string.pyrowave_diag_subgroup_ops), "0x${gpu.subgroupOperations.toString(16)}")
+            card.status("subgroupSizeControl", gpu.subgroupSizeControl)
+            card.status("computeFullSubgroups", gpu.computeFullSubgroups)
+            card.status(tr(R.string.pyrowave_diag_subgroup_range), gpu.hasSubgroupSizeRange)
+            card.keyValue(tr(R.string.pyrowave_diag_subgroup_size), if (gpu.subgroupSize == 0) tr(R.string.pyrowave_diag_unavailable) else gpu.subgroupSize.toString())
+            card.keyValue(tr(R.string.pyrowave_diag_subgroup_limits), if (gpu.minSubgroupSize == 0) tr(R.string.pyrowave_diag_unavailable)
+                else "${gpu.minSubgroupSize} / ${gpu.maxSubgroupSize}")
+            card.divider()
+            card.status(tr(R.string.pyrowave_diag_storage_path), gpu.hasStoragePath)
+            card.status("storageBuffer8BitAccess", gpu.storageBuffer8BitAccess)
+            card.keyValue(tr(R.string.pyrowave_diag_texel_limit), gpu.maxTexelBufferElements.toString())
+            card.status(tr(R.string.pyrowave_diag_queue), gpu.graphicsComputeQueue)
+            card.keyValue(tr(R.string.pyrowave_diag_max_workgroup), gpu.maxComputeWorkGroupInvocations.toString())
+            card.keyValue(tr(R.string.pyrowave_diag_shared_memory), "${gpu.maxComputeSharedMemorySize / 1024} KiB")
+            card.divider()
+            card.status(tr(R.string.pyrowave_diag_android_surface), capabilities.androidSurface)
+            card.status("VK_KHR_swapchain", gpu.swapchain)
+            card.status("VK_EXT_swapchain_colorspace", capabilities.swapchainColorspace)
+            card.status("VK_EXT_hdr_metadata", gpu.hdrMetadata)
+        }
+
+        plainTextReport = StringBuilder(tr(R.string.title_pyrowave_capability_diagnostic)).append("\n\n")
+        cards.forEach { card ->
+            plainTextReport.append(card.title).append('\n')
+            card.rows.forEach { row ->
+                when (row) {
+                    is DiagnosticRow.KeyValue -> plainTextReport.append(row.key).append(": ").append(row.value).append('\n')
+                    is DiagnosticRow.Badge -> plainTextReport.append(row.message).append('\n')
+                    is DiagnosticRow.Status -> plainTextReport.append(row.label).append(": ")
+                        .append(tr(if (row.ok) R.string.pyrowave_diag_present else R.string.pyrowave_diag_absent)).append('\n')
+                    else -> Unit
+                }
+            }
+            plainTextReport.append('\n')
+        }
+        return cards
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -705,6 +817,8 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
     @Composable
     private fun CapabilityDiagnosticScreen(
             cards: List<DiagnosticCard>,
+            @StringRes title: Int,
+            @StringRes subtitle: Int,
             controllerScrollSequence: Int,
             controllerScrollDirection: Int,
             onBack: () -> Unit,
@@ -724,25 +838,22 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val layoutDirection = LocalLayoutDirection.current
+        val isRtl = layoutDirection == LayoutDirection.Rtl
+        val leftFocusRequester = if (isRtl) copyFocusRequester else backFocusRequester
+        val rightFocusRequester = if (isRtl) backFocusRequester else copyFocusRequester
         val safeArea = WindowInsets.systemBars
                 .union(WindowInsets.displayCutout)
                 .asPaddingValues()
         val safeRight = if (isLandscape) safeArea.calculateRightPadding(layoutDirection) else 0.dp
         val safeBottom = safeArea.calculateBottomPadding()
-        var requestedFocusTarget by remember {
-            mutableStateOf<CapabilityDiagnosticFocusTarget?>(null)
-        }
-
-        LaunchedEffect(Unit) { reportFocusRequester.requestFocus() }
-        LaunchedEffect(requestedFocusTarget) {
-            val focusTarget = requestedFocusTarget ?: return@LaunchedEffect
-            withFrameNanos { }
-            when (focusTarget) {
+        fun requestFocus(target: CapabilityDiagnosticFocusTarget) {
+            when (target) {
                 CapabilityDiagnosticFocusTarget.REPORT -> reportFocusRequester.requestFocus()
                 CapabilityDiagnosticFocusTarget.BACK -> backFocusRequester.requestFocus()
                 CapabilityDiagnosticFocusTarget.COPY -> copyFocusRequester.requestFocus()
             }
         }
+        LaunchedEffect(Unit) { reportFocusRequester.requestFocus() }
         LaunchedEffect(controllerScrollSequence) {
             if (controllerScrollSequence > 0 && controllerScrollDirection != 0) {
                 listState.scrollBy(scrollStep * controllerScrollDirection)
@@ -768,6 +879,8 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                 .absolutePadding(right = safeRight, bottom = safeBottom)
                 ) {
                     DiagnosticTopBar(
+                            title = title,
+                            subtitle = subtitle,
                             panel = panel,
                             primary = primary,
                             secondary = secondary,
@@ -775,7 +888,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                             reportFocusRequester = reportFocusRequester,
                             backFocusRequester = backFocusRequester,
                             copyFocusRequester = copyFocusRequester,
-                            onFocusTargetRequested = { requestedFocusTarget = it },
+                            onFocusTargetRequested = ::requestFocus,
                             onBack = onBack,
                             onCopy = onCopy
                     )
@@ -787,8 +900,8 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                     .focusProperties {
                                         up = reportFocusRequester
                                         down = reportFocusRequester
-                                        left = backFocusRequester
-                                        right = copyFocusRequester
+                                        left = leftFocusRequester
+                                        right = rightFocusRequester
                                     }
                                     .onPreviewKeyEvent { event ->
                                         val nativeEvent = event.nativeKeyEvent
@@ -809,13 +922,13 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                             }
                                             KeyEvent.KEYCODE_DPAD_LEFT -> {
                                                 if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
-                                                    requestedFocusTarget = CapabilityDiagnosticFocusTarget.BACK
+                                                    requestFocus(if (isRtl) CapabilityDiagnosticFocusTarget.COPY else CapabilityDiagnosticFocusTarget.BACK)
                                                 }
                                                 true
                                             }
                                             KeyEvent.KEYCODE_DPAD_RIGHT -> {
                                                 if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
-                                                    requestedFocusTarget = CapabilityDiagnosticFocusTarget.COPY
+                                                    requestFocus(if (isRtl) CapabilityDiagnosticFocusTarget.BACK else CapabilityDiagnosticFocusTarget.COPY)
                                                 }
                                                 true
                                             }
@@ -855,6 +968,8 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
     @Composable
     private fun DiagnosticTopBar(
+            @StringRes title: Int,
+            @StringRes subtitle: Int,
             panel: Color,
             primary: Color,
             secondary: Color,
@@ -870,30 +985,33 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
         var copyFocused by remember { mutableStateOf(false) }
         val backShape = CircleShape
         val copyShape = RoundedCornerShape(999.dp)
+        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        val leftFocusRequester = if (isRtl) copyFocusRequester else backFocusRequester
+        val rightFocusRequester = if (isRtl) backFocusRequester else copyFocusRequester
 
         Surface(
                 color = panel,
                 tonalElevation = 0.dp,
                 shadowElevation = 6.dp
         ) {
-            Box(
+            Row(
                     modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
                             .heightIn(min = 60.dp)
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                         onClick = onBack,
                         modifier = Modifier
-                                .align(Alignment.CenterStart)
                                 .size(40.dp)
                                 .focusRequester(backFocusRequester)
                                 .focusProperties {
                                     up = backFocusRequester
                                     down = reportFocusRequester
-                                    left = backFocusRequester
-                                    right = copyFocusRequester
+                                    left = leftFocusRequester
+                                    right = rightFocusRequester
                                 }
                                 .onFocusChanged {
                                     backFocused = it.isFocused
@@ -905,7 +1023,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                 .onPreviewKeyEvent { event ->
                                     handleCapabilityTopBarKey(
                                             event = event.nativeKeyEvent,
-                                            horizontalKeyCode = KeyEvent.KEYCODE_DPAD_RIGHT,
+                                            horizontalKeyCode = if (isRtl) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT,
                                             horizontalTarget = CapabilityDiagnosticFocusTarget.COPY,
                                             onFocusTargetRequested = onFocusTargetRequested,
                                             onDismiss = onBack,
@@ -916,26 +1034,26 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                 ) {
                     Icon(
                             painter = painterResource(R.drawable.ic_arrow_right),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.pyrowave_diag_back),
                             tint = primary,
                             modifier = Modifier
                                     .size(20.dp)
-                                    .rotate(180f)
+                                    .rotate(if (isRtl) 0f else 180f)
                     )
                 }
 
                 Column(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                            text = stringResource(R.string.layout_capability_diagnostic_text_a5e80),
+                            text = stringResource(title),
                             color = primary,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                     )
                     Text(
-                            text = stringResource(R.string.layout_capability_diagnostic_text_41b60),
+                            text = stringResource(subtitle),
                             color = secondary,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(top = 1.dp)
@@ -950,13 +1068,12 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                         ),
                         shape = copyShape,
                         modifier = Modifier
-                                .align(Alignment.CenterEnd)
                                 .focusRequester(copyFocusRequester)
                                 .focusProperties {
                                     up = copyFocusRequester
                                     down = reportFocusRequester
-                                    left = backFocusRequester
-                                    right = copyFocusRequester
+                                    left = leftFocusRequester
+                                    right = rightFocusRequester
                                 }
                                 .onFocusChanged {
                                     copyFocused = it.isFocused
@@ -968,7 +1085,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                 .onPreviewKeyEvent { event ->
                                     handleCapabilityTopBarKey(
                                             event = event.nativeKeyEvent,
-                                            horizontalKeyCode = KeyEvent.KEYCODE_DPAD_LEFT,
+                                            horizontalKeyCode = if (isRtl) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT,
                                             horizontalTarget = CapabilityDiagnosticFocusTarget.BACK,
                                             onFocusTargetRequested = onFocusTargetRequested,
                                             onDismiss = onBack,
@@ -978,7 +1095,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                                 .testTag(CapabilityDiagnosticTags.COPY)
                 ) {
                     Text(
-                            text = stringResource(R.string.layout_capability_diagnostic_text_79d3a),
+                            text = stringResource(R.string.pyrowave_diag_copy),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                     )

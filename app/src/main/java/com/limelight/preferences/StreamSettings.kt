@@ -3751,6 +3751,13 @@ class StreamSettings : ThemedAppCompatActivity() {
                         true
                     }
 
+            findPreference<Preference>("pyrowave_capability_diagnostic")!!.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        startActivity(Intent(requireActivity(), CapabilityDiagnosticActivity::class.java)
+                            .putExtra(CapabilityDiagnosticActivity.EXTRA_PYROWAVE_REPORT, true))
+                        true
+                    }
+
             findPreference<Preference>("controller_diagnostic")!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
                         startActivity(Intent(requireActivity(), ControllerDiagnosticActivity::class.java))

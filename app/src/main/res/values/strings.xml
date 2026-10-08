@@ -2322,4 +2322,39 @@ Tap again to replace it.</string>
     <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
     <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
+    <string name="title_pyrowave_capability_diagnostic">PyroWave capability detection</string>
+    <string name="summary_pyrowave_capability_diagnostic">Inspect Vulkan capabilities and prerequisites for the current PyroWave decoder.</string>
+    <string name="pyrowave_diag_subtitle" translatable="false">Vulkan · GPU · PyroWave</string>
+    <string name="pyrowave_diag_loading">Checking PyroWave capabilities…</string>
+    <string name="pyrowave_diag_runtime">Packaged PyroWave runtime API</string>
+    <string name="pyrowave_diag_gpu_frontend">GPU presentation module</string>
+    <string name="pyrowave_diag_gpu_gate">GPU presentation requires Android 10+, arm64-v8a and Vulkan 1.3. SDR staging requires Vulkan 1.2 and the decoder features below; it is not CPU-only decoding.</string>
+    <string name="pyrowave_diag_ready">The checked prerequisites are present</string>
+    <string name="pyrowave_diag_missing">Prerequisites for the current implementation are missing</string>
+    <string name="pyrowave_diag_scope">This report checks driver declarations only. Window presentation, image formats, target resolution, HDR output and decoding performance still require stream validation.</string>
+    <string name="pyrowave_diag_loader_missing">No accessible Vulkan loader</string>
+    <string name="pyrowave_diag_no_devices">No Vulkan physical device found</string>
+    <string name="pyrowave_diag_query_failed">Unable to read Vulkan capabilities. This is not a confirmed unsupported result.</string>
+    <string name="pyrowave_diag_storage_path">8-bit storage or large texel buffers</string>
+    <string name="pyrowave_diag_gpu_backend">GPU presentation prerequisites</string>
+    <string name="pyrowave_diag_staging_backend">SDR staging prerequisites</string>
+    <string name="pyrowave_diag_subgroup_range">Full compute subgroups within wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Threads per workgroup</string>
+    <string name="pyrowave_diag_shared_memory">Workgroup shared memory</string>
+    <string name="pyrowave_diag_queue">Combined graphics and compute queue</string>
+    <string name="pyrowave_diag_android_surface">Android Vulkan Surface extensions</string>
+    <string name="pyrowave_diag_copy_failed">Unable to copy the report</string>
+    <string name="pyrowave_diag_gpu_title" translatable="false">GPU %1$d</string>
+    <string name="pyrowave_diag_present">Present</string>
+    <string name="pyrowave_diag_absent">Not present</string>
+    <string name="pyrowave_diag_vulkan_loader">Vulkan loader</string>
+    <string name="pyrowave_diag_subgroup_ops">Subgroup operations</string>
+    <string name="pyrowave_diag_subgroup_size">Subgroup size</string>
+    <string name="pyrowave_diag_subgroup_limits">Subgroup min / max</string>
+    <string name="pyrowave_diag_required_subgroup">Required subgroup operations</string>
+    <string name="pyrowave_diag_texel_limit">Maximum texel buffer elements</string>
+    <string name="pyrowave_diag_back">Back</string>
+    <string name="pyrowave_diag_copy">Copy</string>
+    <string name="pyrowave_diag_copy_success">Report copied to clipboard</string>
+    <string name="pyrowave_diag_unavailable">Unavailable</string>
 </resources>

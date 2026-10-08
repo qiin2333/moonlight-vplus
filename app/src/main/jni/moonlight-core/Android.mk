@@ -54,6 +54,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    simplejni.c \
                    callbacks.c \
                    pyrowave_decoder_bridge.cpp \
+                   pyrowave_capabilities.cpp \
                    minisdl.c \
                    OpusEncoder.c \
                    audio_haptics_android_adapter_bridge.cpp

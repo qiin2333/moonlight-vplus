@@ -312,4 +312,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Покращення голосу</string>
     <string name="summary_checkbox_mic_voice_enhancement">Зменшує низькочастотний шум і покращує чіткість мовлення. Доступне з фіксованим підсиленням і балансуванням гучності.</string>
+    <string name="title_pyrowave_capability_diagnostic">Перевірка можливостей PyroWave</string>
+    <string name="summary_pyrowave_capability_diagnostic">Перегляд можливостей Vulkan і вимог поточного декодера PyroWave.</string>
+    <string name="pyrowave_diag_loading">Перевірка можливостей PyroWave…</string>
+    <string name="pyrowave_diag_runtime">API вбудованої бібліотеки PyroWave</string>
+    <string name="pyrowave_diag_gpu_frontend">Модуль виведення через GPU</string>
+    <string name="pyrowave_diag_gpu_gate">Виведення через GPU потребує Android 10+, arm64-v8a та Vulkan 1.3. Резервний шлях SDR потребує Vulkan 1.2 і наведених нижче функцій декодера; це не декодування лише на CPU.</string>
+    <string name="pyrowave_diag_ready">Перевірені базові вимоги виконано</string>
+    <string name="pyrowave_diag_missing">Базові вимоги поточної реалізації не виконано</string>
+    <string name="pyrowave_diag_scope">Цей звіт перевіряє лише можливості, заявлені драйвером. Виведення у вікно, формати зображень, цільова роздільна здатність, вихід HDR і продуктивність декодування ще потребують перевірки під час трансляції.</string>
+    <string name="pyrowave_diag_loader_missing">Завантажувач Vulkan недоступний</string>
+    <string name="pyrowave_diag_no_devices">Фізичний пристрій Vulkan не знайдено</string>
+    <string name="pyrowave_diag_query_failed">Не вдалося прочитати можливості Vulkan. Це не підтверджує відсутність підтримки.</string>
+    <string name="pyrowave_diag_storage_path">8-бітне сховище або великі тексельні буфери</string>
+    <string name="pyrowave_diag_gpu_backend">Базові вимоги виведення через GPU</string>
+    <string name="pyrowave_diag_staging_backend">Базові вимоги резервного шляху SDR</string>
+    <string name="pyrowave_diag_subgroup_range">Повні обчислювальні підгрупи в межах wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Потоків у робочій групі</string>
+    <string name="pyrowave_diag_shared_memory">Спільна пам’ять робочої групи</string>
+    <string name="pyrowave_diag_queue">Спільна черга графіки та обчислень</string>
+    <string name="pyrowave_diag_android_surface">Розширення Vulkan Surface для Android</string>
+    <string name="pyrowave_diag_copy_failed">Не вдалося скопіювати звіт</string>
+    <string name="pyrowave_diag_present">Є</string>
+    <string name="pyrowave_diag_absent">Немає</string>
+    <string name="pyrowave_diag_vulkan_loader">Завантажувач Vulkan</string>
+    <string name="pyrowave_diag_subgroup_ops">Операції підгруп</string>
+    <string name="pyrowave_diag_subgroup_size">Розмір підгрупи</string>
+    <string name="pyrowave_diag_subgroup_limits">Мін. / макс. розмір підгрупи</string>
+    <string name="pyrowave_diag_required_subgroup">Потрібні операції підгруп</string>
+    <string name="pyrowave_diag_texel_limit">Максимум елементів тексельного буфера</string>
+    <string name="pyrowave_diag_back">Назад</string>
+    <string name="pyrowave_diag_copy">Копіювати</string>
+    <string name="pyrowave_diag_copy_success">Звіт скопійовано до буфера обміну</string>
+    <string name="pyrowave_diag_unavailable">Не вдалося отримати</string>
 </resources>

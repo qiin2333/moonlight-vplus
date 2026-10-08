@@ -248,4 +248,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Tăng cường giọng nói</string>
     <string name="summary_checkbox_mic_voice_enhancement">Giảm nhiễu tần số thấp và cải thiện độ rõ của giọng nói. Dùng được với khuếch đại cố định và cân bằng âm lượng.</string>
+    <string name="title_pyrowave_capability_diagnostic">Kiểm tra khả năng PyroWave</string>
+    <string name="summary_pyrowave_capability_diagnostic">Xem khả năng Vulkan và các yêu cầu của bộ giải mã PyroWave hiện tại.</string>
+    <string name="pyrowave_diag_loading">Đang kiểm tra khả năng PyroWave…</string>
+    <string name="pyrowave_diag_runtime">API thư viện PyroWave đi kèm</string>
+    <string name="pyrowave_diag_gpu_frontend">Mô-đun hiển thị GPU</string>
+    <string name="pyrowave_diag_gpu_gate">Hiển thị GPU cần Android 10+, arm64-v8a và Vulkan 1.3. Đường dự phòng SDR cần Vulkan 1.2 cùng các tính năng giải mã bên dưới; đây không phải giải mã chỉ bằng CPU.</string>
+    <string name="pyrowave_diag_ready">Các yêu cầu đã kiểm tra được đáp ứng</string>
+    <string name="pyrowave_diag_missing">Chưa đáp ứng các yêu cầu của cách triển khai hiện tại</string>
+    <string name="pyrowave_diag_scope">Báo cáo này chỉ kiểm tra khả năng do trình điều khiển khai báo. Hiển thị cửa sổ, định dạng hình ảnh, độ phân giải đích, đầu ra HDR và hiệu năng giải mã vẫn cần được xác minh khi truyền phát.</string>
+    <string name="pyrowave_diag_loader_missing">Không truy cập được bộ nạp Vulkan</string>
+    <string name="pyrowave_diag_no_devices">Không tìm thấy thiết bị vật lý Vulkan</string>
+    <string name="pyrowave_diag_query_failed">Không đọc được khả năng Vulkan. Điều này không khẳng định thiết bị không được hỗ trợ.</string>
+    <string name="pyrowave_diag_storage_path">Lưu trữ 8 bit hoặc bộ đệm texel lớn</string>
+    <string name="pyrowave_diag_gpu_backend">Yêu cầu hiển thị GPU</string>
+    <string name="pyrowave_diag_staging_backend">Yêu cầu đường dự phòng SDR</string>
+    <string name="pyrowave_diag_subgroup_range">Các nhóm con tính toán đầy đủ trong wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Số luồng tối đa mỗi nhóm làm việc</string>
+    <string name="pyrowave_diag_shared_memory">Bộ nhớ dùng chung của nhóm làm việc</string>
+    <string name="pyrowave_diag_queue">Hàng đợi kết hợp đồ họa và tính toán</string>
+    <string name="pyrowave_diag_android_surface">Các phần mở rộng Vulkan Surface của Android</string>
+    <string name="pyrowave_diag_copy_failed">Không sao chép được báo cáo</string>
+    <string name="pyrowave_diag_present">Có</string>
+    <string name="pyrowave_diag_absent">Không có</string>
+    <string name="pyrowave_diag_vulkan_loader">Bộ nạp Vulkan</string>
+    <string name="pyrowave_diag_subgroup_ops">Các phép toán nhóm con</string>
+    <string name="pyrowave_diag_subgroup_size">Kích thước nhóm con</string>
+    <string name="pyrowave_diag_subgroup_limits">Kích thước nhóm con nhỏ nhất / lớn nhất</string>
+    <string name="pyrowave_diag_required_subgroup">Các phép toán nhóm con cần thiết</string>
+    <string name="pyrowave_diag_texel_limit">Số phần tử tối đa của bộ đệm texel</string>
+    <string name="pyrowave_diag_back">Quay lại</string>
+    <string name="pyrowave_diag_copy">Sao chép</string>
+    <string name="pyrowave_diag_copy_success">Đã sao chép báo cáo vào bộ nhớ tạm</string>
+    <string name="pyrowave_diag_unavailable">Không lấy được</string>
 </resources>
