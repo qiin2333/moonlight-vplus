@@ -135,6 +135,24 @@ class ComputerDatabaseManager(c: Context) {
         return updated
     }
 
+    fun saveStunAddress(uuid: String, address: ComputerDetails.AddressTuple): ComputerDetails.AddressTuple? {
+        val previous = computerDb.query(COMPUTER_TABLE_NAME, arrayOf(ADDRESSES_COLUMN_NAME),
+            "$COMPUTER_UUID_COLUMN_NAME=?", arrayOf(uuid), null, null, null).use { cursor ->
+            if (!cursor.moveToFirst()) return null
+            cursor.getString(0)
+        }
+        val addresses = JSONObject(previous)
+        tupleFromJson(addresses, AddressFields.REMOTE)?.let { return it }
+        addresses.put(AddressFields.REMOTE, tupleToJson(address))
+        val values = ContentValues().apply { put(ADDRESSES_COLUMN_NAME, addresses.toString()) }
+        // Update only an existing, unchanged row; never recreate a removed host.
+        val updated = computerDb.update(COMPUTER_TABLE_NAME, values,
+            "$COMPUTER_UUID_COLUMN_NAME=? AND $ADDRESSES_COLUMN_NAME=?", arrayOf(uuid, previous))
+        if (updated == 0) return null
+        ConfigurationSyncManager.recordPairingStateChanged(context)
+        return address
+    }
+
     private fun hasPersistentComputerChanged(previous: ComputerDetails?, current: ComputerDetails): Boolean {
         if (previous == null) return true
         return previous.uuid != current.uuid ||

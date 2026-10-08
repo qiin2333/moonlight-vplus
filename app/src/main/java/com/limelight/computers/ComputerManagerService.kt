@@ -5,18 +5,15 @@ import java.io.IOException
 import java.io.StringReader
 import java.net.Inet4Address
 import java.net.InetAddress
-import java.net.UnknownHostException
 import java.util.HashSet
 import java.util.LinkedList
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
 
 import com.limelight.LimeLog
 import com.limelight.binding.PlatformBinding
 import com.limelight.discovery.DiscoveryService
-import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.nvstream.http.NvApp
@@ -33,11 +30,14 @@ import com.limelight.utils.ServerHelper
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -53,6 +53,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -60,6 +61,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import androidx.preference.PreferenceManager
 
 import org.xmlpull.v1.XmlPullParserException
 
@@ -93,7 +95,16 @@ class ComputerManagerService : Service() {
     private var pollingActive = false
     @Volatile
     private var foregroundComputerUuid: String? = null
-    private val defaultNetworkLock = ReentrantLock()
+    private val stunCache = StunQueryCache<Network>()
+    private val stunLock = Any()
+    @Volatile private var stunJob: Job? = null
+    private val preferences by lazy { PreferenceManager.getDefaultSharedPreferences(this) }
+    private val stunPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == null || key == PreferenceConfiguration.ENABLE_STUN_PREF_STRING) {
+            stunCache.invalidate()
+            stunJob?.cancel()
+        }
+    }
 
     // Service 生命周期作用域，用于所有后台协程（轮询、STUN 等）。onDestroy 时 cancel。
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -167,15 +178,6 @@ class ComputerManagerService : Service() {
                 existingComputer.update(details)
                 dbManager.updateComputer(existingComputer)
             } else {
-                try {
-                    if (details.remoteAddress == null) {
-                        val addr = InetAddress.getByName(details.activeAddress?.address)
-                        if (addr.isSiteLocalAddress) {
-                            populateExternalAddress(details)
-                        }
-                    }
-                } catch (_: UnknownHostException) {
-                }
                 dbManager.updateComputer(details)
             }
         }
@@ -221,6 +223,7 @@ class ComputerManagerService : Service() {
                 } else {
                     tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
                     offlineCount = 0
+                    populateExternalAddress(tuple.computer)
                 }
             } catch (e: InterruptedException) {
                 break
@@ -379,88 +382,93 @@ class ComputerManagerService : Service() {
     }
 
     private fun populateExternalAddress(details: ComputerDetails) {
-        val prefConfig = PreferenceConfiguration.readPreferences(this)
-        if (!prefConfig.enableStun) {
-            return
-        }
-        serviceScope.launch { performStunRequestAsync(details) }
-    }
-
-    private suspend fun performStunRequestAsync(details: ComputerDetails) {
+        if (!stunEnabled() || details.remoteAddress != null || details.state != ComputerDetails.State.ONLINE) return
+        val host = details.activeAddress?.address ?: return
+        if (!NetHelper.isIpLiteral(host)) return
+        val localAddress = try { InetAddress.getByName(host) } catch (_: IOException) { return }
+        if (localAddress !is Inet4Address || !localAddress.isSiteLocalAddress) return
+        val tuple = findPollingTuple(details) ?: return
         try {
-            var boundToNetwork = false
-            val activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this)
-            val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-            val stunTimeout = timeoutManager?.stunTimeout ?: 5000
-
-            LimeLog.info("Starting async STUN request for ${details.name} with timeout: ${stunTimeout}ms")
-
-            if (activeNetworkIsVpn) {
-                defaultNetworkLock.lock()
-                try {
-                    val networks = connMgr.allNetworks
-                    for (net in networks) {
-                        val netCaps = connMgr.getNetworkCapabilities(net)
-                        if (netCaps != null &&
-                            !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
-                            !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                        ) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                if (connMgr.bindProcessToNetwork(net)) {
-                                    boundToNetwork = true
-                                    break
-                                }
-                            } else {
-                                @Suppress("DEPRECATION")
-                                if (ConnectivityManager.setProcessDefaultNetwork(net)) {
-                                    boundToNetwork = true
-                                    break
-                                }
+            val network = selectStunNetwork(host) ?: return
+            val cached = stunCache.cached(network, SystemClock.elapsedRealtime())
+            if (cached != null) {
+                applyStunAddress(tuple, host, network, cached)
+                return
+            }
+            synchronized(stunLock) {
+                if (!stunEnabled()) return
+                val attempt = stunCache.begin(network, SystemClock.elapsedRealtime()) ?: return
+                stunJob = serviceScope.launch(STUN_DISPATCHER, start = CoroutineStart.LAZY) {
+                    var result: String? = null
+                    try {
+                        if (!stunEnabled() || !stunCache.isCurrent(attempt)) return@launch
+                        val timeout = minOf(timeoutManager?.stunTimeout ?: 5000, 5000).toLong()
+                        val context = coroutineContext
+                        LimeLog.info("STUN query started on local network")
+                        result = withTimeoutOrNull(timeout) {
+                            val queryContext = coroutineContext
+                            runInterruptible {
+                                StunClient.query("stun.moonlight-stream.org", 3478, timeout,
+                                    network::getAllByName, network::bindSocket, queryContext::ensureActive)
                             }
                         }
-                    }
-
-                    if (!activeNetworkIsVpn || boundToNetwork) {
-                        val startTime = System.currentTimeMillis()
-                        val stunResolvedAddress = performStunQuerySuspending("stun.moonlight-stream.org", 3478, stunTimeout.toLong())
-                        val duration = System.currentTimeMillis() - startTime
-
-                        if (stunResolvedAddress != null) {
-                            details.remoteAddress = ComputerDetails.AddressTuple(stunResolvedAddress, details.guessExternalPort())
-                            LimeLog.info("STUN success for ${details.name} in ${duration}ms: $stunResolvedAddress")
-                            timeoutManager?.recordSuccess("STUN-${details.name}", duration)
+                        context.ensureActive()
+                        if (stunCache.finish(attempt, result, SystemClock.elapsedRealtime()) && result != null) {
+                            applyStunAddress(tuple, host, network, result)
+                            LimeLog.info("STUN query completed")
                         } else {
-                            LimeLog.warning("STUN failed for ${details.name} after ${duration}ms, timeout: ${stunTimeout}ms")
-                            timeoutManager?.recordFailure("STUN-${details.name}")
+                            LimeLog.info("STUN query unavailable; host polling continues independently")
                         }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        LimeLog.warning("STUN query failed; host polling continues independently")
+                    } finally {
+                        stunCache.finish(attempt, result, SystemClock.elapsedRealtime())
                     }
-                } finally {
-                    if (boundToNetwork) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            connMgr.bindProcessToNetwork(null)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            ConnectivityManager.setProcessDefaultNetwork(null)
-                        }
-                    }
-                    defaultNetworkLock.unlock()
                 }
+                stunJob!!.invokeOnCompletion {
+                    stunCache.finish(attempt, null, SystemClock.elapsedRealtime())
+                }
+                stunJob!!.start()
             }
-        } catch (e: Exception) {
-            LimeLog.warning("Async STUN request failed: ${e.message}")
+        } catch (_: RuntimeException) {
+            LimeLog.warning("STUN local network unavailable")
         }
     }
 
-    private suspend fun performStunQuerySuspending(stunHost: String, stunPort: Int, timeoutMs: Long): String? {
-        return withTimeoutOrNull(timeoutMs) {
-            runInterruptible(Dispatchers.IO) {
-                try {
-                    NvConnection.findExternalAddressForMdns(stunHost, stunPort)
-                } catch (e: Exception) {
-                    LimeLog.warning("STUN query exception: ${e.message}")
-                    null
-                }
+    private fun stunEnabled(): Boolean =
+        preferences.getBoolean(PreferenceConfiguration.ENABLE_STUN_PREF_STRING, false)
+
+    private fun selectStunNetwork(host: String): Network? {
+        val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val hostAddress = InetAddress.getByName(host)
+        val active = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) manager.activeNetwork else null
+        return (listOfNotNull(active) + manager.allNetworks).distinct().firstOrNull { network ->
+            manager.getNetworkCapabilities(network)?.let { caps ->
+                !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                    !caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                    (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
+            } == true && manager.getLinkProperties(network)?.routes?.any { route ->
+                !route.isDefaultRoute && route.matches(hostAddress)
+            } == true
+        }
+    }
+
+    private fun applyStunAddress(tuple: PollingTuple, host: String, network: Network, address: String) {
+        synchronized(tuple.networkLock) {
+            if (!stunEnabled() || stunCache.cached(network, SystemClock.elapsedRealtime()) != address ||
+                selectStunNetwork(host) != network || findPollingTuple(tuple.computer) !== tuple) return
+            val computer = tuple.computer
+            if (computer.remoteAddress != null || computer.activeAddress?.address != host) return
+            if (!getLocalDatabaseReference()) return
+            try {
+                val saved = dbManager.saveStunAddress(computer.uuid!!,
+                    ComputerDetails.AddressTuple(address, computer.guessExternalPort())) ?: return
+                computer.remoteAddress = saved
+                emitComputerUpdate(computer)
+            } finally {
+                releaseLocalDatabaseReference()
             }
         }
     }
@@ -472,10 +480,6 @@ class ComputerManagerService : Service() {
 
                 if (computer.getLocalAddress() != null) {
                     details.localAddress = ComputerDetails.AddressTuple(computer.getLocalAddress()!!.hostAddress!!, computer.getPort())
-
-                    if (computer.getLocalAddress() is Inet4Address) {
-                        populateExternalAddress(details)
-                    }
                 }
                 if (computer.getIpv6Address() != null) {
                     details.ipv6Address = ComputerDetails.AddressTuple(computer.getIpv6Address()!!.hostAddress!!, computer.getPort())
@@ -535,6 +539,7 @@ class ComputerManagerService : Service() {
         if (fakeDetails.state == ComputerDetails.State.ONLINE) {
             LimeLog.info("New PC (${fakeDetails.name}) is UUID ${fakeDetails.uuid}")
             addTuple(fakeDetails)
+            populateExternalAddress(fakeDetails)
             return true
         }
         return false
@@ -1087,6 +1092,7 @@ class ComputerManagerService : Service() {
     }
 
     override fun onCreate() {
+        preferences.registerOnSharedPreferenceChangeListener(stunPreferenceListener)
         networkDiagnostics = NetworkDiagnostics(this)
         timeoutManager = DynamicTimeoutManager(networkDiagnostics)
 
@@ -1144,6 +1150,8 @@ class ComputerManagerService : Service() {
     }
 
     override fun onDestroy() {
+        preferences.unregisterOnSharedPreferenceChangeListener(stunPreferenceListener)
+        stunCache.invalidate()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             connMgr.unregisterNetworkCallback(networkCallback)
@@ -1308,6 +1316,8 @@ class ComputerManagerService : Service() {
     }
 
     companion object {
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+        private val STUN_DISPATCHER = Dispatchers.IO.limitedParallelism(1)
         private const val SERVERINFO_POLLING_PERIOD_MS = 1500
         private const val APPVIEW_BACKGROUND_POLLING_PERIOD_MS: Long = 10000
         private const val APPLIST_POLLING_PERIOD_MS = 30000
