@@ -309,4 +309,7 @@
     <string name="pyrowave_diag_copy">Kopírovat</string>
     <string name="pyrowave_diag_copy_success">Zpráva byla zkopírována do schránky</string>
     <string name="pyrowave_diag_unavailable">Nelze zjistit</string>
+    <string name="image_saved_successfully">Obrázek byl úspěšně uložen do: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Uložení obrázku se nezdařilo: %1$s</string>
+    <string name="tip_double_tap_mouse">Tip: dlouhým stisknutím prázdné oblasti v horní části seznamu počítačů uložíte aktuální obrázek pozadí.</string>
 </resources>

@@ -334,4 +334,7 @@
     <string name="pyrowave_diag_copy">Kopiera</string>
     <string name="pyrowave_diag_copy_success">Rapporten har kopierats till urklipp</string>
     <string name="pyrowave_diag_unavailable">Kan inte hämtas</string>
+    <string name="image_saved_successfully">Bilden har sparats i: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Det gick inte att spara bilden: %1$s</string>
+    <string name="tip_double_tap_mouse">Tips: tryck och håll på det tomma området överst i datorlistan för att spara den aktuella bakgrundsbilden.</string>
 </resources>

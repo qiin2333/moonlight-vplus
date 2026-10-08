@@ -516,7 +516,7 @@
     
     <!-- Tips -->
     <string name="tip_esc_exit">💡 Dica: Use o botão \"Sair\" para sair rapidamente e completamente do stream, restaurando sua tela ao estado pré-stream~</string>
-    <string name="tip_double_tap_mouse">💡 Dica: Pressione longamente a área em branco superior na página da lista de hosts para baixar o papel de parede atual~</string>
+    <string name="tip_double_tap_mouse">💡 Dica: mantenha premida a área vazia no topo da lista de computadores para guardar a imagem de fundo atual.</string>
     <string name="tip_long_press_controller">💡 Dica: Pressione longamente uma app para escolher streaming com display virtual, super conveniente!</string>
     <string name="tip_volume_keys">💡 Dica: Usar WiFi 5GHz proporciona uma experiência melhor, velocidade ultra rápida~</string>
     <string name="tip_wallpaper_change">💡 Dica: A opção da API de papel de parede pode definir a API para fontes de papel de parede aleatórias, ou um endereço de imagem único</string>
@@ -670,8 +670,8 @@
     <string name="image_download_failed_with_error">Falha no download da imagem: %1$s</string>
     <string name="image_not_loaded_please_retry">Imagem não carregada, tente novamente mais tarde</string>
     <string name="image_invalid">Imagem inválida</string>
-    <string name="image_saved_successfully">Imagem salva com sucesso no diretório do sistema (Picture/setu)</string>
-    <string name="image_save_failed_with_error">Falha ao salvar imagem: %1$s</string>
+    <string name="image_saved_successfully">Imagem guardada com sucesso em: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Falha ao guardar a imagem: %1$s</string>
     <string name="config_save_failed">Falha ao salvar configuração</string>
     <string name="scene_config_applied">Configuração da cena %1$d aplicada: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">Cena %1$d não configurada</string>

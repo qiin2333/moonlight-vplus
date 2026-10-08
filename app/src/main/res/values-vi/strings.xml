@@ -281,4 +281,7 @@
     <string name="pyrowave_diag_copy">Sao chép</string>
     <string name="pyrowave_diag_copy_success">Đã sao chép báo cáo vào bộ nhớ tạm</string>
     <string name="pyrowave_diag_unavailable">Không lấy được</string>
+    <string name="image_saved_successfully">Đã lưu ảnh vào: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Không thể lưu ảnh: %1$s</string>
+    <string name="tip_double_tap_mouse">Mẹo: nhấn và giữ vùng trống phía trên danh sách máy tính để lưu ảnh nền hiện tại.</string>
 </resources>

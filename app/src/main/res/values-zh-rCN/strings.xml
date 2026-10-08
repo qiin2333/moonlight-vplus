@@ -915,7 +915,7 @@
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 串流小课堂：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
-    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
+    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以保存当前背景图片。</string>
     <string name="tip_long_press_controller">💡 串流小课堂：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
     <string name="tip_volume_keys">💡 串流小课堂：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
     <string name="tip_wallpaper_change">💡 串流小课堂：壁纸API选项可以设置随机壁纸来源的API，也可以是单张图片地址哦</string>
@@ -1106,8 +1106,8 @@
     <string name="image_download_failed_with_error">图片下载失败: %1$s</string>
     <string name="image_not_loaded_please_retry">图片未加载，请稍后再试</string>
     <string name="image_invalid">图片无效</string>
-    <string name="image_saved_successfully">涩图成功保存到了系统目录(Picture/setu)</string>
-    <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
+    <string name="image_saved_successfully">图片成功保存到：Picture/vplus</string>
+    <string name="image_save_failed_with_error">图片保存失败：%1$s</string>
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">场景%1$d未配置</string>

@@ -239,4 +239,7 @@
     <string name="pyrowave_diag_copy">Kopyala</string>
     <string name="pyrowave_diag_copy_success">Rapor panoya kopyalandı</string>
     <string name="pyrowave_diag_unavailable">Alınamıyor</string>
+    <string name="image_saved_successfully">Resim başarıyla kaydedildi: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Resim kaydedilemedi: %1$s</string>
+    <string name="tip_double_tap_mouse">İpucu: mevcut arka plan resmini kaydetmek için bilgisayar listesinin üst kısmındaki boş alana basılı tutun.</string>
 </resources>

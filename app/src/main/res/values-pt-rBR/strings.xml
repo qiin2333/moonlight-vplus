@@ -316,4 +316,7 @@
     <string name="pyrowave_diag_copy">Copiar</string>
     <string name="pyrowave_diag_copy_success">Relatório copiado para a área de transferência</string>
     <string name="pyrowave_diag_unavailable">Indisponível</string>
+    <string name="image_saved_successfully">Imagem salva com sucesso em: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Falha ao salvar imagem: %1$s</string>
+    <string name="tip_double_tap_mouse">Dica: mantenha pressionada a área vazia no topo da lista de computadores para salvar a imagem de fundo atual.</string>
 </resources>

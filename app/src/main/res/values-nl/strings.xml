@@ -271,4 +271,7 @@
     <string name="pyrowave_diag_copy">Kopiëren</string>
     <string name="pyrowave_diag_copy_success">Rapport naar het klembord gekopieerd</string>
     <string name="pyrowave_diag_unavailable">Niet beschikbaar</string>
+    <string name="image_saved_successfully">Afbeelding opgeslagen in: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Afbeelding opslaan mislukt: %1$s</string>
+    <string name="tip_double_tap_mouse">Tip: houd het lege gebied bovenaan de computerlijst ingedrukt om de huidige achtergrondafbeelding op te slaan.</string>
 </resources>

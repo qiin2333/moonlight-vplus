@@ -341,4 +341,7 @@
     <string name="pyrowave_diag_copy">Copia</string>
     <string name="pyrowave_diag_copy_success">Rapporto copiato negli appunti</string>
     <string name="pyrowave_diag_unavailable">Non disponibile</string>
+    <string name="image_saved_successfully">Immagine salvata in: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Salvataggio dell\'immagine non riuscito: %1$s</string>
+    <string name="tip_double_tap_mouse">Suggerimento: tieni premuta l\'area vuota in alto nell\'elenco dei computer per salvare l\'immagine di sfondo attuale.</string>
 </resources>

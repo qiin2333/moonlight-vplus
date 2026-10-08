@@ -306,4 +306,7 @@
     <string name="pyrowave_diag_copy">Másolás</string>
     <string name="pyrowave_diag_copy_success">A jelentés a vágólapra másolva</string>
     <string name="pyrowave_diag_unavailable">Nem állapítható meg</string>
+    <string name="image_saved_successfully">A kép sikeresen mentve ide: Picture/vplus</string>
+    <string name="image_save_failed_with_error">A kép mentése nem sikerült: %1$s</string>
+    <string name="tip_double_tap_mouse">Tipp: a jelenlegi háttérkép mentéséhez tartsa nyomva a számítógéplista tetején lévő üres területet.</string>
 </resources>

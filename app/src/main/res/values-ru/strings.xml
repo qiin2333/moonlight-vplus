@@ -984,7 +984,7 @@
     <string name="title_enable_analytics">Аналитика</string>
     <string name="summary_enable_analytics">Анонимная статистика использования для улучшения приложения</string>
     <string name="tip_esc_exit">💡 Кнопка «Выход» завершает трансляцию и возвращает экран в прежнее состояние.</string>
-    <string name="tip_double_tap_mouse">💡 Удерживайте пустую область вверху списка ПК, чтобы скачать текущие обои.</string>
+    <string name="tip_double_tap_mouse">💡 Совет: нажмите и удерживайте пустую область вверху списка компьютеров, чтобы сохранить текущее фоновое изображение.</string>
     <string name="tip_long_press_controller">💡 Удерживайте приложение для выбора трансляции виртуального экрана.</string>
     <string name="tip_volume_keys">💡 Wi-Fi 5 ГГц обеспечивает более быструю трансляцию.</string>
     <string name="tip_wallpaper_change">💡 В настройке API обоев можно указать источник случайных изображений или ссылку на одно изображение.</string>
@@ -1172,8 +1172,8 @@
     <string name="image_download_failed_with_error">Ошибка загрузки: %1$s</string>
     <string name="image_not_loaded_please_retry">Изображение не загружено. Повторите позже</string>
     <string name="image_invalid">Некорректное изображение</string>
-    <string name="image_saved_successfully">Изображение сохранено в Picture/setu</string>
-    <string name="image_save_failed_with_error">Ошибка сохранения: %1$s</string>
+    <string name="image_saved_successfully">Изображение успешно сохранено в: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Не удалось сохранить изображение: %1$s</string>
     <string name="config_save_failed">Не удалось сохранить настройки</string>
     <string name="scene_config_applied">Сценарий %1$d: %2$dx%3$d@%4$d FPS %5$.2f Мбит/с %6$s HDR %7$s</string>
     <string name="scene_not_configured">Сценарий %1$d не настроен</string>

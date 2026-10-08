@@ -469,7 +469,7 @@
     <string name="tip_cards_show">💡 Consejo: Puedes editar las tarjetas de función mostradas en el menú del juego. Las tarjetas innecesarias pueden ocultarse~</string>
     <string name="tip_close_apps">💡 Consejo: Habilitar HDR proporciona mejor rendimiento de color y contraste. En la versión base de Sunshine, vincular el perfil HDR correspondiente puede sincronizar más precisamente con la pantalla del cliente, ¡colores hermosos~</string>
     <string name="tip_custom_keys">💡 Consejo: Puedes agregar combinaciones de teclas personalizadas, como Ctrl+Shift+Esc para abrir rápidamente el Administrador de Tareas, haciendo las operaciones más convenientes~</string>
-    <string name="tip_double_tap_mouse">💡 Consejo: Presión larga en el área en blanco superior en la página de lista de hosts para descargar el fondo de pantalla actual~</string>
+    <string name="tip_double_tap_mouse">💡 Consejo: mantén pulsada la zona vacía de la parte superior de la lista de equipos para guardar la imagen de fondo actual.</string>
     <string name="tip_dynamic_bitrate">💡 Consejo: Cuando uses decodificadores HEVC o AV1, puedes ajustar la tasa de bits durante la transmisión sin salir, encontrando la tasa de bits óptima para tu red y dispositivo~</string>
     <string name="tip_esc_exit">💡 Consejo: Usa el botón \'Salir\' para salir rápida y completamente de la transmisión, restaurando tu pantalla a su estado pre-transmisión~</string>
     <string name="tip_external_display">💡 Consejo: Al conectar una pantalla externa, puedes elegir mostrar la transmisión en la pantalla externa en configuraciones, haciendo el juego en pantalla grande aún más agradable~</string>
@@ -600,4 +600,6 @@
     <string name="pyrowave_diag_copy">Copiar</string>
     <string name="pyrowave_diag_copy_success">Informe copiado al portapapeles</string>
     <string name="pyrowave_diag_unavailable">No disponible</string>
+    <string name="image_saved_successfully">Imagen guardada correctamente en: Picture/vplus</string>
+    <string name="image_save_failed_with_error">No se pudo guardar la imagen: %1$s</string>
 </resources>

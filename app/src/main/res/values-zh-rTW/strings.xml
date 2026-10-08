@@ -928,6 +928,8 @@
     <string name="background_source_api">自訂 API 網址</string>
     <string name="background_source_local">本機圖片</string>
     <string name="background_source_none">不顯示背景</string>
+    <string name="image_saved_successfully">圖片成功儲存到：Picture/vplus</string>
+    <string name="image_save_failed_with_error">圖片儲存失敗：%1$s</string>
     <string name="float_ball_action_toggle_visibility">切換懸浮球顯示或隱藏</string>
     <string name="float_ball_action_show_perf_overlay">顯示效能監控圖層</string>
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
@@ -1034,4 +1036,5 @@
     <string name="pyrowave_diag_copy">複製</string>
     <string name="pyrowave_diag_copy_success">報告已複製到剪貼簿</string>
     <string name="pyrowave_diag_unavailable">無法取得</string>
+    <string name="tip_double_tap_mouse">提示：在主機清單頁面長按頂部空白區域，可儲存目前的背景圖片。</string>
 </resources>
