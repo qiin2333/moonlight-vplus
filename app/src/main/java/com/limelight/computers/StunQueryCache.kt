@@ -1,45 +1,57 @@
 package com.limelight.computers
 
+import java.util.concurrent.atomic.AtomicReference
+
 internal class StunQueryCache<K> {
     class Attempt<K> internal constructor(val key: K, internal val generation: Long)
 
-    private var generation = 0L
-    private var active: Attempt<K>? = null
-    private var lastKey: K? = null
-    private var completedAt = 0L
-    private var address: String? = null
+    private data class State<K>(
+        val generation: Long = 0,
+        val active: Attempt<K>? = null,
+        val lastKey: K? = null,
+        val completedAt: Long = 0,
+        val address: String? = null
+    )
+    private val state = AtomicReference(State<K>())
 
-    @Synchronized
-    fun cached(key: K, now: Long): String? =
-        address?.takeIf { key == lastKey && now - completedAt < SUCCESS_TTL_MS }
+    fun cached(key: K, now: Long): String? {
+        val current = state.get()
+        return current.address?.takeIf { key == current.lastKey && now - current.completedAt < SUCCESS_TTL_MS }
+    }
 
-    @Synchronized
     fun begin(key: K, now: Long): Attempt<K>? {
-        if (active != null || cached(key, now) != null) return null
-        if (lastKey == key && address == null && now - completedAt < FAILURE_RETRY_MS) return null
-        return Attempt(key, generation).also { active = it }
+        while (true) {
+            val current = state.get()
+            if (current.active != null) return null
+            if (current.lastKey == key && now - current.completedAt <
+                (if (current.address != null) SUCCESS_TTL_MS else FAILURE_RETRY_MS)) return null
+            val attempt = Attempt(key, current.generation)
+            if (state.compareAndSet(current, current.copy(active = attempt))) return attempt
+        }
     }
 
-    @Synchronized
-    fun isCurrent(attempt: Attempt<K>): Boolean = active === attempt && attempt.generation == generation
+    fun isCurrent(attempt: Attempt<K>): Boolean {
+        val current = state.get()
+        return current.active === attempt && attempt.generation == current.generation
+    }
 
-    @Synchronized
     fun finish(attempt: Attempt<K>, result: String?, now: Long): Boolean {
-        if (active !== attempt) return false
-        active = null
-        if (attempt.generation != generation) return false
-        lastKey = attempt.key
-        address = result
-        completedAt = now
-        return true
+        while (true) {
+            val current = state.get()
+            if (current.active !== attempt) return false
+            val valid = attempt.generation == current.generation
+            val next = if (valid) current.copy(active = null, lastKey = attempt.key, address = result, completedAt = now)
+                else current.copy(active = null)
+            if (state.compareAndSet(current, next)) return valid
+        }
     }
 
-    @Synchronized
     fun invalidate() {
-        generation++
-        lastKey = null
-        address = null
         // Keep the active slot until its worker exits, including blocked platform DNS.
+        while (true) {
+            val current = state.get()
+            if (state.compareAndSet(current, current.copy(generation = current.generation + 1, lastKey = null, address = null))) return
+        }
     }
 
     companion object {

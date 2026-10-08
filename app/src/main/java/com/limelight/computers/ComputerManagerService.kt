@@ -96,7 +96,6 @@ class ComputerManagerService : Service() {
     @Volatile
     private var foregroundComputerUuid: String? = null
     private val stunCache = StunQueryCache<Network>()
-    private val stunLock = Any()
     @Volatile private var stunJob: Job? = null
     private val preferences by lazy { PreferenceManager.getDefaultSharedPreferences(this) }
     private val stunPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -174,12 +173,15 @@ class ComputerManagerService : Service() {
                 return false
             }
 
-            if (existingComputer != null) {
-                existingComputer.update(details)
-                dbManager.updateComputer(existingComputer)
-            } else {
-                dbManager.updateComputer(details)
+            val updatedComputer = existingComputer ?: details
+            existingComputer?.update(details)
+            // The normal poll owns host updates; the STUN worker publishes only an immutable cache value.
+            if (details.remoteAddress == null) {
+                val address = updatedComputer.remoteAddress ?: cachedStunAddress(details)
+                updatedComputer.remoteAddress = address
+                details.remoteAddress = address?.let { ComputerDetails.AddressTuple(it.address, it.port) }
             }
+            dbManager.updateComputer(updatedComputer)
         }
 
         if (!newPc || details.state == ComputerDetails.State.ONLINE) {
@@ -383,55 +385,40 @@ class ComputerManagerService : Service() {
 
     private fun populateExternalAddress(details: ComputerDetails) {
         if (!stunEnabled() || details.remoteAddress != null || details.state != ComputerDetails.State.ONLINE) return
-        val host = details.activeAddress?.address ?: return
-        if (!NetHelper.isIpLiteral(host)) return
-        val localAddress = try { InetAddress.getByName(host) } catch (_: IOException) { return }
-        if (localAddress !is Inet4Address || !localAddress.isSiteLocalAddress) return
-        val tuple = findPollingTuple(details) ?: return
         try {
-            val network = selectStunNetwork(host) ?: return
-            val cached = stunCache.cached(network, SystemClock.elapsedRealtime())
-            if (cached != null) {
-                applyStunAddress(tuple, host, network, cached)
-                return
-            }
-            synchronized(stunLock) {
-                if (!stunEnabled()) return
-                val attempt = stunCache.begin(network, SystemClock.elapsedRealtime()) ?: return
-                stunJob = serviceScope.launch(STUN_DISPATCHER, start = CoroutineStart.LAZY) {
-                    var result: String? = null
-                    try {
-                        if (!stunEnabled() || !stunCache.isCurrent(attempt)) return@launch
-                        val timeout = minOf(timeoutManager?.stunTimeout ?: 5000, 5000).toLong()
-                        val context = coroutineContext
-                        LimeLog.info("STUN query started on local network")
-                        result = withTimeoutOrNull(timeout) {
-                            val queryContext = coroutineContext
-                            runInterruptible {
-                                StunClient.query("stun.moonlight-stream.org", 3478, timeout,
-                                    network::getAllByName, network::bindSocket, queryContext::ensureActive)
-                            }
+            val network = stunNetworkFor(details) ?: return
+            val attempt = stunCache.begin(network, SystemClock.elapsedRealtime()) ?: return
+            val job = serviceScope.launch(STUN_DISPATCHER, start = CoroutineStart.LAZY) {
+                var result: String? = null
+                try {
+                    if (!stunEnabled() || !stunCache.isCurrent(attempt)) return@launch
+                    val timeout = minOf(timeoutManager?.stunTimeout ?: 5000, 5000).toLong()
+                    val context = coroutineContext
+                    LimeLog.info("STUN query started on local network")
+                    result = withTimeoutOrNull(timeout) {
+                        val queryContext = coroutineContext
+                        runInterruptible {
+                            StunClient.query("stun.moonlight-stream.org", 3478, timeout,
+                                network::getAllByName, network::bindSocket, queryContext::ensureActive)
                         }
-                        context.ensureActive()
-                        if (stunCache.finish(attempt, result, SystemClock.elapsedRealtime()) && result != null) {
-                            applyStunAddress(tuple, host, network, result)
-                            LimeLog.info("STUN query completed")
-                        } else {
-                            LimeLog.info("STUN query unavailable; host polling continues independently")
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        LimeLog.warning("STUN query failed; host polling continues independently")
-                    } finally {
-                        stunCache.finish(attempt, result, SystemClock.elapsedRealtime())
                     }
+                    context.ensureActive()
+                    if (stunCache.finish(attempt, result, SystemClock.elapsedRealtime()) && result != null) {
+                        LimeLog.info("STUN result ready for normal host poll")
+                    } else {
+                        LimeLog.info("STUN query unavailable; host polling continues independently")
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    LimeLog.warning("STUN query failed; host polling continues independently")
+                } finally {
+                    stunCache.finish(attempt, result, SystemClock.elapsedRealtime())
                 }
-                stunJob!!.invokeOnCompletion {
-                    stunCache.finish(attempt, null, SystemClock.elapsedRealtime())
-                }
-                stunJob!!.start()
             }
+            stunJob = job
+            job.invokeOnCompletion { stunCache.finish(attempt, null, SystemClock.elapsedRealtime()) }
+            job.start()
         } catch (_: RuntimeException) {
             LimeLog.warning("STUN local network unavailable")
         }
@@ -439,6 +426,14 @@ class ComputerManagerService : Service() {
 
     private fun stunEnabled(): Boolean =
         preferences.getBoolean(PreferenceConfiguration.ENABLE_STUN_PREF_STRING, false)
+
+    private fun stunNetworkFor(details: ComputerDetails): Network? {
+        val host = details.activeAddress?.address ?: return null
+        if (!NetHelper.isIpLiteral(host)) return null
+        val localAddress = try { InetAddress.getByName(host) } catch (_: IOException) { return null }
+        if (localAddress !is Inet4Address || !localAddress.isSiteLocalAddress) return null
+        return selectStunNetwork(host)
+    }
 
     private fun selectStunNetwork(host: String): Network? {
         val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -455,21 +450,15 @@ class ComputerManagerService : Service() {
         }
     }
 
-    private fun applyStunAddress(tuple: PollingTuple, host: String, network: Network, address: String) {
-        synchronized(tuple.networkLock) {
-            if (!stunEnabled() || stunCache.cached(network, SystemClock.elapsedRealtime()) != address ||
-                selectStunNetwork(host) != network || findPollingTuple(tuple.computer) !== tuple) return
-            val computer = tuple.computer
-            if (computer.remoteAddress != null || computer.activeAddress?.address != host) return
-            if (!getLocalDatabaseReference()) return
-            try {
-                val saved = dbManager.saveStunAddress(computer.uuid!!,
-                    ComputerDetails.AddressTuple(address, computer.guessExternalPort())) ?: return
-                computer.remoteAddress = saved
-                emitComputerUpdate(computer)
-            } finally {
-                releaseLocalDatabaseReference()
-            }
+    private fun cachedStunAddress(details: ComputerDetails): ComputerDetails.AddressTuple? {
+        if (!stunEnabled()) return null
+        return try {
+            val network = stunNetworkFor(details) ?: return null
+            val address = stunCache.cached(network, SystemClock.elapsedRealtime()) ?: return null
+            ComputerDetails.AddressTuple(address, details.guessExternalPort())
+        } catch (_: RuntimeException) {
+            LimeLog.warning("STUN local network unavailable")
+            null
         }
     }
 
