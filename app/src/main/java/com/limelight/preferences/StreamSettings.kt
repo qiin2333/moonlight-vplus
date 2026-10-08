@@ -5143,9 +5143,10 @@ class StreamSettings : ThemedAppCompatActivity() {
     private fun loadBackgroundImage() {
         val generation = cancelBackgroundLoad()
         val imageView = findViewById<ImageView>(R.id.settingsBackgroundImage)
+        val orientation = resources.configuration.orientation
         val resolved = BackgroundSource.resolveCurrentTarget(
                 this,
-                resources.configuration.orientation
+                orientation
         )
         if (!backgroundIsCurrent(generation)) return
         val target = resolved.target
@@ -5196,7 +5197,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         if (guarded) {
             backgroundJob = lifecycleScope.launch {
                 try {
-                    val lease = pipwBackgroundLease ?: PipwImages.get(this@StreamSettings).acquire(resolved)
+                    val lease = pipwBackgroundLease ?: PipwImages.get(this@StreamSettings).acquire(resolved, orientation)
                         .also { pipwBackgroundLease = it }
                     val file = lease.await()
                     if (!backgroundIsCurrent(generation)) return@launch

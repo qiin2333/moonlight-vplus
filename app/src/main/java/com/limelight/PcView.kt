@@ -960,7 +960,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         backgroundLoadJob = uiScope.launch {
             try {
                 val lease = if (guarded) {
-                    pipwBackgroundLease ?: PipwImages.get(this@PcView).acquire(resolved).also { pipwBackgroundLease = it }
+                    pipwBackgroundLease ?: PipwImages.get(this@PcView).acquire(resolved, orientation).also { pipwBackgroundLease = it }
                 } else null
                 val verified = lease?.await()
                 val bitmap = withContext(Dispatchers.IO) {

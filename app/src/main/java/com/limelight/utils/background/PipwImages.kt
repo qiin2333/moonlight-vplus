@@ -19,12 +19,11 @@ class PipwImages private constructor(private val directory: File, private val as
     }
     private val store = PipwImageStore({ pool, url, operation -> downloader.load(pool, url, operation) })
 
-    fun acquire(resolved: BackgroundSource.ResolvedTarget): PipwImageStore.Lease {
+    fun acquire(resolved: BackgroundSource.ResolvedTarget, orientation: Int): PipwImageStore.Lease {
         val target = resolved.target ?: throw IOException("Missing Pipw source")
-        val url = target.toHttpUrlOrNull() ?: throw IOException("Invalid Pipw source")
-        if (url.host != PipwUrlPolicy.API_HOST) throw IOException("Unexpected Pipw source")
+        val url = PipwUrlPolicy.api(target.toHttpUrlOrNull() ?: throw IOException("Invalid Pipw source"), orientation)
         val pool = if (url.queryParameter("phone") == "true") PipwPool.PHONE else PipwPool.PC
-        return store.acquire(resolved.cacheKey, pool, target)
+        return store.acquire(resolved.cacheKey, pool, url.toString())
     }
 
     private fun isDecodable(file: File): Boolean {

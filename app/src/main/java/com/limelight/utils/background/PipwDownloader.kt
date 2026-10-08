@@ -1,5 +1,6 @@
 package com.limelight.utils.background
 
+import android.content.res.Configuration
 import okhttp3.Call
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -14,6 +15,13 @@ import java.util.concurrent.TimeUnit
 
 internal object PipwUrlPolicy {
     const val API_HOST = "img-api.pipw.top"
+
+    fun api(url: HttpUrl, orientation: Int): HttpUrl {
+        if (url.host != API_HOST) throw IOException("Unexpected Pipw source")
+        return url.newBuilder().removeAllQueryParameters("phone").apply {
+            if (orientation == Configuration.ORIENTATION_PORTRAIT) addQueryParameter("phone", "true")
+        }.build()
+    }
 
     fun candidate(url: HttpUrl, pool: PipwPool): HttpUrl {
         if (!url.isHttps || url.username.isNotEmpty() || url.password.isNotEmpty() || url.fragment != null) {
