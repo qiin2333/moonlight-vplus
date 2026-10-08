@@ -23,7 +23,9 @@ public:
     bool create(int width, int height, int hdrMode, bool fullRange);
     bool setSurface(ANativeWindow* window);
     bool setHdrMetadata(bool enabled, const std::uint8_t* data, std::size_t length);
-    int submit(const std::uint8_t* data, std::size_t length);
+    bool setDynamicHdr(int format, float targetPeakNits);
+    int submit(const std::uint8_t* data, std::size_t length,
+               const std::uint8_t* frameMetadata = nullptr, std::size_t metadataLength = 0);
     std::uint64_t getLastTimingsPacked();
     void destroy() noexcept;
 

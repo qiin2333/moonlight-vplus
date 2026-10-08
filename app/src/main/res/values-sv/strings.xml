@@ -337,4 +337,5 @@
     <string name="image_saved_successfully">Bilden har sparats i: Picture/vplus</string>
     <string name="image_save_failed_with_error">Det gick inte att spara bilden: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tryck och håll på det tomma området överst i datorlistan för att spara den aktuella bakgrundsbilden.</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave-förhandlingen misslyckades. Växlar till %1$s.</string>
 </resources>

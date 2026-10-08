@@ -24,6 +24,10 @@ sequenceDiagram
 
 单个会话串行处理帧，只有一套 YUV 平面、CommandBuffer 和 DescriptorSet。下一帧不能覆盖仍由上一帧转换读取的资源。本层同步使用 Binary Semaphore，不使用 Timeline value 交接。
 
+动态 HDR LUT 同样属于当前会话：逐帧验证 metadata 后更新 host-visible storage buffer，
+需要时 flush 非 coherent 内存，并使用 HOST_WRITE → COMPUTE_SHADER_READ barrier。
+上一帧 submit Fence 完成后，下一帧才可以写同一 LUT；静态模式不启用亮度映射。
+
 ## 2. 同步对象
 
 | 对象 | 所有者与用途 |

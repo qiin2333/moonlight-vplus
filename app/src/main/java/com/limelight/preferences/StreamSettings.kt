@@ -3653,45 +3653,67 @@ class StreamSettings : ThemedAppCompatActivity() {
                 } else {
                     // HDR is supported, configure the HDR mode preference
                     if (hdrModePref != null) {
-                        val entries = mutableListOf<CharSequence>()
-                        val entryValues = mutableListOf<CharSequence>()
+                        val updateHdrEntries: (Boolean) -> Unit = { pyrowaveSelected ->
+                            val entries = mutableListOf<CharSequence>()
+                            val entryValues = mutableListOf<CharSequence>()
 
-                        if (foundHdr10 || foundHdr10Plus) {
-                            entries += getString(R.string.hdr_mode_hdr10)
-                            entryValues += "1"
-                        }
-                        if (foundHdr10Plus) {
-                            entries += getString(R.string.hdr_mode_hdr10_plus)
-                            entryValues += "3"
-                        }
-                        if (foundHlg) {
-                            entries += getString(R.string.hdr_mode_hlg)
-                            entryValues += "2"
-                        }
-                        if (foundDolbyVision) {
-                            entries += getString(R.string.hdr_mode_dolby_vision)
-                            entryValues += "4"
-                            // 8.4 rides the HLG base layer into the same DV
-                            // display pipeline; availability is decoder- and
-                            // display-gated identically to 8.1.
-                            entries += getString(R.string.hdr_mode_dolby_vision_84)
-                            entryValues += "5"
-                        }
+                            if (foundHdr10 || foundHdr10Plus) {
+                                entries += getString(R.string.hdr_mode_hdr10)
+                                entryValues += "1"
+                            }
+                            if (foundHdr10Plus || (pyrowaveSelected && foundHdr10)) {
+                                entries += getString(if (pyrowaveSelected) R.string.hdr_mode_pyrowave_hdr10_plus else R.string.hdr_mode_hdr10_plus)
+                                entryValues += "3"
+                            }
+                            if (foundHlg) {
+                                entries += getString(R.string.hdr_mode_hlg)
+                                entryValues += "2"
+                            }
+                            if (pyrowaveSelected) {
+                                if (foundHdr10 || foundHdr10Plus) {
+                                    entries += getString(R.string.hdr_mode_pyrowave_vivid_pq)
+                                    entryValues += "6"
+                                    entries += getString(R.string.hdr_mode_pyrowave_dv81)
+                                    entryValues += "4"
+                                }
+                                if (foundHlg) {
+                                    entries += getString(R.string.hdr_mode_pyrowave_vivid_hlg)
+                                    entryValues += "7"
+                                    entries += getString(R.string.hdr_mode_pyrowave_dv84)
+                                    entryValues += "5"
+                                }
+                            } else if (foundDolbyVision) {
+                                entries += getString(R.string.hdr_mode_dolby_vision)
+                                entryValues += "4"
+                                // 8.4 rides the HLG base layer into the same DV
+                                // display pipeline; availability is decoder- and
+                                // display-gated identically to 8.1.
+                                entries += getString(R.string.hdr_mode_dolby_vision_84)
+                                entryValues += "5"
+                            }
 
-                        hdrModePref.entries = entries.toTypedArray()
-                        hdrModePref.entryValues = entryValues.toTypedArray()
+                            hdrModePref.entries = entries.toTypedArray()
+                            hdrModePref.entryValues = entryValues.toTypedArray()
 
-                        // An HDR10+ selection may have been restored from another display/profile.
-                        // Prefer static HDR10 when this display cannot present HDR10+.
-                        if (hdrModePref.value == "3" && !foundHdr10Plus && foundHdr10) {
-                            hdrModePref.value = "1"
-                        }
-                        if (hdrModePref.value !in entryValues) {
-                            hdrModePref.value = entryValues.first().toString()
-                        }
+                            // An HDR10+ selection may have been restored from another display/profile.
+                            // Prefer static HDR10 when this display cannot present HDR10+.
+                            if (!pyrowaveSelected && hdrModePref.value == "3" && !foundHdr10Plus && foundHdr10) {
+                                hdrModePref.value = "1"
+                            }
+                            if (hdrModePref.value !in entryValues) {
+                                hdrModePref.value = entryValues.first().toString()
+                            }
 
-                        // 当前选中值由通用的 SummaryProvider 自动显示（applyListPreferenceCurrentValueSummary），
-                        // 这里不再单独设置 summary，避免与 SummaryProvider 互斥而抛 IllegalStateException
+                            // 当前选中值由通用的 SummaryProvider 自动显示（applyListPreferenceCurrentValueSummary），
+                            // 这里不再单独设置 summary，避免与 SummaryProvider 互斥而抛 IllegalStateException
+                        }
+                        val formatPref = findPreference<ListPreference>("video_format")
+                        updateHdrEntries(formatPref?.value == "pyrowave")
+                        formatPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                            // Keep the current preference/dialog focus; only update HDR choices.
+                            updateHdrEntries(newValue == "pyrowave")
+                            true
+                        }
                     }
                 }
             }

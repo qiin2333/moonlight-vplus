@@ -55,4 +55,5 @@
     <string name="image_saved_successfully">وێنەکە بە سەرکەوتوویی پاشەکەوت کرا لە: Picture/vplus</string>
     <string name="image_save_failed_with_error">پاشەکەوتکردنی وێنەکە سەرکەوتوو نەبوو: %1$s</string>
     <string name="tip_double_tap_mouse">ئامۆژگاری: بۆ پاشەکەوتکردنی وێنەی پاشبنەمای ئێستا، شوێنی بەتاڵی سەرەوەی لیستی کۆمپیوتەرەکان بە درێژی دابگرە.</string>
+    <string name="pyrowave_negotiation_fallback">گفتوگۆی PyroWave سەرکەوتوو نەبوو. لەبری ئەوە %1$s بەکاردێت.</string>
 </resources>

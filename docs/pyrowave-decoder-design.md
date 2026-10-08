@@ -10,7 +10,8 @@
 | common-c | 协商合同、解析封套、块级恢复、完整帧重组、控制消息与视频交付 |
 | [MediaCodecDecoderRenderer](../app/src/main/java/com/limelight/binding/video/MediaCodecDecoderRenderer.kt) | 共享视频回调入口，按格式分派，处理尺寸、HDR 状态和性能统计 |
 | [PyrowaveDecoderSession](../app/src/main/java/com/limelight/binding/video/PyrowaveDecoderSession.kt) | 串行管理 native handle、Surface generation、metadata 快照和有界恢复 |
-| [PyrowaveVulkanDecoder](../framegen/src/main/cpp/pyrowave_vulkan_decoder.cpp) | Vulkan device、YUV 平面、转换 shader、swapchain 和静态 HDR 呈现 |
+| [PyrowaveVulkanDecoder](../framegen/src/main/cpp/pyrowave_vulkan_decoder.cpp) | Vulkan device、YUV 平面、转换 shader、swapchain 与静态/动态呈现状态 |
+| [pyrowave_dynamic_hdr](../framegen/src/main/cpp/pyrowave_dynamic_hdr.cpp) | 独立解析同帧动态 TLV/RPU，生成桌面场景亮度映射；不依赖 Android/连接对象 |
 | [pyrowave_decoder_bridge.cpp](../app/src/main/jni/moonlight-core/pyrowave_decoder_bridge.cpp) | SDR CPU staging：解码后读回 YUV、CPU 转换和原生窗口输出 |
 | [pyrowave-runtime](../pyrowave-runtime/README.md) | 构建并打包固定子模块的 C API 运行库，不增加 UI 或服务 |
 
@@ -32,9 +33,13 @@ flowchart TD
     J -->|是| K[按 PyroWave 合同协商]
     J -->|否| I
     G --> K
+    K --> L{实际协商格式}
+    L -->|PyroWave| M[PyroWave 解码与呈现]
+    L -->|H.264 兼容兜底| N[原有 MediaCodec 路径]
+    N --> O[连接成功后弹窗提示一次]
 ~~~
 
-预检使用与实际创建相同的尺寸、HDR 模式、范围和 Surface，创建候选会话后释放。只探测默认 Vulkan 设备或库的符号，不足以证明目标 Surface 可以呈现。
+预检使用与实际创建相同的尺寸、HDR 模式、范围、Surface、动态格式和目标峰值，创建候选会话后释放。只探测默认 Vulkan 设备或库的符号，不足以证明目标 Surface 可以呈现。
 
 Vulkan 呈现后端检查 Vulkan 1.3、graphics/compute/present queue、subgroup 能力、storage image、所需 Surface 格式和 HDR 扩展。YUV 平面格式还必须支持 optimal-tiling sampled image、线性过滤及实际使用的 storage/color-attachment 用法；不支持时在 Surface 预检中拒绝该 GPU 后端。可用性结果还受实际设备和窗口能力限制。
 
@@ -55,11 +60,11 @@ Vulkan 按需动态加载；没有可用 loader 的旧 Android 设备可以显�
 ~~~mermaid
 flowchart LR
     A[RTP payload] --> B[common-c 封套校验与 FEC]
-    B --> C[完整 codec bytes]
+    B --> C[完整 codec bytes 与同帧 metadata]
     C --> D[PyrowaveDecoderSession]
     D --> E{呈现后端}
     E -->|Vulkan| F[GPU YUV 平面]
-    F --> G[GPU YUV 转换]
+    F --> G[GPU YUV 转换与可选逐帧亮度映射]
     G --> H[Android swapchain]
     E -->|SDR staging| I[YUV 读回与 CPU 转换]
     I --> J[ANativeWindow 输出]
@@ -95,6 +100,13 @@ PyroWave 提交可能等待 GPU 和窗口资源，因此不声明 `CAPABILITY_DI
 缺失或非法静态快照不伪造默认 mastering 值，保留当前协商的 PQ/HLG 色彩空间。HDR10 要求 metadata 扩展和入口可用；HLG 可以在扩展缺失时使用 HLG 色彩空间，但不把这种情况称为完整静态元数据应用。
 
 传统 MediaCodec 的 `KEY_HDR_STATIC_INFO` 路径仍保留自身逻辑，不使用 PyroWave 的 native 呈现接口。
+
+### 4.3 动态元数据
+
+动态类型单独协商，完整 payload 与该帧码流一起恢复，经过专用回调及 JNI 进入 Vulkan
+submit。解析和 LUT 更新在会话锁内完成，转换 shader 同时消费当前帧平面与 LUT，静态
+快照仍独立保存。生成子集、错误与呈现边界见[动态 HDR 设计](pyrowave-dynamic-hdr.md)。
+没有厂商原生接口时不广告原生输出。
 
 ## 5. 线程与对象所有权
 

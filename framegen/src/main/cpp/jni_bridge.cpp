@@ -337,20 +337,47 @@ Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveSetHdrMetadata(
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveSubmit(
-        JNIEnv *env, jclass, jlong handle, jbyteArray data, jint length) {
+        JNIEnv *env, jclass, jlong handle, jbyteArray data, jint length, jbyteArray metadata) {
     auto *decoder = reinterpret_cast<FramegenPipeline::PyrowaveVulkanDecoder *>(handle);
     if (decoder == nullptr || data == nullptr || length <= 0 || env->GetArrayLength(data) < length) return -1;
     jbyte *bytes = nullptr;
+    jbyte *metadataBytes = nullptr;
     try {
+        const auto metadataLength = metadata != nullptr ? env->GetArrayLength(metadata) : 0;
+        if (metadataLength > 65535) return -1;
+        if (metadataLength > 0) {
+            metadataBytes = env->GetByteArrayElements(metadata, nullptr);
+            if (metadataBytes == nullptr) return -1;
+        }
         bytes = env->GetByteArrayElements(data, nullptr);
-        if (bytes == nullptr) return -1;
-        const int result = decoder->submit(reinterpret_cast<const std::uint8_t *>(bytes), static_cast<std::size_t>(length));
+        if (bytes == nullptr) {
+            if (metadataBytes != nullptr) env->ReleaseByteArrayElements(metadata, metadataBytes, JNI_ABORT);
+            return -1;
+        }
+        const int result = decoder->submit(
+            reinterpret_cast<const std::uint8_t *>(bytes), static_cast<std::size_t>(length),
+            reinterpret_cast<const std::uint8_t *>(metadataBytes), static_cast<std::size_t>(metadataLength));
+        if (metadataBytes != nullptr) env->ReleaseByteArrayElements(metadata, metadataBytes, JNI_ABORT);
         env->ReleaseByteArrayElements(data, bytes, JNI_ABORT);
         return result;
     } catch (...) {
+        if (metadataBytes != nullptr) env->ReleaseByteArrayElements(metadata, metadataBytes, JNI_ABORT);
         if (bytes != nullptr) env->ReleaseByteArrayElements(data, bytes, JNI_ABORT);
         LOGW("PyroWave Vulkan submit raised an exception");
         return -1;
+    }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveSetDynamicHdr(
+        JNIEnv *, jclass, jlong handle, jint format, jfloat targetPeakNits) {
+    auto *decoder = reinterpret_cast<FramegenPipeline::PyrowaveVulkanDecoder *>(handle);
+    if (decoder == nullptr) return JNI_FALSE;
+    try {
+        return decoder->setDynamicHdr(format, targetPeakNits) ? JNI_TRUE : JNI_FALSE;
+    } catch (...) {
+        LOGW("PyroWave dynamic HDR configuration raised an exception");
+        return JNI_FALSE;
     }
 }
 

@@ -2078,4 +2078,5 @@
     <string name="pyrowave_diag_copy">Копировать</string>
     <string name="pyrowave_diag_copy_success">Отчёт скопирован в буфер обмена</string>
     <string name="pyrowave_diag_unavailable">Недоступно</string>
+    <string name="pyrowave_negotiation_fallback">Не удалось согласовать PyroWave. Переключение на %1$s.</string>
 </resources>

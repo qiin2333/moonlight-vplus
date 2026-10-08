@@ -19,6 +19,7 @@ import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.framegen.FramegenInterceptor
 import com.limelight.nvstream.HdrModePolicy
+import com.limelight.nvstream.PyrowaveDynamicHdrPolicy
 import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.jni.MoonBridge
@@ -92,6 +93,8 @@ class MediaCodecDecoderRenderer(
     private val ppsBuffers = ArrayList<ByteArray>()
     private var submittedCsd = false
     private var currentHdrMetadata: ByteArray? = null
+    private var pyrowaveTargetPeakNits = 500f
+    private var pyrowaveNegotiatedDynamicHdr = MoonBridge.NEGOTIATED_DYNAMIC_HDR_NONE
     private var hdrDataSpace = 0 // Configured DataSpace for HDR content, re-applied after format changes
 
     private var nextInputBufferIndex = -1
@@ -435,7 +438,9 @@ class MediaCodecDecoderRenderer(
         val surface = renderTarget?.surface
         return surface != null && surface.isValid &&
             isPyrowaveSupported(width, height, hdrMode) &&
-            pyrowaveDecoder.canCreate(width, height, hdrMode, fullRange)
+            pyrowaveDecoder.canCreate(width, height, hdrMode, fullRange,
+                dynamicHdrFormat = if (hdrMode != 0) PyrowaveDynamicHdrPolicy.formatForSelection(prefs.hdrMode) else 0,
+                targetPeakNits = pyrowaveTargetPeakNits)
     }
 
     override fun setPyrowavePreflightResult(available: Boolean) {
@@ -443,13 +448,11 @@ class MediaCodecDecoderRenderer(
     }
 
     private fun pyrowaveHdrMode(): Int =
-        if (requestedHdr) {
-            when (prefs.hdrMode) {
-                MoonBridge.HDR_MODE_HDR10 -> 1 // PQ/ST 2084
-                MoonBridge.HDR_MODE_HLG -> 2 // ARIB STD-B67
-                else -> 0 // dynamic metadata and Dolby Vision stay on legacy codecs
-            }
-        } else 0
+        if (requestedHdr) HdrModePolicy.toProtocolMode(prefs.hdrMode) else 0
+
+    fun setPyrowaveTargetPeak(peakNits: Float) {
+        if (peakNits.isFinite() && peakNits in 1f..10000f) pyrowaveTargetPeakNits = peakNits
+    }
 
     // The stream builder uses this same preference for StreamConfig.colorRange;
     // keep the decoder contract aligned without rewriting the saved setting.
@@ -478,6 +481,8 @@ class MediaCodecDecoderRenderer(
             pyrowaveFullRange(),
             hdrEnabled = hdrMode != 0,
             hdrMetadata = pyrowaveHdrMetadataForCreate(),
+            dynamicHdrFormat = pyrowaveNegotiatedDynamicHdr,
+            targetPeakNits = pyrowaveTargetPeakNits,
         )
     }
 
@@ -1488,14 +1493,13 @@ class MediaCodecDecoderRenderer(
             pyrowaveDecoder.reset()
             pyrowaveStopPosted.set(false)
             val hdrMode = pyrowaveHdrMode()
-            if (!pyrowaveDecoder.create(
-                    width,
-                    height,
-                    hdrMode,
-                    pyrowaveFullRange(),
-                    hdrEnabled = hdrMode != 0,
-                    hdrMetadata = pyrowaveHdrMetadataForCreate(),
-                )) {
+            pyrowaveNegotiatedDynamicHdr = MoonBridge.getNegotiatedDynamicHdrFormat()
+            val requestedDynamic = if (hdrMode != 0) PyrowaveDynamicHdrPolicy.formatForSelection(prefs.hdrMode) else 0
+            if (pyrowaveNegotiatedDynamicHdr != requestedDynamic) {
+                LimeLog.warning("PyroWave dynamic HDR mismatch: requested=$requestedDynamic negotiated=$pyrowaveNegotiatedDynamicHdr")
+                return -1
+            }
+            if (!recreatePyrowaveDecoder(width, height)) {
                 LimeLog.warning("PyroWave decoder initialization failed")
                 return -1
             }
@@ -2273,15 +2277,7 @@ class MediaCodecDecoderRenderer(
 
             // Create the replacement before destroying the current decoder. If
             // creation fails, the old handle cannot consume the new dimensions.
-            val hdrMode = pyrowaveHdrMode()
-            if (!pyrowaveDecoder.create(
-                    width,
-                    height,
-                    hdrMode,
-                    pyrowaveFullRange(),
-                    hdrEnabled = hdrMode != 0,
-                    hdrMetadata = pyrowaveHdrMetadataForCreate(),
-                )) {
+            if (!recreatePyrowaveDecoder(width, height)) {
                 LimeLog.warning("PyroWave decoder could not be recreated for ${width}x$height")
                 pyrowaveDecoder.destroy()
                 recoverPyrowaveDecoder("resolution change to ${width}x$height")
@@ -2378,20 +2374,11 @@ class MediaCodecDecoderRenderer(
         performanceInfo.rttInfo = MoonBridge.getEstimatedRttInfo()
         performanceInfo.framesWithHostProcessingLatency = lastTwo.framesWithHostProcessingLatency
         val hdr10PlusRuntime = hdr10PlusOutputObserver.snapshot()
-        val negotiatedDynamicHdr = MoonBridge.getNegotiatedDynamicHdrFormat()
-        performanceInfo.hdrFormat = StreamHdrFormatPolicy.resolve(
+        performanceInfo.hdrFormat = PyrowaveHdrFormatPolicy.resolve(
             hdrEnabled = hdr10PlusRuntime.streamState == HdrStreamState.ENABLED,
             hdrStateKnown = hdr10PlusRuntime.streamState != HdrStreamState.UNKNOWN,
-            isTenBitStream = pyrowaveHdrMode() != 0,
-            isPqHdr = HdrModePolicy.isPqMode(prefs.hdrMode),
-            isHlg = prefs.hdrMode == MoonBridge.HDR_MODE_HLG ||
-                prefs.hdrMode == MoonBridge.HDR_MODE_DOLBY_VISION_84,
-            hdr10PlusConfigured = hdr10PlusRuntime.configured,
-            hdr10PlusMetadataObserved = hdr10PlusRuntime.metadataObserved,
-            dolbyVisionNegotiated = negotiatedDynamicHdr ==
-                MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81,
-            dolbyVisionNegotiatedHlg = negotiatedDynamicHdr ==
-                MoonBridge.NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84,
+            hdrMode = pyrowaveHdrMode(),
+            appliedDynamicFormat = pyrowaveDecoder.appliedDynamicHdrFormat,
         )
         performanceInfo.minHostProcessingLatency = minHostProcessingLatency
         performanceInfo.maxHostProcessingLatency = maxHostProcessingLatency
@@ -2527,6 +2514,25 @@ class MediaCodecDecoderRenderer(
         receiveTimeUs: Long,
         enqueueTimeUs: Long,
         hostPresentationTimeUs: Long
+    ): Int = submitDecodeUnitWithMetadata(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber,
+                                         frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
+                                         hostPresentationTimeUs, null)
+
+    override fun submitPyrowaveDecodeUnit(
+        decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
+        frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
+        receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
+        frameMetadata: ByteArray?,
+    ): Int = submitDecodeUnitWithMetadata(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber,
+                                         frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
+                                         hostPresentationTimeUs, frameMetadata)
+
+    @Suppress("deprecation")
+    private fun submitDecodeUnitWithMetadata(
+        decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
+        frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
+        receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
+        frameMetadata: ByteArray?,
     ): Int {
         if (stopping || isProcessingPaused) {
             // Don't bother if we're stopping or paused
@@ -2535,7 +2541,7 @@ class MediaCodecDecoderRenderer(
 
         if (pyrowaveDecoderActive) {
             val decodeStartNs = SystemClock.elapsedRealtimeNanos()
-            when (pyrowaveDecoder.submit(decodeUnitData, decodeUnitLength)) {
+            when (pyrowaveDecoder.submit(decodeUnitData, decodeUnitLength, frameMetadata)) {
                 PyrowaveDecoderSession.SubmitResult.SUCCESS -> Unit
                 PyrowaveDecoderSession.SubmitResult.FRAME_DROPPED ->
                     // Keep the last successfully presented frame visible.

@@ -17,6 +17,18 @@ abstract class VideoDecoderRenderer {
 
     abstract fun cleanup()
 
+    open fun submitPyrowaveDecodeUnit(
+        decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
+        frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
+        receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
+        frameMetadata: ByteArray?,
+    ): Int = if (frameMetadata == null || frameMetadata.isEmpty()) {
+        submitDecodeUnit(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber, frameType,
+                         frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs, hostPresentationTimeUs)
+    } else {
+        com.limelight.nvstream.jni.MoonBridge.DR_NEED_IDR
+    }
+
     abstract fun getCapabilities(): Int
 
     abstract fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?)

@@ -727,6 +727,11 @@
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (use this first)</string>
     <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG (use if 8.1 shows no picture)</string>
+    <string name="hdr_mode_pyrowave_hdr10_plus" translatable="false">HDR10+ → PQ</string>
+    <string name="hdr_mode_pyrowave_vivid_pq" translatable="false">HDR Vivid → PQ</string>
+    <string name="hdr_mode_pyrowave_vivid_hlg" translatable="false">HDR Vivid → HLG</string>
+    <string name="hdr_mode_pyrowave_dv81" translatable="false">Dolby Vision 8.1 → PQ</string>
+    <string name="hdr_mode_pyrowave_dv84" translatable="false">Dolby Vision 8.4 → HLG</string>
     <string name="title_full_range">Force full color range (Experimental)</string>
     <string name="summary_full_range">Requests full-range video from the host and decodes it as full range. Leave this off unless limited/full range mismatch makes the picture look washed out or crushes shadow and highlight detail. This is separate from HDR.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
@@ -2357,4 +2362,5 @@ Tap again to replace it.</string>
     <string name="pyrowave_diag_copy">Copy</string>
     <string name="pyrowave_diag_copy_success">Report copied to clipboard</string>
     <string name="pyrowave_diag_unavailable">Unavailable</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave negotiation failed. Falling back to %1$s.</string>
 </resources>

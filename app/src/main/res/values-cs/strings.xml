@@ -312,4 +312,5 @@
     <string name="image_saved_successfully">Obrázek byl úspěšně uložen do: Picture/vplus</string>
     <string name="image_save_failed_with_error">Uložení obrázku se nezdařilo: %1$s</string>
     <string name="tip_double_tap_mouse">Tip: dlouhým stisknutím prázdné oblasti v horní části seznamu počítačů uložíte aktuální obrázek pozadí.</string>
+    <string name="pyrowave_negotiation_fallback">Vyjednání PyroWave selhalo. Přepíná se na %1$s.</string>
 </resources>
