@@ -140,6 +140,10 @@ class StreamSettings : ThemedAppCompatActivity() {
     private var searchInput: EditText? = null
     private var searchToggle: ImageView? = null
     private var menuToggleView: ImageView? = null
+    // 进入搜索前记住的选中分类；退出搜索（含空结果）后按它恢复
+    private var preSearchCategoryKey: String? = null
+    private var pendingRestoreCategoryKey: String? = null
+    private var lastQueryBlank = true
     private var screenCombinationModeReturnFocus: View? = null
     private var lastNightMode = false
 
@@ -300,7 +304,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         applySearchBarTheme()
         val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
         findViewById<ImageView>(R.id.settings_search_toggle)?.imageTintList = accent
-        applySearchBarTheme()
         findViewById<TextView>(R.id.drawer_version)?.setTextColor(
             androidx.core.graphics.ColorUtils.setAlphaComponent(UiHelper.accentColor(this), 69))
     }
@@ -469,6 +472,16 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun applyFilterToFragment(query: String) {
+        val searching = query.isNotBlank()
+        if (searching && lastQueryBlank) {
+            // 空结果会清掉分类列表，进入搜索前记住当前分类
+            preSearchCategoryKey = categories.getOrNull(selectedCategoryIndex)?.key
+        }
+        if (!searching && !lastQueryBlank && preSearchCategoryKey != null) {
+            pendingRestoreCategoryKey = preSearchCategoryKey
+            preSearchCategoryKey = null
+        }
+        lastQueryBlank = !searching
         val fragment = supportFragmentManager
                 .findFragmentById(R.id.preference_container) as? SettingsFragment
         fragment?.applySearchFilter(query)
@@ -737,10 +750,18 @@ class StreamSettings : ThemedAppCompatActivity() {
         categories.clear()
         categories.addAll(loadedCategories)
 
+        // 退出搜索时优先回到进入前的分类；空结果时上面的 selectedKey 已丢，
+        // 没有这个快照会强制跳回第 0 项
+        val restoreIndex = pendingRestoreCategoryKey
+            ?.let { key -> categories.indexOfFirst { it.key == key } }
+            ?.takeIf { it >= 0 }
+        pendingRestoreCategoryKey = null
+
         val keptIndex = selectedKey
             ?.let { key -> categories.indexOfFirst { it.key == key } }
             ?.takeIf { it >= 0 }
         selectedCategoryIndex = when {
+            restoreIndex != null -> restoreIndex
             keptIndex != null -> keptIndex
             !hadCategories && categories.isNotEmpty() ->
                 restoredIndex.coerceIn(categories.indices)
@@ -749,7 +770,11 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         categoryAdapter?.notifyDataSetChanged()
-        if (hadCategories && keptIndex == null && categories.isNotEmpty()) {
+        if (categories.isNotEmpty() &&
+            (restoreIndex != null || (hadCategories && keptIndex == null))
+        ) {
+            // 侧栏高亮回到恢复/兜底分类的同时右窗格也滚过去，
+            // 否则同一 adapter 位置在全量列表里已经是别的内容
             categoryList?.scrollToPosition(selectedCategoryIndex)
             categories.getOrNull(selectedCategoryIndex)?.let { scrollToCategory(it.key) }
         }
@@ -983,6 +1008,12 @@ class StreamSettings : ThemedAppCompatActivity() {
         // 搜索栏可见时，优先关闭搜索而不是退出
         if (isSearchBarVisible) {
             hideSearchBar()
+            return
+        }
+        // 横屏常驻搜索框没有展开按钮，isSearchBarVisible 恒 false；
+        // 有查询内容时返回先清搜索再退出，与竖屏行为一致
+        if (!searchInput?.text?.toString().isNullOrBlank()) {
+            clearSearchQuery()
             return
         }
 
@@ -1535,18 +1566,22 @@ class StreamSettings : ThemedAppCompatActivity() {
             (activity as? StreamSettings)?.clearSearchQuery()
         }
 
+        /** 上一轮各 List/MultiSelect 行的「包含：…」备注，用于跳过没变化的行。 */
+        private val lastSearchNotes = IdentityHashMap<Preference, String?>()
+
         @SuppressLint("RestrictedApi")
         private fun refreshSearchPresentation() {
-            val adapter = listView?.adapter as? PreferenceGroupAdapter
-            if (adapter != null) {
-                for (index in 0 until adapter.itemCount) {
-                    val preference = adapter.getItem(index)
-                    when {
-                        preference is IconListPreference -> {
-                            preference.refreshSearchMatchNote()
-                            adapter.notifyItemChanged(index)
-                        }
-                        preference is ListPreference || preference is MultiSelectListPreference -> {
+            val adapter = listView?.adapter as? PreferenceGroupAdapter ?: return
+            for (index in 0 until adapter.itemCount) {
+                val preference = adapter.getItem(index)
+                when {
+                    // setSummary 内部会 notifyChanged，只重建即可，避免双重刷新
+                    preference is IconListPreference -> preference.refreshSearchMatchNote()
+                    preference is ListPreference || preference is MultiSelectListPreference -> {
+                        // 备注有变化才重绑；其余行不因每次按键全量刷新
+                        val note = searchMatchNote(preference)
+                        if (lastSearchNotes[preference] != note) {
+                            lastSearchNotes[preference] = note
                             adapter.notifyItemChanged(index)
                         }
                     }
@@ -1563,6 +1598,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             scrollToCategoryAtIndex(index)
             (activity as? StreamSettings)?.updateSelectedCategory(index)
             listView?.post {
+                if (!isAdded) return@post
                 val position = findAdapterPositionForPreference(categoryList.getOrNull(index))
                 val holder = if (position >= 0) listView?.findViewHolderForAdapterPosition(position) else null
                 holder?.itemView?.startAnimation(AnimationUtils.loadAnimation(requireContext(), R.anim.settings_category_reveal))
