@@ -163,6 +163,27 @@ class PyrowaveDecoderSessionTest {
     }
 
     @Test
+    fun failedGpuSubmissionDestroysTheHandleBeforeTheNextFrame() {
+        val gpu = FakeNative(submitResult = -1)
+        val session = PyrowaveDecoderSession(gpuNative = gpu)
+        val frame = byteArrayOf(1)
+        val metadata = byteArrayOf(2)
+
+        assertTrue(session.create(1280, 720, hdrMode = 1, dynamicHdrFormat = 1))
+        assertEquals(PyrowaveDecoderSession.SubmitResult.RECOVERED,
+                     session.submit(frame, frame.size, metadata))
+        assertEquals(listOf(1L), gpu.submittedHandles)
+        assertEquals(listOf(1L), gpu.destroyed)
+        assertEquals(0, session.appliedDynamicHdrFormat)
+
+        gpu.submitResult = 0
+        assertEquals(PyrowaveDecoderSession.SubmitResult.SUCCESS,
+                     session.submit(frame, frame.size, metadata))
+        assertEquals(listOf(1L, 2L), gpu.submittedHandles)
+        assertEquals(1, session.appliedDynamicHdrFormat)
+    }
+
+    @Test
     fun surfaceDetachIsDeferredToTheDecoderWorker() {
         val native = FakeNative()
         val session = PyrowaveDecoderSession(native)
@@ -271,6 +292,7 @@ class PyrowaveDecoderSessionTest {
         var acceptDynamicHdr = true
         val dynamicConfigurations = mutableListOf<Pair<Int, Float>>()
         val frameMetadata = mutableListOf<ByteArray?>()
+        val submittedHandles = mutableListOf<Long>()
         var onSubmit: (() -> Int)? = null
 
         override fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long {
@@ -284,8 +306,10 @@ class PyrowaveDecoderSessionTest {
             return true
         }
 
-        override fun submit(handle: Long, data: ByteArray, length: Int): Int =
-            onSubmit?.invoke() ?: submitResult
+        override fun submit(handle: Long, data: ByteArray, length: Int): Int {
+            submittedHandles += handle
+            return onSubmit?.invoke() ?: submitResult
+        }
 
         override fun getTimings(handle: Long): Long = 0L
 

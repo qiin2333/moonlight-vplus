@@ -288,9 +288,11 @@ struct PyrowaveVulkanDecoder::impl {
     std::uint64_t last_decode_time_us{0};
     std::uint64_t last_present_time_us{0};
     const char *last_submit_failure{nullptr};
+    bool submit_failed{false};
     bool decode_signal_pending{false};
 
     int submit_failure(const char *stage, int code = 0, std::size_t size = 0) {
+        submit_failed = true;
         if (last_submit_failure != stage) {
             LOGW("PyroWave Vulkan submit failed at %s (frame=%llu, code=%d, size=%zu)",
                  stage,
@@ -1108,6 +1110,9 @@ struct PyrowaveVulkanDecoder::impl {
 
     int submit_locked(const std::uint8_t *data, std::size_t length,
                       const std::uint8_t* frame_metadata, std::size_t metadata_length) {
+        // A failed submission may still own GPU resources (including the LUT).
+        // Only teardown/reinitialization may make this handle reusable.
+        if (submit_failed) return -1;
         const auto frame_number = ++submitted_frames;
         const auto decode_start = std::chrono::steady_clock::now();
         if (!ready_for_submit()) return submit_failure("decoder-not-ready");
@@ -1355,6 +1360,7 @@ struct PyrowaveVulkanDecoder::impl {
         queue = VK_NULL_HANDLE;
         queue_family = VK_QUEUE_FAMILY_IGNORED;
         last_submit_failure = nullptr;
+        submit_failed = false;
         decode_signal_pending = false;
         submitted_frames = 0;
         last_decode_time_us = 0;
@@ -1501,8 +1507,7 @@ int PyrowaveVulkanDecoder::submit(const std::uint8_t* data, std::size_t length,
     std::lock_guard<std::mutex> lock(impl_->mutex);
     try { return impl_->submit_locked(data, length, frameMetadata, metadataLength); }
     catch (...) {
-        LOGW("PyroWave Vulkan decoder submit failed: native exception (size=%zu)", length);
-        return -1;
+        return impl_->submit_failure("native-exception", 0, length);
     }
 }
 
