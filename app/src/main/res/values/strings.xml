@@ -2357,4 +2357,11 @@ Tap again to replace it.</string>
     <string name="pyrowave_diag_copy">Copy</string>
     <string name="pyrowave_diag_copy_success">Report copied to clipboard</string>
     <string name="pyrowave_diag_unavailable">Unavailable</string>
+    <string name="title_fec_mode">FEC protection</string>
+    <string name="summary_fec_mode">Host default, automatic protection, or a fixed percentage. Applied on the next connection to a supported Sunshine host.</string>
+    <string name="title_fec_percentage">Fixed FEC percentage</string>
+    <string name="summary_fec_percentage">Used only in Fixed mode. Parity is added relative to video data; 0 disables protection.</string>
+    <string name="fec_mode_host">Host default</string>
+    <string name="fec_mode_automatic">Automatic</string>
+    <string name="fec_mode_fixed">Fixed</string>
 </resources>

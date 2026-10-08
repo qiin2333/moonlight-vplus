@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="title_fec_mode">FEC protection</string>
-    <string name="summary_fec_mode">Host default, automatic protection, or a fixed percentage. Applied when connecting to a supported Sunshine host.</string>
-    <string name="title_fec_percentage">Fixed FEC percentage</string>
-    <string name="summary_fec_percentage">Used only in Fixed mode. Parity is added relative to video data; 0 disables protection.</string>
-    <string-array name="fec_mode_names"><item>Host default</item><item>Automatic</item><item>Fixed</item></string-array>
-    <string-array name="fec_mode_values"><item>host</item><item>automatic</item><item>fixed</item></string-array>
-</resources>

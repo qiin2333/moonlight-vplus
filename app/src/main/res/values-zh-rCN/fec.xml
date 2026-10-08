@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="title_fec_mode">FEC 纠错</string>
-    <string name="summary_fec_mode">跟随主机、自动调整或固定比例；连接支持此功能的 Sunshine 时生效。</string>
-    <string name="title_fec_percentage">固定 FEC 比例</string>
-    <string name="summary_fec_percentage">仅在固定模式下使用；相对视频数据增加冗余，0 为关闭纠错。</string>
-    <string-array name="fec_mode_names"><item>跟随主机</item><item>自动调整</item><item>固定比例</item></string-array>
-</resources>

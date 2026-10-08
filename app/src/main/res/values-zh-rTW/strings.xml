@@ -1037,4 +1037,11 @@
     <string name="pyrowave_diag_copy_success">報告已複製到剪貼簿</string>
     <string name="pyrowave_diag_unavailable">無法取得</string>
     <string name="tip_double_tap_mouse">提示：在主機清單頁面長按頂部空白區域，可儲存目前的背景圖片。</string>
+    <string name="title_fec_mode">FEC 糾錯</string>
+    <string name="summary_fec_mode">跟隨主機、自動調整或固定比例；下次連線支援此功能的 Sunshine 時生效。</string>
+    <string name="title_fec_percentage">固定 FEC 比例</string>
+    <string name="summary_fec_percentage">僅在固定模式下使用；相對影片資料增加冗餘，0 為關閉糾錯。</string>
+    <string name="fec_mode_host">跟隨主機</string>
+    <string name="fec_mode_automatic">自動調整</string>
+    <string name="fec_mode_fixed">固定比例</string>
 </resources>
