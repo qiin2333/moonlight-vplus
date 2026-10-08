@@ -516,7 +516,7 @@
     
     <!-- Tips -->
     <string name="tip_esc_exit">💡 Dica: Use o botão \"Sair\" para sair rapidamente e completamente do stream, restaurando sua tela ao estado pré-stream~</string>
-    <string name="tip_double_tap_mouse">💡 Dica: Pressione longamente a área em branco superior na página da lista de hosts para baixar o papel de parede atual~</string>
+    <string name="tip_double_tap_mouse">💡 Dica: mantenha premida a área vazia no topo da lista de computadores para guardar a imagem de fundo atual.</string>
     <string name="tip_long_press_controller">💡 Dica: Pressione longamente uma app para escolher streaming com display virtual, super conveniente!</string>
     <string name="tip_volume_keys">💡 Dica: Usar WiFi 5GHz proporciona uma experiência melhor, velocidade ultra rápida~</string>
     <string name="tip_wallpaper_change">💡 Dica: A opção da API de papel de parede pode definir a API para fontes de papel de parede aleatórias, ou um endereço de imagem único</string>
@@ -670,8 +670,8 @@
     <string name="image_download_failed_with_error">Falha no download da imagem: %1$s</string>
     <string name="image_not_loaded_please_retry">Imagem não carregada, tente novamente mais tarde</string>
     <string name="image_invalid">Imagem inválida</string>
-    <string name="image_saved_successfully">Imagem salva com sucesso no diretório do sistema (Picture/setu)</string>
-    <string name="image_save_failed_with_error">Falha ao salvar imagem: %1$s</string>
+    <string name="image_saved_successfully">Imagem guardada com sucesso em: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Falha ao guardar a imagem: %1$s</string>
     <string name="config_save_failed">Falha ao salvar configuração</string>
     <string name="scene_config_applied">Configuração da cena %1$d aplicada: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">Cena %1$d não configurada</string>
@@ -729,4 +729,37 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">Melhoria de voz</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduz o ruído de baixa frequência e melhora a clareza da voz. Disponível com ganho fixo e equilíbrio de volume.</string>
+    <string name="title_pyrowave_capability_diagnostic">Deteção de capacidades PyroWave</string>
+    <string name="summary_pyrowave_capability_diagnostic">Consultar as capacidades Vulkan e os requisitos do descodificador PyroWave atual.</string>
+    <string name="pyrowave_diag_loading">A verificar as capacidades PyroWave…</string>
+    <string name="pyrowave_diag_runtime">API da biblioteca PyroWave incluída</string>
+    <string name="pyrowave_diag_gpu_frontend">Módulo de apresentação GPU</string>
+    <string name="pyrowave_diag_gpu_gate">A apresentação GPU requer Android 10+, arm64-v8a e Vulkan 1.3. O caminho alternativo SDR requer Vulkan 1.2 e as funções do descodificador abaixo; não descodifica apenas na CPU.</string>
+    <string name="pyrowave_diag_ready">Os requisitos verificados estão satisfeitos</string>
+    <string name="pyrowave_diag_missing">Faltam requisitos da implementação atual</string>
+    <string name="pyrowave_diag_scope">Este relatório verifica apenas as capacidades declaradas pelo controlador. A apresentação em janela, os formatos de imagem, a resolução pretendida, a saída HDR e o desempenho de descodificação ainda exigem validação durante o streaming.</string>
+    <string name="pyrowave_diag_loader_missing">Nenhum carregador Vulkan acessível</string>
+    <string name="pyrowave_diag_no_devices">Nenhum dispositivo físico Vulkan encontrado</string>
+    <string name="pyrowave_diag_query_failed">Não foi possível ler as capacidades Vulkan. Isto não confirma a ausência de suporte.</string>
+    <string name="pyrowave_diag_storage_path">Armazenamento de 8 bits ou buffers grandes de texels</string>
+    <string name="pyrowave_diag_gpu_backend">Requisitos de apresentação GPU</string>
+    <string name="pyrowave_diag_staging_backend">Requisitos do caminho alternativo SDR</string>
+    <string name="pyrowave_diag_subgroup_range">Subgrupos de computação completos em wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Threads por grupo de trabalho</string>
+    <string name="pyrowave_diag_shared_memory">Memória partilhada do grupo de trabalho</string>
+    <string name="pyrowave_diag_queue">Fila combinada de gráficos e computação</string>
+    <string name="pyrowave_diag_android_surface">Extensões Vulkan Surface do Android</string>
+    <string name="pyrowave_diag_copy_failed">Não foi possível copiar o relatório</string>
+    <string name="pyrowave_diag_present">Presente</string>
+    <string name="pyrowave_diag_absent">Ausente</string>
+    <string name="pyrowave_diag_vulkan_loader">Carregador Vulkan</string>
+    <string name="pyrowave_diag_subgroup_ops">Operações de subgrupos</string>
+    <string name="pyrowave_diag_subgroup_size">Tamanho do subgrupo</string>
+    <string name="pyrowave_diag_subgroup_limits">Tamanho mín. / máx. do subgrupo</string>
+    <string name="pyrowave_diag_required_subgroup">Operações de subgrupos necessárias</string>
+    <string name="pyrowave_diag_texel_limit">Máximo de elementos do buffer de texels</string>
+    <string name="pyrowave_diag_back">Voltar</string>
+    <string name="pyrowave_diag_copy">Copiar</string>
+    <string name="pyrowave_diag_copy_success">Relatório copiado para a área de transferência</string>
+    <string name="pyrowave_diag_unavailable">Indisponível</string>
 </resources>

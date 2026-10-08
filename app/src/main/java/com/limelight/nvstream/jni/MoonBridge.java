@@ -27,6 +27,7 @@ public class MoonBridge {
     public static final int VIDEO_FORMAT_H265_MAIN10 = 0x0200;
     public static final int VIDEO_FORMAT_AV1_MAIN8 = 0x1000;
     public static final int VIDEO_FORMAT_AV1_MAIN10 = 0x2000;
+    public static final int VIDEO_FORMAT_PYROWAVE = 0x00010000;
 
     public static final int VIDEO_FORMAT_MASK_H264 = 0x000F;
     public static final int VIDEO_FORMAT_MASK_H265 = 0x0F00;
@@ -84,6 +85,7 @@ public class MoonBridge {
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC = 4;
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1 = 0x40;
     public static final int CAPABILITY_PRESERVE_HEVC_SEI = 0x80;
+    public static final int CAPABILITY_PYROWAVE = 0x100;
 
     public static final int DR_OK = 0;
     public static final int DR_NEED_IDR = -1;
@@ -694,4 +696,14 @@ public class MoonBridge {
      */
     public static native int nativeSetSurfaceDataSpace(android.view.Surface surface, int dataSpace);
     public static native int nativeGetSurfaceDataSpace(android.view.Surface surface);
+
+    // Optional PyroWave Vulkan decoder. The implementation is loaded at runtime
+    // so builds without the codec library keep the legacy renderer unchanged.
+    public static native android.os.Bundle pyrowaveGetCapabilities();
+    public static native boolean pyrowaveIsAvailableFor(int width, int height);
+    public static native long pyrowaveCreate(int width, int height, int hdrMode, boolean fullRange);
+    public static native void pyrowaveSetSurface(long decoder, android.view.Surface surface);
+    public static native int pyrowaveSubmit(long decoder, byte[] data, int length);
+    public static native long pyrowaveGetLastTimings(long decoder);
+    public static native void pyrowaveDestroy(long decoder);
 }

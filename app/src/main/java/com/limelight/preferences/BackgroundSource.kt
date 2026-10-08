@@ -43,11 +43,10 @@ sealed class BackgroundSource(val prefValue: String) {
      */
     abstract fun resolveTarget(ctx: Context, orientation: Int): String?
 
-    /** Smart default: pick Picsum on TV/Leanback, Pipw elsewhere. */
+    /** Smart default: photography on every device and orientation. */
     data object Auto : BackgroundSource("auto") {
         override fun resolveTarget(ctx: Context, orientation: Int): String? =
-            if (isTvDevice(ctx)) Picsum.resolveTarget(ctx, orientation)
-            else Pipw.resolveTarget(ctx, orientation)
+            Picsum.resolveTarget(ctx, orientation)
     }
 
     /** Animé (Pipw API). Preserved for users who want the legacy look. */
@@ -59,7 +58,7 @@ sealed class BackgroundSource(val prefValue: String) {
                 "https://img-api.pipw.top"
     }
 
-    /** Lorem Picsum photography. Unsplash-licensed, family/TV safe. */
+    /** Lorem Picsum photography. */
     data object Picsum : BackgroundSource("picsum") {
         override fun resolveTarget(ctx: Context, orientation: Int): String {
             // Picsum returns the same image for the same URL; append a timestamp
@@ -117,6 +116,7 @@ sealed class BackgroundSource(val prefValue: String) {
         private val ALL = listOf(Auto, Pipw, Picsum, Api, Local, None)
         private var cachedResolvedTarget: ResolvedTarget? = null
         private var resolvedTargetOrientation: Int? = null
+        private var resolvedTargetExtra: String? = null
 
         fun fromPrefValue(value: String?): BackgroundSource =
             ALL.firstOrNull { it.prefValue == value } ?: Auto
@@ -131,21 +131,32 @@ sealed class BackgroundSource(val prefValue: String) {
         @Synchronized
         fun resolveCurrentTarget(ctx: Context, orientation: Int): ResolvedTarget {
             val source = current(ctx)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            val extra = when (source) {
+                Api -> prefs.getString(KEY_API_URL, null)
+                Local -> prefs.getString(KEY_LOCAL_PATH, null)
+                else -> null
+            }
             cachedResolvedTarget?.let { cached ->
                 if (cached.source.prefValue == source.prefValue &&
-                    resolvedTargetOrientation == orientation
+                    resolvedTargetOrientation == orientation && resolvedTargetExtra == extra &&
+                    (source !== Local || (extra != null && File(extra).exists()))
                 ) {
                     return cached
                 }
             }
 
+            val target = source.resolveTarget(ctx, orientation)
+            // A missing local file may change the preference and resolve a new target in a nested listener.
+            if (current(ctx) !== source) return resolveCurrentTarget(ctx, orientation)
             val resolved = ResolvedTarget(
                 source = source,
-                target = source.resolveTarget(ctx, orientation),
+                target = target,
                 cacheKey = UUID.randomUUID().toString()
             )
             cachedResolvedTarget = resolved
             resolvedTargetOrientation = orientation
+            resolvedTargetExtra = extra
             return resolved
         }
 
@@ -153,6 +164,7 @@ sealed class BackgroundSource(val prefValue: String) {
         fun invalidateResolvedTarget() {
             cachedResolvedTarget = null
             resolvedTargetOrientation = null
+            resolvedTargetExtra = null
         }
 
         /**
@@ -170,20 +182,20 @@ sealed class BackgroundSource(val prefValue: String) {
             // Forget state that belongs to the source we are leaving.
             if (source !is Api) editor.remove(KEY_API_URL)
             if (source !is Local) editor.remove(KEY_LOCAL_PATH)
-            editor.apply()
             invalidateResolvedTarget()
+            editor.apply()
             ctx.sendBroadcast(Intent(ACTION_REFRESH).setPackage(ctx.packageName))
         }
 
         /** Like [setActive] but keeps the URL/path (used by the picker prefs themselves). */
         fun setActivePreservingExtras(ctx: Context, source: BackgroundSource) {
             val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            invalidateResolvedTarget()
             prefs.edit()
                 .putString(KEY_SOURCE, source.prefValue)
                 .putBoolean(KEY_DIALOG_SHOWN, true)
                 .remove(LEGACY_KEY_TYPE)
                 .apply()
-            invalidateResolvedTarget()
             ctx.sendBroadcast(Intent(ACTION_REFRESH).setPackage(ctx.packageName))
         }
 

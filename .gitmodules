@@ -6,3 +6,7 @@
 	path = framegen/src/main/cpp/lsfg-vk-android
 	url = https://github.com/FrankBarretta/lsfg-vk-android.git
 	branch = release
+[submodule "third-party/pyrowave"]
+	path = third-party/pyrowave
+	url = https://github.com/AlkaidLab/pyrowave.git
+	branch = master

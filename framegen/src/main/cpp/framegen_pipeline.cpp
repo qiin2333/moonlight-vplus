@@ -14,6 +14,8 @@
 #include "yuv_to_rgba.comp.spv.h"
 #include "yuv_to_rgba16f.comp.spv.h"
 #include "yuv_to_rgb10a2.comp.spv.h"
+#include "pyrowave_yuv_to_rgba.comp.spv.h"
+#include "pyrowave_yuv_to_rgba16f.comp.spv.h"
 
 #include <algorithm>
 #include <atomic>

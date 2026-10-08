@@ -334,6 +334,11 @@
             android:key="capability_diagnostic"
             android:title="@string/title_capability_diagnostic"
             android:summary="@string/summary_capability_diagnostic" />
+        <Preference
+            android:key="pyrowave_capability_diagnostic"
+            android:persistent="false"
+            android:title="@string/title_pyrowave_capability_diagnostic"
+            android:summary="@string/summary_pyrowave_capability_diagnostic" />
     </PreferenceCategory>
     <PreferenceCategory
         android:key="category_display_behavior"

@@ -34,6 +34,7 @@ class PreferenceConfiguration {
 
     enum class FormatOption {
         AUTO,
+        FORCE_PYROWAVE,
         FORCE_AV1,
         FORCE_HEVC,
         FORCE_H264
@@ -924,6 +925,7 @@ class PreferenceConfiguration {
         const val RES_NATIVE = "Native"
 
         private const val VIDEO_FORMAT_AUTO = "auto"
+        private const val VIDEO_FORMAT_PYROWAVE = "pyrowave"
         private const val VIDEO_FORMAT_AV1 = "forceav1"
         private const val VIDEO_FORMAT_HEVC = "forceh265"
         private const val VIDEO_FORMAT_H264 = "neverh265"
@@ -1110,6 +1112,7 @@ class PreferenceConfiguration {
         private fun getVideoFormatValue(context: Context): FormatOption {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             return when (prefs.getString(VIDEO_FORMAT_PREF_STRING, VIDEO_FORMAT_AUTO)) {
+                VIDEO_FORMAT_PYROWAVE -> FormatOption.FORCE_PYROWAVE
                 VIDEO_FORMAT_AV1 -> FormatOption.FORCE_AV1
                 VIDEO_FORMAT_HEVC -> FormatOption.FORCE_HEVC
                 VIDEO_FORMAT_H264 -> FormatOption.FORCE_H264
@@ -1120,6 +1123,7 @@ class PreferenceConfiguration {
         private fun getVideoFormatPreferenceString(format: FormatOption): String {
             return when (format) {
                 FormatOption.AUTO -> VIDEO_FORMAT_AUTO
+                FormatOption.FORCE_PYROWAVE -> VIDEO_FORMAT_PYROWAVE
                 FormatOption.FORCE_AV1 -> VIDEO_FORMAT_AV1
                 FormatOption.FORCE_HEVC -> VIDEO_FORMAT_HEVC
                 FormatOption.FORCE_H264 -> VIDEO_FORMAT_H264

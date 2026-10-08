@@ -195,6 +195,7 @@ class AppSettingsManager(private val context: Context) {
     private fun getVideoFormatPreferenceString(format: PreferenceConfiguration.FormatOption): String {
         return when (format) {
             PreferenceConfiguration.FormatOption.AUTO -> "auto"
+            PreferenceConfiguration.FormatOption.FORCE_PYROWAVE -> "pyrowave"
             PreferenceConfiguration.FormatOption.FORCE_H264 -> "h264"
             PreferenceConfiguration.FormatOption.FORCE_HEVC -> "hevc"
             PreferenceConfiguration.FormatOption.FORCE_AV1 -> "av1"
@@ -205,6 +206,8 @@ class AppSettingsManager(private val context: Context) {
         if (videoFormatStr == null) return PreferenceConfiguration.FormatOption.AUTO
 
         return when (videoFormatStr.lowercase()) {
+            "pyrowave", "force_pyrowave", "forcepyrowave" ->
+                PreferenceConfiguration.FormatOption.FORCE_PYROWAVE
             "h264", "force_h264" -> PreferenceConfiguration.FormatOption.FORCE_H264
             "hevc", "force_hevc" -> PreferenceConfiguration.FormatOption.FORCE_HEVC
             "av1", "force_av1" -> PreferenceConfiguration.FormatOption.FORCE_AV1
