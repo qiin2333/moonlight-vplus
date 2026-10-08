@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       transport_test_package:
-        description: 'Build an isolated transport test app without replacing the existing app'
+        description: 'Build a signed Release transport test app without replacing the existing app'
         type: boolean
         default: false
 
@@ -96,7 +96,7 @@ jobs:
 
       - name: Select the isolated transport test application
         if: github.event_name == 'workflow_dispatch' && inputs.transport_test_package && github.ref_type == 'branch'
-        run: echo 'ORG_GRADLE_PROJECT_transportValidationApplicationId=com.limelight.vplus.transporttest' >> "$GITHUB_ENV"
+        run: echo 'ORG_GRADLE_PROJECT_transportValidationApplicationId=com.limelight.vplus.transporttest.release' >> "$GITHUB_ENV"
 
       - name: Run lint and unit tests
         run: ./gradlew :app:lintNonRootDebug :app:testNonRootDebugUnitTest --no-daemon --stacktrace
@@ -170,7 +170,7 @@ jobs:
 
       # ===== Release (Signed) Build (tags only) =====
       - name: Decode keystore for Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.transport_test_package && github.ref_type == 'branch')
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -179,13 +179,35 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.transport_test_package && github.ref_type == 'branch')
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
+
+      - name: Verify and save the signed transport Release test package
+        if: github.event_name == 'workflow_dispatch' && inputs.transport_test_package && github.ref_type == 'branch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/nonRoot/release -maxdepth 1 -type f -name '*.apk' -print -quit)
+          test -n "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk"
+          unzip -Z1 "$apk" > "$RUNNER_TEMP/release-native-files.txt"
+          grep -Fx 'lib/arm64-v8a/libpyrowave-shared.so' "$RUNNER_TEMP/release-native-files.txt"
+          grep -Fx 'lib/armeabi-v7a/libpyrowave-shared.so' "$RUNNER_TEMP/release-native-files.txt"
+
+      - name: Upload signed transport Release test package
+        if: github.event_name == 'workflow_dispatch' && inputs.transport_test_package && github.ref_type == 'branch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: transport-test-release-signed
+          path: |
+            app/build/outputs/apk/nonRoot/release/*.apk
+            app/build/outputs/mapping/nonRootRelease/mapping.txt
+          if-no-files-found: error
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
         if: startsWith(github.ref, 'refs/tags/')

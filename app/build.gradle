@@ -29,7 +29,7 @@ if (transportValidationApplicationId != null &&
         !(transportValidationApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
     throw new GradleException("transportValidationApplicationId must be a valid dotted Android application ID")
 }
-def audioHapticsAppLabel = "Moonlight V+"
+def audioHapticsAppLabel = transportValidationApplicationId != null ? "Moonlight V+ 网络体验" : "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
                 ?: localProperties.getProperty("audioHapticsSdkDir")
@@ -246,7 +246,7 @@ android {
 
 if (transportValidationApplicationId != null) {
     androidComponents {
-        onVariants(selector().withBuildType("debug")) { variant ->
+        onVariants(selector().all()) { variant ->
             // Root and nonRoot APKs remain separately installable when both are built.
             def validationRootSuffix = variant.flavorName == "root" ? ".root" : ""
             variant.applicationId.set(transportValidationApplicationId + validationRootSuffix)
