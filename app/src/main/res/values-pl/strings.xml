@@ -334,4 +334,7 @@
     <string name="pyrowave_diag_copy">Kopiuj</string>
     <string name="pyrowave_diag_copy_success">Raport skopiowano do schowka</string>
     <string name="pyrowave_diag_unavailable">Nie można ustalić</string>
+    <string name="image_saved_successfully">Obraz zapisano w: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Nie udało się zapisać obrazu: %1$s</string>
+    <string name="tip_double_tap_mouse">Wskazówka: przytrzymaj pusty obszar u góry listy komputerów, aby zapisać bieżący obraz tła.</string>
 </resources>

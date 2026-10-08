@@ -226,4 +226,7 @@
     <string name="pyrowave_diag_copy">Copiază</string>
     <string name="pyrowave_diag_copy_success">Raport copiat în clipboard</string>
     <string name="pyrowave_diag_unavailable">Indisponibil</string>
+    <string name="image_saved_successfully">Imagine salvată cu succes în: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Salvarea imaginii a eșuat: %1$s</string>
+    <string name="tip_double_tap_mouse">Sfat: ține apăsat pe zona goală din partea de sus a listei de calculatoare pentru a salva imaginea de fundal curentă.</string>
 </resources>

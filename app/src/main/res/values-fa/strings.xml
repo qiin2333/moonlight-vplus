@@ -52,4 +52,7 @@
     <string name="pyrowave_diag_copy">کپی</string>
     <string name="pyrowave_diag_copy_success">گزارش در کلیپ‌بورد کپی شد</string>
     <string name="pyrowave_diag_unavailable">در دسترس نیست</string>
+    <string name="image_saved_successfully">تصویر با موفقیت در این مسیر ذخیره شد: Picture/vplus</string>
+    <string name="image_save_failed_with_error">ذخیرهٔ تصویر ناموفق بود: %1$s</string>
+    <string name="tip_double_tap_mouse">نکته: برای ذخیرهٔ تصویر پس‌زمینهٔ فعلی، قسمت خالی بالای فهرست رایانه‌ها را لمس کنید و نگه دارید.</string>
 </resources>

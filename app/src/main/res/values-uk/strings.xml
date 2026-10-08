@@ -345,4 +345,7 @@
     <string name="pyrowave_diag_copy">Копіювати</string>
     <string name="pyrowave_diag_copy_success">Звіт скопійовано до буфера обміну</string>
     <string name="pyrowave_diag_unavailable">Не вдалося отримати</string>
+    <string name="image_saved_successfully">Зображення успішно збережено в: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Не вдалося зберегти зображення: %1$s</string>
+    <string name="tip_double_tap_mouse">Порада: натисніть і утримуйте порожню область угорі списку комп\'ютерів, щоб зберегти поточне фонове зображення.</string>
 </resources>

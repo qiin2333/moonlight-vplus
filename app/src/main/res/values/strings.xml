@@ -1135,7 +1135,7 @@
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>
-    <string name="tip_double_tap_mouse">💡 Tip: Long press the top blank area on the host list page to download the current wallpaper~</string>
+    <string name="tip_double_tap_mouse">💡 Tip: Long press the blank area at the top of the computer list to save the current background image.</string>
     <string name="tip_long_press_controller">💡 Tip: Long press an app to choose virtual display streaming, super convenient!</string>
     <string name="tip_volume_keys">💡 Tip: Using 5GHz WiFi provides a better experience, lightning fast speeds~</string>
     <string name="tip_wallpaper_change">💡 Tip: The wallpaper API option can set the API for random wallpaper sources, or a single image address</string>
@@ -1369,7 +1369,7 @@
     <string name="image_download_failed_with_error">Image download failed: %1$s</string>
     <string name="image_not_loaded_please_retry">Image not loaded, please try again later</string>
     <string name="image_invalid">Invalid image</string>
-    <string name="image_saved_successfully">Image successfully saved to system directory (Picture/setu)</string>
+    <string name="image_saved_successfully">Image successfully saved to: Picture/vplus</string>
     <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>

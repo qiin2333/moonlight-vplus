@@ -208,4 +208,7 @@
     <string name="pyrowave_diag_copy">Копиране</string>
     <string name="pyrowave_diag_copy_success">Отчетът е копиран в клипборда</string>
     <string name="pyrowave_diag_unavailable">Недостъпно</string>
+    <string name="image_saved_successfully">Изображението е записано успешно в: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Неуспешно записване на изображението: %1$s</string>
+    <string name="tip_double_tap_mouse">Съвет: натиснете и задръжте празната област в горната част на списъка с компютри, за да запазите текущото фоново изображение.</string>
 </resources>

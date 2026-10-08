@@ -337,4 +337,7 @@
     <string name="pyrowave_diag_copy">Kopieren</string>
     <string name="pyrowave_diag_copy_success">Bericht in die Zwischenablage kopiert</string>
     <string name="pyrowave_diag_unavailable">Nicht verfügbar</string>
+    <string name="image_saved_successfully">Bild erfolgreich gespeichert unter: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Bild konnte nicht gespeichert werden: %1$s</string>
+    <string name="tip_double_tap_mouse">Tipp: Halten Sie den leeren Bereich oben in der Computerliste gedrückt, um das aktuelle Hintergrundbild zu speichern.</string>
 </resources>

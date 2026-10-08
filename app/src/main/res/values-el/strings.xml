@@ -260,4 +260,7 @@
     <string name="pyrowave_diag_copy">Αντιγραφή</string>
     <string name="pyrowave_diag_copy_success">Η αναφορά αντιγράφηκε στο πρόχειρο</string>
     <string name="pyrowave_diag_unavailable">Δεν είναι διαθέσιμο</string>
+    <string name="image_saved_successfully">Η εικόνα αποθηκεύτηκε επιτυχώς στο: Picture/vplus</string>
+    <string name="image_save_failed_with_error">Αποτυχία αποθήκευσης εικόνας: %1$s</string>
+    <string name="tip_double_tap_mouse">Συμβουλή: πατήστε παρατεταμένα την κενή περιοχή στο πάνω μέρος της λίστας υπολογιστών για να αποθηκεύσετε την τρέχουσα εικόνα φόντου.</string>
 </resources>
