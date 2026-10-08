@@ -44,7 +44,10 @@ if (audioHapticsSdkDir.isEmpty()) {
 
 // 仅在存在 google-services.json 且满足条件时应用 Google Services 插件
 def hasGoogleServicesJson = file('google-services.json').exists()
-if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
+// Isolated validation packages have no registered Firebase client.
+if (transportValidationApplicationId != null) {
+    logger.lifecycle("Transport validation package: skipping Google Services + Crashlytics plugins")
+} else if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
     apply plugin: 'com.google.gms.google-services'
     // Crashlytics requires google-services to be applied first.
     apply plugin: 'com.google.firebase.crashlytics'
