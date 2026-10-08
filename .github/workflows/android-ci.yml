@@ -138,8 +138,12 @@ jobs:
           echo "VERSION_CODE=$NEW_VERSION_CODE" >> "$GITHUB_ENV"
           echo "Updated release version (floor was $FLOOR from $FLOOR_SRC)"
 
-      - name: Build NonRoot Debug and Release APKs
-        run: ./gradlew :app:assembleNonRootDebug :app:assembleNonRootRelease --no-daemon --stacktrace
+      - name: Build NonRoot Debug APK
+        run: ./gradlew :app:assembleNonRootDebug --no-daemon --stacktrace
+
+      - name: Build NonRoot Release validation APK
+        if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
 
       - name: Verify PyroWave runtime is packaged
         shell: bash
@@ -160,7 +164,7 @@ jobs:
             app/build/outputs/apk/nonRoot/debug/*.apk
 
       - name: Upload Release validation APK
-        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: app-nonroot-release-validation-apk
