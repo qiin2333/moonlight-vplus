@@ -1517,7 +1517,11 @@
     <string name="menu">菜单</string>
     <string name="settings_search_hint">搜索设置项…</string>
     <string name="settings_search_close">关闭搜索</string>
+    <string name="settings_search_clear">清除搜索</string>
     <string name="settings_search_no_results">没有匹配的设置</string>
+    <string name="settings_search_open_category">在分类中查看</string>
+    <string name="settings_search_contains">包含：%1$s</string>
+    <string name="settings_search_match_separator">、</string>
     <string name="no_app_found_for_streaming">未找到可串流的应用</string>
     <string name="notification_icon">通知图标</string>
     <string name="pacing_precise_sync">精确同步（推荐）</string>

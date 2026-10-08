@@ -2,16 +2,30 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp">
 
     <TextView
         android:id="@android:id/title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
         android:textAppearance="@style/PreferenceCategoryWithShadow" />
+
+    <TextView
+        android:id="@+id/settings_category_open"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="2dp"
+        android:drawableEnd="@drawable/ic_chevron_right_accent"
+        android:drawablePadding="4dp"
+        android:gravity="center_vertical"
+        android:text="@string/settings_search_open_category"
+        android:textColor="?attr/appAccent"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
 </LinearLayout> 
