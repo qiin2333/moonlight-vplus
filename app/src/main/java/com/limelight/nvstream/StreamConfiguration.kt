@@ -18,6 +18,8 @@ class StreamConfiguration private constructor() {
     var clientRefreshRateX100: Int = 0
         private set
     var bitrate: Int = 10000
+    var fecPercentage: Int = -2
+        private set
     private var hostResolutionScaleX100: Int = 100
     var sops: Boolean = true
         private set
@@ -88,6 +90,10 @@ class StreamConfiguration private constructor() {
         fun setRefreshRate(refreshRate: Int): Builder = apply { config.refreshRate = refreshRate }
         fun setLaunchRefreshRate(refreshRate: Int): Builder = apply { config.launchRefreshRate = refreshRate }
         fun setBitrate(bitrate: Int): Builder = apply { config.bitrate = bitrate }
+        fun setFecPercentage(percentage: Int): Builder = apply {
+            require(percentage in -2..100)
+            config.fecPercentage = percentage
+        }
         fun setResolutionScale(scale: Int): Builder = apply { config.hostResolutionScaleX100 = scale }
         fun setEnableSops(enable: Boolean): Builder = apply { config.sops = enable }
         fun enableAdaptiveResolution(enable: Boolean): Builder = apply { config.enableAdaptiveResolution = enable }

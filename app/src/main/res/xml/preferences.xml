@@ -17,6 +17,22 @@
             android:entryValues="@array/resolution_values"
             android:defaultValue="1920x1080" />
         <ListPreference
+            android:key="list_fec_mode"
+            android:title="@string/title_fec_mode"
+            android:summary="@string/summary_fec_mode"
+            android:entries="@array/fec_mode_names"
+            android:entryValues="@array/fec_mode_values"
+            android:defaultValue="host" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_fec_percentage"
+            android:title="@string/title_fec_percentage"
+            android:summary="@string/summary_fec_percentage"
+            android:defaultValue="20"
+            seekbar:min="0"
+            android:max="100"
+            seekbar:step="1"
+            android:dependency="list_fec_mode" />
+        <ListPreference
             android:key="list_fps"
             android:title="@string/title_fps_list"
             android:summary="@string/summary_fps_list"
@@ -69,16 +85,6 @@
             android:entryValues="@array/abr_mode_values"
             android:defaultValue="balanced"
             android:dependency="checkbox_adaptive_bitrate" />
-        <CheckBoxPreference
-            android:key="checkbox_video_packet_feedback"
-            android:title="@string/title_video_packet_feedback"
-            android:summary="@string/summary_video_packet_feedback"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_video_packet_control"
-            android:title="@string/title_video_packet_control"
-            android:summary="@string/summary_video_packet_control"
-            android:defaultValue="false" />
         <ListPreference
             android:key="frame_pacing"
             android:title="@string/title_frame_pacing"

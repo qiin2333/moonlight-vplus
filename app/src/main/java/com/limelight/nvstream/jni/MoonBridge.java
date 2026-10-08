@@ -368,107 +368,93 @@ public class MoonBridge {
     }
 
     public static void bridgeClStageStarting(int stage) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.stageStarting(getStageName(stage));
+        if (connectionListener != null) {
+            connectionListener.stageStarting(getStageName(stage));
         }
     }
 
     public static void bridgeClStageComplete(int stage) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.stageComplete(getStageName(stage));
+        if (connectionListener != null) {
+            connectionListener.stageComplete(getStageName(stage));
         }
     }
 
     public static void bridgeClStageFailed(int stage, int errorCode) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
+        if (connectionListener != null) {
+            connectionListener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
         }
     }
 
     public static void bridgeClConnectionStarted() {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.connectionStarted();
+        if (connectionListener != null) {
+            connectionListener.connectionStarted();
         }
     }
 
     public static void bridgeClConnectionTerminated(int errorCode) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.connectionTerminated(errorCode);
+        if (connectionListener != null) {
+            connectionListener.connectionTerminated(errorCode);
         }
     }
 
     public static void bridgeClRumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
+        if (connectionListener != null) {
+            connectionListener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
         }
     }
 
     public static void bridgeClConnectionStatusUpdate(int connectionStatus) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.connectionStatusUpdate(connectionStatus);
+        if (connectionListener != null) {
+            connectionListener.connectionStatusUpdate(connectionStatus);
         }
     }
 
     public static void bridgeClSetHdrMode(boolean enabled, byte[] hdrMetadata) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.setHdrMode(enabled, hdrMetadata);
+        if (connectionListener != null) {
+            connectionListener.setHdrMode(enabled, hdrMetadata);
         }
     }
 
     public static void bridgeClRumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
+        if (connectionListener != null) {
+            connectionListener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
         }
     }
 
     public static void bridgeClSetAdaptiveTriggers(short controllerNumber, byte eventFlags,
                                                    byte typeLeft, byte typeRight,
                                                    byte[] left, byte[] right) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.setAdaptiveTriggers(
+        if (connectionListener != null) {
+            connectionListener.setAdaptiveTriggers(
                     controllerNumber, eventFlags, typeLeft, typeRight, left, right);
         }
     }
 
     public static void bridgeClSetMotionEventState(short controllerNumber, byte eventType, short sampleRateHz) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
+        if (connectionListener != null) {
+            connectionListener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
         }
     }
 
     public static void bridgeClSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.setControllerLED(controllerNumber, r, g, b);
+        if (connectionListener != null) {
+            connectionListener.setControllerLED(controllerNumber, r, g, b);
         }
     }
 
     public static void bridgeClDs5HapticsPcm(short controllerNumber, byte flags, int sequenceNumber,
                                                 long presentationTimeUs, int sampleRate, int frameCount,
                                                 byte channelCount, byte bitsPerSample, byte[] pcm) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
+        if (connectionListener != null) {
+            connectionListener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
                     controllerNumber, flags, sequenceNumber, presentationTimeUs,
                     sampleRate, frameCount, channelCount, bitsPerSample, pcm));
         }
     }
 
     public static void bridgeClResolutionChanged(int width, int height) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.onResolutionChanged(width, height);
+        if (connectionListener != null) {
+            connectionListener.onResolutionChanged(width, height);
         }
     }
 
@@ -498,9 +484,8 @@ public class MoonBridge {
 
     public static void bridgeClCursorUpdate(int flags, int shapeId, int width, int height,
                                             int hotspotX, int hotspotY, byte[] bgraPixels) {
-        NvConnectionListener listener = connectionListener;
-        if (listener != null) {
-            listener.onCursorUpdate(flags, shapeId, width, height,
+        if (connectionListener != null) {
+            connectionListener.onCursorUpdate(flags, shapeId, width, height,
                     hotspotX, hotspotY, bgraPixels);
         }
     }
@@ -570,7 +555,7 @@ public class MoonBridge {
                                               int videoCapabilities,
                                               int colorSpace, int colorRange, int hdrMode,
                                               boolean enableMic, boolean controlOnly,
-                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics);
+                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics, int fecPercentage);
 
     // Sunshine dynamic HDR negotiation result. Valid after the connection
     // callback reports the session is established (RTSP handshake complete).
@@ -660,22 +645,6 @@ public class MoonBridge {
 
     /** Returns wire-level bytes received by the active video RTP stream. */
     public static native long getRtpVideoBytesReceived();
-
-    /** Opt-in sampling; configure before starting a connection. Disabled by default. */
-    public static native boolean setVideoNetworkObservationEnabled(boolean enabled);
-    // Experimental measurement only. Must be configured before startConnection().
-    public static native boolean setVideoPacketFeedbackEnabled(boolean enabled);
-    /** Separate opt-in for host network control; disabled by default and frozen at connection start. */
-    public static native boolean setVideoPacketControlEnabled(boolean enabled);
-    /** Actual RTSP-confirmed control permission, never inferred from the requested setting. */
-    public static native boolean getVideoPacketControlNegotiated();
-
-    private static native long[] getTransportPolicyStatusNoticeNative();
-
-    public static TransportPolicyStatusNotice getTransportPolicyStatusNotice() {
-        long[] values = getTransportPolicyStatusNoticeNative();
-        return values != null ? new TransportPolicyStatusNotice(values) : null;
-    }
 
     public static native String getLaunchUrlQueryParameters();
 

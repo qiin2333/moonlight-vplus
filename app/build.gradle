@@ -22,14 +22,7 @@ def escapeBuildConfigString = { value ->
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
-
-// Opt-in package isolation for transport validation; normal package IDs stay unchanged.
-def transportValidationApplicationId = project.findProperty("transportValidationApplicationId")?.toString()?.trim()
-if (transportValidationApplicationId != null &&
-        !(transportValidationApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
-    throw new GradleException("transportValidationApplicationId must be a valid dotted Android application ID")
-}
-def audioHapticsAppLabel = transportValidationApplicationId != null ? "Moonlight V+ 网络体验" : "Moonlight V+"
+def audioHapticsAppLabel = "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
                 ?: localProperties.getProperty("audioHapticsSdkDir")
@@ -44,10 +37,7 @@ if (audioHapticsSdkDir.isEmpty()) {
 
 // 仅在存在 google-services.json 且满足条件时应用 Google Services 插件
 def hasGoogleServicesJson = file('google-services.json').exists()
-// Isolated validation packages have no registered Firebase client.
-if (transportValidationApplicationId != null) {
-    logger.lifecycle("Transport validation package: skipping Google Services + Crashlytics plugins")
-} else if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
+if (hasGoogleServicesJson && (project.hasProperty('enableAnalytics') || gradle.startParameter.taskNames.any { it.contains('Release') })) {
     apply plugin: 'com.google.gms.google-services'
     // Crashlytics requires google-services to be applied first.
     apply plugin: 'com.google.firebase.crashlytics'
@@ -243,16 +233,6 @@ android {
     externalNativeBuild {
         ndkBuild {
             path "src/main/jni/Android.mk"
-        }
-    }
-}
-
-if (transportValidationApplicationId != null) {
-    androidComponents {
-        onVariants(selector().all()) { variant ->
-            // Root and nonRoot APKs remain separately installable when both are built.
-            def validationRootSuffix = variant.flavorName == "root" ? ".root" : ""
-            variant.applicationId.set(transportValidationApplicationId + validationRootSuffix)
         }
     }
 }

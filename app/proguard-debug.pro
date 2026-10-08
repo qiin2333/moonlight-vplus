@@ -6,15 +6,6 @@
 -dontwarn kotlinx.coroutines.**
 -keep class androidx.compose.** { *; }
 
-# Transport controls instrumentation calls these models and composables across
-# the APK boundary, including Compose-generated stability fields and copy methods.
--keep class com.limelight.nvstream.http.TransportAutomaticControl { *; }
--keep class com.limelight.nvstream.http.TransportFramePolicy { *; }
--keep class com.limelight.nvstream.http.TransportPolicyReceipt { *; }
--keep class com.limelight.nvstream.http.TransportPolicyStatus { *; }
--keep class com.limelight.nvstream.http.TransportPolicyView { *; }
--keep class com.limelight.gamemenu.TransportPolicyControlsKt { *; }
-
 # Cross-APK instrumentation tests inspect dialog recreation and focus state.
 -keepclassmembers class com.limelight.utils.AboutDialogLauncher {
 	*** dialogSnapshot*(...);

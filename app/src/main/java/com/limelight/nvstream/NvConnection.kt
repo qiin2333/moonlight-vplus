@@ -19,7 +19,6 @@ import java.security.NoSuchAlgorithmException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
 
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -61,12 +60,6 @@ open class NvConnection(
         }
     private val context: ConnectionContext = ConnectionContext()
     private val isMonkey: Boolean = ActivityManager.isUserAMonkey()
-    private val lifecycleLock = Any()
-    private val connectionSlot = ConnectionSlot(connectionAllowed)
-    @Volatile private var stopped = false
-    private var nativeBridgeOwned = false
-    @Volatile private var legacyAbrService: com.limelight.nvstream.http.AdaptiveBitrateService? = null
-    private val legacyBitrateWorker = LegacyBitrateWorker { createNvHttp().setBitrate(it) }
 
     @Volatile
     var serverVersion: String? = null
@@ -103,64 +96,22 @@ open class NvConnection(
     }
 
     fun stop() {
-        if (legacyBitrateWorker.isWorkerThread) {
-            Thread { stop() }.start()
-            return
-        }
-        synchronized(lifecycleLock) {
-            if (stopped) return
-            stopped = true
-            connectionSlot.revoke()
-            if (nativeBridgeOwned) MoonBridge.interruptConnection()
-        }
-        legacyBitrateWorker.close()
-        val abr = legacyAbrService
-        abr?.stop()
-        var interrupted = false
-        try {
-            // A timeout is not terminal: retain the slot until both old workers finish.
-            while (true) {
-                try { if (legacyBitrateWorker.awaitClosed(1, TimeUnit.SECONDS)) break }
-                catch (_: InterruptedException) { interrupted = true }
-            }
-            if (abr != null) {
-                while (true) {
-                    try { if (abr.awaitStopped(1, TimeUnit.SECONDS)) break }
-                    catch (_: InterruptedException) { interrupted = true }
-                }
-            }
-            synchronized(MoonBridge::class.java) {
-                if (nativeBridgeOwned) {
-                    MoonBridge.stopConnection()
-                    MoonBridge.cleanupBridge()
-                    nativeBridgeOwned = false
-                }
-            }
-        } finally {
-            connectionSlot.release()
-            if (interrupted) Thread.currentThread().interrupt()
-        }
-    }
+        MoonBridge.interruptConnection()
 
-    internal fun attachLegacyAbrService(service: com.limelight.nvstream.http.AdaptiveBitrateService): Boolean =
-        synchronized(lifecycleLock) {
-            if (stopped || legacyAbrService != null) return false
-            legacyAbrService = service
-            true
+        synchronized(MoonBridge::class.java) {
+            MoonBridge.stopConnection()
+            MoonBridge.cleanupBridge()
         }
+
+        connectionAllowed.release()
+    }
 
     /**
      * 创建一个新的 NvHTTP 实例（线程安全：调用方负责自行分线程）。
      * 主要用于 [com.limelight.AdaptiveBitrateService] 等需要直接访问服务端 API 的旁路逻辑。
      */
     fun createNvHttp(): NvHTTP =
-        NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider,
-            legacyScope = context.legacyTransportScope)
-
-    val transportSessionId: String?
-        get() = context.transportSessionId
-    val transportConnectionEpoch: String?
-        get() = context.legacyTransportScope?.connectionEpoch
+        NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
 
     /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
     fun applyBitrateLocally(bitrateKbps: Int) {
@@ -312,7 +263,8 @@ open class NvConnection(
             context.streamConfig.getControlOnly(),
             context.streamConfig.audioCodec,
             context.streamConfig.audioBitrate,
-            context.streamConfig.authoredPcmHaptics
+            context.streamConfig.authoredPcmHaptics,
+            context.streamConfig.fecPercentage
         )
 
     @Throws(XmlPullParserException::class, IOException::class, InterruptedException::class)
@@ -498,113 +450,85 @@ open class NvConnection(
         return false
     }
 
-    fun start(
-        audioRenderer: AudioRenderer,
-        videoDecoderRenderer: VideoDecoderRenderer,
-        connectionListener: NvConnectionListener,
-        videoPacketFeedbackEnabled: Boolean = false,
-        videoPacketControlEnabled: Boolean = false
-    ) {
+    fun start(audioRenderer: AudioRenderer, videoDecoderRenderer: VideoDecoderRenderer, connectionListener: NvConnectionListener) {
         Thread {
-            var connectedSuccessfully = false
+            context.connListener = connectionListener
+            val appName = context.streamConfig.app.appName
+            // The preflight creates and tears down the Vulkan/Surface candidate.
+            // Keep it on this worker so Surface callbacks remain responsive,
+            // and complete it before capability/RTSP negotiation begins.
+            if (!preparePyrowaveForSurface(videoDecoderRenderer)) {
+                context.connListener.stageFailed(appName, 0, 0)
+                return@Thread
+            }
+            context.videoCapabilities = videoDecoderRenderer.getCapabilities()
+
+            context.connListener.stageStarting(appName)
+
             try {
-                context.connListener = connectionListener
-                val appName = context.streamConfig.app.appName
-                // Complete the Vulkan/Surface preflight on this worker before RTSP.
-                if (!preparePyrowaveForSurface(videoDecoderRenderer)) {
+                if (!timeConnectionStep("app negotiation") { startApp() }) {
                     context.connListener.stageFailed(appName, 0, 0)
                     return@Thread
                 }
-                context.videoCapabilities = videoDecoderRenderer.getCapabilities()
-
-                try {
-                    val waitStartTime = SystemClock.elapsedRealtime()
-                    if (!connectionSlot.acquire()) return@Thread
-                    val waitMs = SystemClock.elapsedRealtime() - waitStartTime
-                    if (waitMs > 10) {
-                        LimeLog.info("Connection step 'connection slot wait' completed in ${waitMs}ms")
-                    }
-                } catch (e: InterruptedException) {
-                    context.connListener.displayMessage(e.message ?: "")
-                    context.connListener.stageFailed(appName, 0, 0)
-                    return@Thread
+                context.connListener.stageComplete(appName)
+            } catch (e: HostHttpResponseException) {
+                e.printStackTrace()
+                val hostMessage = when (e.getSunshineErrorCode()) {
+                    "VDD_NOT_SUPPORTED" ->
+                        appContext.getString(R.string.error_vdd_unsupported)
+                    "VDD_DRIVER_MISSING", "VDD_DRIVER_UNREACHABLE" ->
+                        appContext.getString(R.string.error_vdd_unavailable)
+                    else -> e.message
                 }
+                context.connListener.displayMessage(hostMessage)
+                context.connListener.stageFailed(appName, 0, e.getErrorCode())
+                return@Thread
+            } catch (e: XmlPullParserException) {
+                e.printStackTrace()
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
+                return@Thread
+            } catch (e: IOException) {
+                e.printStackTrace()
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
+                return@Thread
+            } catch (e: InterruptedException) {
+                context.connListener.displayMessage(appContext.getString(R.string.connection_interrupted))
+                context.connListener.stageFailed(appName, 0, 0)
+                return@Thread
+            }
 
-                synchronized(MoonBridge::class.java) connection@ {
-                    if (stopped) return@connection
-                    context.connListener.stageStarting(appName)
+            val ib = ByteBuffer.allocate(16)
+            ib.putInt(context.riKeyId)
 
-                    try {
-                        if (!timeConnectionStep("app negotiation") { startApp() }) {
-                            context.connListener.stageFailed(appName, 0, 0)
-                            return@Thread
-                        }
-                        context.connListener.stageComplete(appName)
-                    } catch (e: HostHttpResponseException) {
-                        e.printStackTrace()
-                        val hostMessage = when (e.getSunshineErrorCode()) {
-                            "VDD_NOT_SUPPORTED" ->
-                                appContext.getString(R.string.error_vdd_unsupported)
-                            "VDD_DRIVER_MISSING", "VDD_DRIVER_UNREACHABLE" ->
-                                appContext.getString(R.string.error_vdd_unavailable)
-                            else -> e.message
-                        }
-                        context.connListener.displayMessage(hostMessage)
-                        context.connListener.stageFailed(appName, 0, e.getErrorCode())
-                        return@Thread
-                    } catch (e: XmlPullParserException) {
-                        e.printStackTrace()
-                        context.connListener.displayMessage(e.message ?: "")
-                        context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
-                        return@Thread
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                        context.connListener.displayMessage(e.message ?: "")
-                        context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 or MoonBridge.ML_PORT_FLAG_TCP_47989, 0)
-                        return@Thread
-                    } catch (e: InterruptedException) {
-                        context.connListener.displayMessage(appContext.getString(R.string.connection_interrupted))
-                        context.connListener.stageFailed(appName, 0, 0)
-                        return@Thread
-                    }
-
-                    val ib = ByteBuffer.allocate(16)
-                    ib.putInt(context.riKeyId)
-
-                    // Configure only after the previous native connection releases its slot.
-                    // Control is explicit; its request also needs feedback. Measurement alone grants no control.
-                    val controlRequested = videoPacketControlEnabled && !context.streamConfig.getControlOnly()
-                    val feedbackRequested = (videoPacketFeedbackEnabled || controlRequested) && !context.streamConfig.getControlOnly()
-                    val controlConfigured = MoonBridge.setVideoPacketControlEnabled(controlRequested)
-                    val feedbackConfigured = MoonBridge.setVideoPacketFeedbackEnabled(feedbackRequested)
-                    val observationConfigured = MoonBridge.setVideoNetworkObservationEnabled(feedbackRequested)
-                    if (!controlConfigured || !feedbackConfigured || !observationConfigured) {
-                        LimeLog.warning("Video packet opt-in configuration rejected before native connection")
-                        context.connListener.stageFailed(appName, 0, -1)
-                        return@connection
-                    }
-                    LimeLog.info("Video packet control requested=$controlRequested; feedback requested=$feedbackRequested")
-                    synchronized(lifecycleLock) {
-                        if (stopped) return@connection
-                        nativeBridgeOwned = true
-                    }
-                    MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
-                    MoonBridge.setDynamicHdrNegotiation(
-                        context.streamConfig.dynamicHdrCaps,
-                        if (context.streamConfig.dolbyVisionDirectSurface) 1 else 0,
-                        context.streamConfig.dynamicHdrPreference,
-                    )
-                    val ret = timeConnectionStep("native connection") {
-                        startNativeConnection(ib)
-                    }
-                    if (ret != 0) {
-                        return@connection
-                    }
-                    connectedSuccessfully = true
-                    LimeLog.info("Video packet control negotiated=${MoonBridge.getVideoPacketControlNegotiated()}")
+            try {
+                val waitStartTime = SystemClock.elapsedRealtime()
+                connectionAllowed.acquire()
+                val waitMs = SystemClock.elapsedRealtime() - waitStartTime
+                if (waitMs > 10) {
+                    LimeLog.info("Connection step 'connection slot wait' completed in ${waitMs}ms")
                 }
-            } finally {
-                if (!connectedSuccessfully) stop()
+            } catch (e: InterruptedException) {
+                context.connListener.displayMessage(e.message ?: "")
+                context.connListener.stageFailed(appName, 0, 0)
+                return@Thread
+            }
+
+            synchronized(MoonBridge::class.java) {
+                MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
+                MoonBridge.setDynamicHdrNegotiation(
+                    context.streamConfig.dynamicHdrCaps,
+                    if (context.streamConfig.dolbyVisionDirectSurface) 1 else 0,
+                    context.streamConfig.dynamicHdrPreference,
+                )
+                val ret = timeConnectionStep("native connection") {
+                    startNativeConnection(ib)
+                }
+                if (ret != 0) {
+                    connectionAllowed.release()
+                    return@synchronized
+                }
             }
         }.start()
     }
@@ -821,15 +745,41 @@ open class NvConnection(
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun setBitrate(bitrateKbps: Int, callback: BitrateAdjustmentCallback?) {
-        if (stopped || MoonBridge.getVideoPacketControlNegotiated()) {
-            callback?.onFailure("Use this session's transport policy controls")
-            return
-        }
-        val submitted = legacyBitrateWorker.submit(bitrateKbps, { accepted ->
-            context.streamConfig.bitrate = accepted
-            callback?.onSuccess(accepted)
-        }, { error -> callback?.onFailure(error) })
-        if (!submitted) callback?.onFailure("Connection stopped")
+        Thread {
+            val h: NvHTTP
+            try {
+                h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+                LimeLog.info("NvHTTP created successfully for bitrate adjustment")
+            } catch (e: IOException) {
+                LimeLog.warning("Failed to create NvHTTP for bitrate adjustment: ${e.message}")
+                callback?.onFailure(appContext.getString(R.string.connection_http_failed, e.message.orEmpty()))
+                return@Thread
+            }
+            try {
+                LimeLog.info("Sending bitrate adjustment request...")
+                val success = h.setBitrate(bitrateKbps)
+                if (success) {
+                    context.streamConfig.bitrate = bitrateKbps
+                    LimeLog.info("Bitrate adjustment successful, updated local config to $bitrateKbps kbps")
+                    callback?.onSuccess(bitrateKbps)
+                } else {
+                    LimeLog.warning("Bitrate adjustment request failed (server returned false)")
+                    callback?.onFailure(appContext.getString(R.string.connection_server_failed))
+                }
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                LimeLog.warning("Bitrate adjustment interrupted: ${e.message}")
+                callback?.onFailure(appContext.getString(R.string.connection_operation_interrupted))
+            } catch (e: IOException) {
+                LimeLog.warning("Failed to set bitrate: ${e.message}")
+                e.printStackTrace()
+                callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
+            } catch (e: XmlPullParserException) {
+                LimeLog.warning("Failed to set bitrate: ${e.message}")
+                e.printStackTrace()
+                callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
+            }
+        }.start()
     }
 
     interface BitrateAdjustmentCallback {

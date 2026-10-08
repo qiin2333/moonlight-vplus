@@ -174,16 +174,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var orientationManager: OrientationManager
     private lateinit var tombstonePrefs: SharedPreferences
 
-    @Volatile var conn: NvConnection? = null
+    var conn: NvConnection? = null
     var progressOverlay: FullscreenProgressOverlay? = null
 
     // 智能码率
     var adaptiveBitrateService: AdaptiveBitrateService? = null
-    var transportPolicyService: com.limelight.nvstream.http.TransportPolicyService? = null
-    var transportStatisticsService: com.limelight.nvstream.http.TransportPolicyService? = null
-        private set
-    // Activity-local budget only; a new connection never inherits old authority or receipts.
-    @Volatile private var transportReconnectBudgetKbps: Int? = null
     @Volatile private var latestPerfInfo: PerformanceInfo? = null
 
     // Sunshine clipboard sync — null until pref toggles enable it.
@@ -279,7 +274,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var cursorServiceManager: CursorServiceManager
     lateinit var floatBallHandler: FloatBallHandler
     lateinit var connectionCallbackHandler: ConnectionCallbackHandler
-    private lateinit var connectionListener: NvConnectionListener
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
@@ -629,6 +623,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         floatBallHandler = FloatBallHandler(this, prefConfig)
         floatBallHandler.initialize()
 
+        connectionCallbackHandler = ConnectionCallbackHandler(this)
     }
 
     private fun getOrCreateKeyboardUIController(): KeyboardUIController? {
@@ -775,8 +770,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
      */
     private fun createConnectionAndHandler() {
-        // Revoke old callbacks and stop their original attempt before replacing any resources.
-        if (::connectionCallbackHandler.isInitialized) connectionCallbackHandler.stopConnection()
         usbForwarding?.close()
         usbForwarding = null
         framegenEnabledToastShown = false
@@ -806,32 +799,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         // Keep connection callbacks localized on API 22-32 where setLocale() updates
         // the Activity resources without changing the process application context.
         val connectionContext = applicationContext.createConfigurationContext(Configuration(resources.configuration))
-        val connection = NvConnection(
+        conn = NvConnection(
             connectionContext,
             ComputerDetails.AddressTuple(host, port),
             httpsPort, uniqueId, pairName, config,
             PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
         )
-        conn = connection
-        val callbackGuard = com.limelight.nvstream.ConnectionCallbackGuard {
-            conn === connection && !destroying && !isDestroyed
-        }
-        val callbackHandler = ConnectionCallbackHandler(this, connection, callbackGuard)
-        connectionCallbackHandler = callbackHandler
-        decoderRenderer?.firstFrameCallback = {
-            callbackHandler.postToOwner {
-                // Let SurfaceFlinger compose the frame before hiding the loading overlay.
-                val overlay = progressOverlay
-                streamView.postDelayed({
-                    callbackHandler.postToOwner {
-                        if (progressOverlay === overlay) {
-                            overlay?.dismiss()
-                            progressOverlay = null
-                        }
-                    }
-                }, 48)
-            }
-        }
         orientationManager.connection = conn
         controllerHandler = ControllerHandler(
             this,
@@ -842,30 +815,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             onExitStream = ::exitStreamFromDriverShortcut
         )
         virtualController?.rebindControllerHandler(controllerHandler)
-        val controller = controllerHandler
-        val callbackDelegate = object : NvConnectionListener by this {
-            override fun rumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short) {
-                callbackHandler.postToOwner {
-                    controllerManager?.elementController?.gameVibrator(lowFreqMotor, highFreqMotor)
-                }
-                controller.handleRumble(controllerNumber, lowFreqMotor, highFreqMotor)
-            }
-            override fun rumbleTriggers(controllerNumber: Short, leftTrigger: Short, rightTrigger: Short) =
-                controller.handleRumbleTriggers(controllerNumber, leftTrigger, rightTrigger)
-            override fun setAdaptiveTriggers(controllerNumber: Short, eventFlags: Byte, typeLeft: Byte,
-                typeRight: Byte, left: ByteArray, right: ByteArray) =
-                controller.handleSetAdaptiveTriggers(controllerNumber, eventFlags, typeLeft, typeRight, left, right)
-            override fun setMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) =
-                controller.handleSetMotionEventState(controllerNumber, motionType, reportRateHz)
-            override fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
-                controller.handleSetControllerLED(controllerNumber, r, g, b)
-            override fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame) = controller.handleDs5HapticsPcm(frame)
-        }
-        connectionListener = com.limelight.nvstream.ScopedConnectionListener(callbackGuard, callbackDelegate,
-            object : com.limelight.nvstream.ConnectionLifecycleCallbacks by callbackHandler {
-                override fun connectionStarted() = connectionStartedFor(callbackHandler)
-                override fun connectionTerminated(errorCode: Int) = connectionTerminatedFor(callbackHandler, errorCode)
-            }, { action -> runOnUiThread { action() } })
         // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
         // re-runs this path once it claims controller 0.
         controllerHandler.onSensorsReenabled()
@@ -1051,7 +1000,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             )
             rendererForFailure = newRenderer
             decoderRenderer = newRenderer
-            // The connection factory binds the first-frame callback to its own connection.
+            // 首帧解码到达时立刻隐藏 loading overlay，无缝切到真实画面
+            decoderRenderer?.firstFrameCallback = {
+                runOnUiThread {
+                    // OnFrameRenderedListener 触发时 SurfaceFlinger 还要等几个 vsync 才把帧真正合成上屏，
+                    // 此时立即 GONE overlay 仍会暴露空缝；延迟 ~3 帧让 SurfaceView 上的视频稳定再隐藏。
+                    streamView.postDelayed({
+                        progressOverlay?.dismiss()
+                        progressOverlay = null
+                    }, 48)
+                }
+            }
         }
 
         val hevcHdrSupported = when {
@@ -1227,7 +1186,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             .setLaunchRefreshRate(prefConfig.fps)
             .setRefreshRate(chosenFrameRate)
             .setApp(app)
-            .setBitrate(transportReconnectBudgetKbps ?: prefConfig.bitrate)
+            .setBitrate(prefConfig.bitrate)
+            .setFecPercentage(prefConfig.fecPercentage)
             .setResolutionScale(prefConfig.resolutionScale)
             .setEnableSops(prefConfig.enableSops)
             .enableLocalAudioPlayback(prefConfig.playHostAudio)
@@ -1763,10 +1723,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onDestroy() {
-        // Stop while this Activity still owns the connection; destruction revokes UI ownership.
-        if (::connectionCallbackHandler.isInitialized) connectionCallbackHandler.stopConnection()
         destroying = true
-        if (::connectionListener.isInitialized) MoonBridge.detachConnectionListener(connectionListener)
+        MoonBridge.detachConnectionListener(this)
         if (::streamView.isInitialized) {
             streamView.setInputCallbacks(null)
         }
@@ -1799,6 +1757,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         super.onDestroy()
+
+        if (conn != null && connected) {
+            connectionCallbackHandler.stopConnection()
+        }
 
         usbDriverServiceManager?.stopAndUnbind()
 
@@ -2247,19 +2209,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionTerminated(errorCode: Int) {
-        connectionTerminatedFor(connectionCallbackHandler, errorCode)
-    }
-
-    private fun connectionTerminatedFor(callbackHandler: ConnectionCallbackHandler, errorCode: Int) {
-        callbackHandler.postToOwner {
-            if (::remoteImeController.isInitialized) remoteImeController.resetSession()
-            usbForwarding?.stopForeground()
+        if (::remoteImeController.isInitialized) {
+            remoteImeController.resetSession()
         }
-        callbackHandler.connectionTerminated(errorCode)
-    }
-
-    internal fun resetConnectionCallbackWork() {
-        if (::remoteImeController.isInitialized) remoteImeController.resetSession()
+        val forwarding = usbForwarding
+        runOnUiThread { forwarding?.stopForeground() }
+        connectionCallbackHandler.connectionTerminated(errorCode)
     }
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
@@ -2267,22 +2222,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionStarted() {
-        connectionStartedFor(connectionCallbackHandler)
-    }
-
-    private fun connectionStartedFor(callbackHandler: ConnectionCallbackHandler) {
-        callbackHandler.connectionStarted()
-        callbackHandler.postToOwner {
-            remoteImeController.resetSession()
-            screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
-            val controller = controllerHandler
-            controller.retryPendingControllerArrivals {
-                callbackHandler.postToOwner {
-                    if (prefConfig.screenDs5Touchpad) controller.setScreenDs5TouchpadEnabled(true)
-                }
+        remoteImeController.resetSession()
+        connectionCallbackHandler.connectionStarted()
+        screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
+        controllerHandler.retryPendingControllerArrivals {
+            if (prefConfig.screenDs5Touchpad) {
+                // Retries run first so pending arrivals populate the metadata cache;
+                // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
+                controllerHandler.setScreenDs5TouchpadEnabled(true)
             }
-            startClipboardSyncIfEnabled()
         }
+        startClipboardSyncIfEnabled()
     }
 
     private fun addDs5TouchpadFeedbackView() {
@@ -2348,37 +2298,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     /** 启动智能码率（如设置已开启）。在连接建立后调用。*/
     fun startAdaptiveBitrateIfEnabled() {
+        if (!prefConfig.enableAdaptiveBitrate) return
+        if (adaptiveBitrateService != null) return
         val c = conn ?: return
-        if (MoonBridge.getVideoPacketControlNegotiated()) {
-            if (transportPolicyService == null) {
-                val sessionId = c.transportSessionId
-                if (sessionId != null) {
-                    transportPolicyService = com.limelight.nvstream.http.TransportPolicyService(sessionId, { c.createNvHttp() },
-                        expectedEpoch = c.transportConnectionEpoch,
-                        notificationProvider = {
-                            MoonBridge.getTransportPolicyStatusNotice()?.let {
-                                com.limelight.nvstream.http.TransportPolicyNotification.fromNative(it)
-                            }
-                        })
-                        .also { it.start() }
-                } else {
-                    LimeLog.warning("Transport policy unavailable: host launch reply has no session identity")
-                }
-            }
-            return
-        }
-        if (prefConfig.enableVideoPacketFeedback && transportStatisticsService == null) {
-            c.transportSessionId?.let { sessionId ->
-                transportStatisticsService = com.limelight.nvstream.http.TransportPolicyService(sessionId,
-                    { c.createNvHttp() }, readOnly = true, expectedEpoch = c.transportConnectionEpoch,
-                    notificationProvider = {
-                        MoonBridge.getTransportPolicyStatusNotice()?.let {
-                            com.limelight.nvstream.http.TransportPolicyNotification.fromNative(it)
-                        }
-                    }).also { it.start() }
-            }
-        }
-        if (!prefConfig.enableAdaptiveBitrate || adaptiveBitrateService != null) return
         val service = AdaptiveBitrateService(
             nvHttpFactory = { c.createNvHttp() },
             statsProvider = {
@@ -2392,38 +2314,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 }
             },
             onBitrateChanged = { kbps, _ ->
-                // 旧 API 已提交的目标镜像；不代表编码器已生效。
+                // service 已成功通知服务端，仅同步本地配置
                 c.applyBitrateLocally(kbps)
             }
         )
-        if (c.attachLegacyAbrService(service)) {
-            service.start(c.currentBitrate, prefConfig.abrMode)
-            adaptiveBitrateService = service
-        } else service.stop()
+        service.start(prefConfig.bitrate, prefConfig.abrMode)
+        adaptiveBitrateService = service
     }
 
-    /** Stop the old controller while retaining its last applied network budget for reconnect. */
+    /** 停止智能码率，恢复初始码率。*/
     fun stopAdaptiveBitrate() {
-        transportStatisticsService?.stop()
-        transportStatisticsService = null
-        transportPolicyService?.stopAndGetReconnectBudget()?.let { transportReconnectBudgetKbps = it }
-        transportPolicyService = null
         adaptiveBitrateService?.stop()
         adaptiveBitrateService = null
-    }
-
-    /** Called on the UI thread; a legacy reply is scoped to its original live connection. */
-    internal fun isCurrentLegacyBitrateConnection(connection: NvConnection): Boolean =
-        conn === connection && connected && transportPolicyService == null &&
-            !MoonBridge.getVideoPacketControlNegotiated()
-
-    internal fun acknowledgeLegacyBitrate(connection: NvConnection, bitrateKbps: Int): Boolean {
-        if (!isCurrentLegacyBitrateConnection(connection)) return false
-        // A current compatibility-mode acknowledgement supersedes a former v2 budget.
-        // It confirms only the old API's target, never an SDK or wire-budget receipt.
-        transportReconnectBudgetKbps = null
-        prefConfig.bitrate = bitrateKbps
-        return true
     }
 
     override fun onStart() {
@@ -2855,13 +2757,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     )
                 }
             )
-            conn?.start(
-                this.audioRenderer!!,
-                decoderRenderer!!,
-                connectionListener,
-                videoPacketFeedbackEnabled = prefConfig.enableVideoPacketFeedback && !prefConfig.controlOnly,
-                videoPacketControlEnabled = prefConfig.enableVideoPacketControl && !prefConfig.controlOnly
-            )
+            conn?.start(this.audioRenderer!!, decoderRenderer!!, this)
 
             streamView.post { cursorServiceManager.syncCursorWithStream() }
         } else if (connected && isExtremeResumeEnabled) {

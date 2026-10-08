@@ -335,60 +335,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_getRtpVideoBytesReceived(JNIEnv *env,
     return (jlong)LiGetRTPVideoBytesReceived();
 }
 
-JNIEXPORT jboolean JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_setVideoNetworkObservationEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
-    (void)env;
-    (void)clazz;
-    return LiSetVideoNetworkObservationEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
-}
-
-static jlong transportPolicyJniBits(uint64_t value) {
-    _Static_assert(sizeof(jlong) == sizeof(uint64_t), "JNI long must preserve uint64 bits");
-    jlong result;
-    memcpy(&result, &value, sizeof(result));
-    return result;
-}
-
-JNIEXPORT jlongArray JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_getTransportPolicyStatusNoticeNative(JNIEnv *env, jclass clazz) {
-    (void)clazz;
-    TPS_STATUS_NOTICE notice;
-    if (!LiGetTransportPolicyStatusNotice(&notice)) return NULL;
-    const jlong values[] = {
-        TPS_STATUS_VERSION, notice.sessionId,
-        transportPolicyJniBits(notice.connectionEpoch), transportPolicyJniBits(notice.noticeSequence),
-        transportPolicyJniBits(notice.controlEpoch), transportPolicyJniBits(notice.acceptedRevision),
-        transportPolicyJniBits(notice.encoderAppliedRevision), transportPolicyJniBits(notice.firstSentRevision),
-        transportPolicyJniBits(notice.firstSentFrame), notice.flags, notice.controlSource, notice.failure
-    };
-    jlongArray result = (*env)->NewLongArray(env, 12);
-    if (result == NULL) return NULL;
-    (*env)->SetLongArrayRegion(env, result, 0, 12, values);
-    if ((*env)->ExceptionCheck(env)) return NULL;
-    return result;
-}
-
-JNIEXPORT jboolean JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_setVideoPacketFeedbackEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
-    (void)env;
-    (void)clazz;
-    return LiSetVideoPacketFeedbackEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT jboolean JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_setVideoPacketControlEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
-    (void)env;
-    (void)clazz;
-    return LiSetVideoPacketControlEnabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT jboolean JNICALL
-Java_com_limelight_nvstream_jni_MoonBridge_getVideoPacketControlNegotiated(JNIEnv *env, jclass clazz) {
-    (void)env;
-    (void)clazz;
-    return LiGetVideoPacketControlNegotiated() ? JNI_TRUE : JNI_FALSE;
-}
-
 JNIEXPORT jstring JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getLaunchUrlQueryParameters(JNIEnv *env, jclass clazz) {
     return (*env)->NewStringUTF(env, LiGetLaunchUrlQueryParameters());

@@ -1,7 +1,6 @@
 package com.limelight.nvstream
 
 import com.limelight.nvstream.http.ComputerDetails
-import com.limelight.nvstream.http.LegacyTransportScope
 import java.security.cert.X509Certificate
 import javax.crypto.SecretKey
 
@@ -23,9 +22,6 @@ class ConnectionContext {
 
     // This is the sessionUrl0 tag from /resume and /launch
     var rtspSessionUrl: String? = null
-    // Optional, paired launch identity for transport API v2; never inferred from IP/name.
-    var transportSessionId: String? = null
-    var legacyTransportScope: LegacyTransportScope? = null
 
     var negotiatedWidth: Int = 0
     var negotiatedHeight: Int = 0

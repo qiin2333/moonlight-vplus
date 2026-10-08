@@ -101,9 +101,8 @@ class PreferenceConfiguration {
     var fps = 0
     var resolutionScale = 0
     var bitrate = 0
+    var fecPercentage = -2
     var enableAdaptiveBitrate = false
-    var enableVideoPacketFeedback = false
-    var enableVideoPacketControl = false
     var abrMode: String = "balanced"  // quality | balanced | lowLatency
     var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
     var syncTouchEventWithDisplay = false // if true, view.requestUnbufferedDispatch(event) will be disabled
@@ -313,8 +312,6 @@ class PreferenceConfiguration {
                 .putString(RESOLUTION_PREF_STRING, resolutionPreference)
                 .putString(FPS_PREF_STRING, fps.toString())
                 .putInt(BITRATE_PREF_STRING, bitrate)
-                .putBoolean(VIDEO_PACKET_FEEDBACK_PREF_STRING, enableVideoPacketFeedback)
-                .putBoolean(VIDEO_PACKET_CONTROL_PREF_STRING, enableVideoPacketControl)
                 .putString(VIDEO_FORMAT_PREF_STRING, getVideoFormatPreferenceString(videoFormat))
                 .putString(DECODER_INPUT_BUFFER_MODE_PREF_STRING, decoderInputBufferMode.preferenceValue)
                 .putBoolean(ENABLE_HDR_PREF_STRING, enableHdr)
@@ -484,9 +481,8 @@ class PreferenceConfiguration {
         copy.isCustomResolution = this.isCustomResolution
         copy.fps = this.fps
         copy.bitrate = this.bitrate
+        copy.fecPercentage = this.fecPercentage
         copy.enableAdaptiveBitrate = this.enableAdaptiveBitrate
-        copy.enableVideoPacketFeedback = this.enableVideoPacketFeedback
-        copy.enableVideoPacketControl = this.enableVideoPacketControl
         copy.abrMode = this.abrMode
         copy.videoFormat = this.videoFormat
         copy.decoderInputBufferMode = this.decoderInputBufferMode
@@ -571,8 +567,6 @@ class PreferenceConfiguration {
 
         private const val BITRATE_PREF_OLD_STRING = "seekbar_bitrate"
         private const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
-        private const val VIDEO_PACKET_FEEDBACK_PREF_STRING = "checkbox_video_packet_feedback"
-        private const val VIDEO_PACKET_CONTROL_PREF_STRING = "checkbox_video_packet_control"
         private const val ABR_MODE_PREF_STRING = "list_abr_mode"
         private const val STRETCH_PREF_STRING = "checkbox_stretch_video"
         private const val SOPS_PREF_STRING = "checkbox_enable_sops"
@@ -1342,9 +1336,12 @@ class PreferenceConfiguration {
                 config.bitrate = getDefaultBitrate(context)
             }
 
+            config.fecPercentage = when (prefs.getString("list_fec_mode", "host")) {
+                "automatic" -> -1
+                "fixed" -> prefs.getInt("seekbar_fec_percentage", 20).coerceIn(0, 100)
+                else -> -2
+            }
             config.enableAdaptiveBitrate = prefs.getBoolean(ADAPTIVE_BITRATE_PREF_STRING, false)
-            config.enableVideoPacketFeedback = prefs.getBoolean(VIDEO_PACKET_FEEDBACK_PREF_STRING, false)
-            config.enableVideoPacketControl = prefs.getBoolean(VIDEO_PACKET_CONTROL_PREF_STRING, false)
             config.abrMode = prefs.getString(ABR_MODE_PREF_STRING, "balanced") ?: "balanced"
 
             config.resolutionScale = prefs.getInt(HOST_SCALE_PREF_STRING, 100)
