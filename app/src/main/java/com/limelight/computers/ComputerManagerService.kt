@@ -100,8 +100,7 @@ class ComputerManagerService : Service() {
     private val preferences by lazy { PreferenceManager.getDefaultSharedPreferences(this) }
     private val stunPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null || key == PreferenceConfiguration.ENABLE_STUN_PREF_STRING) {
-            stunCache.invalidate()
-            stunJob?.cancel()
+            invalidateStunQuery()
         }
     }
 
@@ -176,11 +175,11 @@ class ComputerManagerService : Service() {
             val updatedComputer = existingComputer ?: details
             existingComputer?.update(details)
             // The normal poll owns host updates; the STUN worker publishes only an immutable cache value.
-            if (details.remoteAddress == null) {
-                val address = updatedComputer.remoteAddress ?: cachedStunAddress(details)
-                updatedComputer.remoteAddress = address
-                details.remoteAddress = address?.let { ComputerDetails.AddressTuple(it.address, it.port) }
+            if (updatedComputer.canRefreshRemoteAddressWithStun) {
+                cachedStunAddress(details)?.let(updatedComputer::updateStunRemoteAddress)
             }
+            details.remoteAddress = updatedComputer.remoteAddress?.let { ComputerDetails.AddressTuple(it.address, it.port) }
+            details.remoteAddressFromStun = updatedComputer.remoteAddressFromStun
             dbManager.updateComputer(updatedComputer)
         }
 
@@ -384,7 +383,7 @@ class ComputerManagerService : Service() {
     }
 
     private fun populateExternalAddress(details: ComputerDetails) {
-        if (!stunEnabled() || details.remoteAddress != null || details.state != ComputerDetails.State.ONLINE) return
+        if (!stunEnabled() || !details.canRefreshRemoteAddressWithStun || details.state != ComputerDetails.State.ONLINE) return
         try {
             val network = stunNetworkFor(details) ?: return
             val attempt = stunCache.begin(network, SystemClock.elapsedRealtime()) ?: return
@@ -426,6 +425,11 @@ class ComputerManagerService : Service() {
 
     private fun stunEnabled(): Boolean =
         preferences.getBoolean(PreferenceConfiguration.ENABLE_STUN_PREF_STRING, false)
+
+    private fun invalidateStunQuery() {
+        stunCache.invalidate()
+        stunJob?.cancel()
+    }
 
     private fun stunNetworkFor(details: ComputerDetails): Network? {
         val host = details.activeAddress?.address ?: return null
@@ -1108,6 +1112,7 @@ class ComputerManagerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
+                    invalidateStunQuery()
                     LimeLog.info("Resetting PC state for new available network")
                     networkDiagnostics?.diagnoseNetwork()
                     LimeLog.info("Network diagnostics after available: ${networkDiagnostics?.getLastDiagnostics()}")
@@ -1121,6 +1126,7 @@ class ComputerManagerService : Service() {
                 }
 
                 override fun onLost(network: Network) {
+                    invalidateStunQuery()
                     LimeLog.info("Offlining PCs due to network loss")
                     networkDiagnostics?.diagnoseNetwork()
                     recentPollResults.clear()
@@ -1140,7 +1146,7 @@ class ComputerManagerService : Service() {
 
     override fun onDestroy() {
         preferences.unregisterOnSharedPreferenceChangeListener(stunPreferenceListener)
-        stunCache.invalidate()
+        invalidateStunQuery()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             connMgr.unregisterNetworkCallback(networkCallback)
