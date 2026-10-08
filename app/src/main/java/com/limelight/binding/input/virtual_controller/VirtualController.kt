@@ -13,6 +13,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
+import android.view.Gravity
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -100,7 +101,7 @@ class VirtualController(
         setImageResource(R.drawable.ic_settings)
         setColorFilter(Color.WHITE)
         scaleType = ImageView.ScaleType.FIT_CENTER
-        // Contrast comes from a 36dp backplate, without enlarging the 48dp hit target.
+        // The backplate keeps the gear readable over both bright and dark game scenes.
         val padding = (12 * density).toInt()
         setPadding(padding, padding, padding, padding)
         setOnClickListener { showOptions() }
@@ -196,7 +197,10 @@ class VirtualController(
         frameLayout.removeView(buttonConfigure)
     }
 
-    fun setOpacity(opacity: Int) = elements.forEach { it.setOpacity(opacity) }
+    fun setOpacity(opacity: Int) {
+        elements.forEach { it.setOpacity(opacity) }
+        buttonConfigure.alpha = opacity.coerceIn(0, 100) / 100f
+    }
 
     fun addElement(element: VirtualControllerElement, x: Int, y: Int, width: Int, height: Int) {
         elements.add(element)
@@ -215,12 +219,19 @@ class VirtualController(
                 VirtualControllerConfigurationLoader.createDefaultLayout(
                     this, context, frameLayout.width, frameLayout.height)
                 VirtualControllerConfigurationLoader.loadFromPreferences(this, context)
-                val size = (48 * context.resources.displayMetrics.density).toInt()
+                val density = context.resources.displayMetrics.density
+                // Restore the legacy compact corner footprint, capped at 48dp on large screens.
+                val size = minOf((48 * density).toInt(), (frameLayout.height * 0.06f).toInt().coerceAtLeast(1))
                     .coerceAtMost(minOf(frameLayout.width, frameLayout.height))
-                frameLayout.addView(buttonConfigure, FrameLayout.LayoutParams(size, size).apply {
-                    // Upper edge, just inside the left thumb cluster; avoids both sticks and shoulders.
-                    leftMargin = (36 * profileScale).toInt().coerceIn(0, frameLayout.width - size)
-                    topMargin = 0
+                val edgeMargin = minOf((8 * density).toInt(), size / 4)
+                val inset = size / 8
+                buttonConfigure.background = InsetDrawable((buttonConfigure.background as InsetDrawable).drawable, inset)
+                buttonConfigure.setPadding(inset, inset, inset, inset)
+                // Overlay coordinates are physical, so RTL must still anchor to the left edge.
+                val horizontalGravity = if (frameLayout.layoutDirection == View.LAYOUT_DIRECTION_RTL) Gravity.END else Gravity.START
+                frameLayout.addView(buttonConfigure, FrameLayout.LayoutParams(size, size, Gravity.TOP or horizontalGravity).apply {
+                    leftMargin = edgeMargin.coerceAtMost(frameLayout.width - size)
+                    topMargin = edgeMargin.coerceAtMost(frameLayout.height - size)
                 })
                 buttonConfigure.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
             }
