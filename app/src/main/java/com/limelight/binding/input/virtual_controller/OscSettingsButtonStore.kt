@@ -48,8 +48,6 @@ internal class OscSettingsButtonStore(context: Context) {
 
         val PORTABLE_PREFERENCE_KEYS = setOf(
             DRAG_ENABLED_KEY,
-            POSITION_X_KEY,
-            POSITION_Y_KEY,
             SIZE_SCALE_KEY
         )
     }

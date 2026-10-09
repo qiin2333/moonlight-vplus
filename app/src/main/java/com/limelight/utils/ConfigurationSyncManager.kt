@@ -414,7 +414,14 @@ class ConfigurationSyncManager(private val context: Context) {
             SECTION_OSC_SETTINGS_BUTTON,
             context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
             valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
-            OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+            OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS,
+            acceptedTypes = { key ->
+                when (key) {
+                    OscSettingsButtonStore.DRAG_ENABLED_KEY -> setOf(TYPE_BOOLEAN, TYPE_DELETED)
+                    OscSettingsButtonStore.SIZE_SCALE_KEY -> setOf(TYPE_FLOAT, TYPE_DELETED)
+                    else -> emptySet()
+                }
+            }
         )
         val oscLayoutProfilesImported = applyPreferences(
             SECTION_OSC_LAYOUT_PROFILES,
@@ -423,7 +430,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 Context.MODE_PRIVATE
             ),
             valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
-            null
+            null,
+            acceptedTypes = { _ -> setOf(TYPE_STRING, TYPE_DELETED) }
         )
 
         val crownResult = importCrownProfiles(sections.optJSONArray(SECTION_CROWN_PROFILES))
@@ -1493,7 +1501,8 @@ class ConfigurationSyncManager(private val context: Context) {
         sectionName: String,
         prefs: SharedPreferences,
         encodedValues: JSONObject?,
-        allowedKeys: Set<String>?
+        allowedKeys: Set<String>?,
+        acceptedTypes: ((key: String) -> Set<String>)? = null
     ): Int {
         if (encodedValues == null) return 0
 
@@ -1505,6 +1514,8 @@ class ConfigurationSyncManager(private val context: Context) {
             if (allowedKeys != null && key !in allowedKeys) continue
 
             val encodedValue = encodedValues.optJSONObject(key) ?: continue
+            val accepted = acceptedTypes?.invoke(key)
+            if (accepted != null && encodedValue.optString(KEY_TYPE) !in accepted) continue
             if (putTypedValue(editor, key, encodedValue)) {
                 rememberImportedValueState(sectionName, key, encodedValue)
                 applied++

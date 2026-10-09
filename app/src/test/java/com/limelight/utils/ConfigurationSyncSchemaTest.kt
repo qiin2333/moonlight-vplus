@@ -323,6 +323,18 @@ class ConfigurationSyncSchemaTest {
                 "size_scale"
             )
         )
+        assertFalse(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                OscSettingsButtonStore.PREFERENCES_NAME,
+                OscSettingsButtonStore.POSITION_X_KEY
+            )
+        )
+        assertFalse(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                OscSettingsButtonStore.PREFERENCES_NAME,
+                OscSettingsButtonStore.POSITION_Y_KEY
+            )
+        )
         assertTrue(
             ConfigurationSyncManager.isPortableSharedPreferenceKey(
                 "OSC",

@@ -341,7 +341,9 @@ class VirtualController(
             .coerceIn(1, minOf(frameLayout.width, frameLayout.height))
         val edgeMargin = minOf((8 * density).toInt(), size / 4)
         val inset = size / 8
-        buttonConfigure.background = InsetDrawable((buttonConfigure.background as InsetDrawable).drawable, inset)
+        (buttonConfigure.background as? InsetDrawable)?.let { currentBackground ->
+            buttonConfigure.background = InsetDrawable(currentBackground.drawable, inset)
+        }
         buttonConfigure.setPadding(inset, inset, inset, inset)
         val horizontalGravity = if (frameLayout.layoutDirection == View.LAYOUT_DIRECTION_RTL) Gravity.END else Gravity.START
         val params = FrameLayout.LayoutParams(size, size, Gravity.TOP or horizontalGravity).apply {
