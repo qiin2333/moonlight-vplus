@@ -317,8 +317,8 @@ class TouchInputHandler(private val game: Game) {
 
                 val eventHasRelativeMouseAxes = game.inputCaptureProvider.eventHasRelativeMouseAxes(event)
                 if (eventHasRelativeMouseAxes) {
-                    val rawDeltaX = game.inputCaptureProvider.getRelativeAxisX(event).toInt()
-                    val rawDeltaY = game.inputCaptureProvider.getRelativeAxisY(event).toInt()
+                    val rawDeltaX = game.inputCaptureProvider.getRelativeAxisX(event)
+                    val rawDeltaY = game.inputCaptureProvider.getRelativeAxisY(event)
                     val (deltaX, deltaY) = scaleRelativeTouchpadDelta(event, rawDeltaX, rawDeltaY)
                     if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
                         if (game.prefConfig.absoluteMouseMode) {
@@ -1390,11 +1390,11 @@ class TouchInputHandler(private val game: Game) {
         }
     }
 
-    private fun scaleRelativeTouchpadDelta(event: MotionEvent, deltaX: Int, deltaY: Int): Pair<Short, Short> {
+    private fun scaleRelativeTouchpadDelta(event: MotionEvent, deltaX: Float, deltaY: Float): Pair<Short, Short> {
         if ((event.source and InputDevice.SOURCE_TOUCHPAD) != InputDevice.SOURCE_TOUCHPAD) {
             relativeTouchpadRemainderX = 0f
             relativeTouchpadRemainderY = 0f
-            return deltaX.toShort() to deltaY.toShort()
+            return deltaX.toInt().toShort() to deltaY.toInt().toShort()
         }
 
         val speedPercent = game.prefConfig.hardwareTouchpadPointerSpeedPercent

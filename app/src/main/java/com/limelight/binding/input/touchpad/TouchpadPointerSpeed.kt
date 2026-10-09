@@ -26,13 +26,12 @@ object TouchpadPointerSpeed {
      * same percentage scales those counts directly. Fractional counts are kept
      * until they add up to a whole count.
      */
-    fun scaleRelativeDelta(delta: Int, remainder: Float, speedPercent: Int): Pair<Int, Float> {
+    fun scaleRelativeDelta(delta: Float, remainder: Float, speedPercent: Int): Pair<Int, Float> {
         val bounded = speedPercent.coerceIn(
             PreferenceConfiguration.MIN_HARDWARE_TOUCHPAD_POINTER_SPEED,
             PreferenceConfiguration.MAX_HARDWARE_TOUCHPAD_POINTER_SPEED
         )
-        val scaled = delta * (bounded / 100f) +
-            if (bounded == PreferenceConfiguration.DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED) 0f else remainder
+        val scaled = delta * (bounded / 100f) + remainder
         val whole = scaled.toInt()
         return whole to (scaled - whole)
     }
