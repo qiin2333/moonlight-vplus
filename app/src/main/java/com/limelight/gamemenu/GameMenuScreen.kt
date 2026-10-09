@@ -45,12 +45,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -70,7 +68,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
@@ -187,8 +184,7 @@ internal fun GameMenuScreen(
     controllerNavigationActive: Boolean = false,
     guideDismissController: GameMenuGuideDismissController,
     useFabricTexture: Boolean = true,
-    restoreFocusRequestToken: Int = 0,
-    requestInitialFocus: Boolean = false
+    restoreFocusRequestToken: Int = 0
 ) {
     val palette = gameMenuPalette()
     val appContext = LocalContext.current.applicationContext
@@ -206,9 +202,7 @@ internal fun GameMenuScreen(
     var crownGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
         mutableStateOf(false)
     }
-    var menuHasFocus by remember { mutableStateOf(false) }
     var handledRestoreFocusRequestToken by remember { mutableIntStateOf(0) }
-    var focusedPageGeneration by remember { mutableIntStateOf(-1) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
             val loadedStore = FeatureGuideStore(appContext)
@@ -305,7 +299,6 @@ internal fun GameMenuScreen(
                             .fillMaxWidth()
                             .focusRequester(menuGroupFocusRequester)
                             .focusRestorer(initialFocusRequester)
-                            .onFocusChanged { menuHasFocus = it.hasFocus }
                             .focusGroup()
                             .onGloballyPositioned { menuContentLaidOut = true }
                             .gameMenuFabricBackground(
@@ -358,6 +351,7 @@ internal fun GameMenuScreen(
         }
     }
 
+    var handledHardwareFocusRequestToken by remember { mutableIntStateOf(0) }
     LaunchedEffect(
         hardwareFocusRequestToken,
         state.pageGeneration,
@@ -366,14 +360,14 @@ internal fun GameMenuScreen(
     ) {
         if (state.controllerNavigationActive && shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = hardwareFocusRequestToken,
+                handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                 guideActive = guideActive,
                 hasFocusTarget = state.options.isNotEmpty() ||
                     state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS,
-                menuContentLaidOut = menuContentLaidOut,
-                menuHasFocus = false
+                menuContentLaidOut = menuContentLaidOut
             )
         ) {
-            focusedPageGeneration = state.pageGeneration
+            handledHardwareFocusRequestToken = hardwareFocusRequestToken
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
         }
@@ -412,16 +406,15 @@ internal fun shouldStartGameMenuGuide(
 
 internal fun shouldRequestGameMenuFocus(
     hardwareFocusRequestToken: Int,
+    handledHardwareFocusRequestToken: Int,
     guideActive: Boolean,
     hasFocusTarget: Boolean,
-    menuContentLaidOut: Boolean,
-    menuHasFocus: Boolean
+    menuContentLaidOut: Boolean
 ): Boolean {
-    return hardwareFocusRequestToken > 0 &&
+    return hardwareFocusRequestToken > handledHardwareFocusRequestToken &&
         !guideActive &&
         hasFocusTarget &&
-        menuContentLaidOut &&
-        !menuHasFocus
+        menuContentLaidOut
 }
 
 internal fun shouldRestoreGameMenuFocus(
@@ -1023,80 +1016,6 @@ private fun DisplayApplyButton(
                 onClick = callbacks.onApplyDisplaySettings,
                 modifier = Modifier.weight(1f)
             )
-        }
-    }
-}
-
-@Composable
-private fun CustomFrameRateField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shape = GameMenuControlShape
-    BasicTextField(
-        value = value,
-        onValueChange = { onValueChange(it.filter(Char::isDigit).take(3)) },
-        singleLine = true,
-        textStyle = TextStyle(
-            color = colorResource(R.color.game_menu_text_primary),
-            fontSize = 13.sp
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .height(36.dp)
-            .clip(shape)
-            .background(colorResource(R.color.game_menu_list_item_normal))
-            .border(
-                GameMenuDimens.surfaceStroke,
-                colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.28f),
-                shape
-            ),
-        decorationBox = { inner ->
-            Box(
-                modifier = Modifier.padding(horizontal = 12.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                if (value.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.title_fps_list),
-                        color = colorResource(R.color.game_menu_text_secondary),
-                        fontSize = 12.sp
-                    )
-                }
-                inner()
-            }
-        }
-    )
-}
-
-@Composable
-private fun EditableChoiceWrap(
-    choices: List<DisplayChoice>,
-    onSelect: (DisplayChoice) -> Unit,
-    onRemove: (DisplayChoice) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
-        choices.forEach { choice ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SensitivityPresetButton(
-                    name = choice.label,
-                    selected = choice.selected,
-                    onClick = { onSelect(choice) },
-                    modifier = Modifier.weight(1f)
-                )
-                if (choice.value != "Native") {
-                    SensitivityPresetButton(
-                        name = "×",
-                        selected = false,
-                        onClick = { onRemove(choice) },
-                        modifier = Modifier.width(36.dp)
-                    )
-                }
-            }
         }
     }
 }

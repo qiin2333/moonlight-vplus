@@ -60,6 +60,7 @@ class ConfigurationSyncManager(private val context: Context) {
         val exportedAt: Long,
         val defaultPreferenceCount: Int,
         val appLastSettingsCount: Int,
+        val customFrameRatesCount: Int,
         val customResolutionsCount: Int,
         val sceneConfigsCount: Int,
         val appViewPreferenceCount: Int,
@@ -72,6 +73,7 @@ class ConfigurationSyncManager(private val context: Context) {
         val totalItems: Int
             get() = defaultPreferenceCount +
                     appLastSettingsCount +
+                    customFrameRatesCount +
                     customResolutionsCount +
                     sceneConfigsCount +
                     appViewPreferenceCount +
@@ -84,6 +86,7 @@ class ConfigurationSyncManager(private val context: Context) {
     data class ImportResult(
         val defaultPreferencesImported: Int,
         val appLastSettingsImported: Int,
+        val customFrameRatesImported: Int,
         val customResolutionsImported: Int,
         val sceneConfigsImported: Int,
         val appViewPreferencesImported: Int,
@@ -96,6 +99,7 @@ class ConfigurationSyncManager(private val context: Context) {
         val totalImported: Int
             get() = defaultPreferencesImported +
                     appLastSettingsImported +
+                    customFrameRatesImported +
                     customResolutionsImported +
                     sceneConfigsImported +
                     appViewPreferencesImported +
@@ -313,6 +317,10 @@ class ConfigurationSyncManager(private val context: Context) {
                 valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
                 null
             ),
+            customFrameRatesCount = countValues(
+                valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_FRAME_RATES)),
+                null
+            ),
             customResolutionsCount = countValues(
                 valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_RESOLUTIONS)),
                 null
@@ -405,6 +413,7 @@ class ConfigurationSyncManager(private val context: Context) {
         return ImportResult(
             defaultPreferencesImported = defaultPreferencesImported,
             appLastSettingsImported = appLastSettingsImported,
+            customFrameRatesImported = customFrameRatesImported,
             customResolutionsImported = customResolutionsImported,
             sceneConfigsImported = sceneConfigsImported,
             appViewPreferencesImported = appViewPreferencesImported,

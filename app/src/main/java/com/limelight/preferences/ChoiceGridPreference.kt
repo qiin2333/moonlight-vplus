@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -27,7 +26,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.preference.Preference
@@ -43,7 +41,6 @@ class ChoiceGridPreference(
     private var labels by mutableStateOf(emptyList<String>())
     private var values by mutableStateOf(emptyList<String>())
     private var selected by mutableStateOf("")
-    private var generation by mutableIntStateOf(0)
     private var focusedChoice: String? = null
     private var focusRequest by mutableStateOf<Pair<String, Int>?>(null)
     private var focusRequestGeneration = 0
@@ -62,7 +59,6 @@ class ChoiceGridPreference(
         this.labels = labels
         this.values = values
         this.selected = selected
-        generation++
         notifyChanged()
     }
 
@@ -80,7 +76,6 @@ class ChoiceGridPreference(
                 labels = labels,
                 values = values,
                 selected = selected,
-                generation = generation,
                 focusRequest = focusRequest,
                 onFocusRestored = { focusRequest = null },
                 onChoiceFocusChanged = { value, focused ->
@@ -103,7 +98,6 @@ private fun ChoiceGrid(
     labels: List<String>,
     values: List<String>,
     selected: String,
-    generation: Int,
     focusRequest: Pair<String, Int>?,
     onFocusRestored: () -> Unit,
     onChoiceFocusChanged: (String, Boolean) -> Unit,
@@ -147,9 +141,6 @@ private fun ChoiceGrid(
                     }
                 }
             }
-        }
-        if (generation < 0) {
-            androidx.compose.material3.Text("", color = colorResource(R.color.game_menu_text_secondary), fontSize = 1.sp)
         }
     }
 }

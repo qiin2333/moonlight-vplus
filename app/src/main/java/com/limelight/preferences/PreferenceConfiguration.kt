@@ -411,7 +411,7 @@ class PreferenceConfiguration {
      * Persist the display settings owned by the in-game bitrate card.
      * These keys match the settings page, and unrelated preferences stay untouched.
      */
-    fun writeDisplayPreferences(context: Context): Boolean {
+    fun writeDisplayPreferences(context: Context, synchronous: Boolean = false): Boolean {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context) ?: return false
         return try {
             val editor = prefs.edit()
@@ -432,7 +432,10 @@ class PreferenceConfiguration {
                     is Boolean -> editor.putBoolean(key, value)
                 }
             }
-            editor.commit()
+            if (synchronous) editor.commit() else {
+                editor.apply()
+                true
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             false

@@ -153,19 +153,24 @@ class BitrateCardControllerTest {
     }
 
     @Test
-    fun invalidCustomFrameRateDoesNotEnterThePendingDraft() {
+    fun selectedFrameRateBecomesPendingWithoutChangingOtherSettings() {
         val current = DisplaySettingsDraft("1920x1080", "60", "2")
-        val typed = current.copy(customFrameRate = "0")
+        val selected = current.copy(frameRate = "90")
 
-        assertFalse(typed.changedFrom(current))
+        assertTrue(selected.changedFrom(current))
+        assertEquals(current.resolution, selected.resolution)
+        assertEquals(current.screenMode, selected.screenMode)
     }
 
     @Test
-    fun validCustomFrameRateBecomesPendingWithoutChangingOtherSettings() {
+    fun everyScreenModeCanBecomePendingWithoutChangingOtherSettings() {
         val current = DisplaySettingsDraft("1920x1080", "60", "2")
-        val typed = current.copy(frameRate = "90", customFrameRate = "90")
-
-        assertTrue(typed.changedFrom(current))
+        listOf("-1", "0", "1", "4", "3").forEach { mode ->
+            val selected = current.copy(screenMode = mode)
+            assertTrue(selected.changedFrom(current))
+            assertEquals(current.resolution, selected.resolution)
+            assertEquals(current.frameRate, selected.frameRate)
+        }
     }
 
     @Test

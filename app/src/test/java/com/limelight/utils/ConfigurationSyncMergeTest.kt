@@ -424,6 +424,42 @@ class ConfigurationSyncMergeTest {
     }
 
     @Test
+    fun customFrameRateCountsAreIncludedInPreviewAndImportTotals() {
+        val preview = ConfigurationSyncManager.PackagePreview(
+            schemaVersion = 2,
+            appVersionCode = 1L,
+            appVersionName = "test",
+            exportedAt = 1000L,
+            defaultPreferenceCount = 1,
+            appLastSettingsCount = 2,
+            customFrameRatesCount = 3,
+            customResolutionsCount = 4,
+            sceneConfigsCount = 5,
+            appViewPreferenceCount = 6,
+            hiddenAppsCount = 7,
+            crownProfilesCount = 8,
+            pairedComputersCount = 9,
+            hasPairingIdentity = true
+        )
+        val importResult = ConfigurationSyncManager.ImportResult(
+            defaultPreferencesImported = 1,
+            appLastSettingsImported = 2,
+            customFrameRatesImported = 3,
+            customResolutionsImported = 4,
+            sceneConfigsImported = 5,
+            appViewPreferencesImported = 6,
+            hiddenAppsImported = 7,
+            crownProfilesImported = 8,
+            crownProfilesFailed = 0,
+            pairingItemsImported = 9,
+            pairingItemsFailed = 0
+        )
+
+        assertEquals(46, preview.totalItems)
+        assertEquals(45, importResult.totalImported)
+    }
+
+    @Test
     fun importedTombstoneKeysStayTrackedForFutureExports() {
         val trackedKeys = ConfigurationSyncManager.trackedKeysAfterImportForTest(
             existingKeys = setOf("list_fps"),

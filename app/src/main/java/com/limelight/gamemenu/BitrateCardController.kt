@@ -23,17 +23,11 @@ internal data class DisplayChoice(
 internal data class DisplaySettingsDraft(
     val resolution: String,
     val frameRate: String,
-    val screenMode: String,
-    val customFrameRate: String = ""
+    val screenMode: String
 ) {
     fun changedFrom(current: DisplaySettingsDraft): Boolean {
-        val typedFrameRate = customFrameRate.toIntOrNull()
-        val frameRatePending = typedFrameRate != null &&
-            typedFrameRate > 0 &&
-            typedFrameRate.toString() != current.frameRate
         return resolution != current.resolution ||
             frameRate != current.frameRate ||
-            frameRatePending ||
             screenMode != current.screenMode
     }
 }
@@ -42,7 +36,8 @@ internal data class BitrateCardState(
     val appliedDisplay: DisplaySettingsDraft = DisplaySettingsDraft("", "", ""),
     val progress: Float,
     val currentBitrateKbps: Int,
-    val abrStatus: String?,
+    val maxProgress: Int,
+    val maxBitrateKbps: Int,
     val adaptiveBitrate: Boolean,
     val abrMode: String,
     val resolutionLabel: String,
@@ -51,9 +46,7 @@ internal data class BitrateCardState(
     val resolutions: List<DisplayChoice>,
     val frameRates: List<DisplayChoice>,
     val screenModes: List<DisplayChoice>,
-    val hapticMode: BitrateCardController.HapticMode,
-    val maxProgress: Int,
-    val maxBitrateKbps: Int
+    val hapticMode: BitrateCardController.HapticMode
 ) {
     val selectedBitrateKbps: Int
         get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
@@ -198,8 +191,7 @@ internal data class ResolutionSelection(
                 if (!userTracking) {
                     state = state.copy(
                         progress = bitrateToProgress(kbps, maxProgress).toFloat(),
-                        currentBitrateKbps = kbps,
-                        abrStatus = abrService.getStatusText()
+                        currentBitrateKbps = kbps
                     )
                     emitState()
                 }
@@ -243,43 +235,12 @@ internal data class ResolutionSelection(
     fun stageFrameRate(value: String) {
         val fps = value.toIntOrNull() ?: return
         if (fps <= 0) return
-        draft = draft.copy(frameRate = fps.toString(), customFrameRate = "")
-        emitState()
-    }
-
-    fun removeResolution(value: String) {
-        val resolution = com.limelight.preferences.ResolutionValidator.parseResolution(value) ?: return
-        val remaining = CustomResolutionsStore.load(game) - resolution
-        CustomResolutionsStore.save(game, remaining)
-        if (draft.resolution == value) {
-            draft = draft.copy(resolution = remaining.lastOrNull()?.toString() ?: PreferenceConfiguration.RES_NATIVE)
-        }
-        emitState()
-    }
-
-    fun removeFrameRate(value: String) {
-        val fps = value.toIntOrNull() ?: return
-        val remaining = CustomFrameRatesStore.load(game) - fps
-        CustomFrameRatesStore.save(game, remaining)
-        if (draft.frameRate == fps.toString()) {
-            draft = draft.copy(frameRate = remaining.lastOrNull()?.toString() ?: draft.frameRate)
-        }
-        emitState()
-    }
-
-    fun stageCustomFrameRate(value: String) {
-        val fps = value.toIntOrNull()
-        val digits = value.filter(Char::isDigit).take(3)
-        draft = draft.copy(customFrameRate = digits)
-        if (fps != null && fps > 0 && value.endsWith("\n")) {
-            CustomFrameRatesStore.add(game, fps)
-            draft = draft.copy(frameRate = fps.toString(), customFrameRate = "")
-        }
+        draft = draft.copy(frameRate = fps.toString())
         emitState()
     }
 
     fun stageScreenMode(value: String) {
-        if (value.toIntOrNull() == null || value !in setOf("2", "4", "3")) return
+        if (state.screenModes.none { it.value == value }) return
         draft = draft.copy(screenMode = value)
         emitState()
     }
@@ -299,7 +260,7 @@ internal data class ResolutionSelection(
             fps > 0 && fps.toString() != appliedDraft.frameRate
         }
         val screenMode = draft.screenMode.toIntOrNull()?.takeIf { mode ->
-            mode.toString() in setOf("2", "4", "3") && mode.toString() != appliedDraft.screenMode
+            mode.toString() != appliedDraft.screenMode
         }
         resolution?.let { selection ->
             game.prefConfig.isNativeResolution = selection.native
@@ -311,7 +272,7 @@ internal data class ResolutionSelection(
         }
         frameRate?.let { game.prefConfig.fps = it }
         screenMode?.let { game.prefConfig.screenCombinationMode = it }
-        game.prefConfig.writeDisplayPreferences(game)
+        game.prefConfig.writeDisplayPreferences(game, synchronous = true)
         game.changeResolution()
         appliedDraft = currentDraft()
         draft = appliedDraft
@@ -321,40 +282,6 @@ internal data class ResolutionSelection(
     fun discardDisplayDraft() {
         draft = appliedDraft
         emitState()
-    }
-
-    fun selectResolution(value: String): Boolean {
-        if (!shouldApplyDisplaySelection(value, currentResolutionValue())) return false
-        val selection = parseResolutionSelection(
-            value,
-            game.prefConfig.width,
-            game.prefConfig.height
-        ) ?: return false
-        game.prefConfig.isNativeResolution = selection.native
-        game.prefConfig.isCustomResolution = selection.custom
-        if (!selection.native) {
-            game.prefConfig.width = selection.width
-            game.prefConfig.height = selection.height
-        }
-        game.prefConfig.writeDisplayPreferences(game)
-        game.changeResolution()
-        return true
-    }
-
-    fun selectFrameRate(value: String) {
-        val fps = value.toIntOrNull() ?: return
-        if (!shouldApplyDisplaySelection(fps.toString(), game.prefConfig.fps.toString())) return
-        game.prefConfig.fps = fps
-        game.prefConfig.writeDisplayPreferences(game)
-        game.changeResolution()
-    }
-
-    fun selectScreenMode(value: String) {
-        val mode = value.toIntOrNull() ?: return
-        if (!shouldApplyDisplaySelection(mode.toString(), game.prefConfig.screenCombinationMode.toString())) return
-        game.prefConfig.screenCombinationMode = mode
-        game.prefConfig.writeDisplayPreferences(game)
-        game.changeResolution()
     }
 
     fun refreshDisplayChoices() {
@@ -371,7 +298,6 @@ internal data class ResolutionSelection(
 
     /** Returns whether this progress change should produce a haptic tick. */
     fun previewProgress(progress: Float): Boolean {
-        if (!manualBitrateChangeAllowed(state.adaptiveBitrate)) return false
         val bounded = progress.coerceIn(0f, maxProgress.toFloat())
         val previousStep = state.progress.roundToInt()
         val currentStep = bounded.roundToInt()
@@ -389,7 +315,6 @@ internal data class ResolutionSelection(
 
     fun applySelectedBitrate() {
         userTracking = false
-        if (!manualBitrateChangeAllowed(state.adaptiveBitrate)) return
         adjustBitrate(state.selectedBitrateKbps)
     }
 
@@ -416,7 +341,6 @@ internal data class ResolutionSelection(
     }
 
     private fun createState(kbps: Int): BitrateCardState {
-        val abrService = game.adaptiveBitrateService
         val resolution = currentResolutionValue()
         val frameRate = game.prefConfig.fps.toString()
         val screenMode = game.prefConfig.screenCombinationMode.toString()
@@ -427,7 +351,8 @@ internal data class ResolutionSelection(
             appliedDisplay = DisplaySettingsDraft(resolution, frameRate, screenMode),
             progress = bitrateToProgress(kbps, maxProgress).toFloat(),
             currentBitrateKbps = kbps,
-            abrStatus = abrService?.takeIf { it.enabled }?.getStatusText(),
+            maxProgress = maxProgress,
+            maxBitrateKbps = maxBitrateKbps,
             adaptiveBitrate = game.prefConfig.enableAdaptiveBitrate,
             abrMode = game.prefConfig.abrMode,
             resolutionLabel = resolutions.firstOrNull { it.selected }?.label ?: resolution,
@@ -436,9 +361,7 @@ internal data class ResolutionSelection(
             resolutions = resolutions,
             frameRates = frameRates,
             screenModes = screenModes,
-            hapticMode = getHapticMode(game),
-            maxProgress = maxProgress,
-            maxBitrateKbps = maxBitrateKbps
+            hapticMode = getHapticMode(game)
         )
     }
 
@@ -506,7 +429,7 @@ internal data class ResolutionSelection(
             R.array.screen_combination_mode_values,
             selected,
             R.array.screen_combination_mode_descriptions
-        ).filter { it.value in setOf("2", "4", "3") }
+        )
     }
 
     private fun showBitrateToast(message: String) {
@@ -525,8 +448,7 @@ internal data class ResolutionSelection(
                         game.adaptiveBitrateService?.notifyManualOverride(newBitrate)
                         state = state.copy(
                             progress = bitrateToProgress(newBitrate, maxProgress).toFloat(),
-                            currentBitrateKbps = newBitrate,
-                            abrStatus = game.adaptiveBitrateService?.takeIf { it.enabled }?.getStatusText()
+                            currentBitrateKbps = newBitrate
                         )
                         emitState()
                         showBitrateToast(

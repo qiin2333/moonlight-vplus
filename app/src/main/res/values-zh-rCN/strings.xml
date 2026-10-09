@@ -172,9 +172,6 @@
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
     <string name="custom_list_save">保存</string>
-    <string name="custom_list_discard_title">放弃更改</string>
-    <string name="custom_list_discard_message">要放弃这次对列表的更改吗？</string>
-    <string name="custom_list_discard">放弃</string>
     <string name="game_menu_apply_display">应用</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
     <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
@@ -1186,7 +1183,6 @@
     <string name="game_menu_resolution_custom">%1$s（自定义）</string>
     <string name="game_menu_resolution_custom_current">%1$s（自定义、当前）</string>
     <string name="game_menu_resolution_restarting">分辨率已设为 %1$s，正在重启串流…</string>
-    <string name="game_menu_screen_mode_restart_confirm">更改显示器排列需要重启串流。要现在重启吗？</string>
     <string name="notification_content_streaming">正在串流： %1$s (%2$s)</string>
 
     <!-- 音频振动设置 -->

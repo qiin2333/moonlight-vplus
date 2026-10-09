@@ -128,6 +128,7 @@
     <string name="title_resolution_list">串流解析度</string>
     <string name="summary_resolution_list">高解析度提升圖像清晰度。低解析度提升在低效能裝置和較慢網路中的串流體驗。</string>
     <string name="title_fps_list">串流影格率</string>
+    <string name="title_custom_fps">自訂影格率</string>
     <string name="summary_fps_list">提高影格速率以取得更順暢的視訊串流，降低可在低效能裝置上取得更好的串流體驗。</string>
     <string name="title_seekbar_bitrate">串流位元率</string>
     <string name="summary_seekbar_bitrate">較高位元率可提升畫質，但會佔用更多頻寬；較低位元率適合較慢或不穩定的網路。串流卡頓時先降低位元率，網路穩定但畫質不夠清晰時再提高；1080p60 可先從 10–20 Mbps 試起。</string>
@@ -612,6 +613,8 @@
     <string name="category_enhanced_touch_settings">直接觸控調校</string>
     <string name="category_display_behavior">顯示與版面配置</string>
     <string name="category_screen_position_settings">編碼與 HDR</string>
+    <string name="game_menu_display_settings">顯示設定</string>
+    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_touch_pointer_speed">指標區速度</string>
     <string name="game_menu_touch_pointer_speed_value">%1$d%%</string>
     <string name="game_menu_touch_pointer_pixels_value">%1$d 像素</string>
@@ -796,6 +799,8 @@
     <string name="audio_vibration_scene_auto">自動</string>
     <!-- Complete coverage for every label referenced by the settings screen. -->
     <string name="category_backup_restore">備份與同步</string>
+    <string name="custom_list_save">儲存</string>
+    <string name="game_menu_apply_display">套用</string>
     <string name="title_custom_resolutions">自訂解析度</string>
     <string name="custom_resolution_add_short">新增</string>
     <string name="custom_resolution_info_contentdesc">使用提示</string>
@@ -815,11 +820,15 @@
     <string name="custom_resolution_error_even_height">高度必須為偶數</string>
     <string name="custom_resolution_empty_title">還沒有自訂解析度</string>
     <string name="custom_resolution_empty_hint">在上方輸入寬和高，或點一個預設快速填入</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_ultrawide">超寬螢幕</string>
     <string name="custom_resolution_tag_portrait">直向</string>
     <string name="custom_resolution_delete_contentdesc">刪除 %1$d×%2$d</string>
     <string name="title_adaptive_bitrate">自適應位元率</string>
     <string name="summary_adaptive_bitrate">依照封包遺失與延遲自動調整位元率；主機不支援伺服器端控制時，改用本機控制器。</string>
+    <string name="game_menu_adaptive_bitrate_tip">根據封包遺失與延遲自動調整位元率，優先使用 Sunshine 伺服器端控制。自適應位元率會從基準位元率開始，並在其附近調整；所選模式會決定最低與最高範圍。</string>
     <string name="title_abr_mode">自適應位元率模式</string>
     <string name="summary_abr_mode">畫質優先會維持較高位元率；低延遲會在封包遺失時更快降低位元率。</string>
     <string name="title_enable_host_cadence_precise_sync">精確同步額外平滑處理</string>

@@ -613,9 +613,7 @@ internal fun BitrateCard(
     onConfigure: () -> Unit,
     showDisplayEntry: Boolean = true
 ) {
-    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val displaySettingsDescription = stringResource(R.string.game_menu_display_settings)
-    val sliderEnabled = true
     val displayEntryFocusRequester = remember { FocusRequester() }
     val adaptiveFocusRequester = remember { FocusRequester() }
     GameMenuCard(
@@ -741,7 +739,6 @@ internal fun BitrateCard(
         BitrateSlider(
             state = state,
             callbacks = callbacks,
-            enabled = sliderEnabled,
             onSliderGesture = onSliderGesture
         )
         Row {
@@ -760,7 +757,6 @@ internal fun BitrateCard(
 internal fun BitrateSlider(
     state: BitrateCardState,
     callbacks: GameMenuCallbacks,
-    enabled: Boolean,
     onSliderGesture: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -773,18 +769,15 @@ internal fun BitrateSlider(
             }
         },
         onValueChangeFinished = callbacks.onBitrateApply,
-        enabled = enabled,
-        valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+        valueRange = 0f..state.maxProgress.toFloat(),
         modifier = modifier
-            .alpha(if (enabled) 1f else 0.38f)
-            .focusProperties { canFocus = enabled }
             .fillMaxWidth()
             .height(GameMenuSliderSpec.height)
             .gamepadFocusOutline(GameMenuControlShape)
             .handleSliderDpad(
                 value = state.progress,
                 step = 1f,
-                valueRange = 0f..BitrateCardController.MAX_PROGRESS.toFloat(),
+                valueRange = 0f..state.maxProgress.toFloat(),
                 onValueChange = { value ->
                     if (callbacks.onBitrateProgress(value)) {
                         hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)

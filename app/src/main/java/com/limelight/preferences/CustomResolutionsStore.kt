@@ -26,7 +26,7 @@ object CustomResolutionsStore {
             preferences.edit()
                 .putStringSet(PREFS_KEY, merged.map(Resolution::toString).toSet())
                 .putInt(MIGRATION_VERSION_KEY, CURRENT_MIGRATION_VERSION)
-                .commit()
+                .apply()
             return merged
         }
         return stored?.mapNotNull(ResolutionValidator::parseResolution)?.sortedWith(resolutionOrder)
@@ -45,7 +45,7 @@ object CustomResolutionsStore {
     fun save(context: Context, resolutions: List<Resolution>) {
         prefs(context).edit()
             .putStringSet(PREFS_KEY, resolutions.map(Resolution::toString).toSet())
-            .commit()
+            .apply()
     }
 
     /** 添加一条(已存在时忽略),返回是否实际写入。 */

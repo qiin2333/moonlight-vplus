@@ -58,7 +58,6 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.preferences.activeCustomDialogController
 import com.limelight.preferences.CustomFrameRatesDialog
 import com.limelight.preferences.CustomResolutionsDialog
-import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
@@ -1127,25 +1126,14 @@ class GameMenu(
             else -> getString(R.string.game_menu_display_settings)
         }
         val replaceCurrent = displaySettingsPage == target
+        val currentGeneration = composeUiState?.value?.pageGeneration ?: 0
         displaySettingsPage = target
         showSubMenu(
             title,
             entries.map(::displaySettingsOption).toTypedArray(),
-            replaceCurrent = replaceCurrent
+            replaceCurrent = replaceCurrent,
+            pageGeneration = if (replaceCurrent) currentGeneration else 0
         )
-    }
-
-    private fun confirmScreenMode(value: String) {
-        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
-            .setTitle(R.string.title_screen_combination_mode)
-            .setMessage(R.string.game_menu_screen_mode_restart_confirm)
-            .setPositiveButton(R.string.game_menu_ok) { _, _ ->
-                bitrateCardController.selectScreenMode(value)
-            }
-            .setNegativeButton(R.string.game_menu_cancel, null)
-            .create()
-        dialog.show()
-        registerChildDialog(dialog)
     }
 
     private fun displaySettingsOption(entry: DisplaySettingsEntry): MenuOption {
@@ -1164,19 +1152,7 @@ class GameMenu(
 
     private fun runDisplaySettingsEntry(entry: DisplaySettingsEntry) {
         when {
-            entry.opensCustomResolutions -> {
-                registerChildDialog(
-                    CustomResolutionsDialog.show(
-                        context = game,
-                        requestInitialFocus = controllerNavigationIsCurrent(),
-                        onClosed = {
-                            refreshOpenDisplaySettings()
-                            if (displaySettingsPage != null) showDisplaySettings(displaySettingsPage)
-                        }
-                    ),
-                    onDismiss = ::refreshOpenDisplaySettings
-                )
-            }
+            entry.opensCustomResolutions -> showCustomDisplayEditor(frameRate = false)
             entry.choiceValue != null -> when (entry.page) {
                 DisplaySettingsPage.RESOLUTION -> bitrateCardController.stageResolution(entry.choiceValue)
                 DisplaySettingsPage.FRAME_RATE -> bitrateCardController.stageFrameRate(entry.choiceValue)
@@ -1185,66 +1161,6 @@ class GameMenu(
             }
             entry.page != null -> showDisplaySettings(entry.page)
         }
-    }
-
-    /**
-     * 显示分辨率选择菜单
-     */
-    private fun showResolutionMenu() {
-        val options = mutableListOf<MenuOption>()
-        val currentResStr = "${game.prefConfig.width}x${game.prefConfig.height}"
-        val prefs = PreferenceManager.getDefaultSharedPreferences(game)
-        val showLowResolutionPresets = prefs.getBoolean(
-            PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
-            false
-        ) || PreferenceConfiguration.isLowResolutionPreset(currentResStr)
-
-        // 预设分辨率
-        for (res in PreferenceConfiguration.RESOLUTIONS) {
-            if (res == PreferenceConfiguration.RES_NATIVE) continue
-            if (!PreferenceConfiguration.includeLowResolutionPreset(
-                    res,
-                    currentResStr,
-                    showLowResolutionPresets
-                )
-            ) {
-                continue
-            }
-            val label = if (res == currentResStr) {
-                game.getString(R.string.game_menu_resolution_current, res)
-            } else {
-                res
-            }
-            options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
-        }
-
-        // 自定义分辨率
-        for (resolution in CustomResolutionsStore.load(game)) {
-            val res = resolution.toString()
-            if (PreferenceConfiguration.RESOLUTIONS.contains(res)) continue
-
-            val label = if (res == currentResStr) {
-                game.getString(R.string.game_menu_resolution_custom_current, res)
-            } else {
-                game.getString(R.string.game_menu_resolution_custom, res)
-            }
-
-            options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
-        }
-
-        showSubMenu(getString(R.string.game_menu_change_resolution), options.toTypedArray())
-    }
-
-    private fun changeResolution(resString: String) {
-        if (!bitrateCardController.selectResolution(resString)) return
-
-        Toast.makeText(
-            game,
-            game.getString(R.string.game_menu_resolution_restarting, resString),
-            Toast.LENGTH_SHORT
-        ).show()
-
-        activeDialog?.dismiss()
     }
 
     /**
@@ -1338,31 +1254,10 @@ class GameMenu(
             onSelectResolution = bitrateCardController::stageResolution,
             onSelectFrameRate = bitrateCardController::stageFrameRate,
             onSelectScreenMode = bitrateCardController::stageScreenMode,
-            onCustomFrameRate = bitrateCardController::stageCustomFrameRate,
             onApplyDisplaySettings = bitrateCardController::applyDisplayDraft,
             onCancelDisplaySettings = bitrateCardController::discardDisplayDraft,
-            onEditCustomResolutions = {
-                registerChildDialog(
-                    CustomResolutionsDialog.show(
-                        context = game,
-                        requestInitialFocus = controllerNavigationIsCurrent(),
-                        onClosed = {}
-                    ),
-                    onDismiss = ::refreshOpenDisplaySettings
-                )
-            },
-            onEditCustomFrameRates = {
-                registerChildDialog(
-                    CustomFrameRatesDialog.show(
-                        context = game,
-                        requestInitialFocus = controllerNavigationIsCurrent(),
-                        onClosed = {}
-                    ),
-                    onDismiss = ::refreshOpenDisplaySettings
-                )
-            },
-            onRemoveResolution = bitrateCardController::removeResolution,
-            onRemoveFrameRate = bitrateCardController::removeFrameRate,
+            onEditCustomResolutions = { showCustomDisplayEditor(frameRate = false) },
+            onEditCustomFrameRates = { showCustomDisplayEditor(frameRate = true) },
             onAudioHapticsEnabled = audioHapticsCardController::setEnabled,
             onAudioHapticsStrength = audioHapticsCardController::previewStrength,
             onAudioHapticsStrengthFinished = audioHapticsCardController::persistStrength,
@@ -1812,10 +1707,30 @@ class GameMenu(
         }
     }
 
+    private fun showCustomDisplayEditor(frameRate: Boolean) {
+        lateinit var dialog: Dialog
+        val onClosed = {
+            finishChildDialog(dialog) {
+                refreshOpenDisplaySettings()
+                val page = displaySettingsPage
+                if (page != null && page != DisplaySettingsPage.ROOT) {
+                    showDisplaySettings(page)
+                }
+            }
+        }
+        dialog = if (frameRate) {
+            CustomFrameRatesDialog.show(game, onClosed, controllerNavigationIsCurrent())
+        } else {
+            CustomResolutionsDialog.show(game, onClosed, controllerNavigationIsCurrent())
+        }
+        registerChildDialog(dialog, installDismissListener = false)
+    }
+
     private fun registerChildDialog(
         dialog: Dialog,
         onDismiss: () -> Unit = {},
-        onDismissKey: ((KeyEvent) -> Boolean)? = null
+        onDismissKey: ((KeyEvent) -> Boolean)? = null,
+        installDismissListener: Boolean = true
     ) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
         prepareForInputOwnerChange()
@@ -1849,22 +1764,27 @@ class GameMenu(
             }
         }
 
-        dialog.setOnDismissListener {
-            if (activeChildDialog !== dialog) return@setOnDismissListener
-            prepareForInputOwnerChange()
-            activeChildDialog = null
-            activeChildDismissKeyHandler = null
-            onDismiss()
-            decorView?.setOnKeyListener(null)
-            decorView?.setOnGenericMotionListener(null)
-            val parentDialog = activeDialog
-            val parentComposeView = activeComposeView
-            parentComposeView?.post {
-                if (parentDialog?.isShowing == true && activeChildDialog == null) {
-                    parentComposeView.requestFocus()
-                    parentFocusRestoreRequestState?.let { request ->
-                        request.intValue++
-                    }
+        if (installDismissListener) {
+            dialog.setOnDismissListener { finishChildDialog(dialog, onDismiss) }
+        }
+    }
+
+    private fun finishChildDialog(dialog: Dialog, onDismiss: () -> Unit) {
+        if (activeChildDialog !== dialog) return
+        val decorView = dialog.window?.decorView
+        prepareForInputOwnerChange()
+        activeChildDialog = null
+        activeChildDismissKeyHandler = null
+        onDismiss()
+        decorView?.setOnKeyListener(null)
+        decorView?.setOnGenericMotionListener(null)
+        val parentDialog = activeDialog
+        val parentComposeView = activeComposeView
+        parentComposeView?.post {
+            if (parentDialog?.isShowing == true && activeChildDialog == null) {
+                parentComposeView.requestFocus()
+                parentFocusRestoreRequestState?.let { request ->
+                    request.intValue++
                 }
             }
         }
@@ -2047,13 +1967,14 @@ class GameMenu(
         title: String,
         subOptions: Array<MenuOption>,
         pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD,
-        replaceCurrent: Boolean = false
+        replaceCurrent: Boolean = false,
+        pageGeneration: Int = 0
     ) {
         val dialog = activeDialog
         if (dialog != null && dialog.isShowing) {
             lastActionOpenedSubmenu = true
             showMenuPage(
-                MenuPage(title, subOptions.toList(), pageLayout),
+                MenuPage(title, subOptions.toList(), pageLayout, pageGeneration),
                 pushCurrent = true,
                 replaceCurrent = replaceCurrent
             )
