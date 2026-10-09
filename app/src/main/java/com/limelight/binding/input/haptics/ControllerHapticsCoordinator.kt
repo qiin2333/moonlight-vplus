@@ -142,7 +142,10 @@ internal class ControllerHapticsCoordinator(
         if (ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_X) == null ||
             ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_Y) == null
         ) {
-            return false
+            // The right Joy-Con exposes its stick on fallback axis pairs (Z/RZ, RX/RY); accept
+            // any stick layout hasJoystickAxes() recognizes so rumble eligibility matches
+            // what device discovery lets through.
+            if (!ControllerHandler.hasJoystickAxes(inputDevice)) return false
         }
         return context.vibratorManager != null ||
             context.vibrator != null ||
