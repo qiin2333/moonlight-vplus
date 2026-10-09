@@ -658,6 +658,9 @@ internal class ControllerHapticsCoordinator(
         return false
     }
 
+    // Any capable borrower suppresses the channel — not "all contexts borrow": in a mixed
+    // controller the borrowed actuator is still driven by the controller channel, so the device
+    // channel must yield even though a real-motor context loses its transient compensation.
     private fun controllerBorrowsDeviceVibrator(controllerNumber: Short): Boolean {
         for (i in 0 until handler.inputDeviceContexts.size()) {
             val context = handler.inputDeviceContexts.valueAt(i)

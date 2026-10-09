@@ -519,7 +519,8 @@ class ControllerHandler(
     private fun registerRumbleContextIfNeeded(deviceId: Int) {
         if (inputDeviceContexts.get(deviceId) != null) return
         val device = InputDevice.getDevice(deviceId) ?: return
-        if (!isExternal(device)) return
+        // No isExternal gate: built-in gamepads (e.g. Switch OLED Joy-Con) must be registered
+        // during discovery so rumble works before their first input event.
         if ((device.sources and InputDevice.SOURCE_GAMEPAD) == 0 &&
             (device.sources and InputDevice.SOURCE_JOYSTICK) == 0
         ) {
