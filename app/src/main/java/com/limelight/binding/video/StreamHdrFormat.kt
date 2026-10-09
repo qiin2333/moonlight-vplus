@@ -1,12 +1,17 @@
 package com.limelight.binding.video
 
-/** Dynamic-range format carried by the decoded input stream, not display-pipeline acceptance. */
+/** Stream HDR state; mapped variants describe application output, not vendor-pipeline acceptance. */
 enum class StreamHdrFormat(val displayName: String) {
     SDR("SDR"),
     HDR10("HDR10"),
     HDR10_PLUS("HDR10+"),
     HLG("HLG"),
     DOLBY_VISION("DV"),
+    PYROWAVE_HDR10_PLUS_PQ("HDR10+ → PQ"),
+    PYROWAVE_VIVID_PQ("Vivid → PQ"),
+    PYROWAVE_VIVID_HLG("Vivid → HLG"),
+    PYROWAVE_DV81_PQ("DV 8.1 → PQ"),
+    PYROWAVE_DV84_HLG("DV 8.4 → HLG"),
     ;
 
     val isHdr: Boolean
@@ -17,8 +22,27 @@ enum class StreamHdrFormat(val displayName: String) {
         get() = when (this) {
             HDR10_PLUS -> "HDR10+ (metadata observed)"
             DOLBY_VISION -> "Dolby Vision (negotiated)"
+            PYROWAVE_HDR10_PLUS_PQ, PYROWAVE_VIVID_PQ, PYROWAVE_VIVID_HLG,
+            PYROWAVE_DV81_PQ, PYROWAVE_DV84_HLG -> "$displayName (application-mapped)"
             else -> displayName
         }
+}
+
+internal object PyrowaveHdrFormatPolicy {
+    fun resolve(hdrEnabled: Boolean, hdrMode: Int, appliedDynamicFormat: Int,
+                hdrStateKnown: Boolean = true): StreamHdrFormat {
+        // This policy is queried only after successful PyroWave presentation,
+        // whose native color-contract check already verified the base transfer.
+        if ((hdrStateKnown && !hdrEnabled) || hdrMode == 0) return StreamHdrFormat.SDR
+        return when (appliedDynamicFormat) {
+            1 -> StreamHdrFormat.PYROWAVE_HDR10_PLUS_PQ
+            2 -> StreamHdrFormat.PYROWAVE_VIVID_PQ
+            3 -> StreamHdrFormat.PYROWAVE_VIVID_HLG
+            4 -> StreamHdrFormat.PYROWAVE_DV81_PQ
+            5 -> StreamHdrFormat.PYROWAVE_DV84_HLG
+            else -> if (hdrMode == 2) StreamHdrFormat.HLG else StreamHdrFormat.HDR10
+        }
+    }
 }
 
 /** Pure policy that keeps capability/configuration distinct from observed stream state. */

@@ -12,6 +12,17 @@ class IconListPreference(context: Context, attrs: AttributeSet?) : ListPreferenc
     var entryIcons: IntArray? = null
         private set
     private var mOriginalSummary: String? = null
+    private var writingOwnSummary = false
+
+    /**
+     * 搜索只命中下拉文案时，由设置页提供「包含：…」。
+     * 不能从外部 setSummary 追加：那样会被当成新的原始说明保存下来。
+     */
+    var searchMatchNoteProvider: (() -> CharSequence?)? = null
+        set(value) {
+            field = value
+            refreshSearchMatchNote()
+        }
 
     init {
         context.withStyledAttributes(attrs, R.styleable.IconListPreference) {
@@ -38,7 +49,10 @@ class IconListPreference(context: Context, attrs: AttributeSet?) : ListPreferenc
     }
 
     override fun setSummary(summary: CharSequence?) {
-        if (summary != null && (mOriginalSummary == null || !summary.toString().contains(mOriginalSummary!!))) {
+        if (!writingOwnSummary &&
+            summary != null &&
+            (mOriginalSummary == null || !summary.toString().contains(mOriginalSummary!!))
+        ) {
             mOriginalSummary = summary.toString()
         }
         super.setSummary(summary)
@@ -53,13 +67,39 @@ class IconListPreference(context: Context, attrs: AttributeSet?) : ListPreferenc
         }
 
         val index = findIndexOfValue(value)
-        if (index >= 0) {
+        val base = if (index >= 0) {
             val currentEntry = entries[index].toString()
-            val summary = context.getString(R.string.preference_summary_current, mOriginalSummary.orEmpty(), currentEntry)
-            super.setSummary(summary)
+            context.getString(R.string.preference_summary_current, mOriginalSummary.orEmpty(), currentEntry)
         } else {
-            super.setSummary(mOriginalSummary)
+            mOriginalSummary
         }
+        val note = searchMatchNoteProvider?.invoke()?.takeIf { it.isNotBlank() }
+        writingOwnSummary = true
+        try {
+            setSummary(if (note == null) base else buildSearchSummary(base, note))
+        } finally {
+            writingOwnSummary = false
+        }
+    }
+
+    /** Rebuilds the summary after the settings search query changes. */
+    fun refreshSearchMatchNote() {
+        updateSummary(value)
+    }
+
+    private fun buildSearchSummary(base: CharSequence?, note: CharSequence): CharSequence {
+        val builder = android.text.SpannableStringBuilder()
+        if (!base.isNullOrBlank()) builder.append(base).append('\n')
+        val noteStart = builder.length
+        builder.append(note)
+        val accent = com.limelight.utils.UiHelper.accentColor(context)
+        builder.setSpan(
+            android.text.style.ForegroundColorSpan(accent),
+            noteStart, builder.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        builder.setSpan(
+            android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+            noteStart, builder.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        return builder
     }
 
     override fun onSetInitialValue(defaultValue: Any?) {

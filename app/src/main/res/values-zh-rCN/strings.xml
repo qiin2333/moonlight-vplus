@@ -549,7 +549,7 @@
     <string name="title_disable_frame_drop"> 永不掉帧 </string>
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟。 </string>
     <string name="title_video_format">视频编解码器</string>
-    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
+    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR；PyroWave 会在兼容的 Sunshine 主机上使用实验性 Vulkan 路径，颜色范围跟随当前设置，并且不支持帧生成。</string>
     <string name="title_enable_hdr">启用 HDR</string>
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用屏幕最高亮度</string>
@@ -668,6 +668,7 @@
     <string name="audioconf_71surround">7.1环绕声</string>
     <string name="audioconf_714surround">7.1.4 环绕声 (Atmos)</string>
     <string name="videoformat_auto">自动（推荐）</string>
+    <string name="videoformat_pyrowave">PyroWave（实验性，不支持帧生成）</string>
     <string name="videoformat_hevcalways">首选 HEVC</string>
     <string name="title_frame_pacing">串流帧节奏</string>
     <string name="pacing_balanced">平衡</string>
@@ -926,7 +927,7 @@
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 串流小课堂：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
-    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
+    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以保存当前背景图片。</string>
     <string name="tip_long_press_controller">💡 串流小课堂：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
     <string name="tip_volume_keys">💡 串流小课堂：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
     <string name="tip_wallpaper_change">💡 串流小课堂：壁纸API选项可以设置随机壁纸来源的API，也可以是单张图片地址哦</string>
@@ -1117,8 +1118,8 @@
     <string name="image_download_failed_with_error">图片下载失败: %1$s</string>
     <string name="image_not_loaded_please_retry">图片未加载，请稍后再试</string>
     <string name="image_invalid">图片无效</string>
-    <string name="image_saved_successfully">涩图成功保存到了系统目录(Picture/setu)</string>
-    <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
+    <string name="image_saved_successfully">图片成功保存到：Picture/vplus</string>
+    <string name="image_save_failed_with_error">图片保存失败：%1$s</string>
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">场景%1$d未配置</string>
@@ -1531,7 +1532,11 @@
     <string name="menu">菜单</string>
     <string name="settings_search_hint">搜索设置项…</string>
     <string name="settings_search_close">关闭搜索</string>
+    <string name="settings_search_clear">清除搜索</string>
     <string name="settings_search_no_results">没有匹配的设置</string>
+    <string name="settings_search_open_category">在分类中查看</string>
+    <string name="settings_search_contains">包含：%1$s</string>
+    <string name="settings_search_match_separator">、</string>
     <string name="no_app_found_for_streaming">未找到可串流的应用</string>
     <string name="notification_icon">通知图标</string>
     <string name="pacing_precise_sync">精确同步（推荐）</string>
@@ -2251,4 +2256,38 @@
     <string name="title_host_gamepad_selection">主机虚拟手柄</string>
     <string name="summary_host_gamepad_selection">选择向 Sunshine 请求的手柄类型，对所有玩家生效。自动模式会为已识别的波形手柄或屏幕触摸板请求 DS5。更改后重新串流。</string>
     <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string name="title_pyrowave_capability_diagnostic">PyroWave 能力检测</string>
+    <string name="summary_pyrowave_capability_diagnostic">查看 Vulkan 能力及当前 PyroWave 解码器所需条件。</string>
+    <string name="pyrowave_diag_loading">正在检测 PyroWave 能力…</string>
+    <string name="pyrowave_diag_runtime">内置 PyroWave 运行库 API</string>
+    <string name="pyrowave_diag_gpu_frontend">GPU 呈现模块</string>
+    <string name="pyrowave_diag_gpu_gate">GPU 呈现需要 Android 10+、arm64-v8a 和 Vulkan 1.3。SDR 备用路径需要 Vulkan 1.2 及下方的解码功能，并非纯 CPU 解码。</string>
+    <string name="pyrowave_diag_ready">已检查的基础条件满足</string>
+    <string name="pyrowave_diag_missing">当前实现的基础条件未满足</string>
+    <string name="pyrowave_diag_scope">本报告仅检查驱动声明的能力。窗口呈现、图像格式、目标分辨率、HDR 输出及解码性能仍需串流验证。</string>
+    <string name="pyrowave_diag_loader_missing">无法使用 Vulkan 运行库</string>
+    <string name="pyrowave_diag_no_devices">未找到 Vulkan 物理设备</string>
+    <string name="pyrowave_diag_query_failed">无法读取 Vulkan 能力，不能据此认定设备不支持。</string>
+    <string name="pyrowave_diag_storage_path">8 位存储或大容量纹素缓冲</string>
+    <string name="pyrowave_diag_gpu_backend">GPU 呈现基础条件</string>
+    <string name="pyrowave_diag_staging_backend">SDR 备用路径基础条件</string>
+    <string name="pyrowave_diag_subgroup_range">wave4–wave128 完整计算子组</string>
+    <string name="pyrowave_diag_max_workgroup">工作组最大线程数</string>
+    <string name="pyrowave_diag_shared_memory">工作组共享内存</string>
+    <string name="pyrowave_diag_queue">图形与计算组合队列</string>
+    <string name="pyrowave_diag_android_surface">Android Vulkan 窗口扩展</string>
+    <string name="pyrowave_diag_copy_failed">无法复制报告</string>
+    <string name="pyrowave_diag_present">已提供</string>
+    <string name="pyrowave_diag_absent">未提供</string>
+    <string name="pyrowave_diag_vulkan_loader">Vulkan 加载器</string>
+    <string name="pyrowave_diag_subgroup_ops">子组操作位</string>
+    <string name="pyrowave_diag_subgroup_size">子组大小</string>
+    <string name="pyrowave_diag_subgroup_limits">子组最小 / 最大值</string>
+    <string name="pyrowave_diag_required_subgroup">所需子组操作</string>
+    <string name="pyrowave_diag_texel_limit">纹素缓冲最大元素数</string>
+    <string name="pyrowave_diag_back">返回</string>
+    <string name="pyrowave_diag_copy">复制</string>
+    <string name="pyrowave_diag_copy_success">报告已复制到剪贴板</string>
+    <string name="pyrowave_diag_unavailable">无法获取</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>
 </resources>

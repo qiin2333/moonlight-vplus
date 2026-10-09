@@ -604,7 +604,16 @@ class PerformanceOverlayManager(
         val isHot = performanceInfo.decodeTimeMs >= 15
         val iconRes: Int? = if (isHot) null else R.drawable.phc_perf_timer
         val iconEmoji: String? = if (isHot) "🥵" else null
-        val latencyValue = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
+        val latencyValue = if (performanceInfo.pyrowaveTimingFrames > 0) {
+            String.format(
+                Locale.getDefault(),
+                "%.2f+%.2f",
+                performanceInfo.pyrowaveDecodeTimeMs,
+                performanceInfo.pyrowavePresentTimeMs,
+            )
+        } else {
+            String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
+        }
         view.text = createStyledText(iconRes, latencyValue, "ms", 0xFFD597E3.toInt(), iconEmoji, textSizePx = view.textSize)
     }
 
@@ -1198,6 +1207,12 @@ class PerformanceOverlayManager(
         }
 
         val lowerName = fullDecoderName.lowercase()
+
+        // The overlay shows the codec name only; the detailed renderer path
+        // (Vulkan Surface vs CPU staging) stays in the decoder detail dialog.
+        if (lowerName.contains("pyrowave")) {
+            return DecoderTypeInfo(fullDecoderName, "PyroWave")
+        }
 
         for ((key, value) in DECODER_TYPE_MAP) {
             if (lowerName.contains(key)) {

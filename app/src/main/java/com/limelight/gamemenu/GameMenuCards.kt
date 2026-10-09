@@ -747,7 +747,11 @@ internal fun BitrateCard(
         Row {
             Text("0.5 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
             Spacer(Modifier.weight(1f))
-            Text("200 Mbps", color = colorResource(R.color.game_menu_text_secondary), fontSize = 9.sp)
+            Text(
+                BitrateCardController.formatBitrateMbps(state.maxBitrateKbps),
+                color = colorResource(R.color.game_menu_text_secondary),
+                fontSize = 9.sp
+            )
         }
     }
 }

@@ -26,6 +26,9 @@ class PerformanceInfo {
     var maxHostProcessingLatency: Float = 0f
     var aveHostProcessingLatency: Float = 0f
     var decodeTimeMs: Float = 0f
+    var pyrowaveDecodeTimeMs: Float = 0f
+    var pyrowavePresentTimeMs: Float = 0f
+    var pyrowaveTimingFrames: Int = 0
     var totalTimeMs: Float = 0f
     var bandWidth: String? = null
     var hdrFormat: StreamHdrFormat = StreamHdrFormat.SDR
