@@ -1536,6 +1536,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 replacement.isVisible = category.isVisible
                 replacement.isIconSpaceReserved = category.isIconSpaceReserved
                 replacement.order = order
+                replacement.initialExpandedChildrenCount = category.initialExpandedChildrenCount
                 group.addPreference(replacement)
                 children.forEach { child ->
                     replacement.addPreference(child)
