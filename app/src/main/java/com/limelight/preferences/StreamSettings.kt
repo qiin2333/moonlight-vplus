@@ -4502,7 +4502,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 append("\n").append(getString(if (recommended) R.string.summary_bitrate_recommended
                                               else R.string.summary_bitrate_manual))
             }
-            bitrate.dialogMessageText = description
+            bitrate.dialogMessageText = getString(if (adaptiveBitrate.isChecked)
+                R.string.summary_seekbar_bitrate_baseline else R.string.summary_seekbar_bitrate)
             applyHighlightedSummary(bitrate, valueText, disabledAccent,
                 currentValueProvider = { "${it.formatDisplayValue(it.currentValue)} ${it.suffix.orEmpty()}" },
                 descriptionProvider = { description })
@@ -4515,17 +4516,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                         "fixed" -> R.string.summary_fec_fixed
                         else -> R.string.summary_fec_host
                     }) })
-            }
-            findPreference<Preference>("use_recommended_bitrate")?.let { action ->
-                val defaultBitrate = PreferenceConfiguration.getDefaultBitrate(requireContext())
-                action.summary = getString(R.string.summary_use_recommended_bitrate,
-                    bitrate.formatDisplayValue(defaultBitrate))
-                action.isEnabled = !recommended || bitrate.currentValue != defaultBitrate
-                action.setOnPreferenceClickListener {
-                    prefs.edit { putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true) }
-                    resetBitrateToDefault(prefs, null, null)
-                    true
-                }
             }
         }
 

@@ -185,7 +185,7 @@ class SettingsResourceHygieneTest {
         val expectedKeysByCategory = mapOf(
             "category_basic_settings" to setOf(
                 "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
-                "use_recommended_bitrate", "list_fec_mode", "seekbar_fec_percentage",
+                "list_fec_mode", "seekbar_fec_percentage",
             ),
             "category_screen_position" to setOf(
                 "video_format",

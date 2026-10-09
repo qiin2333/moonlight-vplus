@@ -36,6 +36,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
     private var numberInput: EditText? = null
     private var syncingNumber = false
     private var enteredValue: Int? = null
+    private var useRecommendedBitrate = false
 
     private val pref: SeekBarPreference
         get() = preference as SeekBarPreference
@@ -45,11 +46,29 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         setStyle(STYLE_NORMAL, R.style.AppDialogStyle)
     }
 
+    override fun onPrepareDialogBuilder(builder: AlertDialog.Builder) {
+        super.onPrepareDialogBuilder(builder)
+        if (pref.isLogarithmic) {
+            builder.setNeutralButton(R.string.title_restore_recommended_bitrate, null)
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         dialog?.window?.setBackgroundDrawableResource(R.drawable.app_dialog_bg_cute)
         tintDialogButtons()
         val alert = dialog as? AlertDialog ?: return
+        if (pref.isLogarithmic) {
+            alert.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                val recommended = PreferenceConfiguration.getDefaultBitrate(requireContext())
+                syncingNumber = true
+                seekBar?.progress = pref.logToLinear(recommended)
+                syncingNumber = false
+                updateValueText(recommended)
+                numberInput?.error = null
+                useRecommendedBitrate = true
+            }
+        }
         numberInput?.let { input ->
             alert.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val value = readNumber()
@@ -74,11 +93,19 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         val pref = pref
         // 确保从持久化存储加载最新值
         pref.refreshCurrentValue()
+        if (pref.isLogarithmic) {
+            useRecommendedBitrate = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true)
+        }
 
         // Message text
         val messageView = layout.findViewById<TextView>(R.id.pref_seekbar_message)
         if (pref.dialogMessageText != null) {
             messageView.text = pref.dialogMessageText
+            if (pref.isLogarithmic) {
+                messageView.append("\n" + getString(R.string.summary_recommended_bitrate,
+                    pref.formatDisplayValue(PreferenceConfiguration.getDefaultBitrate(requireContext()))))
+            }
             messageView.visibility = View.VISIBLE
         }
 
@@ -119,6 +146,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         seekBar = layout.findViewById(R.id.pref_seekbar)
         seekBar!!.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
+                if (fromUser) useRecommendedBitrate = false
                 // 将 progress 换算为显示值
                 val displayValue = if (usesOffsetRange) value + pref.minValue else value
 
@@ -183,6 +211,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         updateValueText(pref.currentValue)
         numberInput?.doAfterTextChanged {
             if (!syncingNumber) {
+                useRecommendedBitrate = false
                 readNumber()?.let { value ->
                     syncingNumber = true
                     seekBar?.progress = if (pref.isLogarithmic) pref.logToLinear(value) else value
@@ -220,6 +249,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
     private fun adjustValue(direction: Int) {
         val seekBar = seekBar ?: return
         val pref = pref
+        useRecommendedBitrate = false
 
         val currentProgress = seekBar.progress
         val newProgress: Int
@@ -311,7 +341,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         if (!pref.callChangeListener(value)) return false
         if (pref.isLogarithmic) {
             PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-                putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, false)
+                putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, useRecommendedBitrate)
             }
         }
         pref.setProgress(value)

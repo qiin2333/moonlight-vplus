@@ -2364,8 +2364,8 @@ Tap again to replace it.</string>
     <string name="fec_mode_host">Host default</string>
     <string name="fec_mode_automatic">Automatic</string>
     <string name="fec_mode_fixed">Fixed</string>
-    <string name="title_use_recommended_bitrate">Use recommended bitrate</string>
-    <string name="summary_use_recommended_bitrate">Recommended: %1$s Mbps. Follows resolution and frame rate.</string>
+    <string name="title_restore_recommended_bitrate">Restore recommended</string>
+    <string name="summary_recommended_bitrate">Recommended: %1$s Mbps. Follows resolution and frame rate.</string>
     <string name="summary_bitrate_recommended">Recommended bitrate follows resolution and frame rate.</string>
     <string name="summary_bitrate_manual">Your chosen bitrate is kept when resolution or frame rate changes.</string>
     <string name="summary_abr_bitrate_range">Adjustment range: %1$s–%2$s Mbps. FEC adds extra bandwidth.</string>

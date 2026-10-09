@@ -65,10 +65,6 @@
             android:entryValues="@array/abr_mode_values"
             android:defaultValue="balanced"
             android:dependency="checkbox_adaptive_bitrate" />
-        <Preference
-            android:key="use_recommended_bitrate"
-            android:title="@string/title_use_recommended_bitrate"
-            android:persistent="false" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_resolutions_scale"
             android:dialogMessage="@string/summary_seekbar_scale"

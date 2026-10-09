@@ -1044,8 +1044,8 @@
     <string name="fec_mode_host">跟隨主機</string>
     <string name="fec_mode_automatic">自動調整</string>
     <string name="fec_mode_fixed">固定比例</string>
-    <string name="title_use_recommended_bitrate">使用建議位元率</string>
-    <string name="summary_use_recommended_bitrate">建議值：%1$s Mbps，隨解析度與影格率調整。</string>
+    <string name="title_restore_recommended_bitrate">恢復建議</string>
+    <string name="summary_recommended_bitrate">建議值：%1$s Mbps，隨解析度與影格率調整。</string>
     <string name="summary_bitrate_recommended">目前使用建議位元率，會隨解析度與影格率調整。</string>
     <string name="summary_bitrate_manual">已指定位元率，變更解析度或影格率時保留此值。</string>
     <string name="summary_abr_bitrate_range">調整範圍：%1$s–%2$s Mbps；FEC 冗餘會額外占用頻寬。</string>
