@@ -715,6 +715,10 @@
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
     <string name="title_optimize_hardware_touchpad">适配平板触摸板</string>
     <string name="summary_optimize_hardware_touchpad">为受支持的平板键盘触摸板使用专用事件处理，Root 与非 Root 版本均可用。</string>
+    <string name="title_hardware_touchpad_pointer_speed">触摸板指针速度</string>
+    <string name="summary_hardware_touchpad_pointer_speed">调整平板触摸板移动指针的快慢。</string>
+    <string name="dialog_title_hardware_touchpad_pointer_speed">调高加快指针，调低减慢指针。</string>
+    <string name="suffix_hardware_touchpad_pointer_speed">%</string>
     <string name="title_checkbox_enable_esc_menu">双击按键打开串流菜单</string>
     <string name="summary_checkbox_enable_esc_menu">双击所选按键打开串流返回菜单；单击仍会发送到主机。</string>
     <string name="title_list_esc_menu_key">串流菜单快捷键</string>

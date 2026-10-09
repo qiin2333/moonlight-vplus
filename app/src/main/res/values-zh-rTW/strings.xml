@@ -864,6 +864,10 @@
     <string name="summary_fix_mouse_wheel">部分裝置會把本機滑鼠滾輪轉成觸控捲動事件；遇到此問題時啟用。</string>
     <string name="title_optimize_hardware_touchpad">平板觸控板支援</string>
     <string name="summary_optimize_hardware_touchpad">為支援的平板鍵盤觸控板使用專用事件處理，Root 與非 Root 版本皆可使用。</string>
+    <string name="title_hardware_touchpad_pointer_speed">觸控板指標速度</string>
+    <string name="summary_hardware_touchpad_pointer_speed">調整平板觸控板移動指標的快慢。</string>
+    <string name="dialog_title_hardware_touchpad_pointer_speed">調高加快指標，調低減慢指標。</string>
+    <string name="suffix_hardware_touchpad_pointer_speed">%</string>
     <string name="title_show_guide_button">顯示手把 Guide/Home 鍵</string>
     <string name="summary_show_guide_button">在螢幕虛擬手把上顯示原生手把 Guide/Home 鍵；它不是 Win+G 鍵盤快速鍵。</string>
     <string name="keyboard_picker_main">主鍵區</string>

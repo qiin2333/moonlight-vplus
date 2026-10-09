@@ -17,6 +17,7 @@ import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
+import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
 import com.limelight.binding.input.touchpad.ScreenDs5PressureClickDetector
 import com.limelight.binding.input.touchpad.ScreenDs5TapClickDetector
 import com.limelight.binding.input.virtual_controller.VirtualController
@@ -97,7 +98,11 @@ class TouchInputHandler(private val game: Game) {
     private var detectScrolling = false
     var detectMouseMiddle = false         // 键盘处理也会读写
     var detectMouseMiddleDown = false     // 键盘处理也会读写
-    private val nonRootTouchpadHandler = NonRootTouchpadHandler()
+    private var relativeTouchpadRemainderX = 0f
+    private var relativeTouchpadRemainderY = 0f
+    private val nonRootTouchpadHandler = NonRootTouchpadHandler {
+        game.prefConfig.hardwareTouchpadPointerSpeedPercent
+    }
     private val penPointerCoords = MotionEvent.PointerCoords()
     private val screenDs5PressureClickDetector = ScreenDs5PressureClickDetector()
     private var screenDs5PressurePointerId = MotionEvent.INVALID_POINTER_ID
@@ -312,8 +317,9 @@ class TouchInputHandler(private val game: Game) {
 
                 val eventHasRelativeMouseAxes = game.inputCaptureProvider.eventHasRelativeMouseAxes(event)
                 if (eventHasRelativeMouseAxes) {
-                    val deltaX = game.inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
-                    val deltaY = game.inputCaptureProvider.getRelativeAxisY(event).toInt().toShort()
+                    val rawDeltaX = game.inputCaptureProvider.getRelativeAxisX(event).toInt()
+                    val rawDeltaY = game.inputCaptureProvider.getRelativeAxisY(event).toInt()
+                    val (deltaX, deltaY) = scaleRelativeTouchpadDelta(event, rawDeltaX, rawDeltaY)
                     if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
                         if (game.prefConfig.absoluteMouseMode) {
                             val activeStreamView = game.activeStreamView!!
@@ -1382,6 +1388,30 @@ class TouchInputHandler(private val game: Game) {
         if (game.prefConfig.enableEnhancedTouch) {
             game.prefConfig.enableNativeMousePointer = false
         }
+    }
+
+    private fun scaleRelativeTouchpadDelta(event: MotionEvent, deltaX: Int, deltaY: Int): Pair<Short, Short> {
+        if ((event.source and InputDevice.SOURCE_TOUCHPAD) != InputDevice.SOURCE_TOUCHPAD) {
+            relativeTouchpadRemainderX = 0f
+            relativeTouchpadRemainderY = 0f
+            return deltaX.toShort() to deltaY.toShort()
+        }
+
+        val speedPercent = game.prefConfig.hardwareTouchpadPointerSpeedPercent
+        val (scaledX, remainderX) = TouchpadPointerSpeed.scaleRelativeDelta(
+            deltaX,
+            relativeTouchpadRemainderX,
+            speedPercent
+        )
+        val (scaledY, remainderY) = TouchpadPointerSpeed.scaleRelativeDelta(
+            deltaY,
+            relativeTouchpadRemainderY,
+            speedPercent
+        )
+        relativeTouchpadRemainderX = remainderX
+        relativeTouchpadRemainderY = remainderY
+        return scaledX.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort() to
+            scaledY.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
     }
 
     fun cancelNonRootTouchpad() {

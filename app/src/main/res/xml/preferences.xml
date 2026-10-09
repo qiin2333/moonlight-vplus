@@ -1006,6 +1006,16 @@
             android:title="@string/title_optimize_hardware_touchpad"
             android:summary="@string/summary_optimize_hardware_touchpad"
             android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_hardware_touchpad_pointer_speed"
+            android:dialogMessage="@string/dialog_title_hardware_touchpad_pointer_speed"
+            seekbar:min="50"
+            seekbar:step="10"
+            android:max="300"
+            android:defaultValue="100"
+            android:summary="@string/summary_hardware_touchpad_pointer_speed"
+            android:text="@string/suffix_hardware_touchpad_pointer_speed"
+            android:title="@string/title_hardware_touchpad_pointer_speed" />
         <!-- Legacy storage flag. Kept for old backups and hidden by StreamSettings. -->
         <CheckBoxPreference
             android:defaultValue="true"
