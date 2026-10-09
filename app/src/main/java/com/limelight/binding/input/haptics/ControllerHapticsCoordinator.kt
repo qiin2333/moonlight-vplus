@@ -136,7 +136,10 @@ internal class ControllerHapticsCoordinator(
             ?.toShort()
 
     fun hasRumbleCapability(context: InputDeviceContext): Boolean {
-        if (!context.external) return false
+        // Built-in gamepads (e.g. Switch OLED Joy-Con under LineageOS) report as internal
+        // but still carry real vibrators, so capability must not gate on isExternal. This
+        // mirrors the arrival advertisement in InputDeviceContext, which likewise has no
+        // external filter for LI_CCAP_RUMBLE.
         if (handler.prefConfig.multiController && !context.assignedControllerNumber) return false
         val inputDevice = context.inputDevice ?: return false
         if (ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_X) == null ||
