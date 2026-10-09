@@ -1193,13 +1193,16 @@ class ControllerHandler(
             ) {
                 context.vibratorManager = deviceVibratorManager
                 context.quadVibrators = true
+                context.borrowsDeviceVibrator = true
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceVibratorManager != null &&
                 rumbleManager.hasDualAmplitudeControlledRumbleVibrators(deviceVibratorManager)
             ) {
                 context.vibratorManager = deviceVibratorManager
                 context.quadVibrators = false
+                context.borrowsDeviceVibrator = true
             } else if (deviceVibrator.hasVibrator()) {
                 context.vibrator = deviceVibrator
+                context.borrowsDeviceVibrator = true
             }
         }
 

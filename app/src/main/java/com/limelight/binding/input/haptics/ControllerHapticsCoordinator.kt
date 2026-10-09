@@ -80,10 +80,7 @@ internal class ControllerHapticsCoordinator(
     private val gamePipeline by lazy {
         GameRumblePipeline(
             renderer = renderer,
-            context = { number -> GameRumbleContext(
-                handler.prefConfig.gameRumbleMode, controllerHasRumble(number),
-                deviceCapabilities.hasVibrator, deviceCapabilities.tier
-            ) },
+            context = ::gameRumbleContext,
             clockMs = SystemClock::elapsedRealtime,
             postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
             removeCallbacks = handler.mainThreadHandler::removeCallbacks
@@ -453,9 +450,7 @@ internal class ControllerHapticsCoordinator(
             if (isStoppingOrStopped()) return@post
             val now = SystemClock.elapsedRealtime()
             for ((number, pending) in latest) {
-                val context = GameRumbleContext(handler.prefConfig.gameRumbleMode,
-                    controllerHasRumble(number), number.toInt() == 0 && deviceCapabilities.hasVibrator,
-                    deviceCapabilities.tier)
+                val context = gameRumbleContext(number)
                 val plan = GameRumbleAllocator.allocate(context, RumbleSignalFeatures(pending.state))
                 renderer.queueController(mixer.submit(number, RumbleSource.AUTHORED,
                     plan.controller ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
@@ -661,6 +656,32 @@ internal class ControllerHapticsCoordinator(
             }
         }
         return false
+    }
+
+    private fun controllerBorrowsDeviceVibrator(controllerNumber: Short): Boolean {
+        for (i in 0 until handler.inputDeviceContexts.size()) {
+            val context = handler.inputDeviceContexts.valueAt(i)
+            if (context.controllerNumber == controllerNumber &&
+                hasRumbleCapability(context) &&
+                context.borrowsDeviceVibrator
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun gameRumbleContext(controllerNumber: Short): GameRumbleContext {
+        val mode = handler.prefConfig.gameRumbleMode
+        val hasController = controllerHasRumble(controllerNumber)
+        // COORDINATED is the only mode where controller and device channels can both fire from one
+        // rumble state. When the controller sink is the device's own borrowed vibrator, the device
+        // channel would double-drive that same actuator, so it must yield.
+        val hasDevice = controllerNumber.toInt() == 0 && deviceCapabilities.hasVibrator && !(
+            mode == GameRumbleMode.COORDINATED && hasController &&
+                controllerBorrowsDeviceVibrator(controllerNumber)
+            )
+        return GameRumbleContext(mode, hasController, hasDevice, deviceCapabilities.tier)
     }
 
     private fun runOnOutputThread(action: () -> Unit) {
