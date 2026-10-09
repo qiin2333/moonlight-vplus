@@ -682,9 +682,14 @@ internal class ControllerHapticsCoordinator(
         val hasController = controllerHasRumble(controllerNumber)
         // COORDINATED is the only mode where controller and device channels can both fire from one
         // rumble state. When the controller sink is the device's own borrowed vibrator, the device
-        // channel would double-drive that same actuator, so it must yield.
+        // channel would double-drive that same actuator, so it must yield — but only while the
+        // controller channel actually dispatches. An active DS5 waveform sink suppresses
+        // writeController, leaving the borrowed vibrator unwritten and the device channel free.
+        val controllerChannelDispatches = ds5HapticsBindings.values.none {
+            it.controllerNumber == controllerNumber && it.sink.playbackControl?.playbackActive == true
+        }
         val hasDevice = controllerNumber.toInt() == 0 && deviceCapabilities.hasVibrator && !(
-            mode == GameRumbleMode.COORDINATED && hasController &&
+            mode == GameRumbleMode.COORDINATED && hasController && controllerChannelDispatches &&
                 controllerBorrowsDeviceVibrator(controllerNumber)
             )
         return GameRumbleContext(mode, hasController, hasDevice, deviceCapabilities.tier)
