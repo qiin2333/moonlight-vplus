@@ -83,7 +83,8 @@ public final class MainActivity extends Activity {
         status = new TextView(this);
         status.setText(message);
         layout.addView(status);
-        if (!UsbIpBackend.isSupported()) { status.append("\n当前阶段仅支持 Android 9+ ARM64"); return; }
+        if (!UsbIpBackend.isSupported()) { status.append("\n需要 Android 9+ ARM64 或实验性 ARMv7 支持"); return; }
+        if (UsbIpBackend.isExperimentalArmv7()) status.append("\nARMv7 USB 转发为实验性功能，尚未通过实机验证。");
         if (active != null) {
             Button release = new Button(this);
             release.setText("释放 " + active.busId);
