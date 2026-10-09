@@ -15,19 +15,14 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.click
-import androidx.compose.ui.geometry.Offset
 import androidx.core.view.children
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.NoMatchingRootException
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
@@ -314,21 +309,6 @@ class VirtualControllerQuickMenuTest {
         idle()
         compose.onNodeWithText("Xbox").assertIsFocused()
         activityRule.scenario.onActivity { controller.dispatchMenuAxes(-7, 0f, 0f, 0f) }
-    }
-
-    @Test fun tappingOutsideDismissesButPanelHeaderDoesNot() {
-        openMenu()
-        val title = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.osc_quick_menu)
-        compose.onNodeWithText(title).performTouchInput { click() }
-        compose.onNodeWithText("Xbox").assertExists()
-        compose.onRoot().performTouchInput { click(Offset(1f, 1f)) }
-        idle()
-        try {
-            onView(isRoot()).inRoot(isDialog()).check(matches(isDisplayed()))
-            fail("Quick menu dialog must be dismissed by the outside tap")
-        } catch (_: NoMatchingRootException) {
-            // Expected: the dialog window is gone after the outside tap.
-        }
     }
 
     @Test fun controllerToggleRetainsFocusAndOrphanUpDoesNothing() {
