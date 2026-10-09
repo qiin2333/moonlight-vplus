@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">允許拖曳設定按鈕</string>
+    <string name="osc_reset_settings_button_position">還原左上角位置</string>
+</resources>

@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -60,6 +62,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
@@ -78,7 +81,8 @@ object AppActionSheet {
         val checked: Boolean? = null,
         val sectionStart: Boolean = false,
         val opensSubmenu: Boolean = false,
-        val trailingText: CharSequence? = null
+        val trailingText: CharSequence? = null,
+        val toggle: Boolean = false
     )
 
     /** Hosts custom, live content in the same window, theme, and dismissal model as
@@ -562,7 +566,10 @@ object AppActionSheet {
                             false
                         }
                     }
-                    .clickable(enabled = action.enabled) { onAction(action) }
+                    .then(if (action.toggle) {
+                        Modifier.toggleable(value = action.checked == true, enabled = action.enabled,
+                            role = Role.Switch, onValueChange = { onAction(action) })
+                    } else Modifier.clickable(enabled = action.enabled) { onAction(action) })
                     .focusable(action.enabled)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -591,7 +598,10 @@ object AppActionSheet {
                         )
                     }
                 }
-                if (!action.trailingText.isNullOrEmpty()) {
+                if (action.toggle) {
+                    Spacer(Modifier.width(10.dp))
+                    Switch(checked = action.checked == true, onCheckedChange = null, enabled = action.enabled)
+                } else if (!action.trailingText.isNullOrEmpty()) {
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = action.trailingText.toString(),

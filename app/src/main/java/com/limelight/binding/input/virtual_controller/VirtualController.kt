@@ -1,7 +1,7 @@
 /** Originally created by Karim Mreisi. */
 package com.limelight.binding.input.virtual_controller
 
-import android.app.Dialog
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -14,6 +14,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -84,7 +85,7 @@ class VirtualController(
     private var hidden = false
     private var pendingLayoutRefresh: OneShotPreDrawListener? = null
     private val delayedRetransmit = Runnable { sendControllerInputContextInternal() }
-    private var optionsDialog: Dialog? = null
+    private var optionsDialog: VirtualControllerOptionsDialog? = null
     private val buttonConfigure = ImageButton(context).apply {
         isFocusable = false
         contentDescription = context.getString(R.string.osc_quick_menu)
@@ -106,9 +107,12 @@ class VirtualController(
         setPadding(padding, padding, padding, padding)
         setOnClickListener { showOptions() }
     }
+    private val settingsButtonStore = OscSettingsButtonStore(context)
+    private val settingsButtonPosition = OscSettingsButtonPositionController(buttonConfigure, frameLayout, settingsButtonStore)
 
     private fun showOptions() {
         if (optionsDialog?.isShowing == true) return
+        if ((context as? Activity)?.let { it.isFinishing || it.isDestroyed } == true) return
         releaseInputs()
         val names = context.resources.getStringArray(R.array.osc_layout_names)
         val actions = VirtualControllerLayout.entries.mapIndexed { index, preset ->
@@ -119,21 +123,56 @@ class VirtualController(
         if (controllerMode != ControllerMode.Active) {
             actions += AppActionSheet.Action(102, context.getString(R.string.osc_action_done))
         }
-        optionsDialog = AppActionSheet.show(
-            context = context,
-            title = context.getString(R.string.osc_quick_menu),
-            actions = actions,
-            onAction = { action ->
-                when (action.id) {
-                    in VirtualControllerLayout.entries.indices -> switchLayout(VirtualControllerLayout.entries[action.id])
+        actions += AppActionSheet.Action(VirtualControllerOptionsDialog.ACTION_DRAG,
+            context.getString(R.string.osc_allow_drag_settings_button), sectionStart = true, toggle = true)
+        actions += AppActionSheet.Action(VirtualControllerOptionsDialog.ACTION_RESET,
+            context.getString(R.string.osc_reset_settings_button_position))
+        val dialog = VirtualControllerOptionsDialog(
+            context, actions, settingsButtonStore,
+            readAxes = { event ->
+                (controllerHandler?.getGameMenuNavigationAxisPairs(event, includeRightStick = false)
+                    ?: emptyList()) to (controllerHandler?.getMenuRightStickY(event) ?: 0f)
+            },
+            onDragEnabled = settingsButtonPosition::setDragEnabled,
+            onAction = { id ->
+                when (id) {
+                    in VirtualControllerLayout.entries.indices -> switchLayout(VirtualControllerLayout.entries[id])
                     100 -> startEditing(ControllerMode.MoveButtons)
                     101 -> startEditing(ControllerMode.ResizeButtons)
                     102 -> finishEditing()
+                    VirtualControllerOptionsDialog.ACTION_RESET -> settingsButtonPosition.resetPosition()
                 }
             },
-            onDismiss = { optionsDialog = null },
         )
+        optionsDialog = dialog
+        dialog.setOnDismissListener {
+            if (optionsDialog === dialog) {
+                optionsDialog = null
+                controllerHandler?.onExternalGameMenuDismissed()
+            }
+        }
+        try {
+            dialog.showMenu()
+            controllerHandler?.onExternalGameMenuOpened()
+        } catch (_: android.view.WindowManager.BadTokenException) {
+            optionsDialog = null
+            dialog.dismiss()
+        }
     }
+
+    fun dispatchMenuKey(event: KeyEvent): Boolean {
+        val dialog = optionsDialog?.takeIf { it.isShowing } ?: return false
+        dialog.dispatchKeyEvent(event)
+        return true
+    }
+
+    fun dispatchMenuAxes(sourceId: Int, leftX: Float, leftY: Float, rightY: Float): Boolean {
+        val dialog = optionsDialog?.takeIf { it.isShowing } ?: return false
+        dialog.dispatchAxes(sourceId, listOf(leftX to leftY), rightY)
+        return true
+    }
+
+    fun releaseMenuSource(sourceId: Int) { optionsDialog?.releaseSource(sourceId) }
 
     internal fun switchLayout(preset: VirtualControllerLayout) {
         if (controllerMode != ControllerMode.Active) finishEditing()
@@ -165,6 +204,7 @@ class VirtualController(
 
     fun hide() {
         optionsDialog?.dismiss()
+        settingsButtonPosition.cancelGesture()
         releaseInputs()
         hidden = true
         elements.forEach { it.visibility = View.INVISIBLE }
@@ -179,7 +219,9 @@ class VirtualController(
 
     /** Replaces the stream-scoped input sink after an automatic reconnect. */
     fun rebindControllerHandler(controllerHandler: ControllerHandler?) {
+        if (this.controllerHandler === controllerHandler) return
         this.controllerHandler = controllerHandler
+        if (optionsDialog?.isShowing == true) controllerHandler?.onExternalGameMenuOpened()
     }
 
     private fun releaseInputs() {
@@ -190,6 +232,7 @@ class VirtualController(
     }
 
     fun removeElements() {
+        settingsButtonPosition.cancelGesture()
         if (controllerMode != ControllerMode.Active) VirtualControllerConfigurationLoader.saveProfile(this, context)
         releaseInputs()
         elements.forEach { frameLayout.removeView(it) }
@@ -211,6 +254,7 @@ class VirtualController(
     }
 
     fun refreshLayout() {
+        settingsButtonPosition.cancelGesture()
         pendingLayoutRefresh?.removeListener()
         pendingLayoutRefresh = OneShotPreDrawListener.add(frameLayout) {
             pendingLayoutRefresh = null
@@ -229,11 +273,14 @@ class VirtualController(
                 buttonConfigure.setPadding(inset, inset, inset, inset)
                 // Overlay coordinates are physical, so RTL must still anchor to the left edge.
                 val horizontalGravity = if (frameLayout.layoutDirection == View.LAYOUT_DIRECTION_RTL) Gravity.END else Gravity.START
+                buttonConfigure.translationX = 0f
+                buttonConfigure.translationY = 0f
                 frameLayout.addView(buttonConfigure, FrameLayout.LayoutParams(size, size, Gravity.TOP or horizontalGravity).apply {
                     leftMargin = edgeMargin.coerceAtMost(frameLayout.width - size)
                     topMargin = edgeMargin.coerceAtMost(frameLayout.height - size)
                 })
                 buttonConfigure.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
+                settingsButtonPosition.requestPlacement()
             }
         }
     }
@@ -255,6 +302,7 @@ class VirtualController(
     fun cleanup() {
         if (controllerMode != ControllerMode.Active) finishEditing()
         optionsDialog?.dismiss()
+        settingsButtonPosition.dispose()
         pendingLayoutRefresh?.removeListener()
         pendingLayoutRefresh = null
         releaseInputs()

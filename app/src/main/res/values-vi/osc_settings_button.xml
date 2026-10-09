@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Cho phép kéo nút cài đặt</string>
+    <string name="osc_reset_settings_button_position">Khôi phục vị trí trên cùng bên trái</string>
+</resources>

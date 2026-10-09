@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Slepen van de instellingenknop toestaan</string>
+    <string name="osc_reset_settings_button_position">Terugzetten naar linksboven</string>
+</resources>
