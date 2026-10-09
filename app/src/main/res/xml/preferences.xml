@@ -30,8 +30,7 @@
             android:defaultValue="20"
             seekbar:min="0"
             android:max="100"
-            seekbar:step="1"
-            android:dependency="list_fec_mode" />
+            seekbar:step="1" />
         <ListPreference
             android:key="list_fps"
             android:title="@string/title_fps_list"

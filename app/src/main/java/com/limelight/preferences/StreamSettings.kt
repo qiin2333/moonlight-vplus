@@ -4369,6 +4369,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             if (changedKey == null || changedKey == "checkbox_adaptive_bitrate") {
                 updateAdaptiveBitratePresentation()
             }
+            if (changedKey == null || changedKey == "list_fec_mode") {
+                findPreference<SeekBarPreference>("seekbar_fec_percentage")?.isEnabled =
+                    findPreference<ListPreference>("list_fec_mode")?.value == "fixed"
+            }
             if (changedKey == null || changedKey == "checkbox_enable_audio_passthrough") {
                 updateAudioPipelineVisibility()
             }
