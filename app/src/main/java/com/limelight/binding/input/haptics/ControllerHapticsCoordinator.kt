@@ -552,6 +552,12 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
             onAvailability(HapticAvailability.READY)
+            // An accepted sink that is already playing changes the gameRumbleContext allocation;
+            // onPlaybackChanged only fires on later transitions, so replay the tracked state here
+            // to re-route it under the new binding.
+            if (sink.playbackControl?.playbackActive == true) {
+                onSinkChanged(controllerNumber)
+            }
             replaced.forEach { it.sink.stop() }
         }
     }
