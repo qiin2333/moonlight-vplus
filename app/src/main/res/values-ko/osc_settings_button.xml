@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">설정 버튼 드래그 허용</string>
-    <string name="osc_reset_settings_button_position">왼쪽 위 위치로 복원</string>
+    <string name="osc_reset_settings_button_position">설정 버튼 초기 위치로 복원</string>
     <string name="osc_settings_button_size">설정 버튼 크기</string>
 </resources>

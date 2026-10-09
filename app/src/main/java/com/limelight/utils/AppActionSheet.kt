@@ -13,6 +13,8 @@ import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -211,17 +213,10 @@ object AppActionSheet {
     internal fun prepareDialog(
         dialog: ComponentDialog,
         contentView: ComposeView,
-        fullScreen: Boolean = false
+        fullScreen: Boolean = false,
+        hostWindow: Window? = null
     ) {
-        val hostWindow = (contentView.context as? Activity)?.window
-        fun mirrorHostWindow(window: Window) {
-            hostWindow?.let { host ->
-                window.decorView.systemUiVisibility = host.decorView.systemUiVisibility
-                if (host.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                }
-            }
-        }
+        val resolvedHostWindow = hostWindow ?: (contentView.context as? Activity)?.window
 
         dialog.setContentView(contentView)
         dialog.setCanceledOnTouchOutside(true)
@@ -231,8 +226,8 @@ object AppActionSheet {
 
         dialog.window?.let { window ->
             window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-            if (fullScreen) WindowCompat.setDecorFitsSystemWindows(window, false)
             if (fullScreen) {
+                applyFullScreenWindow(window, resolvedHostWindow)
                 window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     window.attributes = window.attributes.apply {
@@ -242,7 +237,6 @@ object AppActionSheet {
                 }
             }
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            mirrorHostWindow(window)
             window.attributes = window.attributes.apply {
                 width = ViewGroup.LayoutParams.MATCH_PARENT
                 height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
@@ -259,11 +253,26 @@ object AppActionSheet {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                mirrorHostWindow(window)
+                applyFullScreenWindow(window, resolvedHostWindow)
                 window.decorView.post {
-                    if (dialog.isShowing) mirrorHostWindow(window)
+                    if (dialog.isShowing) applyFullScreenWindow(window, resolvedHostWindow)
                 }
             }
+        }
+    }
+
+    /** Applies the same immersive contract used by the in-stream game menu. */
+    internal fun applyFullScreenWindow(window: Window, hostWindow: Window? = null) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        hostWindow?.let { host ->
+            window.decorView.systemUiVisibility = host.decorView.systemUiVisibility
+            if (host.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
+        }
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
         }
     }
 

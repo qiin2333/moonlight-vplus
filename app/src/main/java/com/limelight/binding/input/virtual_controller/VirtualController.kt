@@ -26,6 +26,7 @@ import com.limelight.utils.AppActionSheet
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.ui.FloatingButtonCoordinates
+import kotlin.math.roundToInt
 
 class VirtualController(
     private var controllerHandler: ControllerHandler?,
@@ -202,6 +203,7 @@ class VirtualController(
                     VirtualControllerOptionsDialog.ACTION_RESET_CONTROLLER_LAYOUT -> resetSavedLayout()
                 }
             },
+            hostWindow = (context as? Activity)?.window,
         )
         optionsDialog = dialog
         dialog.setOnDismissListener {
@@ -347,7 +349,10 @@ class VirtualController(
         }
         val guideParams = guide?.layoutParams as? FrameLayout.LayoutParams
         val guideSize = guideParams?.let { minOf(it.width, it.height) }?.takeIf { it > 0 }
-        val baseSize = guideSize ?: minOf(
+        val defaultGuideSize = ((if (layoutStyle == VirtualControllerLayout.CLASSIC) 7 else 10) * profileScale)
+            .roundToInt()
+            .takeIf { it > 0 }
+        val baseSize = guideSize ?: defaultGuideSize ?: minOf(
             (48 * density).toInt(),
             (frameLayout.height * 0.06f).toInt().coerceAtLeast(1)
         )

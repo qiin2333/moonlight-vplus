@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Permitir arrastrar el botón de ajustes</string>
-    <string name="osc_reset_settings_button_position">Restablecer arriba a la izquierda</string>
+    <string name="osc_reset_settings_button_position">Restaurar la posición inicial del botón de ajustes</string>
     <string name="osc_settings_button_size">Tamaño del botón de ajustes</string>
 </resources>

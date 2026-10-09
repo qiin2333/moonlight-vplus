@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Beállításgomb húzásának engedélyezése</string>
-    <string name="osc_reset_settings_button_position">Visszaállítás a bal felső sarokba</string>
+    <string name="osc_reset_settings_button_position">A beállítások gomb kezdeti helyzetének visszaállítása</string>
     <string name="osc_settings_button_size">Beállításgomb mérete</string>
 </resources>

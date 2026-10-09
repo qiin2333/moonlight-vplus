@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Να επιτρέπεται η μετακίνηση του κουμπιού ρυθμίσεων</string>
-    <string name="osc_reset_settings_button_position">Επαναφορά επάνω αριστερά</string>
+    <string name="osc_reset_settings_button_position">Επαναφορά αρχικής θέσης κουμπιού ρυθμίσεων</string>
     <string name="osc_settings_button_size">Μέγεθος κουμπιού ρυθμίσεων</string>
 </resources>

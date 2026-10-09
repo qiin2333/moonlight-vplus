@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Povolit přetahování tlačítka nastavení</string>
-    <string name="osc_reset_settings_button_position">Obnovit polohu vlevo nahoře</string>
+    <string name="osc_reset_settings_button_position">Obnovit výchozí pozici tlačítka nastavení</string>
     <string name="osc_settings_button_size">Velikost tlačítka nastavení</string>
 </resources>

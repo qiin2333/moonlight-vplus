@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Permitir arrastar o botão de definições</string>
-    <string name="osc_reset_settings_button_position">Repor no canto superior esquerdo</string>
+    <string name="osc_reset_settings_button_position">Restaurar a posição inicial do botão de definições</string>
     <string name="osc_settings_button_size">Tamanho do botão de definições</string>
 </resources>

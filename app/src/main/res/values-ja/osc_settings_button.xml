@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">設定ボタンのドラッグを許可</string>
-    <string name="osc_reset_settings_button_position">左上の位置に戻す</string>
+    <string name="osc_reset_settings_button_position">設定ボタンの初期位置に戻す</string>
     <string name="osc_settings_button_size">設定ボタンのサイズ</string>
 </resources>

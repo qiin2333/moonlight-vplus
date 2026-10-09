@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Дозволити перетягування кнопки налаштувань</string>
-    <string name="osc_reset_settings_button_position">Відновити позицію вгорі ліворуч</string>
+    <string name="osc_reset_settings_button_position">Відновити початкове положення кнопки налаштувань</string>
     <string name="osc_settings_button_size">Розмір кнопки налаштувань</string>
 </resources>

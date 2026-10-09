@@ -8,6 +8,7 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.Window
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,7 +72,8 @@ internal class VirtualControllerOptionsDialog(
     private val onToggleChanged: (Int, Boolean) -> Unit,
     private val onOpacityChanged: (Int) -> Unit,
     private val onSizeScaleChanged: (Float) -> Unit,
-    private val onAction: (Int) -> Unit
+    private val onAction: (Int) -> Unit,
+    private val hostWindow: Window? = null
 ) : ComponentDialog(context, R.style.GameMenuDialogStyle) {
     private class Source {
         val navigation = MenuAxisNavigationState()
@@ -338,7 +340,7 @@ internal class VirtualControllerOptionsDialog(
                 }
             }
         }
-        AppActionSheet.prepareDialog(this, view, fullScreen = true)
+        AppActionSheet.prepareDialog(this, view, fullScreen = true, hostWindow = hostWindow)
     }
 
     @androidx.compose.runtime.Composable
@@ -522,6 +524,9 @@ internal class VirtualControllerOptionsDialog(
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         ownsFocus = hasFocus
+        if (hasFocus) {
+            window?.let { AppActionSheet.applyFullScreenWindow(it, hostWindow) }
+        }
         if (!hasFocus) {
             gateInputUntilRelease()
         }

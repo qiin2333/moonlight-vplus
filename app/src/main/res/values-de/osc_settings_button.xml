@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="osc_allow_drag_settings_button">Ziehen der Einstellungstaste erlauben</string>
-    <string name="osc_reset_settings_button_position">Position oben links wiederherstellen</string>
+    <string name="osc_reset_settings_button_position">Ausgangsposition der Einstellungsschaltfläche wiederherstellen</string>
     <string name="osc_settings_button_size">Größe der Einstellungstaste</string>
 </resources>
