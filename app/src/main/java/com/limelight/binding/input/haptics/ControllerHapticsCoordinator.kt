@@ -139,12 +139,14 @@ internal class ControllerHapticsCoordinator(
         // external filter for LI_CCAP_RUMBLE.
         if (handler.prefConfig.multiController && !context.assignedControllerNumber) return false
         val inputDevice = context.inputDevice ?: return false
+        // Keep the plain X/Y range check first: upstream eligibility relies on motion ranges
+        // alone, so devices passing it must not newly require SOURCE_JOYSTICK. Only when X/Y is
+        // absent do we fall back to hasJoystickAxes() — which does check that flag — so the
+        // right Joy-Con's fallback stick pairs (Z/RZ, RX/RY) stay eligible exactly as far as
+        // device discovery lets them through.
         if (ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_X) == null ||
             ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_Y) == null
         ) {
-            // The right Joy-Con exposes its stick on fallback axis pairs (Z/RZ, RX/RY); accept
-            // any stick layout hasJoystickAxes() recognizes so rumble eligibility matches
-            // what device discovery lets through.
             if (!ControllerHandler.hasJoystickAxes(inputDevice)) return false
         }
         return context.vibratorManager != null ||
@@ -496,9 +498,6 @@ internal class ControllerHapticsCoordinator(
                         try {
                             if (ds5HapticsBindings[controllerId]?.sink === sink) {
                                 if (playing) handler.rumbleManager.handleRumble(controllerNumber, 0, 0)
-                                // Replay on both edges: playback-active flips the gameRumbleContext
-                                // allocation, so the current tracked state must be re-routed or the
-                                // update allocated before the flip is dropped entirely.
                                 onSinkChanged(controllerNumber)
                             }
                         } finally { completed.countDown() }
@@ -552,9 +551,8 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
             onAvailability(HapticAvailability.READY)
-            // An accepted sink that is already playing changes the gameRumbleContext allocation;
-            // onPlaybackChanged only fires on later transitions, so replay the tracked state here
-            // to re-route it under the new binding.
+            // onPlaybackChanged only fires on later transitions, so an accepted sink that is
+            // already playing needs an explicit replay (see onSinkChanged for the invariant).
             if (sink.playbackControl?.playbackActive == true) {
                 onSinkChanged(controllerNumber)
             }
@@ -593,7 +591,12 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    /** Replays current logical state when the physical sink for a controller changes. */
+    /**
+     * Replay entry for any change that can flip gameRumbleContext allocation: the waveform
+     * binding set or its playback state. Current triggers are the playback start/stop edge in
+     * onPlaybackChanged and a binding accepted while already playing. Any new trigger of the
+     * same kind must go through here so tracked state is re-routed under the fresh context.
+     */
     fun onSinkChanged(controllerNumber: Short) {
         runOnOutputThread {
             if (isStoppingOrStopped()) return@runOnOutputThread
