@@ -2,4 +2,5 @@
 <resources>
     <string name="osc_allow_drag_settings_button">Tillat å dra innstillingsknappen</string>
     <string name="osc_reset_settings_button_position">Tilbakestill til øverst til venstre</string>
+    <string name="osc_settings_button_size">Størrelse på innstillingsknappen</string>
 </resources>

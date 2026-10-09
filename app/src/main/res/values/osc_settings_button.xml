@@ -2,4 +2,5 @@
 <resources>
     <string name="osc_allow_drag_settings_button">Allow dragging the settings button</string>
     <string name="osc_reset_settings_button_position">Reset to top left</string>
+    <string name="osc_settings_button_size">Settings button size</string>
 </resources>

@@ -9,41 +9,66 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.utils.AppActionSheet
+import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.appAccentSoftColor
 
 /** Stream-local input owner. Neither USB snapshots nor framework axes may reach the host. */
 internal class VirtualControllerOptionsDialog(
     context: Context,
     private val actions: List<AppActionSheet.Action>,
-    private val store: OscSettingsButtonStore,
     private val readAxes: (MotionEvent) -> Pair<List<Pair<Float, Float>>, Float>,
-    private val onDragEnabled: (Boolean) -> Unit,
+    private val initialOpacity: Int,
+    private val initialSizeScale: Float,
+    private val onToggleChanged: (Int, Boolean) -> Unit,
+    private val onOpacityChanged: (Int) -> Unit,
+    private val onSizeScaleChanged: (Float) -> Unit,
     private val onAction: (Int) -> Unit
 ) : ComponentDialog(context, R.style.AppActionSheetStyle) {
     private class Source {
@@ -62,6 +87,8 @@ internal class VirtualControllerOptionsDialog(
     private var focusedAction: Int? = null
     private var ownsFocus = false
     private var scrollBy: ((Float) -> Unit)? = null
+    private var closeConfirmation: (() -> Boolean)? = null
+    private val awaitingDigitalRelease = mutableSetOf<Pair<Int, Int>>()
     private val handler = Handler(Looper.getMainLooper())
     private var repeatScheduled = false
     private var lastTickAt = 0L
@@ -93,57 +120,225 @@ internal class VirtualControllerOptionsDialog(
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 AppActionSheet.AppActionSheetTheme {
-                    var dragEnabled by remember { mutableStateOf(store.dragEnabled) }
+                    var opacity by remember { mutableFloatStateOf(initialOpacity.coerceIn(0, 100).toFloat()) }
+                    var sizeScale by remember {
+                        mutableFloatStateOf((initialSizeScale * 100f).coerceIn(50f, 200f))
+                    }
+                    var toggleStates by remember {
+                        mutableStateOf(actions.filter { it.toggle }.associate { it.id to (it.checked == true) })
+                    }
                     val focusRequester = remember { FocusRequester() }
+                    val resetFocusRequester = remember { FocusRequester() }
+                    val cancelFocusRequester = remember { FocusRequester() }
+                    var confirmingReset by remember { mutableStateOf(false) }
+                    var restoreResetFocus by remember { mutableStateOf(false) }
                     var placed by remember { mutableStateOf(false) }
+                    var resetPlaced by remember { mutableStateOf(false) }
+                    var cancelPlaced by remember { mutableStateOf(false) }
+                    var panelBounds by remember { mutableStateOf<Rect?>(null) }
                     val inputMode = LocalInputModeManager.current
                     val listState = rememberLazyListState()
                     scrollBy = { listState.dispatchRawDelta(it) }
+                    fun leaveConfirmation() {
+                        gateInputUntilRelease()
+                        confirmingReset = false
+                        restoreResetFocus = true
+                    }
+                    closeConfirmation = {
+                        if (confirmingReset) { leaveConfirmation(); true } else false
+                    }
                     LaunchedEffect(placed) {
-                        if (placed) {
+                        if (placed && !confirmingReset) {
                             inputMode.requestInputMode(InputMode.Keyboard)
                             focusRequester.requestFocus()
                         }
                     }
-                    AppActionSheet.ActionSheetContainer {
-                        AppActionSheet.ActionSheetHeader(context.getString(R.string.osc_quick_menu), null, false)
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxWidth()
-                                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.62f).dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                    LaunchedEffect(confirmingReset, cancelPlaced) {
+                        if (confirmingReset && cancelPlaced) {
+                            inputMode.requestInputMode(InputMode.Keyboard)
+                            cancelFocusRequester.requestFocus()
+                        }
+                    }
+                    LaunchedEffect(restoreResetFocus, resetPlaced) {
+                        if (restoreResetFocus && resetPlaced) {
+                            inputMode.requestInputMode(InputMode.Keyboard)
+                            resetFocusRequester.requestFocus()
+                            restoreResetFocus = false
+                        }
+                    }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxSize().pointerInput(panelBounds) {
+                            detectTapGestures(onTap = {
+                                if (panelBounds?.contains(it) != true && closeConfirmation?.invoke() != true) {
+                                    cancel()
+                                }
+                            })
+                        })
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize().windowInsetsPadding(
+                            WindowInsets.displayCutout
+                        ),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        val panelMaxHeight = maxHeight
+                        AppActionSheet.ActionSheetContainer(
+                            respectNavigationBars = false,
+                            shieldBackgroundTouches = true,
+                            onBoundsChanged = { panelBounds = it }
                         ) {
-                            itemsIndexed(actions, key = { _, action -> action.id }) { index, action ->
-                                val row = if (action.id == ACTION_DRAG) action.copy(checked = dragEnabled) else action
-                                AppActionSheet.ActionSheetRow(row, { selected ->
-                                    if (selected.id == ACTION_DRAG) {
-                                        dragEnabled = !dragEnabled
-                                        onDragEnabled(dragEnabled)
-                                    } else {
-                                        dismiss()
-                                        onAction(selected.id)
+                            AppActionSheet.ActionSheetHeader(context.getString(
+                                if (confirmingReset) R.string.dialog_title_reset_osc else R.string.osc_quick_menu
+                            ), null, false)
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxWidth()
+                                    .heightIn(max = (panelMaxHeight * 0.62f).coerceAtLeast(44.dp)),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                if (confirmingReset) {
+                                    item {
+                                        Text(context.getString(R.string.dialog_text_reset_osc),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
                                     }
-                                }, Modifier
-                                    .then(if (index == 0) Modifier.focusRequester(focusRequester)
-                                        .onGloballyPositioned { placed = true } else Modifier)
-                                    .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
-                                    .onFocusChanged {
-                                        if (it.isFocused) focusedAction = action.id
-                                        else if (focusedAction == action.id) focusedAction = null
-                                    })
+                                    item {
+                                        AppActionSheet.ActionSheetRow(
+                                            AppActionSheet.Action(ACTION_CANCEL_RESET, context.getString(android.R.string.cancel)),
+                                            { leaveConfirmation() },
+                                            Modifier.focusRequester(cancelFocusRequester)
+                                                .onGloballyPositioned { cancelPlaced = true }
+                                                .onFocusChanged { if (it.isFocused) focusedAction = ACTION_CANCEL_RESET }
+                                                .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
+                                        )
+                                    }
+                                        item {
+                                            AppActionSheet.ActionSheetRow(
+                                                AppActionSheet.Action(ACTION_CONFIRM_RESET, context.getString(android.R.string.ok)),
+                                            { onAction(ACTION_RESET_CONTROLLER_LAYOUT); dismiss() },
+                                            Modifier.onFocusChanged { if (it.isFocused) focusedAction = ACTION_CONFIRM_RESET }
+                                                .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
+                                        )
+                                    }
+                                } else {
+                                itemsIndexed(actions, key = { _, action -> action.id }) { index, action ->
+                                    val row = action.copy(checked = if (action.toggle) {
+                                        toggleStates[action.id] == true
+                                    } else action.checked)
+                                    AppActionSheet.ActionSheetRow(row, { selected ->
+                                        if (selected.id == ACTION_RESET_CONTROLLER_LAYOUT) {
+                                            gateInputUntilRelease()
+                                            confirmingReset = true
+                                            cancelPlaced = false
+                                            resetPlaced = false
+                                        } else if (selected.toggle) {
+                                            val enabled = !(toggleStates[selected.id] == true)
+                                            toggleStates = toggleStates + (selected.id to enabled)
+                                            onToggleChanged(selected.id, enabled)
+                                        } else {
+                                            dismiss()
+                                            onAction(selected.id)
+                                        }
+                                    }, Modifier
+                                        .then(if (index == 0) Modifier.focusRequester(focusRequester)
+                                            .onGloballyPositioned { placed = true } else Modifier)
+                                        .then(if (action.id == ACTION_RESET_CONTROLLER_LAYOUT) {
+                                            Modifier.focusRequester(resetFocusRequester)
+                                                .onGloballyPositioned { resetPlaced = true }
+                                        } else Modifier)
+                                        .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
+                                        .onFocusChanged {
+                                            if (it.isFocused) focusedAction = action.id
+                                            else if (focusedAction == action.id) focusedAction = null
+                                        })
+                                }
+                                item {
+                                    SettingsSliderRow(
+                                        id = ACTION_OPACITY,
+                                        title = context.getString(R.string.dialog_title_osc_opacity),
+                                        value = opacity,
+                                        valueRange = 0f..100f,
+                                        step = 1f,
+                                        onValueChange = {
+                                            opacity = it
+                                            onOpacityChanged(it.toInt())
+                                        }
+                                    )
+                                }
+                                item {
+                                    SettingsSliderRow(
+                                        id = ACTION_SIZE,
+                                        title = context.getString(R.string.osc_settings_button_size),
+                                        value = sizeScale,
+                                        valueRange = 50f..200f,
+                                        step = 5f,
+                                        onValueChange = {
+                                            sizeScale = it
+                                            onSizeScaleChanged(it / 100f)
+                                        }
+                                    )
+                                }
+                                }
                             }
                         }
+                    }
                     }
                 }
             }
         }
-        AppActionSheet.prepareDialog(this, view)
+        AppActionSheet.prepareDialog(this, view, fullScreen = true)
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun SettingsSliderRow(
+        id: Int,
+        title: String,
+        value: Float,
+        valueRange: ClosedFloatingPointRange<Float>,
+        step: Float,
+        onValueChange: (Float) -> Unit
+    ) {
+        var focused by remember { mutableStateOf(false) }
+        val modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged {
+                focused = it.isFocused
+                if (it.isFocused) focusedAction = id
+                else if (focusedAction == id) focusedAction = null
+            }
+            .then(if (focused) Modifier.background(appAccentSoftColor(), AppShapes.medium)
+                .border(1.dp, MaterialTheme.colorScheme.primary, AppShapes.medium) else Modifier)
+            .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
+            .onPreviewKeyEvent { event ->
+                val keyCode = event.nativeKeyEvent.keyCode
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                        val delta = if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -step else step
+                        onValueChange((value + delta).coerceIn(valueRange.start, valueRange.endInclusive))
+                    }
+                    true
+                } else keyCode in confirmKeyCodes
+            }
+            .focusable()
+        Column(modifier = modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                Slider(
+                    modifier = Modifier.fillMaxWidth().focusProperties { canFocus = false },
+                    value = value,
+                    onValueChange = onValueChange,
+                    valueRange = valueRange,
+                    steps = ((valueRange.endInclusive - valueRange.start) / step).toInt() - 1
+                )
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!ownsFocus) return true
         val identity = event.deviceId to event.keyCode
+        if (identity in awaitingDigitalRelease) {
+            if (event.action == KeyEvent.ACTION_UP) awaitingDigitalRelease.remove(identity)
+            return true
+        }
         if (event.keyCode in confirmKeyCodes) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 if (identity !in confirms) confirms[identity] = focusedAction
@@ -158,7 +353,9 @@ internal class VirtualControllerOptionsDialog(
         if (event.keyCode in dismissKeyCodes) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) dismissKeys.add(identity)
             if (event.action == KeyEvent.ACTION_UP && dismissKeys.remove(identity) && !event.isCanceled) {
-                UiDismissKeyHandler.handle(event.action, event.keyCode, ::cancel)
+                UiDismissKeyHandler.handle(event.action, event.keyCode) {
+                    if (closeConfirmation?.invoke() != true) cancel()
+                }
             }
             return true
         }
@@ -186,8 +383,12 @@ internal class VirtualControllerOptionsDialog(
     }
 
     private fun step(key: Int) {
-        // This is a single-column menu, so horizontal input cannot escape to another surface.
-        if (key == KeyEvent.KEYCODE_DPAD_UP || key == KeyEvent.KEYCODE_DPAD_DOWN) sendKeyPair(key)
+        // The list is one column. Horizontal input is meaningful only for the two sliders.
+        if (key == KeyEvent.KEYCODE_DPAD_UP || key == KeyEvent.KEYCODE_DPAD_DOWN ||
+            (key in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT) &&
+                focusedAction in setOf(ACTION_OPACITY, ACTION_SIZE))) {
+            sendKeyPair(key)
+        }
     }
 
     private fun sendKeyPair(key: Int) {
@@ -255,13 +456,22 @@ internal class VirtualControllerOptionsDialog(
         scrollSource = null
     }
 
+    private fun gateInputUntilRelease() {
+        sources.forEach { (id, source) ->
+            if (source.navigation.activeKeyCode != null || source.scroll.activeKeyCode != null) {
+                awaitingNeutral.add(id)
+            }
+            source.digital.keys.forEach { awaitingDigitalRelease.add(id to it) }
+        }
+        clearInput()
+        focusedAction = null
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         ownsFocus = hasFocus
         if (!hasFocus) {
-            sources.filterValues { it.navigation.activeKeyCode != null || it.scroll.activeKeyCode != null }
-                .keys.let(awaitingNeutral::addAll)
-            clearInput()
+            gateInputUntilRelease()
         }
     }
 
@@ -269,13 +479,23 @@ internal class VirtualControllerOptionsDialog(
         ownsFocus = false
         clearInput()
         awaitingNeutral.clear()
+        awaitingDigitalRelease.clear()
         scrollBy = null
+        closeConfirmation = null
         super.onStop()
     }
 
     companion object {
         const val ACTION_DRAG = 103
         const val ACTION_RESET = 104
+        const val ACTION_ONLY_L3_R3 = 105
+        const val ACTION_SHOW_GUIDE = 106
+        const val ACTION_HALF_HEIGHT = 107
+        const val ACTION_OPACITY = 108
+        const val ACTION_SIZE = 109
+        const val ACTION_RESET_CONTROLLER_LAYOUT = 110
+        private const val ACTION_CANCEL_RESET = 111
+        private const val ACTION_CONFIRM_RESET = 112
         private val confirmKeyCodes = setOf(KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_SPACE)
         private val dismissKeyCodes = setOf(KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)

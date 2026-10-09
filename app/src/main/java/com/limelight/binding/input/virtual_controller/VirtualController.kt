@@ -86,6 +86,7 @@ class VirtualController(
     private var pendingLayoutRefresh: OneShotPreDrawListener? = null
     private val delayedRetransmit = Runnable { sendControllerInputContextInternal() }
     private var optionsDialog: VirtualControllerOptionsDialog? = null
+    private val defaultPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val buttonConfigure = ImageButton(context).apply {
         isFocusable = false
         contentDescription = context.getString(R.string.osc_quick_menu)
@@ -118,22 +119,73 @@ class VirtualController(
         val actions = VirtualControllerLayout.entries.mapIndexed { index, preset ->
             AppActionSheet.Action(index, names[index], checked = preset == layoutStyle)
         }.toMutableList()
+        actions += AppActionSheet.Action(
+            VirtualControllerOptionsDialog.ACTION_ONLY_L3_R3,
+            context.getString(R.string.title_only_l3r3),
+            checked = defaultPreferences.getBoolean("checkbox_only_show_L3R3", false),
+            toggle = true,
+            sectionStart = true
+        )
+        actions += AppActionSheet.Action(
+            VirtualControllerOptionsDialog.ACTION_SHOW_GUIDE,
+            context.getString(R.string.title_show_guide_button),
+            checked = defaultPreferences.getBoolean("checkbox_show_guide_button", true),
+            toggle = true
+        )
+        actions += AppActionSheet.Action(
+            VirtualControllerOptionsDialog.ACTION_HALF_HEIGHT,
+            context.getString(R.string.title_half_height_osc_portrait),
+            checked = defaultPreferences.getBoolean("checkbox_half_height_osc_portrait", true),
+            toggle = true
+        )
         actions += AppActionSheet.Action(100, context.getString(R.string.osc_action_move), sectionStart = true)
         actions += AppActionSheet.Action(101, context.getString(R.string.osc_action_resize))
         if (controllerMode != ControllerMode.Active) {
             actions += AppActionSheet.Action(102, context.getString(R.string.osc_action_done))
         }
         actions += AppActionSheet.Action(VirtualControllerOptionsDialog.ACTION_DRAG,
-            context.getString(R.string.osc_allow_drag_settings_button), sectionStart = true, toggle = true)
+            context.getString(R.string.osc_allow_drag_settings_button),
+            checked = settingsButtonStore.dragEnabled, sectionStart = true, toggle = true)
         actions += AppActionSheet.Action(VirtualControllerOptionsDialog.ACTION_RESET,
             context.getString(R.string.osc_reset_settings_button_position))
+        actions += AppActionSheet.Action(
+            VirtualControllerOptionsDialog.ACTION_RESET_CONTROLLER_LAYOUT,
+            context.getString(R.string.title_reset_osc),
+            sectionStart = true
+        )
         val dialog = VirtualControllerOptionsDialog(
-            context, actions, settingsButtonStore,
+            context, actions,
             readAxes = { event ->
                 (controllerHandler?.getGameMenuNavigationAxisPairs(event, includeRightStick = false)
                     ?: emptyList()) to (controllerHandler?.getMenuRightStickY(event) ?: 0f)
             },
-            onDragEnabled = settingsButtonPosition::setDragEnabled,
+            initialOpacity = defaultPreferences.getInt("seekbar_osc_opacity", 90),
+            initialSizeScale = settingsButtonStore.sizeScale,
+            onToggleChanged = { id, enabled ->
+                when (id) {
+                    VirtualControllerOptionsDialog.ACTION_DRAG -> settingsButtonPosition.setDragEnabled(enabled)
+                    VirtualControllerOptionsDialog.ACTION_ONLY_L3_R3 -> {
+                        defaultPreferences.edit().putBoolean("checkbox_only_show_L3R3", enabled).apply()
+                        refreshLayout()
+                    }
+                    VirtualControllerOptionsDialog.ACTION_SHOW_GUIDE -> {
+                        defaultPreferences.edit().putBoolean("checkbox_show_guide_button", enabled).apply()
+                        refreshLayout()
+                    }
+                    VirtualControllerOptionsDialog.ACTION_HALF_HEIGHT -> {
+                        defaultPreferences.edit().putBoolean("checkbox_half_height_osc_portrait", enabled).apply()
+                        refreshLayout()
+                    }
+                }
+            },
+            onOpacityChanged = { opacity ->
+                defaultPreferences.edit().putInt("seekbar_osc_opacity", opacity).apply()
+                setOpacity(opacity)
+            },
+            onSizeScaleChanged = { scale ->
+                settingsButtonStore.sizeScale = scale
+                refreshSettingsButtonLayout()
+            },
             onAction = { id ->
                 when (id) {
                     in VirtualControllerLayout.entries.indices -> switchLayout(VirtualControllerLayout.entries[id])
@@ -141,6 +193,7 @@ class VirtualController(
                     101 -> startEditing(ControllerMode.ResizeButtons)
                     102 -> finishEditing()
                     VirtualControllerOptionsDialog.ACTION_RESET -> settingsButtonPosition.resetPosition()
+                    VirtualControllerOptionsDialog.ACTION_RESET_CONTROLLER_LAYOUT -> resetSavedLayout()
                 }
             },
         )
@@ -177,7 +230,7 @@ class VirtualController(
     internal fun switchLayout(preset: VirtualControllerLayout) {
         if (controllerMode != ControllerMode.Active) finishEditing()
         releaseInputs()
-        PreferenceManager.getDefaultSharedPreferences(context).edit()
+        defaultPreferences.edit()
             .putString("list_osc_layout", preset.preferenceValue).apply()
         refreshLayout()
     }
@@ -195,6 +248,14 @@ class VirtualController(
         VirtualControllerConfigurationLoader.saveProfile(this, context)
         controllerMode = ControllerMode.Active
         elements.forEach { it.invalidate() }
+    }
+
+    private fun resetSavedLayout() {
+        // Avoid refreshLayout() saving the editing session back over the reset.
+        controllerMode = ControllerMode.Active
+        VirtualControllerConfigurationLoader.clearSavedProfile(context)
+        refreshLayout()
+        Toast.makeText(context, R.string.toast_reset_osc_success, Toast.LENGTH_SHORT).show()
     }
 
     init {
@@ -263,26 +324,34 @@ class VirtualController(
                 VirtualControllerConfigurationLoader.createDefaultLayout(
                     this, context, frameLayout.width, frameLayout.height)
                 VirtualControllerConfigurationLoader.loadFromPreferences(this, context)
-                val density = context.resources.displayMetrics.density
-                // Restore the legacy compact corner footprint, capped at 48dp on large screens.
-                val size = minOf((48 * density).toInt(), (frameLayout.height * 0.06f).toInt().coerceAtLeast(1))
-                    .coerceAtMost(minOf(frameLayout.width, frameLayout.height))
-                val edgeMargin = minOf((8 * density).toInt(), size / 4)
-                val inset = size / 8
-                buttonConfigure.background = InsetDrawable((buttonConfigure.background as InsetDrawable).drawable, inset)
-                buttonConfigure.setPadding(inset, inset, inset, inset)
-                // Overlay coordinates are physical, so RTL must still anchor to the left edge.
-                val horizontalGravity = if (frameLayout.layoutDirection == View.LAYOUT_DIRECTION_RTL) Gravity.END else Gravity.START
-                buttonConfigure.translationX = 0f
-                buttonConfigure.translationY = 0f
-                frameLayout.addView(buttonConfigure, FrameLayout.LayoutParams(size, size, Gravity.TOP or horizontalGravity).apply {
-                    leftMargin = edgeMargin.coerceAtMost(frameLayout.width - size)
-                    topMargin = edgeMargin.coerceAtMost(frameLayout.height - size)
-                })
-                buttonConfigure.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
-                settingsButtonPosition.requestPlacement()
+                addOrUpdateSettingsButton()
             }
         }
+    }
+
+    private fun refreshSettingsButtonLayout() {
+        if (frameLayout.width <= 0 || frameLayout.height <= 0) return
+        addOrUpdateSettingsButton()
+    }
+
+    private fun addOrUpdateSettingsButton() {
+        val density = context.resources.displayMetrics.density
+        val baseSize = minOf((48 * density).toInt(), (frameLayout.height * 0.06f).toInt().coerceAtLeast(1))
+        val size = (baseSize * settingsButtonStore.sizeScale).toInt()
+            .coerceIn(1, minOf(frameLayout.width, frameLayout.height))
+        val edgeMargin = minOf((8 * density).toInt(), size / 4)
+        val inset = size / 8
+        buttonConfigure.background = InsetDrawable((buttonConfigure.background as InsetDrawable).drawable, inset)
+        buttonConfigure.setPadding(inset, inset, inset, inset)
+        val horizontalGravity = if (frameLayout.layoutDirection == View.LAYOUT_DIRECTION_RTL) Gravity.END else Gravity.START
+        val params = FrameLayout.LayoutParams(size, size, Gravity.TOP or horizontalGravity).apply {
+            leftMargin = edgeMargin.coerceAtMost(frameLayout.width - size)
+            topMargin = edgeMargin.coerceAtMost(frameLayout.height - size)
+        }
+        if (buttonConfigure.parent == frameLayout) frameLayout.updateViewLayout(buttonConfigure, params)
+        else frameLayout.addView(buttonConfigure, params)
+        buttonConfigure.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
+        settingsButtonPosition.requestPlacement()
     }
 
     private fun sendControllerInputContextInternal() {

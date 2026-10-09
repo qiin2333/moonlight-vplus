@@ -2,4 +2,5 @@
 <resources>
     <string name="osc_allow_drag_settings_button">Zezwól na przeciąganie przycisku ustawień</string>
     <string name="osc_reset_settings_button_position">Przywróć pozycję w lewym górnym rogu</string>
+    <string name="osc_settings_button_size">Rozmiar przycisku ustawień</string>
 </resources>

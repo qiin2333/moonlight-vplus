@@ -2,4 +2,5 @@
 <resources>
     <string name="osc_allow_drag_settings_button">Разрешить перетаскивание кнопки настроек</string>
     <string name="osc_reset_settings_button_position">Вернуть в левый верхний угол</string>
+    <string name="osc_settings_button_size">Размер кнопки настроек</string>
 </resources>

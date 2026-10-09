@@ -30,8 +30,13 @@ class VirtualControllerOptionsDialogTest {
             val activity = compose.activity
             dialog = VirtualControllerOptionsDialog(activity,
                 listOf(AppActionSheet.Action(0, "First"), AppActionSheet.Action(1, "Second")),
-                OscSettingsButtonStore(activity), readAxes = { emptyList<Pair<Float, Float>>() to 0f },
-                onDragEnabled = {}, onAction = {}).also { it.showMenu() }
+                readAxes = { emptyList<Pair<Float, Float>>() to 0f },
+                initialOpacity = 90,
+                initialSizeScale = 1f,
+                onToggleChanged = { _, _ -> },
+                onOpacityChanged = {},
+                onSizeScaleChanged = {},
+                onAction = {}).also { it.showMenu() }
         }
         onView(isRoot()).inRoot(isDialog()).check(matches(isDisplayed()))
         compose.onNodeWithText("First").assertIsFocused()

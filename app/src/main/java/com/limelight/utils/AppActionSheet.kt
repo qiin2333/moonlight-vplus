@@ -4,12 +4,14 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
 import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,11 +54,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -201,7 +207,11 @@ object AppActionSheet {
     }
 
     @Suppress("DEPRECATION")
-    internal fun prepareDialog(dialog: ComponentDialog, contentView: ComposeView) {
+    internal fun prepareDialog(
+        dialog: ComponentDialog,
+        contentView: ComposeView,
+        fullScreen: Boolean = false
+    ) {
         dialog.setContentView(contentView)
         dialog.setCanceledOnTouchOutside(true)
         dialog.setOnKeyListener { _, keyCode, event ->
@@ -210,6 +220,16 @@ object AppActionSheet {
 
         dialog.window?.let { window ->
             window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            if (fullScreen) WindowCompat.setDecorFitsSystemWindows(window, false)
+            if (fullScreen) {
+                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    window.attributes = window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                }
+            }
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             (contentView.context as? Activity)?.window?.let { hostWindow ->
                 window.decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
@@ -221,8 +241,9 @@ object AppActionSheet {
             }
             window.attributes = window.attributes.apply {
                 width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = ViewGroup.LayoutParams.WRAP_CONTENT
-                gravity = Gravity.BOTTOM
+                height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
+                else ViewGroup.LayoutParams.WRAP_CONTENT
+                gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM
             }
         }
 
@@ -391,9 +412,15 @@ object AppActionSheet {
     }
 
     @Composable
-    internal fun ActionSheetContainer(content: @Composable ColumnScope.() -> Unit) {
+    internal fun ActionSheetContainer(
+        respectNavigationBars: Boolean = true,
+        shieldBackgroundTouches: Boolean = false,
+        onBoundsChanged: ((Rect) -> Unit)? = null,
+        content: @Composable ColumnScope.() -> Unit
+    ) {
         val shape = AppShapes.overlay
         val outline = colorResource(R.color.app_dialog_outline)
+        val touchShield = if (shieldBackgroundTouches) remember { MutableInteractionSource() } else null
         val gradient = Brush.verticalGradient(
             listOf(
                 colorResource(R.color.app_dialog_surface_gradient_start),
@@ -405,7 +432,13 @@ object AppActionSheet {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .then(if (respectNavigationBars) Modifier.navigationBarsPadding() else Modifier)
+                .then(touchShield?.let {
+                    Modifier.clickable(it, indication = null, onClick = {})
+                } ?: Modifier)
+                .then(onBoundsChanged?.let { callback ->
+                    Modifier.onGloballyPositioned { callback(it.boundsInRoot()) }
+                } ?: Modifier)
                 .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
         ) {
             Column(

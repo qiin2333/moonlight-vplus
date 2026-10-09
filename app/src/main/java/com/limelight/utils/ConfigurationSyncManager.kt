@@ -13,6 +13,8 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneButtonPreferences
+import com.limelight.binding.input.virtual_controller.OscSettingsButtonStore
+import com.limelight.binding.input.virtual_controller.VirtualControllerConfigurationLoader
 import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
@@ -241,6 +243,31 @@ class ConfigurationSyncManager(private val context: Context) {
                 )
             )
             .put(
+                SECTION_OSC_SETTINGS_BUTTON,
+                JSONObject().put(
+                    KEY_VALUES,
+                    encodePreferences(
+                        SECTION_OSC_SETTINGS_BUTTON,
+                        context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                    )
+                )
+            )
+            .put(
+                SECTION_OSC_LAYOUT_PROFILES,
+                JSONObject().put(
+                    KEY_VALUES,
+                    encodePreferences(
+                        SECTION_OSC_LAYOUT_PROFILES,
+                        context.getSharedPreferences(
+                            VirtualControllerConfigurationLoader.OSC_PREFERENCE,
+                            Context.MODE_PRIVATE
+                        ),
+                        null
+                    )
+                )
+            )
+            .put(
                 SECTION_TOUCH_POINTER_PRESETS,
                 JSONObject().put(
                     KEY_VALUES,
@@ -297,6 +324,12 @@ class ConfigurationSyncManager(private val context: Context) {
                 ) + countValues(
                     valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
                     TOUCH_POINTER_PRESET_PREF_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
+                    OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
+                    null
                 ),
             appLastSettingsCount = countValues(
                 valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
@@ -377,16 +410,31 @@ class ConfigurationSyncManager(private val context: Context) {
             valuesFromSection(sections.optJSONObject(SECTION_HIDDEN_APPS)),
             null
         )
+        val oscSettingsButtonImported = applyPreferences(
+            SECTION_OSC_SETTINGS_BUTTON,
+            context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
+            valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
+            OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+        )
+        val oscLayoutProfilesImported = applyPreferences(
+            SECTION_OSC_LAYOUT_PROFILES,
+            context.getSharedPreferences(
+                VirtualControllerConfigurationLoader.OSC_PREFERENCE,
+                Context.MODE_PRIVATE
+            ),
+            valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
+            null
+        )
 
         val crownResult = importCrownProfiles(sections.optJSONArray(SECTION_CROWN_PROFILES))
         val pairingResult = importPairingState(sections.optJSONObject(SECTION_PAIRING))
 
-        if (defaultPreferencesImported > 0) {
+        if (defaultPreferencesImported > 0 || oscSettingsButtonImported > 0 || oscLayoutProfilesImported > 0) {
             context.sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH))
         }
 
         return ImportResult(
-            defaultPreferencesImported = defaultPreferencesImported,
+            defaultPreferencesImported = defaultPreferencesImported + oscSettingsButtonImported + oscLayoutProfilesImported,
             appLastSettingsImported = appLastSettingsImported,
             customResolutionsImported = customResolutionsImported,
             sceneConfigsImported = sceneConfigsImported,
@@ -1297,6 +1345,28 @@ class ConfigurationSyncManager(private val context: Context) {
                     KEY_VALUES,
                     mergeEncodedValues(
                         valuesFromSection(sections.optJSONObject(SECTION_HIDDEN_APPS)),
+                        null,
+                        null
+                    )
+                )
+            )
+            .put(
+                SECTION_OSC_SETTINGS_BUTTON,
+                JSONObject().put(
+                    KEY_VALUES,
+                    mergeEncodedValues(
+                        valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
+                        null,
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                    )
+                )
+            )
+            .put(
+                SECTION_OSC_LAYOUT_PROFILES,
+                JSONObject().put(
+                    KEY_VALUES,
+                    mergeEncodedValues(
+                        valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
                         null,
                         null
                     )
@@ -2354,6 +2424,24 @@ class ConfigurationSyncManager(private val context: Context) {
                     )
                 )
                 .put(
+                    SECTION_OSC_SETTINGS_BUTTON,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON),
+                        localSections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON),
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS,
+                        metadata.deviceId
+                    )
+                )
+                .put(
+                    SECTION_OSC_LAYOUT_PROFILES,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES),
+                        localSections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES),
+                        null,
+                        metadata.deviceId
+                    )
+                )
+                .put(
                     SECTION_TOUCH_POINTER_PRESETS,
                     mergedTouchPointerPresetSectionCore(
                         externalSections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
@@ -2450,6 +2538,24 @@ class ConfigurationSyncManager(private val context: Context) {
                     SECTION_HIDDEN_APPS,
                     mergedPreferenceSectionCore(
                         sections.optJSONObject(SECTION_HIDDEN_APPS),
+                        null,
+                        null,
+                        "hash"
+                    )
+                )
+                .put(
+                    SECTION_OSC_SETTINGS_BUTTON,
+                    mergedPreferenceSectionCore(
+                        sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON),
+                        null,
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS,
+                        "hash"
+                    )
+                )
+                .put(
+                    SECTION_OSC_LAYOUT_PROFILES,
+                    mergedPreferenceSectionCore(
+                        sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES),
                         null,
                         null,
                         "hash"
@@ -3174,6 +3280,8 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val SECTION_HIDDEN_APPS = "hiddenApps"
         private const val SECTION_PAIRING = "pairing"
         private const val SECTION_SCENE_CONFIGS = "sceneConfigs"
+        private const val SECTION_OSC_SETTINGS_BUTTON = "oscSettingsButton"
+        private const val SECTION_OSC_LAYOUT_PROFILES = "oscLayoutProfiles"
         private const val SECTION_TOUCH_POINTER_PRESETS = "touchPointerPresets"
 
         private const val TYPE_BOOLEAN = "boolean"
@@ -3279,6 +3387,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 SCENE_CONFIGS_PREFS -> true
                 APP_VIEW_PREFS -> key in APP_VIEW_PREF_KEYS
                 TouchPointerPresetPreferences.FILE_NAME -> key in TOUCH_POINTER_PRESET_PREF_KEYS
+                OscSettingsButtonStore.PREFERENCES_NAME -> key in OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                VirtualControllerConfigurationLoader.OSC_PREFERENCE -> true
                 else -> false
             }
         }
@@ -3437,7 +3547,9 @@ class ConfigurationSyncManager(private val context: Context) {
             CUSTOM_RESOLUTIONS_PREFS,
             HIDDEN_APPS_PREFS,
             SCENE_CONFIGS_PREFS,
-            TouchPointerPresetPreferences.FILE_NAME
+            TouchPointerPresetPreferences.FILE_NAME,
+            OscSettingsButtonStore.PREFERENCES_NAME,
+            VirtualControllerConfigurationLoader.OSC_PREFERENCE
         )
     }
 }

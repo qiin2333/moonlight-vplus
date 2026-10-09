@@ -2,4 +2,5 @@
 <resources>
     <string name="osc_allow_drag_settings_button">اجازه کشیدن دکمه تنظیمات</string>
     <string name="osc_reset_settings_button_position">بازنشانی به گوشه بالا سمت چپ</string>
+    <string name="osc_settings_button_size">اندازه دکمه تنظیمات</string>
 </resources>
