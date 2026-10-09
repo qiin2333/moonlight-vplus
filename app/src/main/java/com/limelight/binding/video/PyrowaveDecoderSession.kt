@@ -56,10 +56,16 @@ internal class PyrowaveDecoderSession(
     private var usingGpu = false
     private var requestedHdrMode = 0
     private var requestedFullRange = true
+    private var requestedDynamicHdrFormat = 0
+    private var targetPeakNits = 1000f
     private var hdrEnabled = false
     private var hdrMetadata: ByteArray? = null
     private var lastNativeFailure: String? = null
     private var lastFrameTimings = PyrowaveFrameTimings(0L, 0L)
+    private var dynamicMetadataApplied = false
+
+    val appliedDynamicHdrFormat: Int
+        get() = synchronized(lock) { if (dynamicMetadataApplied) requestedDynamicHdrFormat else 0 }
 
     val isActive: Boolean
         get() = synchronized(lock) { handle != 0L }
@@ -93,6 +99,8 @@ internal class PyrowaveDecoderSession(
         fullRange: Boolean = true,
         hdrEnabled: Boolean = hdrMode != 0,
         hdrMetadata: ByteArray? = null,
+        dynamicHdrFormat: Int = 0,
+        targetPeakNits: Float = 1000f,
     ): Boolean {
         synchronized(lock) {
             this.hdrEnabled = hdrEnabled
@@ -113,12 +121,14 @@ internal class PyrowaveDecoderSession(
                 replacement = 0L
                 replacementUsesGpu = false
             }
-            if (replacement != 0L && !safeSetHdrMetadata(replacementNative, replacement, this.hdrEnabled, this.hdrMetadata)) {
+            if (replacement != 0L &&
+                (!safeSetHdrMetadata(replacementNative, replacement, this.hdrEnabled, this.hdrMetadata) ||
+                 !safeSetDynamicHdr(replacementNative, replacement, dynamicHdrFormat, targetPeakNits))) {
                 safeDestroy(replacementNative, replacement)
                 replacement = 0L
                 replacementUsesGpu = false
             }
-            if (replacement == 0L && hdrMode == 0) {
+            if (replacement == 0L && hdrMode == 0 && dynamicHdrFormat == 0) {
                 replacement = safeCreate(native, width, height, hdrMode, fullRange)
                 replacementNative = native
             }
@@ -129,7 +139,8 @@ internal class PyrowaveDecoderSession(
                 safeDestroy(replacementNative, replacement)
                 return false
             }
-            if (!safeSetHdrMetadata(replacementNative, replacement, this.hdrEnabled, this.hdrMetadata)) {
+            if (!safeSetHdrMetadata(replacementNative, replacement, this.hdrEnabled, this.hdrMetadata) ||
+                !safeSetDynamicHdr(replacementNative, replacement, dynamicHdrFormat, targetPeakNits)) {
                 safeDestroy(replacementNative, replacement)
                 return false
             }
@@ -140,7 +151,10 @@ internal class PyrowaveDecoderSession(
             this.height = height
             requestedHdrMode = hdrMode
             requestedFullRange = fullRange
+            requestedDynamicHdrFormat = dynamicHdrFormat
+            this.targetPeakNits = targetPeakNits
             handle = replacement
+            dynamicMetadataApplied = false
             usingGpu = replacementUsesGpu
             boundSurfaceGeneration = target.generation
             lastFrameTimings = PyrowaveFrameTimings(0L, 0L)
@@ -157,11 +171,13 @@ internal class PyrowaveDecoderSession(
      * before RTSP starts, so a swapchain failure cannot be negotiated as a
      * usable PyroWave stream.
      */
-    fun canCreate(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Boolean {
+    fun canCreate(width: Int, height: Int, hdrMode: Int, fullRange: Boolean,
+                  dynamicHdrFormat: Int = 0, targetPeakNits: Float = 1000f): Boolean {
         synchronized(lock) {
             if (handle != 0L) return true
             val generation = surfaceState.generation
-            if (!create(width, height, hdrMode, fullRange)) return false
+            if (!create(width, height, hdrMode, fullRange,
+                        dynamicHdrFormat = dynamicHdrFormat, targetPeakNits = targetPeakNits)) return false
             destroyLocked()
             return generation == surfaceState.generation
         }
@@ -177,6 +193,7 @@ internal class PyrowaveDecoderSession(
     fun setHdrMetadata(enabled: Boolean, metadata: ByteArray?): Boolean {
         synchronized(lock) {
             hdrEnabled = enabled
+            if (!enabled) dynamicMetadataApplied = false
             hdrMetadata = metadata?.copyOf()
             if (handle == 0L) return true
             return safeSetHdrMetadata(
@@ -211,7 +228,7 @@ internal class PyrowaveDecoderSession(
         return fatal
     }
 
-    fun submit(data: ByteArray, length: Int): SubmitResult {
+    fun submit(data: ByteArray, length: Int, frameMetadata: ByteArray? = null): SubmitResult {
         var result = SubmitResult.INACTIVE
         var fatalReason: String? = null
         synchronized(lock) {
@@ -224,6 +241,7 @@ internal class PyrowaveDecoderSession(
             val surfaceReady = if (boundSurfaceGeneration == target.generation) {
                 true
             } else {
+                dynamicMetadataApplied = false
                 safeSetSurface(activeNative, handle, target.surface).also { bound ->
                     if (bound) boundSurfaceGeneration = target.generation
                 }
@@ -232,7 +250,8 @@ internal class PyrowaveDecoderSession(
                 return SubmitResult.SURFACE_UNAVAILABLE
             }
             val submitResult = if (surfaceReady) {
-                safeSubmit(activeNative, handle, data, length)
+                safeSubmit(activeNative, handle, data, length,
+                           if (requestedDynamicHdrFormat != 0) frameMetadata else null)
             } else {
                 -1
             }
@@ -246,6 +265,7 @@ internal class PyrowaveDecoderSession(
                 // presentation attempt. Only this event clears failures.
                 recoveryAttempts = 0
                 lastFrameTimings = safeGetTimings(activeNative, handle)
+                dynamicMetadataApplied = usingGpu && requestedDynamicHdrFormat != 0
                 return SubmitResult.SUCCESS
             }
 
@@ -263,18 +283,21 @@ internal class PyrowaveDecoderSession(
                 replacement = 0L
                 replacementUsesGpu = false
             }
-            if (replacement != 0L && !safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata)) {
+            if (replacement != 0L &&
+                (!safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata) ||
+                 !safeSetDynamicHdr(replacementNative, replacement, requestedDynamicHdrFormat, targetPeakNits))) {
                 safeDestroy(replacementNative, replacement)
                 replacement = 0L
                 replacementUsesGpu = false
             }
-            if (replacement == 0L && requestedHdrMode == 0) {
+            if (replacement == 0L && requestedHdrMode == 0 && requestedDynamicHdrFormat == 0) {
                 replacement = safeCreate(native, width, height, requestedHdrMode, requestedFullRange)
                 replacementNative = native
             }
             if (replacement != 0L &&
                 (replacementUsesGpu || safeSetSurface(replacementNative, replacement, replacementTarget.surface))) {
-                if (safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata)) {
+                if (safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata) &&
+                    safeSetDynamicHdr(replacementNative, replacement, requestedDynamicHdrFormat, targetPeakNits)) {
                     handle = replacement
                     usingGpu = replacementUsesGpu
                     boundSurfaceGeneration = replacementTarget.generation
@@ -306,6 +329,7 @@ internal class PyrowaveDecoderSession(
     }
 
     private fun destroyLocked() {
+        dynamicMetadataApplied = false
         if (handle != 0L) {
             safeDestroy(if (usingGpu) gpuNative else native, handle)
             handle = 0L
@@ -380,9 +404,19 @@ internal class PyrowaveDecoderSession(
         false
     }
 
-    private fun safeSubmit(api: PyrowaveNativeApi?, handle: Long, data: ByteArray, length: Int): Int {
+    private fun safeSetDynamicHdr(api: PyrowaveNativeApi?, handle: Long, format: Int, peak: Float): Boolean = try {
+        val configured = api?.setDynamicHdr(handle, format, peak) ?: false
+        if (!configured) logNativeFailure("setDynamicHdr", "format=$format targetPeak=$peak")
+        configured
+    } catch (error: RuntimeException) {
+        logNativeFailure("setDynamicHdr", describe(error))
+        false
+    }
+
+    private fun safeSubmit(api: PyrowaveNativeApi?, handle: Long, data: ByteArray, length: Int,
+                           frameMetadata: ByteArray?): Int {
         return try {
-            val result = api?.submit(handle, data, length) ?: -1
+            val result = api?.submitFrame(handle, data, length, frameMetadata) ?: -1
             if (result == NATIVE_SUBMIT_FRAME_DROPPED) {
                 clearNativeFailure()
             } else if (result != 0) {
@@ -428,6 +462,9 @@ internal interface PyrowaveNativeApi {
     fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long
     fun setSurface(handle: Long, surface: Surface?): Boolean
     fun submit(handle: Long, data: ByteArray, length: Int): Int
+    fun submitFrame(handle: Long, data: ByteArray, length: Int, metadata: ByteArray?): Int =
+        if (metadata == null || metadata.isEmpty()) submit(handle, data, length) else -1
+    fun setDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean = format == 0
     fun getTimings(handle: Long): Long
     fun setHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean
     fun destroy(handle: Long)
@@ -464,6 +501,12 @@ internal object FramegenPyrowaveNativeApi : PyrowaveNativeApi {
 
     override fun submit(handle: Long, data: ByteArray, length: Int): Int =
         FramegenInterceptor.submitPyrowaveDecoder(handle, data, length)
+
+    override fun submitFrame(handle: Long, data: ByteArray, length: Int, metadata: ByteArray?): Int =
+        FramegenInterceptor.submitPyrowaveDecoder(handle, data, length, metadata)
+
+    override fun setDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean =
+        FramegenInterceptor.setPyrowaveDecoderDynamicHdr(handle, format, targetPeakNits)
 
     override fun getTimings(handle: Long): Long =
         FramegenInterceptor.getPyrowaveDecoderTimings(handle)

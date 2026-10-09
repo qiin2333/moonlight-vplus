@@ -60,10 +60,10 @@ typedef struct pyrowave_color_metadata {
 
 // The shared library ABI is checked before any other entry point is used.
 // Keep these values pinned to the runtime revision built by the Android
-// packaging script; a major-version change is not ABI compatible.
-#define PYROWAVE_API_VERSION_MAJOR 0u
-#define PYROWAVE_API_VERSION_MINOR 6u
-#define PYROWAVE_API_VERSION_PATCH 1u
+// pyrowave-runtime module; a major-version change is not ABI compatible.
+#define PYROWAVE_API_VERSION_MAJOR 101u
+#define PYROWAVE_API_VERSION_MINOR 0u
+#define PYROWAVE_API_VERSION_PATCH 0u
 
 typedef struct pyrowave_device_opaque *pyrowave_device;
 typedef struct pyrowave_decoder_opaque *pyrowave_decoder;
@@ -97,7 +97,6 @@ typedef struct pyrowave_decoder_create_info {
     int height;
     pyrowave_chroma_subsampling chroma;
     bool fragment_path;
-    uint32_t output_bit_depth;
 } pyrowave_decoder_create_info;
 
 typedef struct pyrowave_image_view {

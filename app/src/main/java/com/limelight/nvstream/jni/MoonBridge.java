@@ -58,6 +58,8 @@ public class MoonBridge {
     public static final int HDR_MODE_HDR10_PLUS = 3; // HDR10/PQ with ST 2094-40 dynamic metadata
     public static final int HDR_MODE_DOLBY_VISION = 4; // HDR10/PQ base with Dolby Vision Profile 8.1 RPU (client-only selection)
     public static final int HDR_MODE_DOLBY_VISION_84 = 5; // HLG base with Dolby Vision Profile 8.4 RPU (client-only selection)
+    public static final int HDR_MODE_VIVID_PQ = 6; // PyroWave application mapping, PQ output
+    public static final int HDR_MODE_VIVID_HLG = 7; // PyroWave application mapping, HLG output
 
     // Dynamic HDR capability bits for setDynamicHdrNegotiation() and the
     // x-ss-video[0].dynamicHdrCaps SDP attribute (Sunshine extension).
@@ -77,6 +79,8 @@ public class MoonBridge {
     // LiGetNegotiatedDynamicHdrFormat() results (X-SS-Dynamic-HDR values)
     public static final int NEGOTIATED_DYNAMIC_HDR_NONE = 0;
     public static final int NEGOTIATED_DYNAMIC_HDR_HDR10_PLUS = 1;
+    public static final int NEGOTIATED_DYNAMIC_HDR_VIVID_PQ = 2;
+    public static final int NEGOTIATED_DYNAMIC_HDR_VIVID_HLG = 3;
     public static final int NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81 = 4;
     public static final int NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84 = 5;
 
@@ -320,6 +324,15 @@ public class MoonBridge {
         else {
             return DR_OK;
         }
+    }
+
+    public static int bridgeDrSubmitPyrowaveDecodeUnit(byte[] data, int length, int type,
+                                                       int frameNumber, int frameType, char hostLatency,
+                                                       long receiveTimeUs, long enqueueTimeUs, long presentationTimeUs,
+                                                       byte[] metadata) {
+        if (videoRenderer == null) return DR_OK;
+        return videoRenderer.submitPyrowaveDecodeUnit(data, length, type, frameNumber, frameType,
+                hostLatency, receiveTimeUs, enqueueTimeUs, presentationTimeUs, metadata);
     }
 
     public static int bridgeArInit(int audioConfiguration, int sampleRate, int samplesPerFrame, int codec, int bitrate) {

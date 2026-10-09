@@ -355,7 +355,6 @@ Java_com_limelight_nvstream_jni_MoonBridge_pyrowaveCreate(JNIEnv *, jclass, jint
       .height = height,
       .chroma = PYROWAVE_CHROMA_SUBSAMPLING_420,
       .fragment_path = decoder->api.prefers_fragment_path(decoder->device),
-      .output_bit_depth = 0u,
     };
     if (decoder->api.create_decoder(&info, &decoder->decoder) != PYROWAVE_SUCCESS || decoder->decoder == nullptr) {
       return 0;

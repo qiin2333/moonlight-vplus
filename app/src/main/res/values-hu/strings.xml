@@ -309,4 +309,5 @@
     <string name="image_saved_successfully">A kép sikeresen mentve ide: Picture/vplus</string>
     <string name="image_save_failed_with_error">A kép mentése nem sikerült: %1$s</string>
     <string name="tip_double_tap_mouse">Tipp: a jelenlegi háttérkép mentéséhez tartsa nyomva a számítógéplista tetején lévő üres területet.</string>
+    <string name="pyrowave_negotiation_fallback">A PyroWave egyeztetése sikertelen. Átváltás erre: %1$s.</string>
 </resources>

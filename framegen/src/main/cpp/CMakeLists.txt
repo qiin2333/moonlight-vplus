@@ -54,6 +54,7 @@ add_library(moonlight-framegen SHARED
     jni_bridge.cpp
     framegen_pipeline.cpp
     pyrowave_vulkan_decoder.cpp
+    pyrowave_dynamic_hdr.cpp
     fsr_upscaler.cpp
     "${LSFGVK_ROOT}/src/config/config.cpp"
     "${LSFGVK_ROOT}/src/extract/extract.cpp"

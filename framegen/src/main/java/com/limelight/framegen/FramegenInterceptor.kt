@@ -216,10 +216,21 @@ class FramegenInterceptor {
         }
 
         @JvmStatic
-        fun submitPyrowaveDecoder(handle: Long, data: ByteArray, length: Int): Int {
+        fun setPyrowaveDecoderDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean {
+            if (!isAvailable() || handle == 0L) return false
+            return try {
+                nativePyrowaveSetDynamicHdr(handle, format, targetPeakNits)
+            } catch (error: LinkageError) {
+                Log.e(TAG, "PyroWave dynamic HDR configuration failed", error)
+                false
+            }
+        }
+
+        @JvmStatic
+        fun submitPyrowaveDecoder(handle: Long, data: ByteArray, length: Int, metadata: ByteArray? = null): Int {
             if (!isAvailable() || handle == 0L) return -1
             return try {
-                nativePyrowaveSubmit(handle, data, length)
+                nativePyrowaveSubmit(handle, data, length, metadata)
             } catch (t: Throwable) {
                 Log.w(TAG, "failed to submit PyroWave Vulkan frame", t)
                 -1
@@ -315,7 +326,10 @@ class FramegenInterceptor {
         private external fun nativePyrowaveSetHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean
 
         @JvmStatic
-        private external fun nativePyrowaveSubmit(handle: Long, data: ByteArray, length: Int): Int
+        private external fun nativePyrowaveSetDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean
+
+        @JvmStatic
+        private external fun nativePyrowaveSubmit(handle: Long, data: ByteArray, length: Int, metadata: ByteArray?): Int
 
         @JvmStatic
         private external fun nativePyrowaveGetLastTimings(handle: Long): Long

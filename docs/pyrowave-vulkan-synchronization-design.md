@@ -24,6 +24,10 @@ sequenceDiagram
 
 单个会话串行处理帧，只有一套 YUV 平面、CommandBuffer 和 DescriptorSet。下一帧不能覆盖仍由上一帧转换读取的资源。本层同步使用 Binary Semaphore，不使用 Timeline value 交接。
 
+动态 HDR LUT 同样属于当前会话：逐帧验证 metadata 后更新 host-visible storage buffer，
+需要时 flush 非 coherent 内存，并使用 HOST_WRITE → COMPUTE_SHADER_READ barrier。
+上一帧 submit Fence 完成后，下一帧才可以写同一 LUT；静态模式不启用亮度映射。
+
 ## 2. 同步对象
 
 | 对象 | 所有者与用途 |
@@ -71,6 +75,10 @@ decode 返回成功表示提交已完成，不表示 CPU 可以读取平面。�
 `VK_SUCCESS` 和 `VK_SUBOPTIMAL_KHR` 视为该次 acquire/present 可继续处理；`VK_ERROR_OUT_OF_DATE_KHR` 等失败返回上层恢复，不继续使用无效的旧 swapchain。
 
 帧级 acquire/Fence 等待设置 5 秒超时。超时是故障恢复边界，不是正常延迟目标，也不表示整个驱动销毁路径具有同样的时间上限。
+
+提交失败后，该 native handle 不再接受后续帧；检查位于 push、LUT 更新及 GPU 资源复用之前。
+Fence 超时不代表 GPU 已完成，因此不能把返回错误当成资源已空闲，也不在旧 handle 上重试。
+Kotlin 沿用已有的有界 decoder 重建；native 异常同样使当前 handle 失效。普通不完整帧仍只丢帧，不使 handle 失效。
 
 ## 4. 失败路径
 

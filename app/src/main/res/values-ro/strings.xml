@@ -229,4 +229,5 @@
     <string name="image_saved_successfully">Imagine salvată cu succes în: Picture/vplus</string>
     <string name="image_save_failed_with_error">Salvarea imaginii a eșuat: %1$s</string>
     <string name="tip_double_tap_mouse">Sfat: ține apăsat pe zona goală din partea de sus a listei de calculatoare pentru a salva imaginea de fundal curentă.</string>
+    <string name="pyrowave_negotiation_fallback">Negocierea PyroWave a eșuat. Se trece la %1$s.</string>
 </resources>

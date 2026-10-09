@@ -287,6 +287,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Final HDR decision after display and decoder capability negotiation. */
     private var negotiatedHdrEnabled = false
     private var framegenEnabledToastShown = false
+    private var pyrowaveFallbackDialogShown = false
     private var reportedCrash = false
 
     private var highPerfWifiLock: WifiManager.WifiLock? = null
@@ -773,6 +774,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForwarding?.close()
         usbForwarding = null
         framegenEnabledToastShown = false
+        pyrowaveFallbackDialogShown = false
         if (::controllerHandler.isInitialized) {
             audioVibrationService?.controllerHandler = null
             controllerHandler.destroy()
@@ -870,10 +872,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             LimeLog.info("PyroWave selected: frame generation is disabled for this stream")
         }
         val connMgr = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val displayHdrMode = if (pyrowaveSelected) HdrModePolicy.toProtocolMode(prefConfig.hdrMode) else prefConfig.hdrMode
         val acceptableHdrTypes = if (prefConfig.enableHdr &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         ) {
-            when (prefConfig.hdrMode) {
+            when (displayHdrMode) {
                 MoonBridge.HDR_MODE_HLG ->
                     intArrayOf(Display.HdrCapabilities.HDR_TYPE_HLG)
                 MoonBridge.HDR_MODE_HDR10_PLUS ->
@@ -901,7 +904,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         var willStreamHdr = false
         if (prefConfig.enableHdr) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                willStreamHdr = when (prefConfig.hdrMode) {
+                willStreamHdr = when (displayHdrMode) {
                     MoonBridge.HDR_MODE_HLG -> hdrTypeSupport.hasHlg
                     MoonBridge.HDR_MODE_HDR10_PLUS -> hdrTypeSupport.hasHdr10Plus
                     MoonBridge.HDR_MODE_DOLBY_VISION -> hdrTypeSupport.hasDolbyVision
@@ -910,7 +913,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     else -> false
                 }
                 if (!willStreamHdr) {
-                    val requiredType = when (prefConfig.hdrMode) {
+                    val requiredType = when (displayHdrMode) {
                         MoonBridge.HDR_MODE_HLG -> "HLG"
                         MoonBridge.HDR_MODE_HDR10_PLUS -> "HDR10+"
                         MoonBridge.HDR_MODE_DOLBY_VISION -> "Dolby Vision"
@@ -928,7 +931,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         // HDR10+ metadata cannot survive the ImageReader/frame-generation path yet. Keep that
         // path on static HDR10 until frame generation explicitly supports dynamic metadata.
         val framegenRequested = framegenRequestedByPreference && !pyrowaveSelected
-        val hdr10PlusRequested = HdrModePolicy.shouldRequestHdr10Plus(
+        val hdr10PlusRequested = !pyrowaveSelected && HdrModePolicy.shouldRequestHdr10Plus(
             hdrEnabled = willStreamHdr,
             hdrMode = prefConfig.hdrMode,
             displaySupportsHdr10Plus = hdrTypeSupport.hasHdr10Plus,
@@ -949,14 +952,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             prefConfig.height,
             prefConfig.fps,
         ).probe()
-        val dolbyVisionRequested = HdrModePolicy.shouldRequestDolbyVision(
+        val dolbyVisionRequested = !pyrowaveSelected && HdrModePolicy.shouldRequestDolbyVision(
             hdrEnabled = willStreamHdr,
             hdrMode = prefConfig.hdrMode,
             displaySupportsDolbyVision = hdrTypeSupport.hasDolbyVision,
             decoderSupportsDolbyVision = dolbyVisionProbe.decoderAvailable,
             framegenRequested = framegenRequested,
         )
-        if (willStreamHdr &&
+        if (willStreamHdr && !pyrowaveSelected &&
             HdrModePolicy.isDolbyVisionMode(prefConfig.hdrMode) &&
             !dolbyVisionRequested
         ) {
@@ -1031,15 +1034,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 decoderRenderer?.isAv1Hdr10PlusEligible() == true
             else -> decoderRenderer?.isAv1Main10Hdr10Supported() == true
         }
-        // PyroWave's HDR contract is intentionally narrower than the legacy
-        // codec paths: static HDR10/PQ or HLG and no dynamic metadata. The
-        // selected limited/full range is carried by the existing encoderCscMode
-        // contract and is not changed for this experimental format.
-        val pyrowaveRequestedHdrMode = when (prefConfig.hdrMode) {
-            MoonBridge.HDR_MODE_HDR10 -> 1
-            MoonBridge.HDR_MODE_HLG -> 2
-            else -> 0
-        }
+        // Dynamic selections use their PQ/HLG base layer. Vulkan consumes the
+        // protected per-frame metadata; no MediaCodec Dolby profile is needed.
+        val pyrowaveRequestedHdrMode = HdrModePolicy.toProtocolMode(prefConfig.hdrMode)
         val pyrowaveHdrRequestedByUser =
             willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
         // This is only the cheap policy gate. Full Vulkan/Surface capability
@@ -1076,6 +1073,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         // when display/decoder negotiation ultimately falls back to SDR.
         decoderRenderer?.setStreamHdrRequested(willStreamHdr)
         decoderRenderer?.setHdr10PlusRequested(willStreamHdr && hdr10PlusRequested)
+        if (pyrowaveSelected) {
+            val reportedPeak = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                currentTargetDisplay.hdrCapabilities.desiredMaxLuminance
+            } else 0f
+            decoderRenderer?.setPyrowaveTargetPeak(
+                if (prefConfig.hdrBrightnessOverride) prefConfig.hdrPeakBrightnessNits.toFloat()
+                else if (reportedPeak.isFinite() && reportedPeak in 1f..10000f) reportedPeak
+                else 500f,
+            )
+        }
 
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
             Toast.makeText(this, this.getString(R.string.error_no_hevc_decoder), Toast.LENGTH_LONG).show()
@@ -1091,11 +1098,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         // worker after the Surface exists; a failed preflight removes this
         // candidate before ANNOUNCE, leaving legacy codec negotiation unchanged.
         val pyrowaveRenderer = decoderRenderer
-        val pyrowaveHdrMode = if (!willStreamHdr) 0 else when (prefConfig.hdrMode) {
-            MoonBridge.HDR_MODE_HDR10 -> 1
-            MoonBridge.HDR_MODE_HLG -> 2
-            else -> 0
-        }
+        val pyrowaveHdrMode = if (willStreamHdr) pyrowaveRequestedHdrMode else 0
         val pyrowaveHdr = willStreamHdr &&
             pyrowaveHdrMode != 0 &&
             !hdr10PlusRequested &&
@@ -1122,9 +1125,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         }
 
-        // An explicit PyroWave selection is strict. Leave only PyroWave in
-        // the mask so the connection fails clearly instead of silently
-        // switching to HEVC/AV1 when the requested contract is unavailable.
+        // Request PyroWave explicitly. common-c retains its H.264 compatibility
+        // fallback when initial capability negotiation cannot select PyroWave;
+        // the connected session reports the actual codec through a dialog.
         if (pyrowaveSelected) {
             supportedVideoFormats = MoonBridge.VIDEO_FORMAT_PYROWAVE
         }
@@ -1232,7 +1235,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 // HLG request, so the HLG-profile selection reports only that bit.
                 // willStreamHdr is re-checked because decoder validation above
                 // can clear it after these request flags were computed.
-                if (willStreamHdr && dolbyVisionRequested && HdrModePolicy.isDolbyVisionHlgMode(prefConfig.hdrMode)) {
+                if (willStreamHdr && pyrowaveSelected) {
+                    setDynamicHdrNegotiation(
+                        com.limelight.nvstream.PyrowaveDynamicHdrPolicy.capsForSelection(prefConfig.hdrMode),
+                        dolbyVisionDirectSurface = false,
+                        preference = com.limelight.nvstream.PyrowaveDynamicHdrPolicy.preferenceForSelection(prefConfig.hdrMode),
+                    )
+                } else if (willStreamHdr && dolbyVisionRequested && HdrModePolicy.isDolbyVisionHlgMode(prefConfig.hdrMode)) {
                     setDynamicHdrNegotiation(
                         MoonBridge.DYNAMIC_HDR_CAPS_DOLBY_VISION_84,
                         dolbyVisionDirectSurface = true,
@@ -2223,7 +2232,24 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun connectionStarted() {
         remoteImeController.resetSession()
+        val startedConnection = conn
         connectionCallbackHandler.connectionStarted()
+        runOnUiThread {
+            if (conn === startedConnection && connected && !displayedFailureDialog &&
+                !isFinishing && !isDestroyed && !pyrowaveFallbackDialogShown &&
+                prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE &&
+                !isPyrowaveSessionActive()
+            ) {
+                val codec = getDecoderFormatLabel()
+                if (codec != "UNKNOWN") {
+                    pyrowaveFallbackDialogShown = true
+                    Dialog.displayDialog(
+                        this, getString(R.string.conn_error_title),
+                        getString(R.string.pyrowave_negotiation_fallback, codec), false,
+                    )
+                }
+            }
+        }
         screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
         controllerHandler.retryPendingControllerArrivals {
             if (prefConfig.screenDs5Touchpad) {

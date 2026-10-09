@@ -155,6 +155,15 @@ jobs:
           grep -Fx 'lib/arm64-v8a/libpyrowave-shared.so' "$RUNNER_TEMP/apk-native-files.txt"
           grep -Fx 'lib/armeabi-v7a/libpyrowave-shared.so' "$RUNNER_TEMP/apk-native-files.txt"
 
+      - name: Verify USB/IP runtimes are packaged
+        shell: bash
+        run: |
+          set -euo pipefail
+          for abi in arm64-v8a armeabi-v7a; do
+            grep -Fx "lib/$abi/libmoonlight_usbip.so" "$RUNNER_TEMP/apk-native-files.txt"
+            grep -Fx "lib/$abi/libc++_shared.so" "$RUNNER_TEMP/apk-native-files.txt"
+          done
+
       - name: Upload APK artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

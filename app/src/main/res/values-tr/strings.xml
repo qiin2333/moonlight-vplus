@@ -242,4 +242,5 @@
     <string name="image_saved_successfully">Resim başarıyla kaydedildi: Picture/vplus</string>
     <string name="image_save_failed_with_error">Resim kaydedilemedi: %1$s</string>
     <string name="tip_double_tap_mouse">İpucu: mevcut arka plan resmini kaydetmek için bilgisayar listesinin üst kısmındaki boş alana basılı tutun.</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave anlaşması başarısız oldu. %1$s kullanılıyor.</string>
 </resources>

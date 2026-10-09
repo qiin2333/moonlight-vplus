@@ -1003,6 +1003,13 @@
     <string name="title_host_gamepad_selection">主機虛擬控制器</string>
     <string name="summary_host_gamepad_selection">選擇向 Sunshine 請求的控制器類型，對所有玩家生效。自動模式會為已辨識的波形控制器或螢幕觸控板請求 DS5。變更後請重新串流。</string>
     <string-array name="host_gamepad_selection_names"><item>自動</item><item>遵循主機設定</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string name="settings_search_hint">搜尋設定項…</string>
+    <string name="settings_search_close">關閉搜尋</string>
+    <string name="settings_search_clear">清除搜尋</string>
+    <string name="settings_search_no_results">沒有符合的設定</string>
+    <string name="settings_search_open_category">在分類中查看</string>
+    <string name="settings_search_contains">包含：%1$s</string>
+    <string name="settings_search_match_separator">、</string>
     <string name="title_pyrowave_capability_diagnostic">PyroWave 能力檢測</string>
     <string name="summary_pyrowave_capability_diagnostic">查看 Vulkan 能力及目前 PyroWave 解碼器所需條件。</string>
     <string name="pyrowave_diag_loading">正在檢測 PyroWave 能力…</string>
@@ -1053,4 +1060,5 @@
     <string name="summary_fec_automatic">下次連線時由相容的主機依網路回饋選擇冗餘比例；不支援時使用主機預設設定。</string>
     <string name="summary_fec_fixed">用戶端指定比例優先於相容主機的 FEC 設定，下次連線生效。</string>
     <string name="numeric_parameter_range">請輸入 %1$s–%2$s %3$s 內的有效數值。</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave 協商失敗，已改用 %1$s。</string>
 </resources>

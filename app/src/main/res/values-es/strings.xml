@@ -602,4 +602,5 @@
     <string name="pyrowave_diag_unavailable">No disponible</string>
     <string name="image_saved_successfully">Imagen guardada correctamente en: Picture/vplus</string>
     <string name="image_save_failed_with_error">No se pudo guardar la imagen: %1$s</string>
+    <string name="pyrowave_negotiation_fallback">La negociación de PyroWave ha fallado. Se cambia a %1$s.</string>
 </resources>

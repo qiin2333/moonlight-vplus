@@ -26,6 +26,8 @@ static jmethodID BridgeDrStartMethod;
 static jmethodID BridgeDrStopMethod;
 static jmethodID BridgeDrCleanupMethod;
 static jmethodID BridgeDrSubmitDecodeUnitMethod;
+static jmethodID BridgeDrSubmitPyrowaveDecodeUnitMethod;
+static int BridgeVideoFormat;
 static jmethodID BridgeArInitMethod;
 static jmethodID BridgeArStartMethod;
 static jmethodID BridgeArStopMethod;
@@ -106,6 +108,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeDrStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrStop", "()V");
     BridgeDrCleanupMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrCleanup", "()V");
     BridgeDrSubmitDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitDecodeUnit", "([BIIIICJJJ)I");
+    BridgeDrSubmitPyrowaveDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitPyrowaveDecodeUnit", "([BIIIICJJJ[B)I");
     BridgeArInitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArInit", "(IIIII)I");
     BridgeArStartMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStart", "()V");
     BridgeArStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStop", "()V");
@@ -146,6 +149,7 @@ int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* 
     }
 
     // Use a 32K frame buffer that will increase if needed
+    BridgeVideoFormat = videoFormat;
     DecodedFrameBuffer = (*env)->NewGlobalRef(env, (*env)->NewByteArray(env, 32768));
 
     return 0;
@@ -215,11 +219,38 @@ int BridgeDrSubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
         currentEntry = currentEntry->next;
     }
 
-    ret = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSubmitDecodeUnitMethod,
+    if (BridgeVideoFormat == VIDEO_FORMAT_PYROWAVE) {
+        jbyteArray metadata = NULL;
+        if (decodeUnit->pyrowaveMetadataLength != 0) {
+            if (decodeUnit->pyrowaveMetadata == NULL) return DR_NEED_IDR;
+            metadata = (*env)->NewByteArray(env, decodeUnit->pyrowaveMetadataLength);
+            if (metadata == NULL) {
+                // This callback runs on an attached native decoder thread.
+                // Do not leave an allocation exception pending across frames.
+                if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+                return DR_NEED_IDR;
+            }
+            (*env)->SetByteArrayRegion(env, metadata, 0, decodeUnit->pyrowaveMetadataLength,
+                                      (const jbyte*)decodeUnit->pyrowaveMetadata);
+            if ((*env)->ExceptionCheck(env)) {
+                (*env)->DeleteLocalRef(env, metadata);
+                (*env)->ExceptionClear(env);
+                return DR_NEED_IDR;
+            }
+        }
+        ret = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSubmitPyrowaveDecodeUnitMethod,
+                                         DecodedFrameBuffer, offset, BUFFER_TYPE_PICDATA,
+                                         decodeUnit->frameNumber, decodeUnit->frameType, (jchar)decodeUnit->frameHostProcessingLatency,
+                                         (jlong)decodeUnit->receiveTimeUs, (jlong)decodeUnit->enqueueTimeUs,
+                                         (jlong)decodeUnit->presentationTimeUs, metadata);
+        if (metadata != NULL) (*env)->DeleteLocalRef(env, metadata);
+    } else {
+        ret = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSubmitDecodeUnitMethod,
                                        DecodedFrameBuffer, offset, BUFFER_TYPE_PICDATA,
                                        decodeUnit->frameNumber, decodeUnit->frameType, (jchar)decodeUnit->frameHostProcessingLatency,
                                        (jlong)decodeUnit->receiveTimeUs, (jlong)decodeUnit->enqueueTimeUs,
                                        (jlong)decodeUnit->presentationTimeUs);
+    }
     if ((*env)->ExceptionCheck(env)) {
         // We will crash here
         (*JVM)->DetachCurrentThread(JVM);

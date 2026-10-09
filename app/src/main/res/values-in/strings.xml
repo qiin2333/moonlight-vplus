@@ -265,4 +265,5 @@
     <string name="image_saved_successfully">Gambar berhasil disimpan ke: Picture/vplus</string>
     <string name="image_save_failed_with_error">Gagal menyimpan gambar: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tekan lama area kosong di bagian atas daftar komputer untuk menyimpan gambar latar saat ini.</string>
+    <string name="pyrowave_negotiation_fallback">Negosiasi PyroWave gagal. Beralih ke %1$s.</string>
 </resources>
