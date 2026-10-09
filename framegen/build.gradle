@@ -20,6 +20,13 @@ android {
     defaultConfig {
         minSdk 29
 
+        // The Vulkan decoder and the app CPU bridge compile against the same
+        // PyroWave ABI contract headers. Pass the canonical path explicitly
+        // instead of counting traversal levels inside CMake.
+        def moonlightNativeIncludeDir = rootProject
+                .file('app/src/main/jni/moonlight-core')
+                .absolutePath.replace('\\', '/')
+
         ndk {
             // lsfg-vk 仅支持 64 位 ARM。x86_64 仅用于模拟器，本仓 :app 也不打包，
             // 因此这里只编 arm64-v8a 即可。
@@ -30,7 +37,8 @@ android {
             cmake {
                 arguments "-DANDROID_STL=c++_shared",
                           "-DANDROID_ARM_NEON=ON",
-                          "-DCMAKE_BUILD_TYPE=Release"
+                          "-DCMAKE_BUILD_TYPE=Release",
+                          "-DMOONLIGHT_NATIVE_INCLUDE_DIR=${moonlightNativeIncludeDir}"
                 cppFlags "-std=c++20", "-fexceptions", "-frtti"
             }
         }

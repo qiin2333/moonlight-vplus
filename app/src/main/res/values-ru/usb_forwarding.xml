@@ -5,7 +5,8 @@
     <string name="usb_forward_on">Вкл.</string>
     <string name="usb_forward_off">Выкл.</string>
     <string name="usb_forward_disabled">Проброс USB для этого ПК отключён.</string>
-    <string name="usb_forward_unsupported">Для проброса USB нужны Android 9+ и ARM64.</string>
+    <string name="usb_forward_unsupported">Для проброса USB нужны Android 9+ и ARM64 или ARMv7 (экспериментально).</string>
+    <string name="usb_forward_armv7_experimental">Проброс USB на ARMv7 экспериментальный и ещё не проверен на реальных устройствах.</string>
     <string name="usb_forward_checking">Проверка поддержки на ПК…</string>
     <string name="usb_forward_host_update">ПК не поддерживает настройку USB. Обновите Sunshine.</string>
     <string name="usb_forward_host_error">Не удалось проверить ПК. Проверьте связь и сопряжение, затем повторите.</string>

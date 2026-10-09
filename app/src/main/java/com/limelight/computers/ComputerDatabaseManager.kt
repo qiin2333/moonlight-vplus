@@ -33,6 +33,7 @@ class ComputerDatabaseManager(c: Context) {
         companion object {
             const val LOCAL = "local"
             const val REMOTE = "remote"
+            const val REMOTE_FROM_STUN = "remoteAddressFromStun"
             const val MANUAL = "manual"
             const val IPv6 = "ipv6"
             const val IPv6_DISABLED = "ipv6Disabled"
@@ -100,6 +101,9 @@ class ComputerDatabaseManager(c: Context) {
             val addresses = JSONObject()
             addresses.put(AddressFields.LOCAL, tupleToJson(details.localAddress))
             addresses.put(AddressFields.REMOTE, tupleToJson(details.remoteAddress))
+            if (details.remoteAddress != null && details.remoteAddressFromStun) {
+                addresses.put(AddressFields.REMOTE_FROM_STUN, true)
+            }
             addresses.put(AddressFields.MANUAL, tupleToJson(details.manualAddress))
             addresses.put(AddressFields.IPv6, tupleToJson(details.ipv6Address))
             addresses.put(AddressFields.IPv6_DISABLED, details.ipv6Disabled)
@@ -141,6 +145,7 @@ class ComputerDatabaseManager(c: Context) {
                 previous.name != current.name ||
                 previous.localAddress != current.localAddress ||
                 previous.remoteAddress != current.remoteAddress ||
+                previous.remoteAddressFromStun != current.remoteAddressFromStun ||
                 previous.manualAddress != current.manualAddress ||
                 previous.ipv6Address != current.ipv6Address ||
                 previous.ipv6Disabled != current.ipv6Disabled ||
@@ -177,6 +182,8 @@ class ComputerDatabaseManager(c: Context) {
             val addresses = JSONObject(c.getString(2))
             details.localAddress = tupleFromJson(addresses, AddressFields.LOCAL)
             details.remoteAddress = tupleFromJson(addresses, AddressFields.REMOTE)
+            details.remoteAddressFromStun = details.remoteAddress != null &&
+                addresses.optBoolean(AddressFields.REMOTE_FROM_STUN, false)
             details.manualAddress = tupleFromJson(addresses, AddressFields.MANUAL)
             details.ipv6Address = tupleFromJson(addresses, AddressFields.IPv6)
             details.ipv6Disabled = addresses.optBoolean(AddressFields.IPv6_DISABLED, false)

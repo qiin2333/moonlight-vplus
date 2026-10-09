@@ -710,7 +710,7 @@
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
     <string name="title_video_format">Video codec</string>
-    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR.</string>
+    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR; PyroWave uses the experimental Vulkan path on compatible Sunshine hosts and follows the selected color range. It does not support frame generation.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
     <string name="title_enable_hdr_high_brightness">Maximum display brightness for HDR</string>
@@ -727,6 +727,11 @@
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (use this first)</string>
     <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG (use if 8.1 shows no picture)</string>
+    <string name="hdr_mode_pyrowave_hdr10_plus" translatable="false">HDR10+ → PQ</string>
+    <string name="hdr_mode_pyrowave_vivid_pq" translatable="false">HDR Vivid → PQ</string>
+    <string name="hdr_mode_pyrowave_vivid_hlg" translatable="false">HDR Vivid → HLG</string>
+    <string name="hdr_mode_pyrowave_dv81" translatable="false">Dolby Vision 8.1 → PQ</string>
+    <string name="hdr_mode_pyrowave_dv84" translatable="false">Dolby Vision 8.4 → HLG</string>
     <string name="title_full_range">Force full color range (Experimental)</string>
     <string name="summary_full_range">Requests full-range video from the host and decodes it as full range. Leave this off unless limited/full range mismatch makes the picture look washed out or crushes shadow and highlight detail. This is separate from HDR.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
@@ -867,6 +872,7 @@
     <string name="audioconf_714surround">7.1.4 Surround Sound (Atmos)</string>
 
     <string name="videoformat_auto">Automatic (Recommended)</string>
+    <string name="videoformat_pyrowave">PyroWave (Experimental, no frame generation)</string>
     <string name="videoformat_av1always">Prefer AV1 (Experimental)</string>
     <string name="videoformat_hevcalways">Prefer HEVC</string>
     <string name="videoformat_h264always">Prefer H.264</string>
@@ -1134,7 +1140,7 @@
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>
-    <string name="tip_double_tap_mouse">💡 Tip: Long press the top blank area on the host list page to download the current wallpaper~</string>
+    <string name="tip_double_tap_mouse">💡 Tip: Long press the blank area at the top of the computer list to save the current background image.</string>
     <string name="tip_long_press_controller">💡 Tip: Long press an app to choose virtual display streaming, super convenient!</string>
     <string name="tip_volume_keys">💡 Tip: Using 5GHz WiFi provides a better experience, lightning fast speeds~</string>
     <string name="tip_wallpaper_change">💡 Tip: The wallpaper API option can set the API for random wallpaper sources, or a single image address</string>
@@ -1368,7 +1374,7 @@
     <string name="image_download_failed_with_error">Image download failed: %1$s</string>
     <string name="image_not_loaded_please_retry">Image not loaded, please try again later</string>
     <string name="image_invalid">Invalid image</string>
-    <string name="image_saved_successfully">Image successfully saved to system directory (Picture/setu)</string>
+    <string name="image_saved_successfully">Image successfully saved to: Picture/vplus</string>
     <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
@@ -1492,7 +1498,11 @@ Tap again to replace it.</string>
     <string name="menu">Menu</string>
     <string name="settings_search_hint">Search settings…</string>
     <string name="settings_search_close">Close search</string>
+    <string name="settings_search_clear">Clear search</string>
     <string name="settings_search_no_results">No matching settings</string>
+    <string name="settings_search_open_category">View in category</string>
+    <string name="settings_search_contains">Includes: %1$s</string>
+    <string name="settings_search_match_separator">, </string>
     <string name="game_menu_change_resolution">Resolution</string>
     <string name="game_menu_resolution_current">%1$s (Current)</string>
     <string name="game_menu_resolution_custom">%1$s (Custom)</string>
@@ -2321,4 +2331,40 @@ Tap again to replace it.</string>
     <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
     <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
+    <string name="title_pyrowave_capability_diagnostic">PyroWave capability detection</string>
+    <string name="summary_pyrowave_capability_diagnostic">Inspect Vulkan capabilities and prerequisites for the current PyroWave decoder.</string>
+    <string name="pyrowave_diag_subtitle" translatable="false">Vulkan · GPU · PyroWave</string>
+    <string name="pyrowave_diag_loading">Checking PyroWave capabilities…</string>
+    <string name="pyrowave_diag_runtime">Packaged PyroWave runtime API</string>
+    <string name="pyrowave_diag_gpu_frontend">GPU presentation module</string>
+    <string name="pyrowave_diag_gpu_gate">GPU presentation requires Android 10+, arm64-v8a and Vulkan 1.3. SDR staging requires Vulkan 1.2 and the decoder features below; it is not CPU-only decoding.</string>
+    <string name="pyrowave_diag_ready">The checked prerequisites are present</string>
+    <string name="pyrowave_diag_missing">Prerequisites for the current implementation are missing</string>
+    <string name="pyrowave_diag_scope">This report checks driver declarations only. Window presentation, image formats, target resolution, HDR output and decoding performance still require stream validation.</string>
+    <string name="pyrowave_diag_loader_missing">No accessible Vulkan loader</string>
+    <string name="pyrowave_diag_no_devices">No Vulkan physical device found</string>
+    <string name="pyrowave_diag_query_failed">Unable to read Vulkan capabilities. This is not a confirmed unsupported result.</string>
+    <string name="pyrowave_diag_storage_path">8-bit storage or large texel buffers</string>
+    <string name="pyrowave_diag_gpu_backend">GPU presentation prerequisites</string>
+    <string name="pyrowave_diag_staging_backend">SDR staging prerequisites</string>
+    <string name="pyrowave_diag_subgroup_range">Full compute subgroups within wave4–wave128</string>
+    <string name="pyrowave_diag_max_workgroup">Threads per workgroup</string>
+    <string name="pyrowave_diag_shared_memory">Workgroup shared memory</string>
+    <string name="pyrowave_diag_queue">Combined graphics and compute queue</string>
+    <string name="pyrowave_diag_android_surface">Android Vulkan Surface extensions</string>
+    <string name="pyrowave_diag_copy_failed">Unable to copy the report</string>
+    <string name="pyrowave_diag_gpu_title" translatable="false">GPU %1$d</string>
+    <string name="pyrowave_diag_present">Present</string>
+    <string name="pyrowave_diag_absent">Not present</string>
+    <string name="pyrowave_diag_vulkan_loader">Vulkan loader</string>
+    <string name="pyrowave_diag_subgroup_ops">Subgroup operations</string>
+    <string name="pyrowave_diag_subgroup_size">Subgroup size</string>
+    <string name="pyrowave_diag_subgroup_limits">Subgroup min / max</string>
+    <string name="pyrowave_diag_required_subgroup">Required subgroup operations</string>
+    <string name="pyrowave_diag_texel_limit">Maximum texel buffer elements</string>
+    <string name="pyrowave_diag_back">Back</string>
+    <string name="pyrowave_diag_copy">Copy</string>
+    <string name="pyrowave_diag_copy_success">Report copied to clipboard</string>
+    <string name="pyrowave_diag_unavailable">Unavailable</string>
+    <string name="pyrowave_negotiation_fallback">PyroWave negotiation failed. Falling back to %1$s.</string>
 </resources>

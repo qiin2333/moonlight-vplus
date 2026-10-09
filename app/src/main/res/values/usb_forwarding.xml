@@ -4,7 +4,8 @@
     <string name="usb_forward_on">On</string>
     <string name="usb_forward_off">Off</string>
     <string name="usb_forward_disabled">USB forwarding is off for this computer.</string>
-    <string name="usb_forward_unsupported">USB forwarding currently requires Android 9 or later on ARM64.</string>
+    <string name="usb_forward_unsupported">USB forwarding requires Android 9 or later on ARM64 or ARMv7 (experimental).</string>
+    <string name="usb_forward_armv7_experimental">ARMv7 USB forwarding is experimental and has not yet been validated on physical devices.</string>
     <string name="usb_forward_checking">Checking paired host capability…</string>
     <string name="usb_forward_host_update">This host does not support USB setup. Update Sunshine.</string>
     <string name="usb_forward_host_error">Cannot verify the paired host. Check the connection and pairing, then retry.</string>

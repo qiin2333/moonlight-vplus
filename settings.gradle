@@ -44,6 +44,7 @@ if (!audioHapticsAndroidDir.isDirectory()) {
 
 include ':app'
 include ':framegen'
+include ':pyrowave-runtime'
 include ':usbip-backend'
 include ':moonlight-haptics-android'
 project(':moonlight-haptics-android').projectDir = audioHapticsAndroidDir

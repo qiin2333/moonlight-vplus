@@ -46,6 +46,7 @@ class ComputerDetails {
     var name: String? = null
     var localAddress: AddressTuple? = null
     var remoteAddress: AddressTuple? = null
+    var remoteAddressFromStun = false
     var manualAddress: AddressTuple? = null
     var ipv6Address: AddressTuple? = null
     var macAddress: String? = null
@@ -76,6 +77,15 @@ class ComputerDetails {
         update(details)
     }
 
+    internal val canRefreshRemoteAddressWithStun: Boolean
+        get() = remoteAddress == null || remoteAddressFromStun
+
+    internal fun updateStunRemoteAddress(address: AddressTuple) {
+        if (!canRefreshRemoteAddressWithStun) return
+        remoteAddress = address
+        remoteAddressFromStun = true
+    }
+
     fun guessExternalPort(): Int {
         if (externalPort != 0) return externalPort
         if (remoteAddress != null) return (remoteAddress?.port ?: 0)
@@ -96,8 +106,9 @@ class ComputerDetails {
         if (details.localAddress != null && details.localAddress?.address?.startsWith("127.") != true) {
             this.localAddress = details.localAddress
         }
-        if (details.remoteAddress != null) {
+        if (details.remoteAddress != null && (!details.remoteAddressFromStun || canRefreshRemoteAddressWithStun)) {
             this.remoteAddress = details.remoteAddress
+            this.remoteAddressFromStun = details.remoteAddressFromStun
         } else if (this.remoteAddress != null && details.externalPort != 0) {
             this.remoteAddress?.port = details.externalPort
         }

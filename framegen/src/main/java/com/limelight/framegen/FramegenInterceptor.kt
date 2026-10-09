@@ -169,6 +169,95 @@ class FramegenInterceptor {
             }
         }
 
+        /** Vulkan/Surface PyroWave decoder entry points. HDR mode 1 is static HDR10/PQ. */
+        @JvmStatic
+        fun isPyrowaveAvailableFor(width: Int, height: Int, hdrMode: Int): Boolean {
+            if (!isAvailable()) return false
+            return try {
+                nativePyrowaveIsAvailableFor(width, height, hdrMode)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to probe PyroWave Vulkan decoder", t)
+                false
+            }
+        }
+
+        @JvmStatic
+        fun createPyrowaveDecoder(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long {
+            if (!isAvailable()) return 0L
+            return try {
+                nativePyrowaveCreate(width, height, hdrMode, fullRange)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to create PyroWave Vulkan decoder", t)
+                0L
+            }
+        }
+
+        @JvmStatic
+        fun setPyrowaveDecoderSurface(handle: Long, surface: android.view.Surface?): Boolean {
+            if (!isAvailable() || handle == 0L) return false
+            try {
+                return nativePyrowaveSetSurface(handle, surface)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to bind PyroWave Vulkan decoder Surface", t)
+                return false
+            }
+        }
+
+        /** Apply Sunshine SS_HDR_METADATA to the Vulkan presentation swapchain. */
+        @JvmStatic
+        fun setPyrowaveDecoderHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean {
+            if (!isAvailable() || handle == 0L) return false
+            return try {
+                nativePyrowaveSetHdrMetadata(handle, enabled, metadata)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to update PyroWave HDR metadata", t)
+                false
+            }
+        }
+
+        @JvmStatic
+        fun setPyrowaveDecoderDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean {
+            if (!isAvailable() || handle == 0L) return false
+            return try {
+                nativePyrowaveSetDynamicHdr(handle, format, targetPeakNits)
+            } catch (error: LinkageError) {
+                Log.e(TAG, "PyroWave dynamic HDR configuration failed", error)
+                false
+            }
+        }
+
+        @JvmStatic
+        fun submitPyrowaveDecoder(handle: Long, data: ByteArray, length: Int, metadata: ByteArray? = null): Int {
+            if (!isAvailable() || handle == 0L) return -1
+            return try {
+                nativePyrowaveSubmit(handle, data, length, metadata)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to submit PyroWave Vulkan frame", t)
+                -1
+            }
+        }
+
+        @JvmStatic
+        fun getPyrowaveDecoderTimings(handle: Long): Long {
+            if (!isAvailable() || handle == 0L) return 0L
+            return try {
+                nativePyrowaveGetLastTimings(handle)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to read PyroWave Vulkan timings", t)
+                0L
+            }
+        }
+
+        @JvmStatic
+        fun destroyPyrowaveDecoder(handle: Long) {
+            if (!isAvailable() || handle == 0L) return
+            try {
+                nativePyrowaveDestroy(handle)
+            } catch (t: Throwable) {
+                Log.w(TAG, "failed to destroy PyroWave Vulkan decoder", t)
+            }
+        }
+
         /**
          * Hand a decoded HardwareBuffer frame to native code. The native side does not
          * retain this Java-owned buffer beyond the call; FramegenCapture closes the Image.
@@ -223,6 +312,30 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativeSetOutputSurface(surface: android.view.Surface?)
+
+        @JvmStatic
+        private external fun nativePyrowaveIsAvailableFor(width: Int, height: Int, hdrMode: Int): Boolean
+
+        @JvmStatic
+        private external fun nativePyrowaveCreate(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long
+
+        @JvmStatic
+        private external fun nativePyrowaveSetSurface(handle: Long, surface: android.view.Surface?): Boolean
+
+        @JvmStatic
+        private external fun nativePyrowaveSetHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean
+
+        @JvmStatic
+        private external fun nativePyrowaveSetDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean
+
+        @JvmStatic
+        private external fun nativePyrowaveSubmit(handle: Long, data: ByteArray, length: Int, metadata: ByteArray?): Int
+
+        @JvmStatic
+        private external fun nativePyrowaveGetLastTimings(handle: Long): Long
+
+        @JvmStatic
+        private external fun nativePyrowaveDestroy(handle: Long)
 
         private fun LongArray.toFramegenStats(): FramegenStats? {
             if (size < 12) return null

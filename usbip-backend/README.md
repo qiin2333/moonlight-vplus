@@ -5,8 +5,12 @@ reverse TLS tunnel to Sunshine. It builds pinned usbipdcpp and libusb sources in
 the app; no root command, second installed server app, Qt, or RUSB component is
 required on Android.
 
-The supported target is Android 9+ ARM64. The menu remains discoverable on other
-devices and explains why forwarding is unavailable without loading native code.
+The validated target is Android 9+ ARM64. Android 9+ ARMv7 (`armeabi-v7a`)
+is available experimentally, including devices with a 32-bit Android userspace
+on a 64-bit-capable SoC. The app packages both ARM native libraries by default.
+ARMv7 has not yet been validated end-to-end on physical hardware; the USB panel
+and diagnostics app display this limitation. Other architectures remain unavailable
+in the forwarding UI without loading native code; `x86_64` is a native-test target only.
 
 ## Enable forwarding
 
@@ -63,7 +67,10 @@ With Android SDK, NDK 28.2, and JDK 21 installed:
 ```sh
 ./gradlew -p usbip-diagnostics assembleDebug \
   :usbip-backend:assembleDebug \
-  :usbip-backend:assembleDebugAndroidTest
+  :usbip-backend:assembleDebugAndroidTest \
+  :usbip-backend:testDebugUnitTest
+./gradlew -p usbip-diagnostics assembleDebug \
+  :usbip-backend:assembleDebugAndroidTest -PusbipTestAbi=armeabi-v7a
 ./gradlew :app:assembleNonRootDebug \
   -PaudioHapticsSdkDir=/path/to/moonlight-audio-haptics
 ```
@@ -74,6 +81,19 @@ invalid file descriptors, cleanup, unauthorized loopback rejection, mutual TLS,
 certificate pinning, host rejection, handshake bounds, cancellation, and 256 KiB
 bidirectional forwarding. Hardware-only tests remain opt-in and skip unless every
 required endpoint and bus ID argument is present.
+
+`usbipTestAbi` selects a single ABI for standalone diagnostics/device tests
+(`arm64-v8a`, `armeabi-v7a`, or `x86_64`); omit it for production builds so both
+ARM libraries are included. USB/IP CI compiles diagnostics, AARs and device tests
+for both ARM targets, checks the packaged JNI libraries, and retains the existing
+x86_64 emulator lifecycle tests. Main app CI checks both ARM USB/IP runtimes in
+the Moonlight APK.
+
+Before treating ARMv7 as validated, install a development Moonlight APK on a
+32-bit Android device and test explicit share/permission, Windows enumeration
+through Sunshine/usbip-win2, real device input, detach, reconnect, Stop sharing,
+and stream-exit cleanup. The standalone diagnostic APK only tests the local
+exporter; it does not validate the reverse tunnel or Windows attachment.
 
 End-to-end validation on 2026-09-07 used an OPPO PKJ110 with a Logitech K380
 (`046d:b34d`, Android bus ID `1-6:0`) and Sunshine with usbip-win2 0.9.7.8. Sunshine

@@ -8,8 +8,16 @@ on:
 permissions:
   contents: read
 jobs:
-  build-arm64:
+  build-arm:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            artifact: arm64
+          - abi: armeabi-v7a
+            artifact: armv7
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,24 +28,45 @@ jobs:
           java-version: '21'
       - uses: android-actions/setup-android@v3
         # 必须显式给 packages：该 action 缺省安装的 'tools' 包已被 SDK 仓库移除，
-        # 会让 build-arm64 在装环境阶段直接失败；其余包由下一步自行安装。
+        # 会让 build-arm 在装环境阶段直接失败；其余包由下一步自行安装。
         with:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Install native toolchain
         run: sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1' 'platforms;android-36' 'build-tools;36.0.0'
       - name: Build standalone diagnostics, AAR and device tests
-        run: bash gradlew -p usbip-diagnostics assembleDebug :usbip-backend:assembleDebug :usbip-backend:assembleDebugAndroidTest --max-workers=2
+        run: bash gradlew -p usbip-diagnostics assembleDebug :usbip-backend:assembleDebug :usbip-backend:assembleDebugAndroidTest :usbip-backend:testDebugUnitTest -PusbipTestAbi=${{ matrix.abi }} --max-workers=2
+      - name: Verify native libraries are packaged for the selected ABI
+        env:
+          USBIP_ABI: ${{ matrix.abi }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+          abi = os.environ['USBIP_ABI']
+          for directory, pattern, prefix in [
+              ('usbip-diagnostics/build/outputs/apk/debug', '*.apk', 'lib'),
+              ('usbip-backend/build/outputs/aar', '*-debug.aar', 'jni'),
+          ]:
+              archives = list(Path(directory).glob(pattern))
+              assert archives, f'No archives in {directory}'
+              for archive in archives:
+                  with ZipFile(archive) as package:
+                      for library in ['libmoonlight_usbip.so', 'libc++_shared.so']:
+                          assert f'{prefix}/{abi}/{library}' in package.namelist(), (archive, abi, library)
+          PY
       - name: Upload development artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-usbip-arm64-development
+          name: android-usbip-${{ matrix.artifact }}-development
           path: |
             usbip-diagnostics/build/outputs/apk/debug/*.apk
             usbip-backend/build/outputs/aar/*.aar
             usbip-backend/build/outputs/apk/androidTest/debug/*.apk
           if-no-files-found: error
       - name: Install emulator image
+        if: matrix.abi == 'arm64-v8a'
         run: |
           sdkmanager 'system-images;android-34;google_apis;x86_64'
           export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
@@ -46,6 +75,7 @@ jobs:
           test -f "$ANDROID_AVD_HOME/usbip-ci.ini"
           sudo chmod 666 /dev/kvm
       - name: Run native lifecycle tests on Android x86_64
+        if: matrix.abi == 'arm64-v8a'
         timeout-minutes: 15
         env:
           ANDROID_SERIAL: emulator-5554
@@ -60,7 +90,7 @@ jobs:
           test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
           bash gradlew -p usbip-diagnostics :usbip-backend:connectedDebugAndroidTest -PusbipTestAbi=x86_64 --max-workers=2
       - name: Upload emulator test results
-        if: always()
+        if: always() && matrix.abi == 'arm64-v8a'
         uses: actions/upload-artifact@v4
         with:
           name: android-usbip-test-results
