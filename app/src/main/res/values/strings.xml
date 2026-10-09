@@ -2369,7 +2369,7 @@ Tap again to replace it.</string>
     <string name="title_fec_mode">Packet loss protection (FEC)</string>
     <string name="summary_fec_mode">Host default, automatic protection, or a fixed percentage. Applied on the next connection to a supported Sunshine host.</string>
     <string name="title_fec_percentage">Fixed FEC percentage</string>
-    <string name="summary_fec_percentage" formatted="false">Redundancy relative to video data. 0% disables FEC; higher percentages use more bandwidth.</string>
+    <string name="summary_fec_percentage" formatted="false">Redundancy relative to video data. 0% disables FEC. Compatible hosts share the target bitrate between picture quality and protection. Higher protection leaves less bitrate for picture quality; actual traffic may vary.</string>
     <string name="fec_mode_host">Host default</string>
     <string name="fec_mode_automatic">Automatic</string>
     <string name="fec_mode_fixed">Fixed</string>
@@ -2377,9 +2377,9 @@ Tap again to replace it.</string>
     <string name="summary_recommended_bitrate">Recommended: %1$s Mbps. Follows resolution and frame rate.</string>
     <string name="summary_bitrate_recommended">Recommended bitrate follows resolution and frame rate.</string>
     <string name="summary_bitrate_manual">Your chosen bitrate is kept when resolution or frame rate changes.</string>
-    <string name="summary_abr_bitrate_range">Adjustment range: %1$s–%2$s Mbps. FEC adds extra bandwidth.</string>
+    <string name="summary_abr_bitrate_range">Adjustment range: %1$s–%2$s Mbps. Compatible hosts share the target bitrate between picture quality and FEC; actual traffic may vary.</string>
     <string name="summary_fec_host">Use the host’s configured FEC mode and percentage on the next connection.</string>
-    <string name="summary_fec_automatic">Ask a compatible host to choose redundancy from network feedback on the next connection. Otherwise use the host default.</string>
+    <string name="summary_fec_automatic">On the next connection, a compatible host selects FEC from network feedback and balances protection with picture quality within the target bitrate. Unsupported hosts use their default settings.</string>
     <string name="summary_fec_fixed">Your fixed percentage takes priority on a compatible host. Applied on the next connection.</string>
     <string name="numeric_parameter_range">Enter a valid value from %1$s to %2$s %3$s.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave negotiation failed. Falling back to %1$s.</string>

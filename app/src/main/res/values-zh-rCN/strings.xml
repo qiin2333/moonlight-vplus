@@ -2277,7 +2277,7 @@
     <string name="title_fec_mode">丢包保护（FEC）</string>
     <string name="summary_fec_mode">跟随主机、自动调整或固定比例；下次连接支持此功能的 Sunshine 时生效。</string>
     <string name="title_fec_percentage">固定 FEC 比例</string>
-    <string name="summary_fec_percentage" formatted="false">相对视频数据增加的冗余比例。0% 关闭纠错；比例越高，额外占用的带宽越多。</string>
+    <string name="summary_fec_percentage" formatted="false">相对视频数据的冗余比例。0% 关闭纠错。兼容主机让画质与纠错共用目标码率；比例越高，可用于画质的码率越少。实际流量仍会波动。</string>
     <string name="fec_mode_host">跟随主机</string>
     <string name="fec_mode_automatic">自动调整</string>
     <string name="fec_mode_fixed">固定比例</string>
@@ -2285,9 +2285,9 @@
     <string name="summary_recommended_bitrate">推荐值：%1$s Mbps，随分辨率与帧率调整。</string>
     <string name="summary_bitrate_recommended">当前使用推荐码率，会随分辨率与帧率调整。</string>
     <string name="summary_bitrate_manual">已指定码率，改变分辨率或帧率时保留该值。</string>
-    <string name="summary_abr_bitrate_range">调整范围：%1$s–%2$s Mbps；FEC 冗余会额外占用带宽。</string>
+    <string name="summary_abr_bitrate_range">调整范围：%1$s–%2$s Mbps。兼容主机让画质与纠错共用目标码率；实际流量仍会波动。</string>
     <string name="summary_fec_host">下次连接时使用主机设置的 FEC 模式和比例。</string>
-    <string name="summary_fec_automatic">下次连接时由兼容的主机根据网络反馈选择冗余比例；不支持时使用主机默认设置。</string>
+    <string name="summary_fec_automatic">下次连接时，由兼容主机根据网络反馈选择纠错比例，在目标码率内平衡保护与画质；不支持时使用主机默认设置。</string>
     <string name="summary_fec_fixed">客户端指定比例优先于兼容主机的 FEC 设置，下次连接生效。</string>
     <string name="numeric_parameter_range">请输入 %1$s–%2$s %3$s 内的有效数值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>

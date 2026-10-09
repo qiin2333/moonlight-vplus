@@ -1047,7 +1047,7 @@
     <string name="title_fec_mode">封包遺失保護（FEC）</string>
     <string name="summary_fec_mode">跟隨主機、自動調整或固定比例；下次連線支援此功能的 Sunshine 時生效。</string>
     <string name="title_fec_percentage">固定 FEC 比例</string>
-    <string name="summary_fec_percentage" formatted="false">相對視訊資料增加的冗餘比例。0% 關閉糾錯；比例越高，額外占用的頻寬越多。</string>
+    <string name="summary_fec_percentage" formatted="false">相對視訊資料的冗餘比例。0% 關閉糾錯。相容主機讓畫質與糾錯共用目標碼率；比例越高，可用於畫質的碼率越少。實際流量仍會波動。</string>
     <string name="fec_mode_host">跟隨主機</string>
     <string name="fec_mode_automatic">自動調整</string>
     <string name="fec_mode_fixed">固定比例</string>
@@ -1055,9 +1055,9 @@
     <string name="summary_recommended_bitrate">建議值：%1$s Mbps，隨解析度與影格率調整。</string>
     <string name="summary_bitrate_recommended">目前使用建議位元率，會隨解析度與影格率調整。</string>
     <string name="summary_bitrate_manual">已指定位元率，變更解析度或影格率時保留此值。</string>
-    <string name="summary_abr_bitrate_range">調整範圍：%1$s–%2$s Mbps；FEC 冗餘會額外占用頻寬。</string>
+    <string name="summary_abr_bitrate_range">調整範圍：%1$s–%2$s Mbps。相容主機讓畫質與糾錯共用目標碼率；實際流量仍會波動。</string>
     <string name="summary_fec_host">下次連線時使用主機設定的 FEC 模式與比例。</string>
-    <string name="summary_fec_automatic">下次連線時由相容的主機依網路回饋選擇冗餘比例；不支援時使用主機預設設定。</string>
+    <string name="summary_fec_automatic">下次連線時，由相容主機依網路回饋選擇糾錯比例，在目標碼率內平衡保護與畫質；不支援時使用主機預設設定。</string>
     <string name="summary_fec_fixed">用戶端指定比例優先於相容主機的 FEC 設定，下次連線生效。</string>
     <string name="numeric_parameter_range">請輸入 %1$s–%2$s %3$s 內的有效數值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 協商失敗，已改用 %1$s。</string>
