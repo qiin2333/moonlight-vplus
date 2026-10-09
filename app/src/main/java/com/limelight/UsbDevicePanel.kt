@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.limelight.utils.AppActionSheet
+import com.limelight.usbip.UsbIpBackend
 
 internal data class UsbPanelDevice(val path: String, val name: String, val type: UsbDeviceType)
 
@@ -70,6 +71,13 @@ internal fun UsbDevicePanel(
                         UsbPanelHeader(hostName, onDismiss)
                     }
                     item { HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)) }
+                    if (UsbIpBackend.isExperimentalArmv7()) {
+                        item {
+                            Text(stringResource(R.string.usb_forward_armv7_experimental),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     item {
                         UsbSharingToggle(forwardingEnabled, busy, initialFocus, { placed = true }, onEnabledChange)
                     }

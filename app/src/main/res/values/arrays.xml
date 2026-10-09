@@ -634,4 +634,12 @@
         <item>bottom_center</item>
         <item>bottom_right</item>
     </string-array>
+    <string-array name="fec_mode_names">
+        <item>@string/fec_mode_host</item>
+        <item>@string/fec_mode_automatic</item>
+        <item>@string/fec_mode_fixed</item>
+    </string-array>
+    <string-array name="fec_mode_values">
+        <item>host</item><item>automatic</item><item>fixed</item>
+    </string-array>
 </resources>

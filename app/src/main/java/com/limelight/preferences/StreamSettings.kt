@@ -83,6 +83,7 @@ import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
+import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.ExternalDisplayManager
 import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.InputDeviceSensorPolicy
@@ -1406,6 +1407,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         private fun resetBitrateToDefault(prefs: SharedPreferences, res: String?, fps: String?) {
+            if (!prefs.getBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true)) return
             var resValue = res
             var fpsValue = fps
             if (resValue == null) {
@@ -1534,6 +1536,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 replacement.isVisible = category.isVisible
                 replacement.isIconSpaceReserved = category.isIconSpaceReserved
                 replacement.order = order
+                replacement.initialExpandedChildrenCount = category.initialExpandedChildrenCount
                 group.addPreference(replacement)
                 children.forEach { child ->
                     replacement.addPreference(child)
@@ -1590,6 +1593,7 @@ class StreamSettings : ThemedAppCompatActivity() {
          */
         fun applySearchFilter(query: String) {
             visibilityController.applySearch(query)
+            if (query.isBlank()) refreshSettingsPresentation("list_fec_mode")
             preferenceScreen?.let { updateSearchCategoryActions(it) }
             refreshSearchPresentation()
         }
@@ -3482,6 +3486,14 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
             initializeTouchModeDefaultsIfNeeded()
+            val bitratePrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            if (!bitratePrefs.contains(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING)) {
+                val recommended = PreferenceConfiguration.getDefaultBitrate(requireContext())
+                bitratePrefs.edit {
+                    putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING,
+                        bitratePrefs.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, recommended) == recommended)
+                }
+            }
             setPreferencesFromResource(R.xml.preferences, rootKey)
             val screen = preferenceScreen
             replaceSearchableCategories(screen)
@@ -4631,8 +4643,25 @@ class StreamSettings : ThemedAppCompatActivity() {
             if (changedKey == null || changedKey in LegacySettingsModeStore.modeKeys) {
                 refreshModeSelectors()
             }
-            if (changedKey == null || changedKey == "checkbox_adaptive_bitrate") {
+            if (changedKey == null || changedKey in setOf(
+                    "checkbox_adaptive_bitrate", "list_abr_mode",
+                    PreferenceConfiguration.BITRATE_PREF_STRING,
+                    PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING,
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                    PreferenceConfiguration.FPS_PREF_STRING,
+                )) {
+                setupAdaptiveBitratePresentation()
                 updateAdaptiveBitratePresentation()
+            }
+            if (changedKey == null || changedKey == "list_fec_mode") {
+                val fixed = findPreference<ListPreference>("list_fec_mode")?.value == "fixed"
+                updateRuntimeVisibility(findPreference("seekbar_fec_percentage"), fixed)
+                findPreference<PreferenceCategory>("category_basic_settings")?.let { category ->
+                    // Preserve an explicit expansion; otherwise reveal the active fixed value.
+                    if (category.initialExpandedChildrenCount != Int.MAX_VALUE) {
+                        category.initialExpandedChildrenCount = if (fixed) 6 else 5
+                    }
+                }
             }
             if (changedKey == null || changedKey == "checkbox_enable_audio_passthrough") {
                 updateAudioPipelineVisibility()
@@ -4721,40 +4750,49 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         private fun setupAdaptiveBitratePresentation() {
-            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate")
-                ?: return
-            val bitrate = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
-                ?: return
+            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate") ?: return
+            val bitrate = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING) ?: return
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
             val valueText = ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_primary)
-            val disabledAccent =
-                ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_disabled_primary)
+            val disabledAccent = ContextCompat.getColor(bitrate.context, R.color.ui_shell_text_disabled_primary)
+            val recommended = prefs.getBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true)
+            val description = buildString {
+                append(getString(if (adaptiveBitrate.isChecked) R.string.summary_seekbar_bitrate_baseline
+                                 else R.string.summary_seekbar_bitrate))
+                if (adaptiveBitrate.isChecked) {
+                    val range = AdaptiveBitrateService.bitrateRange(bitrate.currentValue,
+                        prefs.getString("list_abr_mode", "balanced") ?: "balanced")
+                    append("\n").append(getString(R.string.summary_abr_bitrate_range,
+                        bitrate.formatDisplayValue(range.first), bitrate.formatDisplayValue(range.last)))
+                }
+                append("\n").append(getString(if (recommended) R.string.summary_bitrate_recommended
+                                              else R.string.summary_bitrate_manual))
+            }
+            bitrate.dialogMessageText = getString(if (adaptiveBitrate.isChecked)
+                R.string.summary_seekbar_bitrate_baseline else R.string.summary_seekbar_bitrate)
+            applyHighlightedSummary(bitrate, valueText, disabledAccent,
+                currentValueProvider = { "${it.formatDisplayValue(it.currentValue)} ${it.suffix.orEmpty()}" },
+                descriptionProvider = { description })
 
-            applyHighlightedSummary(
-                bitrate,
-                valueText,
-                disabledAccent,
-                currentValueProvider = {
-                    val display = it.formatDisplayValue(it.currentValue)
-                    val suffix = it.suffix?.takeIf { suffix -> suffix.isNotBlank() }
-                    if (suffix != null) "$display $suffix" else display
-                },
-                descriptionProvider = {
-                    getString(
-                        if (adaptiveBitrate.isChecked) R.string.summary_seekbar_bitrate_baseline
-                        else R.string.summary_seekbar_bitrate
-                    )
-                },
-            )
+            findPreference<ListPreference>("list_fec_mode")?.let { fec ->
+                applyHighlightedSummary(fec, valueText, disabledAccent,
+                    currentValueProvider = { it.entry?.toString().orEmpty() },
+                    descriptionProvider = { getString(when (it.value) {
+                        "automatic" -> R.string.summary_fec_automatic
+                        "fixed" -> R.string.summary_fec_fixed
+                        else -> R.string.summary_fec_host
+                    }) })
+            }
         }
 
         private fun updateAdaptiveBitratePresentation() {
-            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate")
-                ?: return
-            findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
-                ?.setTitle(
-                    if (adaptiveBitrate.isChecked) R.string.title_seekbar_bitrate_baseline
-                    else R.string.title_seekbar_bitrate
-                )
+            val adaptiveBitrate = findPreference<CheckBoxPreference>("checkbox_adaptive_bitrate") ?: return
+            findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)?.let { bitrate ->
+                bitrate.setTitle(if (adaptiveBitrate.isChecked) R.string.title_seekbar_bitrate_baseline
+                                 else R.string.title_seekbar_bitrate)
+                bitrate.dialogTitle = bitrate.title
+            }
+            updateRuntimeVisibility(findPreference("list_abr_mode"), adaptiveBitrate.isChecked)
         }
 
         private fun updateAudioPipelineVisibility() {

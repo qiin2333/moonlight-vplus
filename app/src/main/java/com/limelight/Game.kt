@@ -1190,6 +1190,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             .setRefreshRate(chosenFrameRate)
             .setApp(app)
             .setBitrate(prefConfig.bitrate)
+            .setFecPercentage(prefConfig.fecPercentage)
             .setResolutionScale(prefConfig.resolutionScale)
             .setEnableSops(prefConfig.enableSops)
             .enableLocalAudioPlayback(prefConfig.playHostAudio)
