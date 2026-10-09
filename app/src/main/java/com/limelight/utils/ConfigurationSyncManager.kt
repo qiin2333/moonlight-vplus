@@ -1859,6 +1859,7 @@ class ConfigurationSyncManager(private val context: Context) {
             .put(KEY_PAIRING_COMPUTER_NAME, details.name ?: "")
             .put(KEY_PAIRING_LOCAL_ADDRESS, encodeAddress(details.localAddress))
             .put(KEY_PAIRING_REMOTE_ADDRESS, encodeAddress(details.remoteAddress))
+            .put(KEY_PAIRING_REMOTE_FROM_STUN, details.remoteAddress != null && details.remoteAddressFromStun)
             .put(KEY_PAIRING_MANUAL_ADDRESS, encodeAddress(details.manualAddress))
             .put(KEY_PAIRING_IPV6_ADDRESS, encodeAddress(details.ipv6Address))
             .put(KEY_PAIRING_IPV6_DISABLED, details.ipv6Disabled)
@@ -1884,6 +1885,7 @@ class ConfigurationSyncManager(private val context: Context) {
             this.name = name
             localAddress = decodeAddress(encoded.optJSONObject(KEY_PAIRING_LOCAL_ADDRESS))
             remoteAddress = decodeAddress(encoded.optJSONObject(KEY_PAIRING_REMOTE_ADDRESS))
+            remoteAddressFromStun = remoteAddress != null && encoded.optBoolean(KEY_PAIRING_REMOTE_FROM_STUN, false)
             manualAddress = decodeAddress(encoded.optJSONObject(KEY_PAIRING_MANUAL_ADDRESS))
             ipv6Address = decodeAddress(encoded.optJSONObject(KEY_PAIRING_IPV6_ADDRESS))
             ipv6Disabled = encoded.optBoolean(KEY_PAIRING_IPV6_DISABLED, false)
@@ -2858,6 +2860,7 @@ class ConfigurationSyncManager(private val context: Context) {
                 .put(KEY_PAIRING_COMPUTER_NAME, name)
                 .put(KEY_PAIRING_LOCAL_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_LOCAL_ADDRESS)))
                 .put(KEY_PAIRING_REMOTE_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_REMOTE_ADDRESS)))
+                .put(KEY_PAIRING_REMOTE_FROM_STUN, computer.optBoolean(KEY_PAIRING_REMOTE_FROM_STUN, false))
                 .put(KEY_PAIRING_MANUAL_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_MANUAL_ADDRESS)))
                 .put(KEY_PAIRING_IPV6_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_IPV6_ADDRESS)))
                 .put(KEY_PAIRING_IPV6_DISABLED, computer.optBoolean(KEY_PAIRING_IPV6_DISABLED, false))
@@ -3159,6 +3162,7 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val KEY_PAIRING_PAIR_NAME = "pairName"
         private const val KEY_PAIRING_PORT = "port"
         private const val KEY_PAIRING_REMOTE_ADDRESS = "remoteAddress"
+        private const val KEY_PAIRING_REMOTE_FROM_STUN = "remoteAddressFromStun"
         private const val KEY_PAIRING_SERVER_CERTIFICATE = "serverCertificateDer"
         private const val KEY_PAIRING_UNIQUE_ID = "uniqueId"
 
