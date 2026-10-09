@@ -5,6 +5,7 @@ import android.os.Build
 import android.view.View
 import android.view.ViewConfiguration
 import android.widget.FrameLayout
+import com.limelight.ui.FloatingButtonCoordinates
 import com.limelight.ui.FloatingButtonNormalizedPosition
 import com.limelight.ui.FloatingButtonPlacement
 import com.limelight.ui.FloatingButtonViewport
@@ -13,7 +14,8 @@ import kotlin.math.abs
 internal class OscSettingsButtonPositionController(
     private val button: View,
     private val container: FrameLayout,
-    private val store: OscSettingsButtonStore
+    private val store: OscSettingsButtonStore,
+    private val defaultPosition: () -> FloatingButtonCoordinates? = { null }
 ) : View.OnTouchListener, View.OnLayoutChangeListener {
     private val touchSlop = ViewConfiguration.get(button.context).scaledTouchSlop
     private val applyPosition = Runnable(::restorePosition)
@@ -140,9 +142,22 @@ internal class OscSettingsButtonPositionController(
         if (disposed || pointerId != -1 || button.parent !== container ||
             button.width <= 0 || button.height <= 0 || container.width <= 0 || container.height <= 0) return
         val saved = store.position()
-        val point = FloatingButtonPlacement.resolve(
-            if (saved == null) FloatingButtonPlacement.POSITION_TOP_LEFT else FloatingButtonPlacement.POSITION_CUSTOM,
-            saved ?: FloatingButtonNormalizedPosition(0f, 0f), viewport())
+        val bounds = viewport()
+        val point = if (saved == null) {
+            defaultPosition()?.let { coordinates ->
+                FloatingButtonPlacement.clampCustom(coordinates.x.toFloat(), coordinates.y.toFloat(), bounds)
+            } ?: FloatingButtonPlacement.resolve(
+                FloatingButtonPlacement.POSITION_TOP_LEFT,
+                FloatingButtonNormalizedPosition(0f, 0f),
+                bounds
+            )
+        } else {
+            FloatingButtonPlacement.resolve(
+                FloatingButtonPlacement.POSITION_CUSTOM,
+                saved,
+                bounds
+            )
+        }
         button.x = point.x.toFloat()
         button.y = point.y.toFloat()
     }

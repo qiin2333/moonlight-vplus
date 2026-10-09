@@ -1,6 +1,7 @@
 package com.limelight.binding.input.virtual_controller
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -13,47 +14,48 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.displayCutout
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
 import com.limelight.binding.input.MenuAxisNavigationState
+import com.limelight.gamemenu.GameMenuDialogShell
+import com.limelight.gamemenu.GameMenuDimens
+import com.limelight.gamemenu.GameMenuVerticalScrollbar
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.utils.AppActionSheet
 import com.limelight.ui.theme.AppShapes
@@ -70,7 +72,7 @@ internal class VirtualControllerOptionsDialog(
     private val onOpacityChanged: (Int) -> Unit,
     private val onSizeScaleChanged: (Float) -> Unit,
     private val onAction: (Int) -> Unit
-) : ComponentDialog(context, R.style.AppActionSheetStyle) {
+) : ComponentDialog(context, R.style.GameMenuDialogStyle) {
     private class Source {
         val navigation = MenuAxisNavigationState()
         val scroll = MenuAxisNavigationState()
@@ -135,18 +137,30 @@ internal class VirtualControllerOptionsDialog(
                     var placed by remember { mutableStateOf(false) }
                     var resetPlaced by remember { mutableStateOf(false) }
                     var cancelPlaced by remember { mutableStateOf(false) }
-                    var panelBounds by remember { mutableStateOf<Rect?>(null) }
+                    var viewportHeightPx by remember { mutableIntStateOf(0) }
                     val inputMode = LocalInputModeManager.current
-                    val listState = rememberLazyListState()
-                    scrollBy = { listState.dispatchRawDelta(it) }
+                    val configuration = LocalConfiguration.current
+                    val windowWidth = with(LocalDensity.current) {
+                        LocalWindowInfo.current.containerSize.width.toDp()
+                    }
+                    val scrollState = rememberScrollState()
+                    scrollBy = { scrollState.dispatchRawDelta(it) }
+
                     fun leaveConfirmation() {
                         gateInputUntilRelease()
                         confirmingReset = false
                         restoreResetFocus = true
                     }
+
                     closeConfirmation = {
-                        if (confirmingReset) { leaveConfirmation(); true } else false
+                        if (confirmingReset) {
+                            leaveConfirmation()
+                            true
+                        } else {
+                            false
+                        }
                     }
+
                     LaunchedEffect(placed) {
                         if (placed && !confirmingReset) {
                             inputMode.requestInputMode(InputMode.Keyboard)
@@ -166,122 +180,160 @@ internal class VirtualControllerOptionsDialog(
                             restoreResetFocus = false
                         }
                     }
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Box(Modifier.fillMaxSize().pointerInput(panelBounds) {
-                            detectTapGestures(onTap = {
-                                if (panelBounds?.contains(it) != true && closeConfirmation?.invoke() != true) {
-                                    cancel()
-                                }
-                            })
-                        })
-                    BoxWithConstraints(
-                        modifier = Modifier.fillMaxSize().windowInsetsPadding(
-                            WindowInsets.displayCutout
-                        ),
-                        contentAlignment = Alignment.BottomCenter
+
+                    GameMenuDialogShell(
+                        widthFraction = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                            0.98f
+                        } else {
+                            0.95f
+                        },
+                        horizontalInset = if (windowWidth >= 576.dp) {
+                            GameMenuDimens.wideScreenInset
+                        } else {
+                            GameMenuDimens.compactScreenInset
+                        },
+                        onDismissRequest = {
+                            if (closeConfirmation?.invoke() != true) cancel()
+                        }
                     ) {
-                        val panelMaxHeight = maxHeight
-                        AppActionSheet.ActionSheetContainer(
-                            respectNavigationBars = false,
-                            shieldBackgroundTouches = true,
-                            onBoundsChanged = { panelBounds = it }
-                        ) {
-                            AppActionSheet.ActionSheetHeader(context.getString(
-                                if (confirmingReset) R.string.dialog_title_reset_osc else R.string.osc_quick_menu
-                            ), null, false)
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxWidth()
-                                    .heightIn(max = (panelMaxHeight * 0.62f).coerceAtLeast(44.dp)),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val panelMaxHeight = maxHeight * 0.90f
+                            val listMaxHeight = (panelMaxHeight - 64.dp).coerceAtLeast(44.dp)
+                            AppActionSheet.ActionSheetContainer(
+                                respectNavigationBars = false,
+                                shieldBackgroundTouches = true,
+                                outerPadding = PaddingValues(0.dp)
                             ) {
-                                if (confirmingReset) {
-                                    item {
-                                        Text(context.getString(R.string.dialog_text_reset_osc),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
-                                    }
-                                    item {
-                                        AppActionSheet.ActionSheetRow(
-                                            AppActionSheet.Action(ACTION_CANCEL_RESET, context.getString(android.R.string.cancel)),
-                                            { leaveConfirmation() },
-                                            Modifier.focusRequester(cancelFocusRequester)
-                                                .onGloballyPositioned { cancelPlaced = true }
-                                                .onFocusChanged { if (it.isFocused) focusedAction = ACTION_CANCEL_RESET }
-                                                .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
-                                        )
-                                    }
-                                        item {
+                                AppActionSheet.ActionSheetHeader(context.getString(
+                                    if (confirmingReset) R.string.dialog_title_reset_osc else R.string.osc_quick_menu
+                                ), null, false)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = listMaxHeight)
+                                        .onGloballyPositioned { viewportHeightPx = it.size.height }
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(end = GameMenuDimens.section)
+                                            .verticalScroll(scrollState)
+                                            .padding(horizontal = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                                    ) {
+                                        if (confirmingReset) {
+                                            Text(
+                                                context.getString(R.string.dialog_text_reset_osc),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
+                                            )
                                             AppActionSheet.ActionSheetRow(
-                                                AppActionSheet.Action(ACTION_CONFIRM_RESET, context.getString(android.R.string.ok)),
-                                            { onAction(ACTION_RESET_CONTROLLER_LAYOUT); dismiss() },
-                                            Modifier.onFocusChanged { if (it.isFocused) focusedAction = ACTION_CONFIRM_RESET }
-                                                .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
-                                        )
-                                    }
-                                } else {
-                                itemsIndexed(actions, key = { _, action -> action.id }) { index, action ->
-                                    val row = action.copy(checked = if (action.toggle) {
-                                        toggleStates[action.id] == true
-                                    } else action.checked)
-                                    AppActionSheet.ActionSheetRow(row, { selected ->
-                                        if (selected.id == ACTION_RESET_CONTROLLER_LAYOUT) {
-                                            gateInputUntilRelease()
-                                            confirmingReset = true
-                                            cancelPlaced = false
-                                            resetPlaced = false
-                                        } else if (selected.toggle) {
-                                            val enabled = !(toggleStates[selected.id] == true)
-                                            toggleStates = toggleStates + (selected.id to enabled)
-                                            onToggleChanged(selected.id, enabled)
+                                                AppActionSheet.Action(
+                                                    ACTION_CANCEL_RESET,
+                                                    context.getString(android.R.string.cancel)
+                                                ),
+                                                { leaveConfirmation() },
+                                                Modifier
+                                                    .focusRequester(cancelFocusRequester)
+                                                    .onGloballyPositioned { cancelPlaced = true }
+                                                    .onFocusChanged {
+                                                        if (it.isFocused) focusedAction = ACTION_CANCEL_RESET
+                                                    }
+                                                    .focusProperties {
+                                                        left = FocusRequester.Cancel
+                                                        right = FocusRequester.Cancel
+                                                    }
+                                            )
+                                            AppActionSheet.ActionSheetRow(
+                                                AppActionSheet.Action(
+                                                    ACTION_CONFIRM_RESET,
+                                                    context.getString(android.R.string.ok)
+                                                ),
+                                                { onAction(ACTION_RESET_CONTROLLER_LAYOUT); dismiss() },
+                                                Modifier
+                                                    .onFocusChanged {
+                                                        if (it.isFocused) focusedAction = ACTION_CONFIRM_RESET
+                                                    }
+                                                    .focusProperties {
+                                                        left = FocusRequester.Cancel
+                                                        right = FocusRequester.Cancel
+                                                    }
+                                            )
                                         } else {
-                                            dismiss()
-                                            onAction(selected.id)
+                                            actions.forEachIndexed { index, action ->
+                                                val row = action.copy(checked = if (action.toggle) {
+                                                    toggleStates[action.id] == true
+                                                } else {
+                                                    action.checked
+                                                })
+                                                AppActionSheet.ActionSheetRow(row, { selected ->
+                                                    if (selected.id == ACTION_RESET_CONTROLLER_LAYOUT) {
+                                                        gateInputUntilRelease()
+                                                        confirmingReset = true
+                                                        cancelPlaced = false
+                                                        resetPlaced = false
+                                                    } else if (selected.toggle) {
+                                                        val enabled = !(toggleStates[selected.id] == true)
+                                                        toggleStates = toggleStates + (selected.id to enabled)
+                                                        onToggleChanged(selected.id, enabled)
+                                                    } else {
+                                                        dismiss()
+                                                        onAction(selected.id)
+                                                    }
+                                                }, Modifier
+                                                    .then(if (index == 0) Modifier
+                                                        .focusRequester(focusRequester)
+                                                        .onGloballyPositioned { placed = true }
+                                                    else Modifier)
+                                                    .then(if (action.id == ACTION_RESET_CONTROLLER_LAYOUT) {
+                                                        Modifier
+                                                            .focusRequester(resetFocusRequester)
+                                                            .onGloballyPositioned { resetPlaced = true }
+                                                    } else Modifier)
+                                                    .focusProperties {
+                                                        left = FocusRequester.Cancel
+                                                        right = FocusRequester.Cancel
+                                                    }
+                                                    .onFocusChanged {
+                                                        if (it.isFocused) focusedAction = action.id
+                                                        else if (focusedAction == action.id) focusedAction = null
+                                                    })
+                                            }
+                                            SettingsSliderRow(
+                                                id = ACTION_OPACITY,
+                                                title = context.getString(R.string.dialog_title_osc_opacity),
+                                                value = opacity,
+                                                valueRange = 0f..100f,
+                                                step = 1f,
+                                                onValueChange = {
+                                                    opacity = it
+                                                    onOpacityChanged(it.toInt())
+                                                }
+                                            )
+                                            SettingsSliderRow(
+                                                id = ACTION_SIZE,
+                                                title = context.getString(R.string.osc_settings_button_size),
+                                                value = sizeScale,
+                                                valueRange = 50f..200f,
+                                                step = 5f,
+                                                onValueChange = {
+                                                    sizeScale = it
+                                                    onSizeScaleChanged(it / 100f)
+                                                }
+                                            )
                                         }
-                                    }, Modifier
-                                        .then(if (index == 0) Modifier.focusRequester(focusRequester)
-                                            .onGloballyPositioned { placed = true } else Modifier)
-                                        .then(if (action.id == ACTION_RESET_CONTROLLER_LAYOUT) {
-                                            Modifier.focusRequester(resetFocusRequester)
-                                                .onGloballyPositioned { resetPlaced = true }
-                                        } else Modifier)
-                                        .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
-                                        .onFocusChanged {
-                                            if (it.isFocused) focusedAction = action.id
-                                            else if (focusedAction == action.id) focusedAction = null
-                                        })
-                                }
-                                item {
-                                    SettingsSliderRow(
-                                        id = ACTION_OPACITY,
-                                        title = context.getString(R.string.dialog_title_osc_opacity),
-                                        value = opacity,
-                                        valueRange = 0f..100f,
-                                        step = 1f,
-                                        onValueChange = {
-                                            opacity = it
-                                            onOpacityChanged(it.toInt())
-                                        }
+                                    }
+                                    GameMenuVerticalScrollbar(
+                                        scrollState = scrollState,
+                                        viewportHeightPx = viewportHeightPx,
+                                        modifier = Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .fillMaxHeight()
+                                            .width(3.dp)
                                     )
-                                }
-                                item {
-                                    SettingsSliderRow(
-                                        id = ACTION_SIZE,
-                                        title = context.getString(R.string.osc_settings_button_size),
-                                        value = sizeScale,
-                                        valueRange = 50f..200f,
-                                        step = 5f,
-                                        onValueChange = {
-                                            sizeScale = it
-                                            onSizeScaleChanged(it / 100f)
-                                        }
-                                    )
-                                }
                                 }
                             }
                         }
-                    }
                     }
                 }
             }

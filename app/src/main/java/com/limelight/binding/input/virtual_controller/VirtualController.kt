@@ -25,6 +25,7 @@ import androidx.preference.PreferenceManager
 import com.limelight.utils.AppActionSheet
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.ui.FloatingButtonCoordinates
 
 class VirtualController(
     private var controllerHandler: ControllerHandler?,
@@ -109,7 +110,12 @@ class VirtualController(
         setOnClickListener { showOptions() }
     }
     private val settingsButtonStore = OscSettingsButtonStore(context)
-    private val settingsButtonPosition = OscSettingsButtonPositionController(buttonConfigure, frameLayout, settingsButtonStore)
+    private val settingsButtonPosition = OscSettingsButtonPositionController(
+        buttonConfigure,
+        frameLayout,
+        settingsButtonStore,
+        ::defaultSettingsButtonPosition
+    )
 
     private fun showOptions() {
         if (optionsDialog?.isShowing == true) return
@@ -336,7 +342,15 @@ class VirtualController(
 
     private fun addOrUpdateSettingsButton() {
         val density = context.resources.displayMetrics.density
-        val baseSize = minOf((48 * density).toInt(), (frameLayout.height * 0.06f).toInt().coerceAtLeast(1))
+        val guide = elements.firstOrNull {
+            it.elementId == VirtualControllerElement.EID_GDB
+        }
+        val guideParams = guide?.layoutParams as? FrameLayout.LayoutParams
+        val guideSize = guideParams?.let { minOf(it.width, it.height) }?.takeIf { it > 0 }
+        val baseSize = guideSize ?: minOf(
+            (48 * density).toInt(),
+            (frameLayout.height * 0.06f).toInt().coerceAtLeast(1)
+        )
         val size = (baseSize * settingsButtonStore.sizeScale).toInt()
             .coerceIn(1, minOf(frameLayout.width, frameLayout.height))
         val edgeMargin = minOf((8 * density).toInt(), size / 4)
@@ -354,6 +368,21 @@ class VirtualController(
         else frameLayout.addView(buttonConfigure, params)
         buttonConfigure.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
         settingsButtonPosition.requestPlacement()
+    }
+
+    private fun defaultSettingsButtonPosition(): FloatingButtonCoordinates? {
+        val guide = elements.firstOrNull {
+            it.elementId == VirtualControllerElement.EID_GDB
+        } ?: return null
+        val guideParams = guide.layoutParams as? FrameLayout.LayoutParams ?: return null
+        val buttonSize = buttonConfigure.layoutParams?.width?.takeIf { it > 0 } ?: return null
+        val guideLeft = guide.left.takeIf { guide.width > 0 } ?: guideParams.leftMargin
+        val guideTop = guide.top.takeIf { guide.height > 0 } ?: guideParams.topMargin
+        val gap = (2 * context.resources.displayMetrics.density).toInt()
+        return FloatingButtonCoordinates(
+            guideLeft + (guideParams.width - buttonSize) / 2,
+            guideTop - buttonSize - gap
+        )
     }
 
     private fun sendControllerInputContextInternal() {

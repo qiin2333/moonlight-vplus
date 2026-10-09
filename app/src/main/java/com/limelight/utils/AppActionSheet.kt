@@ -9,6 +9,7 @@ import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
 import androidx.core.view.WindowCompat
@@ -212,6 +213,16 @@ object AppActionSheet {
         contentView: ComposeView,
         fullScreen: Boolean = false
     ) {
+        val hostWindow = (contentView.context as? Activity)?.window
+        fun mirrorHostWindow(window: Window) {
+            hostWindow?.let { host ->
+                window.decorView.systemUiVisibility = host.decorView.systemUiVisibility
+                if (host.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
+            }
+        }
+
         dialog.setContentView(contentView)
         dialog.setCanceledOnTouchOutside(true)
         dialog.setOnKeyListener { _, keyCode, event ->
@@ -231,14 +242,7 @@ object AppActionSheet {
                 }
             }
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            (contentView.context as? Activity)?.window?.let { hostWindow ->
-                window.decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
-                if (hostWindow.attributes.flags and
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN != 0
-                ) {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                }
-            }
+            mirrorHostWindow(window)
             window.attributes = window.attributes.apply {
                 width = ViewGroup.LayoutParams.MATCH_PARENT
                 height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
@@ -248,7 +252,19 @@ object AppActionSheet {
         }
 
         dialog.show()
-        dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        dialog.window?.let { window ->
+            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            if (fullScreen) {
+                window.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                mirrorHostWindow(window)
+                window.decorView.post {
+                    if (dialog.isShowing) mirrorHostWindow(window)
+                }
+            }
+        }
     }
 
     @Composable
@@ -416,6 +432,7 @@ object AppActionSheet {
         respectNavigationBars: Boolean = true,
         shieldBackgroundTouches: Boolean = false,
         onBoundsChanged: ((Rect) -> Unit)? = null,
+        outerPadding: PaddingValues = PaddingValues(start = 10.dp, end = 10.dp, bottom = 10.dp),
         content: @Composable ColumnScope.() -> Unit
     ) {
         val shape = AppShapes.overlay
@@ -439,7 +456,7 @@ object AppActionSheet {
                 .then(onBoundsChanged?.let { callback ->
                     Modifier.onGloballyPositioned { callback(it.boundsInRoot()) }
                 } ?: Modifier)
-                .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+                .padding(outerPadding)
         ) {
             Column(
                 modifier = Modifier
