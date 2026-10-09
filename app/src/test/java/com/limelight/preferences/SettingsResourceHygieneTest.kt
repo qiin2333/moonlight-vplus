@@ -109,6 +109,7 @@ class SettingsResourceHygieneTest {
         val arrays = parse(File(resourceDir, "values/arrays.xml"))
         val localizedArrays = setOf(
             "abr_mode_names",
+            "fec_mode_names",
             "analog_scrolling_names",
             "audio_codec_names",
             "audio_config_names",
@@ -183,6 +184,10 @@ class SettingsResourceHygieneTest {
         }
 
         val expectedKeysByCategory = mapOf(
+            "category_basic_settings" to setOf(
+                "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
+                "list_fec_mode", "seekbar_fec_percentage",
+            ),
             "category_screen_position" to setOf(
                 "video_format",
                 "checkbox_enable_hdr",

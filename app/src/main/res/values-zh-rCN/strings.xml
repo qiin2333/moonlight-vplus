@@ -233,11 +233,11 @@
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
     <string name="title_seekbar_bitrate">串流码率</string>
-    <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
-    <string name="title_adaptive_bitrate">智能码率</string>
-    <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
-    <string name="title_abr_mode">智能码率模式</string>
-    <string name="summary_abr_mode">画质优先：偏向高码率；低延迟：丢包时降档更快。</string>
+    <string name="summary_seekbar_bitrate">提高码率可改善画质，也会增加带宽消耗。</string>
+    <string name="title_adaptive_bitrate">自动调整码率（ABR）</string>
+    <string name="summary_adaptive_bitrate">根据网络状况调整视频码率，可与丢包保护独立使用。</string>
+    <string name="title_abr_mode">码率调整偏好</string>
+    <string name="summary_abr_mode">选择画质与响应速度之间的取舍。</string>
     <string name="abr_mode_quality">画质优先</string>
     <string name="abr_mode_balanced">均衡</string>
     <string name="abr_mode_low_latency">低延迟</string>
@@ -2204,7 +2204,7 @@
     <string name="dualsense_output_mode_wireless_bridge">外置 USB 蓝牙桥接</string>
     <string name="dualsense_output_mode_both">同时使用两种输出路径</string>
     <string name="title_seekbar_bitrate_baseline">基准码率</string>
-    <string name="summary_seekbar_bitrate_baseline">智能码率从此数值开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
+    <string name="summary_seekbar_bitrate_baseline">自动调整从此基准开始，在所选偏好的范围内变化。</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">启用音频直通时不可用，因为直通会绕过系统音频效果。</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">启用音频直通时不可用，因为直通会绕过 Android 空间音频。</string>
     <string name="title_decoder_input_buffer_mode">解码输入缓冲区</string>
@@ -2274,5 +2274,21 @@
     <string name="pyrowave_diag_copy">复制</string>
     <string name="pyrowave_diag_copy_success">报告已复制到剪贴板</string>
     <string name="pyrowave_diag_unavailable">无法获取</string>
+    <string name="title_fec_mode">丢包保护（FEC）</string>
+    <string name="summary_fec_mode">跟随主机、自动调整或固定比例；下次连接支持此功能的 Sunshine 时生效。</string>
+    <string name="title_fec_percentage">固定 FEC 比例</string>
+    <string name="summary_fec_percentage" formatted="false">相对视频数据的冗余比例。0% 关闭纠错。兼容主机让画质与纠错共用目标码率；比例越高，可用于画质的码率越少。实际流量仍会波动。</string>
+    <string name="fec_mode_host">跟随主机</string>
+    <string name="fec_mode_automatic">自动调整</string>
+    <string name="fec_mode_fixed">固定比例</string>
+    <string name="title_restore_recommended_bitrate">恢复推荐</string>
+    <string name="summary_recommended_bitrate">推荐值：%1$s Mbps，随分辨率与帧率调整。</string>
+    <string name="summary_bitrate_recommended">当前使用推荐码率，会随分辨率与帧率调整。</string>
+    <string name="summary_bitrate_manual">已指定码率，改变分辨率或帧率时保留该值。</string>
+    <string name="summary_abr_bitrate_range">调整范围：%1$s–%2$s Mbps。兼容主机让画质与纠错共用目标码率；实际流量仍会波动。</string>
+    <string name="summary_fec_host">下次连接时使用主机设置的 FEC 模式和比例。</string>
+    <string name="summary_fec_automatic">下次连接时，由兼容主机根据网络反馈选择纠错比例，在目标码率内平衡保护与画质；不支持时使用主机默认设置。</string>
+    <string name="summary_fec_fixed">客户端指定比例优先于兼容主机的 FEC 设置，下次连接生效。</string>
+    <string name="numeric_parameter_range">请输入 %1$s–%2$s %3$s 内的有效数值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>
 </resources>
