@@ -496,7 +496,10 @@ internal class ControllerHapticsCoordinator(
                         try {
                             if (ds5HapticsBindings[controllerId]?.sink === sink) {
                                 if (playing) handler.rumbleManager.handleRumble(controllerNumber, 0, 0)
-                                else onSinkChanged(controllerNumber)
+                                // Replay on both edges: playback-active flips the gameRumbleContext
+                                // allocation, so the current tracked state must be re-routed or the
+                                // update allocated before the flip is dropped entirely.
+                                onSinkChanged(controllerNumber)
                             }
                         } finally { completed.countDown() }
                     }
