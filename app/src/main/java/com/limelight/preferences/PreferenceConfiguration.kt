@@ -727,6 +727,7 @@ class PreferenceConfiguration {
         // ---- Package-private pref key constants (promoted to public for Kotlin interop) ----
         const val FPS_PREF_STRING = "list_fps"
         const val BITRATE_PREF_STRING = "seekbar_bitrate_kbps"
+        const val AUTO_ADJUST_BITRATE_PREF_STRING = "auto_adjust_bitrate"
         const val HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale"
         const val LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels"
         const val SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display"
