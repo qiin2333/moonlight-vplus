@@ -427,6 +427,15 @@
     <string name="title_checkbox_flip_face_buttons">交换 A/B 与 X/Y 按键</string>
     <string name="summary_checkbox_flip_face_buttons">同时交换实体手柄和屏幕控制上的这两组按键。</string>
     <string name="category_on_screen_controls_settings">屏幕虚拟手柄按钮</string>
+    <string name="category_stream_overlay">串流悬浮层</string>
+    <string name="title_stream_overlay_float_ball">悬浮球</string>
+    <string name="summary_stream_overlay_float_ball">进入悬浮球设置</string>
+    <string name="title_stream_overlay_performance">性能监控图层</string>
+    <string name="summary_stream_overlay_performance">进入性能监控图层设置</string>
+    <string name="title_stream_overlay_virtual_controller">虚拟手柄</string>
+    <string name="summary_stream_overlay_virtual_controller">进入屏幕虚拟手柄设置</string>
+    <string name="title_stream_overlay_crown">王冠虚拟按钮</string>
+    <string name="summary_stream_overlay_crown">进入王冠虚拟按钮设置</string>
     <string name="title_checkbox_show_onscreen_controls">显示屏幕控制按钮</string>
     <string name="summary_checkbox_show_onscreen_controls">在触摸屏上显示一层虚拟手柄。</string>
     <string name="title_checkbox_vibrate_osc"> 启用震动 </string>

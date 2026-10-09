@@ -201,6 +201,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 "category_microphone_settings" -> R.drawable.ic_mic_gm
                 "category_gamepad_settings" -> R.drawable.phc_gamepad
                 "category_input_settings" -> R.drawable.phc_keyboard
+                "category_stream_overlay" -> R.drawable.phc_perf_monitor
                 "category_onscreen_controls" -> R.drawable.phc_game_controller
                 "category_crown_features" -> R.drawable.phc_crown
                 "category_host_settings" -> R.drawable.phc_host
@@ -768,6 +769,12 @@ class StreamSettings : ThemedAppCompatActivity() {
         val fragment = supportFragmentManager
                 .findFragmentById(R.id.preference_container) as? SettingsFragment
         fragment?.scrollToCategoryByKey(categoryKey)
+    }
+
+    fun scrollToPreference(preferenceKey: String) {
+        val fragment = supportFragmentManager
+                .findFragmentById(R.id.preference_container) as? SettingsFragment
+        fragment?.scrollToPreferenceByKey(preferenceKey)
     }
 
     /**
@@ -1491,6 +1498,25 @@ class StreamSettings : ThemedAppCompatActivity() {
                     scrollToCategoryAtIndex(i)
                     return
                 }
+            }
+        }
+
+        /** Scrolls to a concrete preference while keeping the sidebar category in sync. */
+        fun scrollToPreferenceByKey(preferenceKey: String) {
+            val target = findPreference<Preference>(preferenceKey) ?: return
+            val position = findAdapterPositionForPreference(target)
+            if (position < 0) return
+
+            val targetCategoryIndex = categoryList.indexOfFirst { category ->
+                (0 until category.preferenceCount).any { category.getPreference(it) === target }
+            }
+            if (targetCategoryIndex >= 0) currentCategoryIndex = targetCategoryIndex
+
+            isManualScrolling = true
+            val recyclerView = listView ?: return
+            val layoutManager = recyclerView.layoutManager
+            if (layoutManager is LinearLayoutManager) {
+                layoutManager.scrollToPositionWithOffset(position, dpToPx(2))
             }
         }
 
@@ -4079,7 +4105,29 @@ class StreamSettings : ThemedAppCompatActivity() {
                         true
                     }
 
+            setupStreamOverlayNavigation()
+
             refreshSettingsPresentation()
+        }
+
+        private fun setupStreamOverlayNavigation() {
+            val targets = mapOf(
+                "stream_overlay_float_ball" to "checkbox_enable_float_ball",
+                "stream_overlay_performance" to "checkbox_enable_perf_overlay",
+                "stream_overlay_virtual_controller" to "checkbox_show_onscreen_controls",
+                "stream_overlay_crown" to "checkbox_show_onscreen_keyboard",
+            )
+            targets.forEach { (entryKey, targetKey) ->
+                findPreference<Preference>(entryKey)?.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        (activity as? StreamSettings)?.scrollToPreference(targetKey)
+                        true
+                    }
+            }
+
+            // Devices without a touchscreen do not expose virtual controller settings.
+            findPreference<Preference>("stream_overlay_virtual_controller")?.isVisible =
+                findPreference<PreferenceCategory>("category_onscreen_controls") != null
         }
 
         private fun showEnableExternalSyncConfirmation() {

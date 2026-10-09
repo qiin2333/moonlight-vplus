@@ -557,6 +557,15 @@
     <string name="suffix_fixed_x_velocity">pixels</string>
 
     <string name="category_on_screen_controls_settings">On-screen virtual gamepad buttons</string>
+    <string name="category_stream_overlay">Streaming overlays</string>
+    <string name="title_stream_overlay_float_ball">Float ball</string>
+    <string name="summary_stream_overlay_float_ball">Open float ball settings</string>
+    <string name="title_stream_overlay_performance">Performance overlay</string>
+    <string name="summary_stream_overlay_performance">Open performance overlay settings</string>
+    <string name="title_stream_overlay_virtual_controller">Virtual controller</string>
+    <string name="summary_stream_overlay_virtual_controller">Open on-screen controller settings</string>
+    <string name="title_stream_overlay_crown">Crown virtual buttons</string>
+    <string name="summary_stream_overlay_crown">Open Crown virtual button settings</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>
