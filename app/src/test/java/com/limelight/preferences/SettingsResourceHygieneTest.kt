@@ -243,6 +243,12 @@ class SettingsResourceHygieneTest {
                 "checkbox_dualsense_direct_bluetooth",
                 "checkbox_dualsense_wireless_bridge",
             ),
+            "category_stream_overlay" to setOf(
+                "stream_overlay_float_ball",
+                "stream_overlay_performance",
+                "stream_overlay_virtual_controller",
+                "stream_overlay_crown",
+            ),
         )
 
         listOf(
@@ -256,6 +262,7 @@ class SettingsResourceHygieneTest {
             "category_microphone_settings",
             "category_gamepad_settings",
             "category_input_settings",
+            "category_stream_overlay",
             "category_onscreen_controls",
             "category_crown_features",
             "category_ui_settings",
