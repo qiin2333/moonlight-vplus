@@ -31,7 +31,7 @@
     <string name="usb_forward_detached">Устройство отсоединено. Передача остановлена.</string>
     <string name="usb_forward_handoff">Освобождение локального драйвера геймпада…</string>
     <string name="usb_forward_wireless_adapter">Проброс USB Bluetooth-адаптеров пока не поддерживается.</string>
-    <string name="usb_forward_duplicate_device">Несколько USB-устройств имеют одинаковые VID/PID. Отключите дубликаты перед передачей.</string>
+    <string name="usb_forward_duplicate_device">У другого подключённого устройства такие же VID и PID. Android не может их различить, поэтому пока одно из них передаётся, второе тоже перестаёт получать ввод здесь.</string>
     <string name="usb_forward_experimental">Экспериментально</string>
     <string name="usb_forward_toggle_title">Проброс USB</string>
     <string name="usb_forward_toggle_hint">Только для этого ПК</string>
