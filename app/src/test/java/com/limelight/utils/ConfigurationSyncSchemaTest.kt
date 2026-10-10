@@ -17,6 +17,11 @@ import org.junit.Test
 
 class ConfigurationSyncSchemaTest {
     @Test
+    fun mouseAxisCorrectionIsPortable() {
+        assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_mouse_axis_correction"))
+    }
+
+    @Test
     fun hevcLowLatencyModeIsPortable() {
         assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_hevc_low_latency_mode"))
     }
