@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">אפשר גרירה של לחצן ההגדרות</string>
+    <string name="osc_reset_settings_button_position">שחזור המיקום הראשוני של לחצן ההגדרות</string>
+    <string name="osc_settings_button_size">גודל לחצן ההגדרות</string>
+</resources>

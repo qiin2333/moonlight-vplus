@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Разрешаване на влаченето на бутона за настройки</string>
+    <string name="osc_reset_settings_button_position">Възстановяване на началната позиция на бутона за настройки</string>
+    <string name="osc_settings_button_size">Размер на бутона за настройки</string>
+</resources>

@@ -9,9 +9,11 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         consumerProguardFiles 'consumer-rules.pro'
         ndk {
-            def nativeAbi = providers.gradleProperty('usbipTestAbi').getOrElse('arm64-v8a')
-            if (!(nativeAbi in ['arm64-v8a', 'x86_64'])) throw new GradleException('Unsupported USB/IP ABI')
-            abiFilters nativeAbi
+            // Ship both app ABIs. A single-ABI override is reserved for diagnostics/tests.
+            def nativeAbi = providers.gradleProperty('usbipTestAbi').orNull
+            if (nativeAbi != null && !(nativeAbi in ['arm64-v8a', 'armeabi-v7a', 'x86_64']))
+                throw new GradleException('Unsupported USB/IP ABI')
+            abiFilters(*(nativeAbi != null ? [nativeAbi] : ['arm64-v8a', 'armeabi-v7a']))
         }
         externalNativeBuild {
             cmake {

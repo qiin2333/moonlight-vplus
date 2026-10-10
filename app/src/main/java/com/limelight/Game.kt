@@ -24,6 +24,7 @@ import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
 import com.limelight.binding.input.touch.AbsoluteTouchContext
+import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
@@ -1199,6 +1200,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             .setRefreshRate(chosenFrameRate)
             .setApp(app)
             .setBitrate(prefConfig.bitrate)
+            .setFecPercentage(prefConfig.fecPercentage)
             .setResolutionScale(prefConfig.resolutionScale)
             .setEnableSops(prefConfig.enableSops)
             .enableLocalAudioPlayback(prefConfig.playHostAudio)
@@ -1751,6 +1753,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             cancelKeepAliveNotification()
         }
         micButtonPositionController?.dispose()
+        virtualController?.cleanup()
         if (::remoteImeController.isInitialized) {
             remoteImeController.dispose()
         }
@@ -3042,10 +3045,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         deviceHeightMm: Short,
         buttonState: Byte
     ) {
+        val speedPercent = prefConfig.hardwareTouchpadPointerSpeedPercent
         conn?.sendTouchpadEvent(
             eventType, pointerId, x, y, pressure,
             contactAreaMajor, contactAreaMinor, rotation,
-            deviceWidthMm, deviceHeightMm, buttonState
+            TouchpadPointerSpeed.scaledSizeMm(deviceWidthMm.toInt(), speedPercent).toShort(),
+            TouchpadPointerSpeed.scaledSizeMm(deviceHeightMm.toInt(), speedPercent).toShort(),
+            buttonState
         )
     }
 
@@ -3061,10 +3067,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         deviceHeightMm: Short,
         buttonState: Byte
     ): Int {
+        val speedPercent = prefConfig.hardwareTouchpadPointerSpeedPercent
         return conn?.sendTouchpadFrameEvent(
             contactCount, eventTypes, pointerIds,
             x, y, pressure, rotation,
-            deviceWidthMm, deviceHeightMm, buttonState
+            TouchpadPointerSpeed.scaledSizeMm(deviceWidthMm.toInt(), speedPercent).toShort(),
+            TouchpadPointerSpeed.scaledSizeMm(deviceHeightMm.toInt(), speedPercent).toShort(),
+            buttonState
         ) ?: MoonBridge.LI_ERR_UNSUPPORTED
     }
 
@@ -3219,6 +3228,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
+        if (virtualController?.dispatchMenuKey(event) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchKeyEvent(event)
             return true
@@ -3235,6 +3245,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         rightStickX: Float,
         rightStickY: Float
     ): Boolean {
+        if (virtualController?.dispatchMenuAxes(ControllerHandler.usbGameMenuAxisSourceId(controllerId),
+                leftStickX, leftStickY, rightStickY) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchAxes(
                 ControllerHandler.usbGameMenuAxisSourceId(controllerId),
@@ -3257,6 +3269,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun releaseControllerMenuAxisSource(sourceId: Int) {
+        virtualController?.releaseMenuSource(sourceId)
         crownConfigPicker?.releaseSource(sourceId)
         activeGameMenu?.releaseControllerAxisSource(sourceId)
     }

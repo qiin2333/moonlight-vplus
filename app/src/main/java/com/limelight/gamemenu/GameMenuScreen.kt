@@ -1111,7 +1111,7 @@ private fun GameMenuScrollablePane(
 }
 
 @Composable
-private fun GameMenuVerticalScrollbar(
+internal fun GameMenuVerticalScrollbar(
     scrollState: ScrollState,
     viewportHeightPx: Int,
     modifier: Modifier = Modifier

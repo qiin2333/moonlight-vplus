@@ -81,6 +81,8 @@ class PreferenceConfiguration {
     var doubleTapTimeThreshold = 0
     var enableLocalCursorRendering = false
     var optimizeHardwareTouchpad = false
+    /** Percent. 100 keeps the physical touchpad size reported to the host. */
+    var hardwareTouchpadPointerSpeedPercent = DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
     //自定义按键映射
     var enableCustomKeyMap = false
     //修复鼠标中键识别
@@ -101,6 +103,7 @@ class PreferenceConfiguration {
     var fps = 0
     var resolutionScale = 0
     var bitrate = 0
+    var fecPercentage = -2
     var enableAdaptiveBitrate = false
     var abrMode: String = "balanced"  // quality | balanced | lowLatency
     var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
@@ -388,6 +391,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
                 .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
                 .putBoolean(OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING, optimizeHardwareTouchpad)
+                .putInt(HARDWARE_TOUCHPAD_POINTER_SPEED_PREF_STRING, hardwareTouchpadPointerSpeedPercent)
                 .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
                 .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                 .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
@@ -515,6 +519,7 @@ class PreferenceConfiguration {
         copy.isCustomResolution = this.isCustomResolution
         copy.fps = this.fps
         copy.bitrate = this.bitrate
+        copy.fecPercentage = this.fecPercentage
         copy.enableAdaptiveBitrate = this.enableAdaptiveBitrate
         copy.abrMode = this.abrMode
         copy.videoFormat = this.videoFormat
@@ -567,6 +572,7 @@ class PreferenceConfiguration {
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
+        copy.hardwareTouchpadPointerSpeedPercent = this.hardwareTouchpadPointerSpeedPercent
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier
@@ -594,6 +600,7 @@ class PreferenceConfiguration {
         private const val DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING = "seekbar_double_tap_time_threshold"
         private const val ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING = "pref_enable_local_cursor_rendering"
         private const val OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING = "checkbox_optimize_hardware_touchpad"
+        private const val HARDWARE_TOUCHPAD_POINTER_SPEED_PREF_STRING = "seekbar_hardware_touchpad_pointer_speed"
 
         private const val LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps"
         private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
@@ -760,6 +767,7 @@ class PreferenceConfiguration {
         // ---- Package-private pref key constants (promoted to public for Kotlin interop) ----
         const val FPS_PREF_STRING = "list_fps"
         const val BITRATE_PREF_STRING = "seekbar_bitrate_kbps"
+        const val AUTO_ADJUST_BITRATE_PREF_STRING = "auto_adjust_bitrate"
         val DISPLAY_PREFERENCE_KEYS = setOf(
             RESOLUTION_PREF_STRING,
             FPS_PREF_STRING,
@@ -942,6 +950,9 @@ class PreferenceConfiguration {
         private const val DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 125 // 默认125ms
         private const val DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING = false
         private const val DEFAULT_OPTIMIZE_HARDWARE_TOUCHPAD = false
+        const val DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED = 100
+        const val MIN_HARDWARE_TOUCHPAD_POINTER_SPEED = 50
+        const val MAX_HARDWARE_TOUCHPAD_POINTER_SPEED = 300
 
         private const val DEFAULT_REVERSE_RESOLUTION = false
         private const val DEFAULT_ROTABLE_SCREEN = false
@@ -1388,6 +1399,11 @@ class PreferenceConfiguration {
                 config.bitrate = getDefaultBitrate(context)
             }
 
+            config.fecPercentage = when (prefs.getString("list_fec_mode", "host")) {
+                "automatic" -> -1
+                "fixed" -> prefs.getInt("seekbar_fec_percentage", 20).coerceIn(0, 100)
+                else -> -2
+            }
             config.enableAdaptiveBitrate = prefs.getBoolean(ADAPTIVE_BITRATE_PREF_STRING, false)
             config.abrMode = prefs.getString(ABR_MODE_PREF_STRING, "balanced") ?: "balanced"
 
@@ -1472,6 +1488,10 @@ class PreferenceConfiguration {
             config.doubleTapTimeThreshold = prefs.getInt(DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING, DEFAULT_DOUBLE_TAP_TIME_THRESHOLD)
             config.enableLocalCursorRendering = prefs.getBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING)
             config.optimizeHardwareTouchpad = prefs.getBoolean(OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING, DEFAULT_OPTIMIZE_HARDWARE_TOUCHPAD)
+            config.hardwareTouchpadPointerSpeedPercent = prefs.getInt(
+                HARDWARE_TOUCHPAD_POINTER_SPEED_PREF_STRING,
+                DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
+            ).coerceIn(MIN_HARDWARE_TOUCHPAD_POINTER_SPEED, MAX_HARDWARE_TOUCHPAD_POINTER_SPEED)
             config.enableCustomKeyMap = prefs.getBoolean("checkbox_special_key_map", false)
             config.fixMouseMiddle = prefs.getBoolean("checkbox_mouse_middle", false)
             config.fixMouseWheel = prefs.getBoolean("checkbox_mouse_wheel", false)

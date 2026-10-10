@@ -5,7 +5,8 @@
     <string name="usb_forward_on">Вкл.</string>
     <string name="usb_forward_off">Выкл.</string>
     <string name="usb_forward_disabled">Проброс USB для этого ПК отключён.</string>
-    <string name="usb_forward_unsupported">Для проброса USB нужны Android 9+ и ARM64.</string>
+    <string name="usb_forward_unsupported">Для проброса USB нужны Android 9+ и ARM64 или ARMv7 (экспериментально).</string>
+    <string name="usb_forward_armv7_experimental">Проброс USB на ARMv7 экспериментальный и ещё не проверен на реальных устройствах.</string>
     <string name="usb_forward_checking">Проверка поддержки на ПК…</string>
     <string name="usb_forward_host_update">ПК не поддерживает настройку USB. Обновите Sunshine.</string>
     <string name="usb_forward_host_error">Не удалось проверить ПК. Проверьте связь и сопряжение, затем повторите.</string>
@@ -30,7 +31,7 @@
     <string name="usb_forward_detached">Устройство отсоединено. Передача остановлена.</string>
     <string name="usb_forward_handoff">Освобождение локального драйвера геймпада…</string>
     <string name="usb_forward_wireless_adapter">Проброс USB Bluetooth-адаптеров пока не поддерживается.</string>
-    <string name="usb_forward_duplicate_device">Несколько USB-устройств имеют одинаковые VID/PID. Отключите дубликаты перед передачей.</string>
+    <string name="usb_forward_duplicate_device">У другого подключённого устройства такие же VID и PID. Android не может их различить, поэтому пока одно из них передаётся, второе тоже перестаёт получать ввод здесь.</string>
     <string name="usb_forward_experimental">Экспериментально</string>
     <string name="usb_forward_toggle_title">Проброс USB</string>
     <string name="usb_forward_toggle_hint">Только для этого ПК</string>
