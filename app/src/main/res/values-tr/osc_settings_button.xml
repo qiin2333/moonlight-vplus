@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Ayarlar düğmesinin sürüklenmesine izin ver</string>
+    <string name="osc_reset_settings_button_position">Ayarlar düğmesinin başlangıç konumunu geri yükle</string>
+    <string name="osc_settings_button_size">Ayarlar düğmesi boyutu</string>
+</resources>

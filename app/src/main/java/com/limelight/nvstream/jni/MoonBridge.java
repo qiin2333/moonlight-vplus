@@ -27,6 +27,7 @@ public class MoonBridge {
     public static final int VIDEO_FORMAT_H265_MAIN10 = 0x0200;
     public static final int VIDEO_FORMAT_AV1_MAIN8 = 0x1000;
     public static final int VIDEO_FORMAT_AV1_MAIN10 = 0x2000;
+    public static final int VIDEO_FORMAT_PYROWAVE = 0x00010000;
 
     public static final int VIDEO_FORMAT_MASK_H264 = 0x000F;
     public static final int VIDEO_FORMAT_MASK_H265 = 0x0F00;
@@ -57,6 +58,8 @@ public class MoonBridge {
     public static final int HDR_MODE_HDR10_PLUS = 3; // HDR10/PQ with ST 2094-40 dynamic metadata
     public static final int HDR_MODE_DOLBY_VISION = 4; // HDR10/PQ base with Dolby Vision Profile 8.1 RPU (client-only selection)
     public static final int HDR_MODE_DOLBY_VISION_84 = 5; // HLG base with Dolby Vision Profile 8.4 RPU (client-only selection)
+    public static final int HDR_MODE_VIVID_PQ = 6; // PyroWave application mapping, PQ output
+    public static final int HDR_MODE_VIVID_HLG = 7; // PyroWave application mapping, HLG output
 
     // Dynamic HDR capability bits for setDynamicHdrNegotiation() and the
     // x-ss-video[0].dynamicHdrCaps SDP attribute (Sunshine extension).
@@ -76,6 +79,8 @@ public class MoonBridge {
     // LiGetNegotiatedDynamicHdrFormat() results (X-SS-Dynamic-HDR values)
     public static final int NEGOTIATED_DYNAMIC_HDR_NONE = 0;
     public static final int NEGOTIATED_DYNAMIC_HDR_HDR10_PLUS = 1;
+    public static final int NEGOTIATED_DYNAMIC_HDR_VIVID_PQ = 2;
+    public static final int NEGOTIATED_DYNAMIC_HDR_VIVID_HLG = 3;
     public static final int NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_81 = 4;
     public static final int NEGOTIATED_DYNAMIC_HDR_DOLBY_VISION_PROFILE_84 = 5;
 
@@ -84,6 +89,7 @@ public class MoonBridge {
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC = 4;
     public static final int CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1 = 0x40;
     public static final int CAPABILITY_PRESERVE_HEVC_SEI = 0x80;
+    public static final int CAPABILITY_PYROWAVE = 0x100;
 
     public static final int DR_OK = 0;
     public static final int DR_NEED_IDR = -1;
@@ -320,6 +326,15 @@ public class MoonBridge {
         }
     }
 
+    public static int bridgeDrSubmitPyrowaveDecodeUnit(byte[] data, int length, int type,
+                                                       int frameNumber, int frameType, char hostLatency,
+                                                       long receiveTimeUs, long enqueueTimeUs, long presentationTimeUs,
+                                                       byte[] metadata) {
+        if (videoRenderer == null) return DR_OK;
+        return videoRenderer.submitPyrowaveDecodeUnit(data, length, type, frameNumber, frameType,
+                hostLatency, receiveTimeUs, enqueueTimeUs, presentationTimeUs, metadata);
+    }
+
     public static int bridgeArInit(int audioConfiguration, int sampleRate, int samplesPerFrame, int codec, int bitrate) {
         if (audioRenderer != null) {
             return audioRenderer.setup(new AudioConfiguration(audioConfiguration), sampleRate, samplesPerFrame, codec, bitrate);
@@ -553,7 +568,7 @@ public class MoonBridge {
                                               int videoCapabilities,
                                               int colorSpace, int colorRange, int hdrMode,
                                               boolean enableMic, boolean controlOnly,
-                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics);
+                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics, int fecPercentage);
 
     // Sunshine dynamic HDR negotiation result. Valid after the connection
     // callback reports the session is established (RTSP handshake complete).
@@ -694,4 +709,14 @@ public class MoonBridge {
      */
     public static native int nativeSetSurfaceDataSpace(android.view.Surface surface, int dataSpace);
     public static native int nativeGetSurfaceDataSpace(android.view.Surface surface);
+
+    // Optional PyroWave Vulkan decoder. The implementation is loaded at runtime
+    // so builds without the codec library keep the legacy renderer unchanged.
+    public static native android.os.Bundle pyrowaveGetCapabilities();
+    public static native boolean pyrowaveIsAvailableFor(int width, int height);
+    public static native long pyrowaveCreate(int width, int height, int hdrMode, boolean fullRange);
+    public static native void pyrowaveSetSurface(long decoder, android.view.Surface surface);
+    public static native int pyrowaveSubmit(long decoder, byte[] data, int length);
+    public static native long pyrowaveGetLastTimings(long decoder);
+    public static native void pyrowaveDestroy(long decoder);
 }

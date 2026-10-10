@@ -13,6 +13,8 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneButtonPreferences
+import com.limelight.binding.input.virtual_controller.OscSettingsButtonStore
+import com.limelight.binding.input.virtual_controller.VirtualControllerConfigurationLoader
 import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
@@ -241,6 +243,31 @@ class ConfigurationSyncManager(private val context: Context) {
                 )
             )
             .put(
+                SECTION_OSC_SETTINGS_BUTTON,
+                JSONObject().put(
+                    KEY_VALUES,
+                    encodePreferences(
+                        SECTION_OSC_SETTINGS_BUTTON,
+                        context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                    )
+                )
+            )
+            .put(
+                SECTION_OSC_LAYOUT_PROFILES,
+                JSONObject().put(
+                    KEY_VALUES,
+                    encodePreferences(
+                        SECTION_OSC_LAYOUT_PROFILES,
+                        context.getSharedPreferences(
+                            VirtualControllerConfigurationLoader.OSC_PREFERENCE,
+                            Context.MODE_PRIVATE
+                        ),
+                        null
+                    )
+                )
+            )
+            .put(
                 SECTION_TOUCH_POINTER_PRESETS,
                 JSONObject().put(
                     KEY_VALUES,
@@ -297,6 +324,12 @@ class ConfigurationSyncManager(private val context: Context) {
                 ) + countValues(
                     valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
                     TOUCH_POINTER_PRESET_PREF_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
+                    OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
+                    null
                 ),
             appLastSettingsCount = countValues(
                 valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
@@ -377,16 +410,39 @@ class ConfigurationSyncManager(private val context: Context) {
             valuesFromSection(sections.optJSONObject(SECTION_HIDDEN_APPS)),
             null
         )
+        val oscSettingsButtonImported = applyPreferences(
+            SECTION_OSC_SETTINGS_BUTTON,
+            context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
+            valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
+            OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS,
+            acceptedTypes = { key ->
+                when (key) {
+                    OscSettingsButtonStore.DRAG_ENABLED_KEY -> setOf(TYPE_BOOLEAN, TYPE_DELETED)
+                    OscSettingsButtonStore.SIZE_SCALE_KEY -> setOf(TYPE_FLOAT, TYPE_DELETED)
+                    else -> emptySet()
+                }
+            }
+        )
+        val oscLayoutProfilesImported = applyPreferences(
+            SECTION_OSC_LAYOUT_PROFILES,
+            context.getSharedPreferences(
+                VirtualControllerConfigurationLoader.OSC_PREFERENCE,
+                Context.MODE_PRIVATE
+            ),
+            valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
+            null,
+            acceptedTypes = { _ -> setOf(TYPE_STRING, TYPE_DELETED) }
+        )
 
         val crownResult = importCrownProfiles(sections.optJSONArray(SECTION_CROWN_PROFILES))
         val pairingResult = importPairingState(sections.optJSONObject(SECTION_PAIRING))
 
-        if (defaultPreferencesImported > 0) {
+        if (defaultPreferencesImported > 0 || oscSettingsButtonImported > 0 || oscLayoutProfilesImported > 0) {
             context.sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH))
         }
 
         return ImportResult(
-            defaultPreferencesImported = defaultPreferencesImported,
+            defaultPreferencesImported = defaultPreferencesImported + oscSettingsButtonImported + oscLayoutProfilesImported,
             appLastSettingsImported = appLastSettingsImported,
             customResolutionsImported = customResolutionsImported,
             sceneConfigsImported = sceneConfigsImported,
@@ -1303,6 +1359,28 @@ class ConfigurationSyncManager(private val context: Context) {
                 )
             )
             .put(
+                SECTION_OSC_SETTINGS_BUTTON,
+                JSONObject().put(
+                    KEY_VALUES,
+                    mergeEncodedValues(
+                        valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
+                        null,
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                    )
+                )
+            )
+            .put(
+                SECTION_OSC_LAYOUT_PROFILES,
+                JSONObject().put(
+                    KEY_VALUES,
+                    mergeEncodedValues(
+                        valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
+                        null,
+                        null
+                    )
+                )
+            )
+            .put(
                 SECTION_TOUCH_POINTER_PRESETS,
                 mergedTouchPointerPresetSectionCore(
                     sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
@@ -1423,7 +1501,8 @@ class ConfigurationSyncManager(private val context: Context) {
         sectionName: String,
         prefs: SharedPreferences,
         encodedValues: JSONObject?,
-        allowedKeys: Set<String>?
+        allowedKeys: Set<String>?,
+        acceptedTypes: ((key: String) -> Set<String>)? = null
     ): Int {
         if (encodedValues == null) return 0
 
@@ -1435,6 +1514,8 @@ class ConfigurationSyncManager(private val context: Context) {
             if (allowedKeys != null && key !in allowedKeys) continue
 
             val encodedValue = encodedValues.optJSONObject(key) ?: continue
+            val accepted = acceptedTypes?.invoke(key)
+            if (accepted != null && encodedValue.optString(KEY_TYPE) !in accepted) continue
             if (putTypedValue(editor, key, encodedValue)) {
                 rememberImportedValueState(sectionName, key, encodedValue)
                 applied++
@@ -1859,6 +1940,7 @@ class ConfigurationSyncManager(private val context: Context) {
             .put(KEY_PAIRING_COMPUTER_NAME, details.name ?: "")
             .put(KEY_PAIRING_LOCAL_ADDRESS, encodeAddress(details.localAddress))
             .put(KEY_PAIRING_REMOTE_ADDRESS, encodeAddress(details.remoteAddress))
+            .put(KEY_PAIRING_REMOTE_FROM_STUN, details.remoteAddress != null && details.remoteAddressFromStun)
             .put(KEY_PAIRING_MANUAL_ADDRESS, encodeAddress(details.manualAddress))
             .put(KEY_PAIRING_IPV6_ADDRESS, encodeAddress(details.ipv6Address))
             .put(KEY_PAIRING_IPV6_DISABLED, details.ipv6Disabled)
@@ -1884,6 +1966,7 @@ class ConfigurationSyncManager(private val context: Context) {
             this.name = name
             localAddress = decodeAddress(encoded.optJSONObject(KEY_PAIRING_LOCAL_ADDRESS))
             remoteAddress = decodeAddress(encoded.optJSONObject(KEY_PAIRING_REMOTE_ADDRESS))
+            remoteAddressFromStun = remoteAddress != null && encoded.optBoolean(KEY_PAIRING_REMOTE_FROM_STUN, false)
             manualAddress = decodeAddress(encoded.optJSONObject(KEY_PAIRING_MANUAL_ADDRESS))
             ipv6Address = decodeAddress(encoded.optJSONObject(KEY_PAIRING_IPV6_ADDRESS))
             ipv6Disabled = encoded.optBoolean(KEY_PAIRING_IPV6_DISABLED, false)
@@ -2352,6 +2435,24 @@ class ConfigurationSyncManager(private val context: Context) {
                     )
                 )
                 .put(
+                    SECTION_OSC_SETTINGS_BUTTON,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON),
+                        localSections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON),
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS,
+                        metadata.deviceId
+                    )
+                )
+                .put(
+                    SECTION_OSC_LAYOUT_PROFILES,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES),
+                        localSections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES),
+                        null,
+                        metadata.deviceId
+                    )
+                )
+                .put(
                     SECTION_TOUCH_POINTER_PRESETS,
                     mergedTouchPointerPresetSectionCore(
                         externalSections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
@@ -2448,6 +2549,24 @@ class ConfigurationSyncManager(private val context: Context) {
                     SECTION_HIDDEN_APPS,
                     mergedPreferenceSectionCore(
                         sections.optJSONObject(SECTION_HIDDEN_APPS),
+                        null,
+                        null,
+                        "hash"
+                    )
+                )
+                .put(
+                    SECTION_OSC_SETTINGS_BUTTON,
+                    mergedPreferenceSectionCore(
+                        sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON),
+                        null,
+                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS,
+                        "hash"
+                    )
+                )
+                .put(
+                    SECTION_OSC_LAYOUT_PROFILES,
+                    mergedPreferenceSectionCore(
+                        sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES),
                         null,
                         null,
                         "hash"
@@ -2858,6 +2977,7 @@ class ConfigurationSyncManager(private val context: Context) {
                 .put(KEY_PAIRING_COMPUTER_NAME, name)
                 .put(KEY_PAIRING_LOCAL_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_LOCAL_ADDRESS)))
                 .put(KEY_PAIRING_REMOTE_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_REMOTE_ADDRESS)))
+                .put(KEY_PAIRING_REMOTE_FROM_STUN, computer.optBoolean(KEY_PAIRING_REMOTE_FROM_STUN, false))
                 .put(KEY_PAIRING_MANUAL_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_MANUAL_ADDRESS)))
                 .put(KEY_PAIRING_IPV6_ADDRESS, normalizedPairingAddressCore(computer.optJSONObject(KEY_PAIRING_IPV6_ADDRESS)))
                 .put(KEY_PAIRING_IPV6_DISABLED, computer.optBoolean(KEY_PAIRING_IPV6_DISABLED, false))
@@ -3159,6 +3279,7 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val KEY_PAIRING_PAIR_NAME = "pairName"
         private const val KEY_PAIRING_PORT = "port"
         private const val KEY_PAIRING_REMOTE_ADDRESS = "remoteAddress"
+        private const val KEY_PAIRING_REMOTE_FROM_STUN = "remoteAddressFromStun"
         private const val KEY_PAIRING_SERVER_CERTIFICATE = "serverCertificateDer"
         private const val KEY_PAIRING_UNIQUE_ID = "uniqueId"
 
@@ -3170,6 +3291,8 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val SECTION_HIDDEN_APPS = "hiddenApps"
         private const val SECTION_PAIRING = "pairing"
         private const val SECTION_SCENE_CONFIGS = "sceneConfigs"
+        private const val SECTION_OSC_SETTINGS_BUTTON = "oscSettingsButton"
+        private const val SECTION_OSC_LAYOUT_PROFILES = "oscLayoutProfiles"
         private const val SECTION_TOUCH_POINTER_PRESETS = "touchPointerPresets"
 
         private const val TYPE_BOOLEAN = "boolean"
@@ -3275,6 +3398,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 SCENE_CONFIGS_PREFS -> true
                 APP_VIEW_PREFS -> key in APP_VIEW_PREF_KEYS
                 TouchPointerPresetPreferences.FILE_NAME -> key in TOUCH_POINTER_PRESET_PREF_KEYS
+                OscSettingsButtonStore.PREFERENCES_NAME -> key in OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
+                VirtualControllerConfigurationLoader.OSC_PREFERENCE -> true
                 else -> false
             }
         }
@@ -3286,6 +3411,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "background_image_url",
             "background_source",
             "checkbox_adaptive_bitrate",
+            "auto_adjust_bitrate",
             "checkbox_absolute_mouse_mode",
             "checkbox_audio_vibration",
             "checkbox_background_audio",
@@ -3369,6 +3495,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "gyro_to_mouse",
             "gyro_to_right_stick",
             "list_abr_mode",
+            "list_fec_mode",
             "list_audio_codec",
             "list_audio_config",
             "list_audio_passthrough_buffer",
@@ -3405,6 +3532,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "pref_enable_local_cursor_rendering",
             "seekbar_audio_vibration_strength",
             "seekbar_bitrate_kbps",
+            "seekbar_fec_percentage",
             "seekbar_deadzone",
             "seekbar_double_tap_time_threshold",
             "seekbar_flat_region_pixels",
@@ -3433,7 +3561,9 @@ class ConfigurationSyncManager(private val context: Context) {
             CUSTOM_RESOLUTIONS_PREFS,
             HIDDEN_APPS_PREFS,
             SCENE_CONFIGS_PREFS,
-            TouchPointerPresetPreferences.FILE_NAME
+            TouchPointerPresetPreferences.FILE_NAME,
+            OscSettingsButtonStore.PREFERENCES_NAME,
+            VirtualControllerConfigurationLoader.OSC_PREFERENCE
         )
     }
 }

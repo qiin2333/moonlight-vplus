@@ -37,7 +37,7 @@ Thumbs.db
 build/
 *.iml
 
-# Compiled JNI libraries folder
+# Prebuilt/local JNI libraries. PyroWave is built by the pyrowave-runtime module.
 **/jniLibs
 app/.externalNativeBuild/
 
@@ -64,6 +64,10 @@ docs/*
 !docs/REMOTE_TEXT_FOCUS_DETECTION_IMPLEMENTATION.md
 !docs/STYLUS_IME_HANDWRITING_ISOLATION.md
 !docs/controller-waveform-haptics.md
+!docs/pyrowave-client-contract.md
+!docs/pyrowave-decoder-design.md
+!docs/pyrowave-vulkan-synchronization-design.md
+!docs/pyrowave-dynamic-hdr.md
 
 # Kotlin build cache
 .kotlin/

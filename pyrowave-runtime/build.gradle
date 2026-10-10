@@ -1,0 +1,38 @@
+plugins {
+    alias(libs.plugins.android.library)
+}
+
+def enableX86TestAbi = (project.findProperty('enableX86TestAbi') ?: 'false').toString().toBoolean()
+
+android {
+    namespace 'com.limelight.pyrowave.runtime'
+    compileSdk 36
+    ndkVersion '28.2.13676358'
+
+    defaultConfig {
+        minSdk 22
+        ndk {
+            def supportedAbis = ['arm64-v8a', 'armeabi-v7a']
+            if (enableX86TestAbi) {
+                supportedAbis += 'x86'
+            }
+            abiFilters(*supportedAbis)
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static',
+                          '-DANDROID_ARM_NEON=ON',
+                          '-DCMAKE_BUILD_TYPE=Release',
+                          "-DPYROWAVE_SOURCE_DIR=${rootProject.file('third-party/pyrowave').absolutePath.replace('\\', '/')}"
+                targets 'pyrowave-shared'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+}

@@ -174,12 +174,14 @@
 
     <string-array name="video_format_names">
         <item>@string/videoformat_auto</item>
+        <item>@string/videoformat_pyrowave</item>
         <item>@string/videoformat_av1always</item>
         <item>@string/videoformat_hevcalways</item>
         <item>@string/videoformat_h264always</item>
     </string-array>
     <string-array name="video_format_values" translatable="false">
         <item>auto</item>
+        <item>pyrowave</item>
         <item>forceav1</item>
         <item>forceh265</item>
         <item>neverh265</item>
@@ -644,5 +646,13 @@
         <item>bottom_left</item>
         <item>bottom_center</item>
         <item>bottom_right</item>
+    </string-array>
+    <string-array name="fec_mode_names">
+        <item>@string/fec_mode_host</item>
+        <item>@string/fec_mode_automatic</item>
+        <item>@string/fec_mode_fixed</item>
+    </string-array>
+    <string-array name="fec_mode_values">
+        <item>host</item><item>automatic</item><item>fixed</item>
     </string-array>
 </resources>

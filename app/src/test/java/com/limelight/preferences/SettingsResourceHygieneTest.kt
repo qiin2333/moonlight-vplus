@@ -59,10 +59,57 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
+    fun pyrowaveDiagnosticIsANonPersistentActionBelowVideoReport() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val actions = preferences.documentElement.getElementsByTagName("Preference")
+            .asElementSequence().toList()
+        val video = actions.single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "capability_diagnostic" }
+        val pyrowave = actions.single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "pyrowave_capability_diagnostic" }
+        assertEquals(video.parentNode, pyrowave.parentNode)
+        val siblings = video.parentNode.childNodes.asElementSequence().toList()
+        assertEquals(siblings.indexOf(video) + 1, siblings.indexOf(pyrowave))
+        assertEquals("false", pyrowave.getAttributeNS(ANDROID_NAMESPACE, "persistent"))
+    }
+
+    @Test
+    fun pyrowaveDiagnosticAndFallbackStringsCoverEveryExistingLocale() {
+        val defaultEntries = parse(File(resourceDir, "values/strings.xml"))
+            .documentElement.childNodes.asElementSequence()
+            .filter { it.tagName == "string" && it.getAttribute("translatable") != "false" }
+            .filter {
+                it.getAttribute("name").startsWith("pyrowave_diag_") ||
+                    it.getAttribute("name") in setOf(
+                        "title_pyrowave_capability_diagnostic", "summary_pyrowave_capability_diagnostic",
+                        "pyrowave_negotiation_fallback",
+                    )
+            }.associate { it.getAttribute("name") to it.textContent }
+        assertTrue("No PyroWave strings found", defaultEntries.isNotEmpty())
+        val placeholders = Regex("%(?:\\d+\\$)?[a-zA-Z]")
+        resourceDir.listFiles().orEmpty()
+            .filter { it.isDirectory && it.name.startsWith("values-") && File(it, "strings.xml").isFile }
+            .forEach { directory ->
+                val entries = parse(File(directory, "strings.xml"))
+                    .documentElement.childNodes.asElementSequence()
+                    .filter { it.tagName == "string" }
+                    .groupBy { it.getAttribute("name") }
+                defaultEntries.forEach { (name, defaultValue) ->
+                    val matches = entries[name].orEmpty()
+                    assertEquals("${directory.name}: missing or duplicate $name", 1, matches.size)
+                    val value = matches.single().textContent
+                    assertTrue("${directory.name}: blank $name", value.isNotBlank())
+                    assertEquals("${directory.name}: formatting mismatch in $name",
+                        placeholders.findAll(defaultValue).map { it.value }.toList(),
+                        placeholders.findAll(value).map { it.value }.toList())
+                }
+            }
+    }
+
+    @Test
     fun userFacingSettingsArraysUseStringResources() {
         val arrays = parse(File(resourceDir, "values/arrays.xml"))
         val localizedArrays = setOf(
             "abr_mode_names",
+            "fec_mode_names",
             "analog_scrolling_names",
             "audio_codec_names",
             "audio_config_names",
@@ -138,6 +185,10 @@ class SettingsResourceHygieneTest {
         }
 
         val expectedKeysByCategory = mapOf(
+            "category_basic_settings" to setOf(
+                "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
+                "list_fec_mode", "seekbar_fec_percentage",
+            ),
             "category_screen_position" to setOf(
                 "video_format",
                 "checkbox_enable_hdr",
@@ -147,6 +198,7 @@ class SettingsResourceHygieneTest {
                 "list_hdr_mode",
                 "checkbox_full_range",
                 "capability_diagnostic",
+                "pyrowave_capability_diagnostic",
             ),
             "category_host_settings" to setOf(
                 "list_background_stream_behavior",

@@ -8,6 +8,7 @@
     <PreferenceCategory android:title="@string/category_basic_settings"
         android:key="category_basic_settings"
         android:order="0"
+        app:initialExpandedChildrenCount="5"
         android:layout="@layout/preference_category_material">
         <ListPreference
             android:key="list_resolution"
@@ -34,6 +35,36 @@
             android:summary="@string/summary_seekbar_bitrate"
             android:text="@string/suffix_seekbar_bitrate_mbps"
             android:title="@string/title_seekbar_bitrate" />
+        <CheckBoxPreference
+            android:key="checkbox_adaptive_bitrate"
+            android:title="@string/title_adaptive_bitrate"
+            android:summary="@string/summary_adaptive_bitrate"
+            android:defaultValue="false" />
+        <ListPreference
+            android:key="list_fec_mode"
+            android:title="@string/title_fec_mode"
+            android:summary="@string/summary_fec_mode"
+            android:entries="@array/fec_mode_names"
+            android:entryValues="@array/fec_mode_values"
+            android:defaultValue="host" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_fec_percentage"
+            android:title="@string/title_fec_percentage"
+            android:text="%"
+            android:dialogMessage="@string/summary_fec_percentage"
+            android:summary="@string/summary_fec_percentage"
+            android:defaultValue="20"
+            seekbar:min="0"
+            android:max="100"
+            seekbar:step="1" />
+        <ListPreference
+            android:key="list_abr_mode"
+            android:title="@string/title_abr_mode"
+            android:summary="@string/summary_abr_mode"
+            android:entries="@array/abr_mode_names"
+            android:entryValues="@array/abr_mode_values"
+            android:defaultValue="balanced"
+            android:dependency="checkbox_adaptive_bitrate" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_resolutions_scale"
             android:dialogMessage="@string/summary_seekbar_scale"
@@ -56,19 +87,6 @@
         android:order="4"
         android:layout="@layout/preference_category_material"
         app:initialExpandedChildrenCount="6">
-        <CheckBoxPreference
-            android:key="checkbox_adaptive_bitrate"
-            android:title="@string/title_adaptive_bitrate"
-            android:summary="@string/summary_adaptive_bitrate"
-            android:defaultValue="false" />
-        <ListPreference
-            android:key="list_abr_mode"
-            android:title="@string/title_abr_mode"
-            android:summary="@string/summary_abr_mode"
-            android:entries="@array/abr_mode_names"
-            android:entryValues="@array/abr_mode_values"
-            android:defaultValue="balanced"
-            android:dependency="checkbox_adaptive_bitrate" />
         <ListPreference
             android:key="frame_pacing"
             android:title="@string/title_frame_pacing"
@@ -334,6 +352,11 @@
             android:key="capability_diagnostic"
             android:title="@string/title_capability_diagnostic"
             android:summary="@string/summary_capability_diagnostic" />
+        <Preference
+            android:key="pyrowave_capability_diagnostic"
+            android:persistent="false"
+            android:title="@string/title_pyrowave_capability_diagnostic"
+            android:summary="@string/summary_pyrowave_capability_diagnostic" />
     </PreferenceCategory>
     <PreferenceCategory
         android:key="category_display_behavior"

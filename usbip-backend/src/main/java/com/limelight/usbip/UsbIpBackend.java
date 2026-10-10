@@ -42,9 +42,25 @@ public final class UsbIpBackend implements AutoCloseable {
     }
 
     public static boolean isSupported() {
-        // First validated ABI/API range; do not load the library on other devices.
-        return Build.VERSION.SDK_INT >= 28 && android.os.Process.is64Bit() && Build.SUPPORTED_ABIS.length > 0
-                && "arm64-v8a".equals(Build.SUPPORTED_ABIS[0]);
+        if (Build.VERSION.SDK_INT < 28) return false;
+        boolean is64Bit = android.os.Process.is64Bit();
+        // Match the running process, including 32-bit apps on a 64-bit-capable device.
+        return isSupported(Build.VERSION.SDK_INT, is64Bit,
+                is64Bit ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS);
+    }
+
+    static boolean isSupported(int sdkInt, boolean is64Bit, String[] processAbis) {
+        if (sdkInt < 28 || processAbis == null) return false;
+        String target = is64Bit ? "arm64-v8a" : "armeabi-v7a";
+        for (String abi : processAbis) {
+            if (target.equals(abi)) return true;
+        }
+        return false;
+    }
+
+    /** ARMv7 can be tested, but has not yet been validated on physical hardware. */
+    public static boolean isExperimentalArmv7() {
+        return isSupported() && !android.os.Process.is64Bit();
     }
 
     public synchronized Future<Export> export(UsbDevice device) {
@@ -54,7 +70,8 @@ public final class UsbIpBackend implements AutoCloseable {
                 if (closed) throw new IllegalStateException("Backend closed");
             }
             Log.i(TAG, "export requested for " + device.getDeviceName());
-            if (!isSupported()) throw new UnsupportedOperationException("USB/IP requires Android 9+ ARM64");
+            if (!isSupported()) throw new UnsupportedOperationException(
+                    "USB/IP requires Android 9+ ARM64 or experimental ARMv7");
             if (active != null) throw new IllegalStateException("Release the current device first");
             if (usbManager == null || !usbManager.hasPermission(device))
                 throw new SecurityException("USB permission has not been granted");

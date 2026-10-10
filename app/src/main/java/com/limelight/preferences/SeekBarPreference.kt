@@ -17,7 +17,7 @@ import kotlin.math.round
 
 class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreference(context, attrs) {
 
-    val dialogMessageText: String?
+    var dialogMessageText: String?
     val suffix: String?
     val defaultValue: Int
     val maxValue: Int
@@ -79,10 +79,10 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreferenc
 
     fun formatDisplayValue(value: Int): String {
         return if (divisor != 1) {
-            if (divisor == 100) {
-                String.format(null as Locale?, "%.2f", value / divisor.toDouble())
+            if (divisor == 100 || divisor == 1000) {
+                String.format(null as Locale?, if (divisor == 1000) "%.3f" else "%.2f", value / divisor.toDouble())
                     .trimEnd('0')
-                    .trimEnd('.')
+                    .trimEnd('.', ',')
             } else {
                 String.format(null as Locale?, "%.1f", value / divisor.toDouble())
             }

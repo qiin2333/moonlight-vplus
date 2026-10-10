@@ -247,7 +247,11 @@ class GameMenu(
         scheduleRetry = { action -> handler.postDelayed(action, GAME_FOCUS_RETRY_DELAY_MS) }
     )
     private val actionExecutor = StreamActionExecutor(game, { conn }, handler)
-    private val bitrateCardController = BitrateCardController(game, conn)
+    private val bitrateCardController = BitrateCardController(
+        game,
+        conn,
+        supportsExtendedBitrate = game.isPyrowaveSessionActive()
+    )
     private val audioHapticsCardController = AudioHapticsCardController(game)
     private val waveformHapticsCardController = WaveformHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)

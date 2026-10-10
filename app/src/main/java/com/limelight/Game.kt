@@ -287,6 +287,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Final HDR decision after display and decoder capability negotiation. */
     private var negotiatedHdrEnabled = false
     private var framegenEnabledToastShown = false
+    private var pyrowaveFallbackDialogShown = false
     private var reportedCrash = false
 
     private var highPerfWifiLock: WifiManager.WifiLock? = null
@@ -756,7 +757,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             .getBoolean("checkbox_resume_stream", false)
 
     private fun shouldUseFramegen(prefs: SharedPreferences = defaultPreferences()): Boolean =
-        FramegenRuntimePlanner.shouldUse(prefs, prefConfig.width, prefConfig.height, prefConfig.fps)
+        prefConfig.videoFormat != PreferenceConfiguration.FormatOption.FORCE_PYROWAVE &&
+            FramegenRuntimePlanner.shouldUse(prefs, prefConfig.width, prefConfig.height, prefConfig.fps)
 
     private fun framegenPresentationFps(prefs: SharedPreferences = defaultPreferences()): Int =
         FramegenRuntimePlanner.presentationFps(prefs, prefConfig.fps)
@@ -772,6 +774,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForwarding?.close()
         usbForwarding = null
         framegenEnabledToastShown = false
+        pyrowaveFallbackDialogShown = false
         if (::controllerHandler.isInitialized) {
             audioVibrationService?.controllerHandler = null
             controllerHandler.destroy()
@@ -857,11 +860,23 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         displayName: String?
     ): StreamConfigResult {
         val glPrefs = GlPreferences.readPreferences(this)
+        val pyrowaveSelected =
+            prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE
+        val framegenRequestedByPreference = FramegenRuntimePlanner.shouldUse(
+            defaultPreferences(),
+            prefConfig.width,
+            prefConfig.height,
+            prefConfig.fps,
+        )
+        if (pyrowaveSelected && framegenRequestedByPreference) {
+            LimeLog.info("PyroWave selected: frame generation is disabled for this stream")
+        }
         val connMgr = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val displayHdrMode = if (pyrowaveSelected) HdrModePolicy.toProtocolMode(prefConfig.hdrMode) else prefConfig.hdrMode
         val acceptableHdrTypes = if (prefConfig.enableHdr &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         ) {
-            when (prefConfig.hdrMode) {
+            when (displayHdrMode) {
                 MoonBridge.HDR_MODE_HLG ->
                     intArrayOf(Display.HdrCapabilities.HDR_TYPE_HLG)
                 MoonBridge.HDR_MODE_HDR10_PLUS ->
@@ -889,7 +904,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         var willStreamHdr = false
         if (prefConfig.enableHdr) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                willStreamHdr = when (prefConfig.hdrMode) {
+                willStreamHdr = when (displayHdrMode) {
                     MoonBridge.HDR_MODE_HLG -> hdrTypeSupport.hasHlg
                     MoonBridge.HDR_MODE_HDR10_PLUS -> hdrTypeSupport.hasHdr10Plus
                     MoonBridge.HDR_MODE_DOLBY_VISION -> hdrTypeSupport.hasDolbyVision
@@ -898,7 +913,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     else -> false
                 }
                 if (!willStreamHdr) {
-                    val requiredType = when (prefConfig.hdrMode) {
+                    val requiredType = when (displayHdrMode) {
                         MoonBridge.HDR_MODE_HLG -> "HLG"
                         MoonBridge.HDR_MODE_HDR10_PLUS -> "HDR10+"
                         MoonBridge.HDR_MODE_DOLBY_VISION -> "Dolby Vision"
@@ -915,8 +930,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         // HDR10+ metadata cannot survive the ImageReader/frame-generation path yet. Keep that
         // path on static HDR10 until frame generation explicitly supports dynamic metadata.
-        val framegenRequested = shouldUseFramegen()
-        val hdr10PlusRequested = HdrModePolicy.shouldRequestHdr10Plus(
+        val framegenRequested = framegenRequestedByPreference && !pyrowaveSelected
+        val hdr10PlusRequested = !pyrowaveSelected && HdrModePolicy.shouldRequestHdr10Plus(
             hdrEnabled = willStreamHdr,
             hdrMode = prefConfig.hdrMode,
             displaySupportsHdr10Plus = hdrTypeSupport.hasHdr10Plus,
@@ -937,14 +952,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             prefConfig.height,
             prefConfig.fps,
         ).probe()
-        val dolbyVisionRequested = HdrModePolicy.shouldRequestDolbyVision(
+        val dolbyVisionRequested = !pyrowaveSelected && HdrModePolicy.shouldRequestDolbyVision(
             hdrEnabled = willStreamHdr,
             hdrMode = prefConfig.hdrMode,
             displaySupportsDolbyVision = hdrTypeSupport.hasDolbyVision,
             decoderSupportsDolbyVision = dolbyVisionProbe.decoderAvailable,
             framegenRequested = framegenRequested,
         )
-        if (willStreamHdr &&
+        if (willStreamHdr && !pyrowaveSelected &&
             HdrModePolicy.isDolbyVisionMode(prefConfig.hdrMode) &&
             !dolbyVisionRequested
         ) {
@@ -956,7 +971,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         if (decoderRenderer == null) {
-            decoderRenderer = MediaCodecDecoderRenderer(
+            // The failure callback can run after this renderer has been
+            // discarded during a reconnect. Keep its identity so a stale
+            // PyroWave worker cannot terminate the next connection.
+            var rendererForFailure: MediaCodecDecoderRenderer? = null
+            val newRenderer = MediaCodecDecoderRenderer(
                 this, prefConfig,
                 {
                     tombstonePrefs.edit(commit = true) {
@@ -972,8 +991,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 willStreamHdr,
                 hdr10PlusRequested,
                 glPrefs.glRenderer,
-                this
+                this,
+                { reason ->
+                    if (decoderRenderer !== rendererForFailure) {
+                        LimeLog.info("Ignoring stale PyroWave failure: $reason")
+                    } else {
+                        LimeLog.severe("PyroWave decoder session failed: $reason")
+                        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+                    }
+                }
             )
+            rendererForFailure = newRenderer
+            decoderRenderer = newRenderer
             // 首帧解码到达时立刻隐藏 loading overlay，无缝切到真实画面
             decoderRenderer?.firstFrameCallback = {
                 runOnUiThread {
@@ -1005,13 +1034,28 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 decoderRenderer?.isAv1Hdr10PlusEligible() == true
             else -> decoderRenderer?.isAv1Main10Hdr10Supported() == true
         }
+        // Dynamic selections use their PQ/HLG base layer. Vulkan consumes the
+        // protected per-frame metadata; no MediaCodec Dolby profile is needed.
+        val pyrowaveRequestedHdrMode = HdrModePolicy.toProtocolMode(prefConfig.hdrMode)
+        val pyrowaveHdrRequestedByUser =
+            willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
+        // This is only the cheap policy gate. Full Vulkan/Surface capability
+        // validation is intentionally deferred until the connection worker.
+        val pyrowaveHdrCapable = willStreamHdr &&
+            pyrowaveSelected &&
+            pyrowaveRequestedHdrMode != 0 &&
+            !hdr10PlusRequested &&
+            !dolbyVisionRequested &&
+            !framegenRequested &&
+            decoderRenderer?.getPreferredColorSpace() == MoonBridge.COLORSPACE_REC_709
         val selectedCodecSupportsHdr = when (prefConfig.videoFormat) {
             PreferenceConfiguration.FormatOption.FORCE_HEVC -> hevcHdrSupported
             PreferenceConfiguration.FormatOption.FORCE_AV1 -> av1HdrSupported
             PreferenceConfiguration.FormatOption.FORCE_H264 -> false
+            PreferenceConfiguration.FormatOption.FORCE_PYROWAVE -> pyrowaveHdrCapable
             PreferenceConfiguration.FormatOption.AUTO -> hevcHdrSupported || av1HdrSupported
         }
-        if (willStreamHdr && !selectedCodecSupportsHdr) {
+        if (willStreamHdr && !selectedCodecSupportsHdr && !pyrowaveHdrCapable && !pyrowaveSelected) {
             willStreamHdr = false
             val requiredProfile = when (prefConfig.hdrMode) {
                 MoonBridge.HDR_MODE_HLG, MoonBridge.HDR_MODE_DOLBY_VISION_84 -> "Main10/HLG"
@@ -1020,11 +1064,25 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             Toast.makeText(this, this.getString(R.string.error_decoder_profile, requiredProfile), Toast.LENGTH_LONG).show()
         }
+        if (willStreamHdr && pyrowaveSelected && !pyrowaveHdrCapable) {
+            LimeLog.warning("PyroWave was explicitly selected but the requested HDR contract is unavailable")
+        }
 
         // The renderer is constructed before this final decoder gate so that common-c can
         // query capabilities later. Clear a speculative HDR10+ request before that happens
         // when display/decoder negotiation ultimately falls back to SDR.
+        decoderRenderer?.setStreamHdrRequested(willStreamHdr)
         decoderRenderer?.setHdr10PlusRequested(willStreamHdr && hdr10PlusRequested)
+        if (pyrowaveSelected) {
+            val reportedPeak = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                currentTargetDisplay.hdrCapabilities.desiredMaxLuminance
+            } else 0f
+            decoderRenderer?.setPyrowaveTargetPeak(
+                if (prefConfig.hdrBrightnessOverride) prefConfig.hdrPeakBrightnessNits.toFloat()
+                else if (reportedPeak.isFinite() && reportedPeak in 1f..10000f) reportedPeak
+                else 500f,
+            )
+        }
 
         if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && decoderRenderer?.isHevcSupported() != true) {
             Toast.makeText(this, this.getString(R.string.error_no_hevc_decoder), Toast.LENGTH_LONG).show()
@@ -1034,6 +1092,26 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
+        // PyroWave is opt-in. Auto mode must keep the legacy codec negotiation
+        // unchanged; only the explicit codec selection below adds this format.
+        // The device-specific Vulkan/Surface probe is deferred to NvConnection's
+        // worker after the Surface exists; a failed preflight removes this
+        // candidate before ANNOUNCE, leaving legacy codec negotiation unchanged.
+        val pyrowaveRenderer = decoderRenderer
+        val pyrowaveHdrMode = if (willStreamHdr) pyrowaveRequestedHdrMode else 0
+        val pyrowaveHdr = willStreamHdr &&
+            pyrowaveHdrMode != 0 &&
+            !hdr10PlusRequested &&
+            !dolbyVisionRequested &&
+            !framegenRequested
+        if (pyrowaveSelected &&
+            pyrowaveRenderer != null &&
+            (!willStreamHdr || pyrowaveHdr) &&
+            (!pyrowaveHdrRequestedByUser || pyrowaveHdr) &&
+            pyrowaveRenderer.getPreferredColorSpace() == MoonBridge.COLORSPACE_REC_709
+        ) {
+            supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_PYROWAVE
+        }
         if (decoderRenderer?.isHevcSupported() == true) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
             if (willStreamHdr && hevcHdrSupported) {
@@ -1045,6 +1123,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (willStreamHdr && av1HdrSupported) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
             }
+        }
+
+        // Request PyroWave explicitly. common-c retains its H.264 compatibility
+        // fallback when initial capability negotiation cannot select PyroWave;
+        // the connected session reports the actual codec through a dialog.
+        if (pyrowaveSelected) {
+            supportedVideoFormats = MoonBridge.VIDEO_FORMAT_PYROWAVE
         }
 
         if (dolbyVisionRequested && decoderRenderer?.isHevcSupported() == true) {
@@ -1105,6 +1190,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             .setRefreshRate(chosenFrameRate)
             .setApp(app)
             .setBitrate(prefConfig.bitrate)
+            .setFecPercentage(prefConfig.fecPercentage)
             .setResolutionScale(prefConfig.resolutionScale)
             .setEnableSops(prefConfig.enableSops)
             .enableLocalAudioPlayback(prefConfig.playHostAudio)
@@ -1149,7 +1235,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 // HLG request, so the HLG-profile selection reports only that bit.
                 // willStreamHdr is re-checked because decoder validation above
                 // can clear it after these request flags were computed.
-                if (willStreamHdr && dolbyVisionRequested && HdrModePolicy.isDolbyVisionHlgMode(prefConfig.hdrMode)) {
+                if (willStreamHdr && pyrowaveSelected) {
+                    setDynamicHdrNegotiation(
+                        com.limelight.nvstream.PyrowaveDynamicHdrPolicy.capsForSelection(prefConfig.hdrMode),
+                        dolbyVisionDirectSurface = false,
+                        preference = com.limelight.nvstream.PyrowaveDynamicHdrPolicy.preferenceForSelection(prefConfig.hdrMode),
+                    )
+                } else if (willStreamHdr && dolbyVisionRequested && HdrModePolicy.isDolbyVisionHlgMode(prefConfig.hdrMode)) {
                     setDynamicHdrNegotiation(
                         MoonBridge.DYNAMIC_HDR_CAPS_DOLBY_VISION_84,
                         dolbyVisionDirectSurface = true,
@@ -1179,7 +1271,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         LimeLog.info(
             "Stream config: hdr=$willStreamHdr hdrMode=${prefConfig.hdrMode} " +
-                "protocolHdrMode=${config.hdrMode} fullRange=${prefConfig.fullRange}"
+                "protocolHdrMode=${config.hdrMode} " +
+                "colorspace=${when (config.colorSpace) {
+                    MoonBridge.COLORSPACE_REC_709 -> "BT.709"
+                    MoonBridge.COLORSPACE_REC_2020 -> "BT.2020"
+                    MoonBridge.COLORSPACE_REC_601 -> "BT.601"
+                    else -> "unknown"
+                }} " +
+                "range=${if (ColorRangePolicy.isFullRange(config.colorRange)) "full" else "limited"} " +
+                "bitDepth=${if (config.hdrMode == MoonBridge.HDR_MODE_SDR) 8 else 10} " +
+                "videoFormats=0x${config.supportedVideoFormats.toString(16)}"
         )
 
         return StreamConfigResult(config, displayRefreshRate, clientRefreshRateX100)
@@ -1642,6 +1743,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             cancelKeepAliveNotification()
         }
         micButtonPositionController?.dispose()
+        virtualController?.cleanup()
         if (::remoteImeController.isInitialized) {
             remoteImeController.dispose()
         }
@@ -1870,6 +1972,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (decoderRenderer == null) return "UNKNOWN"
         val videoFormat = (decoderRenderer?.getActiveVideoFormat() ?: 0)
         var label = when {
+            (videoFormat and MoonBridge.VIDEO_FORMAT_PYROWAVE) != 0 -> "PyroWave"
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> "H.264"
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> "HEVC"
             (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> "AV1"
@@ -1879,6 +1982,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             label += " HDR"
         }
         return label
+    }
+
+    fun isPyrowaveSessionActive(): Boolean {
+        val videoFormat = decoderRenderer?.getActiveVideoFormat() ?: return false
+        return (videoFormat and MoonBridge.VIDEO_FORMAT_PYROWAVE) != 0
     }
 
     private fun showLatencyToast(decoderMessage: String) {
@@ -2125,7 +2233,24 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun connectionStarted() {
         remoteImeController.resetSession()
+        val startedConnection = conn
         connectionCallbackHandler.connectionStarted()
+        runOnUiThread {
+            if (conn === startedConnection && connected && !displayedFailureDialog &&
+                !isFinishing && !isDestroyed && !pyrowaveFallbackDialogShown &&
+                prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE &&
+                !isPyrowaveSessionActive()
+            ) {
+                val codec = getDecoderFormatLabel()
+                if (codec != "UNKNOWN") {
+                    pyrowaveFallbackDialogShown = true
+                    Dialog.displayDialog(
+                        this, getString(R.string.conn_error_title),
+                        getString(R.string.pyrowave_negotiation_fallback, codec), false,
+                    )
+                }
+            }
+        }
         screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
         controllerHandler.retryPendingControllerArrivals {
             if (prefConfig.screenDs5Touchpad) {
@@ -2700,6 +2825,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             throw IllegalStateException("Surface destroyed before creation!")
         }
 
+        // Detach the optional native Surface consumer before Android releases
+        // the window. This is a no-op for MediaCodec and prevents a pending
+        // PyroWave decode from touching a destroyed ANativeWindow.
+        decoderRenderer?.setRenderTarget(null)
         cursorServiceManager.destroyLocalCursorRenderers()
 
         if (attemptedConnection) {
@@ -2893,7 +3022,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 perfAttrs[getString(R.string.perf_frame_loss)] = String.format(Locale.getDefault(), "%.1f", performanceInfo.lostFrameRate)
                 perfAttrs[getString(R.string.perf_network_rtt)] = String.format(Locale.getDefault(), "%d", (performanceInfo.rttInfo shr 32).toInt())
                 perfAttrs[getString(R.string.perf_host_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.aveHostProcessingLatency)
-                perfAttrs[getString(R.string.perf_decode_time)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
+                perfAttrs[getString(R.string.perf_decode_time)] = if (performanceInfo.pyrowaveTimingFrames > 0) {
+                    String.format(
+                        Locale.getDefault(),
+                        "%.2f+%.2f",
+                        performanceInfo.pyrowaveDecodeTimeMs,
+                        performanceInfo.pyrowavePresentTimeMs,
+                    )
+                } else {
+                    String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
+                }
                 perfAttrs[getString(R.string.perf_bandwidth)] = performanceInfo.bandWidth ?: ""
                 perfAttrs[getString(R.string.perf_render_latency)] = String.format(Locale.getDefault(), "%.2f", performanceInfo.renderingLatencyMs)
                 com.limelight.utils.PerformanceTemplateTokens.addCanonicalAliases(perfAttrs)
@@ -2991,6 +3129,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
+        if (virtualController?.dispatchMenuKey(event) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchKeyEvent(event)
             return true
@@ -3007,6 +3146,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         rightStickX: Float,
         rightStickY: Float
     ): Boolean {
+        if (virtualController?.dispatchMenuAxes(ControllerHandler.usbGameMenuAxisSourceId(controllerId),
+                leftStickX, leftStickY, rightStickY) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchAxes(
                 ControllerHandler.usbGameMenuAxisSourceId(controllerId),
@@ -3029,6 +3170,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun releaseControllerMenuAxisSource(sourceId: Int) {
+        virtualController?.releaseMenuSource(sourceId)
         crownConfigPicker?.releaseSource(sourceId)
         activeGameMenu?.releaseControllerAxisSource(sourceId)
     }

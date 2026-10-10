@@ -35,6 +35,7 @@ class PreferenceConfiguration {
 
     enum class FormatOption {
         AUTO,
+        FORCE_PYROWAVE,
         FORCE_AV1,
         FORCE_HEVC,
         FORCE_H264
@@ -101,6 +102,7 @@ class PreferenceConfiguration {
     var fps = 0
     var resolutionScale = 0
     var bitrate = 0
+    var fecPercentage = -2
     var enableAdaptiveBitrate = false
     var abrMode: String = "balanced"  // quality | balanced | lowLatency
     var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
@@ -481,6 +483,7 @@ class PreferenceConfiguration {
         copy.isCustomResolution = this.isCustomResolution
         copy.fps = this.fps
         copy.bitrate = this.bitrate
+        copy.fecPercentage = this.fecPercentage
         copy.enableAdaptiveBitrate = this.enableAdaptiveBitrate
         copy.abrMode = this.abrMode
         copy.videoFormat = this.videoFormat
@@ -618,7 +621,7 @@ class PreferenceConfiguration {
         private const val AUDIO_VIBRATION_SCENE_PREF_STRING = "list_audio_vibration_scene"
         private const val FLIP_FACE_BUTTONS_PREF_STRING = "checkbox_flip_face_buttons"
         private const val LATENCY_TOAST_PREF_STRING = "checkbox_enable_post_stream_toast"
-        private const val ENABLE_STUN_PREF_STRING = "checkbox_enable_stun"
+        internal const val ENABLE_STUN_PREF_STRING = "checkbox_enable_stun"
         private const val LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING = "checkbox_lock_screen_after_disconnect"
         private const val SWAP_QUIT_AND_DISCONNECT_PERF_STRING = "checkbox_swap_quit_and_disconnect"
         private const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
@@ -727,6 +730,7 @@ class PreferenceConfiguration {
         // ---- Package-private pref key constants (promoted to public for Kotlin interop) ----
         const val FPS_PREF_STRING = "list_fps"
         const val BITRATE_PREF_STRING = "seekbar_bitrate_kbps"
+        const val AUTO_ADJUST_BITRATE_PREF_STRING = "auto_adjust_bitrate"
         const val HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale"
         const val LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels"
         const val SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display"
@@ -928,6 +932,7 @@ class PreferenceConfiguration {
         const val RES_NATIVE = "Native"
 
         private const val VIDEO_FORMAT_AUTO = "auto"
+        private const val VIDEO_FORMAT_PYROWAVE = "pyrowave"
         private const val VIDEO_FORMAT_AV1 = "forceav1"
         private const val VIDEO_FORMAT_HEVC = "forceh265"
         private const val VIDEO_FORMAT_H264 = "neverh265"
@@ -1114,6 +1119,7 @@ class PreferenceConfiguration {
         private fun getVideoFormatValue(context: Context): FormatOption {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             return when (prefs.getString(VIDEO_FORMAT_PREF_STRING, VIDEO_FORMAT_AUTO)) {
+                VIDEO_FORMAT_PYROWAVE -> FormatOption.FORCE_PYROWAVE
                 VIDEO_FORMAT_AV1 -> FormatOption.FORCE_AV1
                 VIDEO_FORMAT_HEVC -> FormatOption.FORCE_HEVC
                 VIDEO_FORMAT_H264 -> FormatOption.FORCE_H264
@@ -1124,6 +1130,7 @@ class PreferenceConfiguration {
         private fun getVideoFormatPreferenceString(format: FormatOption): String {
             return when (format) {
                 FormatOption.AUTO -> VIDEO_FORMAT_AUTO
+                FormatOption.FORCE_PYROWAVE -> VIDEO_FORMAT_PYROWAVE
                 FormatOption.FORCE_AV1 -> VIDEO_FORMAT_AV1
                 FormatOption.FORCE_HEVC -> VIDEO_FORMAT_HEVC
                 FormatOption.FORCE_H264 -> VIDEO_FORMAT_H264
@@ -1334,6 +1341,11 @@ class PreferenceConfiguration {
                 config.bitrate = getDefaultBitrate(context)
             }
 
+            config.fecPercentage = when (prefs.getString("list_fec_mode", "host")) {
+                "automatic" -> -1
+                "fixed" -> prefs.getInt("seekbar_fec_percentage", 20).coerceIn(0, 100)
+                else -> -2
+            }
             config.enableAdaptiveBitrate = prefs.getBoolean(ADAPTIVE_BITRATE_PREF_STRING, false)
             config.abrMode = prefs.getString(ABR_MODE_PREF_STRING, "balanced") ?: "balanced"
 
