@@ -171,6 +171,8 @@
     <string name="game_menu_bitrate_adjustment_success">码率调整成功至 %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
+    <string name="custom_list_save">保存</string>
+    <string name="game_menu_apply_display">应用</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
     <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
@@ -222,22 +224,29 @@
     <string name="custom_resolution_error_empty_width">请输入宽度</string>
     <string name="custom_resolution_error_empty_height">请输入高度</string>
     <string name="custom_resolution_error_range_width">宽度需在 320–7680 之间</string>
+    <string name="custom_frame_rate_error_empty">请输入帧率</string>
+    <string name="custom_frame_rate_error_range">帧率需在 1–500 之间</string>
     <string name="custom_resolution_error_range_height">高度需在 240–4320 之间</string>
     <string name="custom_resolution_error_even_width">宽度必须为偶数</string>
     <string name="custom_resolution_error_even_height">高度必须为偶数</string>
     <string name="custom_resolution_empty_title">还没有自定义分辨率</string>
     <string name="custom_resolution_empty_hint">在上方输入宽和高，或点一个预设快速填入</string>
     <string name="custom_resolution_tag_ultrawide">带鱼屏</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_portrait">竖屏</string>
     <string name="custom_resolution_delete_contentdesc">删除 %1$d×%2$d</string>
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
+    <string name="title_custom_fps">自定义帧率</string>
     <string name="title_seekbar_bitrate">串流码率</string>
-    <string name="summary_seekbar_bitrate">提高码率可改善画质，也会增加带宽消耗。</string>
-    <string name="title_adaptive_bitrate">自动调整码率（ABR）</string>
-    <string name="summary_adaptive_bitrate">根据网络状况调整视频码率，可与丢包保护独立使用。</string>
-    <string name="title_abr_mode">码率调整偏好</string>
-    <string name="summary_abr_mode">选择画质与响应速度之间的取舍。</string>
+    <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
+    <string name="title_adaptive_bitrate">智能码率</string>
+    <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
+    <string name="game_menu_adaptive_bitrate_tip">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策。智能码率从基准码率开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
+    <string name="title_abr_mode">智能码率模式</string>
+    <string name="summary_abr_mode">画质优先：偏向高码率；低延迟：丢包时降档更快。</string>
     <string name="abr_mode_quality">画质优先</string>
     <string name="abr_mode_balanced">均衡</string>
     <string name="abr_mode_low_latency">低延迟</string>
@@ -629,7 +638,7 @@
     <string name="pcview_menu_header_unknown">刷新中</string>
     <string name="pcview_menu_header_offline">离线</string>
     <string name="pcview_menu_header_online">在线</string>
-    <string name="resolution_prefix_native">本地</string>
+    <string name="resolution_prefix_native">原生</string>
     <string name="text_native_res_dialog">流媒体服务器可能不支持原始分辨率或者 FPS。您可能需要手动为主机配置匹配的自定义显示模式。
 \n
 \n如果您选择在 NVIDIA 控制面板中创建与屏幕设置相匹配的自定义分辨率，请确保您已阅读并理解 NVIDIA 关于显示器可能损坏、电脑不稳定和其他潜在问题的警告。
@@ -637,7 +646,7 @@
 \n我们不对因在电脑上创建自定义分辨率而导致的任何问题负责。
 \n
 \n您的显示器可能不支持必要的显示配置。如果是这样，您可以尝试设置虚拟显示器。最后，如果您的设备或主机不支持以特定分辨率或刷新率进行流式传输，那就很不幸了。</string>
-    <string name="title_native_res_dialog">本地分辨率警告</string>
+    <string name="title_native_res_dialog">原生分辨率警告</string>
     <string name="applist_menu_hide_app">隐藏游戏</string>
     <string name="check_ports_msg">请检查您的防火墙和端口转发规则中的端口：</string>
     <string name="early_termination_error">开始串流时您的主机电脑出了点问题。
@@ -1172,6 +1181,8 @@
     <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
 
     <string name="game_menu_change_resolution">更改分辨率</string>
+    <string name="game_menu_display_settings">显示设置</string>
+    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_resolution_current">%1$s（当前）</string>
     <string name="game_menu_resolution_custom">%1$s（自定义）</string>
     <string name="game_menu_resolution_custom_current">%1$s（自定义、当前）</string>

@@ -62,6 +62,7 @@ class ConfigurationSyncManager(private val context: Context) {
         val exportedAt: Long,
         val defaultPreferenceCount: Int,
         val appLastSettingsCount: Int,
+        val customFrameRatesCount: Int,
         val customResolutionsCount: Int,
         val sceneConfigsCount: Int,
         val appViewPreferenceCount: Int,
@@ -74,6 +75,7 @@ class ConfigurationSyncManager(private val context: Context) {
         val totalItems: Int
             get() = defaultPreferenceCount +
                     appLastSettingsCount +
+                    customFrameRatesCount +
                     customResolutionsCount +
                     sceneConfigsCount +
                     appViewPreferenceCount +
@@ -86,6 +88,7 @@ class ConfigurationSyncManager(private val context: Context) {
     data class ImportResult(
         val defaultPreferencesImported: Int,
         val appLastSettingsImported: Int,
+        val customFrameRatesImported: Int,
         val customResolutionsImported: Int,
         val sceneConfigsImported: Int,
         val appViewPreferencesImported: Int,
@@ -98,6 +101,7 @@ class ConfigurationSyncManager(private val context: Context) {
         val totalImported: Int
             get() = defaultPreferencesImported +
                     appLastSettingsImported +
+                    customFrameRatesImported +
                     customResolutionsImported +
                     sceneConfigsImported +
                     appViewPreferencesImported +
@@ -194,6 +198,17 @@ class ConfigurationSyncManager(private val context: Context) {
                     encodePreferences(
                         SECTION_APP_LAST_SETTINGS,
                         context.getSharedPreferences(APP_LAST_SETTINGS_PREFS, Context.MODE_PRIVATE),
+                        null
+                    )
+                )
+            )
+            .put(
+                SECTION_CUSTOM_FRAME_RATES,
+                JSONObject().put(
+                    KEY_VALUES,
+                    encodePreferences(
+                        SECTION_CUSTOM_FRAME_RATES,
+                        context.getSharedPreferences(CUSTOM_FRAME_RATES_PREFS, Context.MODE_PRIVATE),
                         null
                     )
                 )
@@ -335,6 +350,10 @@ class ConfigurationSyncManager(private val context: Context) {
                 valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
                 null
             ),
+            customFrameRatesCount = countValues(
+                valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_FRAME_RATES)),
+                null
+            ),
             customResolutionsCount = countValues(
                 valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_RESOLUTIONS)),
                 null
@@ -384,6 +403,12 @@ class ConfigurationSyncManager(private val context: Context) {
             SECTION_APP_LAST_SETTINGS,
             context.getSharedPreferences(APP_LAST_SETTINGS_PREFS, Context.MODE_PRIVATE),
             valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
+            null
+        )
+        val customFrameRatesImported = applyPreferences(
+            SECTION_CUSTOM_FRAME_RATES,
+            context.getSharedPreferences(CUSTOM_FRAME_RATES_PREFS, Context.MODE_PRIVATE),
+            valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_FRAME_RATES)),
             null
         )
         val customResolutionsImported = applyPreferences(
@@ -444,6 +469,7 @@ class ConfigurationSyncManager(private val context: Context) {
         return ImportResult(
             defaultPreferencesImported = defaultPreferencesImported + oscSettingsButtonImported + oscLayoutProfilesImported,
             appLastSettingsImported = appLastSettingsImported,
+            customFrameRatesImported = customFrameRatesImported,
             customResolutionsImported = customResolutionsImported,
             sceneConfigsImported = sceneConfigsImported,
             appViewPreferencesImported = appViewPreferencesImported,
@@ -1309,6 +1335,17 @@ class ConfigurationSyncManager(private val context: Context) {
                     KEY_VALUES,
                     mergeEncodedValues(
                         valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
+                        null,
+                        null
+                    )
+                )
+            )
+            .put(
+                SECTION_CUSTOM_FRAME_RATES,
+                JSONObject().put(
+                    KEY_VALUES,
+                    mergeEncodedValues(
+                        valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_FRAME_RATES)),
                         null,
                         null
                     )
@@ -2408,6 +2445,15 @@ class ConfigurationSyncManager(private val context: Context) {
                     )
                 )
                 .put(
+                    SECTION_CUSTOM_FRAME_RATES,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_CUSTOM_FRAME_RATES),
+                        localSections.optJSONObject(SECTION_CUSTOM_FRAME_RATES),
+                        null,
+                        metadata.deviceId
+                    )
+                )
+                .put(
                     SECTION_SCENE_CONFIGS,
                     mergedPreferenceSectionCore(
                         externalSections.optJSONObject(SECTION_SCENE_CONFIGS),
@@ -2513,6 +2559,15 @@ class ConfigurationSyncManager(private val context: Context) {
                     SECTION_APP_LAST_SETTINGS,
                     mergedPreferenceSectionCore(
                         sections.optJSONObject(SECTION_APP_LAST_SETTINGS),
+                        null,
+                        null,
+                        "hash"
+                    )
+                )
+                .put(
+                    SECTION_CUSTOM_FRAME_RATES,
+                    mergedPreferenceSectionCore(
+                        sections.optJSONObject(SECTION_CUSTOM_FRAME_RATES),
                         null,
                         null,
                         "hash"
@@ -3227,6 +3282,7 @@ class ConfigurationSyncManager(private val context: Context) {
 
         private const val APP_LAST_SETTINGS_PREFS = "app_last_settings"
         private const val APP_VIEW_PREFS = "AppView"
+        private const val CUSTOM_FRAME_RATES_PREFS = "custom_frame_rates"
         private const val CUSTOM_RESOLUTIONS_PREFS = "custom_resolutions"
         private const val CURRENT_CROWN_CONFIG_ID_KEY = "current_config_id"
         private const val HIDDEN_APPS_PREFS = "HiddenApps"
@@ -3286,6 +3342,7 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val SECTION_APP_LAST_SETTINGS = "appLastSettings"
         private const val SECTION_APP_VIEW_PREFERENCES = "appViewPreferences"
         private const val SECTION_CROWN_PROFILES = "crownProfiles"
+        private const val SECTION_CUSTOM_FRAME_RATES = "customFrameRates"
         private const val SECTION_CUSTOM_RESOLUTIONS = "customResolutions"
         private const val SECTION_DEFAULT_PREFERENCES = "defaultPreferences"
         private const val SECTION_HIDDEN_APPS = "hiddenApps"
@@ -3393,6 +3450,7 @@ class ConfigurationSyncManager(private val context: Context) {
             if (key.isNullOrBlank()) return false
             return when (sharedPreferencesName) {
                 APP_LAST_SETTINGS_PREFS,
+                CUSTOM_FRAME_RATES_PREFS,
                 CUSTOM_RESOLUTIONS_PREFS,
                 HIDDEN_APPS_PREFS,
                 SCENE_CONFIGS_PREFS -> true
@@ -3559,6 +3617,7 @@ class ConfigurationSyncManager(private val context: Context) {
         private val PORTABLE_SHARED_PREFERENCE_NAMES = listOf(
             APP_LAST_SETTINGS_PREFS,
             APP_VIEW_PREFS,
+            CUSTOM_FRAME_RATES_PREFS,
             CUSTOM_RESOLUTIONS_PREFS,
             HIDDEN_APPS_PREFS,
             SCENE_CONFIGS_PREFS,

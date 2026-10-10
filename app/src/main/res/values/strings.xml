@@ -222,6 +222,8 @@
     <string name="game_menu_bitrate_adjustment_success">Bitrate set to %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">Couldn\'t adjust bitrate</string>
     <string name="game_menu_ok">OK</string>
+    <string name="custom_list_save">Save</string>
+    <string name="game_menu_apply_display">Apply</string>
     <string name="game_menu_bitrate_range">Bitrate Range:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
     <string name="game_menu_bitrate_tip">Drag the slider to adjust bitrate in real time. Higher values improve image quality but require a faster, more stable connection.</string>
@@ -264,14 +266,16 @@
     <string name="title_native_res_dialog">Native Resolution Warning</string>
     <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You may need to configure a matching custom display mode on the host PC.\n\nIf you create a custom resolution in NVIDIA Control Panel, read NVIDIA\'s warning about possible monitor damage, PC instability, and other risks first.\n\nMoonlight cannot prevent problems caused by an unsupported custom display mode. If the physical monitor does not support the required mode, try a virtual display. Streaming still requires both the client and host to support the selected resolution and refresh rate.</string>
     <string name="title_fps_list">Stream frame rate</string>
+    <string name="title_custom_fps">Custom frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
     <string name="title_seekbar_bitrate">Stream bitrate</string>
     <string name="summary_seekbar_bitrate">Higher bitrate improves picture quality and uses more bandwidth.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="title_adaptive_bitrate">Automatically adjust bitrate (ABR)</string>
-    <string name="summary_adaptive_bitrate">Adjust video bitrate to network conditions. Can be used independently of FEC.</string>
-    <string name="title_abr_mode">Bitrate adjustment preference</string>
-    <string name="summary_abr_mode">Choose the balance between picture quality and responsiveness.</string>
+    <string name="title_adaptive_bitrate">Adaptive bitrate</string>
+    <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
+    <string name="game_menu_adaptive_bitrate_tip">Auto-adjust bitrate based on packet loss and latency, preferring Sunshine server-side control. Adaptive bitrate starts from the baseline bitrate and adjusts around it. The selected ABR mode controls the minimum and maximum range.</string>
+    <string name="title_abr_mode">ABR mode</string>
+    <string name="summary_abr_mode">Quality prefers higher bitrate; Low-latency drops faster on packet loss.</string>
     <string name="abr_mode_quality">Quality</string>
     <string name="abr_mode_balanced">Balanced</string>
     <string name="abr_mode_low_latency">Low latency</string>
@@ -301,6 +305,8 @@
     <string name="custom_resolution_error_empty_width">Enter a width</string>
     <string name="custom_resolution_error_empty_height">Enter a height</string>
     <string name="custom_resolution_error_range_width">Width must be between 320 and 7680</string>
+    <string name="custom_frame_rate_error_empty">Enter a frame rate</string>
+    <string name="custom_frame_rate_error_range">Frame rate must be between 1 and 500</string>
     <string name="custom_resolution_error_range_height">Height must be between 240 and 4320</string>
     <string name="custom_resolution_error_even_width">Width must be an even number</string>
     <string name="custom_resolution_error_even_height">Height must be an even number</string>
@@ -310,6 +316,9 @@
     <string name="custom_resolution_tag_4k">4K</string>
     <string name="custom_resolution_tag_2k">2K</string>
     <string name="custom_resolution_tag_1080p">1080p</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_ultrawide">Ultrawide</string>
     <string name="custom_resolution_tag_portrait">Portrait</string>
     <string name="custom_resolution_delete_contentdesc">Delete %1$d×%2$d</string>
@@ -1508,6 +1517,8 @@ Tap again to replace it.</string>
     <string name="settings_search_contains">Includes: %1$s</string>
     <string name="settings_search_match_separator">, </string>
     <string name="game_menu_change_resolution">Resolution</string>
+    <string name="game_menu_display_settings">Display settings</string>
+    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_resolution_current">%1$s (Current)</string>
     <string name="game_menu_resolution_custom">%1$s (Custom)</string>
     <string name="game_menu_resolution_custom_current">%1$s (Custom, Current)</string>
