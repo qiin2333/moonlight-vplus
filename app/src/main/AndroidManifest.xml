@@ -115,7 +115,7 @@
             android:name=".PosterContentProvider"
             android:authorities="poster.${applicationId}"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
         </provider>
 
         <!--
