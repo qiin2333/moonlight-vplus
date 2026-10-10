@@ -212,4 +212,10 @@
     <string name="image_save_failed_with_error">Неуспешно записване на изображението: %1$s</string>
     <string name="tip_double_tap_mouse">Съвет: натиснете и задръжте празната област в горната част на списъка с компютри, за да запазите текущото фоново изображение.</string>
     <string name="pyrowave_negotiation_fallback">Договарянето на PyroWave е неуспешно. Преминаване към %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Корекция на посоката на мишката</string>
+    <string name="summary_list_mouse_axis_correction">Завъртане на засеченото движение на мишката преди изпращане към хоста. Променяйте това само ако устройство с Android съобщава за завъртени оси на мишката.</string>
+    <string name="mouse_axis_correction_off">Изкл.</string>
+    <string name="mouse_axis_correction_90">Завъртане на 90 градуса</string>
+    <string name="mouse_axis_correction_180">Завъртане на 180 градуса</string>
+    <string name="mouse_axis_correction_270">Завъртане на 270 градуса</string>
 </resources>

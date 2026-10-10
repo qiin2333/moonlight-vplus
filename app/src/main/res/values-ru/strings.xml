@@ -2079,4 +2079,10 @@
     <string name="pyrowave_diag_copy_success">Отчёт скопирован в буфер обмена</string>
     <string name="pyrowave_diag_unavailable">Недоступно</string>
     <string name="pyrowave_negotiation_fallback">Не удалось согласовать PyroWave. Переключение на %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Коррекция направления мыши</string>
+    <string name="summary_list_mouse_axis_correction">Поворачивать захваченное движение мыши перед отправкой на хост. Меняйте это только если устройство Android сообщает о повернутых осях мыши.</string>
+    <string name="mouse_axis_correction_off">Выкл.</string>
+    <string name="mouse_axis_correction_90">Поворот на 90 градусов</string>
+    <string name="mouse_axis_correction_180">Поворот на 180 градусов</string>
+    <string name="mouse_axis_correction_270">Поворот на 270 градусов</string>
 </resources>

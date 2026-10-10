@@ -338,4 +338,10 @@
     <string name="image_save_failed_with_error">Det gick inte att spara bilden: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tryck och håll på det tomma området överst i datorlistan för att spara den aktuella bakgrundsbilden.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave-förhandlingen misslyckades. Växlar till %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Korrigering av musriktning</string>
+    <string name="summary_list_mouse_axis_correction">Rotera registrerade musrörelser innan de skickas till värden. Ändra bara detta om en Android-enhet rapporterar roterade musaxlar.</string>
+    <string name="mouse_axis_correction_off">Av</string>
+    <string name="mouse_axis_correction_90">Rotera 90 grader</string>
+    <string name="mouse_axis_correction_180">Rotera 180 grader</string>
+    <string name="mouse_axis_correction_270">Rotera 270 grader</string>
 </resources>

@@ -349,4 +349,10 @@
     <string name="image_save_failed_with_error">Не вдалося зберегти зображення: %1$s</string>
     <string name="tip_double_tap_mouse">Порада: натисніть і утримуйте порожню область угорі списку комп\'ютерів, щоб зберегти поточне фонове зображення.</string>
     <string name="pyrowave_negotiation_fallback">Не вдалося узгодити PyroWave. Перехід на %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Корекція напрямку миші</string>
+    <string name="summary_list_mouse_axis_correction">Повертати зафіксований рух миші перед надсиланням на хост. Змінюйте це лише якщо пристрій Android повідомляє про повернуті осі миші.</string>
+    <string name="mouse_axis_correction_off">Вимкнено</string>
+    <string name="mouse_axis_correction_90">Повернути на 90 градусів</string>
+    <string name="mouse_axis_correction_180">Повернути на 180 градусів</string>
+    <string name="mouse_axis_correction_270">Повернути на 270 градусів</string>
 </resources>

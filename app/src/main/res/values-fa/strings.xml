@@ -56,4 +56,10 @@
     <string name="image_save_failed_with_error">ذخیرهٔ تصویر ناموفق بود: %1$s</string>
     <string name="tip_double_tap_mouse">نکته: برای ذخیرهٔ تصویر پس‌زمینهٔ فعلی، قسمت خالی بالای فهرست رایانه‌ها را لمس کنید و نگه دارید.</string>
     <string name="pyrowave_negotiation_fallback">مذاکرهٔ PyroWave ناموفق بود. از %1$s استفاده می‌شود.</string>
+    <string name="title_list_mouse_axis_correction">اصلاح جهت ماوس</string>
+    <string name="summary_list_mouse_axis_correction">حرکت دریافت‌شدهٔ ماوس را پیش از ارسال به میزبان بچرخانید. فقط وقتی تغییر دهید که دستگاه اندروید محورهای ماوس را چرخیده گزارش کند.</string>
+    <string name="mouse_axis_correction_off">خاموش</string>
+    <string name="mouse_axis_correction_90">چرخش ۹۰ درجه</string>
+    <string name="mouse_axis_correction_180">چرخش ۱۸۰ درجه</string>
+    <string name="mouse_axis_correction_270">چرخش ۲۷۰ درجه</string>
 </resources>

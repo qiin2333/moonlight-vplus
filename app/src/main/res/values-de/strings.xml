@@ -341,4 +341,10 @@
     <string name="image_save_failed_with_error">Bild konnte nicht gespeichert werden: %1$s</string>
     <string name="tip_double_tap_mouse">Tipp: Halten Sie den leeren Bereich oben in der Computerliste gedrückt, um das aktuelle Hintergrundbild zu speichern.</string>
     <string name="pyrowave_negotiation_fallback">Die PyroWave-Aushandlung ist fehlgeschlagen. Wechsel zu %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Mausrichtung korrigieren</string>
+    <string name="summary_list_mouse_axis_correction">Erfasste Mausbewegungen vor dem Senden an den Host drehen. Ändern Sie dies nur, wenn ein Android-Gerät gedrehte Mausachsen meldet.</string>
+    <string name="mouse_axis_correction_off">Aus</string>
+    <string name="mouse_axis_correction_90">Um 90 Grad drehen</string>
+    <string name="mouse_axis_correction_180">Um 180 Grad drehen</string>
+    <string name="mouse_axis_correction_270">Um 270 Grad drehen</string>
 </resources>

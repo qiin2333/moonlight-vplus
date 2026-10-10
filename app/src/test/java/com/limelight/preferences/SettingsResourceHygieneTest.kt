@@ -105,6 +105,29 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
+    fun mouseAxisCorrectionStringsCoverEveryExistingLocale() {
+        val keys = listOf(
+            "title_list_mouse_axis_correction",
+            "summary_list_mouse_axis_correction",
+            "mouse_axis_correction_off",
+            "mouse_axis_correction_90",
+            "mouse_axis_correction_180",
+            "mouse_axis_correction_270",
+        )
+
+        resourceDir.listFiles().orEmpty()
+            .filter { it.isDirectory && it.name.startsWith("values-") && File(it, "strings.xml").isFile }
+            .forEach { directory ->
+                val entries = stringValues(directory.name)
+                keys.forEach { key ->
+                    val value = entries[key]
+                    assertNotNull("${directory.name}: missing $key", value)
+                    assertTrue("${directory.name}: blank $key", value!!.isNotBlank())
+                }
+            }
+    }
+
+    @Test
     fun userFacingSettingsArraysUseStringResources() {
         val arrays = parse(File(resourceDir, "values/arrays.xml"))
         val localizedArrays = setOf(

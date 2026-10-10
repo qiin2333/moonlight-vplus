@@ -320,4 +320,10 @@
     <string name="image_save_failed_with_error">Falha ao salvar imagem: %1$s</string>
     <string name="tip_double_tap_mouse">Dica: mantenha pressionada a área vazia no topo da lista de computadores para salvar a imagem de fundo atual.</string>
     <string name="pyrowave_negotiation_fallback">A negociação do PyroWave falhou. Alternando para %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correção da direção do mouse</string>
+    <string name="summary_list_mouse_axis_correction">Gire o movimento do mouse capturado antes de enviá-lo ao host. Altere isso somente se um dispositivo Android informar que os eixos do mouse estão girados.</string>
+    <string name="mouse_axis_correction_off">Desativado</string>
+    <string name="mouse_axis_correction_90">Girar 90 graus</string>
+    <string name="mouse_axis_correction_180">Girar 180 graus</string>
+    <string name="mouse_axis_correction_270">Girar 270 graus</string>
 </resources>

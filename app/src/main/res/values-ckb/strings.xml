@@ -56,4 +56,10 @@
     <string name="image_save_failed_with_error">پاشەکەوتکردنی وێنەکە سەرکەوتوو نەبوو: %1$s</string>
     <string name="tip_double_tap_mouse">ئامۆژگاری: بۆ پاشەکەوتکردنی وێنەی پاشبنەمای ئێستا، شوێنی بەتاڵی سەرەوەی لیستی کۆمپیوتەرەکان بە درێژی دابگرە.</string>
     <string name="pyrowave_negotiation_fallback">گفتوگۆی PyroWave سەرکەوتوو نەبوو. لەبری ئەوە %1$s بەکاردێت.</string>
+    <string name="title_list_mouse_axis_correction">ڕاستکردنەوەی ئاراستەی ماوس</string>
+    <string name="summary_list_mouse_axis_correction">جوڵەی ماوسی گیراو پێش ناردن بۆ هۆست بسووڕێنەوە. تەنها ئەگەر ئامێرێکی ئەندرۆید ئاكسەكانی ماوس بە سووڕاو ڕابگەیەنێت بیگۆڕە.</string>
+    <string name="mouse_axis_correction_off">ناچالاک</string>
+    <string name="mouse_axis_correction_90">سووڕاندن بە ٩٠ پلە</string>
+    <string name="mouse_axis_correction_180">سووڕاندن بە ١٨٠ پلە</string>
+    <string name="mouse_axis_correction_270">سووڕاندن بە ٢٧٠ پلە</string>
 </resources>

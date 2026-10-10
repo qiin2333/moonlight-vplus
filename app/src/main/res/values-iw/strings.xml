@@ -209,4 +209,10 @@
     <string name="image_save_failed_with_error">שמירת התמונה נכשלה: %1$s</string>
     <string name="tip_double_tap_mouse">טיפ: כדי לשמור את תמונת הרקע הנוכחית, לחצו לחיצה ארוכה על האזור הריק בראש רשימת המחשבים.</string>
     <string name="pyrowave_negotiation_fallback">משא ומתן עם PyroWave נכשל. מעבר ל־%1$s.</string>
+    <string name="title_list_mouse_axis_correction">תיקון כיוון העכבר</string>
+    <string name="summary_list_mouse_axis_correction">סיבוב תנועת העכבר שנלכדה לפני שליחתה למארח. יש לשנות זאת רק אם מכשיר Android מדווח על צירי עכבר מסובבים.</string>
+    <string name="mouse_axis_correction_off">כבוי</string>
+    <string name="mouse_axis_correction_90">סיבוב של 90 מעלות</string>
+    <string name="mouse_axis_correction_180">סיבוב של 180 מעלות</string>
+    <string name="mouse_axis_correction_270">סיבוב של 270 מעלות</string>
 </resources>
