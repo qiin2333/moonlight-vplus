@@ -190,19 +190,20 @@ class GameMenuComposeFocusTest {
             val initialFocusRequester = remember { FocusRequester() }
             val inputModeManager = LocalInputModeManager.current
             var focusRequestToken by remember { mutableIntStateOf(1) }
+            var handledHardwareFocusRequestToken by remember { mutableIntStateOf(0) }
             var contentLaidOut by remember { mutableStateOf(false) }
-            var menuHasFocus by remember { mutableStateOf(false) }
             refreshHardwareFocus = { focusRequestToken++ }
 
             LaunchedEffect(focusRequestToken, contentLaidOut) {
                 if (shouldRequestGameMenuFocus(
                         hardwareFocusRequestToken = focusRequestToken,
+                        handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                         guideActive = false,
                         hasFocusTarget = true,
-                        menuContentLaidOut = contentLaidOut,
-                        menuHasFocus = menuHasFocus
+                        menuContentLaidOut = contentLaidOut
                     )
                 ) {
+                    handledHardwareFocusRequestToken = focusRequestToken
                     inputModeManager.requestInputMode(InputMode.Keyboard)
                     initialFocusRequester.requestFocus()
                 }
@@ -210,7 +211,6 @@ class GameMenuComposeFocusTest {
 
             Column(
                 modifier = Modifier
-                    .onFocusChanged { menuHasFocus = it.hasFocus }
                     .focusGroup()
                     .onGloballyPositioned { contentLaidOut = true }
             ) {
