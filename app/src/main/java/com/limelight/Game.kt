@@ -1743,6 +1743,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             cancelKeepAliveNotification()
         }
         micButtonPositionController?.dispose()
+        virtualController?.cleanup()
         if (::remoteImeController.isInitialized) {
             remoteImeController.dispose()
         }
@@ -3128,6 +3129,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
+        if (virtualController?.dispatchMenuKey(event) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchKeyEvent(event)
             return true
@@ -3144,6 +3146,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         rightStickX: Float,
         rightStickY: Float
     ): Boolean {
+        if (virtualController?.dispatchMenuAxes(ControllerHandler.usbGameMenuAxisSourceId(controllerId),
+                leftStickX, leftStickY, rightStickY) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchAxes(
                 ControllerHandler.usbGameMenuAxisSourceId(controllerId),
@@ -3166,6 +3170,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun releaseControllerMenuAxisSource(sourceId: Int) {
+        virtualController?.releaseMenuSource(sourceId)
         crownConfigPicker?.releaseSource(sourceId)
         activeGameMenu?.releaseControllerAxisSource(sourceId)
     }
