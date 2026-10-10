@@ -4,9 +4,14 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.preferences.PreferenceConfiguration
 import kotlin.math.roundToInt
 
-class NonRootTouchpadHandler {
+class NonRootTouchpadHandler(
+    private val pointerSpeedPercent: () -> Int = {
+        PreferenceConfiguration.DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
+    }
+) {
     private val activePointerIds = LinkedHashSet<Int>()
     private var touchpadFrameUnsupported = false
     private var deviceWidthMm: Short = DEFAULT_TOUCHPAD_WIDTH_MM.toShort()
@@ -18,8 +23,9 @@ class NonRootTouchpadHandler {
         }
 
         val deviceInfo = DeviceInfo.from(event) ?: return false
-        deviceWidthMm = deviceInfo.widthMm
-        deviceHeightMm = deviceInfo.heightMm
+        val speedPercent = pointerSpeedPercent()
+        deviceWidthMm = TouchpadPointerSpeed.scaledSizeMm(deviceInfo.widthMm.toInt(), speedPercent).toShort()
+        deviceHeightMm = TouchpadPointerSpeed.scaledSizeMm(deviceInfo.heightMm.toInt(), speedPercent).toShort()
 
         val buttonState = touchpadButtonState(event)
         val handled = when (event.actionMasked) {

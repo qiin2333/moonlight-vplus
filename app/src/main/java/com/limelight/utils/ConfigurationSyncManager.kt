@@ -3530,6 +3530,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "pointer_velocity_factor",
             "pref_enable_double_click_drag",
             "pref_enable_local_cursor_rendering",
+            "seekbar_hardware_touchpad_pointer_speed",
             "seekbar_audio_vibration_strength",
             "seekbar_bitrate_kbps",
             "seekbar_fec_percentage",

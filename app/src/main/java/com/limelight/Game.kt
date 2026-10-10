@@ -24,6 +24,7 @@ import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
 import com.limelight.binding.input.touch.AbsoluteTouchContext
+import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
@@ -2952,10 +2953,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         deviceHeightMm: Short,
         buttonState: Byte
     ) {
+        val speedPercent = prefConfig.hardwareTouchpadPointerSpeedPercent
         conn?.sendTouchpadEvent(
             eventType, pointerId, x, y, pressure,
             contactAreaMajor, contactAreaMinor, rotation,
-            deviceWidthMm, deviceHeightMm, buttonState
+            TouchpadPointerSpeed.scaledSizeMm(deviceWidthMm.toInt(), speedPercent).toShort(),
+            TouchpadPointerSpeed.scaledSizeMm(deviceHeightMm.toInt(), speedPercent).toShort(),
+            buttonState
         )
     }
 
@@ -2971,10 +2975,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         deviceHeightMm: Short,
         buttonState: Byte
     ): Int {
+        val speedPercent = prefConfig.hardwareTouchpadPointerSpeedPercent
         return conn?.sendTouchpadFrameEvent(
             contactCount, eventTypes, pointerIds,
             x, y, pressure, rotation,
-            deviceWidthMm, deviceHeightMm, buttonState
+            TouchpadPointerSpeed.scaledSizeMm(deviceWidthMm.toInt(), speedPercent).toShort(),
+            TouchpadPointerSpeed.scaledSizeMm(deviceHeightMm.toInt(), speedPercent).toShort(),
+            buttonState
         ) ?: MoonBridge.LI_ERR_UNSUPPORTED
     }
 
