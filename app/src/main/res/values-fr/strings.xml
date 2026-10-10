@@ -351,4 +351,10 @@
     <string name="image_save_failed_with_error">Échec de l\'enregistrement de l\'image : %1$s</string>
     <string name="tip_double_tap_mouse">Conseil : maintenez une pression sur la zone vide en haut de la liste des ordinateurs pour enregistrer l\'image de fond actuelle.</string>
     <string name="pyrowave_negotiation_fallback">La négociation PyroWave a échoué. Basculement vers %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correction de la direction de la souris</string>
+    <string name="summary_list_mouse_axis_correction">Fait pivoter le mouvement de souris capturé avant de l’envoyer à l’hôte. Modifiez ce réglage uniquement si un appareil Android signale des axes de souris pivotés.</string>
+    <string name="mouse_axis_correction_off">Désactivé</string>
+    <string name="mouse_axis_correction_90">Pivoter de 90 degrés</string>
+    <string name="mouse_axis_correction_180">Pivoter de 180 degrés</string>
+    <string name="mouse_axis_correction_270">Pivoter de 270 degrés</string>
 </resources>

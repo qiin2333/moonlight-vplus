@@ -3413,6 +3413,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_adaptive_bitrate",
             "auto_adjust_bitrate",
             "checkbox_absolute_mouse_mode",
+            "list_mouse_axis_correction",
             "checkbox_audio_vibration",
             "checkbox_background_audio",
             "checkbox_clipboard_sync_image",

@@ -713,6 +713,12 @@
 
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
+    <string name="title_list_mouse_axis_correction">鼠标方向修正</string>
+    <string name="summary_list_mouse_axis_correction">发送到主机前旋转被捕获的鼠标移动。仅在某些安卓设备错误旋转鼠标轴时修改。</string>
+    <string name="mouse_axis_correction_off">关闭</string>
+    <string name="mouse_axis_correction_90">旋转 90 度</string>
+    <string name="mouse_axis_correction_180">旋转 180 度</string>
+    <string name="mouse_axis_correction_270">旋转 270 度</string>
     <string name="title_optimize_hardware_touchpad">适配平板触摸板</string>
     <string name="summary_optimize_hardware_touchpad">为受支持的平板键盘触摸板使用专用事件处理，Root 与非 Root 版本均可用。</string>
     <string name="title_checkbox_enable_esc_menu">双击按键打开串流菜单</string>

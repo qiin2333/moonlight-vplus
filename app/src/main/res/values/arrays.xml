@@ -507,6 +507,19 @@
         <item>native</item>
     </string-array>
 
+    <string-array name="mouse_axis_correction_names">
+        <item>@string/mouse_axis_correction_off</item>
+        <item>@string/mouse_axis_correction_90</item>
+        <item>@string/mouse_axis_correction_180</item>
+        <item>@string/mouse_axis_correction_270</item>
+    </string-array>
+    <string-array name="mouse_axis_correction_values" translatable="false">
+        <item>off</item>
+        <item>90</item>
+        <item>180</item>
+        <item>270</item>
+    </string-array>
+
     <string-array name="mic_volume_processing_mode_names">
         <item>@string/mic_volume_processing_mode_off</item>
         <item>@string/mic_volume_processing_mode_gain</item>

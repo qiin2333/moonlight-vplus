@@ -222,4 +222,10 @@
     <string name="image_save_failed_with_error">画像の保存に失敗しました：%1$s</string>
     <string name="tip_double_tap_mouse">ヒント：PC 一覧の上部にある空白部分を長押しすると、現在の背景画像を保存できます。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave のネゴシエーションに失敗しました。%1$s に切り替えます。</string>
+    <string name="title_list_mouse_axis_correction">マウス方向の補正</string>
+    <string name="summary_list_mouse_axis_correction">ホストに送信する前に、取得したマウスの動きを回転します。Android デバイスがマウス軸の回転を報告する場合のみ変更してください。</string>
+    <string name="mouse_axis_correction_off">オフ</string>
+    <string name="mouse_axis_correction_90">90 度回転</string>
+    <string name="mouse_axis_correction_180">180 度回転</string>
+    <string name="mouse_axis_correction_270">270 度回転</string>
 </resources>
