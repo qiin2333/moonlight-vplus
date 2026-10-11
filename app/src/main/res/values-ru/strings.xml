@@ -469,6 +469,10 @@
     <string name="summary_checkbox_absolute_mouse_mode">Более естественное ускорение мыши для удалённого рабочего стола, но несовместимо со многими играми.</string>
     <string name="title_optimize_hardware_touchpad">Тачпад планшета</string>
     <string name="summary_optimize_hardware_touchpad">Особая обработка поддерживаемых тачпадов клавиатур планшета. Доступно в сборках с root и без него.</string>
+    <string name="title_hardware_touchpad_pointer_speed">Скорость указателя тачпада</string>
+    <string name="summary_hardware_touchpad_pointer_speed">Скорость перемещения указателя тачпадом планшета.</string>
+    <string name="dialog_title_hardware_touchpad_pointer_speed">Увеличьте, чтобы ускорить указатель, или уменьшите, чтобы замедлить.</string>
+    <string name="suffix_hardware_touchpad_pointer_speed">%</string>
     <string name="title_checkbox_enable_esc_menu">Меню по двойному нажатию</string>
     <string name="summary_checkbox_enable_esc_menu">Двойное нажатие выбранной клавиши открывает меню возврата. Одиночное передаётся на ПК.</string>
     <string name="title_list_esc_menu_key">Клавиша меню трансляции</string>

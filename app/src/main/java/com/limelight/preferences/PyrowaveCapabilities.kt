@@ -33,6 +33,11 @@ internal data class PyrowaveCapabilities(
 
     val hasAnyPrerequisites: Boolean
         get() = devices.any { hasStagingPrerequisites(it) || hasSurfacePrerequisites(it) }
+
+    val hasNativeVivid: Boolean
+        get() = swapchainColorspace && devices.any {
+            hasSurfacePrerequisites(it) && it.hdrMetadata && it.nativeVivid
+        }
 }
 
 internal data class PyrowaveGpuCapabilities(
@@ -51,6 +56,7 @@ internal data class PyrowaveGpuCapabilities(
     val graphicsComputeQueue: Boolean = false,
     val swapchain: Boolean = false,
     val hdrMetadata: Boolean = false,
+    val nativeVivid: Boolean = false,
     val maxComputeWorkGroupInvocations: Int = 0,
     val maxComputeSharedMemorySize: Int = 0
 ) {
@@ -120,6 +126,7 @@ internal object PyrowaveCapabilityProbe {
                 graphicsComputeQueue = device.getBoolean("graphicsComputeQueue"),
                 swapchain = device.getBoolean("swapchain"),
                 hdrMetadata = device.getBoolean("hdrMetadata"),
+                nativeVivid = device.getBoolean("nativeVivid"),
                 maxComputeWorkGroupInvocations = device.getInt("maxComputeWorkGroupInvocations"),
                 maxComputeSharedMemorySize = device.getInt("maxComputeSharedMemorySize")
             )

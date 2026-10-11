@@ -15,6 +15,7 @@ layout(push_constant) uniform PushConstants {
     float hdrMode;
     float sourcePeakNits;
     float targetPeakNits;
+    float saturation;
     float padding;
 } pc;
 
@@ -29,7 +30,6 @@ vec3 yuvToRgb(vec3 yuv) {
         y - 0.16455 * u - 0.57135 * v,
         y + 1.8814 * u);
 }
-
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(uDst);
@@ -43,6 +43,6 @@ void main() {
         yuv.x = (yuv.x - 64.0 / 1023.0) * (1023.0 / 876.0);
         yuv.yz = (yuv.yz - vec2(512.0 / 1023.0)) * (1023.0 / 896.0) + vec2(0.5);
     }
-    vec3 rgb = applyDynamicHdr(yuvToRgb(yuv));
+    vec3 rgb = applyDynamicHdr(dynamicYuvToRgb(yuv));
     imageStore(uDst, coord, vec4(max(rgb, vec3(0.0)), 1.0));
 }

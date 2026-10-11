@@ -24,6 +24,7 @@ import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
 import com.limelight.binding.input.touch.AbsoluteTouchContext
+import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
@@ -860,8 +861,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         displayName: String?
     ): StreamConfigResult {
         val glPrefs = GlPreferences.readPreferences(this)
-        val pyrowaveSelected =
+        val forcePyrowave =
             prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE
+        // PyroWave consumes HDR10+/Dolby Vision frame metadata in its Vulkan
+        // presentation shader. Vivid is offered only when the native Vulkan
+        // extension is available; no dynamic format is reduced to its static
+        // base layer.
+        val pyrowaveSelected = forcePyrowave
         val framegenRequestedByPreference = FramegenRuntimePlanner.shouldUse(
             defaultPreferences(),
             prefConfig.width,
@@ -1034,8 +1040,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 decoderRenderer?.isAv1Hdr10PlusEligible() == true
             else -> decoderRenderer?.isAv1Main10Hdr10Supported() == true
         }
-        // Dynamic selections use their PQ/HLG base layer. Vulkan consumes the
-        // protected per-frame metadata; no MediaCodec Dolby profile is needed.
+        // PyroWave dynamic selections require the Vulkan presentation path.
+        // The negotiated dynamic metadata format is carried separately from
+        // the PQ/HLG base transfer and validated again after ANNOUNCE.
         val pyrowaveRequestedHdrMode = HdrModePolicy.toProtocolMode(prefConfig.hdrMode)
         val pyrowaveHdrRequestedByUser =
             willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
@@ -1044,8 +1051,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val pyrowaveHdrCapable = willStreamHdr &&
             pyrowaveSelected &&
             pyrowaveRequestedHdrMode != 0 &&
-            !hdr10PlusRequested &&
-            !dolbyVisionRequested &&
             !framegenRequested &&
             decoderRenderer?.getPreferredColorSpace() == MoonBridge.COLORSPACE_REC_709
         val selectedCodecSupportsHdr = when (prefConfig.videoFormat) {
@@ -1101,8 +1106,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val pyrowaveHdrMode = if (willStreamHdr) pyrowaveRequestedHdrMode else 0
         val pyrowaveHdr = willStreamHdr &&
             pyrowaveHdrMode != 0 &&
-            !hdr10PlusRequested &&
-            !dolbyVisionRequested &&
             !framegenRequested
         if (pyrowaveSelected &&
             pyrowaveRenderer != null &&
@@ -2952,10 +2955,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         deviceHeightMm: Short,
         buttonState: Byte
     ) {
+        val speedPercent = prefConfig.hardwareTouchpadPointerSpeedPercent
         conn?.sendTouchpadEvent(
             eventType, pointerId, x, y, pressure,
             contactAreaMajor, contactAreaMinor, rotation,
-            deviceWidthMm, deviceHeightMm, buttonState
+            TouchpadPointerSpeed.scaledSizeMm(deviceWidthMm.toInt(), speedPercent).toShort(),
+            TouchpadPointerSpeed.scaledSizeMm(deviceHeightMm.toInt(), speedPercent).toShort(),
+            buttonState
         )
     }
 
@@ -2971,10 +2977,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         deviceHeightMm: Short,
         buttonState: Byte
     ): Int {
+        val speedPercent = prefConfig.hardwareTouchpadPointerSpeedPercent
         return conn?.sendTouchpadFrameEvent(
             contactCount, eventTypes, pointerIds,
             x, y, pressure, rotation,
-            deviceWidthMm, deviceHeightMm, buttonState
+            TouchpadPointerSpeed.scaledSizeMm(deviceWidthMm.toInt(), speedPercent).toShort(),
+            TouchpadPointerSpeed.scaledSizeMm(deviceHeightMm.toInt(), speedPercent).toShort(),
+            buttonState
         ) ?: MoonBridge.LI_ERR_UNSUPPORTED
     }
 

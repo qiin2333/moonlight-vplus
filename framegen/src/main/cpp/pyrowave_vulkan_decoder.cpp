@@ -7,6 +7,7 @@
 
 #include "pyrowave_api.h"
 #include "pyrowave_hdr_metadata.h"
+#include "pyrowave_hdr_presentation.hpp"
 #include "pyrowave_dynamic_hdr.hpp"
 #include "moonlight-common-c/src/DynamicHdr.h"
 
@@ -31,7 +32,6 @@
 namespace FramegenPipeline {
 namespace {
 
-constexpr std::size_t kSsHdrMetadataSize = 26;
 constexpr std::uint32_t kMaxWidth = 8192;
 constexpr std::uint32_t kMaxHeight = 8192;
 constexpr std::uint64_t kMaxPixels = 8192ull * 8192ull;
@@ -39,7 +39,6 @@ constexpr std::uint64_t kMaxPixels = 8192ull * 8192ull;
 // PyroWave fails to signal the hand-off semaphore. Teardown still performs the
 // device-level wait needed to destroy Vulkan resources safely.
 constexpr std::uint64_t kGpuWaitTimeoutNs = 5'000'000'000ULL;
-
 bool valid_dimensions(int width, int height) {
     return width > 0 && height > 0 && (width & 1) == 0 && (height & 1) == 0 &&
            static_cast<std::uint32_t>(width) <= kMaxWidth &&
@@ -205,6 +204,7 @@ struct shader_constants {
     float hdr_mode{0.0F};
     float source_peak_nits{1000.0F};
     float target_peak_nits{1000.0F};
+    float saturation{1.0F};
     float padding{0.0F};
 };
 
@@ -229,6 +229,7 @@ struct PyrowaveVulkanDecoder::impl {
     VkPhysicalDevice physical_device{VK_NULL_HANDLE};
     VkDevice device{VK_NULL_HANDLE};
     PFN_vkSetHdrMetadataEXT set_hdr_metadata{nullptr};
+    bool vivid_native_supported{false};
     VkQueue queue{VK_NULL_HANDLE};
     std::uint32_t queue_family{VK_QUEUE_FAMILY_IGNORED};
     VkPhysicalDeviceMemoryProperties memory_properties{};
@@ -251,7 +252,7 @@ struct PyrowaveVulkanDecoder::impl {
     VkPipelineLayout pipeline_layout{VK_NULL_HANDLE};
     VkPipeline conversion_pipeline{VK_NULL_HANDLE};
     VkDescriptorPool descriptor_pool{VK_NULL_HANDLE};
-    VkDescriptorSet descriptor_set{VK_NULL_HANDLE};
+    std::vector<VkDescriptorSet> descriptor_sets;
     VkSampler sampler{VK_NULL_HANDLE};
     VkBuffer mapping_buffer{VK_NULL_HANDLE};
     VkDeviceMemory mapping_memory{VK_NULL_HANDLE};
@@ -262,6 +263,8 @@ struct PyrowaveVulkanDecoder::impl {
     moonlight::pyrowave::dynamic_hdr_scene dynamic_scene{};
     bool dynamic_frame_applied{false};
     bool dynamic_hdr_logged{false};
+    moonlight::pyrowave::dynamic_hdr_presentation dynamic_presentation{
+        moonlight::pyrowave::dynamic_hdr_presentation::pending};
     std::array<image_t, 3> planes{};
     std::array<pyrowave_image_view, 3> plane_views{};
 
@@ -274,15 +277,15 @@ struct PyrowaveVulkanDecoder::impl {
     VkPhysicalDeviceFeatures2 enabled_features{};
     VkPhysicalDeviceVulkan12Features enabled_vulkan12_features{};
     VkPhysicalDeviceVulkan13Features enabled_vulkan13_features{};
+    VkPhysicalDeviceHdrVividFeaturesHUAWEI enabled_vivid_features{};
     VkDeviceCreateInfo device_create_info{};
     std::vector<const char *> device_extensions;
     pyrowave_device_create_queue_info queue_info{};
     pyrowave_device pyrowave_device_handle{nullptr};
     pyrowave_decoder decoder{nullptr};
-    moonlight::pyrowave::hdr_static_metadata hdr_metadata{};
-    bool hdr_metadata_enabled{false};
-    bool hdr_metadata_valid{false};
+    moonlight::pyrowave::hdr_static_snapshot hdr_snapshot{};
     bool hdr_metadata_missing_logged{false};
+    bool hdr_metadata_invalid_logged{false};
     bool hdr_metadata_extension_missing_logged{false};
     std::uint64_t submitted_frames{0};
     std::uint64_t last_decode_time_us{0};
@@ -412,6 +415,9 @@ struct PyrowaveVulkanDecoder::impl {
         std::vector<VkPhysicalDevice> devices(count);
         const auto devices_result = vkEnumeratePhysicalDevices(instance, &count, devices.data());
         if (devices_result != VK_SUCCESS) return log_vulkan_failure("enumerate-physical-devices-data", devices_result);
+        const bool vivid_requested =
+            dynamic_hdr_format == DYNAMIC_HDR_FORMAT_VIVID_PQ ||
+            dynamic_hdr_format == DYNAMIC_HDR_FORMAT_VIVID_HLG;
 
         for (auto candidate : devices) {
             VkPhysicalDeviceProperties props{};
@@ -419,6 +425,10 @@ struct PyrowaveVulkanDecoder::impl {
             if (VK_VERSION_MAJOR(props.apiVersion) < 1 || VK_VERSION_MINOR(props.apiVersion) < 3) continue;
             if (!has_extension(candidate, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) continue;
             const bool hdr_metadata_supported = has_extension(candidate, VK_EXT_HDR_METADATA_EXTENSION_NAME);
+            if (vivid_requested &&
+                (!has_extension(candidate, VK_HUAWEI_HDR_VIVID_EXTENSION_NAME) || !hdr_metadata_supported)) {
+                continue;
+            }
             // HDR10/PQ needs VK_EXT_hdr_metadata so supplied static metadata
             // can be applied before presentation. HLG may still present with
             // its HLG colorspace when the host has no mastering metadata; a
@@ -454,7 +464,19 @@ struct PyrowaveVulkanDecoder::impl {
         supported13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
         supported.pNext = &supported12;
         supported12.pNext = &supported13;
+        VkPhysicalDeviceHdrVividFeaturesHUAWEI supported_vivid{};
+        supported_vivid.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HDR_VIVID_FEATURES_HUAWEI;
+        const bool vivid_extension_supported =
+            (dynamic_hdr_format == DYNAMIC_HDR_FORMAT_VIVID_PQ || dynamic_hdr_format == DYNAMIC_HDR_FORMAT_VIVID_HLG) && hdr_mode != 0 &&
+            dynamic_presentation != moonlight::pyrowave::dynamic_hdr_presentation::application_mapped &&
+            has_extension(physical_device, VK_HUAWEI_HDR_VIVID_EXTENSION_NAME) &&
+            has_extension(physical_device, VK_EXT_HDR_METADATA_EXTENSION_NAME);
+        if (vivid_extension_supported) supported13.pNext = &supported_vivid;
         vkGetPhysicalDeviceFeatures2(physical_device, &supported);
+        if (vivid_requested && (!vivid_extension_supported || !supported_vivid.hdrVivid)) {
+            LOGW("PyroWave native Vivid requested but VK_HUAWEI_hdr_vivid/hdrVivid is unavailable");
+            return false;
+        }
         if (!supported13.subgroupSizeControl) {
             LOGW("PyroWave GPU decoder disabled: subgroup size control is unavailable");
             return false;
@@ -477,6 +499,13 @@ struct PyrowaveVulkanDecoder::impl {
         enabled_vulkan13_features.synchronization2 = supported13.synchronization2;
         enabled_features.pNext = &enabled_vulkan12_features;
         enabled_vulkan12_features.pNext = &enabled_vulkan13_features;
+        vivid_native_supported = vivid_extension_supported && supported_vivid.hdrVivid;
+        enabled_vivid_features = {};
+        enabled_vivid_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HDR_VIVID_FEATURES_HUAWEI;
+        if (vivid_native_supported) {
+            enabled_vivid_features.hdrVivid = VK_TRUE;
+            enabled_vulkan13_features.pNext = &enabled_vivid_features;
+        }
 
         queue_create_info = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -490,6 +519,7 @@ struct PyrowaveVulkanDecoder::impl {
         if (has_extension(physical_device, VK_EXT_HDR_METADATA_EXTENSION_NAME)) {
             device_extensions.push_back(VK_EXT_HDR_METADATA_EXTENSION_NAME);
         }
+        if (vivid_native_supported) device_extensions.push_back(VK_HUAWEI_HDR_VIVID_EXTENSION_NAME);
         device_create_info = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .pNext = &enabled_features,
@@ -503,6 +533,12 @@ struct PyrowaveVulkanDecoder::impl {
             .pEnabledFeatures = nullptr,
         };
         const auto create_device_result = vkCreateDevice(physical_device, &device_create_info, nullptr, &device);
+        if (vivid_native_supported &&
+            (create_device_result == VK_ERROR_FEATURE_NOT_PRESENT || create_device_result == VK_ERROR_EXTENSION_NOT_PRESENT)) {
+            LOGW("PyroWave Vivid feature was reported but could not be enabled (VkResult=%d)",
+                 static_cast<int>(create_device_result));
+            return false;
+        }
         if (create_device_result != VK_SUCCESS) return log_vulkan_failure("vkCreateDevice", create_device_result);
         volkLoadDevice(device);
         if (has_extension(physical_device, VK_EXT_HDR_METADATA_EXTENSION_NAME)) {
@@ -511,6 +547,11 @@ struct PyrowaveVulkanDecoder::impl {
         }
         if (hdr_mode == 1 && set_hdr_metadata == nullptr) {
             LOGW("PyroWave HDR10 decoder disabled: vkSetHdrMetadataEXT is unavailable");
+            return false;
+        }
+        if (dynamic_presentation == moonlight::pyrowave::dynamic_hdr_presentation::native_vivid &&
+            (!vivid_native_supported || set_hdr_metadata == nullptr)) {
+            LOGW("PyroWave native Vivid consumer is unavailable after Surface recreation");
             return false;
         }
         vkGetDeviceQueue(device, queue_family, 0, &queue);
@@ -580,8 +621,8 @@ struct PyrowaveVulkanDecoder::impl {
             : log_vulkan_failure("vkCreateSemaphore(decode-complete)", decode_semaphore_result);
     }
 
-    bool apply_hdr_metadata() {
-        if (hdr_mode == 0 || !hdr_metadata_enabled || !hdr_metadata_valid) return true;
+    bool apply_hdr_metadata(const moonlight::pyrowave::dynamic_hdr_payload& vivid = {}) {
+        if (hdr_mode == 0 || !hdr_snapshot.enabled || !hdr_snapshot.valid) return vivid.size == 0;
         if (swapchain == VK_NULL_HANDLE) return false;
         if (set_hdr_metadata == nullptr) {
             // HLG can still be presented through its HLG swapchain colorspace
@@ -597,58 +638,34 @@ struct PyrowaveVulkanDecoder::impl {
             return false;
         }
 
-        VkHdrMetadataEXT metadata{
-            .sType = VK_STRUCTURE_TYPE_HDR_METADATA_EXT,
-            .pNext = nullptr,
-            .displayPrimaryRed = { hdr_metadata.display_primaries[0].x,
-                                   hdr_metadata.display_primaries[0].y },
-            .displayPrimaryGreen = { hdr_metadata.display_primaries[1].x,
-                                     hdr_metadata.display_primaries[1].y },
-            .displayPrimaryBlue = { hdr_metadata.display_primaries[2].x,
-                                    hdr_metadata.display_primaries[2].y },
-            .whitePoint = { hdr_metadata.white_point.x, hdr_metadata.white_point.y },
-            .maxLuminance = hdr_metadata.max_display_luminance,
-            .minLuminance = hdr_metadata.min_display_luminance,
-            .maxContentLightLevel = hdr_metadata.max_content_light_level,
-            .maxFrameAverageLightLevel = hdr_metadata.max_frame_average_light_level,
-        };
-        if (dynamic_frame_applied) {
-            // These are output-signal values after application mapping. The
-            // source SS_HDR_METADATA snapshot itself remains unchanged.
-            metadata.maxLuminance = target_peak_nits;
-            metadata.minLuminance = std::min(metadata.minLuminance, target_peak_nits);
-            metadata.maxContentLightLevel = std::min(metadata.maxContentLightLevel, target_peak_nits);
-            metadata.maxFrameAverageLightLevel = std::min(metadata.maxFrameAverageLightLevel, target_peak_nits);
-        }
-        // VkHdrMetadataEXT has no independent maxFullFrameLuminance member.
-        // Keep that Sunshine display value in the validated snapshot (so it
-        // survives rebind/recovery) but do not mislabel it as MaxFALL.
-        // VK_EXT_hdr_metadata exposes a void entry point; extension/function
-        // availability is the failure boundary, while the driver applies the
-        // metadata asynchronously to the swapchain.
-        set_hdr_metadata(device, 1, &swapchain, &metadata);
-        return true;
+        const bool application_mapped = dynamic_frame_applied &&
+            dynamic_presentation == moonlight::pyrowave::dynamic_hdr_presentation::application_mapped;
+        // The helper validates and submits only to the live swapchain passed
+        // here. The Vivid view is borrowed from this submit, never cached.
+        return moonlight::pyrowave::apply_swapchain_hdr_metadata(
+            device, swapchain, set_hdr_metadata, hdr_snapshot.metadata,
+            application_mapped, target_peak_nits, vivid.data, vivid.size);
     }
 
     bool set_hdr_metadata_snapshot(bool enabled, const std::uint8_t *bytes, std::size_t length) {
-        const auto previous_metadata = hdr_metadata;
-        const bool previous_metadata_valid = hdr_metadata_valid;
-        hdr_metadata_enabled = enabled;
-        hdr_metadata_valid = false;
-        hdr_metadata = {};
-        bool all_zero = bytes != nullptr && length >= kSsHdrMetadataSize;
-        if (all_zero) {
-            for (std::size_t i = 0; i < kSsHdrMetadataSize; ++i) {
-                if (bytes[i] != 0) {
-                    all_zero = false;
-                    break;
-                }
-            }
+        const auto previous = hdr_snapshot;
+        const auto update = hdr_snapshot.update(enabled, bytes, length);
+        if (update == moonlight::pyrowave::hdr_snapshot_update::cleared) {
+            hdr_metadata_missing_logged = false;
+            hdr_metadata_invalid_logged = false;
+            dynamic_frame_applied = false;
+            return true;
         }
-        if (!enabled || bytes == nullptr || length == 0 || all_zero) {
-            // Vulkan defines HDR metadata as optional. Keep the negotiated
-            // HDR10/HLG colorspace when Sunshine has not supplied a static
-            // snapshot yet; do not invent mastering or content-light values.
+        if (update == moonlight::pyrowave::hdr_snapshot_update::invalid) {
+            if (!hdr_metadata_invalid_logged) {
+                LOGW("PyroWave HDR metadata rejected: invalid Sunshine SS_HDR_METADATA (mode=%d size=%zu); keeping valid snapshot",
+                     hdr_mode, length);
+                hdr_metadata_invalid_logged = true;
+            }
+        } else if (update == moonlight::pyrowave::hdr_snapshot_update::accepted) {
+            hdr_metadata_invalid_logged = false;
+        }
+        if (!hdr_snapshot.valid) {
             if (hdr_mode != 0 && !hdr_metadata_missing_logged) {
                 LOGW("PyroWave HDR mode %d running without Sunshine static HDR metadata; "
                      "presenting degraded HDR colorspace", hdr_mode);
@@ -657,23 +674,10 @@ struct PyrowaveVulkanDecoder::impl {
             return true;
         }
         hdr_metadata_missing_logged = false;
-        hdr_metadata_valid = moonlight::pyrowave::parse_ss_hdr_metadata(
-            bytes, length, hdr_metadata);
-        if (!hdr_metadata_valid) {
-            LOGW("PyroWave HDR metadata rejected: invalid Sunshine SS_HDR_METADATA (mode=%d size=%zu)",
-                 hdr_mode, length);
-            // Do not apply malformed values and do not invent replacements.
-            // Keep the last known-good snapshot if one was already applied;
-            // otherwise the negotiated PQ/HLG colorspace remains usable as
-            // degraded HDR.
-            hdr_metadata = previous_metadata;
-            hdr_metadata_valid = previous_metadata_valid;
-            if (!previous_metadata_valid) hdr_metadata_missing_logged = true;
-            return true;
-        }
         if (swapchain == VK_NULL_HANDLE) return true;
         const auto applied = apply_hdr_metadata();
         if (!applied) {
+            hdr_snapshot = previous;
             LOGW("PyroWave HDR metadata could not be applied to the current swapchain (mode=%d)", hdr_mode);
         }
         return applied;
@@ -941,7 +945,7 @@ struct PyrowaveVulkanDecoder::impl {
 
     bool create_mapping_buffer() {
         VkBufferCreateInfo info{.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(moonlight::pyrowave::dynamic_hdr_lut),
+            .size = sizeof(moonlight::pyrowave::dynamic_hdr_mapping),
             .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
         auto result = vkCreateBuffer(device, &info, nullptr, &mapping_buffer);
         if (result != VK_SUCCESS) return log_vulkan_failure("vkCreateBuffer(HDR mapping)", result);
@@ -968,27 +972,47 @@ struct PyrowaveVulkanDecoder::impl {
         return result == VK_SUCCESS ? true : log_vulkan_failure("vkMapMemory(HDR mapping)", result);
     }
 
-    bool update_dynamic_mapping(const std::uint8_t* metadata, std::size_t length) {
+    bool update_dynamic_mapping(const std::uint8_t* metadata, std::size_t length,
+                                moonlight::pyrowave::dynamic_hdr_payload& vivid) {
         if (dynamic_hdr_format == DYNAMIC_HDR_FORMAT_NONE) return true;
         moonlight::pyrowave::dynamic_hdr_scene scene;
-        if (!moonlight::pyrowave::parse_dynamic_hdr_frame(metadata, length, dynamic_hdr_format, width, height, scene)) {
+        if (!moonlight::pyrowave::parse_dynamic_hdr_frame(metadata, length, dynamic_hdr_format, width, height, scene, &vivid)) {
             LOGW("PyroWave dynamic HDR frame rejected: format=%d metadata_bytes=%zu", dynamic_hdr_format, length);
             return false;
         }
-        // Validate every frame, but unrelated runtime TLVs must not force LUT
-        // allocation/rebuild. Missing metadata never authorizes stale reuse.
-        if (!dynamic_frame_applied || scene.minimum_nits != dynamic_scene.minimum_nits ||
-            scene.maximum_nits != dynamic_scene.maximum_nits || scene.average_nits != dynamic_scene.average_nits ||
-            scene.median_nits != dynamic_scene.median_nits || scene.variance_pq != dynamic_scene.variance_pq) {
-            moonlight::pyrowave::dynamic_hdr_lut lut;
-            if (mapping_data == nullptr || !moonlight::pyrowave::build_dynamic_hdr_lut(scene, target_peak_nits, lut)) return false;
-            std::memcpy(mapping_data, lut.data(), sizeof(lut));
-            if (!mapping_coherent) {
-                VkMappedMemoryRange range{.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-                    .memory = mapping_memory, .offset = 0, .size = VK_WHOLE_SIZE};
-                const auto result = vkFlushMappedMemoryRanges(device, 1, &range);
-                if (result != VK_SUCCESS) return log_vulkan_failure("vkFlushMappedMemoryRanges(HDR mapping)", result);
-            }
+        using moonlight::pyrowave::dynamic_hdr_presentation;
+        if (dynamic_presentation == dynamic_hdr_presentation::pending) {
+            dynamic_presentation = moonlight::pyrowave::select_dynamic_hdr_presentation(
+                dynamic_hdr_format == DYNAMIC_HDR_FORMAT_VIVID_PQ || dynamic_hdr_format == DYNAMIC_HDR_FORMAT_VIVID_HLG,
+                vivid_native_supported,
+                set_hdr_metadata != nullptr, hdr_snapshot);
+        }
+        if (dynamic_presentation == dynamic_hdr_presentation::native_vivid) {
+            if (!vivid_native_supported || set_hdr_metadata == nullptr ||
+                !hdr_snapshot.enabled || !hdr_snapshot.valid || vivid.data == nullptr || vivid.size == 0) return false;
+            dynamic_scene = scene;
+            dynamic_frame_applied = true;
+            return true;
+        }
+        if (dynamic_presentation == dynamic_hdr_presentation::unsupported) {
+            LOGW("PyroWave dynamic HDR presentation is unavailable: format=%d static_metadata=%d vivid_native=%d",
+                 dynamic_hdr_format, hdr_snapshot.valid ? 1 : 0, vivid_native_supported ? 1 : 0);
+            return false;
+        }
+        vivid = {}; // The software path must not also invoke native tone mapping.
+        // Build from every accepted frame. Curves, per-component MMR pieces,
+        // Dolby matrices and trim blocks may change without changing the
+        // luminance summary, so a summary-only dirty check would reuse stale
+        // presentation state. The mapping is small enough for this bounded
+        // host-visible upload; no GPU readback or extra frame copy is needed.
+        moonlight::pyrowave::dynamic_hdr_mapping mapping;
+        if (mapping_data == nullptr || !moonlight::pyrowave::build_dynamic_hdr_mapping(scene, target_peak_nits, mapping)) return false;
+        std::memcpy(mapping_data, &mapping, sizeof(mapping));
+        if (!mapping_coherent) {
+            VkMappedMemoryRange range{.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                .memory = mapping_memory, .offset = 0, .size = VK_WHOLE_SIZE};
+            const auto result = vkFlushMappedMemoryRanges(device, 1, &range);
+            if (result != VK_SUCCESS) return log_vulkan_failure("vkFlushMappedMemoryRanges(HDR mapping)", result);
         }
         dynamic_scene = scene;
         dynamic_frame_applied = true;
@@ -1025,17 +1049,20 @@ struct PyrowaveVulkanDecoder::impl {
             .layout = pipeline_layout };
         const auto pipeline_result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &conversion_pipeline);
         if (pipeline_result != VK_SUCCESS) return log_vulkan_failure("vkCreateComputePipelines", pipeline_result);
-        VkDescriptorPoolSize sizes[3] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
-                                          { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-                                          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } };
+        const auto set_count = static_cast<std::uint32_t>(swapchain_views.size());
+        VkDescriptorPoolSize sizes[3] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 * set_count },
+                                          { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, set_count },
+                                          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, set_count } };
         VkDescriptorPoolCreateInfo pool_info{ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                                              .maxSets = 1, .poolSizeCount = hdr_mode != 0 ? 3U : 2U, .pPoolSizes = sizes };
+                                              .maxSets = set_count, .poolSizeCount = hdr_mode != 0 ? 3U : 2U, .pPoolSizes = sizes };
         const auto pool_result = vkCreateDescriptorPool(device, &pool_info, nullptr, &descriptor_pool);
         if (pool_result != VK_SUCCESS) return log_vulkan_failure("vkCreateDescriptorPool", pool_result);
+        const std::vector<VkDescriptorSetLayout> layouts(set_count, descriptor_layout);
+        descriptor_sets.resize(set_count);
         VkDescriptorSetAllocateInfo allocation{ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                                                .descriptorPool = descriptor_pool, .descriptorSetCount = 1,
-                                                .pSetLayouts = &descriptor_layout };
-        const auto descriptor_result = vkAllocateDescriptorSets(device, &allocation, &descriptor_set);
+                                                .descriptorPool = descriptor_pool, .descriptorSetCount = set_count,
+                                                .pSetLayouts = layouts.data() };
+        const auto descriptor_result = vkAllocateDescriptorSets(device, &allocation, descriptor_sets.data());
         if (descriptor_result != VK_SUCCESS) return log_vulkan_failure("vkAllocateDescriptorSets", descriptor_result);
         VkSamplerCreateInfo sampler_info{ .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR,
@@ -1045,7 +1072,30 @@ struct PyrowaveVulkanDecoder::impl {
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             .maxLod = 0.0f, .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK };
         const auto sampler_result = vkCreateSampler(device, &sampler_info, nullptr, &sampler);
-        return sampler_result == VK_SUCCESS ? true : log_vulkan_failure("vkCreateSampler", sampler_result);
+        if (sampler_result != VK_SUCCESS) return log_vulkan_failure("vkCreateSampler", sampler_result);
+        // Plane, LUT and output-view handles remain fixed until resource
+        // recreation. Pre-bind one set per swapchain image instead of writing
+        // all bindings again on every frame.
+        VkDescriptorImageInfo sources[3]{};
+        for (std::size_t i = 0; i < 3; ++i) sources[i] = {sampler, planes[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+        const VkDescriptorBufferInfo mapping_info{mapping_buffer, 0, sizeof(moonlight::pyrowave::dynamic_hdr_mapping)};
+        for (std::size_t image = 0; image < descriptor_sets.size(); ++image) {
+            const VkDescriptorImageInfo destination{VK_NULL_HANDLE, swapchain_views[image], VK_IMAGE_LAYOUT_GENERAL};
+            VkWriteDescriptorSet writes[5]{};
+            for (std::uint32_t i = 0; i < 3; ++i) {
+                writes[i] = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptor_sets[image],
+                    .dstBinding = i, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &sources[i]};
+            }
+            writes[3] = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptor_sets[image],
+                .dstBinding = 3, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                .pImageInfo = &destination};
+            writes[4] = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptor_sets[image],
+                .dstBinding = 4, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .pBufferInfo = &mapping_info};
+            vkUpdateDescriptorSets(device, hdr_mode != 0 ? 5U : 4U, writes, 0, nullptr);
+        }
+        return true;
     }
 
     bool ready_for_submit() const {
@@ -1116,6 +1166,7 @@ struct PyrowaveVulkanDecoder::impl {
         const auto frame_number = ++submitted_frames;
         const auto decode_start = std::chrono::steady_clock::now();
         if (!ready_for_submit()) return submit_failure("decoder-not-ready");
+        if (hdr_mode != 0 && !hdr_snapshot.enabled) return submit_failure("hdr-mode-disabled");
         if (data == nullptr || length == 0) return submit_failure("invalid-packet");
         if (api.push(decoder, data, length) != PYROWAVE_SUCCESS) {
             return submit_failure("push-packet", static_cast<int>(PYROWAVE_ERROR_GENERIC), length);
@@ -1140,7 +1191,8 @@ struct PyrowaveVulkanDecoder::impl {
                  metadata.primaries, metadata.transfer, metadata.transform);
             return submit_failure("color-metadata-mismatch", 0, length);
         }
-        if (!update_dynamic_mapping(frame_metadata, metadata_length)) {
+        moonlight::pyrowave::dynamic_hdr_payload vivid{};
+        if (!update_dynamic_mapping(frame_metadata, metadata_length, vivid)) {
             return submit_failure("dynamic-hdr-metadata", 0, metadata_length);
         }
         pyrowave_gpu_buffers buffers{};
@@ -1167,28 +1219,9 @@ struct PyrowaveVulkanDecoder::impl {
         if (acquire != VK_SUCCESS && acquire != VK_SUBOPTIMAL_KHR) {
             return submit_failure_after_decode("acquire-image", acquire, length);
         }
-        if (image_index >= swapchain_images.size()) {
+        if (image_index >= swapchain_images.size() || image_index >= descriptor_sets.size()) {
             return submit_failure_after_decode("acquire-image-index", 0, length);
         }
-
-        VkDescriptorImageInfo source_infos[3]{};
-        for (std::size_t i = 0; i < 3; ++i) source_infos[i] = { sampler, planes[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        VkDescriptorImageInfo destination{ VK_NULL_HANDLE, swapchain_views[image_index], VK_IMAGE_LAYOUT_GENERAL };
-        VkWriteDescriptorSet writes[5]{};
-        for (std::uint32_t i = 0; i < 3; ++i) {
-            writes[i] = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptor_set,
-                          .dstBinding = i, .descriptorCount = 1,
-                          .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &source_infos[i] };
-        }
-        writes[3] = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptor_set,
-                      .dstBinding = 3, .descriptorCount = 1,
-                      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .pImageInfo = &destination };
-        VkDescriptorBufferInfo mapping_info{mapping_buffer, 0, sizeof(moonlight::pyrowave::dynamic_hdr_lut)};
-        writes[4] = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptor_set,
-            .dstBinding = 4, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .pBufferInfo = &mapping_info};
-        vkUpdateDescriptorSets(device, hdr_mode != 0 ? 5U : 4U, writes, 0, nullptr);
-
         VkCommandBufferBeginInfo begin_info{ .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
                                              .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
         const auto reset_command_result = vkResetCommandBuffer(command_buffer, 0);
@@ -1199,7 +1232,8 @@ struct PyrowaveVulkanDecoder::impl {
         if (begin_result != VK_SUCCESS) {
             return submit_failure_after_decode("begin-command-buffer", begin_result, length);
         }
-        if (dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE) {
+        if (dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE &&
+            dynamic_presentation == moonlight::pyrowave::dynamic_hdr_presentation::application_mapped) {
             VkMemoryBarrier metadata_visibility{.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
                 .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT};
             vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -1228,15 +1262,17 @@ struct PyrowaveVulkanDecoder::impl {
                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr,
                              static_cast<std::uint32_t>(barriers.size()), barriers.data());
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, conversion_pipeline);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_sets[image_index], 0, nullptr);
         const shader_constants constants{
             .scale_x = 1.0F,
             .scale_y = 1.0F,
             .full_range = full_range ? 1.0F : 0.0F,
-            .reserved = dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE ? 1.0F : 0.0F,
+            .reserved = dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE &&
+                dynamic_presentation == moonlight::pyrowave::dynamic_hdr_presentation::application_mapped ? 1.0F : 0.0F,
             .hdr_mode = static_cast<float>(hdr_mode),
             .source_peak_nits = hdr_mode == 2 ? dynamic_scene.hlg_nominal_peak_nits : 10000.0F,
             .target_peak_nits = target_peak_nits,
+            .saturation = dynamic_scene.hdr10plus.saturation_weight,
             .padding = 0.0F,
         };
         vkCmdPushConstants(command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(constants), &constants);
@@ -1281,7 +1317,7 @@ struct PyrowaveVulkanDecoder::impl {
         if (reset_fence_result != VK_SUCCESS) {
             return submit_failure("reset-submit-fence", reset_fence_result, length);
         }
-        if (dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE && !apply_hdr_metadata()) {
+        if (dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE && !apply_hdr_metadata(vivid)) {
             return submit_failure("dynamic-hdr-output-metadata", 0, metadata_length);
         }
         VkPresentInfoKHR present{ .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .swapchainCount = 1,
@@ -1291,8 +1327,11 @@ struct PyrowaveVulkanDecoder::impl {
             return submit_failure("present", result, length);
         }
         if (dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE && !dynamic_hdr_logged) {
-            LOGI("PyroWave dynamic HDR applied: format=%d presentation=application-mapped output=%s target_peak=%.1f",
-                 dynamic_hdr_format, hdr_mode == 2 ? "HLG" : "PQ", target_peak_nits);
+            LOGI("PyroWave dynamic HDR submitted: format=%d presentation=%s output=%s target_peak=%.1f",
+                 dynamic_hdr_format,
+                 dynamic_presentation == moonlight::pyrowave::dynamic_hdr_presentation::native_vivid
+                    ? "native-vivid" : "application-mapped",
+                 hdr_mode == 2 ? "HLG" : "PQ", target_peak_nits);
             dynamic_hdr_logged = true;
         }
         const auto present_end = std::chrono::steady_clock::now();
@@ -1325,6 +1364,7 @@ struct PyrowaveVulkanDecoder::impl {
         for (auto &plane : planes) destroy_image(device, plane);
         destroy_handle(device, sampler, vkDestroySampler);
         destroy_handle(device, descriptor_pool, vkDestroyDescriptorPool);
+        descriptor_sets.clear();
         destroy_handle(device, conversion_pipeline, vkDestroyPipeline);
         destroy_handle(device, pipeline_layout, vkDestroyPipelineLayout);
         destroy_handle(device, descriptor_layout, vkDestroyDescriptorSetLayout);
@@ -1352,6 +1392,7 @@ struct PyrowaveVulkanDecoder::impl {
         if (device != VK_NULL_HANDLE) vkDestroyDevice(device, nullptr);
         device = VK_NULL_HANDLE;
         set_hdr_metadata = nullptr;
+        vivid_native_supported = false;
         if (instance != VK_NULL_HANDLE && surface != VK_NULL_HANDLE) vkDestroySurfaceKHR(instance, surface, nullptr);
         surface = VK_NULL_HANDLE;
         if (instance != VK_NULL_HANDLE) vkDestroyInstance(instance, nullptr);
@@ -1428,7 +1469,7 @@ bool PyrowaveVulkanDecoder::available(int width, int height, int hdrMode) {
     return available;
 }
 
-bool PyrowaveVulkanDecoder::create(int width, int height, int hdrMode, bool fullRange) {
+bool PyrowaveVulkanDecoder::create(int width, int height, int hdrMode, bool fullRange, int dynamicHdrFormat) {
     if (!valid_dimensions(width, height) || (hdrMode < 0 || hdrMode > 2)) {
         LOGW("PyroWave Vulkan decoder rejected create request: %dx%d hdr=%d full_range=%d",
              width, height, hdrMode, fullRange ? 1 : 0);
@@ -1442,6 +1483,8 @@ bool PyrowaveVulkanDecoder::create(int width, int height, int hdrMode, bool full
     impl_->height = height;
     impl_->hdr_mode = hdrMode;
     impl_->full_range = fullRange;
+    impl_->dynamic_hdr_format = dynamicHdrFormat;
+    impl_->dynamic_presentation = moonlight::pyrowave::dynamic_hdr_presentation::pending;
     impl_->window = previous_window;
     if (!impl_->api.load()) {
         LOGW("PyroWave Vulkan decoder create failed: runtime library unavailable");
@@ -1493,7 +1536,11 @@ bool PyrowaveVulkanDecoder::setDynamicHdr(int format, float targetPeakNits) {
     const bool hlg = format == DYNAMIC_HDR_FORMAT_VIVID_HLG || format == DYNAMIC_HDR_FORMAT_DOLBY_VISION_PROFILE_84;
     if ((format != DYNAMIC_HDR_FORMAT_NONE && !pq && !hlg) ||
         (pq && impl_->hdr_mode != 1) || (hlg && impl_->hdr_mode != 2) ||
+        format != impl_->dynamic_hdr_format ||
         !std::isfinite(targetPeakNits) || targetPeakNits < 1 || targetPeakNits > 10000) return false;
+    if (format != impl_->dynamic_hdr_format) {
+        impl_->dynamic_presentation = moonlight::pyrowave::dynamic_hdr_presentation::pending;
+    }
     impl_->dynamic_hdr_format = format;
     impl_->target_peak_nits = targetPeakNits;
     impl_->dynamic_scene = {};

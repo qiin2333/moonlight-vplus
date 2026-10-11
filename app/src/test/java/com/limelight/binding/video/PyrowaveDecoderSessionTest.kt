@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -119,24 +121,113 @@ class PyrowaveDecoderSessionTest {
     @Test
     fun hdrMetadataIsForwardedAndSurvivesSessionRecreation() {
         val native = FakeNative()
-        val session = PyrowaveDecoderSession(native)
-        val metadata = byteArrayOf(1, 2, 3)
+        val session = PyrowaveDecoderSession(native, gpuNative = native)
+        val metadata = hdrMetadataPayload()
 
-        assertTrue(session.create(1280, 720, hdrMode = 0))
+        assertTrue(session.create(1280, 720, hdrMode = 1))
         assertTrue(session.setHdrMetadata(enabled = true, metadata = metadata))
         assertEquals(metadata.toList(), native.hdrMetadata.last().second?.toList())
 
-        assertTrue(session.create(1920, 1080, hdrMode = 0))
+        assertTrue(session.create(1920, 1080, hdrMode = 1))
         assertEquals(metadata.toList(), native.hdrMetadata.last().second?.toList())
     }
 
     @Test
     fun hdrMetadataFailureDoesNotExposeAnIncompleteSession() {
         val native = FakeNative().also { it.acceptHdrMetadata = false }
-        val session = PyrowaveDecoderSession(native)
+        val session = PyrowaveDecoderSession(native, gpuNative = native)
 
-        assertFalse(session.create(1920, 1080, hdrMode = 1, hdrMetadata = byteArrayOf(1)))
+        assertFalse(session.create(1920, 1080, hdrMode = 1, hdrMetadata = hdrMetadataPayload()))
         assertFalse(session.isActive)
+    }
+
+    @Test
+    fun missingAndInvalidUpdatesPreserveTheAcceptedSnapshotForRecovery() {
+        val gpu = FakeNative(submitResult = -1)
+        val session = PyrowaveDecoderSession(FakeNative(), gpu)
+        val accepted = hdrMetadataPayload()
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = accepted))
+        for (update in listOf(null, ByteArray(26), byteArrayOf(1), hdrMetadataPayload(0))) {
+            assertTrue(session.setHdrMetadata(true, update))
+            assertEquals(accepted.toList(), gpu.hdrMetadata.last().second?.toList())
+        }
+        assertEquals(PyrowaveDecoderSession.SubmitResult.RECOVERED, session.submit(byteArrayOf(1), 1))
+        assertEquals(accepted.toList(), gpu.hdrMetadata.last().second?.toList())
+    }
+
+    @Test
+    fun failedMetadataApplicationDoesNotPolluteARecreatedDecoder() {
+        val gpu = FakeNative(submitResult = -1)
+        val session = PyrowaveDecoderSession(FakeNative(), gpu)
+        val accepted = hdrMetadataPayload()
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = accepted))
+        gpu.acceptHdrMetadata = false
+        assertFalse(session.setHdrMetadata(true, hdrMetadataPayload(600)))
+        gpu.acceptHdrMetadata = true
+        assertEquals(PyrowaveDecoderSession.SubmitResult.RECOVERED, session.submit(byteArrayOf(1), 1))
+        assertEquals(accepted.toList(), gpu.hdrMetadata.last().second?.toList())
+    }
+
+    @Test
+    fun failedReplacementDoesNotChangeTheLiveHdrState() {
+        val gpu = FakeNative(submitResult = -1)
+        val session = PyrowaveDecoderSession(FakeNative(createResult = 0L), gpu)
+        val accepted = hdrMetadataPayload()
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = accepted))
+        gpu.createResult = 0
+        assertFalse(session.create(1280, 720, hdrMode = 0))
+        assertTrue(session.isActive)
+        gpu.createResult = 1
+        assertEquals(PyrowaveDecoderSession.SubmitResult.RECOVERED, session.submit(byteArrayOf(1), 1))
+        assertEquals(1 to true, gpu.createProfiles.last())
+        assertEquals(accepted.toList(), gpu.hdrMetadata.last().second?.toList())
+    }
+
+    @Test
+    fun aStaleCreationSeedCannotOverwriteAnAcceptedControlUpdate() {
+        val gpu = FakeNative()
+        val session = PyrowaveDecoderSession(FakeNative(), gpu)
+        val old = hdrMetadataPayload()
+        val latest = hdrMetadataPayload(800)
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = old))
+        assertTrue(session.setHdrMetadata(true, latest))
+        latest.fill(0) // The control byte array is not owned by the session.
+        assertTrue(session.create(1280, 720, hdrMode = 1, hdrMetadata = old))
+        assertEquals(hdrMetadataPayload(800).toList(), gpu.hdrMetadata.last().second?.toList())
+    }
+
+    @Test
+    fun resetDoesNotReuseStaticHdrMetadataFromThePreviousConnection() {
+        val gpu = FakeNative()
+        val session = PyrowaveDecoderSession(FakeNative(), gpu)
+        val old = hdrMetadataPayload(1000)
+        val latest = hdrMetadataPayload(600)
+
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = old))
+        session.reset()
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = latest))
+
+        assertEquals(latest.toList(), gpu.hdrMetadata.last().second?.toList())
+    }
+
+    @Test
+    fun explicitDisableClearsTheSnapshotAndSdrCannotInheritIt() {
+        val gpu = FakeNative()
+        val session = PyrowaveDecoderSession(FakeNative(), gpu)
+        assertTrue(session.create(1920, 1080, hdrMode = 1, hdrMetadata = hdrMetadataPayload()))
+        assertTrue(session.setHdrMetadata(false, null))
+        assertEquals(false to null, gpu.hdrMetadata.last())
+        assertTrue(session.create(1280, 720, hdrMode = 0))
+        assertEquals(false to null, gpu.hdrMetadata.last())
+    }
+
+    @Test
+    fun hdrAndDynamicConfigurationAreReadyBeforeTheFirstSurfaceBind() {
+        val gpu = FakeNative()
+        val session = PyrowaveDecoderSession(FakeNative(), gpu)
+        assertTrue(session.create(1920, 1080, hdrMode = 1,
+            hdrMetadata = hdrMetadataPayload(), dynamicHdrFormat = 2))
+        assertEquals(listOf("create", "hdr", "dynamic", "surface"), gpu.operations)
     }
 
     @Test
@@ -294,14 +385,17 @@ class PyrowaveDecoderSessionTest {
         val frameMetadata = mutableListOf<ByteArray?>()
         val submittedHandles = mutableListOf<Long>()
         var onSubmit: (() -> Int)? = null
+        val operations = mutableListOf<String>()
 
         override fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long {
+            operations += "create"
             createProfiles += hdrMode to fullRange
             if (createResult == 0L) return 0L
             return nextHandle++
         }
 
         override fun setSurface(handle: Long, surface: android.view.Surface?): Boolean {
+            operations += "surface"
             surfaces += surface
             return true
         }
@@ -314,6 +408,7 @@ class PyrowaveDecoderSessionTest {
         override fun getTimings(handle: Long): Long = 0L
 
         override fun setDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean {
+            operations += "dynamic"
             dynamicConfigurations += format to targetPeakNits
             return acceptDynamicHdr
         }
@@ -324,6 +419,7 @@ class PyrowaveDecoderSessionTest {
         }
 
         override fun setHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean {
+            operations += "hdr"
             hdrMetadata += enabled to metadata?.copyOf()
             return acceptHdrMetadata
         }
@@ -331,5 +427,13 @@ class PyrowaveDecoderSessionTest {
         override fun destroy(handle: Long) {
             destroyed += handle
         }
+    }
+
+    private fun hdrMetadataPayload(peakNits: Int = 1000): ByteArray {
+        val values = intArrayOf(35400, 14600, 8500, 39850, 6550, 2300,
+            15635, 16450, peakNits, 1, 1200, 400, 600)
+        val buffer = ByteBuffer.allocate(26).order(ByteOrder.LITTLE_ENDIAN)
+        values.forEach { buffer.putShort(it.toShort()) }
+        return buffer.array()
     }
 }
