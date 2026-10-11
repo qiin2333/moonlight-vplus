@@ -81,6 +81,18 @@ class PyrowaveHdrMetadataTest {
         assertNull(PyrowaveHdrMetadata.fromSunshineBytes(ByteArray(PyrowaveHdrMetadata.SS_HDR_METADATA_SIZE)))
     }
 
+    @Test
+    fun snapshotUpdatesAreValidatedAndExplicitDisableIsTheOnlyClear() {
+        val accepted = payload(35400, 14600, 8500, 39850, 6550, 2300,
+            15635, 16450, 1000, 1, 0, 0, 600)
+        for (update in listOf(null, ByteArray(26), byteArrayOf(1),
+            payload(50001, 14600, 8500, 39850, 6550, 2300, 15635, 16450, 1000, 1, 0, 0, 600))) {
+            assertEquals(accepted.toList(), PyrowaveHdrMetadata.updatedSnapshot(accepted, true, update)?.toList())
+        }
+        assertNull(PyrowaveHdrMetadata.updatedSnapshot(accepted, false, accepted))
+        assertNull(PyrowaveHdrMetadata.updatedSnapshot(null, true, ByteArray(26)))
+    }
+
     private fun payload(vararg values: Int): ByteArray {
         val buffer = ByteBuffer.allocate(PyrowaveHdrMetadata.SS_HDR_METADATA_SIZE).order(ByteOrder.LITTLE_ENDIAN)
         values.forEach { buffer.putShort(it.toShort()) }

@@ -1,30 +1,33 @@
-# PyroWave 动态 HDR 帧交付与应用内映射
+# PyroWave 动态 HDR 帧交付与呈现
 
-PyroWave 使用 Sunshine 从桌面画面生成的 HDR10+、HDR Vivid 和 Dolby Vision RPU 子集，
-在 Vulkan 图像转换中进行逐帧亮度映射，再输出 PQ 或 HLG。此路径消费动态元数据，
-不调用厂商原生 Dolby Vision 显示引擎，也不使 PyroWave 成为标准 Dolby Vision HEVC 码流。
+PyroWave 使用 Sunshine 从桌面画面生成的动态 HDR 元数据，并通过 Vulkan 呈现链路逐帧消费。
+Vivid 在设备支持 `VK_HUAWEI_hdr_vivid` 时走原生扩展；HDR10+ 与 Dolby Vision 使用
+客户端的受限应用映射 shader，输出仍保持协商的 PQ/HLG 基础信号。PyroWave 不声称自己是
+经过 Dolby 或 HDR10+ 认证的硬件解码器，也不改变网络码流的基础颜色合同。
 
 ## 格式与生成范围
 
 | 用户选择 | 主机动态类型 | 基础信号与输出 | 消费范围 |
 | --- | ---: | --- | --- |
-| HDR10+ → PQ | 1 | BT.2020/PQ、10-bit | Application 1 单窗口，maxSCL、mean、九项亮度分布；5%/10% 保留值按合同验证 |
-| HDR Vivid → PQ | 2 | BT.2020/PQ、10-bit | system_start_code=1，min/average/variance/max 四个 PQ 统计字段 |
-| HDR Vivid → HLG | 3 | BT.2020/HLG、10-bit | 同上，额外使用主机 HLG 名义峰值进行 OOTF 还原 |
-| Dolby Vision 8.1 → PQ | 4 | BT.2020/PQ、10-bit | identity polynomial、CM2.9 L1/L5/L6、scene refresh 与 CRC |
-| Dolby Vision 8.4 → HLG | 5 | BT.2020/HLG、10-bit | 同一桌面 RPU 统计子集，按协商的 HLG 基础信号解释像素 |
+| HDR Vivid（PQ 基础信号） | 2 | BT.2020/PQ、10-bit | system_start_code=1，四个 PQ 统计字段；仅 Vulkan 原生 Vivid |
+| HDR Vivid（HLG 基础信号） | 3 | BT.2020/HLG、10-bit | system_start_code=2，四个 PQ 统计字段和 UWA base curve；仅 Vulkan 原生 Vivid |
+| HDR10+ | 1 | BT.2020/PQ、10-bit | 解析 ST 2094-40 统计/曲线并在 Vulkan 中应用映射 |
+| Dolby Vision 8.1 / 8.4 | 4 / 5 | BT.2020/PQ 或 HLG、10-bit | 解析受支持的 RPU reshape、矩阵和 trim 字段并在 Vulkan 中应用映射 |
 
 所有模式保持 4:2:0，并支持用户选择的 limited/full range。基础静态 HDR10/HLG 选项
 不隐式请求动态格式，SDR 不启用动态处理。没有独立 SDR 10-bit、4:4:4 或 4:2:2 选项。
 
-解析器只接受上述生成子集。不处理 HDR10+ 多窗口、空间峰值网格、authored curves
-或饱和度映射，不处理 Vivid authored tone curves，也不处理 Dolby trim blocks、Profile 5/7、
-enhancement layer 或任意影片 RPU。遇到不支持的语法不会假装成功。
+解析器只接受上述生成子集。HDR10+ 只生成和消费单窗口统计、knee/Bezier 及饱和度字段，
+不处理多窗口、空间峰值网格或 authored curves；Vivid 不处理 authored tone curves。Dolby
+客户端消费 polynomial/MMR 的全部分段曲线，并解析 CM2.9 L1/L2/L5/L6；Sunshine 当前
+只生成无增强层的 identity reshape、L1/L5/L6，L2 仅作为兼容接收字段。Profile 5/7、
+enhancement layer、NLQ 和其他影片 RPU 仍拒绝。遇到不支持的语法不会假装成功。
 
 ## 连接与能力
 
-客户端复用现有 HDR 模式设置，按 PQ/HLG 基础能力筛选 PyroWave 动态选项，不要求
-MediaCodec Dolby 解码器。非 PyroWave 的设置列表及解码策略继续按原有厂商能力筛选。
+客户端复用现有 HDR 模式设置。Vivid 菜单项仍要求原生 Vulkan Vivid 能力；HDR10+ 与
+Dolby Vision 菜单项要求对应的显示基础信号，并在 PyroWave 会话中使用应用映射路径。
+非 PyroWave 的设置列表及解码策略继续按原有厂商能力筛选。
 
 连接工作线程使用实际尺寸、range、Surface、动态格式和目标峰值创建候选 Vulkan 会话。
 预检成功后才声明 `DYNAMIC_HDR_MAPPING`，通过现有 `dynamicHdrCaps`、`dynamicHdrPreference`
@@ -43,7 +46,7 @@ DV 生产器还要求主机提供有效的源 mastering 峰值；缺失时不伪
 
 ~~~mermaid
 flowchart LR
-    A[Sunshine 图像处理后的逐帧统计] --> B[HDR10+ Vivid 或 RPU 生产器]
+    A[Sunshine 图像处理后的有效场景统计] --> B[每个编码帧的 HDR10+ Vivid 或 RPU 生产器]
     B --> C[同帧 protected TLV 加 codec bytes]
     C --> D[Frame Envelope 与块级 FEC]
     D --> E[common-c 完整重组]
@@ -51,9 +54,9 @@ flowchart LR
     F --> G[callbacks 与 MoonBridge 专用 PyroWave 回调]
     G --> H[PyrowaveDecoderSession submit]
     H --> I[JNI 与 PyrowaveVulkanDecoder]
-    I --> J[解析并生成当前帧亮度 LUT]
-    J --> K[GPU YUV 转换与亮度映射]
-    K --> L[PQ 或 HLG swapchain present]
+    I --> J[解析当前帧 metadata]
+    J --> V[GPU YUV 转换与原生 Vivid PQ 或 HLG 提交]
+    V --> L[PQ 或 HLG swapchain present]
 ~~~
 
 动态元数据与码流由同一个 decode-unit 分配拥有，直到 `LiCompleteVideoFrame()` 才释放。
@@ -64,42 +67,66 @@ JNI 将元数据区复制到当前 Java 回调的 byte array，native 在同步 
 必须从受保护 DATA/PARITY 区取得完整 TLV。动态 TLV 必须匹配协商格式并标记
 `PROTECTED | REQUIRED`；缺失、重复、截断、错前缀、CRC 错误或未知 required 类型拒绝该帧。
 
-## 像素映射
+## 动态元数据限制
 
-解析器将本帧统计转换为 nits，依据内容峰值、平均/中位亮度及 PQ 分布生成
-256 项单调亮度 LUT。映射保留暗部、压缩超过目标显示峰值的亮部，不放大亮度。
-不同统计会改变当前帧 LUT；没有 metadata 不能复用另一帧 LUT。
+PyroWave Vulkan 路径对 HDR10+ 与 Dolby Vision 执行受限的应用侧动态映射，
+对 Vivid 优先使用原生呈现，不在原生 Vivid 路径重复映射。
+Vivid 逐帧 payload 只有在原生 Vivid Vulkan feature、`VK_EXT_hdr_metadata`、函数入口和
+有效 `SS_HDR_METADATA` 都满足时才提交；不满足时当前格式失败并等待重新协商。
+HDR10+ 与 Dolby Vision 的动态载荷不能通过 Vulkan 通用 swapchain 原生提交，
+因此由客户端 shader 解析后应用到 PQ/HLG 基础信号；这不等同于厂商认证的 Dolby 输出。
+应用映射仍要求有效的 `SS_HDR_METADATA` 快照来确定源峰值和输出限制；快照缺失或非法时
+拒绝该动态会话，不把静态默认值冒充主机元数据。
 
-客户端先做原有 limited/full YUV 归一化与 BT.2020 转换，再在 GPU 上按 RGB 最大分量
-执行保持色相比例的亮度压缩。PQ 直接转换为绝对亮度；HLG 使用主机发送的名义峰值
-和 BT.2100 system gamma 还原线性显示光，映射后按目标峰值重新编码 HLG。
+颜色范围归一化、BT.2020 YUV 转换和静态 HDR metadata 提交仍在 GPU 上完成，图像平面
+不读回 CPU。没有动态元数据时，静态 HDR10/HLG 继续按基础色彩合同呈现。
 
-目标峰值来自用户的亮度覆盖设置，否则使用目标显示器报告的有效峰值；未报告时采用
-500 nits 的应用映射目标。这不是主机 mastering 元数据，不能写回源 `SS_HDR_METADATA`。
-此算法是应用侧桌面场景适配，不承诺与厂商 Dolby/Vivid 引擎或影片 authored mapping 等价。
+## 原生 Vivid/PQ 与 Vivid/HLG
 
-小型 LUT 使用 host-visible storage buffer；更新后处理非 coherent flush，并在转换提交中
-使用 HOST_WRITE → COMPUTE_SHADER_READ barrier。上一帧 Fence 完成后才复用缓冲区，
-图像平面仍留在 GPU，不增加逐帧 YUV CPU 读回。
+实际 Vulkan device 同时支持 `VK_HUAWEI_hdr_vivid`、`hdrVivid` feature、
+`VK_EXT_hdr_metadata` 和 `vkSetHdrMetadataEXT`，且当前帧开始前已有有效的主机静态快照时，
+Vivid/PQ 与 Vivid/HLG 可以使用原生呈现。扩展与 feature 在 logical device 创建时启用，不能仅根据
+设备品牌或显示器宣称的 HDR 能力判断。
+
+消费者在第一帧选择，并在该 decoder 生命周期内固定。Vivid 条件不满足时不伪造原生
+Vivid；HDR10+ 与 Dolby 走应用映射，不因此额外启用 Vivid feature。资源重建后保持已选
+消费者，能力缺失则按现有恢复路径处理故障。
+
+受保护 TLV 内仍保留完整 T.35 payload。原生接口使用 UWA 005.1 §7.3 的
+`dynamic_metadata()` 正文：去掉 country/provider/oriented code 共 5 字节，保留
+`system_start_code`。在当前帧转换完成后、present 前，将正文通过
+`VkHdrVividDynamicMetadataHUAWEI` 链到 `VkHdrMetadataEXT`；不缓存跨帧的载荷指针。
+静态源快照不经过应用侧亮度调整；该帧只提交原生 Vivid metadata，避免重复 tone mapping。
+
+当前原生输入只接受主机生成的统计和 base curve 子集：PQ 使用 system_start_code=0x01，
+HLG 使用 0x02；该字段表示 UWA 系统版本，不是可任意替换的 transfer 标签。两端必须按
+协商格式生成并校验对应载荷，HLG 仍使用 HLG swapchain。没有原生条件时拒绝该动态格式，
+不开放任意影片载荷或 authored curves。
+Vulkan metadata 接口没有成功返回值；调用完成及 present 提交不等于已证明面板最终效果。
+
+接口依据：[Vulkan Vivid metadata](https://docs.vulkan.org/refpages/latest/refpages/source/VkHdrVividDynamicMetadataHUAWEI.html)、
+[UWA 005.1-2022 §7.3、§8.2 与附录 B.3](https://www.uhd-world-association.com/wp-content/uploads/2025/03/TUWA-005.1-2022-HDR-Video-Technology-Part-1-Metadata-and-Tone-Mapping.pdf)。
 
 ## 静态元数据与生命周期
 
 `SS_HDR_METADATA` 继续走控制通道，原生 `color_metadata` 继续只描述颜色信号。
-应用映射保存有效主机快照；向输出 swapchain 提交时，亮度字段按映射后目标约束，
-色度/white point 保留原值。源快照不被覆盖，缺失或非法快照不伪造 mastering 数据。
+原生提交保存有效主机快照；向输出 swapchain 提交时保留主机亮度、色度和 white point，
+不通过 PyroWave shader 改写显示目标。源快照不被覆盖，缺失或非法快照不伪造 mastering 数据。
+启用期间的缺失、全零或非法更新保留本会话最后接受的有效快照；没有有效值时只使用基础
+PQ/HLG 色彩空间。明确关闭 HDR 会清空快照，不继续以固定 HDR 会话提交图像。
 
 Surface 重绑、extent 或分辨率变化、decoder recovery 重建资源并恢复会话格式、目标峰值
 和有效静态快照；旧帧动态状态清空，下一帧必须携带自己的 payload。Resume 通过新连接
 重新协商，不依赖旧 handle。基础信号冲突或连续呈现失败按现有有界恢复结束连接。
 
-成功消费 metadata 并提交 present 后，性能信息才显示“格式 → PQ/HLG”，详细诊断标记
-`application-mapped`。仅协商、解析或创建 swapchain 不能报告厂商原生动态 HDR。
+成功消费 metadata 并提交 present 后，详细诊断标记 `native-vivid`。仅协商、解析或创建
+swapchain 不能报告动态处理成功。
 
 ## 验证入口
 
 - Sunshine `pyrowave_unit_tests`：生产器 golden、实际发布函数、跨包 metadata 和 FEC 恢复。
 - common-c `pyrowave-decode-unit-tests`：实际队列中的同帧所有权与 metadata 校验；使用静态 common-c 构建。
-- `framegen/src/test/cpp`：客户端生产解析器、固定主机样本、非法 TLV/RPU 和 LUT 数值边界。
+- `framegen/src/test/cpp`：客户端生产解析器、固定主机样本、非法 TLV/RPU、Vivid 正文边界，以及实际静态/Vivid 提交辅助的 mock Vulkan 回归。
 - Android 单元测试：预检、同帧传参、恢复/尺寸重建、实际消费状态和传统 HDR 策略。
 
 真实黑位、亮部、色域、场景切换、Surface 重建、Resume 和设备丢失需用目标设备验收；
@@ -108,4 +135,4 @@ Surface 重绑、extent 或分辨率变化、decoder recovery 重建资源并恢
 ## 许可
 
 本文档及新增项目实现采用 GNU GPLv3（`GPL-3.0-only`），见 [LICENSE.txt](../LICENSE.txt)。
-第三方代码与依赖保留各自的许可；应用映射不代表 Dolby、HDR10+ 或 Vivid 的认证或背书。
+第三方代码与依赖保留各自的许可；原生动态 HDR 提交不代表 Dolby、HDR10+ 或 Vivid 的认证或背书。

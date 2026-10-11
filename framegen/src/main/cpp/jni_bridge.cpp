@@ -17,6 +17,7 @@
 #include "pyrowave_vulkan_decoder.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
@@ -275,16 +276,22 @@ Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveIsAvailableFor(
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveCreate(
-        JNIEnv *, jclass, jint width, jint height, jint hdrMode, jboolean fullRange) {
+        JNIEnv *, jclass, jint width, jint height, jint hdrMode, jboolean fullRange, jint dynamicHdrFormat) {
     std::lock_guard<std::mutex> lock(g_pyrowaveMutex);
-    auto decoder = std::make_unique<FramegenPipeline::PyrowaveVulkanDecoder>();
-    if (!decoder->create(static_cast<int>(width), static_cast<int>(height),
-                         static_cast<int>(hdrMode), fullRange == JNI_TRUE)) {
+    try {
+        auto decoder = std::make_unique<FramegenPipeline::PyrowaveVulkanDecoder>();
+        if (!decoder->create(static_cast<int>(width), static_cast<int>(height),
+                             static_cast<int>(hdrMode), fullRange == JNI_TRUE,
+                             static_cast<int>(dynamicHdrFormat))) {
+            return 0;
+        }
+        // Independent from framegen: resetting that context must not release
+        // the active PyroWave session or its presentation metadata.
+        return reinterpret_cast<jlong>(decoder.release());
+    } catch (...) {
+        LOGW("PyroWave Vulkan decoder creation raised an exception");
         return 0;
     }
-    // The object is kept independent from the framegen context. This prevents
-    // a framegen reset from invalidating an active PyroWave stream.
-    return reinterpret_cast<jlong>(decoder.release());
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

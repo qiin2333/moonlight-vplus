@@ -250,6 +250,7 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             card.status("VK_KHR_swapchain", gpu.swapchain)
             card.status("VK_EXT_swapchain_colorspace", capabilities.swapchainColorspace)
             card.status("VK_EXT_hdr_metadata", gpu.hdrMetadata)
+            card.status("VK_HUAWEI_hdr_vivid / hdrVivid", gpu.nativeVivid)
         }
 
         plainTextReport = StringBuilder(tr(R.string.title_pyrowave_capability_diagnostic)).append("\n\n")

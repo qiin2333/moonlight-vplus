@@ -11,7 +11,7 @@ class PyrowaveHdrFormatPolicyTest {
             PyrowaveHdrFormatPolicy.resolve(false, 1, 4, hdrStateKnown = false))
         assertEquals(StreamHdrFormat.HLG,
             PyrowaveHdrFormatPolicy.resolve(false, 2, 0, hdrStateKnown = false))
-        assertEquals(StreamHdrFormat.SDR, PyrowaveHdrFormatPolicy.resolve(false, 1, 4, hdrStateKnown = true))
+        assertEquals(StreamHdrFormat.SDR, PyrowaveHdrFormatPolicy.resolve(false, 1, 2, hdrStateKnown = true))
     }
 
     @Test

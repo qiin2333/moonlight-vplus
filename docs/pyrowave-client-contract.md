@@ -51,9 +51,11 @@ GPU 解码通过 R8/R16 image/view format 区分 SDR/HDR 平面；CPU 解码通�
 
 解码器必须逐帧校验原生 color metadata 中的 primaries、transfer、YCbCr transform 和 range 与会话一致，不把不匹配的 PQ、HLG 或范围当作正常帧显示。
 
-本合同不包含独立 SDR 10-bit、4:4:4 或 4:2:2。HDR10+、Vivid PQ/HLG 与 DV 8.1/8.4
-的桌面生成子集由应用内消费，输出仍为 PQ/HLG，不代表厂商原生 Dolby Vision 输出；
-见[动态 HDR 帧交付与应用内映射](pyrowave-dynamic-hdr.md)。PyroWave 会话不使用帧生成管线。
+本合同不包含独立 SDR 10-bit、4:4:4 或 4:2:2。Vivid PQ/HLG 只有在客户端 Vulkan
+原生能力探测通过时才加入 PyroWave 的 HDR 类型菜单；HDR10+、Dolby Vision 8.1/8.4
+使用 PyroWave Vulkan 的应用映射路径，输出仍保持各自的 PQ/HLG 基础信号。应用映射不代表
+Dolby 或 HDR10+ 的厂商认证输出。见[动态 HDR 帧交付与呈现](pyrowave-dynamic-hdr.md)。
+PyroWave 会话不使用帧生成管线。
 
 ### 3.1 范围解释
 
@@ -113,20 +115,33 @@ Sunshine SS_HDR_METADATA
 
 `maxFullFrameLuminance` 不得冒充 MaxFALL。有效主机值不能被客户端默认值覆盖。
 
-应用内映射保留源快照；向映射后的输出 swapchain 提交时，亮度字段按输出目标约束，
-不是覆盖主机原始值。基础静态 HDR 路径不经过该调整。
+原生提交保留源快照；向输出 swapchain 提交时使用主机原始亮度字段，基础静态 HDR
+路径也不通过应用侧动态色调映射改写这些值。
 
 解析器拒绝不完整载荷、越界色度、非有限或负亮度，以及无效的 mastering 亮度关系。空载荷或全零快照视为缺失；非法快照不应用到 swapchain，也不伪造替代值。MaxCLL/MaxFALL 为零不使其他有效字段失效。
+
+启用期间缺失或非法更新不删除本会话已有的有效快照；未取得有效快照时不生成默认值。
+只有 `enabled=false` 明确清空。候选创建或 native 更新失败不发布新的 Kotlin 快照，
+分辨率恢复和 Surface 重绑继续使用最后接受的值。当前会话的控制更新由
+`PyrowaveDecoderSession` 管理，旧的 renderer 创建参数不能覆盖已接受的新值。
 
 | 情况 | 呈现要求 |
 | --- | --- |
 | HDR10/PQ | 使用 `VK_COLOR_SPACE_HDR10_ST2084_EXT`；预检必须确认 `VK_EXT_hdr_metadata` 和函数入口可用 |
 | HLG | 使用 `VK_COLOR_SPACE_HDR10_HLG_EXT`；有有效快照且扩展可用时应用静态元数据 |
-| 缺失或无效快照 | 保持已协商的 PQ/HLG 色彩空间，不伪造 mastering 元数据，不改为 SDR |
+| 缺失或无效快照 | 有历史有效快照时保留；否则保持 PQ/HLG 色彩空间，不伪造 mastering 元数据，不改为 SDR |
 | HLG 缺少 metadata 扩展 | 可以使用 HLG 色彩空间，但不得宣称已应用完整静态元数据 |
 | HDR10 缺少 metadata 扩展或入口 | 预检失败；明确选择 PyroWave 的连接不静默降级到其他格式 |
 
 `vkSetHdrMetadataEXT` 没有返回值。接口可用且调用完成不等于能够从驱动读取并证明面板的最终映射效果。
+
+Vivid/PQ 与 Vivid/HLG 的原生提交复用此接口的 `pNext`，不改动静态控制消息或原生 color metadata。
+必须在实际 device 启用 Vivid feature，提交当前帧正文，且不能同时执行应用侧动态色调映射。
+当前原生输入仅覆盖桌面 Vivid/PQ（system_start_code=0x01）与 Vivid/HLG（0x02）的
+统计和 base curve 子集，输出保持各自的基础信号。HDR10+ 使用受支持的 ST 2094-40
+单窗口统计/曲线；Dolby Vision 8.1/8.4 使用受支持的 RPU reshape、矩阵和 trim 字段。
+Profile 5/7、增强层、NLQ 和任意影片 authored metadata 不由 PyroWave Vulkan 路径消费；
+遇到未实现语法时拒绝当前动态帧和会话。
 
 ## 6. 生命周期与错误返回
 

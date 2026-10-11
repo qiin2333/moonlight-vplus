@@ -63,5 +63,13 @@ internal data class PyrowaveHdrMetadata(
             )
             return metadata.takeIf { it.isValidForHdr10() }
         }
+
+        /** Missing/invalid updates do not erase a valid snapshot in this HDR session. */
+        fun updatedSnapshot(previous: ByteArray?, enabled: Boolean, incoming: ByteArray?): ByteArray? =
+            when {
+                !enabled -> null
+                fromSunshineBytes(incoming) != null -> incoming?.copyOf()
+                else -> previous?.copyOf()
+            }
     }
 }

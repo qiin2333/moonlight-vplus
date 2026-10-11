@@ -19,14 +19,20 @@ sequenceDiagram
     W->>S: acquire / acquire_semaphore
     W->>Q: 转换提交等待两个 Semaphore
     Q-->>W: submit_fence 完成
+    opt 原生 Vivid/PQ 或 Vivid/HLG
+        W->>S: vkSetHdrMetadataEXT / 当前帧 Vivid 正文
+    end
+    opt HDR10+ 或 Dolby Vision 应用映射
+        W->>Q: 读取当前帧映射缓冲区
+    end
     W->>S: vkQueuePresentKHR
 ~~~
 
-单个会话串行处理帧，只有一套 YUV 平面、CommandBuffer 和 DescriptorSet。下一帧不能覆盖仍由上一帧转换读取的资源。本层同步使用 Binary Semaphore，不使用 Timeline value 交接。
+单个会话串行处理帧，只有一套 YUV 平面和 CommandBuffer。每张 swapchain 图像有一个预绑定的 DescriptorSet，源平面和输出 view 在资源重建前保持不变；每帧只选择对应 set，不重复写 descriptor。下一帧不能覆盖仍由上一帧转换读取的资源。本层同步使用 Binary Semaphore，不使用 Timeline value 交接。
 
-动态 HDR LUT 同样属于当前会话：逐帧验证 metadata 后更新 host-visible storage buffer，
-需要时 flush 非 coherent 内存，并使用 HOST_WRITE → COMPUTE_SHADER_READ barrier。
-上一帧 submit Fence 完成后，下一帧才可以写同一 LUT；静态模式不启用亮度映射。
+动态 HDR metadata 同样属于当前会话：逐帧验证 payload 后，原生 Vivid 在 present 前提交
+扩展链，HDR10+ 与 Dolby Vision 在同一转换提交中读取更新后的映射缓冲区。静态模式和
+原生 Vivid/PQ、Vivid/HLG 不启用应用侧动态色调映射。
 
 ## 2. 同步对象
 
@@ -72,11 +78,17 @@ decode 返回成功表示提交已完成，不表示 CPU 可以读取平面。�
 
 客户端等待 `submit_fence`，成功后 reset Fence，再调用 `vkQueuePresentKHR`。由于 CPU 已确认转换完成，present 不再使用额外的 render-complete Semaphore。
 
+原生 Vivid/PQ、Vivid/HLG 在 Fence 完成后，将当前帧受保护 TLV 的正文链到 `VkHdrMetadataEXT`，
+随后立即 present，中间不释放 native 会话锁。`vkSetHdrMetadataEXT` 的元数据按规范应用于
+使用该 swapchain 的下一次 present，见[官方接口约定](https://docs.vulkan.org/refpages/latest/refpages/source/vkSetHdrMetadataEXT.html)。
+函数调用期间 byte array 保持有效；调用返回后不保留借用指针，也不在 swapchain 重建时
+重放上一帧的动态载荷。静态更新与 present 使用同一同步边界。
+
 `VK_SUCCESS` 和 `VK_SUBOPTIMAL_KHR` 视为该次 acquire/present 可继续处理；`VK_ERROR_OUT_OF_DATE_KHR` 等失败返回上层恢复，不继续使用无效的旧 swapchain。
 
 帧级 acquire/Fence 等待设置 5 秒超时。超时是故障恢复边界，不是正常延迟目标，也不表示整个驱动销毁路径具有同样的时间上限。
 
-提交失败后，该 native handle 不再接受后续帧；检查位于 push、LUT 更新及 GPU 资源复用之前。
+提交失败后，该 native handle 不再接受后续帧；检查位于 push、动态 metadata 校验及 GPU 资源复用之前。
 Fence 超时不代表 GPU 已完成，因此不能把返回错误当成资源已空闲，也不在旧 handle 上重试。
 Kotlin 沿用已有的有界 decoder 重建；native 异常同样使当前 handle 失效。普通不完整帧仍只丢帧，不使 handle 失效。
 
@@ -102,6 +114,8 @@ Surface 重绑定时同时检查窗口身份和 extent；同一个 `ANativeWindo
 清理顺序为：停止新提交，进入串行清理，等待设备访问旧资源结束，销毁 PyroWave decoder/device 包装，释放客户端图像、pipeline、同步对象和 swapchain，最后销毁 Vulkan device、Surface/instance 和窗口引用。
 
 native 保留静态 HDR 快照，创建新 swapchain 后对新的句柄重新应用；不得向已经销毁的 swapchain 调用 metadata 接口。Kotlin 重建整个 decoder handle 时也重新提交会话快照。
+无效或缺失静态更新不删除已接受的值；明确关闭 HDR 才清空。动态映射缓冲区和帧状态在资源销毁时清空，
+已选原生消费者在同一 native decoder 的 Surface 重建后不能静默改用应用侧映射；能力缺失按故障处理。
 
 ## 6. 计时语义
 
