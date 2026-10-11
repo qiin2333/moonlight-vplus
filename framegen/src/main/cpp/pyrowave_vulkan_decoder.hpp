@@ -28,10 +28,6 @@ public:
     int submit(const std::uint8_t* data, std::size_t length,
                const std::uint8_t* frameMetadata = nullptr, std::size_t metadataLength = 0);
     std::uint64_t getLastTimingsPacked();
-    // Acquire wait, completion wait, present call (us), unconfirmed presents,
-    // display lateness (us), timing-interface availability, last confirmed present ID.
-    // Unavailable observations use -1; these are not GPU execution timestamps.
-    std::array<std::int64_t, 7> getProbeTimings();
     void destroy() noexcept;
 
     [[nodiscard]] static bool available(int width, int height, int hdrMode);

@@ -250,17 +250,6 @@ class FramegenInterceptor {
         }
 
         @JvmStatic
-        fun getPyrowaveDecoderProbeTimings(handle: Long): LongArray? {
-            if (!isAvailable() || handle == 0L) return null
-            return try {
-                nativePyrowaveGetProbeTimings(handle)
-            } catch (error: Throwable) {
-                Log.w(TAG, "failed to read PyroWave probe timings", error)
-                null
-            }
-        }
-
-        @JvmStatic
         fun destroyPyrowaveDecoder(handle: Long) {
             if (!isAvailable() || handle == 0L) return
             try {
@@ -346,9 +335,6 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativePyrowaveGetLastTimings(handle: Long): Long
-
-        @JvmStatic
-        private external fun nativePyrowaveGetProbeTimings(handle: Long): LongArray?
 
         @JvmStatic
         private external fun nativePyrowaveDestroy(handle: Long)

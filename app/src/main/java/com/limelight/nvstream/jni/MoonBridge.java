@@ -644,8 +644,6 @@ public class MoonBridge {
     public static native int getPendingAudioDuration();
 
     public static native int getPendingVideoFrames();
-    public static native boolean isPyrowaveProbeEnabled();
-    public static native long getMonotonicTimeUs();
 
     public static native int testClientConnectivity(String testServerHostName, int referencePort, int testFlags);
 

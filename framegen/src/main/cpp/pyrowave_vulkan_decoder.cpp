@@ -2,7 +2,6 @@
 
 #include <android/log.h>
 #include <dlfcn.h>
-#include <sys/system_properties.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 
@@ -40,8 +39,6 @@ constexpr std::uint64_t kMaxPixels = 8192ull * 8192ull;
 // PyroWave fails to signal the hand-off semaphore. Teardown still performs the
 // device-level wait needed to destroy Vulkan resources safely.
 constexpr std::uint64_t kGpuWaitTimeoutNs = 5'000'000'000ULL;
-constexpr auto kProbeFeedbackInterval = std::chrono::milliseconds(100);
-
 bool valid_dimensions(int width, int height) {
     return width > 0 && height > 0 && (width & 1) == 0 && (height & 1) == 0 &&
            static_cast<std::uint32_t>(width) <= kMaxWidth &&
@@ -220,17 +217,6 @@ bool log_vulkan_failure(const char *stage, VkResult result) {
 
 struct PyrowaveVulkanDecoder::impl {
     std::mutex mutex;
-    bool probe_enabled = [] {
-        char value[PROP_VALUE_MAX]{};
-        __system_property_get("debug.moonlight.pyrowave_probe", value);
-        return std::strcmp(value, "1") == 0;
-    }();
-    std::array<std::int64_t, 7> probe_timings{0, 0, 0, -1, -1, 0, 0};
-    PFN_vkGetPastPresentationTimingGOOGLE get_display_timing{nullptr};
-    std::uint32_t probe_present_id{0};
-    std::uint32_t probe_confirmed_id{0};
-    std::chrono::steady_clock::time_point probe_feedback_due_at{};
-    VkResult probe_feedback_last_error{VK_SUCCESS};
     api_t api;
     int width{0};
     int height{0};
@@ -534,9 +520,6 @@ struct PyrowaveVulkanDecoder::impl {
             device_extensions.push_back(VK_EXT_HDR_METADATA_EXTENSION_NAME);
         }
         if (vivid_native_supported) device_extensions.push_back(VK_HUAWEI_HDR_VIVID_EXTENSION_NAME);
-        if (probe_enabled && has_extension(physical_device, VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME)) {
-            device_extensions.push_back(VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME);
-        }
         device_create_info = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .pNext = &enabled_features,
@@ -558,11 +541,6 @@ struct PyrowaveVulkanDecoder::impl {
         }
         if (create_device_result != VK_SUCCESS) return log_vulkan_failure("vkCreateDevice", create_device_result);
         volkLoadDevice(device);
-        if (probe_enabled && has_extension(physical_device, VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME)) {
-            get_display_timing = reinterpret_cast<PFN_vkGetPastPresentationTimingGOOGLE>(
-                vkGetDeviceProcAddr(device, "vkGetPastPresentationTimingGOOGLE"));
-        }
-        probe_timings[5] = get_display_timing != nullptr ? 1 : 0;
         if (has_extension(physical_device, VK_EXT_HDR_METADATA_EXTENSION_NAME)) {
             set_hdr_metadata = reinterpret_cast<PFN_vkSetHdrMetadataEXT>(
                 vkGetDeviceProcAddr(device, "vkSetHdrMetadataEXT"));
@@ -1244,13 +1222,6 @@ struct PyrowaveVulkanDecoder::impl {
         if (image_index >= swapchain_images.size() || image_index >= descriptor_sets.size()) {
             return submit_failure_after_decode("acquire-image-index", 0, length);
         }
-        if (probe_enabled) {
-            probe_timings[0] = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::steady_clock::now() - present_start).count();
-            probe_timings[3] = -1;
-            probe_timings[4] = -1;
-        }
-
         VkCommandBufferBeginInfo begin_info{ .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
                                              .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
         const auto reset_command_result = vkResetCommandBuffer(command_buffer, 0);
@@ -1340,13 +1311,8 @@ struct PyrowaveVulkanDecoder::impl {
         }
         // The conversion submission now owns the wait on the decode semaphore.
         decode_signal_pending = false;
-        const auto probe_wait_start = probe_enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         const auto fence_result = vkWaitForFences(device, 1, &submit_fence, VK_TRUE, kGpuWaitTimeoutNs);
         if (fence_result != VK_SUCCESS) return submit_failure("wait-submit-fence", fence_result, length);
-        if (probe_enabled) {
-            probe_timings[1] = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::steady_clock::now() - probe_wait_start).count();
-        }
         const auto reset_fence_result = vkResetFences(device, 1, &submit_fence);
         if (reset_fence_result != VK_SUCCESS) {
             return submit_failure("reset-submit-fence", reset_fence_result, length);
@@ -1356,49 +1322,9 @@ struct PyrowaveVulkanDecoder::impl {
         }
         VkPresentInfoKHR present{ .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .swapchainCount = 1,
                                   .pSwapchains = &swapchain, .pImageIndices = &image_index };
-        VkPresentTimeGOOGLE present_time{probe_present_id + 1, 0};
-        VkPresentTimesInfoGOOGLE present_times{.sType = VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE,
-            .swapchainCount = 1, .pTimes = &present_time};
-        if (get_display_timing != nullptr) present.pNext = &present_times;
-        const auto probe_present_start = probe_enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         const VkResult result = vkQueuePresentKHR(queue, &present);
         if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
             return submit_failure("present", result, length);
-        }
-        if (probe_enabled) {
-            probe_timings[2] = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::steady_clock::now() - probe_present_start).count();
-            if (get_display_timing != nullptr) {
-                probe_present_id = present_time.presentID;
-            }
-            const auto feedback_now = std::chrono::steady_clock::now();
-            if (get_display_timing != nullptr && feedback_now >= probe_feedback_due_at) {
-                probe_feedback_due_at = feedback_now + kProbeFeedbackInterval;
-                std::array<VkPastPresentationTimingGOOGLE, 64> timings{};
-                auto count = static_cast<std::uint32_t>(timings.size());
-                const auto timing_result = get_display_timing(device, swapchain, &count, timings.data());
-                if (timing_result == VK_SUCCESS || timing_result == VK_INCOMPLETE) {
-                    probe_feedback_last_error = VK_SUCCESS;
-                    for (std::uint32_t index = 0; index < count; ++index) {
-                        const auto &timing = timings[index];
-                        probe_confirmed_id = std::max(probe_confirmed_id, timing.presentID);
-                        if (timing.actualPresentTime >= timing.earliestPresentTime) {
-                            probe_timings[4] = std::max<std::int64_t>(probe_timings[4],
-                                static_cast<std::int64_t>((timing.actualPresentTime - timing.earliestPresentTime) / 1000));
-                        }
-                    }
-                    // Timing feedback is asynchronous: this is the number of
-                    // unconfirmed presents, not an exact live display queue.
-                    if (count != 0 && probe_confirmed_id != 0 && probe_present_id >= probe_confirmed_id) {
-                        probe_timings[3] = probe_present_id - probe_confirmed_id;
-                        probe_timings[6] = probe_confirmed_id;
-                    }
-                } else if (timing_result != probe_feedback_last_error) {
-                    LOGW("PyroWave present feedback query failed (VkResult=%d); timing observations unavailable",
-                         static_cast<int>(timing_result));
-                    probe_feedback_last_error = timing_result;
-                }
-            }
         }
         if (dynamic_hdr_format != DYNAMIC_HDR_FORMAT_NONE && !dynamic_hdr_logged) {
             LOGI("PyroWave dynamic HDR submitted: format=%d presentation=%s output=%s target_peak=%.1f",
@@ -1463,12 +1389,6 @@ struct PyrowaveVulkanDecoder::impl {
         if (device != VK_NULL_HANDLE && swapchain != VK_NULL_HANDLE) vkDestroySwapchainKHR(device, swapchain, nullptr);
         swapchain = VK_NULL_HANDLE;
         swapchain_images.clear();
-        get_display_timing = nullptr;
-        probe_present_id = 0;
-        probe_confirmed_id = 0;
-        probe_feedback_due_at = {};
-        probe_feedback_last_error = VK_SUCCESS;
-        probe_timings = {0, 0, 0, -1, -1, 0, 0};
         if (device != VK_NULL_HANDLE) vkDestroyDevice(device, nullptr);
         device = VK_NULL_HANDLE;
         set_hdr_metadata = nullptr;
@@ -1642,12 +1562,6 @@ std::uint64_t PyrowaveVulkanDecoder::getLastTimingsPacked() {
     std::lock_guard<std::mutex> lock(impl_->mutex);
     return ((impl_->last_decode_time_us & 0xffffffffULL) << 32) |
            (impl_->last_present_time_us & 0xffffffffULL);
-}
-
-std::array<std::int64_t, 7> PyrowaveVulkanDecoder::getProbeTimings() {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
-    if (!impl_->probe_enabled) return {-1, -1, -1, -1, -1, -1, -1};
-    return impl_->probe_timings;
 }
 
 void PyrowaveVulkanDecoder::destroy() noexcept {

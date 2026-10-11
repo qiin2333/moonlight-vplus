@@ -35,7 +35,9 @@ internal data class PyrowaveCapabilities(
         get() = devices.any { hasStagingPrerequisites(it) || hasSurfacePrerequisites(it) }
 
     val hasNativeVivid: Boolean
-        get() = devices.any { hasSurfacePrerequisites(it) && it.hdrMetadata && it.nativeVivid }
+        get() = swapchainColorspace && devices.any {
+            hasSurfacePrerequisites(it) && it.hdrMetadata && it.nativeVivid
+        }
 }
 
 internal data class PyrowaveGpuCapabilities(

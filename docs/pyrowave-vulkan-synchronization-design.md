@@ -21,6 +21,7 @@ sequenceDiagram
     Q-->>W: submit_fence 完成
     opt 原生 Vivid/PQ 或 Vivid/HLG
         W->>S: vkSetHdrMetadataEXT / 当前帧 Vivid 正文
+    end
     opt HDR10+ 或 Dolby Vision 应用映射
         W->>Q: 读取当前帧映射缓冲区
     end
@@ -124,12 +125,6 @@ native 保留静态 HDR 快照，创建新 swapchain 后对新的句柄重新应
 | conversion/present | 之后的 acquire、同步、转换提交、Fence 等待与 present 调用 |
 
 decode 指标不等于 GPU 内部纯解码时间，conversion/present 包含等待解码完成的时间。两项合计到 `vkQueuePresentKHR` 返回为止，不证明图像已经完成扫描显示。
-
-临时性能探针额外区分 acquire、CPU Fence wait 和 present 调用耗时。可用的
-`VK_GOOGLE_display_timing` 反馈每 100 ms 查询一次；接口存在不等于本次查询有新数据。
-未开启探针、未查询或没有反馈的观测保持 unavailable，而不是零等待或零积压。
-未确认 present 数只是异步反馈的估计，不是精确实时显示队列长度。资源重建时重建
-descriptor sets，并清空属于旧 swapchain 的反馈 ID 与采样状态。
 
 ## 7. 适用范围与不变量
 

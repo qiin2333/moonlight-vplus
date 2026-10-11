@@ -3909,6 +3909,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                     // HDR is supported, configure the HDR mode preference
                     if (hdrModePref != null) {
                         var pyrowaveNativeVivid = false
+                        var pyrowaveVividProbed = false
                         val updateHdrEntries: (Boolean) -> Unit = { pyrowaveSelected ->
                             val entries = mutableListOf<CharSequence>()
                             val entryValues = mutableListOf<CharSequence>()
@@ -3963,7 +3964,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                             if (!pyrowaveSelected && hdrModePref.value == "3" && !foundHdr10Plus && foundHdr10) {
                                 hdrModePref.value = "1"
                             }
-                            if (hdrModePref.value !in entryValues) {
+                            val pendingVividSelection = pyrowaveSelected && !pyrowaveVividProbed &&
+                                    (hdrModePref.value == "6" || hdrModePref.value == "7")
+                            if (!pendingVividSelection && hdrModePref.value !in entryValues) {
                                 hdrModePref.value = entryValues.first().toString()
                             }
 
@@ -3979,6 +3982,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                         }
                         lifecycleScope.launch {
                             pyrowaveNativeVivid = PyrowaveCapabilityProbe.collect().hasNativeVivid
+                            pyrowaveVividProbed = true
                             if (isAdded) {
                                 updateHdrEntries(formatPref?.value == "pyrowave")
                             }

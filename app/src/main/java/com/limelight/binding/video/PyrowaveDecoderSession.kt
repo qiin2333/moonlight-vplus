@@ -77,10 +77,6 @@ internal class PyrowaveDecoderSession(
     val latestFrameTimings: PyrowaveFrameTimings
         get() = synchronized(lock) { lastFrameTimings }
 
-    fun getProbeTimings(): LongArray? = synchronized(lock) {
-        if (handle == 0L || !usingGpu) null else gpuNative?.getProbeTimings(handle)
-    }
-
     /**
      * Surface callbacks only publish the latest target. The decoder worker
      * applies it before the next frame, without holding the native-operation
@@ -488,7 +484,6 @@ internal interface PyrowaveNativeApi {
         if (metadata == null || metadata.isEmpty()) submit(handle, data, length) else -1
     fun setDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean = format == 0
     fun getTimings(handle: Long): Long
-    fun getProbeTimings(handle: Long): LongArray? = null
     fun setHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean
     fun destroy(handle: Long)
 }
@@ -537,9 +532,6 @@ internal object FramegenPyrowaveNativeApi : PyrowaveNativeApi {
 
     override fun getTimings(handle: Long): Long =
         FramegenInterceptor.getPyrowaveDecoderTimings(handle)
-
-    override fun getProbeTimings(handle: Long): LongArray? =
-        FramegenInterceptor.getPyrowaveDecoderProbeTimings(handle)
 
     override fun setHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean =
         FramegenInterceptor.setPyrowaveDecoderHdrMetadata(handle, enabled, metadata)

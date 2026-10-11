@@ -409,20 +409,3 @@ Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveDestroy(
         LOGW("PyroWave Vulkan decoder destruction raised an exception");
     }
 }
-
-extern "C" JNIEXPORT jlongArray JNICALL
-Java_com_limelight_framegen_FramegenInterceptor_nativePyrowaveGetProbeTimings(
-        JNIEnv *env, jclass, jlong handle) {
-    auto *decoder = reinterpret_cast<FramegenPipeline::PyrowaveVulkanDecoder *>(handle);
-    if (decoder == nullptr) return nullptr;
-    try {
-        const auto timings = decoder->getProbeTimings();
-        std::array<jlong, 7> values{};
-        std::copy(timings.begin(), timings.end(), values.begin());
-        auto result = env->NewLongArray(static_cast<jsize>(values.size()));
-        if (result != nullptr) env->SetLongArrayRegion(result, 0, static_cast<jsize>(values.size()), values.data());
-        return result;
-    } catch (...) {
-        return nullptr;
-    }
-}

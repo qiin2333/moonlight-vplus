@@ -26,6 +26,7 @@ class PyrowaveCapabilitiesTest {
         gpuFrontendAvailable = true,
         loaderVersion = VULKAN_1_3,
         androidSurface = true,
+        swapchainColorspace = true,
         devices = devices.toList()
     )
 
@@ -136,6 +137,13 @@ class PyrowaveCapabilitiesTest {
         assertTrue(report(noSwapchain).hasStagingPrerequisites(noSwapchain))
         assertFalse(report(noSwapchain).hasSurfacePrerequisites(noSwapchain))
         assertFalse(report(supported).copy(androidSurface = false).hasSurfacePrerequisites(supported))
+    }
+
+    @Test
+    fun nativeVividRequiresSwapchainColorspaceExtension() {
+        val vivid = supported.copy(hdrMetadata = true, nativeVivid = true)
+        assertTrue(report(vivid).hasNativeVivid)
+        assertFalse(report(vivid).copy(swapchainColorspace = false).hasNativeVivid)
     }
 
     @Test
