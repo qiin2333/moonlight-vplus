@@ -182,10 +182,11 @@ class FramegenInterceptor {
         }
 
         @JvmStatic
-        fun createPyrowaveDecoder(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long {
+        fun createPyrowaveDecoder(width: Int, height: Int, hdrMode: Int, fullRange: Boolean,
+                                  dynamicHdrFormat: Int = 0): Long {
             if (!isAvailable()) return 0L
             return try {
-                nativePyrowaveCreate(width, height, hdrMode, fullRange)
+                nativePyrowaveCreate(width, height, hdrMode, fullRange, dynamicHdrFormat)
             } catch (t: Throwable) {
                 Log.w(TAG, "failed to create PyroWave Vulkan decoder", t)
                 0L
@@ -245,6 +246,17 @@ class FramegenInterceptor {
             } catch (t: Throwable) {
                 Log.w(TAG, "failed to read PyroWave Vulkan timings", t)
                 0L
+            }
+        }
+
+        @JvmStatic
+        fun getPyrowaveDecoderProbeTimings(handle: Long): LongArray? {
+            if (!isAvailable() || handle == 0L) return null
+            return try {
+                nativePyrowaveGetProbeTimings(handle)
+            } catch (error: Throwable) {
+                Log.w(TAG, "failed to read PyroWave probe timings", error)
+                null
             }
         }
 
@@ -317,7 +329,8 @@ class FramegenInterceptor {
         private external fun nativePyrowaveIsAvailableFor(width: Int, height: Int, hdrMode: Int): Boolean
 
         @JvmStatic
-        private external fun nativePyrowaveCreate(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long
+        private external fun nativePyrowaveCreate(width: Int, height: Int, hdrMode: Int,
+                                                  fullRange: Boolean, dynamicHdrFormat: Int): Long
 
         @JvmStatic
         private external fun nativePyrowaveSetSurface(handle: Long, surface: android.view.Surface?): Boolean
@@ -333,6 +346,9 @@ class FramegenInterceptor {
 
         @JvmStatic
         private external fun nativePyrowaveGetLastTimings(handle: Long): Long
+
+        @JvmStatic
+        private external fun nativePyrowaveGetProbeTimings(handle: Long): LongArray?
 
         @JvmStatic
         private external fun nativePyrowaveDestroy(handle: Long)

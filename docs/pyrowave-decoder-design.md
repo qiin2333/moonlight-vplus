@@ -11,7 +11,8 @@
 | [MediaCodecDecoderRenderer](../app/src/main/java/com/limelight/binding/video/MediaCodecDecoderRenderer.kt) | 共享视频回调入口，按格式分派，处理尺寸、HDR 状态和性能统计 |
 | [PyrowaveDecoderSession](../app/src/main/java/com/limelight/binding/video/PyrowaveDecoderSession.kt) | 串行管理 native handle、Surface generation、metadata 快照和有界恢复 |
 | [PyrowaveVulkanDecoder](../framegen/src/main/cpp/pyrowave_vulkan_decoder.cpp) | Vulkan device、YUV 平面、转换 shader、swapchain 与静态/动态呈现状态 |
-| [pyrowave_dynamic_hdr](../framegen/src/main/cpp/pyrowave_dynamic_hdr.cpp) | 独立解析同帧动态 TLV/RPU，生成桌面场景亮度映射；不依赖 Android/连接对象 |
+| [pyrowave_dynamic_hdr](../framegen/src/main/cpp/pyrowave_dynamic_hdr.cpp) | 独立解析同帧动态 TLV/RPU，并校验原生 Vivid 桌面子集；不依赖 Android/连接对象 |
+| [pyrowave_hdr_presentation](../framegen/src/main/cpp/pyrowave_hdr_presentation.hpp) | 静态字段转换及当前 swapchain 的静态/Vivid 提交；不持有旧 handle 或跨帧指针 |
 | [pyrowave_decoder_bridge.cpp](../app/src/main/jni/moonlight-core/pyrowave_decoder_bridge.cpp) | SDR CPU staging：解码后读回 YUV、CPU 转换和原生窗口输出 |
 | [pyrowave-runtime](../pyrowave-runtime/README.md) | 构建并打包固定子模块的 C API 运行库，不增加 UI 或服务 |
 
@@ -64,7 +65,7 @@ flowchart LR
     C --> D[PyrowaveDecoderSession]
     D --> E{呈现后端}
     E -->|Vulkan| F[GPU YUV 平面]
-    F --> G[GPU YUV 转换与可选逐帧亮度映射]
+    F --> G[GPU YUV 转换与原生 Vivid metadata 提交]
     G --> H[Android swapchain]
     E -->|SDR staging| I[YUV 读回与 CPU 转换]
     I --> J[ANativeWindow 输出]
@@ -91,9 +92,9 @@ PyroWave 提交可能等待 GPU 和窗口资源，因此不声明 `CAPABILITY_DI
 
 码流中的 `pyrowave_color_metadata` 描述 primaries、transfer、YCbCr transform、range 和 chroma siting。`SS_HDR_METADATA` 是独立的显示 mastering/content-light 快照，两者不得合并。
 
-`MediaCodecDecoderRenderer.setHdrMode()` 保存并检查主机快照，`PyrowaveDecoderSession` 复制载荷并通过 JNI 传入 native。native 校验、保存结构化快照，并使用 `VkHdrMetadataEXT` 应用到当前 swapchain。
+`MediaCodecDecoderRenderer.setHdrMode()` 将主机快照交给 `PyrowaveDecoderSession`，后者验证并复制载荷，通过 JNI 传入 native。native 生产解析器再次校验，保存结构化快照，并使用 `VkHdrMetadataEXT` 应用到当前 swapchain。
 
-元数据更新与提交、Surface 重建共用 native mutex，避免更新已销毁的 swapchain。快照保留在会话中，swapchain 重建后重新应用；decoder handle 重建时 Kotlin 同样重新提交快照。
+元数据更新与提交、Surface 重建共用 native mutex，避免更新已销毁的 swapchain。启用期间缺失或非法更新保留已有的有效快照，明确关闭才清空；失败的候选创建和更新不污染快照。swapchain 重建后重新应用，decoder handle 重建时 Kotlin 同样重新提交最后接受的值。
 
 `maxFullFrameLuminance` 保留在快照中；`VkHdrMetadataEXT` 没有该字段，不能把它写入 `maxFrameAverageLightLevel`。后者只接收 MaxFALL。
 
@@ -104,9 +105,15 @@ PyroWave 提交可能等待 GPU 和窗口资源，因此不声明 `CAPABILITY_DI
 ### 4.3 动态元数据
 
 动态类型单独协商，完整 payload 与该帧码流一起恢复，经过专用回调及 JNI 进入 Vulkan
-submit。解析和 LUT 更新在会话锁内完成，转换 shader 同时消费当前帧平面与 LUT，静态
-快照仍独立保存。生成子集、错误与呈现边界见[动态 HDR 设计](pyrowave-dynamic-hdr.md)。
-没有厂商原生接口时不广告原生输出。
+submit。PyroWave 对 HDR10+ 与 Dolby Vision 使用受限应用映射 shader；Vivid 在原生扩展
+可用时提交原生 payload。静态快照仍独立保存。生成子集、错误与呈现边界见[动态 HDR 设计](pyrowave-dynamic-hdr.md)。
+没有满足对应基础 HDR 与静态元数据条件时不广告 PyroWave 动态输出。
+
+Vivid/PQ 与 Vivid/HLG 可在扩展、feature、入口和静态快照都有效时使用原生消费者。先配置 HDR/动态
+格式，再绑定 Surface 创建 logical device；该顺序保证 device feature 与所选模式一致。
+第一帧固定消费者，原生帧只进行 YUV→RGB 转换，present 前提交本帧 Vivid 正文，不进行
+应用侧动态色调映射。Surface 重绑清空动态帧状态，但保留静态快照和已选消费者；没有旧动态
+payload 可重放。
 
 ## 5. 线程与对象所有权
 

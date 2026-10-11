@@ -163,6 +163,7 @@ class MediaCodecDecoderRenderer(
     )
     @Volatile
     private var pyrowavePreflightAvailable = false
+    private var pyrowavePerformanceProbe: PyrowavePerformanceProbe? = null
     private val pyrowaveStopPosted = AtomicBoolean(false)
 
     private val pyrowaveDecoderActive: Boolean
@@ -1490,6 +1491,10 @@ class MediaCodecDecoderRenderer(
         this.refreshRate = redrawRate
 
         if (format == MoonBridge.VIDEO_FORMAT_PYROWAVE) {
+            // Static HDR metadata belongs to one negotiated connection. Do
+            // not seed a new PyroWave handle with a snapshot accepted by a
+            // previous connection when this renderer instance is reused.
+            currentHdrMetadata = null
             pyrowaveDecoder.reset()
             pyrowaveStopPosted.set(false)
             val hdrMode = pyrowaveHdrMode()
@@ -1504,6 +1509,9 @@ class MediaCodecDecoderRenderer(
                 return -1
             }
             LimeLog.info("PyroWave decoder initialized for ${width}x$height gpu=${pyrowaveDecoder.isGpu}")
+            if (pyrowavePerformanceProbe == null) {
+                pyrowavePerformanceProbe = PyrowavePerformanceProbe.create(context, width, height, redrawRate, pyrowaveDecoder.isGpu)
+            }
             return 0
         }
 
@@ -2163,6 +2171,8 @@ class MediaCodecDecoderRenderer(
 
     override fun cleanup() {
         destroyPyrowaveDecoder()
+        pyrowavePerformanceProbe?.finish()
+        pyrowavePerformanceProbe = null
         dolbyVisionRoutingActive = false
         if (videoDecoder != null) {
             try {
@@ -2195,22 +2205,10 @@ class MediaCodecDecoderRenderer(
                 failPyrowaveSession("PyroWave HDR mode changed during the session")
                 return
             }
-            currentHdrMetadata = if (enabled) hdrMetadata?.copyOf() else null
             val negotiatedPyrowaveHdrMode = pyrowaveHdrMode()
-            val metadataSupplied = !PyrowaveHdrMetadata.isAbsent(currentHdrMetadata)
-            if (enabled && negotiatedPyrowaveHdrMode != 0 && metadataSupplied &&
-                PyrowaveHdrMetadata.fromSunshineBytes(currentHdrMetadata) == null
-            ) {
-                // Static mastering metadata is optional for the PyroWave
-                // presentation contract. Discard malformed data instead of
-                // applying it; keep the negotiated PQ/HLG colorspace and let
-                // the native layer report a degraded HDR presentation.
-                LimeLog.warning("Invalid Sunshine static HDR metadata; presenting degraded PyroWave HDR")
-                currentHdrMetadata = null
-            }
-            if (!pyrowaveDecoder.setHdrMetadata(enabled, currentHdrMetadata) &&
-                negotiatedPyrowaveHdrMode != 0
-            ) {
+            if (pyrowaveDecoder.setHdrMetadata(enabled, hdrMetadata)) {
+                currentHdrMetadata = PyrowaveHdrMetadata.updatedSnapshot(currentHdrMetadata, enabled, hdrMetadata)
+            } else if (negotiatedPyrowaveHdrMode != 0) {
                 failPyrowaveSession("Static HDR metadata could not be applied to the Vulkan Surface")
             }
             return
@@ -2541,7 +2539,20 @@ class MediaCodecDecoderRenderer(
 
         if (pyrowaveDecoderActive) {
             val decodeStartNs = SystemClock.elapsedRealtimeNanos()
-            when (pyrowaveDecoder.submit(decodeUnitData, decodeUnitLength, frameMetadata)) {
+            val probe = pyrowavePerformanceProbe
+            val pendingBefore = if (probe != null) MoonBridge.getPendingVideoFrames() else 0
+            val queueWaitUs = if (probe != null && enqueueTimeUs > 0L) {
+                (MoonBridge.getMonotonicTimeUs() - enqueueTimeUs).takeIf { it >= 0L }
+            } else null
+            val probeSubmitStartedNs = if (probe != null) SystemClock.elapsedRealtimeNanos() else 0L
+            val result = pyrowaveDecoder.submit(decodeUnitData, decodeUnitLength, frameMetadata)
+            if (probe != null) {
+                val submitUs = (SystemClock.elapsedRealtimeNanos() - probeSubmitStartedNs) / 1000L
+                probe.record(frameNumber, pendingBefore, MoonBridge.getPendingVideoFrames(), queueWaitUs,
+                    if (receiveTimeUs > 0L && enqueueTimeUs >= receiveTimeUs) enqueueTimeUs - receiveTimeUs else null,
+                    submitUs, result, if (result == PyrowaveDecoderSession.SubmitResult.SUCCESS) pyrowaveDecoder.getProbeTimings() else null)
+            }
+            when (result) {
                 PyrowaveDecoderSession.SubmitResult.SUCCESS -> Unit
                 PyrowaveDecoderSession.SubmitResult.FRAME_DROPPED ->
                     // Keep the last successfully presented frame visible.
@@ -2940,11 +2951,10 @@ class MediaCodecDecoderRenderer(
         }
 
         // Keep the capability flag in sync with the explicit format gate in
-        // Game. Auto mode must not advertise PyroWave. Static HDR10/PQ and HLG
-        // are eligible only when the GPU Surface decoder and static color
-        // contract are available. The selected limited/full range is preserved
-        // in the existing stream configuration. Dynamic metadata and Dolby
-        // Vision remain on the legacy Main10 path.
+        // Game. Auto mode must not advertise PyroWave. Static and dynamic HDR
+        // are eligible only when the GPU Surface decoder and color contract
+        // are available; the negotiated dynamic format is checked by common-c
+        // and the decoder session before media starts.
         val pyrowaveHdr = pyrowaveHdrMode() != 0
         if (prefs.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE &&
             framegenSurface == null &&

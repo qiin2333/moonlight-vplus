@@ -9,6 +9,7 @@
 
 #include <arpa/inet.h>
 #include <string.h>
+#include <sys/system_properties.h>
 
 #include "minisdl.h"
 #include "controller_type.h"
@@ -284,6 +285,18 @@ Java_com_limelight_nvstream_jni_MoonBridge_getPendingAudioDuration(JNIEnv *env, 
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getPendingVideoFrames(JNIEnv *env, jclass clazz) {
     return LiGetPendingVideoFrames();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_isPyrowaveProbeEnabled(JNIEnv *env, jclass clazz) {
+    char value[PROP_VALUE_MAX] = {0};
+    __system_property_get("debug.moonlight.pyrowave_probe", value);
+    return strcmp(value, "1") == 0 ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getMonotonicTimeUs(JNIEnv *env, jclass clazz) {
+    return (jlong)PltGetMicroseconds();
 }
 
 JNIEXPORT jint JNICALL

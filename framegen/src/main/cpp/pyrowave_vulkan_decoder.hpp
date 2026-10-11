@@ -3,6 +3,7 @@
 #include <android/native_window.h>
 
 #include <cstddef>
+#include <array>
 #include <cstdint>
 #include <memory>
 
@@ -20,13 +21,17 @@ public:
     PyrowaveVulkanDecoder(const PyrowaveVulkanDecoder&) = delete;
     PyrowaveVulkanDecoder& operator=(const PyrowaveVulkanDecoder&) = delete;
 
-    bool create(int width, int height, int hdrMode, bool fullRange);
+    bool create(int width, int height, int hdrMode, bool fullRange, int dynamicHdrFormat = 0);
     bool setSurface(ANativeWindow* window);
     bool setHdrMetadata(bool enabled, const std::uint8_t* data, std::size_t length);
     bool setDynamicHdr(int format, float targetPeakNits);
     int submit(const std::uint8_t* data, std::size_t length,
                const std::uint8_t* frameMetadata = nullptr, std::size_t metadataLength = 0);
     std::uint64_t getLastTimingsPacked();
+    // Acquire wait, completion wait, present call (us), unconfirmed presents,
+    // display lateness (us), timing-interface availability, last confirmed present ID.
+    // Unavailable observations use -1; these are not GPU execution timestamps.
+    std::array<std::int64_t, 7> getProbeTimings();
     void destroy() noexcept;
 
     [[nodiscard]] static bool available(int width, int height, int hdrMode);

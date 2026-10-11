@@ -9,6 +9,20 @@
 #include <cstring>
 #include <vector>
 
+#ifndef VK_HUAWEI_HDR_VIVID_EXTENSION_NAME
+// Android NDK Vulkan headers may predate VK_HUAWEI_hdr_vivid even though a
+// device loader can expose the extension at runtime. Keep the probe ABI
+// compatible with the registry definitions without requiring a newer NDK.
+#define VK_HUAWEI_HDR_VIVID_EXTENSION_NAME "VK_HUAWEI_hdr_vivid"
+#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HDR_VIVID_FEATURES_HUAWEI \
+  static_cast<VkStructureType>(1000590000)
+typedef struct VkPhysicalDeviceHdrVividFeaturesHUAWEI {
+  VkStructureType sType;
+  void *pNext;
+  VkBool32 hdrVivid;
+} VkPhysicalDeviceHdrVividFeaturesHUAWEI;
+#endif
+
 namespace {
 
 class BundleWriter {
@@ -193,6 +207,8 @@ jobject query_pyrowave_capabilities(JNIEnv *env, bool runtime_available) {
       writer.integer(device, "maxComputeSharedMemorySize", props.limits.maxComputeSharedMemorySize);
       writer.boolean(device, "swapchain", has_extension(device_extensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME));
       writer.boolean(device, "hdrMetadata", has_extension(device_extensions, VK_EXT_HDR_METADATA_EXTENSION_NAME));
+      const bool vivid_extension = has_extension(device_extensions, VK_HUAWEI_HDR_VIVID_EXTENSION_NAME) &&
+          has_extension(device_extensions, VK_EXT_HDR_METADATA_EXTENSION_NAME);
 
       uint32_t queue_count = 0;
       queues(devices[i], &queue_count, nullptr);
@@ -223,18 +239,24 @@ jobject query_pyrowave_capabilities(JNIEnv *env, bool runtime_available) {
 
       VkPhysicalDeviceSubgroupSizeControlFeatures size_features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES};
       VkPhysicalDevice8BitStorageFeatures storage{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES};
+      VkPhysicalDeviceHdrVividFeaturesHUAWEI vivid_features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HDR_VIVID_FEATURES_HUAWEI};
       if (features2 != nullptr) {
         VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         void **next = &features.pNext;
         if (has_size) { *next = &size_features; next = &size_features.pNext; }
         if (effective_version >= VK_API_VERSION_1_2 || has_extension(device_extensions, VK_KHR_8BIT_STORAGE_EXTENSION_NAME)) {
           *next = &storage;
+          next = &storage.pNext;
+        }
+        if (vivid_extension) {
+          *next = &vivid_features;
         }
         features2(devices[i], &features);
       }
       writer.boolean(device, "subgroupSizeControl", size_features.subgroupSizeControl);
       writer.boolean(device, "computeFullSubgroups", size_features.computeFullSubgroups);
       writer.boolean(device, "storageBuffer8BitAccess", storage.storageBuffer8BitAccess);
+      writer.boolean(device, "nativeVivid", vivid_extension && vivid_features.hdrVivid);
       env->SetObjectArrayElement(device_reports, static_cast<jsize>(i), device);
       env->DeleteLocalRef(device);
       if (env->ExceptionCheck()) return nullptr;

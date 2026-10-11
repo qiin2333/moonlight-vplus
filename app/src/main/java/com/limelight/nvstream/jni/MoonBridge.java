@@ -58,8 +58,8 @@ public class MoonBridge {
     public static final int HDR_MODE_HDR10_PLUS = 3; // HDR10/PQ with ST 2094-40 dynamic metadata
     public static final int HDR_MODE_DOLBY_VISION = 4; // HDR10/PQ base with Dolby Vision Profile 8.1 RPU (client-only selection)
     public static final int HDR_MODE_DOLBY_VISION_84 = 5; // HLG base with Dolby Vision Profile 8.4 RPU (client-only selection)
-    public static final int HDR_MODE_VIVID_PQ = 6; // PyroWave application mapping, PQ output
-    public static final int HDR_MODE_VIVID_HLG = 7; // PyroWave application mapping, HLG output
+    public static final int HDR_MODE_VIVID_PQ = 6; // PyroWave native Vivid over a PQ base
+    public static final int HDR_MODE_VIVID_HLG = 7; // PyroWave native Vivid over an HLG base
 
     // Dynamic HDR capability bits for setDynamicHdrNegotiation() and the
     // x-ss-video[0].dynamicHdrCaps SDP attribute (Sunshine extension).
@@ -644,6 +644,8 @@ public class MoonBridge {
     public static native int getPendingAudioDuration();
 
     public static native int getPendingVideoFrames();
+    public static native boolean isPyrowaveProbeEnabled();
+    public static native long getMonotonicTimeUs();
 
     public static native int testClientConnectivity(String testServerHostName, int referencePort, int testFlags);
 

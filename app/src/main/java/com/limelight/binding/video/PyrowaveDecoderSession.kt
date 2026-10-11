@@ -60,6 +60,7 @@ internal class PyrowaveDecoderSession(
     private var targetPeakNits = 1000f
     private var hdrEnabled = false
     private var hdrMetadata: ByteArray? = null
+    private var invalidHdrMetadataLogged = false
     private var lastNativeFailure: String? = null
     private var lastFrameTimings = PyrowaveFrameTimings(0L, 0L)
     private var dynamicMetadataApplied = false
@@ -75,6 +76,10 @@ internal class PyrowaveDecoderSession(
 
     val latestFrameTimings: PyrowaveFrameTimings
         get() = synchronized(lock) { lastFrameTimings }
+
+    fun getProbeTimings(): LongArray? = synchronized(lock) {
+        if (handle == 0L || !usingGpu) null else gpuNative?.getProbeTimings(handle)
+    }
 
     /**
      * Surface callbacks only publish the latest target. The decoder worker
@@ -103,44 +108,39 @@ internal class PyrowaveDecoderSession(
         targetPeakNits: Float = 1000f,
     ): Boolean {
         synchronized(lock) {
-            this.hdrEnabled = hdrEnabled
-            // A decoder recreation without an explicit metadata argument must
-            // keep the latest Sunshine metadata. Callers can still replace it
-            // by passing a non-null value, and setHdrMetadata(false, null)
-            // remains the explicit way to clear the live presentation state.
-            this.hdrMetadata = hdrMetadata?.copyOf() ?: this.hdrMetadata?.copyOf()
+            val candidateHdrEnabled = hdrEnabled && hdrMode != 0
+            // The argument seeds initial creation only. Once a control update
+            // has been accepted, this owner is authoritative for recovery;
+            // a renderer-side copy may be older than that update.
+            val candidateHdrMetadata = PyrowaveHdrMetadata.updatedSnapshot(
+                this.hdrMetadata, candidateHdrEnabled, if (this.hdrMetadata == null) hdrMetadata else null,
+            )
             val gpuReplacement = gpuNative?.let {
-                safeCreate(it, width, height, hdrMode, fullRange)
+                safeCreate(it, width, height, hdrMode, fullRange, dynamicHdrFormat)
             } ?: 0L
             val target = surfaceState
             var replacement = gpuReplacement
             var replacementUsesGpu = gpuReplacement != 0L
             var replacementNative: PyrowaveNativeApi? = if (replacementUsesGpu) gpuNative else null
-            if (replacement != 0L && !safeSetSurface(replacementNative, replacement, target.surface)) {
-                safeDestroy(replacementNative, replacement)
-                replacement = 0L
-                replacementUsesGpu = false
-            }
             if (replacement != 0L &&
-                (!safeSetHdrMetadata(replacementNative, replacement, this.hdrEnabled, this.hdrMetadata) ||
-                 !safeSetDynamicHdr(replacementNative, replacement, dynamicHdrFormat, targetPeakNits))) {
+                (!safeSetHdrMetadata(replacementNative, replacement, candidateHdrEnabled, candidateHdrMetadata) ||
+                 !safeSetDynamicHdr(replacementNative, replacement, dynamicHdrFormat, targetPeakNits) ||
+                 !safeSetSurface(replacementNative, replacement, target.surface))) {
                 safeDestroy(replacementNative, replacement)
                 replacement = 0L
                 replacementUsesGpu = false
             }
             if (replacement == 0L && hdrMode == 0 && dynamicHdrFormat == 0) {
-                replacement = safeCreate(native, width, height, hdrMode, fullRange)
+                replacement = safeCreate(native, width, height, hdrMode, fullRange, dynamicHdrFormat)
                 replacementNative = native
             }
             if (replacement == 0L) {
                 return false
             }
-            if (!replacementUsesGpu && !safeSetSurface(replacementNative, replacement, target.surface)) {
-                safeDestroy(replacementNative, replacement)
-                return false
-            }
-            if (!safeSetHdrMetadata(replacementNative, replacement, this.hdrEnabled, this.hdrMetadata) ||
-                !safeSetDynamicHdr(replacementNative, replacement, dynamicHdrFormat, targetPeakNits)) {
+            if (!replacementUsesGpu &&
+                (!safeSetHdrMetadata(replacementNative, replacement, candidateHdrEnabled, candidateHdrMetadata) ||
+                 !safeSetDynamicHdr(replacementNative, replacement, dynamicHdrFormat, targetPeakNits) ||
+                 !safeSetSurface(replacementNative, replacement, target.surface))) {
                 safeDestroy(replacementNative, replacement)
                 return false
             }
@@ -149,6 +149,8 @@ internal class PyrowaveDecoderSession(
             val previousNative = if (usingGpu) gpuNative else native
             this.width = width
             this.height = height
+            this.hdrEnabled = candidateHdrEnabled
+            this.hdrMetadata = candidateHdrMetadata
             requestedHdrMode = hdrMode
             requestedFullRange = fullRange
             requestedDynamicHdrFormat = dynamicHdrFormat
@@ -192,16 +194,24 @@ internal class PyrowaveDecoderSession(
     /** Apply the latest Sunshine static HDR metadata to a live PyroWave session. */
     fun setHdrMetadata(enabled: Boolean, metadata: ByteArray?): Boolean {
         synchronized(lock) {
+            val candidate = PyrowaveHdrMetadata.updatedSnapshot(hdrMetadata, enabled, metadata)
+            if (enabled && !PyrowaveHdrMetadata.isAbsent(metadata) &&
+                PyrowaveHdrMetadata.fromSunshineBytes(metadata) == null
+            ) {
+                if (!invalidHdrMetadataLogged) {
+                    LimeLog.warning("Invalid Sunshine static HDR metadata; keeping the last valid PyroWave snapshot")
+                    invalidHdrMetadataLogged = true
+                }
+            } else if (!enabled || PyrowaveHdrMetadata.fromSunshineBytes(metadata) != null) {
+                invalidHdrMetadataLogged = false
+            }
+            if (handle != 0L && !safeSetHdrMetadata(
+                    if (usingGpu) gpuNative else native, handle, enabled, candidate,
+                )) return false
             hdrEnabled = enabled
+            hdrMetadata = candidate
             if (!enabled) dynamicMetadataApplied = false
-            hdrMetadata = metadata?.copyOf()
-            if (handle == 0L) return true
-            return safeSetHdrMetadata(
-                if (usingGpu) gpuNative else native,
-                handle,
-                hdrEnabled,
-                hdrMetadata,
-            )
+            return true
         }
     }
 
@@ -210,6 +220,19 @@ internal class PyrowaveDecoderSession(
             destroyLocked()
             recoveryAttempts = 0
             fatalFailureReported = false
+            // A new setup/Resume is a new video session. Do not let a static
+            // HDR snapshot accepted by the previous connection seed the next
+            // decoder before the current control stream supplies its metadata.
+            // The renderer-owned snapshot is passed back through create() when
+            // it is still valid for the new connection.
+            hdrEnabled = false
+            hdrMetadata = null
+            invalidHdrMetadataLogged = false
+            requestedHdrMode = 0
+            requestedFullRange = true
+            requestedDynamicHdrFormat = 0
+            targetPeakNits = 1000f
+            lastNativeFailure = null
         }
     }
 
@@ -232,24 +255,26 @@ internal class PyrowaveDecoderSession(
         var result = SubmitResult.INACTIVE
         var fatalReason: String? = null
         synchronized(lock) {
-            if (handle == 0L) {
-                return SubmitResult.INACTIVE
-            }
-
             val activeNative = if (usingGpu) gpuNative else native
             val target = surfaceState
-            val surfaceReady = if (boundSurfaceGeneration == target.generation) {
+            // A Surface recreation can destroy the native swapchain and leave
+            // the session without a handle. Let the bounded recovery path
+            // below recreate it on the decode worker instead of returning
+            // INACTIVE forever until the connection is torn down.
+            val surfaceReady = if (handle != 0L && boundSurfaceGeneration == target.generation) {
                 true
-            } else {
+            } else if (handle != 0L) {
                 dynamicMetadataApplied = false
                 safeSetSurface(activeNative, handle, target.surface).also { bound ->
                     if (bound) boundSurfaceGeneration = target.generation
                 }
+            } else {
+                false
             }
-            if (surfaceReady && target.generation != 0L && target.surface == null) {
+            if (handle != 0L && surfaceReady && target.generation != 0L && target.surface == null) {
                 return SubmitResult.SURFACE_UNAVAILABLE
             }
-            val submitResult = if (surfaceReady) {
+            val submitResult = if (handle != 0L && surfaceReady) {
                 safeSubmit(activeNative, handle, data, length,
                            if (requestedDynamicHdrFormat != 0) frameMetadata else null)
             } else {
@@ -272,40 +297,34 @@ internal class PyrowaveDecoderSession(
             destroyLocked()
             recoveryAttempts++
             val gpuReplacement = gpuNative?.let {
-                safeCreate(it, width, height, requestedHdrMode, requestedFullRange)
+                safeCreate(it, width, height, requestedHdrMode, requestedFullRange, requestedDynamicHdrFormat)
             } ?: 0L
             val replacementTarget = surfaceState
             var replacement = gpuReplacement
             var replacementUsesGpu = gpuReplacement != 0L
             var replacementNative: PyrowaveNativeApi? = if (replacementUsesGpu) gpuNative else null
-            if (replacement != 0L && !safeSetSurface(replacementNative, replacement, replacementTarget.surface)) {
-                safeDestroy(replacementNative, replacement)
-                replacement = 0L
-                replacementUsesGpu = false
-            }
             if (replacement != 0L &&
                 (!safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata) ||
-                 !safeSetDynamicHdr(replacementNative, replacement, requestedDynamicHdrFormat, targetPeakNits))) {
+                 !safeSetDynamicHdr(replacementNative, replacement, requestedDynamicHdrFormat, targetPeakNits) ||
+                 !safeSetSurface(replacementNative, replacement, replacementTarget.surface))) {
                 safeDestroy(replacementNative, replacement)
                 replacement = 0L
                 replacementUsesGpu = false
             }
             if (replacement == 0L && requestedHdrMode == 0 && requestedDynamicHdrFormat == 0) {
-                replacement = safeCreate(native, width, height, requestedHdrMode, requestedFullRange)
+                replacement = safeCreate(native, width, height, requestedHdrMode, requestedFullRange,
+                    requestedDynamicHdrFormat)
                 replacementNative = native
             }
             if (replacement != 0L &&
-                (replacementUsesGpu || safeSetSurface(replacementNative, replacement, replacementTarget.surface))) {
-                if (safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata) &&
-                    safeSetDynamicHdr(replacementNative, replacement, requestedDynamicHdrFormat, targetPeakNits)) {
-                    handle = replacement
-                    usingGpu = replacementUsesGpu
-                    boundSurfaceGeneration = replacementTarget.generation
-                    result = SubmitResult.RECOVERED
-                } else {
-                    safeDestroy(replacementNative, replacement)
-                    result = SubmitResult.INACTIVE
-                }
+                (replacementUsesGpu ||
+                    (safeSetHdrMetadata(replacementNative, replacement, hdrEnabled, hdrMetadata) &&
+                     safeSetDynamicHdr(replacementNative, replacement, requestedDynamicHdrFormat, targetPeakNits) &&
+                     safeSetSurface(replacementNative, replacement, replacementTarget.surface)))) {
+                handle = replacement
+                usingGpu = replacementUsesGpu
+                boundSurfaceGeneration = replacementTarget.generation
+                result = SubmitResult.RECOVERED
             } else {
                 if (replacement != 0L) {
                     safeDestroy(replacementNative, replacement)
@@ -351,9 +370,10 @@ internal class PyrowaveDecoderSession(
         lastNativeFailure = null
     }
 
-    private fun safeCreate(api: PyrowaveNativeApi, width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long {
+    private fun safeCreate(api: PyrowaveNativeApi, width: Int, height: Int, hdrMode: Int,
+                           fullRange: Boolean, dynamicHdrFormat: Int): Long {
         return try {
-            val created = api.create(width, height, hdrMode, fullRange)
+            val created = api.create(width, height, hdrMode, fullRange, dynamicHdrFormat)
             if (created == 0L) {
                 logNativeFailure("create", "native returned no handle for ${width}x$height hdr=$hdrMode")
             } else {
@@ -460,12 +480,15 @@ internal class PyrowaveDecoderSession(
 
 internal interface PyrowaveNativeApi {
     fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long
+    fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean,
+               dynamicHdrFormat: Int): Long = create(width, height, hdrMode, fullRange)
     fun setSurface(handle: Long, surface: Surface?): Boolean
     fun submit(handle: Long, data: ByteArray, length: Int): Int
     fun submitFrame(handle: Long, data: ByteArray, length: Int, metadata: ByteArray?): Int =
         if (metadata == null || metadata.isEmpty()) submit(handle, data, length) else -1
     fun setDynamicHdr(handle: Long, format: Int, targetPeakNits: Float): Boolean = format == 0
     fun getTimings(handle: Long): Long
+    fun getProbeTimings(handle: Long): LongArray? = null
     fun setHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean
     fun destroy(handle: Long)
 }
@@ -495,6 +518,10 @@ internal object FramegenPyrowaveNativeApi : PyrowaveNativeApi {
     override fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean): Long =
         FramegenInterceptor.createPyrowaveDecoder(width, height, hdrMode, fullRange)
 
+    override fun create(width: Int, height: Int, hdrMode: Int, fullRange: Boolean,
+                        dynamicHdrFormat: Int): Long =
+        FramegenInterceptor.createPyrowaveDecoder(width, height, hdrMode, fullRange, dynamicHdrFormat)
+
     override fun setSurface(handle: Long, surface: Surface?): Boolean {
         return FramegenInterceptor.setPyrowaveDecoderSurface(handle, surface)
     }
@@ -510,6 +537,9 @@ internal object FramegenPyrowaveNativeApi : PyrowaveNativeApi {
 
     override fun getTimings(handle: Long): Long =
         FramegenInterceptor.getPyrowaveDecoderTimings(handle)
+
+    override fun getProbeTimings(handle: Long): LongArray? =
+        FramegenInterceptor.getPyrowaveDecoderProbeTimings(handle)
 
     override fun setHdrMetadata(handle: Long, enabled: Boolean, metadata: ByteArray?): Boolean =
         FramegenInterceptor.setPyrowaveDecoderHdrMetadata(handle, enabled, metadata)

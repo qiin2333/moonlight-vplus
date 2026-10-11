@@ -1,17 +1,14 @@
 package com.limelight.binding.video
 
-/** Stream HDR state; mapped variants describe application output, not vendor-pipeline acceptance. */
+/** Stream HDR state reported by the active decoder/presentation path. */
 enum class StreamHdrFormat(val displayName: String) {
     SDR("SDR"),
     HDR10("HDR10"),
     HDR10_PLUS("HDR10+"),
     HLG("HLG"),
     DOLBY_VISION("DV"),
-    PYROWAVE_HDR10_PLUS_PQ("HDR10+ → PQ"),
-    PYROWAVE_VIVID_PQ("Vivid → PQ"),
-    PYROWAVE_VIVID_HLG("Vivid → HLG"),
-    PYROWAVE_DV81_PQ("DV 8.1 → PQ"),
-    PYROWAVE_DV84_HLG("DV 8.4 → HLG"),
+    PYROWAVE_VIVID_PQ("Vivid"),
+    PYROWAVE_VIVID_HLG("Vivid"),
     ;
 
     val isHdr: Boolean
@@ -22,8 +19,6 @@ enum class StreamHdrFormat(val displayName: String) {
         get() = when (this) {
             HDR10_PLUS -> "HDR10+ (metadata observed)"
             DOLBY_VISION -> "Dolby Vision (negotiated)"
-            PYROWAVE_HDR10_PLUS_PQ, PYROWAVE_VIVID_PQ, PYROWAVE_VIVID_HLG,
-            PYROWAVE_DV81_PQ, PYROWAVE_DV84_HLG -> "$displayName (application-mapped)"
             else -> displayName
         }
 }
@@ -34,12 +29,14 @@ internal object PyrowaveHdrFormatPolicy {
         // This policy is queried only after successful PyroWave presentation,
         // whose native color-contract check already verified the base transfer.
         if ((hdrStateKnown && !hdrEnabled) || hdrMode == 0) return StreamHdrFormat.SDR
+        // The negotiated format identifies the dynamic metadata consumer. Vivid
+        // may use the native Vulkan extension, while HDR10+/Dolby Vision use
+        // the application mapping shader; both are observable HDR formats.
         return when (appliedDynamicFormat) {
-            1 -> StreamHdrFormat.PYROWAVE_HDR10_PLUS_PQ
+            1 -> StreamHdrFormat.HDR10_PLUS
             2 -> StreamHdrFormat.PYROWAVE_VIVID_PQ
             3 -> StreamHdrFormat.PYROWAVE_VIVID_HLG
-            4 -> StreamHdrFormat.PYROWAVE_DV81_PQ
-            5 -> StreamHdrFormat.PYROWAVE_DV84_HLG
+            4, 5 -> StreamHdrFormat.DOLBY_VISION
             else -> if (hdrMode == 2) StreamHdrFormat.HLG else StreamHdrFormat.HDR10
         }
     }

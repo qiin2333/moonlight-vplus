@@ -3908,6 +3908,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 } else {
                     // HDR is supported, configure the HDR mode preference
                     if (hdrModePref != null) {
+                        var pyrowaveNativeVivid = false
                         val updateHdrEntries: (Boolean) -> Unit = { pyrowaveSelected ->
                             val entries = mutableListOf<CharSequence>()
                             val entryValues = mutableListOf<CharSequence>()
@@ -3917,7 +3918,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                                 entryValues += "1"
                             }
                             if (foundHdr10Plus || (pyrowaveSelected && foundHdr10)) {
-                                entries += getString(if (pyrowaveSelected) R.string.hdr_mode_pyrowave_hdr10_plus else R.string.hdr_mode_hdr10_plus)
+                                entries += getString(R.string.hdr_mode_hdr10_plus)
                                 entryValues += "3"
                             }
                             if (foundHlg) {
@@ -3925,16 +3926,23 @@ class StreamSettings : ThemedAppCompatActivity() {
                                 entryValues += "2"
                             }
                             if (pyrowaveSelected) {
-                                if (foundHdr10 || foundHdr10Plus) {
+                                if (pyrowaveNativeVivid && (foundHdr10 || foundHdr10Plus)) {
                                     entries += getString(R.string.hdr_mode_pyrowave_vivid_pq)
                                     entryValues += "6"
-                                    entries += getString(R.string.hdr_mode_pyrowave_dv81)
+                                }
+                                if (pyrowaveNativeVivid && foundHlg) {
+                                    entries += getString(R.string.hdr_mode_pyrowave_vivid_hlg)
+                                    entryValues += "7"
+                                }
+                                // HDR10+ and Dolby Vision use PyroWave's bounded
+                                // application mapping path. The base transfer still
+                                // follows the display's HDR10/HLG capability.
+                                if (foundHdr10 || foundHdr10Plus) {
+                                    entries += getString(R.string.hdr_mode_dolby_vision)
                                     entryValues += "4"
                                 }
                                 if (foundHlg) {
-                                    entries += getString(R.string.hdr_mode_pyrowave_vivid_hlg)
-                                    entryValues += "7"
-                                    entries += getString(R.string.hdr_mode_pyrowave_dv84)
+                                    entries += getString(R.string.hdr_mode_dolby_vision_84)
                                     entryValues += "5"
                                 }
                             } else if (foundDolbyVision) {
@@ -3968,6 +3976,12 @@ class StreamSettings : ThemedAppCompatActivity() {
                             // Keep the current preference/dialog focus; only update HDR choices.
                             updateHdrEntries(newValue == "pyrowave")
                             true
+                        }
+                        lifecycleScope.launch {
+                            pyrowaveNativeVivid = PyrowaveCapabilityProbe.collect().hasNativeVivid
+                            if (isAdded) {
+                                updateHdrEntries(formatPref?.value == "pyrowave")
+                            }
                         }
                     }
                 }

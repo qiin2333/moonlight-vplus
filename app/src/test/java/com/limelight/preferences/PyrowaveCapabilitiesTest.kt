@@ -61,6 +61,8 @@ class PyrowaveCapabilitiesTest {
         assertTrue(report.hasAnyPrerequisites)
         assertTrue(report.hasSurfacePrerequisites(supported))
         assertTrue(report.hasStagingPrerequisites(supported))
+        assertFalse(report.hasNativeVivid)
+        assertTrue(report(supported.copy(hdrMetadata = true, nativeVivid = true)).hasNativeVivid)
     }
 
     @Test
