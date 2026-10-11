@@ -55,4 +55,7 @@
     <string name="usb_type_printer">Printer</string>
     <string name="usb_type_hub">USB hub</string>
     <string name="usb_type_generic">USB device</string>
+    <string name="usb_forward_auto_title">Automatically share with this computer</string>
+    <string name="usb_forward_auto_type_hint">No serial number: remembers this device type. Identical devices require manual sharing.</string>
+    <string name="usb_forward_auto_ambiguous">Identical USB devices detected. Choose Share with computer manually.</string>
 </resources>

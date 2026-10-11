@@ -33,12 +33,13 @@ import java.util.concurrent.Executors
 /** One foreground stream owns one export per shared device, all served by the
  * backend's single exporter. Permission and UI state stay on the main thread;
  * blocking native cleanup is serialized behind export on the worker. */
-class UsbForwardingController(
+internal class UsbForwardingController(
     private val game: Game,
     private val host: String,
     private val pinned: X509Certificate,
     private val crypto: LimelightCryptoProvider,
     hostId: String,
+    private val autoShareSession: UsbAutoShareSession,
     private val httpProvider: () -> NvHTTP?
 ) : AutoCloseable {
     companion object {
@@ -71,8 +72,9 @@ class UsbForwardingController(
 
     /** Per-device export state. [phase] is main-thread state, the handles are
      * written by the worker and read by whichever callback owns them. */
-    private class Forwarding(val device: UsbDevice) {
-        var generation = 0L
+    private class Forwarding(val device: UsbDevice, val automatic: Boolean = false, remember: Boolean = false) {
+        var remember by mutableStateOf(remember)
+        @Volatile var generation = 0L
         var request = 0
 
         /** Released while its own permission dialog was on screen: the answer
@@ -88,6 +90,12 @@ class UsbForwardingController(
     private val backend = UsbIpBackend(game)
     private val preferences = game.getSharedPreferences("usb_forwarding_hosts", Context.MODE_PRIVATE)
     private val preferenceKey = "enabled_$hostId"
+    private val autoShareRules = UsbAutoShareRules(hostId,
+        { key -> preferences.getStringSet(key, emptySet()).orEmpty() },
+        { key, values -> preferences.edit().putStringSet(key, values).apply() })
+    private var rules by mutableStateOf(autoShareRules.load())
+    private val attempted = mutableSetOf<String>()
+    private var foreground = false
     private var enabled by mutableStateOf(preferences.getBoolean(preferenceKey, false))
     private var capability by mutableStateOf<UsbForwardingCapability?>(null)
     private val worker = Executors.newSingleThreadExecutor()
@@ -126,9 +134,23 @@ class UsbForwardingController(
                 // The newcomer cannot be told apart from an identical shared device,
                 // so Android input from it is suppressed as well.
                 if (siblings(device).any { it.phase.claimed }) message = R.string.usb_forward_duplicate_device
+                if (identicalCount(device) > 1) {
+                    val automatic = siblings(device).filter { it.automatic }
+                    for (state in automatic) {
+                        attempted.remove(state.device.deviceName)
+                        if (state.phase == Phase.Authorizing) discardAuthorization(state)
+                    }
+                    // An automatic share must not silently consume Android input from
+                    // a newly attached, unselected device with the same VID/PID.
+                    releaseGroup(automatic.filter { it.phase != Phase.Authorizing && it.phase != Phase.Releasing },
+                        R.string.usb_forward_auto_ambiguous)
+                }
+                attempted.remove(device.deviceName)
+                startAutomaticSharing(retryCapability = true)
                 return
             }
             forwarding[device.deviceName]?.let { releaseGroup(listOf(it), R.string.usb_forward_detached) }
+            startAutomaticSharing()
         }
     }
 
@@ -149,7 +171,9 @@ class UsbForwardingController(
             UsbDevicePanel(
                 // Keep a detached device visible until its release finishes.
                 devices = (devices + forwarding.values.map { it.device }).distinctBy { it.deviceName }.map {
-                    val phase = forwarding[it.deviceName]?.phase
+                    val state = forwarding[it.deviceName]
+                    val phase = state?.phase
+                    val id = identity(it)
                     UsbPanelDevice(
                         path = it.deviceName,
                         name = it.productName ?: "USB %04x:%04x".format(it.vendorId, it.productId),
@@ -160,6 +184,9 @@ class UsbForwardingController(
                         // transition can still be stopped from its own row.
                         locked = phase == Phase.Releasing,
                         status = phase?.status ?: R.string.usb_forward_local,
+                        autoShare = state?.remember == true || rules.any { rule -> rule.sameType(id) &&
+                            (rule.serial == null || !manager.hasPermission(it) || rule.serial == id.serial) },
+                        typeRule = rules.any { rule -> rule.sameType(id) && rule.serial == null },
                     )
                 },
                 busy = busy,
@@ -168,11 +195,18 @@ class UsbForwardingController(
                 forwardingEnabled = enabled,
                 canShare = enabled && capability?.available == true,
                 onEnabledChange = ::changeEnabled,
-                onRetry = ::refreshCapability,
-                onShare = { path -> manager.deviceList[path]?.let(::request) },
-                onRelease = { path -> forwarding[path]?.let { releaseGroup(listOf(it), R.string.usb_forward_choose) } },
-                onRefresh = { refreshDevices() },
-                onDismiss = { sheet?.dismiss() }
+                onRetry = { refreshCapability(resetAttempts = true) },
+                onShare = { path -> manager.deviceList[path]?.let { device ->
+                    autoShareSession.suppressedGroups.remove(identity(device).inputGroup)
+                    request(device)
+                } },
+                onRelease = { path -> forwarding[path]?.let {
+                    autoShareSession.suppressedGroups.add(identity(it.device).inputGroup)
+                    releaseGroup(listOf(it), R.string.usb_forward_choose)
+                } },
+                onRefresh = { refreshDevices(); startAutomaticSharing() },
+                onDismiss = { sheet?.dismiss() },
+                onAutoShareChange = { path, value -> manager.deviceList[path]?.let { changeAutoShare(it, value) } },
             )
         }
         return sheet
@@ -183,12 +217,21 @@ class UsbForwardingController(
         enabled = value
         preferences.edit().putBoolean(preferenceKey, value).apply()
         capability = null
-        if (value) refreshCapability()
-        else releaseGroup(forwarding.values.toList(), R.string.usb_forward_disabled)
+        capabilityGeneration++
+        busy = false
+        if (value) {
+            attempted.clear()
+            refreshCapability()
+        }
+        else {
+            message = R.string.usb_forward_disabled
+            releaseGroup(forwarding.values.toList(), R.string.usb_forward_disabled)
+        }
     }
 
-    private fun refreshCapability() {
+    private fun refreshCapability(resetAttempts: Boolean = false) {
         if (closed || busy || forwarding.isNotEmpty()) return
+        if (resetAttempts) attempted.clear()
         capability = null
         if (!enabled) { message = R.string.usb_forward_disabled; return }
         if (!UsbIpBackend.isSupported()) { message = R.string.usb_forward_unsupported; return }
@@ -210,12 +253,90 @@ class UsbForwardingController(
                     capability?.reason == "disabled" -> R.string.usb_forward_host_disabled
                     else -> R.string.usb_forward_host_unavailable
                 }
+                startAutomaticSharing()
             }
         }
     }
 
     private fun refreshDevices() {
         devices = manager.deviceList.values.sortedBy { it.deviceName }
+    }
+
+    private fun identity(device: UsbDevice): UsbAutoShareIdentity =
+        runCatching { device.autoShareIdentity(manager) }.getOrElse { device.autoShareIdentity(manager, false) }
+
+    private fun saveRules() {
+        autoShareRules.save(rules)
+    }
+
+    private fun changeAutoShare(device: UsbDevice, value: Boolean) {
+        if (closed) return
+        if (value && HciUsbDeviceProbe.probe(device) != null) {
+            Toast.makeText(game, R.string.usb_forward_wireless_adapter, Toast.LENGTH_LONG).show()
+            return
+        }
+        val id = identity(device)
+        if (!value) {
+            rules = rules.filterNot { it.sameType(id) &&
+                (id.serial == null || it.serial == null || it.serial == id.serial) }.toSet()
+            saveRules()
+            // Do not release a manual share, but cancel an automatic permission request.
+            forwarding[device.deviceName]?.let { state ->
+                state.remember = false
+                if (state.automatic && state.phase == Phase.Authorizing) discardAuthorization(state)
+            }
+        } else {
+            autoShareSession.suppressedGroups.remove(id.inputGroup)
+            attempted.remove(device.deviceName)
+            val state = forwarding[device.deviceName]
+            if (state != null && state.phase == Phase.Authorizing) state.remember = true
+            else if (manager.hasPermission(device)) rememberDevice(device)
+            else request(device, automatic = true, remember = true)
+            startAutomaticSharing()
+        }
+    }
+
+    private fun rememberDevice(device: UsbDevice): Boolean {
+        val id = runCatching { device.autoShareIdentity(manager) }.getOrNull() ?: return false
+        rules = rules.filterNot { it.sameType(id) && (it.serial == null || it.serial == id.serial) }.toSet() + id
+        saveRules()
+        return true
+    }
+
+    fun startForeground() {
+        if (closed || foreground) return
+        foreground = true
+        refreshDevices()
+        startAutomaticSharing(retryCapability = true)
+    }
+
+    private fun startAutomaticSharing(retryCapability: Boolean = false) {
+        if (closed || !foreground || !game.connected || !enabled || rules.isEmpty()) return
+        if (capability?.available != true) {
+            if (retryCapability) refreshCapability()
+            return
+        }
+        if (busy) return
+        refreshDevices()
+        for (device in devices) {
+            if (device.deviceName in attempted || forwarding.containsKey(device.deviceName)) continue
+            val id = identity(device)
+            // A serial can only be checked after permission. Preliminary matching only
+            // authorizes the system prompt, never driver handoff or native export.
+            if (!rules.any { it.sameType(id) } || id.inputGroup in autoShareSession.suppressedGroups) continue
+            if (identicalCount(device) != 1) { message = R.string.usb_forward_auto_ambiguous; continue }
+            attempted.add(device.deviceName)
+            request(device, automatic = true)
+        }
+    }
+
+    private fun discardAuthorization(state: Forwarding) {
+        cancelPermission(state)
+        if (forwarding[state.device.deviceName] === state) forwarding = forwarding - state.device.deviceName
+        if (foreground && enabled && !busy && forwarding.values.none { it.phase == Phase.Authorizing }) {
+            message = if (forwarding.values.any { it.phase == Phase.Sharing })
+                R.string.usb_forward_connected else R.string.usb_forward_choose
+        }
     }
 
     /** Devices Android cannot tell apart, because it exposes no USB path on its
@@ -234,8 +355,8 @@ class UsbForwardingController(
         },
     )
 
-    private fun request(device: UsbDevice) {
-        if (closed || busy || !game.connected || !enabled || capability?.available != true) return
+    private fun request(device: UsbDevice, automatic: Boolean = false, remember: Boolean = false) {
+        if (closed || !foreground || busy || !game.connected || !enabled || capability?.available != true) return
         if (forwarding.containsKey(device.deviceName)) return
         LimeLog.info("USB forwarding selected ${device.deviceName} (${device.vendorId}:${device.productId})")
         // Wireless adapter handoff needs a separate whole-bridge lifecycle.
@@ -248,11 +369,11 @@ class UsbForwardingController(
             LimeLog.warning("USB forwarding unavailable: ${game.getString(unavailableReason)}")
             return
         }
-        val state = Forwarding(device)
+        val state = Forwarding(device, automatic, remember)
         forwarding = forwarding + (device.deviceName to state)
         if (identicalCount(device) > 1) message = R.string.usb_forward_duplicate_device
         if (manager.hasPermission(device)) {
-            export(state)
+            authorized(state)
         } else {
             state.phase = Phase.Authorizing
             permissionQueue.addLast(state)
@@ -263,7 +384,7 @@ class UsbForwardingController(
     /** Serializes permission prompts: the system shows one dialog at a time, and a
      * queued device keeps its [Phase.Authorizing] row while it waits. */
     private fun pumpPermissionQueue() {
-        if (closed || pendingPermission != null) return
+        if (closed || !foreground || pendingPermission != null) return
         while (true) {
             val next = permissionQueue.removeFirstOrNull() ?: return
             if (forwarding[next.device.deviceName] !== next) continue
@@ -281,7 +402,8 @@ class UsbForwardingController(
                 // queue can carry on.
                 pendingPermission = null
                 game.onUsbPermissionPromptCompleted()
-                releaseGroup(listOf(next), R.string.usb_forward_permission_denied)
+                discardAuthorization(next)
+                message = R.string.usb_forward_permission_denied
                 pumpPermissionQueue()
             }
             return
@@ -300,8 +422,11 @@ class UsbForwardingController(
             pumpPermissionQueue()
             return
         }
-        if (granted && manager.hasPermission(pending.device)) export(pending)
-        else releaseGroup(listOf(pending), R.string.usb_forward_permission_denied)
+        if (granted && manager.hasPermission(pending.device)) authorized(pending)
+        else {
+            discardAuthorization(pending)
+            message = R.string.usb_forward_permission_denied
+        }
         pumpPermissionQueue()
     }
 
@@ -316,6 +441,23 @@ class UsbForwardingController(
         permissionQueue.remove(state)
     }
 
+    private fun authorized(state: Forwarding) {
+        val device = state.device
+        val id = if (state.automatic || state.remember)
+            runCatching { device.autoShareIdentity(manager) }.getOrNull() else identity(device)
+        if (closed || !foreground || !enabled || !game.connected || state.cancelled ||
+            forwarding[device.deviceName] !== state || !manager.deviceList.containsKey(device.deviceName) || id == null) {
+            discardAuthorization(state)
+            return
+        }
+        if (state.remember && !rememberDevice(device)) { discardAuthorization(state); return }
+        if (state.automatic && !autoShareSession.allows(id, rules, identicalCount(device))) {
+            discardAuthorization(state)
+            return
+        }
+        export(state)
+    }
+
     private fun export(state: Forwarding) {
         val credentials = capability ?: return
         val device = state.device
@@ -326,10 +468,10 @@ class UsbForwardingController(
                 // Activity recreation publishes its cleanup before a replacement
                 // controller can enqueue native work.
                 predecessorCleanup.await()
-                if (closed) return@enqueue
+                if (closed || state.generation != operation) return@enqueue
                 state.reservation = UsbDriverService.reserveForForwarding(device)
                 state.reservation!!.ready.await(10_000)
-                if (closed) return@enqueue
+                if (closed || state.generation != operation) return@enqueue
                 val exported = backend.export(device).get()
                 state.export = exported
                 game.runOnUiThread {
@@ -387,7 +529,8 @@ class UsbForwardingController(
      * VID/PID pairs share one identity here because Android offers no USB path
      * mapping, so releasing one member releases the whole group. */
     fun consumes(input: InputDevice?): Boolean = input != null && forwarding.values.any {
-        it.device.vendorId == input.vendorId && it.device.productId == input.productId
+        !(it.automatic && it.phase == Phase.Authorizing) &&
+            it.device.vendorId == input.vendorId && it.device.productId == input.productId
     }
 
     fun release(resultMessage: Int = R.string.usb_forward_choose) {
@@ -442,12 +585,24 @@ class UsbForwardingController(
                 }
             }
             game.runOnUiThread {
-                if (!closed) message = if (released) resultMessage else R.string.usb_forward_failed
+                if (!closed) {
+                    message = if (released) resultMessage else R.string.usb_forward_failed
+                    startAutomaticSharing(retryCapability = capability == null)
+                }
             }
         }
     }
 
     fun stopForeground() {
+        foreground = false
+        capabilityGeneration++
+        capability = null
+        busy = false
+        for (state in forwarding.values) {
+            if (state.phase == Phase.Handoff || state.phase == Phase.Connecting || state.phase == Phase.Sharing) {
+                attempted.remove(state.device.deviceName)
+            }
+        }
         sheet?.dismiss()
         sheet = null
         release()

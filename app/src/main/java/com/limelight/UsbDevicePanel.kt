@@ -38,7 +38,8 @@ import com.limelight.usbip.UsbIpBackend
 /** One row: its own share state, its own progress, its own status line. */
 internal data class UsbPanelDevice(
     val path: String, val name: String, val type: UsbDeviceType, val status: Int,
-    val sharing: Boolean = false, val busy: Boolean = false, val locked: Boolean = false
+    val sharing: Boolean = false, val busy: Boolean = false, val locked: Boolean = false,
+    val autoShare: Boolean = false, val typeRule: Boolean = false,
 )
 
 /** Shared dialog shell, with explicit controls and one focus target per action. */
@@ -48,7 +49,8 @@ internal fun UsbDevicePanel(
     hostName: String, forwardingEnabled: Boolean, canShare: Boolean,
     onEnabledChange: (Boolean) -> Unit, onRetry: () -> Unit,
     onShare: (String) -> Unit, onRelease: (String) -> Unit,
-    onRefresh: () -> Unit, onDismiss: () -> Unit
+    onRefresh: () -> Unit, onDismiss: () -> Unit,
+    onAutoShareChange: (String, Boolean) -> Unit = { _, _ -> },
 ) {
     val initialFocus = remember { FocusRequester() }
     var placed by remember { mutableStateOf(false) }
@@ -112,8 +114,14 @@ internal fun UsbDevicePanel(
                     items(devices, key = { it.path }) { device ->
                         // Every device acts on its own: one in flight never blocks the rest.
                         val enabled = if (device.sharing) !device.locked else canShare && !busy
-                        UsbDeviceRow(device, enabled, initialFocus) {
-                            if (device.sharing) onRelease(device.path) else onShare(device.path)
+                        Column {
+                            UsbDeviceRow(device, enabled, initialFocus) {
+                                if (device.sharing) onRelease(device.path) else onShare(device.path)
+                            }
+                            UsbAutoSharingToggle(device.autoShare, device.typeRule,
+                                device.autoShare || (canShare && !busy && !device.busy)) {
+                                onAutoShareChange(device.path, it)
+                            }
                         }
                     }
                     item {
@@ -235,6 +243,32 @@ private fun UsbSharingToggle(forwardingEnabled: Boolean, busy: Boolean, initialF
         Spacer(Modifier.width(12.dp))
         Switch(checked = forwardingEnabled, onCheckedChange = null, enabled = enabled,
             colors = SwitchDefaults.colors(checkedTrackColor = accent, checkedThumbColor = Color.White))
+    }
+}
+
+@Composable
+private fun UsbAutoSharingToggle(checked: Boolean, typeRule: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val accent = usbPanelAccent()
+    Row(Modifier.fillMaxWidth()
+        .border(if (focused) 2.dp else 0.dp, if (focused) accent else Color.Transparent, RoundedCornerShape(12.dp))
+        .onPreviewKeyEvent { event ->
+            val key = event.nativeKeyEvent
+            if (enabled && key.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                if (key.action == KeyEvent.ACTION_UP) onChange(!checked)
+                true
+            } else false
+        }
+        .toggleable(checked, interaction, null, enabled, Role.Checkbox, onChange)
+        .padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked, onCheckedChange = null, enabled = enabled)
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(stringResource(R.string.usb_forward_auto_title), style = MaterialTheme.typography.bodyMedium)
+            if (checked && typeRule) Text(stringResource(R.string.usb_forward_auto_type_hint),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
