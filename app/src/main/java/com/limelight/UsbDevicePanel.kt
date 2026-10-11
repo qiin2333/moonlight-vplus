@@ -92,6 +92,7 @@ internal fun UsbDevicePanel(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(stringResource(R.string.usb_forward_devices_count, devices.size),
                                 style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f))
                             UsbPanelAction(stringResource(R.string.usb_forward_refresh), onRefresh, initialFocus)
                         }
@@ -193,9 +194,11 @@ private fun UsbControllerHints() {
 private fun UsbPanelHeader(hostName: String, onDismiss: () -> Unit) {
     val accent = usbPanelAccent()
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(painterResource(R.drawable.ic_usb_type_generic), null, Modifier.size(26.dp))
+        Icon(painterResource(R.drawable.ic_usb_type_generic), null, Modifier.size(26.dp),
+            tint = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.width(10.dp))
         Text(stringResource(R.string.usb_forward_title), fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         Text(stringResource(R.string.usb_forward_experimental),
             modifier = Modifier.background(accent.copy(alpha = 0.1f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp),
@@ -235,7 +238,8 @@ private fun UsbSharingToggle(forwardingEnabled: Boolean, busy: Boolean, initialF
         .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.usb_forward_toggle_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.usb_forward_toggle_title), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             Text(stringResource(R.string.usb_forward_toggle_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(stringResource(if (forwardingEnabled) R.string.usb_forward_on else R.string.usb_forward_off),
@@ -265,7 +269,8 @@ private fun UsbAutoSharingToggle(checked: Boolean, typeRule: Boolean, enabled: B
         Checkbox(checked, onCheckedChange = null, enabled = enabled)
         Spacer(Modifier.width(8.dp))
         Column {
-            Text(stringResource(R.string.usb_forward_auto_title), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.usb_forward_auto_title), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface)
             if (checked && typeRule) Text(stringResource(R.string.usb_forward_auto_type_hint),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -287,6 +292,7 @@ private fun UsbDeviceRow(device: UsbPanelDevice, enabled: Boolean,
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(device.name,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(stringResource(deviceType.label) + " · " + stringResource(device.status),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -356,6 +362,7 @@ private fun UsbPanelCloseButton(onClick: () -> Unit) {
         .clickable(interaction, null, role = Role.Button, onClick = onClick)
         .padding(8.dp), contentAlignment = Alignment.Center) {
         Icon(painterResource(R.drawable.ic_close_stylish),
-            stringResource(R.string.usb_forward_close), Modifier.size(24.dp))
+            stringResource(R.string.usb_forward_close), Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurface)
     }
 }
