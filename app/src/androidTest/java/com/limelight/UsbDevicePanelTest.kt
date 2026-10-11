@@ -78,8 +78,8 @@ class UsbDevicePanelTest {
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(2, refreshes) }
         compose.onRoot().captureToImage().asAndroidBitmap().let { bitmap ->
-            File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null),
-                "usb-panel.png").outputStream().use {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            File(context.getExternalFilesDir(null) ?: context.filesDir, "usb-panel.png").outputStream().use {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
         }
