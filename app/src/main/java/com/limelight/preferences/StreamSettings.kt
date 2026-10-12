@@ -448,7 +448,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         if (searchBar == null || searchInput == null) return
 
-        searchToggle?.setOnClickListener { showSearchBar() }
+        searchToggle?.setOnClickListener { showSearchBar(enterInput = true) }
         closeBtn?.setOnClickListener {
             if (searchToggle == null) {
                 clearSearchQuery()
@@ -460,7 +460,8 @@ class StreamSettings : ThemedAppCompatActivity() {
         searchBar?.defaultFocusHighlightEnabled = false
         closeBtn?.defaultFocusHighlightEnabled = false
         val searchIcon = searchBar?.findViewById<View>(R.id.settings_search_icon)
-        searchIcon?.setOnClickListener { enterSearchInput() }
+        searchBar?.setOnClickListener { enterSearchInput() }
+        searchInput?.setOnClickListener { enterSearchInput() }
         searchIcon?.setOnFocusChangeListener { _, hasFocus -> updateSearchBarHighlight(hasFocus) }
         closeBtn?.setOnFocusChangeListener { view, hasFocus -> updateCloseHighlight(view, hasFocus) }
         findViewById<View>(R.id.settings_back)?.foreground = null
@@ -509,13 +510,15 @@ class StreamSettings : ThemedAppCompatActivity() {
         v.animate().alpha(0f).setDuration(140L).withEndAction { v.visibility = View.GONE }.start()
     }
 
-    private fun showSearchBar() {
+    private fun showSearchBar(enterInput: Boolean = false) {
         fadeOut(searchToggle)
         fadeOut(menuToggleView)
         fadeIn(searchBar)
-        searchBar?.findViewById<View>(R.id.settings_search_icon)?.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT)
+        if (enterInput) {
+            searchBar?.post { enterSearchInput() }
+        } else {
+            searchBar?.findViewById<View>(R.id.settings_search_icon)?.requestFocus()
+        }
     }
 
     private fun moveRightToPreferenceList(keyCode: Int, event: KeyEvent): Boolean {
