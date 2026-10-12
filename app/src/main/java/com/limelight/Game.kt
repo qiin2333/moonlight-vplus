@@ -985,17 +985,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 this, prefConfig,
                 {
                     if (decoderRenderer === rendererForFailure) {
-                        tombstonePrefs.edit(commit = true) {
-                            putInt(
-                                "CrashCount",
-                                tombstonePrefs.getInt("CrashCount", 0) + 1
-                            )
-                        }
-                        reportedCrash = true
-                        // Hardware decoder gave up: end the stream with the standard
-                        // failure dialog instead of crashing the process from the
-                        // codec callback thread.
-                        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+                        onActiveRendererFailure()
                     } else {
                         // A discarded renderer's callback must not count toward the
                         // active renderer's crash accounting or report state.
@@ -1012,15 +1002,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     if (decoderRenderer !== rendererForFailure) {
                         LimeLog.info("Ignoring stale PyroWave failure: $reason")
                     } else {
-                        tombstonePrefs.edit(commit = true) {
-                            putInt(
-                                "CrashCount",
-                                tombstonePrefs.getInt("CrashCount", 0) + 1
-                            )
-                        }
-                        reportedCrash = true
                         LimeLog.severe("PyroWave decoder session failed: $reason")
-                        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+                        onActiveRendererFailure()
                     }
                 }
             )
@@ -1311,6 +1294,25 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val displayRefreshRate: Float,
         val clientRefreshRateX100: Int
     )
+
+    /**
+     * Shared terminal path for the active renderer's fatal failure callbacks
+     * (codec crash and PyroWave session failure): count the crash, mark it
+     * reported, and end the stream through the standard failure dialog instead
+     * of crashing the process. Callers must verify the failing renderer is
+     * still the active one so a discarded renderer cannot pollute the new
+     * connection's accounting.
+     */
+    private fun onActiveRendererFailure() {
+        tombstonePrefs.edit(commit = true) {
+            putInt(
+                "CrashCount",
+                tombstonePrefs.getInt("CrashCount", 0) + 1
+            )
+        }
+        reportedCrash = true
+        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+    }
 
     private fun prepareConnection() {
         audioVibrationService?.stop()

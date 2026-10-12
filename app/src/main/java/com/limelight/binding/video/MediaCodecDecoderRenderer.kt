@@ -1557,10 +1557,7 @@ class MediaCodecDecoderRenderer(
                         val failure = IllegalStateException(
                             "Decoder configuration did not settle after $recoveryPasses recovery passes"
                         )
-                        if (!reportedCrash) {
-                            reportedCrash = true
-                            crashListener.notifyCrash(failure)
-                        }
+                        notifyCrashOnce(failure)
                         throw RendererException(createDiagnostics(), failure)
                     }
                     recoveryPasses++
@@ -1669,10 +1666,7 @@ class MediaCodecDecoderRenderer(
                             codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
                         } catch (e: IllegalStateException) {
                             // If we failed to recover after all of these attempts, just crash
-                            if (!reportedCrash) {
-                                reportedCrash = true
-                                crashListener.notifyCrash(e)
-                            }
+                            notifyCrashOnce(e)
                             throw RendererException(createDiagnostics(), e)
                         }
                     }
@@ -1722,6 +1716,14 @@ class MediaCodecDecoderRenderer(
     }
 
     // Returns true if the exception is transient
+    /** Report a fatal renderer error to the crash listener exactly once. */
+    private fun notifyCrashOnce(e: Exception) {
+        if (!reportedCrash) {
+            reportedCrash = true
+            crashListener.notifyCrash(e)
+        }
+    }
+
     private fun handleDecoderException(e: IllegalStateException): Boolean {
         // Eat decoder exceptions if we're in the process of stopping
         if (stopping) {
@@ -1810,10 +1812,7 @@ class MediaCodecDecoderRenderer(
                     // failure. Throwing from here would escape the codec callback (or sync
                     // submit) thread and kill the whole process.
                     stopping = true
-                    if (!reportedCrash) {
-                        reportedCrash = true
-                        crashListener.notifyCrash(initialException!!)
-                    }
+                    notifyCrashOnce(initialException!!)
                 }
             } else {
                 // This is the first exception we've hit
@@ -2098,10 +2097,7 @@ class MediaCodecDecoderRenderer(
             // so generate a decoder hung exception
             if (deltaMs >= 5000 && initialException == null) {
                 val decoderHungException = DecoderHungException(deltaMs)
-                if (!reportedCrash) {
-                    reportedCrash = true
-                    crashListener.notifyCrash(decoderHungException)
-                }
+                notifyCrashOnce(decoderHungException)
                 throw RendererException(createDiagnostics(), decoderHungException)
             }
 
@@ -2875,10 +2871,7 @@ class MediaCodecDecoderRenderer(
             val exception = IllegalArgumentException(
                 "Decode unit length $decodeUnitLength too large for input buffer ${nextInputBuffer!!.limit()}"
             )
-            if (!reportedCrash) {
-                reportedCrash = true
-                crashListener.notifyCrash(exception)
-            }
+            notifyCrashOnce(exception)
             throw RendererException(createDiagnostics(), exception)
         }
 
