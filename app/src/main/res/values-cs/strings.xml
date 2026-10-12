@@ -97,8 +97,8 @@
     <string name="resolution_1440p">1440p</string>
     <string name="videoformat_auto">Automaticky</string>
     <string name="audioconf_71surround">7.1 prostorový zvuk</string>
-    <string name="pacing_balanced">Vyvážené</string>
-    <string name="pacing_smoothness">Preferovat plynulejší video (může výrazně zvýšit zpoždění)</string>
+    <string name="pacing_balanced">Vyvážené (zpoždění a plynulost)</string>
+    <string name="pacing_smoothness">Plynulost na prvním místě (vyšší zpoždění)</string>
     <string name="resolution_prefix_native_landscape">(na šířku)</string>
     <string name="resolution_prefix_native_portrait">(na výšku)</string>
     <string name="category_audio_settings">Nastavení zvuku</string>
@@ -190,7 +190,7 @@
     <string name="summary_privacy_policy">Zobrazit zásady ochrany osobních údajů Moonlightu</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_480p">480p</string>
-    <string name="pacing_balanced_alt">Vyvážené s limitem FPS</string>
+    <string name="pacing_balanced_alt">Omezit výstupní FPS (do obnovovací frekvence displeje)</string>
     <string name="scut_deleted_pc">PC smazán</string>
     <string name="scut_not_paired">PC nespárován</string>
     <string name="scut_pc_not_found">PC nenalezen</string>
@@ -241,8 +241,10 @@
     <string name="summary_enable_hdr">Streamovat v HDR, pokud jej hra a GPU počítače podporují. HDR vyžaduje GPU GTX 1000 nebo novější.</string>
     <string name="videoformat_hevcalways">Vždy použít HEVC (může padat)</string>
     <string name="title_frame_pacing">Frame pacing videa</string>
-    <string name="summary_frame_pacing">Zvolte, jak vyvážit zpoždění videa a jeho plynulost</string>
-    <string name="pacing_latency">Preferovat nejnižší zpoždění</string>
+    <string name="summary_frame_pacing">Zvolte, jak nastavit tempo video snímků. Přesné tempo může používat časová razítka videa (PTS) a doporučuje se pro většinu zařízení.</string>
+    <string name="pacing_latency">Nízké zpoždění (rychlejší odezva)</string>
+    <string name="pacing_precise_sync">Přesné tempo snímků (doporučeno)</string>
+    <string name="pacing_experimental_low_latency">Ultranízké zpoždění (experimentální)</string>
     <string name="title_screen_combination_mode">Nastavení kombinace obrazovek</string>
     <string name="summary_screen_combination_mode">Ovládání displejů Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">Platí pro ovládání displejů Foundation Sunshine</string>

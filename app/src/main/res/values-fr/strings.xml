@@ -224,11 +224,13 @@
     <string name="videoformat_auto">Automatique (recommandé)</string>
     <string name="videoformat_hevcalways">Préférer HEVC</string>
     <string name="title_frame_pacing">Frame-pacing vidéo</string>
-    <string name="summary_frame_pacing">Spécifiez comment équilibrer latence et fluidité de la vidéo</string>
-    <string name="pacing_latency">Préférer une latence plus faible</string>
-    <string name="pacing_balanced">Équilibré</string>
+    <string name="summary_frame_pacing">Choisissez le rythme des images vidéo. Le rythme précis peut utiliser les horodatages vidéo (PTS) et est recommandé pour la plupart des appareils.</string>
+    <string name="pacing_latency">Faible latence (réponse plus rapide)</string>
+    <string name="pacing_precise_sync">Rythme d’images précis (recommandé)</string>
+    <string name="pacing_experimental_low_latency">Latence ultra-faible (expérimental)</string>
+    <string name="pacing_balanced">Équilibré (latence et fluidité)</string>
     <string name="resolution_720p">720p</string>
-    <string name="pacing_smoothness">Préférer la qualité vidéo (risque d\'augmenter la latence)</string>
+    <string name="pacing_smoothness">Fluidité prioritaire (latence plus élevée)</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_480p">480p</string>
     <string name="resolution_1440p">1440p</string>
@@ -241,7 +243,7 @@
     <string name="summary_privacy_policy">Voir la politique de confidentialité de Moonlight</string>
     <string name="summary_setup_guide">Voir les instructions sur la façon de configurer votre PC de jeu pour le streaming</string>
     <string name="summary_troubleshooting">Voir des conseils pour diagnostiquer et résoudre les problèmes de streaming courants</string>
-    <string name="pacing_balanced_alt">Équilibré avec limite FPS</string>
+    <string name="pacing_balanced_alt">Limiter les FPS de sortie (jusqu’au taux de rafraîchissement)</string>
     <string name="title_checkbox_absolute_mouse_mode">Mode souris pour bureau à distance</string>
     <string name="summary_seekbar_deadzone">Remarque : Certains jeux peuvent imposer une zone morte plus grande que celle que Moonlight est configuré pour utiliser.</string>
     <string name="summary_checkbox_absolute_mouse_mode">Cela peut rendre l\'accélération de la souris plus naturelle pour l\'utilisation du bureau à distance, mais il est incompatible avec de nombreux jeux.</string>

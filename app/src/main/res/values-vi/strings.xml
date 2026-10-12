@@ -204,10 +204,13 @@
     <string name="perf_overlay_streamdetails">Tốc độ khung hình: %1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">Toàn màn hình theo hệ thống</string>
     <string name="title_frame_pacing">Nhịp độ khung hình video</string>
-    <string name="summary_frame_pacing">Chỉ ra cách cân bằng giữa độ trễ video và độ mượt mà</string>
-    <string name="pacing_latency">Ưu tiên độ trễ thấp nhất</string>
-    <string name="pacing_balanced">Cân bằng</string>
-    <string name="pacing_smoothness">Ưu tiên video mượt nhất (có thể tăng độ trễ đáng kể)</string>
+    <string name="summary_frame_pacing">Chọn cách điều chỉnh nhịp khung hình video. Nhịp khung hình chính xác có thể dùng dấu thời gian video (PTS) và được khuyến nghị cho hầu hết thiết bị.</string>
+    <string name="pacing_latency">Độ trễ thấp (phản hồi nhanh hơn)</string>
+    <string name="pacing_precise_sync">Nhịp khung hình chính xác (khuyến nghị)</string>
+    <string name="pacing_experimental_low_latency">Độ trễ siêu thấp (thử nghiệm)</string>
+    <string name="pacing_balanced_alt">Giới hạn FPS đầu ra (không vượt quá tần số quét màn hình)</string>
+    <string name="pacing_balanced">Cân bằng (độ trễ và độ mượt)</string>
+    <string name="pacing_smoothness">Ưu tiên độ mượt (độ trễ cao hơn)</string>
     <string name="resolution_480p">480p</string>
     <string name="fps_120">120 FPS</string>
     <string name="resolution_360p">360p</string>

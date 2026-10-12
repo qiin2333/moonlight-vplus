@@ -217,11 +217,13 @@
     <string name="videoformat_auto">Automatisch</string>
     <string name="videoformat_hevcalways">Immer HEVC verwenden (könnte Crashes verursachen)</string>
     <string name="title_frame_pacing">Video Frame-Pacing</string>
-    <string name="summary_frame_pacing">Lege fest, wie die Videolatenz und die flüssige Wiedergabe ausgeglichen werden sollen</string>
+    <string name="summary_frame_pacing">Lege fest, wie Videobilder getaktet werden. Die präzise Bildausgabe kann Videozeitstempel (PTS) verwenden und wird für die meisten Geräte empfohlen.</string>
     <string name="resolution_prefix_native_fullscreen">Natives Vollbild</string>
-    <string name="pacing_latency">Bevorzuge niedrigste Latenz</string>
-    <string name="pacing_balanced">Ausgeglichen</string>
-    <string name="pacing_smoothness">Bevorzuge flüssige Bildwiedergabe (kann die Latenzzeit deutlich erhöhen)</string>
+    <string name="pacing_latency">Niedrige Latenz (schnellere Reaktion)</string>
+    <string name="pacing_precise_sync">Präzises Bildtempo (empfohlen)</string>
+    <string name="pacing_experimental_low_latency">Ultraniedrige Latenz (experimentell)</string>
+    <string name="pacing_balanced">Ausgeglichen (Latenz und flüssige Wiedergabe)</string>
+    <string name="pacing_smoothness">Flüssige Wiedergabe zuerst (höhere Latenz)</string>
     <string name="perf_overlay_streamdetails">Video Stream: %1$s %2$.2f FPS</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
@@ -238,7 +240,7 @@
     <string name="fps_60">60 FPS</string>
     <string name="fps_90">90 FPS</string>
     <string name="summary_troubleshooting">Tipps zur Diagnose und Behebung häufiger Streaming-Probleme anzeigen</string>
-    <string name="pacing_balanced_alt">Ausbalanciert mit FPS-Limit</string>
+    <string name="pacing_balanced_alt">Ausgabe-FPS begrenzen (bis zur Bildwiederholrate)</string>
     <string name="summary_checkbox_absolute_mouse_mode">Dies kann die Mausbeschleunigung für die Fernsteuerung natürlicher gestalten, ist aber mit vielen Spielen nicht kompatibel.</string>
     <string name="title_troubleshooting">Anleitung zur Fehlersuche</string>
     <string name="title_privacy_policy">Datenschutzbestimmungen</string>

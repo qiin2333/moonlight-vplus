@@ -129,8 +129,8 @@
     <string name="fps_90">90 FPS</string>
     <string name="fps_120">120 FPS</string>
     <string name="videoformat_h264always">Preferowany H.264</string>
-    <string name="pacing_balanced_alt">Zrównoważone z limitem FPS</string>
-    <string name="pacing_smoothness">Preferowanie najbardziej płynnego wideo (może znacznie zwiększyć opóźnienie)</string>
+    <string name="pacing_balanced_alt">Ogranicz wyjściowe FPS (do częstotliwości odświeżania)</string>
+    <string name="pacing_smoothness">Płynność przede wszystkim (większe opóźnienie)</string>
     <string name="title_analog_scrolling">Użyj drążka analogowego do przewijania</string>
     <string name="summary_analog_scrolling">Wybór drążka analogowego do przewijania w trybie emulacji myszy</string>
     <string name="analogscroll_none">Brak (oba drążki poruszają myszą)</string>
@@ -176,7 +176,7 @@
     <string name="addpc_enter_ip">Należy wprowadzić adres IP</string>
     <string name="category_audio_settings">Ustawienia audio</string>
     <string name="title_frame_pacing">Tempo klatek wideo</string>
-    <string name="pacing_balanced">Zrównoważone</string>
+    <string name="pacing_balanced">Zrównoważone (opóźnienie i płynność)</string>
     <string name="no">Nie</string>
     <string name="applist_menu_quit">Zakończenie sesji</string>
     <string name="title_seekbar_bitrate">Szybkość transmisji wideo</string>
@@ -203,8 +203,10 @@
     <string name="audioconf_51surround">5.1 Surround Sound</string>
     <string name="audioconf_71surround">7.1 Surround Sound</string>
     <string name="videoformat_hevcalways">Preferowany HEVC</string>
-    <string name="summary_frame_pacing">Określenie sposobu równoważenia opóźnienia i płynności wideo</string>
-    <string name="pacing_latency">Preferowane najniższe opóźnienia</string>
+    <string name="summary_frame_pacing">Wybierz sposób taktowania klatek wideo. Precyzyjne taktowanie może używać znaczników czasu wideo (PTS) i jest zalecane dla większości urządzeń.</string>
+    <string name="pacing_latency">Niskie opóźnienie (szybsza reakcja)</string>
+    <string name="pacing_precise_sync">Precyzyjne taktowanie klatek (zalecane)</string>
+    <string name="pacing_experimental_low_latency">Ultraniskie opóźnienie (eksperymentalne)</string>
     <string name="perf_overlay_hostprocessinglatency">Opóźnienie przetwarzania hosta min/max/średnia: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="perf_overlay_netlatency">Średnie opóźnienie sieci: %1$d ms (wariancja: %2$d ms)</string>
     <string name="applist_connect_msg">Podłączanie do komputera…</string>
