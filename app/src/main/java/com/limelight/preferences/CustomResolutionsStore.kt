@@ -12,12 +12,25 @@ import android.content.Context
 object CustomResolutionsStore {
     private const val PREFS_FILE = "custom_resolutions"
     private const val PREFS_KEY = "custom_resolutions"
+    private const val MIGRATION_VERSION_KEY = "migration_version"
+    private const val CURRENT_MIGRATION_VERSION = 1
 
     /** 读取全部自定义分辨率,按宽、高升序;无法解析的脏数据会被丢弃。 */
     fun load(context: Context): List<Resolution> {
-        val stored = prefs(context).getStringSet(PREFS_KEY, null)
-            ?: return defaultResolutions()
-        return stored.mapNotNull(ResolutionValidator::parseResolution).sortedWith(resolutionOrder)
+        val preferences = prefs(context)
+        val stored = preferences.getStringSet(PREFS_KEY, null)
+        if (preferences.getInt(MIGRATION_VERSION_KEY, 0) < CURRENT_MIGRATION_VERSION) {
+            val merged = (defaultResolutions() + stored.orEmpty().mapNotNull(ResolutionValidator::parseResolution))
+                .distinct()
+                .sortedWith(resolutionOrder)
+            preferences.edit()
+                .putStringSet(PREFS_KEY, merged.map(Resolution::toString).toSet())
+                .putInt(MIGRATION_VERSION_KEY, CURRENT_MIGRATION_VERSION)
+                .apply()
+            return merged
+        }
+        return stored?.mapNotNull(ResolutionValidator::parseResolution)?.sortedWith(resolutionOrder)
+            ?: defaultResolutions()
     }
 
     private fun defaultResolutions(): List<Resolution> {
@@ -32,7 +45,7 @@ object CustomResolutionsStore {
     fun save(context: Context, resolutions: List<Resolution>) {
         prefs(context).edit()
             .putStringSet(PREFS_KEY, resolutions.map(Resolution::toString).toSet())
-            .commit()
+            .apply()
     }
 
     /** 添加一条(已存在时忽略),返回是否实际写入。 */

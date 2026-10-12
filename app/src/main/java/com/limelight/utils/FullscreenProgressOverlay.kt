@@ -177,6 +177,7 @@ class FullscreenProgressOverlay(
                         overlayView.alpha = 1f
                         appPosterBackgroundBlur.setImageDrawable(null)
                         appPosterBackgroundClear.setImageDrawable(null)
+                        reconnectBackdrop = null
                         if (overlayView.parent != null) {
                             rootView.removeView(overlayView)
                         }

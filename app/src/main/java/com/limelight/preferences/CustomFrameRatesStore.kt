@@ -18,7 +18,7 @@ object CustomFrameRatesStore {
     fun save(context: Context, frameRates: List<Int>) {
         prefs(context).edit()
             .putStringSet(PREFS_KEY, frameRates.filter { it > 0 }.map(Int::toString).toSet())
-            .commit()
+            .apply()
     }
 
     fun add(context: Context, frameRate: Int): Boolean {

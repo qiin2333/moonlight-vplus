@@ -222,6 +222,8 @@
     <string name="game_menu_bitrate_adjustment_success">Bitrate set to %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">Couldn\'t adjust bitrate</string>
     <string name="game_menu_ok">OK</string>
+    <string name="custom_list_save">Save</string>
+    <string name="game_menu_apply_display">Apply</string>
     <string name="game_menu_bitrate_range">Bitrate Range:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
     <string name="game_menu_bitrate_tip">Drag the slider to adjust bitrate in real time. Higher values improve image quality but require a faster, more stable connection.</string>
@@ -267,12 +269,13 @@
     <string name="title_custom_fps">Custom frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
     <string name="title_seekbar_bitrate">Stream bitrate</string>
-    <string name="summary_seekbar_bitrate">Higher bitrate improves picture quality and uses more bandwidth.</string>
+    <string name="summary_seekbar_bitrate">Higher bitrate improves image quality but uses more bandwidth; lower bitrate is better for slower or unstable networks. Lower it first if streaming stutters, and raise it when the image is too soft and the network is stable; for 1080p60, start around 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="title_adaptive_bitrate">Automatically adjust bitrate (ABR)</string>
-    <string name="summary_adaptive_bitrate">Adjust video bitrate to network conditions. Can be used independently of FEC.</string>
-    <string name="title_abr_mode">Bitrate adjustment preference</string>
-    <string name="summary_abr_mode">Choose the balance between picture quality and responsiveness.</string>
+    <string name="title_adaptive_bitrate">Adaptive bitrate</string>
+    <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
+    <string name="game_menu_adaptive_bitrate_tip">Auto-adjust bitrate based on packet loss and latency, preferring Sunshine server-side control. Adaptive bitrate starts from the baseline bitrate and adjusts around it. The selected ABR mode controls the minimum and maximum range.</string>
+    <string name="title_abr_mode">ABR mode</string>
+    <string name="summary_abr_mode">Quality prefers higher bitrate; Low-latency drops faster on packet loss.</string>
     <string name="abr_mode_quality">Quality</string>
     <string name="abr_mode_balanced">Balanced</string>
     <string name="abr_mode_low_latency">Low latency</string>
@@ -313,6 +316,9 @@
     <string name="custom_resolution_tag_4k">4K</string>
     <string name="custom_resolution_tag_2k">2K</string>
     <string name="custom_resolution_tag_1080p">1080p</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_ultrawide">Ultrawide</string>
     <string name="custom_resolution_tag_portrait">Portrait</string>
     <string name="custom_resolution_delete_contentdesc">Delete %1$d×%2$d</string>
@@ -370,7 +376,7 @@
     <string name="title_checkbox_mic_voice_enhancement">Voice enhancement</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce low-frequency noise and improve speech clarity. Available in both fixed gain and volume balance modes.</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow a lower display refresh rate</string>
-    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced mode. Matching the stream with a lower display refresh rate can save power but may add video latency.</string>
+    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced frame pacing. A lower matching refresh rate can save power but may add video latency.</string>
 
     <string name="category_gamepad_settings">Gamepad</string>
     <string name="title_combine_joycons">Combine Joy-Con controllers</string>
@@ -515,7 +521,7 @@
     <string name="title_checkbox_touch_keyboard_auto_invoke">Auto-invoke the PC touch keyboard</string>
     <string name="summary_checkbox_touch_keyboard_auto_invoke">When enabled, the streamed PC shows its touch keyboard when a text field gains focus (Sunshine hosts with the virtual touchscreen).</string>
     <string name="title_checkbox_remote_ime_auto_show">Auto-open the local keyboard for remote text fields</string>
-    <string name="summary_checkbox_remote_ime_auto_show">When the streamed PC focuses a text field, open the local keyboard automatically (Android 11 and later). Strokes on the video stay remote input.</string>
+    <string name="summary_checkbox_remote_ime_auto_show">When the streamed PC focuses a text field, open the local keyboard automatically (Android 13 and later). Strokes on the video stay remote input.</string>
 
     <string name="title_checkbox_sync_touch_event_with_display">Align touch delivery with display refresh</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Batch touch updates to the local display refresh cadence. This may improve consistency but can add input delay.</string>
@@ -532,18 +538,8 @@
 
     <string name="title_checkbox_absolute_mouse_mode">Remote desktop mouse mode</string>
     <string name="summary_checkbox_absolute_mouse_mode">This can make mouse acceleration behave more naturally for remote desktop usage, but it is incompatible with many games.</string>
-    <string name="title_list_mouse_axis_correction">Mouse direction correction</string>
-    <string name="summary_list_mouse_axis_correction">Rotate captured mouse movement before sending it to the host. Change this only if an Android device reports rotated mouse axes.</string>
-    <string name="mouse_axis_correction_off">Off</string>
-    <string name="mouse_axis_correction_90">Rotate 90 degrees</string>
-    <string name="mouse_axis_correction_180">Rotate 180 degrees</string>
-    <string name="mouse_axis_correction_270">Rotate 270 degrees</string>
     <string name="title_optimize_hardware_touchpad">Tablet touchpad support</string>
     <string name="summary_optimize_hardware_touchpad">Use dedicated event handling for supported tablet keyboard touchpads. Available in both root and non-root builds.</string>
-    <string name="title_hardware_touchpad_pointer_speed">Touchpad pointer speed</string>
-    <string name="summary_hardware_touchpad_pointer_speed">Adjust how quickly the tablet touchpad moves the pointer.</string>
-    <string name="dialog_title_hardware_touchpad_pointer_speed">Increase to move the pointer faster, or decrease to move it slower.</string>
-    <string name="suffix_hardware_touchpad_pointer_speed">%</string>
     <string name="title_checkbox_enable_esc_menu">Double-press key for stream menu</string>
     <string name="summary_checkbox_enable_esc_menu">Double-press the selected key to open the stream return menu; a single press is still sent to the host.</string>
     <string name="title_list_esc_menu_key">Stream menu shortcut key</string>
@@ -723,7 +719,7 @@
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
     <string name="title_video_format">Video codec</string>
-    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR; PyroWave uses the experimental Vulkan path on compatible Sunshine hosts and follows the selected color range. It does not support frame generation.</string>
+    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
     <string name="title_enable_hdr_high_brightness">Maximum display brightness for HDR</string>
@@ -740,11 +736,6 @@
     <string name="hdr_mode_hlg">HLG (Hybrid Log-Gamma)</string>
     <string name="hdr_mode_dolby_vision">Dolby Vision 8.1 (use this first)</string>
     <string name="hdr_mode_dolby_vision_84">Dolby Vision 8.4 HLG (use if 8.1 shows no picture)</string>
-    <string name="hdr_mode_pyrowave_hdr10_plus" translatable="false">HDR10+ → PQ</string>
-    <string name="hdr_mode_pyrowave_vivid_pq" translatable="false">HDR Vivid → PQ</string>
-    <string name="hdr_mode_pyrowave_vivid_hlg" translatable="false">HDR Vivid → HLG</string>
-    <string name="hdr_mode_pyrowave_dv81" translatable="false">Dolby Vision 8.1 → PQ</string>
-    <string name="hdr_mode_pyrowave_dv84" translatable="false">Dolby Vision 8.4 → HLG</string>
     <string name="title_full_range">Force full color range (Experimental)</string>
     <string name="summary_full_range">Requests full-range video from the host and decodes it as full range. Leave this off unless limited/full range mismatch makes the picture look washed out or crushes shadow and highlight detail. This is separate from HDR.</string>
     <string name="title_enable_perf_overlay">Show performance stats while streaming</string>
@@ -753,7 +744,7 @@
     <string name="summary_enable_jitter_monitor">Overlay a real-time present-interval jitter chart (judder%, jitter, histogram) while streaming. No performance impact when disabled.</string>
     <string name="jitter_monitor_empty_title">Waiting for frame data</string>
     <string name="jitter_monitor_empty_message">The chart will appear after playback samples arrive</string>
-    <string name="title_enable_host_cadence_precise_sync">Host frame pacing enhancement</string>
+    <string name="title_enable_host_cadence_precise_sync">Extra smoothness for Precise Sync</string>
     <string name="summary_enable_host_cadence_precise_sync">Helps reduce tiny repeated stutters on stable networks, especially at 90/120 FPS. May add about 1-3 ms of latency.</string>
     <string name="title_perf_overlay_orientation">Performance stats layout</string>
     <string name="summary_perf_overlay_orientation">Choose a horizontal row or vertical column.</string>
@@ -885,19 +876,18 @@
     <string name="audioconf_714surround">7.1.4 Surround Sound (Atmos)</string>
 
     <string name="videoformat_auto">Automatic (Recommended)</string>
-    <string name="videoformat_pyrowave">PyroWave (Experimental, no frame generation)</string>
     <string name="videoformat_av1always">Prefer AV1 (Experimental)</string>
     <string name="videoformat_hevcalways">Prefer HEVC</string>
     <string name="videoformat_h264always">Prefer H.264</string>
 
     <string name="title_frame_pacing">Stream frame pacing</string>
-    <string name="summary_frame_pacing">Choose how video frames are paced. Precise frame pacing can use video timestamps (PTS) and is recommended for most devices.</string>
-    <string name="pacing_latency">Low latency (faster response)</string>
-    <string name="pacing_balanced">Balanced (latency and smoothness)</string>
-    <string name="pacing_balanced_alt">Limit output FPS (up to display refresh rate)</string>
-    <string name="pacing_smoothness">Smoothness first (higher latency)</string>
-    <string name="pacing_experimental_low_latency">Ultra-low latency (experimental)</string>
-    <string name="pacing_precise_sync">Precise frame pacing (recommended)</string>
+    <string name="summary_frame_pacing">Specify how to balance video latency and smoothness</string>
+    <string name="pacing_latency">Prefer lowest latency</string>
+    <string name="pacing_balanced">Balanced</string>
+    <string name="pacing_balanced_alt">Balanced with FPS limit</string>
+    <string name="pacing_smoothness">Prefer smoothest video (may significantly increase latency)</string>
+    <string name="pacing_experimental_low_latency">Experimental ultra-low latency</string>
+    <string name="pacing_precise_sync">Precise Sync (Recommended)</string>
 
     <string name="title_analog_scrolling">Use an analog stick to scroll</string>
     <string name="summary_analog_scrolling">Select an analog stick to scroll when in mouse emulation mode</string>
@@ -1140,9 +1130,9 @@
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Swap stream width and height</string>
-    <string name="summary_checkbox_reverse_resolution">Enable only when the image orientation or width and height are incorrect; it may conflict with Follow device rotation.</string>
+    <string name="summary_checkbox_reverse_resolution">Request the selected resolution with its width and height exchanged. Use only for portrait or unusual display layouts.</string>
     <string name="title_checkbox_rotable_screen">Follow device rotation</string>
-    <string name="summary_checkbox_rotable_screen">Automatically synchronize the stream layout when the device switches between portrait and landscape orientation.</string>
+    <string name="summary_checkbox_rotable_screen">Rotate the stream layout when this device\'s orientation changes.</string>
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
@@ -1153,7 +1143,7 @@
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>
-    <string name="tip_double_tap_mouse">💡 Tip: Long press the blank area at the top of the computer list to save the current background image.</string>
+    <string name="tip_double_tap_mouse">💡 Tip: Long press the top blank area on the host list page to download the current wallpaper~</string>
     <string name="tip_long_press_controller">💡 Tip: Long press an app to choose virtual display streaming, super convenient!</string>
     <string name="tip_volume_keys">💡 Tip: Using 5GHz WiFi provides a better experience, lightning fast speeds~</string>
     <string name="tip_wallpaper_change">💡 Tip: The wallpaper API option can set the API for random wallpaper sources, or a single image address</string>
@@ -1387,7 +1377,7 @@
     <string name="image_download_failed_with_error">Image download failed: %1$s</string>
     <string name="image_not_loaded_please_retry">Image not loaded, please try again later</string>
     <string name="image_invalid">Invalid image</string>
-    <string name="image_saved_successfully">Image successfully saved to: Picture/vplus</string>
+    <string name="image_saved_successfully">Image successfully saved to system directory (Picture/setu)</string>
     <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
@@ -1511,12 +1501,10 @@ Tap again to replace it.</string>
     <string name="menu">Menu</string>
     <string name="settings_search_hint">Search settings…</string>
     <string name="settings_search_close">Close search</string>
-    <string name="settings_search_clear">Clear search</string>
     <string name="settings_search_no_results">No matching settings</string>
-    <string name="settings_search_open_category">View in category</string>
-    <string name="settings_search_contains">Includes: %1$s</string>
-    <string name="settings_search_match_separator">, </string>
     <string name="game_menu_change_resolution">Resolution</string>
+    <string name="game_menu_display_settings">Display settings</string>
+    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_resolution_current">%1$s (Current)</string>
     <string name="game_menu_resolution_custom">%1$s (Custom)</string>
     <string name="game_menu_resolution_custom_current">%1$s (Custom, Current)</string>
@@ -2306,7 +2294,7 @@ Tap again to replace it.</string>
     <string name="dualsense_output_mode_wireless_bridge">External USB Bluetooth bridge</string>
     <string name="dualsense_output_mode_both">Both output paths</string>
     <string name="title_seekbar_bitrate_baseline">Baseline bitrate</string>
-    <string name="summary_seekbar_bitrate_baseline">ABR starts at this value and adjusts within the range for your selected preference.</string>
+    <string name="summary_seekbar_bitrate_baseline">Adaptive bitrate starts here and adjusts around this value. The selected ABR mode controls the minimum and maximum range.</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses system audio effects.</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses Android spatial audio.</string>
     <string name="title_decoder_input_buffer_mode">Decoder input buffer</string>
@@ -2344,56 +2332,4 @@ Tap again to replace it.</string>
     <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
     <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
-    <string name="title_pyrowave_capability_diagnostic">PyroWave capability detection</string>
-    <string name="summary_pyrowave_capability_diagnostic">Inspect Vulkan capabilities and prerequisites for the current PyroWave decoder.</string>
-    <string name="pyrowave_diag_subtitle" translatable="false">Vulkan · GPU · PyroWave</string>
-    <string name="pyrowave_diag_loading">Checking PyroWave capabilities…</string>
-    <string name="pyrowave_diag_runtime">Packaged PyroWave runtime API</string>
-    <string name="pyrowave_diag_gpu_frontend">GPU presentation module</string>
-    <string name="pyrowave_diag_gpu_gate">GPU presentation requires Android 10+, arm64-v8a and Vulkan 1.3. SDR staging requires Vulkan 1.2 and the decoder features below; it is not CPU-only decoding.</string>
-    <string name="pyrowave_diag_ready">The checked prerequisites are present</string>
-    <string name="pyrowave_diag_missing">Prerequisites for the current implementation are missing</string>
-    <string name="pyrowave_diag_scope">This report checks driver declarations only. Window presentation, image formats, target resolution, HDR output and decoding performance still require stream validation.</string>
-    <string name="pyrowave_diag_loader_missing">No accessible Vulkan loader</string>
-    <string name="pyrowave_diag_no_devices">No Vulkan physical device found</string>
-    <string name="pyrowave_diag_query_failed">Unable to read Vulkan capabilities. This is not a confirmed unsupported result.</string>
-    <string name="pyrowave_diag_storage_path">8-bit storage or large texel buffers</string>
-    <string name="pyrowave_diag_gpu_backend">GPU presentation prerequisites</string>
-    <string name="pyrowave_diag_staging_backend">SDR staging prerequisites</string>
-    <string name="pyrowave_diag_subgroup_range">Full compute subgroups within wave4–wave128</string>
-    <string name="pyrowave_diag_max_workgroup">Threads per workgroup</string>
-    <string name="pyrowave_diag_shared_memory">Workgroup shared memory</string>
-    <string name="pyrowave_diag_queue">Combined graphics and compute queue</string>
-    <string name="pyrowave_diag_android_surface">Android Vulkan Surface extensions</string>
-    <string name="pyrowave_diag_copy_failed">Unable to copy the report</string>
-    <string name="pyrowave_diag_gpu_title" translatable="false">GPU %1$d</string>
-    <string name="pyrowave_diag_present">Present</string>
-    <string name="pyrowave_diag_absent">Not present</string>
-    <string name="pyrowave_diag_vulkan_loader">Vulkan loader</string>
-    <string name="pyrowave_diag_subgroup_ops">Subgroup operations</string>
-    <string name="pyrowave_diag_subgroup_size">Subgroup size</string>
-    <string name="pyrowave_diag_subgroup_limits">Subgroup min / max</string>
-    <string name="pyrowave_diag_required_subgroup">Required subgroup operations</string>
-    <string name="pyrowave_diag_texel_limit">Maximum texel buffer elements</string>
-    <string name="pyrowave_diag_back">Back</string>
-    <string name="pyrowave_diag_copy">Copy</string>
-    <string name="pyrowave_diag_copy_success">Report copied to clipboard</string>
-    <string name="pyrowave_diag_unavailable">Unavailable</string>
-    <string name="title_fec_mode">Packet loss protection (FEC)</string>
-    <string name="summary_fec_mode">Host default, automatic protection, or a fixed percentage. Applied on the next connection to a supported Sunshine host.</string>
-    <string name="title_fec_percentage">Fixed FEC percentage</string>
-    <string name="summary_fec_percentage" formatted="false">Redundancy relative to video data. 0% disables FEC. Compatible hosts share the target bitrate between picture quality and protection. Higher protection leaves less bitrate for picture quality; actual traffic may vary.</string>
-    <string name="fec_mode_host">Host default</string>
-    <string name="fec_mode_automatic">Automatic</string>
-    <string name="fec_mode_fixed">Fixed</string>
-    <string name="title_restore_recommended_bitrate">Restore recommended</string>
-    <string name="summary_recommended_bitrate">Recommended: %1$s Mbps. Follows resolution and frame rate.</string>
-    <string name="summary_bitrate_recommended">Recommended bitrate follows resolution and frame rate.</string>
-    <string name="summary_bitrate_manual">Your chosen bitrate is kept when resolution or frame rate changes.</string>
-    <string name="summary_abr_bitrate_range">Adjustment range: %1$s–%2$s Mbps. Compatible hosts share the target bitrate between picture quality and FEC; actual traffic may vary.</string>
-    <string name="summary_fec_host">Use the host’s configured FEC mode and percentage on the next connection.</string>
-    <string name="summary_fec_automatic">On the next connection, a compatible host selects FEC from network feedback and balances protection with picture quality within the target bitrate. Unsupported hosts use their default settings.</string>
-    <string name="summary_fec_fixed">Your fixed percentage takes priority on a compatible host. Applied on the next connection.</string>
-    <string name="numeric_parameter_range">Enter a valid value from %1$s to %2$s %3$s.</string>
-    <string name="pyrowave_negotiation_fallback">PyroWave negotiation failed. Falling back to %1$s.</string>
 </resources>
