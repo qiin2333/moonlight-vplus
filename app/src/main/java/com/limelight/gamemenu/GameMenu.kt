@@ -1296,6 +1296,9 @@ class GameMenu(
         val composeView = ComposeView(game).apply {
             isFocusable = true
             isFocusableInTouchMode = true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                defaultFocusHighlightEnabled = false
+            }
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 CompositionLocalProvider(
@@ -1950,6 +1953,9 @@ class GameMenu(
                 page.generation
             }
         )
+        if (controllerNavigationIsCurrent()) {
+            hardwareFocusRequestState?.let { request -> request.intValue++ }
+        }
     }
 
     private fun navigateBack(): Boolean {

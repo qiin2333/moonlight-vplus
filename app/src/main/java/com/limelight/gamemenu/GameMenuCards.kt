@@ -527,6 +527,7 @@ internal fun SensitivityPresetButton(
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = GameMenuControlShape
     val accent = appAccentColor()
+    var focused by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val inactiveBorder = colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.28f)
     Box(
         modifier = modifier
@@ -541,7 +542,8 @@ internal fun SensitivityPresetButton(
                 if (selected) accent else inactiveBorder,
                 shape
             )
-            .gamepadFocusOutline(shape)
+            .onFocusChanged { focused = it.isFocused }
+            .border(if (focused) 2.dp else 0.dp, if (focused) accent else androidx.compose.ui.graphics.Color.Transparent, shape)
             .clickable(role = Role.Button) {
                 hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()

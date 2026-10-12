@@ -86,7 +86,8 @@ class GameMenuKeyEventTest {
                 handledHardwareFocusRequestToken = 0,
                 guideActive = false,
                 hasFocusTarget = true,
-                menuContentLaidOut = false
+                menuContentLaidOut = false,
+                menuHasFocus = false
             )
         )
         assertTrue(
@@ -95,33 +96,32 @@ class GameMenuKeyEventTest {
                 handledHardwareFocusRequestToken = 0,
                 guideActive = false,
                 hasFocusTarget = true,
-                menuContentLaidOut = true
+                menuContentLaidOut = true,
+                menuHasFocus = false
             )
         )
     }
 
     @Test
-    fun hardwareNavigationDoesNotStealFocusFromAnActiveGuide() {
-        assertTrue(
-            !shouldRequestGameMenuFocus(
-                hardwareFocusRequestToken = 2,
-                handledHardwareFocusRequestToken = 0,
-                guideActive = true,
-                hasFocusTarget = true,
-                menuContentLaidOut = true
-            )
-        )
-    }
-
-    @Test
-    fun closingAChildDialogDoesNotRepeatTheInitialFocusRequest() {
+    fun hardwareNavigationDoesNotResetAnExistingMenuFocus() {
         assertTrue(
             !shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 2,
                 handledHardwareFocusRequestToken = 2,
                 guideActive = false,
                 hasFocusTarget = true,
-                menuContentLaidOut = true
+                menuContentLaidOut = true,
+                menuHasFocus = true
+            )
+        )
+        assertTrue(
+            shouldRequestGameMenuFocus(
+                hardwareFocusRequestToken = 2,
+                handledHardwareFocusRequestToken = 1,
+                guideActive = false,
+                hasFocusTarget = true,
+                menuContentLaidOut = true,
+                menuHasFocus = false
             )
         )
     }

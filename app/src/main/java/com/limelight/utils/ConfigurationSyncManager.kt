@@ -2565,6 +2565,15 @@ class ConfigurationSyncManager(private val context: Context) {
                     )
                 )
                 .put(
+                    SECTION_CUSTOM_FRAME_RATES,
+                    mergedPreferenceSectionCore(
+                        sections.optJSONObject(SECTION_CUSTOM_FRAME_RATES),
+                        null,
+                        null,
+                        "hash"
+                    )
+                )
+                .put(
                     SECTION_CUSTOM_RESOLUTIONS,
                     mergedPreferenceSectionCore(
                         sections.optJSONObject(SECTION_CUSTOM_RESOLUTIONS),

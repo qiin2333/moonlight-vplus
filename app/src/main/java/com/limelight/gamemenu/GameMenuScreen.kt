@@ -68,6 +68,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
@@ -191,10 +192,18 @@ internal fun GameMenuScreen(
     val showcaseState = rememberSequenceShowcaseState()
     val initialFocusRequester = remember { FocusRequester() }
     val menuGroupFocusRequester = remember { FocusRequester() }
+    var handledHardwareFocusRequestToken by remember { mutableIntStateOf(0) }
+    val initialFocusModifier = Modifier
+        .onFocusChanged {
+            if (it.isFocused) {
+                handledHardwareFocusRequestToken = hardwareFocusRequestToken
+            }
+        }
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
     var guideActive by remember(appContext) { mutableStateOf(false) }
+    var menuHasFocus by remember { mutableStateOf(false) }
     var menuContentLaidOut by remember(state.pageGeneration) { mutableStateOf(false) }
     var quickActionGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
         mutableStateOf(false)
@@ -299,6 +308,7 @@ internal fun GameMenuScreen(
                             .fillMaxWidth()
                             .focusRequester(menuGroupFocusRequester)
                             .focusRestorer(initialFocusRequester)
+                            .onFocusChanged { menuHasFocus = it.hasFocus }
                             .focusGroup()
                             .onGloballyPositioned { menuContentLaidOut = true }
                             .gameMenuFabricBackground(
@@ -315,6 +325,7 @@ internal fun GameMenuScreen(
                                     state.pageLayout == GameMenuPageLayout.TOUCH_MODE),
                             maxMenuHeight = maxMenuHeight,
                             initialFocusRequester = initialFocusRequester,
+                            initialFocusModifier = initialFocusModifier,
                             quickActionGuideModifier = quickActionGuideModifier,
                             crownGuideModifier = crownGuideModifier
                         )
@@ -351,9 +362,10 @@ internal fun GameMenuScreen(
         }
     }
 
-    var handledHardwareFocusRequestToken by remember { mutableIntStateOf(0) }
     LaunchedEffect(
         hardwareFocusRequestToken,
+        handledHardwareFocusRequestToken,
+        menuHasFocus,
         state.pageGeneration,
         guideActive,
         menuContentLaidOut
@@ -364,10 +376,10 @@ internal fun GameMenuScreen(
                 guideActive = guideActive,
                 hasFocusTarget = state.options.isNotEmpty() ||
                     state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS,
-                menuContentLaidOut = menuContentLaidOut
+                menuContentLaidOut = menuContentLaidOut,
+                menuHasFocus = menuHasFocus
             )
         ) {
-            handledHardwareFocusRequestToken = hardwareFocusRequestToken
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
         }
@@ -409,12 +421,14 @@ internal fun shouldRequestGameMenuFocus(
     handledHardwareFocusRequestToken: Int,
     guideActive: Boolean,
     hasFocusTarget: Boolean,
-    menuContentLaidOut: Boolean
+    menuContentLaidOut: Boolean,
+    menuHasFocus: Boolean
 ): Boolean {
     return hardwareFocusRequestToken > handledHardwareFocusRequestToken &&
         !guideActive &&
         hasFocusTarget &&
-        menuContentLaidOut
+        menuContentLaidOut &&
+        !menuHasFocus
 }
 
 internal fun shouldRestoreGameMenuFocus(
@@ -556,6 +570,7 @@ private fun GameMenuContent(
     wideLayout: Boolean,
     maxMenuHeight: Dp,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     quickActionGuideModifier: Modifier = Modifier,
     crownGuideModifier: Modifier = Modifier
 ) {
@@ -615,6 +630,7 @@ private fun GameMenuContent(
                 callbacks = callbacks,
                 wideLayout = displayWideLayout,
                 initialFocusRequester = initialFocusRequester,
+                initialFocusModifier = initialFocusModifier,
                 onSliderGesture = { sliderGestureActive = it }
             )
         } else if (wideTouchMode) {
@@ -622,6 +638,7 @@ private fun GameMenuContent(
                 state = state,
                 callbacks = callbacks,
                 initialFocusRequester = initialFocusRequester,
+                initialFocusModifier = initialFocusModifier,
                 topFocusRequester = touchModeBackFocusRequester,
                 sliderGestureActive = sliderGestureActive,
                 onSliderGesture = { sliderGestureActive = it },
@@ -642,7 +659,8 @@ private fun GameMenuContent(
                     onInlineToggle = callbacks.onInlineToggle,
                     onSegmentClick = callbacks.onSegmentClick,
                     modifier = Modifier.weight(1f),
-                    initialFocusRequester = initialFocusRequester
+                    initialFocusRequester = initialFocusRequester,
+                    optionFocusModifier = initialFocusModifier
                 )
                 GameMenuCards(
                     state = state,
@@ -659,7 +677,8 @@ private fun GameMenuContent(
                     callbacks.onOptionClick,
                     callbacks.onInlineToggle,
                     callbacks.onSegmentClick,
-                    initialFocusRequester = initialFocusRequester
+                    initialFocusRequester = initialFocusRequester,
+                    optionFocusModifier = initialFocusModifier
                 )
                 if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
                     TouchPointerSensitivityControl(
@@ -741,6 +760,7 @@ private fun TouchModeTable(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     topFocusRequester: FocusRequester,
     sliderGestureActive: Boolean,
     onSliderGesture: (Boolean) -> Unit,
@@ -802,6 +822,7 @@ private fun TouchModeTable(
                                 topFocusRequester
                             )
                             .focusRequester(focusRequesters[globalIndex])
+                            .then(if (globalIndex == 0) initialFocusModifier else Modifier)
                     )
                 }
             }
@@ -886,6 +907,7 @@ private fun DisplaySettingsPage(
     callbacks: GameMenuCallbacks,
     wideLayout: Boolean,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     onSliderGesture: (Boolean) -> Unit
 ) {
     if (wideLayout) {
@@ -898,7 +920,7 @@ private fun DisplaySettingsPage(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
             ) {
-                DisplayChoiceColumn(state, callbacks, initialFocusRequester)
+                DisplayChoiceColumn(state, callbacks, initialFocusRequester, initialFocusModifier)
                 ScreenCombinationPanel(
                     state = state.bitrate,
                     onSelect = callbacks.onSelectScreenMode
@@ -915,7 +937,7 @@ private fun DisplaySettingsPage(
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)) {
-            DisplayChoiceColumn(state, callbacks, initialFocusRequester)
+            DisplayChoiceColumn(state, callbacks, initialFocusRequester, initialFocusModifier)
             ScreenCombinationPanel(state.bitrate, callbacks.onSelectScreenMode)
             DisplayApplyButton(state, callbacks, initialFocusRequester)
             Spacer(Modifier.height(GameMenuDimens.section))
@@ -950,6 +972,7 @@ private fun DisplayChoiceColumn(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -963,6 +986,7 @@ private fun DisplayChoiceColumn(
         )
         ChoiceWrap(
             initialFocusRequester,
+            initialFocusModifier,
             state.bitrate.resolutions + DisplayChoice(
                 value = "custom-resolution",
                 label = stringResource(R.string.title_custom_resolutions),
@@ -980,6 +1004,7 @@ private fun DisplayChoiceColumn(
         )
         ChoiceWrap(
             null,
+            Modifier,
             state.bitrate.frameRates + DisplayChoice(
                 value = "custom-frame-rate",
                 label = stringResource(R.string.title_custom_fps),
@@ -1023,6 +1048,7 @@ private fun DisplayApplyButton(
 @Composable
 private fun ChoiceWrap(
     initialFocusRequester: FocusRequester?,
+    initialFocusModifier: Modifier = Modifier,
     choices: List<DisplayChoice>,
     onSelect: (DisplayChoice) -> Unit
 ) {
@@ -1038,7 +1064,7 @@ private fun ChoiceWrap(
                             .weight(1f)
                             .then(
                                 if (initialFocusRequester != null && rowIndex == 0 && columnIndex == 0) {
-                                    Modifier.focusRequester(initialFocusRequester)
+                                    Modifier.focusRequester(initialFocusRequester).then(initialFocusModifier)
                                 } else {
                                     Modifier
                                 }

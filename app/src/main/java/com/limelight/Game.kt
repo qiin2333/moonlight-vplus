@@ -1930,8 +1930,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             recreateAfterResolutionChange()
             return
         }
-        view.post {
-            view.post {
+        runOnUiThread {
+            runOnUiThread {
                 stageReconnectBackdrop(::recreateAfterResolutionChange)
             }
         }
