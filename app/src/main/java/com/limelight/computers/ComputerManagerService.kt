@@ -685,30 +685,32 @@ class ComputerManagerService : Service() {
         // networkLock. Poll threads hold networkLock for the whole runPoll() (network I/O
         // included) and take pollingTuples inside it, so nesting these locks in the other
         // order deadlocks the poll coroutine and every thread waiting on pollingTuples
-        // with it (e.g. onUnbind on the main thread). Revalidate inside networkLock
-        // (taking pollingTuples there is the one allowed nesting direction); if the
-        // tuple was removed and re-added meanwhile, follow the replacement and take
-        // its lock instead of mutating it under the stale lock.
+        // with it (e.g. onUnbind on the main thread). Revalidation and the update must
+        // share the same networkLock acquisition — releasing in between lets a poll
+        // overwrite the verified state. If the tuple was removed and re-added meanwhile,
+        // follow the replacement and take its lock instead of mutating it under the
+        // stale lock.
         if (uuid != null) {
             var tuple = synchronized(pollingTuples) {
                 pollingTuples.firstOrNull { it.computer.uuid == uuid }
             }
             while (tuple != null) {
-                val current = synchronized(tuple.networkLock) {
-                    synchronized(pollingTuples) {
+                val next = synchronized(tuple.networkLock) {
+                    val current = synchronized(pollingTuples) {
                         pollingTuples.firstOrNull { it.computer.uuid == uuid }
                     }
-                }
-                when {
-                    // Removed and not re-added: nothing to update.
-                    current == null -> tuple = null
-                    current === tuple -> {
-                        canonicalComputer = tuple.computer
-                        tuple.computer.update(verified)
-                        tuple = null
+                    when {
+                        // Removed and not re-added: nothing to update.
+                        current == null -> null
+                        current === tuple -> {
+                            canonicalComputer = tuple.computer
+                            tuple.computer.update(verified)
+                            null
+                        }
+                        else -> current
                     }
-                    else -> tuple = current
                 }
+                tuple = next
             }
         }
 
