@@ -74,21 +74,23 @@ class DiskAssetLoader(context: Context) {
                 }
             }
 
-            var bmp: Bitmap? = try {
-                BitmapFactory.decodeFile(file.absolutePath, options)
+            val bmp: Bitmap? = try {
+                val decoded = BitmapFactory.decodeFile(file.absolutePath, options)
+                if (decoded != null) {
+                    // createScaledBitmap 会在解码结果仍存活时再分配一份，同样可能 OOM，
+                    // 压缩与解码共用同一个 OOM 兜底
+                    val compressedBmp = compressLargeBitmap(decoded)
+                    if (compressedBmp !== decoded) {
+                        decoded.recycle()
+                    }
+                    compressedBmp
+                } else null
             } catch (e: OutOfMemoryError) {
                 LimeLog.warning("OOM while decoding tuple $tuple; using placeholder")
                 null
             }
             if (bmp != null) {
                 LimeLog.info("Tuple $tuple decoded from disk cache with sample size: ${options.inSampleSize}")
-
-                val compressedBmp = compressLargeBitmap(bmp)
-                if (compressedBmp !== bmp) {
-                    bmp.recycle()
-                    bmp = compressedBmp!!
-                }
-
                 return ScaledBitmap(decodeOnlyOptions.outWidth, decodeOnlyOptions.outHeight, bmp)
             }
         } else {
