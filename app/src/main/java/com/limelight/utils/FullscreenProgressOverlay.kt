@@ -31,6 +31,7 @@ class FullscreenProgressOverlay(
     private val random = Random()
     private val backgroundMode = AppBackgroundMode.read(activity)
     private var isShowing = false
+    private var reconnectBackdrop: Bitmap? = null
     private var posterRequestSerial = 0
     var computer: ComputerDetails? = null
 
@@ -89,7 +90,7 @@ class FullscreenProgressOverlay(
                 isShowing = true
 
                 applySoftColorFallback()
-                loadAppImage()
+                reconnectBackdrop?.let { applyPoster(it) } ?: loadAppImage()
             }
         }
     }
@@ -119,8 +120,9 @@ class FullscreenProgressOverlay(
 
         activity.runOnUiThread {
             if (poster != null) {
+                reconnectBackdrop = poster
                 applyPoster(poster)
-            } else {
+            } else if (reconnectBackdrop == null) {
                 applyMissingPoster()
             }
         }
@@ -191,7 +193,7 @@ class FullscreenProgressOverlay(
         val curComputer = computer ?: return
         val cached = AppIconCache.instance.getFullIcon(curComputer, curApp)
         if (cached != null) {
-            applyPoster(cached)
+            if (reconnectBackdrop == null) applyPoster(cached)
             return
         }
 
@@ -210,7 +212,7 @@ class FullscreenProgressOverlay(
             } ?: return@Thread
             AppIconCache.instance.putFullIcon(curComputer, curApp, bitmap)
             activity.runOnUiThread {
-                if (isShowing) applyPoster(bitmap)
+                if (isShowing && reconnectBackdrop == null) applyPoster(bitmap)
             }
         }, "OverlayPosterLoader").start()
     }
