@@ -221,7 +221,7 @@
     <string name="title_checkbox_gamepad_motion_sensors">Gamepad mozgásérzékelők használatának engedélyezése</string>
     <string name="resolution_720p">720p</string>
     <string name="videoformat_auto">Automatikus (ajánlott)</string>
-    <string name="pacing_balanced_alt">Kimeneti FPS korlátozása (a kijelző frissítéséig)</string>
+    <string name="pacing_balanced_alt">Kimeneti FPS korlátozása (nem haladhatja meg a kijelző frissítési frekvenciáját)</string>
     <string name="frame_conversion_error">A fogadó számítógép végzetes videokódolási hibát jelentett.
 \n
 \nPróbálja meg letiltani a HDR módot, megváltoztatni a streaming felbontást, vagy megváltoztatni a host PC kijelzőjének felbontását.</string>

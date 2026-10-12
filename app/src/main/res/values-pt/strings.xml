@@ -244,7 +244,7 @@
     <string name="summary_privacy_policy">Veja a política de privacidade do Moonlight</string>
     <string name="resolution_480p">480p</string>
     <string name="resolution_720p">720p</string>
-    <string name="summary_frame_pacing">Escolha como as imagens de vídeo são sincronizadas. O ritmo preciso pode usar os carimbos de data/hora do vídeo (PTS) e é recomendado para a maioria dos dispositivos.</string>
+    <string name="summary_frame_pacing">Escolha como as imagens de vídeo são sincronizadas. O ritmo preciso pode usar as marcas temporais de apresentação do vídeo (PTS) e é recomendado para a maioria dos dispositivos.</string>
     <string name="analogscroll_none">Nenhum (ambos os sticks movem o rato)</string>
     <string name="analogscroll_right">Stick analógico direito</string>
     <string name="analogscroll_left">Stick analógico esquerdo</string>
