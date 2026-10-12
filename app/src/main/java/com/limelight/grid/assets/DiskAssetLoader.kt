@@ -56,10 +56,15 @@ class DiskAssetLoader(context: Context) {
             LimeLog.info("Tuple $tuple has cached art of size: ${decodeOnlyOptions.outWidth}x${decodeOnlyOptions.outHeight}")
 
             val options = BitmapFactory.Options().apply {
-                inSampleSize = calculateInSampleSize(
-                    decodeOnlyOptions,
-                    decodeOnlyOptions.outWidth / sampleSize,
-                    decodeOnlyOptions.outHeight / sampleSize
+                inSampleSize = capInSampleSize(
+                    calculateInSampleSize(
+                        decodeOnlyOptions,
+                        decodeOnlyOptions.outWidth / sampleSize,
+                        decodeOnlyOptions.outHeight / sampleSize
+                    ),
+                    decodeOnlyOptions.outWidth,
+                    decodeOnlyOptions.outHeight,
+                    MAX_ICON_DECODE_DIMENSION
                 )
                 if (isLowRamDevice) {
                     inPreferredConfig = Bitmap.Config.RGB_565
@@ -69,16 +74,23 @@ class DiskAssetLoader(context: Context) {
                 }
             }
 
-            var bmp = BitmapFactory.decodeFile(file.absolutePath, options)
+            val bmp: Bitmap? = try {
+                val decoded = BitmapFactory.decodeFile(file.absolutePath, options)
+                if (decoded != null) {
+                    // createScaledBitmap 会在解码结果仍存活时再分配一份，同样可能 OOM，
+                    // 压缩与解码共用同一个 OOM 兜底
+                    val compressedBmp = compressLargeBitmap(decoded)
+                    if (compressedBmp !== decoded) {
+                        decoded.recycle()
+                    }
+                    compressedBmp
+                } else null
+            } catch (e: OutOfMemoryError) {
+                LimeLog.warning("OOM while decoding tuple $tuple; using placeholder")
+                null
+            }
             if (bmp != null) {
                 LimeLog.info("Tuple $tuple decoded from disk cache with sample size: ${options.inSampleSize}")
-
-                val compressedBmp = compressLargeBitmap(bmp)
-                if (compressedBmp !== bmp) {
-                    bmp.recycle()
-                    bmp = compressedBmp!!
-                }
-
                 return ScaledBitmap(decodeOnlyOptions.outWidth, decodeOnlyOptions.outHeight, bmp)
             }
         } else {
@@ -93,6 +105,16 @@ class DiskAssetLoader(context: Context) {
                     if (isLowRamDevice) {
                         imageDecoder.setMemorySizePolicy(ImageDecoder.MEMORY_POLICY_LOW_RAM)
                     }
+
+                    // imageInfo.size 始终是原图尺寸；setTargetSize 只影响解码输出
+                    val longSide = max(imageInfo.size.width, imageInfo.size.height)
+                    if (longSide > MAX_ICON_DECODE_DIMENSION) {
+                        val scale = MAX_ICON_DECODE_DIMENSION.toFloat() / longSide
+                        imageDecoder.setTargetSize(
+                            max(1, (imageInfo.size.width * scale).toInt()),
+                            max(1, (imageInfo.size.height * scale).toInt())
+                        )
+                    }
                 }
 
                 if (scaledBitmap.bitmap != null) {
@@ -106,6 +128,9 @@ class DiskAssetLoader(context: Context) {
                 return scaledBitmap
             } catch (e: IOException) {
                 e.printStackTrace()
+                return null
+            } catch (e: OutOfMemoryError) {
+                LimeLog.warning("OOM while decoding tuple $tuple; using placeholder")
                 return null
             }
         }
@@ -148,10 +173,12 @@ class DiskAssetLoader(context: Context) {
                 val sampleSize = if (maxDimension > 0) {
                     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeFile(file.absolutePath, bounds)
-                    val longSide = max(bounds.outWidth, bounds.outHeight)
-                    var s = 1
-                    while (longSide > 0 && (longSide / s) > maxDimension) s *= 2
-                    s
+                    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                        // 头信息读不出来时按原尺寸盲解码可能直接 OOM
+                        LimeLog.warning("Skipping unreadable cached art for app $appId")
+                        return null
+                    }
+                    capInSampleSize(1, bounds.outWidth, bounds.outHeight, maxDimension)
                 } else 1
                 val options = BitmapFactory.Options().apply {
                     inPreferredConfig = if (isLowRamDevice) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888
@@ -162,11 +189,15 @@ class DiskAssetLoader(context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        } catch (e: OutOfMemoryError) {
+            LimeLog.warning("OOM while decoding full bitmap for app $appId")
+            null
         }
     }
 
     /**
-     * 压缩过大的Bitmap
+     * 压缩过大的Bitmap：等比缩放到 1MB 内。不设最小宽高钳制——
+     * 两维独立钳制会破坏宽高比（横版封面被竖向拉伸）。
      */
     private fun compressLargeBitmap(original: Bitmap?): Bitmap? {
         if (original == null) return null
@@ -176,12 +207,7 @@ class DiskAssetLoader(context: Context) {
 
         if (byteCount > maxSize) {
             try {
-                val scale = sqrt(maxSize.toDouble() / byteCount).toFloat()
-                var newWidth = round(original.width * scale).toInt()
-                var newHeight = round(original.height * scale).toInt()
-
-                newWidth = max(newWidth, 300)
-                newHeight = max(newHeight, 400)
+                val (newWidth, newHeight) = compressedDimensions(original.width, original.height, byteCount, maxSize)
 
                 val compressed = Bitmap.createScaledBitmap(original, newWidth, newHeight, true)
 
@@ -241,6 +267,10 @@ class DiskAssetLoader(context: Context) {
         private const val STANDARD_ASSET_WIDTH = 300
         private const val STANDARD_ASSET_HEIGHT = 400
 
+        // 图标解码长边硬上限（像素）。图标最终会被 compressLargeBitmap 压到
+        // 1MB 以内，超过该尺寸的解码只是白占内存并可能 OOM。
+        private const val MAX_ICON_DECODE_DIMENSION = 1024
+
         // https://developer.android.com/topic/performance/graphics/load-bitmap.html
         fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
             val height = options.outHeight
@@ -257,6 +287,36 @@ class DiskAssetLoader(context: Context) {
             }
 
             return inSampleSize
+        }
+
+        /**
+         * 在按比例采样（calculateInSampleSize）之后追加长边硬上限。
+         * scalingDivisor 收敛为 1 时按比例采样不会生效，超大自定义封面
+         * （如 4900×4900、文件却不足 20MB）会被原尺寸解码直接 OOM。
+         * 只会放大 inSampleSize，不会缩小；maxDimension <= 0 时不生效。
+         */
+        fun capInSampleSize(baseSampleSize: Int, srcWidth: Int, srcHeight: Int, maxDimension: Int): Int {
+            if (maxDimension <= 0) return baseSampleSize
+            // inSampleSize 必须是 2 的幂（非 2 幂会被解码器向下取整，如 3→2），
+            // 基准先归一到不超过它的最大 2 的幂，保证返回值即实际生效的采样
+            var sampleSize = Integer.highestOneBit(max(baseSampleSize, 1)).toLong()
+            val longSide = max(srcWidth, srcHeight).toLong()
+            // 判断用向上取整：解码器对非整除采样按向上取整取尺寸（4097/4 → 1025）
+            while (longSide > 0 && (longSide + sampleSize - 1L) / sampleSize > maxDimension) {
+                sampleSize *= 2
+            }
+            return sampleSize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        }
+
+        /**
+         * 等比压缩维度：byteCount 超过 maxBytes 时按面积比缩放，宽高比不变。
+         * 不设最小显示尺寸；维度下限 1，防止极端比例 round 到 0 使
+         * createScaledBitmap 抛异常。
+         */
+        fun compressedDimensions(width: Int, height: Int, byteCount: Int, maxBytes: Int): Pair<Int, Int> {
+            if (byteCount <= maxBytes) return width to height
+            val scale = sqrt(maxBytes.toDouble() / byteCount).toFloat()
+            return max(1, round(width * scale).toInt()) to max(1, round(height * scale).toInt())
         }
     }
 }
