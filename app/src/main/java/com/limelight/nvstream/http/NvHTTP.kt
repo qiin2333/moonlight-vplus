@@ -1326,8 +1326,7 @@ class NvHTTP(
             // missing-attribute and non-numeric cases must surface as a typed host error
             // rather than an NPE/NumberFormatException on the calling thread.
             val statusCode = xpp.getAttributeValue(XmlPullParser.NO_NAMESPACE, "status_code")
-                ?.toLongOrNull()
-                ?.toInt()
+                ?.toIntOrNull()
                 ?: throw HostHttpResponseException(400, "Missing or invalid status_code in host response")
             if (statusCode != 200) {
                 var statusMsg = xpp.getAttributeValue(XmlPullParser.NO_NAMESPACE, "status_message")

@@ -359,12 +359,17 @@ class ComputerManagerService : Service() {
             // Lookup and mutation use separate acquisitions: poll threads hold a tuple's
             // networkLock for the whole runPoll() and take pollingTuples inside it, so
             // waiting on a networkLock while holding pollingTuples can deadlock them.
+            // Revalidate under networkLock (re-taking pollingTuples there is the one
+            // allowed nesting direction) so a tuple replaced or removed between the
+            // acquisitions is not mutated.
             val targets = synchronized(pollingTuples) {
                 pollingTuples.filter { uuid == it.computer.uuid }
             }
             for (tuple in targets) {
                 synchronized(tuple.networkLock) {
-                    tuple.computer.state = ComputerDetails.State.UNKNOWN
+                    if (synchronized(pollingTuples) { pollingTuples.contains(tuple) }) {
+                        tuple.computer.state = ComputerDetails.State.UNKNOWN
+                    }
                 }
             }
         }
@@ -680,15 +685,22 @@ class ComputerManagerService : Service() {
         // networkLock. Poll threads hold networkLock for the whole runPoll() (network I/O
         // included) and take pollingTuples inside it, so nesting these locks in the other
         // order deadlocks the poll coroutine and every thread waiting on pollingTuples
-        // with it (e.g. onUnbind on the main thread).
+        // with it (e.g. onUnbind on the main thread). Revalidate inside networkLock
+        // (taking pollingTuples there is the one allowed nesting direction) so the
+        // update lands on whichever tuple is still current for this UUID.
         if (uuid != null) {
             val target = synchronized(pollingTuples) {
                 pollingTuples.firstOrNull { it.computer.uuid == uuid }
             }
             if (target != null) {
-                canonicalComputer = target.computer
                 synchronized(target.networkLock) {
-                    target.computer.update(verified)
+                    val current = synchronized(pollingTuples) {
+                        pollingTuples.firstOrNull { it.computer.uuid == uuid }
+                    }
+                    if (current != null) {
+                        canonicalComputer = current.computer
+                        current.computer.update(verified)
+                    }
                 }
             }
         }

@@ -494,16 +494,15 @@ class MediaCodecDecoderRenderer(
     private fun failPyrowaveSession(reason: String) {
         destroyPyrowaveDecoder()
         val shouldNotifyConnectionFailure = !stopping && pyrowaveStopPosted.compareAndSet(false, true)
-        val failure = IllegalStateException("PyroWave decoder session failed: $reason")
-        if (!reportedCrash) {
-            reportedCrash = true
-            crashListener.notifyCrash(failure)
-        }
         stopping = true
         if (shouldNotifyConnectionFailure) {
             // Let the existing connection callback path serialize NvConnection
             // shutdown, UI error reporting, and resource cleanup. The callback
             // performs its network stop work off the main thread.
+            //
+            // Deliberately not routed through crashListener: pyrowaveFailureListener
+            // owns PyroWave termination (and crash accounting), so a fatal PyroWave
+            // failure ends the stream exactly once.
             Thread {
                 try {
                     pyrowaveFailureListener(reason)
@@ -1087,7 +1086,7 @@ class MediaCodecDecoderRenderer(
                 prefs.hdrMode,
                 getPreferredColorRange(),
             )
-            renderTarget?.surface?.let { applyHdrDataSpace(it, "decoder output") }
+            applyHdrDataSpace(directOutputSurface(), "decoder output")
         }
 
         configuredFormat = format
@@ -1805,15 +1804,16 @@ class MediaCodecDecoderRenderer(
             if (initialException != null) {
                 // This isn't the first time we've had an exception processing video
                 if (SystemClock.uptimeMillis() - initialExceptionTimestamp >= EXCEPTION_REPORT_DELAY_MS) {
-                    // It's been over 3 seconds and we're still getting exceptions. Report the
-                    // failure and stop decoding; the crash listener terminates the stream with
-                    // the standard failure dialog. Throwing from here would escape the codec
-                    // callback (or sync submit) thread and kill the whole process.
+                    // It's been over 3 seconds and we're still getting exceptions. Stop the
+                    // decode pipeline first (the crash listener terminates the stream via
+                    // the standard failure path, which does network work), then report the
+                    // failure. Throwing from here would escape the codec callback (or sync
+                    // submit) thread and kill the whole process.
+                    stopping = true
                     if (!reportedCrash) {
                         reportedCrash = true
                         crashListener.notifyCrash(initialException!!)
                     }
-                    stopping = true
                 }
             } else {
                 // This is the first exception we've hit

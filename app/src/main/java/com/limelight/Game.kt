@@ -1010,6 +1010,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     if (decoderRenderer !== rendererForFailure) {
                         LimeLog.info("Ignoring stale PyroWave failure: $reason")
                     } else {
+                        tombstonePrefs.edit(commit = true) {
+                            putInt(
+                                "CrashCount",
+                                tombstonePrefs.getInt("CrashCount", 0) + 1
+                            )
+                        }
+                        reportedCrash = true
                         LimeLog.severe("PyroWave decoder session failed: $reason")
                         connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
                     }

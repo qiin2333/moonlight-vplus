@@ -27,6 +27,14 @@ class NvHttpMalformedRootTest {
     }
 
     @Test
+    fun outOfRangeStatusCodeIsRejectedNotWrapped() {
+        // 4294967496 would wrap to 200 if narrowed through Long -> Int.
+        assertThrows(HostHttpResponseException::class.java) {
+            NvHTTP.getXmlString("<root status_code=\"4294967496\"></root>", "bitrate", true)
+        }
+    }
+
+    @Test
     fun errorStatusWithoutStatusMessageStillThrowsTypedError() {
         val error = assertThrows(HostHttpResponseException::class.java) {
             NvHTTP.getXmlString("<root status_code=\"418\"></root>", "bitrate", true)
