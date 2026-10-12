@@ -984,19 +984,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             val newRenderer = MediaCodecDecoderRenderer(
                 this, prefConfig,
                 {
-                    tombstonePrefs.edit(commit = true) {
-                        putInt(
-                            "CrashCount",
-                            tombstonePrefs.getInt("CrashCount", 0) + 1
-                        )
-                    }
-                    reportedCrash = true
                     if (decoderRenderer === rendererForFailure) {
+                        tombstonePrefs.edit(commit = true) {
+                            putInt(
+                                "CrashCount",
+                                tombstonePrefs.getInt("CrashCount", 0) + 1
+                            )
+                        }
+                        reportedCrash = true
                         // Hardware decoder gave up: end the stream with the standard
                         // failure dialog instead of crashing the process from the
                         // codec callback thread.
                         connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
                     } else {
+                        // A discarded renderer's callback must not count toward the
+                        // active renderer's crash accounting or report state.
                         LimeLog.info("Ignoring stale renderer crash callback")
                     }
                 },

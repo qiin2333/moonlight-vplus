@@ -686,21 +686,28 @@ class ComputerManagerService : Service() {
         // included) and take pollingTuples inside it, so nesting these locks in the other
         // order deadlocks the poll coroutine and every thread waiting on pollingTuples
         // with it (e.g. onUnbind on the main thread). Revalidate inside networkLock
-        // (taking pollingTuples there is the one allowed nesting direction) so the
-        // update lands on whichever tuple is still current for this UUID.
+        // (taking pollingTuples there is the one allowed nesting direction); if the
+        // tuple was removed and re-added meanwhile, follow the replacement and take
+        // its lock instead of mutating it under the stale lock.
         if (uuid != null) {
-            val target = synchronized(pollingTuples) {
+            var tuple = synchronized(pollingTuples) {
                 pollingTuples.firstOrNull { it.computer.uuid == uuid }
             }
-            if (target != null) {
-                synchronized(target.networkLock) {
-                    val current = synchronized(pollingTuples) {
+            while (tuple != null) {
+                val current = synchronized(tuple.networkLock) {
+                    synchronized(pollingTuples) {
                         pollingTuples.firstOrNull { it.computer.uuid == uuid }
                     }
-                    if (current != null) {
-                        canonicalComputer = current.computer
-                        current.computer.update(verified)
+                }
+                when {
+                    // Removed and not re-added: nothing to update.
+                    current == null -> tuple = null
+                    current === tuple -> {
+                        canonicalComputer = tuple.computer
+                        tuple.computer.update(verified)
+                        tuple = null
                     }
+                    else -> tuple = current
                 }
             }
         }
