@@ -301,10 +301,11 @@ class DiskAssetLoader(context: Context) {
          */
         fun capInSampleSize(baseSampleSize: Int, srcWidth: Int, srcHeight: Int, maxDimension: Int): Int {
             if (maxDimension <= 0) return baseSampleSize
-            // 向上取整判断：解码器对非整除的 inSampleSize 按向上取整采样
-            // （4097/4 → 1025），按地板除判断会漏掉这 1px 越界
-            var sampleSize = max(baseSampleSize, 1).toLong()
+            // inSampleSize 必须是 2 的幂（非 2 幂会被解码器向下取整，如 3→2），
+            // 基准先归一到不超过它的最大 2 的幂，保证返回值即实际生效的采样
+            var sampleSize = Integer.highestOneBit(max(baseSampleSize, 1)).toLong()
             val longSide = max(srcWidth, srcHeight).toLong()
+            // 判断用向上取整：解码器对非整除采样按向上取整取尺寸（4097/4 → 1025）
             while (longSide > 0 && (longSide + sampleSize - 1L) / sampleSize > maxDimension) {
                 sampleSize *= 2
             }

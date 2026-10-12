@@ -34,6 +34,13 @@ class DiskAssetLoaderSamplingTest {
     }
 
     @Test
+    fun normalizesNonPowerOfTwoBase() {
+        // 解码器把非 2 幂 inSampleSize 向下取整（3→2），返回值须与实际生效采样一致
+        assertEquals(8, DiskAssetLoader.capInSampleSize(3, 4900, 4900, 1024))
+        assertEquals(2, DiskAssetLoader.capInSampleSize(3, 628, 888, 1024))
+    }
+
+    @Test
     fun ignoresInvalidInputs() {
         assertEquals(1, DiskAssetLoader.capInSampleSize(1, 4900, 4900, 0))
         assertEquals(3, DiskAssetLoader.capInSampleSize(3, 4900, 4900, -1))
