@@ -27,6 +27,13 @@ class DiskAssetLoaderSamplingTest {
     }
 
     @Test
+    fun usesCeilingDivisionAtTheLimitBoundary() {
+        // 解码器按向上取整采样：4097/4 实际解出 1025，须再放大一档；4096/4 = 1024 恰好达标
+        assertEquals(8, DiskAssetLoader.capInSampleSize(1, 4097, 4097, 1024))
+        assertEquals(4, DiskAssetLoader.capInSampleSize(1, 4096, 4096, 1024))
+    }
+
+    @Test
     fun ignoresInvalidInputs() {
         assertEquals(1, DiskAssetLoader.capInSampleSize(1, 4900, 4900, 0))
         assertEquals(3, DiskAssetLoader.capInSampleSize(3, 4900, 4900, -1))

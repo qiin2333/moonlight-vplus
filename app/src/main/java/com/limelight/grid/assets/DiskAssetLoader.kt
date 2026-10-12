@@ -301,12 +301,14 @@ class DiskAssetLoader(context: Context) {
          */
         fun capInSampleSize(baseSampleSize: Int, srcWidth: Int, srcHeight: Int, maxDimension: Int): Int {
             if (maxDimension <= 0) return baseSampleSize
-            var sampleSize = max(baseSampleSize, 1)
-            val longSide = max(srcWidth, srcHeight)
-            while (longSide > 0 && longSide / sampleSize > maxDimension) {
+            // 向上取整判断：解码器对非整除的 inSampleSize 按向上取整采样
+            // （4097/4 → 1025），按地板除判断会漏掉这 1px 越界
+            var sampleSize = max(baseSampleSize, 1).toLong()
+            val longSide = max(srcWidth, srcHeight).toLong()
+            while (longSide > 0 && (longSide + sampleSize - 1L) / sampleSize > maxDimension) {
                 sampleSize *= 2
             }
-            return sampleSize
+            return sampleSize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         }
     }
 }
