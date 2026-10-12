@@ -367,7 +367,7 @@
     <string name="title_checkbox_mic_voice_enhancement">Voice enhancement</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce low-frequency noise and improve speech clarity. Available in both fixed gain and volume balance modes.</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow a lower display refresh rate</string>
-    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced frame pacing. A lower matching refresh rate can save power but may add video latency.</string>
+    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced mode. Matching the stream with a lower display refresh rate can save power but may add video latency.</string>
 
     <string name="category_gamepad_settings">Gamepad</string>
     <string name="title_combine_joycons">Combine Joy-Con controllers</string>
@@ -740,7 +740,7 @@
     <string name="summary_enable_jitter_monitor">Overlay a real-time present-interval jitter chart (judder%, jitter, histogram) while streaming. No performance impact when disabled.</string>
     <string name="jitter_monitor_empty_title">Waiting for frame data</string>
     <string name="jitter_monitor_empty_message">The chart will appear after playback samples arrive</string>
-    <string name="title_enable_host_cadence_precise_sync">Extra smoothness for Precise Sync</string>
+    <string name="title_enable_host_cadence_precise_sync">Host frame pacing enhancement</string>
     <string name="summary_enable_host_cadence_precise_sync">Helps reduce tiny repeated stutters on stable networks, especially at 90/120 FPS. May add about 1-3 ms of latency.</string>
     <string name="title_perf_overlay_orientation">Performance stats layout</string>
     <string name="summary_perf_overlay_orientation">Choose a horizontal row or vertical column.</string>
@@ -878,13 +878,13 @@
     <string name="videoformat_h264always">Prefer H.264</string>
 
     <string name="title_frame_pacing">Stream frame pacing</string>
-    <string name="summary_frame_pacing">Specify how to balance video latency and smoothness</string>
-    <string name="pacing_latency">Prefer lowest latency</string>
-    <string name="pacing_balanced">Balanced</string>
-    <string name="pacing_balanced_alt">Balanced with FPS limit</string>
-    <string name="pacing_smoothness">Prefer smoothest video (may significantly increase latency)</string>
-    <string name="pacing_experimental_low_latency">Experimental ultra-low latency</string>
-    <string name="pacing_precise_sync">Precise Sync (Recommended)</string>
+    <string name="summary_frame_pacing">Choose how video frames are paced. Precise frame pacing can use video timestamps (PTS) and is recommended for most devices.</string>
+    <string name="pacing_latency">Low latency (faster response)</string>
+    <string name="pacing_balanced">Balanced (latency and smoothness)</string>
+    <string name="pacing_balanced_alt">Limit output FPS (up to display refresh rate)</string>
+    <string name="pacing_smoothness">Smoothness first (higher latency)</string>
+    <string name="pacing_experimental_low_latency">Ultra-low latency (experimental)</string>
+    <string name="pacing_precise_sync">Precise frame pacing (recommended)</string>
 
     <string name="title_analog_scrolling">Use an analog stick to scroll</string>
     <string name="summary_analog_scrolling">Select an analog stick to scroll when in mouse emulation mode</string>

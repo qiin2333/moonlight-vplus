@@ -181,10 +181,12 @@
     <string name="audioconf_51surround">5.1 surroundljud</string>
     <string name="audioconf_71surround">7.1 surroundljud</string>
     <string name="title_frame_pacing">Videorams fart</string>
-    <string name="pacing_latency">Föredrar lägsta latenstid</string>
-    <string name="pacing_balanced">Balanserad</string>
-    <string name="pacing_balanced_alt">Balanserad med FPS-gräns</string>
-    <string name="pacing_smoothness">Föredrar smidigast video (kan öka latensen avsevärt)</string>
+    <string name="pacing_latency">Låg latens (snabbare svar)</string>
+    <string name="pacing_precise_sync">Exakt bildrutestyrning (rekommenderas)</string>
+    <string name="pacing_experimental_low_latency">Ultralåg latens (experimentellt)</string>
+    <string name="pacing_balanced">Balanserad (latens och jämnhet)</string>
+    <string name="pacing_balanced_alt">Begränsa utgående FPS (upp till skärmens uppdateringsfrekvens)</string>
+    <string name="pacing_smoothness">Jämnhet först (högre latens)</string>
     <string name="nettest_title_done">Nätverkstestet fullföljt</string>
     <string name="nettest_text_failure">Din enhets aktuella nätverksanslutning verkar blockera Moonlight. Streaming via Internet kanske inte fungerar när du är ansluten till det här nätverket.
 \n
@@ -242,7 +244,7 @@
     <string name="summary_setup_guide">Visa instruktioner om hur du utformar din speldator för strömning</string>
     <string name="resolution_1080p">1080p</string>
     <string name="fps_60">60 FPS</string>
-    <string name="summary_frame_pacing">Ange hur du ska balansera videofördröjning och jämnhet</string>
+    <string name="summary_frame_pacing">Välj hur videobildrutorna ska tajmas. Exakt bildrutestyrning kan använda videons tidsstämplar (PTS) och rekommenderas för de flesta enheter.</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Native FPS varning</string>
     <string name="category_gamepad_settings">Spelkontroller inställningar</string>

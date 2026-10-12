@@ -23,7 +23,7 @@
     <string name="nettest_text_waiting">Moonlight está testando sua conexão com a rede para determinar se o NVIDIA GameStream está bloqueado.
 \n
 \nEste processo pode demorar alguns segundos…</string>
-    <string name="pacing_balanced">Balanceado</string>
+    <string name="pacing_balanced">Balanceado (latência e fluidez)</string>
     <string name="nettest_text_success">A sua rede não parece estar a bloquear o Moonlight. Se ainda tiver problemas a se conectar, verifique as configurações de firewall do seu PC.
 \n
 \nSe estiver a tentar transmitir pela Internet, instale o Moonlight Internet Hosting Tool no seu PC e execute o Internet Streaming Tester para verificar a conexão com a Internet do seu PC.</string>
@@ -128,11 +128,11 @@
     <string name="audioconf_51surround">5.1 Surround</string>
     <string name="videoformat_auto">Automático (recomendado)</string>
     <string name="title_frame_pacing">Ritmo de quadros</string>
-    <string name="pacing_smoothness">Preferir vídeo mais suave (pode aumentar significativamente a latência)</string>
+    <string name="pacing_smoothness">Fluidez em primeiro lugar (maior latência)</string>
     <string name="summary_seekbar_deadzone">Nota: Alguns jogos podem impor uma zona morta maior do que o Moonlight está configurado para usar.</string>
     <string name="dialog_text_reset_osc">Tem certeza de que deseja apagar o layout salvo dos controles de ecrã\?</string>
     <string name="category_host_settings">Configurações de Host</string>
-    <string name="pacing_balanced_alt">Equilibrado com limite de FPS</string>
+    <string name="pacing_balanced_alt">Limitar FPS de saída (até à taxa de atualização)</string>
     <string name="audioconf_71surround">7.1 Surround</string>
     <string name="videoformat_hevcalways">Prefira HEVC</string>
     <string name="error_404">GFE retornou um erro HTTP 404. Verifique se o seu PC tem uma GPU compatível. O uso do software de área de trabalho remota também pode causar esse erro. Tente reiniciar o seu computador ou reinstalar o GFE.</string>
@@ -236,7 +236,7 @@
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
     <string name="fps_30">30 FPS</string>
-    <string name="pacing_latency">Preferir baixa latência</string>
+    <string name="pacing_latency">Baixa latência (resposta mais rápida)</string>
     <string name="title_checkbox_mouse_nav_buttons">Ativar os botões de voltar e avançar do rato</string>
     <string name="summary_checkbox_mouse_nav_buttons">Ativar esta opção pode bugar o clique com o botão direito em alguns aparelhos com bugs</string>
     <string name="title_checkbox_flip_face_buttons">Inverter botões</string>
@@ -244,7 +244,7 @@
     <string name="summary_privacy_policy">Veja a política de privacidade do Moonlight</string>
     <string name="resolution_480p">480p</string>
     <string name="resolution_720p">720p</string>
-    <string name="summary_frame_pacing">Especifique o equilíbrio entre latência e suavidade do vídeo</string>
+    <string name="summary_frame_pacing">Escolha como as imagens de vídeo são sincronizadas. O ritmo preciso pode usar os carimbos de data/hora do vídeo (PTS) e é recomendado para a maioria dos dispositivos.</string>
     <string name="analogscroll_none">Nenhum (ambos os sticks movem o rato)</string>
     <string name="analogscroll_right">Stick analógico direito</string>
     <string name="analogscroll_left">Stick analógico esquerdo</string>
@@ -440,8 +440,8 @@
     <!-- Video format -->
     <string name="videoformat_av1always">Preferir AV1 (Experimental)</string>
     <string name="videoformat_h264always">Preferir H.264</string>
-    <string name="pacing_experimental_low_latency">Experimental: Latência ultra-baixa (avançado)</string>
-    <string name="pacing_precise_sync">Sincronização precisa</string>
+    <string name="pacing_experimental_low_latency">Latência ultrabaixa (experimental)</string>
+    <string name="pacing_precise_sync">Ritmo de frames preciso (recomendado)</string>
     
     <!-- Microphone -->
     <string name="mic_button">Microfone</string>

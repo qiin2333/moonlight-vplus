@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="title_frame_pacing">Ritmo de quadros</string>
-    <string name="pacing_balanced">Balanceado</string>
-    <string name="pacing_latency">Preferir baixa latência</string>
+    <string name="pacing_balanced">Balanceado (latência e fluidez)</string>
+    <string name="pacing_latency">Baixa latência (resposta mais rápida)</string>
+    <string name="pacing_precise_sync">Ritmo de quadros preciso (recomendado)</string>
+    <string name="pacing_experimental_low_latency">Latência ultrabaixa (experimental)</string>
     <string name="summary_enable_hdr">Transmita HDR quando o jogo e a GPU do PC suportarem. O HDR requer uma GPU da série GTX 1000 ou posterior.</string>
     <string name="summary_enable_post_stream_toast">Exibe uma mensagem com informações de latência após o término da transmissão</string>
     <string name="summary_unlock_fps">Transmitir a 90 ou 120 FPS pode reduzir a latência em dispositivos de última geração, mas pode causar atraso ou instabilidade em dispositivos que não suportam</string>
     <string name="summary_checkbox_vibrate_osc">Vibra seu dispositivo para emular rumble nos controles de tela</string>
     <string name="pcview_menu_header_offline">Indisponível</string>
     <string name="pcview_menu_header_unknown">Atualizando</string>
-    <string name="pacing_smoothness">Preferir vídeo mais suave (pode aumentar significativamente a latência)</string>
-    <string name="summary_frame_pacing">Especifique o equilíbrio entre latência e suavidade do vídeo</string>
+    <string name="pacing_smoothness">Fluidez em primeiro lugar (maior latência)</string>
+    <string name="summary_frame_pacing">Escolha como os quadros de vídeo são sincronizados. O ritmo preciso pode usar os timestamps do vídeo (PTS) e é recomendado para a maioria dos dispositivos.</string>
     <string name="title_checkbox_disable_warnings">Desabilitar mensagens de alerta</string>
     <string name="title_checkbox_enable_pip">Habilitar modo Picture-in-Picture</string>
     <string name="summary_checkbox_small_icon_mode">Diminui o tamanho dos ícones permitindo que mais aplicativos sejam visíveis na tela</string>
@@ -231,7 +233,7 @@
     <string name="title_privacy_policy">Política de privacidade</string>
     <string name="summary_checkbox_absolute_mouse_mode">Isso pode alterar a aceleração do mouse para se comportar mais naturalmente para uso em desktop remoto, mas é incompatível com muitos jogos.</string>
     <string name="summary_privacy_policy">Veja a política de privacidade do Moonlight</string>
-    <string name="pacing_balanced_alt">Equilibrado com limite de FPS</string>
+    <string name="pacing_balanced_alt">Limitar FPS de saída (até a taxa de atualização)</string>
     <string name="summary_seekbar_deadzone">Nota: Alguns jogos podem impor uma zona morta maior do que o Moonlight está configurado para usar.</string>
     <string name="title_checkbox_absolute_mouse_mode">Modo de mouse para área de trabalho remota</string>
     <string name="resolution_prefix_native_landscape">(Paisagem)</string>

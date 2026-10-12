@@ -385,11 +385,11 @@
     <string name="title_show_low_resolution_presets">顯示低頻寬解析度</string>
     <string name="summary_show_low_resolution_presets">在解析度清單中加入 360p 和 480p，供極慢網路或低效能裝置相容使用。</string>
     <string name="title_frame_pacing">串流影格節奏</string>
-    <string name="summary_frame_pacing">指定如何平衡視訊延遲和平滑度</string>
-    <string name="pacing_balanced">平衡</string>
-    <string name="pacing_smoothness">偏好平滑視訊 (可能顯著提高延遲)</string>
-    <string name="pacing_latency">偏好低延遲</string>
-    <string name="pacing_balanced_alt">FPS 上限平衡</string>
+    <string name="summary_frame_pacing">選擇視訊影格的呈現節奏。精準影格節奏可結合視訊時間戳（PTS）恢復影格間隔，大多數裝置建議使用。</string>
+    <string name="pacing_balanced">平衡（兼顧延遲與流暢）</string>
+    <string name="pacing_smoothness">流暢優先（延遲可能較高）</string>
+    <string name="pacing_latency">低延遲（優先回應速度）</string>
+    <string name="pacing_balanced_alt">限制輸出影格率（不超過螢幕更新率）</string>
     <string name="category_help">說明</string>
     <string name="title_troubleshooting">疑難排解指南</string>
     <string name="summary_setup_guide">檢視關於如何設定你的遊戲電腦以進行串流的指示</string>
@@ -406,7 +406,7 @@
     <string name="resolution_prefix_native_landscape">(橫向)</string>
     <string name="resolution_prefix_native_portrait">(直向)</string>
     <string name="title_checkbox_reduce_refresh_rate">允許使用較低的螢幕更新率</string>
-    <string name="summary_checkbox_reduce_refresh_rate">僅用於「平衡」影格節奏。符合串流的較低更新率可以省電，但可能增加視訊延遲。</string>
+    <string name="summary_checkbox_reduce_refresh_rate">僅用於「平衡」模式。配合串流的較低螢幕更新率可以省電，但可能增加視訊延遲。</string>
     <string name="frame_conversion_error">主機電腦回報了一個嚴重的視訊編碼錯誤。
 \n
 \n嘗試停用 HDR 模式，變更串流解析度，或變更您的主機電腦的顯示器解析度。</string>
@@ -653,7 +653,7 @@
     <string name="summary_config_sync_background_sync">與所選資料夾雙向合併變更；屬於這台裝置的較新外部設定可能會被自動套用。</string>
     <string name="title_config_sync_status">自動同步狀態</string>
     <string name="summary_config_sync_status_disabled">自動設定同步未開啟。</string>
-    <string name="pacing_experimental_low_latency">實驗性超低延遲</string>
+    <string name="pacing_experimental_low_latency">超低延遲（實驗性）</string>
     <string name="title_checkbox_sync_touch_event_with_display">按顯示更新節奏提交觸控事件</string>
     <string name="summary_checkbox_sync_touch_event_with_display">將觸控更新按本機螢幕更新節奏批次提交，可能使輸入更穩定，也可能增加輸入延遲。</string>
     <string name="title_force_mtk_max_operating_rate">強制聯發科解碼器最高運作速率（實驗性）</string>
@@ -820,7 +820,7 @@
     <string name="summary_adaptive_bitrate">依照封包遺失與延遲自動調整位元率；主機不支援伺服器端控制時，改用本機控制器。</string>
     <string name="title_abr_mode">自適應位元率模式</string>
     <string name="summary_abr_mode">畫質優先會維持較高位元率；低延遲會在封包遺失時更快降低位元率。</string>
-    <string name="title_enable_host_cadence_precise_sync">精確同步額外平滑處理</string>
+    <string name="title_enable_host_cadence_precise_sync">主機影格節奏增強</string>
     <string name="summary_enable_host_cadence_precise_sync">在穩定網路上減少細微重複卡頓，尤其適合 90/120 FPS；可能增加約 1–3 ms 延遲。</string>
     <string name="title_checkbox_control_only">僅控制模式</string>
     <string name="summary_checkbox_control_only">只建立控制連線，不傳送視訊與音訊。需要支援僅控制模式的 Sunshine 主機。</string>
@@ -943,7 +943,7 @@
     <string name="native_mouse_mode_preset_classic">觸點直接定位游標</string>
     <string name="native_mouse_mode_preset_trackpad">觸控板（相對移動）</string>
     <string name="native_mouse_mode_preset_native">外接滑鼠（擷取游標）</string>
-    <string name="pacing_precise_sync">精確同步（建議）</string>
+    <string name="pacing_precise_sync">精準影格節奏（建議）</string>
     <string name="title_background_stream_behavior">Moonlight 進入背景時</string>
     <string name="summary_background_stream_behavior">選擇立即中斷、返回時恢復、保持連線，或保持連線並繼續播放聲音。</string>
     <string name="background_stream_behavior_disconnect">立即中斷連線</string>

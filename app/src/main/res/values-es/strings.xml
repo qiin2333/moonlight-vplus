@@ -145,9 +145,10 @@
     <string name="no_video_received_error">No se recibe video desde el equipo anfitrión.</string>
     <string name="applist_details_id">ID de Aplicación:</string>
     <string name="title_checkbox_mouse_emulation">Emulación de ratón usando el mando</string>
-    <string name="pacing_latency">Preferir la menor latencia posible</string>
-    <string name="pacing_balanced">Equilibrado</string>
-    <string name="pacing_smoothness">Preferir mayor fluidez de video (puede incrementar significativamente la latencia)</string>
+    <string name="pacing_latency">Baja latencia (respuesta más rápida)</string>
+    <string name="pacing_precise_sync">Ritmo de fotogramas preciso (recomendado)</string>
+    <string name="pacing_balanced">Equilibrado (latencia y fluidez)</string>
+    <string name="pacing_smoothness">Fluidez primero (mayor latencia)</string>
     <string name="perf_overlay_decoder">Decodificador: %1$s</string>
     <string name="perf_overlay_incomingfps">Tasa de cuadros obtenida de la red: %1$.2f FPS</string>
     <string name="perf_overlay_renderingfps">Tasa de Cuadros Renderizada: %1$.2f FPS</string>
@@ -170,8 +171,8 @@
     <string name="audioconf_71surround">7.1 Sonido Envolvente</string>
     <string name="title_troubleshooting">Guía de Solución de Errores</string>
     <string name="resolution_1080p">1080p</string>
-    <string name="summary_frame_pacing">Especificar como balancear la latencia de video y la fluidez</string>
-    <string name="pacing_balanced_alt">Equilibrado con limitador de FPS (Cuadros por Segundo)</string>
+    <string name="summary_frame_pacing">Elige cómo se sincronizan los fotogramas de vídeo. El ritmo preciso puede usar marcas de tiempo de vídeo (PTS) y se recomienda para la mayoría de dispositivos.</string>
+    <string name="pacing_balanced_alt">Limitar FPS de salida (hasta la frecuencia de actualización)</string>
     <string name="audioconf_51surround">5.1 Sonido Envolvente</string>
     <string name="audioconf_stereo">Estéreo</string>
     <string name="check_ports_msg">Revisa la configuración de tu firewall, así como, las reglas de redireccionamiento para él(los) puerto(s):</string>
@@ -398,7 +399,7 @@
     <string name="mic_permission_required">Permiso de micrófono requerido</string>
     <string name="mic_stats_continuity">Continuidad de audio: %1$.1f%% (Capturado:%2$d Codificado:%3$d Enviado:%4$d Perdido:%5$d)</string>
     <string name="notification_icon">Icono de notificación</string>
-    <string name="pacing_experimental_low_latency">Experimental: Latencia ultra-baja (avanzado)</string>
+    <string name="pacing_experimental_low_latency">Latencia ultrabaja (experimental)</string>
     <string name="pcview_menu_sleep_fail">Falló el sueño del host</string>
     <string name="pcview_menu_sleep_success">Éxito del sueño del host</string>
     <string name="perf_decode_latency_title">⏱️ Información de Latencia de Decodificación</string>
