@@ -1322,9 +1322,16 @@ class NvHTTP(
         }
 
         private fun verifyResponseStatus(xpp: XmlPullParser) {
-            val statusCode = xpp.getAttributeValue(XmlPullParser.NO_NAMESPACE, "status_code").toLong().toInt()
+            // Nonconforming hosts (or proxies) can answer with a bare <root>. Both the
+            // missing-attribute and non-numeric cases must surface as a typed host error
+            // rather than an NPE/NumberFormatException on the calling thread.
+            val statusCode = xpp.getAttributeValue(XmlPullParser.NO_NAMESPACE, "status_code")
+                ?.toLongOrNull()
+                ?.toInt()
+                ?: throw HostHttpResponseException(400, "Missing or invalid status_code in host response")
             if (statusCode != 200) {
                 var statusMsg = xpp.getAttributeValue(XmlPullParser.NO_NAMESPACE, "status_message")
+                    ?: "Unknown error"
                 var code = statusCode
                 if (code == -1 && "Invalid" == statusMsg) {
                     code = 418

@@ -778,6 +778,11 @@ open class NvConnection(
                 LimeLog.warning("Failed to set bitrate: ${e.message}")
                 e.printStackTrace()
                 callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
+            } catch (e: Exception) {
+                // A failed background bitrate adjustment must never kill the process.
+                LimeLog.warning("Unexpected error during bitrate adjustment: ${e.message}")
+                e.printStackTrace()
+                callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
             }
         }.start()
     }
