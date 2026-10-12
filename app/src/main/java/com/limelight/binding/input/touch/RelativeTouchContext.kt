@@ -100,12 +100,13 @@ class RelativeTouchContext(
     private var dragButtonDownQueued = false
     /** 左键拖拽按下已经实际发送给主机 */
     private var dragButtonDownSent = false
-    /** 排队的左键拖拽收到正常抬手，点击队列清空后仍需完整交付 */
-    private var dragButtonUpQueued = false
     /** 左键拖拽按下排队期间缓存的移动事件 */
     private val queuedDragMoves = java.util.ArrayDeque<QueuedDragMove>()
+    /** 已正常结束但仍等待点击队列清空的完整左键拖拽序列 */
+    private val completedQueuedDrags = java.util.ArrayDeque<QueuedLeftDrag>()
 
     private data class QueuedDragMove(val deltaX: Int, val deltaY: Int)
+    private data class QueuedLeftDrag(val moves: List<QueuedDragMove>)
 
     // 本地光标渲染器 - 用于显示虚拟鼠标光标
     private var localCursorRenderer: LocalCursorRenderer? = null
@@ -420,6 +421,7 @@ class RelativeTouchContext(
         //  取消手势时丢弃未确认的延迟单击与尚未发出的拖拽按下；已确认的合成点击继续交付
         val leftDragWasSent = dragButtonDownSent
         discardQueuedDrag()
+        dragButtonDownSent = false
         cancelPendingSingleTap()
         //  取消手势时，也要清理这个新计时器
         cancelDoubleTapHoldTimer()
@@ -562,7 +564,9 @@ class RelativeTouchContext(
         if (dragButtonDownQueued || dragButtonDownSent) {
             return
         }
-        if (leftSyntheticActive || leftSyntheticDownRunnable != null || !leftClickQueue.isEmpty()) {
+        if (leftSyntheticActive || leftSyntheticDownRunnable != null || !leftClickQueue.isEmpty() ||
+            !completedQueuedDrags.isEmpty()
+        ) {
             dragButtonDownQueued = true
         } else {
             sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT)
@@ -597,43 +601,48 @@ class RelativeTouchContext(
         }
     }
 
-    /** 正常抬手结束左键拖拽；若按下还在排队，等点击交付后补齐完整序列。 */
     /** Records or sends the drag release, preserving a queued drag's complete sequence. */
     private fun finishLeftDragGesture() {
         if (dragButtonDownQueued) {
-            dragButtonUpQueued = true
+            completedQueuedDrags.add(QueuedLeftDrag(queuedDragMoves.toList()))
+            dragButtonDownQueued = false
+            queuedDragMoves.clear()
+            pumpLeftClicks()
         } else if (dragButtonDownSent) {
             sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
             dragButtonDownSent = false
         }
     }
 
-    /** 取消尚未发出的左键拖拽，避免取消手势误释放合成点击。 */
-    /** Drops an undelivered drag request without releasing a synthetic click. */
+    /** Drops only the current undelivered drag without releasing a synthetic click. */
     private fun discardQueuedDrag() {
         dragButtonDownQueued = false
-        dragButtonUpQueued = false
         queuedDragMoves.clear()
     }
 
-    /** 点击队列清空后交付排队的拖拽 down、移动和正常 up。 */
-    /** Delivers a queued drag press, buffered movement, and optional release in order. */
-    private fun deliverQueuedDrag() {
-        if (!dragButtonDownQueued) {
-            return
-        }
-
-        dragButtonDownQueued = false
+    /** Delivers a queued drag press, buffered movement, and normal release in order. */
+    private fun deliverQueuedDragSequence(drag: QueuedLeftDrag) {
         sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT)
         dragButtonDownSent = true
-        while (!queuedDragMoves.isEmpty()) {
-            val move = queuedDragMoves.removeFirst()
-            sendDragMove(move.deltaX, move.deltaY)
+        drag.moves.forEach { move -> sendDragMove(move.deltaX, move.deltaY) }
+        sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
+        dragButtonDownSent = false
+    }
+
+    /** Delivers completed drags before the current still-active queued drag. */
+    private fun deliverQueuedDrag() {
+        while (!completedQueuedDrags.isEmpty()) {
+            deliverQueuedDragSequence(completedQueuedDrags.removeFirst())
         }
-        if (dragButtonUpQueued) {
-            dragButtonUpQueued = false
-            sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
-            dragButtonDownSent = false
+
+        if (dragButtonDownQueued) {
+            dragButtonDownQueued = false
+            sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT)
+            dragButtonDownSent = true
+            while (!queuedDragMoves.isEmpty()) {
+                val move = queuedDragMoves.removeFirst()
+                sendDragMove(move.deltaX, move.deltaY)
+            }
         }
     }
 
