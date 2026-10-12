@@ -94,9 +94,18 @@ class RelativeTouchContext(
     private val leftClickQueue = java.util.ArrayDeque<QueuedLeftClick>()
     private var leftSyntheticActive = false
     private var leftSyntheticDownRunnable: Runnable? = null
+    private var leftSyntheticDownClick: QueuedLeftClick? = null
     private var leftSyntheticUpRunnable: Runnable? = null
     /** 拖拽按下需等待合成点击队列清空后再发送 */
     private var dragButtonDownQueued = false
+    /** 左键拖拽按下已经实际发送给主机 */
+    private var dragButtonDownSent = false
+    /** 排队的左键拖拽收到正常抬手，点击队列清空后仍需完整交付 */
+    private var dragButtonUpQueued = false
+    /** 左键拖拽按下排队期间缓存的移动事件 */
+    private val queuedDragMoves = java.util.ArrayDeque<QueuedDragMove>()
+
+    private data class QueuedDragMove(val deltaX: Int, val deltaY: Int)
 
     // 本地光标渲染器 - 用于显示虚拟鼠标光标
     private var localCursorRenderer: LocalCursorRenderer? = null
@@ -192,6 +201,7 @@ class RelativeTouchContext(
         return if (actionIndex == 1) MouseButtonPacket.BUTTON_RIGHT else MouseButtonPacket.BUTTON_LEFT
     }
 
+    /** Processes a touch-down and arms tap, double-tap, or drag recognition. */
     override fun touchDownEvent(eventX: Int, eventY: Int, eventTime: Long, isNewFinger: Boolean): Boolean {
         // Get the view dimensions to scale inputs on this touch
         xFactor = Game.REFERENCE_HORIZ_RES / targetView.width.toDouble() * sense
@@ -206,7 +216,7 @@ class RelativeTouchContext(
             // 新手势开始时，取消可能存在的未确认延迟单击
             cancelPendingSingleTap()
             //  新手势开始，丢弃上一手势尚未发出的排队拖拽按下
-            dragButtonDownQueued = false
+            discardQueuedDrag()
             //  新手势开始，取消任何可能存在的按住计时器
             cancelDoubleTapHoldTimer()
 
@@ -256,6 +266,7 @@ class RelativeTouchContext(
         return true
     }
 
+    /** Completes the current gesture and delivers any queued click or drag sequence. */
     override fun touchUpEvent(eventX: Int, eventY: Int, eventTime: Long) {
         if (cancelled) {
             return
@@ -274,7 +285,9 @@ class RelativeTouchContext(
             val now = SystemClock.uptimeMillis()
             val secondClickDelay = (potentialSecondTapDownTime - lastTapUpTime).coerceAtLeast(0L)
             scheduleLeftClick(now, false)
-            scheduleLeftClick(now + secondClickDelay, false)
+            // 第一击保持100ms按下，第二击的目标时刻从第一击抬起后开始计算，
+            // 因而不会因点击保持时间把真实的抬起到按下间隔压缩成0ms。
+            scheduleLeftClick(now + SYNTHETIC_CLICK_HOLD_MS + secondClickDelay, false)
 
             // Invalidate the tap time to prevent a triple-tap from becoming a double-tap drag
             lastTapUpTime = 0
@@ -282,12 +295,7 @@ class RelativeTouchContext(
         }
 
         if (isDoubleClickDrag) {
-            if (dragButtonDownQueued) {
-                //  拖拽按下还在排队未发出，直接作废，不发按下也不发抬起
-                dragButtonDownQueued = false
-            } else {
-                sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT) 
-            }
+            finishLeftDragGesture()
             isDoubleClickDrag = false
             lastTapUpTime = 0
             return
@@ -298,9 +306,8 @@ class RelativeTouchContext(
         val buttonIndex = getMouseButtonIndex()
 
         if (confirmedDrag) {
-            if (dragButtonDownQueued) {
-                //  拖拽按下还在排队未发出，直接作废
-                dragButtonDownQueued = false
+            if (buttonIndex == MouseButtonPacket.BUTTON_LEFT) {
+                finishLeftDragGesture()
             } else {
                 sendMouseButtonUpProxy(buttonIndex) 
             }
@@ -334,6 +341,7 @@ class RelativeTouchContext(
         }
     }
 
+    /** Processes movement, buffering it when a left drag is waiting behind synthetic clicks. */
     override fun touchMoveEvent(eventX: Int, eventY: Int, eventTime: Long): Boolean {
         if (cancelled) {
             return true
@@ -375,28 +383,14 @@ class RelativeTouchContext(
                         conn.sendMouseHighResScroll((deltaY * SCROLL_SPEED_FACTOR).toShort())
                     }
                 } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) {
-                    val renderer = localCursorRenderer
-                    if (renderer != null && this.enableLocalCursorRendering) {
-                        // 1. 本地模式：更新本地光标
-                        renderer.updateCursorPosition(deltaX.toFloat(), deltaY.toFloat())
-                        // 2. 获取绝对坐标并发送给服务器 (保持同步)
-                        val absPos = renderer.getCursorAbsolutePosition()
-                        conn.sendMousePosition(
-                            absPos[0].toInt().toShort(),
-                            absPos[1].toInt().toShort(),
-                            targetView.width.toShort(),
-                            targetView.height.toShort()
-                        )
-                    } else if (prefConfig.absoluteMouseMode) {
-                        // 3. 旧版绝对模式
-                        conn.sendMouseMoveAsMousePosition(
-                            deltaX.toShort(),
-                            deltaY.toShort(),
-                            targetView.width.toShort(),
-                            targetView.height.toShort()
-                        )
+                    if (isDoubleClickDrag || (confirmedDrag && buttonIndexIsLeft())) {
+                        if (dragButtonDownQueued) {
+                            queuedDragMoves.add(QueuedDragMove(deltaX, deltaY))
+                        } else {
+                            sendDragMove(deltaX, deltaY)
+                        }
                     } else {
-                        conn.sendMouseMove(deltaX.toShort(), deltaY.toShort())
+                        sendDragMove(deltaX, deltaY)
                     }
                 }
 
@@ -418,23 +412,33 @@ class RelativeTouchContext(
         return true
     }
 
+    /** Cancels the active gesture while allowing confirmed synthetic clicks to finish. */
     override fun cancelTouch() {
         cancelled = true
 
         cancelDragTimer()
         //  取消手势时丢弃未确认的延迟单击与尚未发出的拖拽按下；已确认的合成点击继续交付
-        dragButtonDownQueued = false
+        val leftDragWasSent = dragButtonDownSent
+        discardQueuedDrag()
         cancelPendingSingleTap()
         //  取消手势时，也要清理这个新计时器
         cancelDoubleTapHoldTimer()
 
         if (isDoubleClickDrag) {
-            sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT) 
+            if (leftDragWasSent) {
+                sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
+            }
             isDoubleClickDrag = false
         }
 
         if (confirmedDrag) {
-            sendMouseButtonUpProxy(getMouseButtonIndex()) 
+            if (buttonIndexIsLeft()) {
+                if (leftDragWasSent) {
+                    sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
+                }
+            } else {
+                sendMouseButtonUpProxy(getMouseButtonIndex())
+            }
         }
 
         confirmedMove = false
@@ -475,32 +479,40 @@ class RelativeTouchContext(
     }
 
     //  把一个左键合成点击排入队列；downAt为期望按下时刻(uptimeMillis)
+    /** Adds one synthetic left click to the FIFO queue and starts delivery if idle. */
     private fun scheduleLeftClick(downAt: Long, isPendingSingleTap: Boolean) {
         leftClickQueue.add(QueuedLeftClick(downAt, isPendingSingleTap))
         pumpLeftClicks()
     }
 
     //  依次交付队列中的点击：每次完整发送down+100ms up，再交付下一个
+    /** Schedules the queue head without removing it until its button-down is sent. */
     private fun pumpLeftClicks() {
         if (leftSyntheticActive || leftSyntheticDownRunnable != null) {
             return
         }
 
-        val next = leftClickQueue.pollFirst()
+        val next = leftClickQueue.peekFirst()
         if (next == null) {
-            if (dragButtonDownQueued) {
-                dragButtonDownQueued = false
-                sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT) 
-            }
+            deliverQueuedDrag()
             return
         }
 
         val wait = next.downAt - SystemClock.uptimeMillis()
         val downRunnable = Runnable {
             leftSyntheticDownRunnable = null
+            leftSyntheticDownClick = null
+            // The queue item remains visible until its down is actually sent.
+            // This keeps cancellation from removing a confirmed click's task.
+            if (leftClickQueue.peekFirst() !== next) {
+                pumpLeftClicks()
+                return@Runnable
+            }
+            leftClickQueue.removeFirst()
             startLeftSyntheticClick()
         }
         leftSyntheticDownRunnable = downRunnable
+        leftSyntheticDownClick = next
         if (wait > 0) {
             handler.postDelayed(downRunnable, wait)
         } else {
@@ -508,6 +520,7 @@ class RelativeTouchContext(
         }
     }
 
+    /** Sends one queued click and schedules its independent button-up task. */
     private fun startLeftSyntheticClick() {
         leftSyntheticActive = true
         sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT) 
@@ -518,10 +531,11 @@ class RelativeTouchContext(
             pumpLeftClicks()
         }
         leftSyntheticUpRunnable = upRunnable
-        handler.postDelayed(upRunnable, 100)
+        handler.postDelayed(upRunnable, SYNTHETIC_CLICK_HOLD_MS)
     }
 
     //  取消尚未交付的延迟单击（第一击被双击/拖拽征用时调用）
+    /** Removes only unconfirmed single taps, preserving confirmed queued clicks. */
     private fun cancelPendingSingleTap() {
         val iterator = leftClickQueue.iterator()
         while (iterator.hasNext()) {
@@ -529,21 +543,97 @@ class RelativeTouchContext(
                 iterator.remove()
             }
         }
-        leftSyntheticDownRunnable?.let { handler.removeCallbacks(it) }
-        leftSyntheticDownRunnable = null
+        val scheduledClick = leftSyntheticDownClick
+        if (scheduledClick?.isPendingSingleTap == true) {
+            leftSyntheticDownRunnable?.let { handler.removeCallbacks(it) }
+            leftSyntheticDownRunnable = null
+            leftSyntheticDownClick = null
+            if (leftClickQueue.peekFirst() === scheduledClick) {
+                leftClickQueue.removeFirst()
+            }
+        }
         pumpLeftClicks()
     }
 
     //  发送拖拽的左键按下；若有合成点击在途/在队列中则排队，
     //  避免旧点击的延迟松键提前释放新拖拽
+    /** Sends or queues a left drag press until preceding synthetic clicks complete. */
     private fun sendDragButtonDown() {
-        if (dragButtonDownQueued) {
+        if (dragButtonDownQueued || dragButtonDownSent) {
             return
         }
         if (leftSyntheticActive || leftSyntheticDownRunnable != null || !leftClickQueue.isEmpty()) {
             dragButtonDownQueued = true
         } else {
-            sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT) 
+            sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT)
+            dragButtonDownSent = true
+        }
+    }
+
+    /** Returns whether this context owns the primary left mouse button. */
+    private fun buttonIndexIsLeft(): Boolean = getMouseButtonIndex() == MouseButtonPacket.BUTTON_LEFT
+
+    /** Sends a drag movement using the same cursor mode as ordinary touch movement. */
+    private fun sendDragMove(deltaX: Int, deltaY: Int) {
+        val renderer = localCursorRenderer
+        if (renderer != null && this.enableLocalCursorRendering) {
+            renderer.updateCursorPosition(deltaX.toFloat(), deltaY.toFloat())
+            val absPos = renderer.getCursorAbsolutePosition()
+            conn.sendMousePosition(
+                absPos[0].toInt().toShort(),
+                absPos[1].toInt().toShort(),
+                targetView.width.toShort(),
+                targetView.height.toShort()
+            )
+        } else if (prefConfig.absoluteMouseMode) {
+            conn.sendMouseMoveAsMousePosition(
+                deltaX.toShort(),
+                deltaY.toShort(),
+                targetView.width.toShort(),
+                targetView.height.toShort()
+            )
+        } else {
+            conn.sendMouseMove(deltaX.toShort(), deltaY.toShort())
+        }
+    }
+
+    /** 正常抬手结束左键拖拽；若按下还在排队，等点击交付后补齐完整序列。 */
+    /** Records or sends the drag release, preserving a queued drag's complete sequence. */
+    private fun finishLeftDragGesture() {
+        if (dragButtonDownQueued) {
+            dragButtonUpQueued = true
+        } else if (dragButtonDownSent) {
+            sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
+            dragButtonDownSent = false
+        }
+    }
+
+    /** 取消尚未发出的左键拖拽，避免取消手势误释放合成点击。 */
+    /** Drops an undelivered drag request without releasing a synthetic click. */
+    private fun discardQueuedDrag() {
+        dragButtonDownQueued = false
+        dragButtonUpQueued = false
+        queuedDragMoves.clear()
+    }
+
+    /** 点击队列清空后交付排队的拖拽 down、移动和正常 up。 */
+    /** Delivers a queued drag press, buffered movement, and optional release in order. */
+    private fun deliverQueuedDrag() {
+        if (!dragButtonDownQueued) {
+            return
+        }
+
+        dragButtonDownQueued = false
+        sendMouseButtonDownProxy(MouseButtonPacket.BUTTON_LEFT)
+        dragButtonDownSent = true
+        while (!queuedDragMoves.isEmpty()) {
+            val move = queuedDragMoves.removeFirst()
+            sendDragMove(move.deltaX, move.deltaY)
+        }
+        if (dragButtonUpQueued) {
+            dragButtonUpQueued = false
+            sendMouseButtonUpProxy(MouseButtonPacket.BUTTON_LEFT)
+            dragButtonDownSent = false
         }
     }
 
@@ -587,6 +677,7 @@ class RelativeTouchContext(
         private const val DRAG_START_THRESHOLD = 10
         //  定义双击后按住多久确认为拖拽
         private const val DOUBLE_TAP_HOLD_TO_DRAG_THRESHOLD = 200
+        private const val SYNTHETIC_CLICK_HOLD_MS = 100L
         /** 定义双击时，两次点击位置的最大允许偏差 */
         private const val DOUBLE_TAP_MOVEMENT_THRESHOLD = 40
 
