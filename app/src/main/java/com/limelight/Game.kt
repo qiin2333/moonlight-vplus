@@ -984,13 +984,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             val newRenderer = MediaCodecDecoderRenderer(
                 this, prefConfig,
                 {
-                    tombstonePrefs.edit(commit = true) {
-                        putInt(
-                            "CrashCount",
-                            tombstonePrefs.getInt("CrashCount", 0) + 1
-                        )
+                    if (decoderRenderer === rendererForFailure) {
+                        onActiveRendererFailure()
+                    } else {
+                        // A discarded renderer's callback must not count toward the
+                        // active renderer's crash accounting or report state.
+                        LimeLog.info("Ignoring stale renderer crash callback")
                     }
-                    reportedCrash = true
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
                 connMgr.isActiveNetworkMetered,
@@ -1003,7 +1003,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                         LimeLog.info("Ignoring stale PyroWave failure: $reason")
                     } else {
                         LimeLog.severe("PyroWave decoder session failed: $reason")
-                        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+                        onActiveRendererFailure()
                     }
                 }
             )
@@ -1294,6 +1294,25 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val displayRefreshRate: Float,
         val clientRefreshRateX100: Int
     )
+
+    /**
+     * Shared terminal path for the active renderer's fatal failure callbacks
+     * (codec crash and PyroWave session failure): count the crash, mark it
+     * reported, and end the stream through the standard failure dialog instead
+     * of crashing the process. Callers must verify the failing renderer is
+     * still the active one so a discarded renderer cannot pollute the new
+     * connection's accounting.
+     */
+    private fun onActiveRendererFailure() {
+        tombstonePrefs.edit(commit = true) {
+            putInt(
+                "CrashCount",
+                tombstonePrefs.getInt("CrashCount", 0) + 1
+            )
+        }
+        reportedCrash = true
+        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+    }
 
     private fun prepareConnection() {
         audioVibrationService?.stop()
