@@ -357,6 +357,9 @@ class ControllerHandler(
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
     private val driverControllerContextsLifecycleLock = Any()
+    // Serializes lights session transfer in migrateContext/close in destroy() (main thread)
+    // against session open/requestLights in handleSetControllerLED (common-c callback thread).
+    internal val lightsSessionLock = Any()
 
     internal val deviceVibrator: Vibrator
     private val deviceVibratorManager: VibratorManager?
@@ -588,10 +591,14 @@ class ControllerHandler(
 
         LimeLog.info("Device changed: " + existingContext.name + " (" + deviceId + ")")
 
-        // Migrate the existing context into this new one by moving any stateful elements
+        // Migrate the existing context into this new one by moving any stateful elements.
+        // Publish the new context under lightsSessionLock so the LED command thread can't
+        // open a session on the old context while it is being migrated and destroyed.
         val newContext = createInputDeviceContextForDevice(device)
-        newContext.migrateContext(existingContext)
-        inputDeviceContexts.put(deviceId, newContext)
+        synchronized(lightsSessionLock) {
+            newContext.migrateContext(existingContext)
+            inputDeviceContexts.put(deviceId, newContext)
+        }
         refreshSystemWaveformRoutes()
         if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
             gyroManager.onControllerSourceChanged(newContext.controllerNumber)
