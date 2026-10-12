@@ -1058,17 +1058,23 @@ class MediaCodecDecoderRenderer(
         framegenOutputSwitchRetryCount.set(0)
         framegenOutputSwitchPending =
             pendingFramegenSurface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        // The render target is released concurrently with codec recovery (activity relaunch,
+        // stream stop). Fail with the exception type every configureAndStartDecoder caller
+        // already treats as an invalid surface instead of crashing on a null dereference.
+        fun directOutputSurface(): Surface =
+            renderTarget?.surface
+                ?: throw IllegalArgumentException("Render target was released before decoder configuration")
         val outSurface = if (framegenOutputSwitchPending) {
             LimeLog.info(
                 "Framegen delayed capture active: decoder starts on SurfaceView " +
                     "and will switch to ImageReader after first direct frame"
             )
-            renderTarget!!.surface
+            directOutputSurface()
         } else {
             if (pendingFramegenSurface != null) {
                 LimeLog.info("Framegen capture surface active (decoder output redirected to ImageReader)")
             }
-            pendingFramegenSurface ?: renderTarget!!.surface
+            pendingFramegenSurface ?: directOutputSurface()
         }
         videoDecoder!!.configure(format, outSurface, null, 0)
 
@@ -1081,7 +1087,7 @@ class MediaCodecDecoderRenderer(
                 prefs.hdrMode,
                 getPreferredColorRange(),
             )
-            applyHdrDataSpace(renderTarget!!.surface, "decoder output")
+            renderTarget?.surface?.let { applyHdrDataSpace(it, "decoder output") }
         }
 
         configuredFormat = format
