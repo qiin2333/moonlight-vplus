@@ -35,7 +35,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"
-                android:paddingTop="@dimen/activity_safearea_top"/>
+                android:paddingTop="@dimen/activity_safearea_top"
+                android:nextFocusUp="@id/settings_search_icon"/>
 
             <!-- 浮动菜单按钮（右上角）- 精致圆形设计 -->
             <ImageView
@@ -52,6 +53,7 @@
                 android:scaleType="center"
                 android:padding="10dp"
                 android:elevation="6dp"
+                android:nextFocusLeft="@id/settings_search_icon"
                 android:contentDescription="@string/menu" />
 
             <!-- 浮动搜索按钮（菜单按钮左侧）- 同风格 -->
@@ -85,15 +87,21 @@
                 android:background="@drawable/settings_search_bar_background"
                 android:elevation="6dp"
                 android:visibility="gone"
-                android:paddingStart="14dp"
+                android:paddingStart="8dp"
                 android:paddingEnd="6dp">
 
                 <ImageView
                     android:id="@+id/settings_search_icon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     app:srcCompat="@drawable/ic_search_stylish"
-                    android:layout_marginEnd="10dp"
+                    android:scaleType="center"
+                    android:padding="7dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="false"
+                    android:defaultFocusHighlightEnabled="false"
+                    android:nextFocusRight="@id/settings_search_close"
+                    android:nextFocusDown="@id/preference_container"
                     android:contentDescription="@string/settings_search_hint" />
 
                 <EditText
@@ -101,6 +109,7 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
+                    android:layout_marginStart="8dp"
                     android:background="@android:color/transparent"
                     android:hint="@string/settings_search_hint"
                     android:textColor="@color/ui_shell_text_primary"
@@ -110,6 +119,8 @@
                     android:inputType="text"
                     android:singleLine="true"
                     android:maxLines="1"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"
                     android:importantForAutofill="no" />
 
                 <ImageView
@@ -119,7 +130,10 @@
                     android:src="@drawable/ic_close_stylish"
                     android:scaleType="center"
                     android:padding="6dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:focusable="true"
+                    android:defaultFocusHighlightEnabled="false"
+                    android:nextFocusLeft="@id/settings_search_icon"
+                    android:nextFocusDown="@id/preference_container"
                     android:contentDescription="@string/settings_search_close" />
 
             </LinearLayout>

@@ -77,6 +77,8 @@
                         android:background="@drawable/menu_button_background_stylish"
                         android:scaleType="center"
                         android:padding="10dp"
+                        android:nextFocusRight="@id/preference_container"
+                        android:nextFocusDown="@id/settings_search_icon"
                         android:contentDescription="@string/addpc_back" />
 
                 </FrameLayout>
@@ -91,15 +93,22 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="@drawable/settings_search_bar_background"
-                    android:paddingStart="10dp"
+                    android:paddingStart="6dp"
                     android:paddingEnd="4dp">
 
                     <ImageView
                         android:id="@+id/settings_search_icon"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         app:srcCompat="@drawable/ic_search_stylish"
-                        android:layout_marginEnd="6dp"
+                        android:scaleType="center"
+                        android:padding="7dp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="false"
+                        android:defaultFocusHighlightEnabled="false"
+                        android:nextFocusUp="@id/settings_back"
+                        android:nextFocusRight="@id/settings_search_close"
+                        android:nextFocusDown="@id/category_list"
                         android:contentDescription="@string/settings_search_hint" />
 
                     <EditText
@@ -107,6 +116,7 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
+                        android:layout_marginStart="6dp"
                         android:background="@android:color/transparent"
                         android:hint="@string/settings_search_hint"
                         android:textColor="@color/ui_shell_text_primary"
@@ -116,6 +126,8 @@
                         android:inputType="text"
                         android:singleLine="true"
                         android:maxLines="1"
+                        android:focusable="false"
+                        android:focusableInTouchMode="false"
                         android:importantForAutofill="no" />
 
                     <ImageView
@@ -125,7 +137,12 @@
                         android:src="@drawable/ic_close_stylish"
                         android:scaleType="center"
                         android:padding="5dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:focusable="true"
+                        android:defaultFocusHighlightEnabled="false"
+                        android:nextFocusLeft="@id/settings_search_icon"
+                        android:nextFocusRight="@id/preference_container"
+                        android:nextFocusUp="@id/settings_back"
+                        android:nextFocusDown="@id/category_list"
                         android:contentDescription="@string/settings_search_clear" />
 
                 </LinearLayout>
@@ -139,6 +156,7 @@
                     android:scrollbars="none"
                     android:overScrollMode="never"
                     android:clipToPadding="false"
+                    android:nextFocusUp="@id/settings_search_icon"
                     android:paddingTop="4dp"
                     android:paddingBottom="4dp" />
 
@@ -170,7 +188,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@android:color/transparent"
-                    android:paddingTop="@dimen/activity_safearea_top"/>
+                    android:paddingTop="@dimen/activity_safearea_top"
+                    android:nextFocusLeft="@id/settings_search_icon"/>
 
             </RelativeLayout>
 
