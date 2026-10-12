@@ -316,4 +316,6 @@
     <string name="mouse_axis_correction_90">Elforgatás 90 fokkal</string>
     <string name="mouse_axis_correction_180">Elforgatás 180 fokkal</string>
     <string name="mouse_axis_correction_270">Elforgatás 270 fokkal</string>
+    <string name="summary_checkbox_reverse_resolution">Csak akkor engedélyezze, ha a kép tájolása vagy méretei hibásak; ütközhet az eszközforgatás követésével.</string>
+    <string name="summary_checkbox_rotable_screen">Automatikusan szinkronizálja a stream elrendezését, amikor az eszköz álló és fekvő tájolás között vált.</string>
 </resources>

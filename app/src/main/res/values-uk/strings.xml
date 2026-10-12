@@ -355,4 +355,6 @@
     <string name="mouse_axis_correction_90">Повернути на 90 градусів</string>
     <string name="mouse_axis_correction_180">Повернути на 180 градусів</string>
     <string name="mouse_axis_correction_270">Повернути на 270 градусів</string>
+    <string name="summary_checkbox_reverse_resolution">Вмикайте лише якщо орієнтація або розміри зображення неправильні; може конфліктувати з поворотом відповідно до орієнтації пристрою.</string>
+    <string name="summary_checkbox_rotable_screen">Автоматично синхронізує макет трансляції, коли пристрій перемикається між книжковою та альбомною орієнтацією.</string>
 </resources>

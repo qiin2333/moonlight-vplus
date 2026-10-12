@@ -249,4 +249,6 @@
     <string name="mouse_axis_correction_90">90 derece döndür</string>
     <string name="mouse_axis_correction_180">180 derece döndür</string>
     <string name="mouse_axis_correction_270">270 derece döndür</string>
+    <string name="summary_checkbox_reverse_resolution">Yalnızca görüntü yönü veya boyutları hatalı olduğunda etkinleştirin; cihaz döndürmeyi izleme ayarıyla çakışabilir.</string>
+    <string name="summary_checkbox_rotable_screen">Cihaz dikey ve yatay yön arasında geçiş yaptığında akış düzenini otomatik olarak senkronize eder.</string>
 </resources>

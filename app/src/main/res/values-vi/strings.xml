@@ -291,4 +291,6 @@
     <string name="mouse_axis_correction_90">Xoay 90 độ</string>
     <string name="mouse_axis_correction_180">Xoay 180 độ</string>
     <string name="mouse_axis_correction_270">Xoay 270 độ</string>
+    <string name="summary_checkbox_reverse_resolution">Chỉ bật khi hướng hoặc kích thước hình ảnh không chính xác; có thể xung đột với tính năng xoay theo thiết bị.</string>
+    <string name="summary_checkbox_rotable_screen">Tự động đồng bộ bố cục truyền phát khi thiết bị chuyển giữa hướng dọc và hướng ngang.</string>
 </resources>

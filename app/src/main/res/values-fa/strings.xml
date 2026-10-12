@@ -62,4 +62,6 @@
     <string name="mouse_axis_correction_90">چرخش ۹۰ درجه</string>
     <string name="mouse_axis_correction_180">چرخش ۱۸۰ درجه</string>
     <string name="mouse_axis_correction_270">چرخش ۲۷۰ درجه</string>
+    <string name="summary_checkbox_reverse_resolution">فقط وقتی فعال کنید که جهت یا ابعاد تصویر نادرست باشد؛ ممکن است با چرخش دستگاه تداخل داشته باشد.</string>
+    <string name="summary_checkbox_rotable_screen">با تغییر دستگاه بین حالت عمودی و افقی، چیدمان پخش را به‌صورت خودکار همگام می‌کند.</string>
 </resources>
