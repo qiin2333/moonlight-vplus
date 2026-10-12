@@ -105,6 +105,7 @@ import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.HdrCapabilityHelper
+import com.limelight.utils.RemoteImeAutoShowPolicy
 import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
@@ -3576,8 +3577,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                 category.removePreference(findPreference("checkbox_gamepad_motion_fallback")!!)
             }
 
-            // Remote text field auto-show needs the API 33 auto-handwriting shield.
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // Remote text field auto-show uses the temporary input connection on API 30+.
+            // API 33+ additionally enables StreamView's auto-handwriting shield.
+            if (!RemoteImeAutoShowPolicy.isSupported(Build.VERSION.SDK_INT)) {
                 findPreference<Preference>("checkbox_remote_ime_auto_show")?.isVisible = false
             }
 
