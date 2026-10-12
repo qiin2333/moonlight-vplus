@@ -285,4 +285,10 @@
     <string name="image_save_failed_with_error">Không thể lưu ảnh: %1$s</string>
     <string name="tip_double_tap_mouse">Mẹo: nhấn và giữ vùng trống phía trên danh sách máy tính để lưu ảnh nền hiện tại.</string>
     <string name="pyrowave_negotiation_fallback">Thương lượng PyroWave thất bại. Chuyển sang %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Điều chỉnh hướng chuột</string>
+    <string name="summary_list_mouse_axis_correction">Xoay chuyển động chuột được ghi nhận trước khi gửi đến máy chủ. Chỉ thay đổi khi thiết bị Android báo các trục chuột bị xoay.</string>
+    <string name="mouse_axis_correction_off">Tắt</string>
+    <string name="mouse_axis_correction_90">Xoay 90 độ</string>
+    <string name="mouse_axis_correction_180">Xoay 180 độ</string>
+    <string name="mouse_axis_correction_270">Xoay 270 độ</string>
 </resources>

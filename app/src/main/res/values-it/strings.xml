@@ -345,4 +345,10 @@
     <string name="image_save_failed_with_error">Salvataggio dell\'immagine non riuscito: %1$s</string>
     <string name="tip_double_tap_mouse">Suggerimento: tieni premuta l\'area vuota in alto nell\'elenco dei computer per salvare l\'immagine di sfondo attuale.</string>
     <string name="pyrowave_negotiation_fallback">La negoziazione di PyroWave non è riuscita. Passaggio a %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correzione della direzione del mouse</string>
+    <string name="summary_list_mouse_axis_correction">Ruota il movimento del mouse acquisito prima di inviarlo all’host. Modifica questa opzione solo se un dispositivo Android segnala assi del mouse ruotati.</string>
+    <string name="mouse_axis_correction_off">Disattivato</string>
+    <string name="mouse_axis_correction_90">Ruota di 90 gradi</string>
+    <string name="mouse_axis_correction_180">Ruota di 180 gradi</string>
+    <string name="mouse_axis_correction_270">Ruota di 270 gradi</string>
 </resources>

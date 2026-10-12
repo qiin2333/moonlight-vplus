@@ -275,4 +275,10 @@
     <string name="image_save_failed_with_error">Afbeelding opslaan mislukt: %1$s</string>
     <string name="tip_double_tap_mouse">Tip: houd het lege gebied bovenaan de computerlijst ingedrukt om de huidige achtergrondafbeelding op te slaan.</string>
     <string name="pyrowave_negotiation_fallback">De PyroWave-onderhandeling is mislukt. Er wordt overgeschakeld naar %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correctie van muisrichting</string>
+    <string name="summary_list_mouse_axis_correction">Geregistreerde muisbeweging draaien voordat deze naar de host wordt verzonden. Wijzig dit alleen als een Android-apparaat gedraaide muisassen meldt.</string>
+    <string name="mouse_axis_correction_off">Uit</string>
+    <string name="mouse_axis_correction_90">90 graden draaien</string>
+    <string name="mouse_axis_correction_180">180 graden draaien</string>
+    <string name="mouse_axis_correction_270">270 graden draaien</string>
 </resources>

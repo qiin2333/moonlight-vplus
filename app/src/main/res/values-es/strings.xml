@@ -603,4 +603,10 @@
     <string name="image_saved_successfully">Imagen guardada correctamente en: Picture/vplus</string>
     <string name="image_save_failed_with_error">No se pudo guardar la imagen: %1$s</string>
     <string name="pyrowave_negotiation_fallback">La negociación de PyroWave ha fallado. Se cambia a %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Corrección de la dirección del ratón</string>
+    <string name="summary_list_mouse_axis_correction">Gira el movimiento del ratón capturado antes de enviarlo al host. Cámbialo solo si un dispositivo Android informa de ejes del ratón girados.</string>
+    <string name="mouse_axis_correction_off">Desactivado</string>
+    <string name="mouse_axis_correction_90">Girar 90 grados</string>
+    <string name="mouse_axis_correction_180">Girar 180 grados</string>
+    <string name="mouse_axis_correction_270">Girar 270 grados</string>
 </resources>

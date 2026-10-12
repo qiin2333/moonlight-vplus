@@ -264,4 +264,10 @@
     <string name="image_save_failed_with_error">Αποτυχία αποθήκευσης εικόνας: %1$s</string>
     <string name="tip_double_tap_mouse">Συμβουλή: πατήστε παρατεταμένα την κενή περιοχή στο πάνω μέρος της λίστας υπολογιστών για να αποθηκεύσετε την τρέχουσα εικόνα φόντου.</string>
     <string name="pyrowave_negotiation_fallback">Η διαπραγμάτευση PyroWave απέτυχε. Μετάβαση σε %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Διόρθωση κατεύθυνσης ποντικιού</string>
+    <string name="summary_list_mouse_axis_correction">Περιστροφή της καταγεγραμμένης κίνησης του ποντικιού πριν από την αποστολή στον κεντρικό υπολογιστή. Αλλάξτε το μόνο αν μια συσκευή Android αναφέρει περιστραμμένους άξονες ποντικιού.</string>
+    <string name="mouse_axis_correction_off">Απενεργοποιημένο</string>
+    <string name="mouse_axis_correction_90">Περιστροφή 90 μοιρών</string>
+    <string name="mouse_axis_correction_180">Περιστροφή 180 μοιρών</string>
+    <string name="mouse_axis_correction_270">Περιστροφή 270 μοιρών</string>
 </resources>

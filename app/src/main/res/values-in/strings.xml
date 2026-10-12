@@ -266,4 +266,10 @@
     <string name="image_save_failed_with_error">Gagal menyimpan gambar: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tekan lama area kosong di bagian atas daftar komputer untuk menyimpan gambar latar saat ini.</string>
     <string name="pyrowave_negotiation_fallback">Negosiasi PyroWave gagal. Beralih ke %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Koreksi arah mouse</string>
+    <string name="summary_list_mouse_axis_correction">Putar gerakan mouse yang ditangkap sebelum mengirimkannya ke host. Ubah hanya jika perangkat Android melaporkan sumbu mouse terputar.</string>
+    <string name="mouse_axis_correction_off">Nonaktif</string>
+    <string name="mouse_axis_correction_90">Putar 90 derajat</string>
+    <string name="mouse_axis_correction_180">Putar 180 derajat</string>
+    <string name="mouse_axis_correction_270">Putar 270 derajat</string>
 </resources>

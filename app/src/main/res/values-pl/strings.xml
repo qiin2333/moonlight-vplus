@@ -338,4 +338,10 @@
     <string name="image_save_failed_with_error">Nie udało się zapisać obrazu: %1$s</string>
     <string name="tip_double_tap_mouse">Wskazówka: przytrzymaj pusty obszar u góry listy komputerów, aby zapisać bieżący obraz tła.</string>
     <string name="pyrowave_negotiation_fallback">Negocjacja PyroWave nie powiodła się. Przełączanie na %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Korekta kierunku myszy</string>
+    <string name="summary_list_mouse_axis_correction">Obróć przechwycony ruch myszy przed wysłaniem go do hosta. Zmień to tylko wtedy, gdy urządzenie z Androidem zgłasza obrócone osie myszy.</string>
+    <string name="mouse_axis_correction_off">Wyłączone</string>
+    <string name="mouse_axis_correction_90">Obróć o 90 stopni</string>
+    <string name="mouse_axis_correction_180">Obróć o 180 stopni</string>
+    <string name="mouse_axis_correction_270">Obróć o 270 stopni</string>
 </resources>

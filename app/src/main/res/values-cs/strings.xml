@@ -313,4 +313,10 @@
     <string name="image_save_failed_with_error">Uložení obrázku se nezdařilo: %1$s</string>
     <string name="tip_double_tap_mouse">Tip: dlouhým stisknutím prázdné oblasti v horní části seznamu počítačů uložíte aktuální obrázek pozadí.</string>
     <string name="pyrowave_negotiation_fallback">Vyjednání PyroWave selhalo. Přepíná se na %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Oprava směru myši</string>
+    <string name="summary_list_mouse_axis_correction">Před odesláním hostiteli otočte zachycený pohyb myši. Změňte pouze v případě, že zařízení Android hlásí otočené osy myši.</string>
+    <string name="mouse_axis_correction_off">Vypnuto</string>
+    <string name="mouse_axis_correction_90">Otočit o 90 stupňů</string>
+    <string name="mouse_axis_correction_180">Otočit o 180 stupňů</string>
+    <string name="mouse_axis_correction_270">Otočit o 270 stupňů</string>
 </resources>

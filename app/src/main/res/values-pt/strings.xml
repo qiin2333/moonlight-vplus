@@ -763,4 +763,10 @@
     <string name="pyrowave_diag_copy_success">Relatório copiado para a área de transferência</string>
     <string name="pyrowave_diag_unavailable">Indisponível</string>
     <string name="pyrowave_negotiation_fallback">A negociação do PyroWave falhou. A mudar para %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correção da direção do rato</string>
+    <string name="summary_list_mouse_axis_correction">Rodar o movimento do rato capturado antes de o enviar para o anfitrião. Altere isto apenas se um dispositivo Android indicar eixos do rato rodados.</string>
+    <string name="mouse_axis_correction_off">Desativado</string>
+    <string name="mouse_axis_correction_90">Rodar 90 graus</string>
+    <string name="mouse_axis_correction_180">Rodar 180 graus</string>
+    <string name="mouse_axis_correction_270">Rodar 270 graus</string>
 </resources>
