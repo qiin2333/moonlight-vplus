@@ -17,9 +17,9 @@ import com.limelight.nvstream.ImeAvoidanceSession
 import com.limelight.ui.StreamView
 
 /**
- * Avoids the open IME over the host's focused field. On API 33+ a trusted host
- * activation may also open the keyboard; the view's auto-handwriting shield keeps
- * stylus strokes on the video remote, so the temporary input connection stays safe.
+ * Avoids the open IME over the host's focused field. On API 30+ a trusted host
+ * activation may also open the keyboard; API 33+ additionally uses the view's
+ * auto-handwriting shield so stylus strokes stay on the video remote.
  */
 class RemoteImeController(
     private val activity: Activity,
@@ -35,7 +35,7 @@ class RemoteImeController(
     @Volatile private var disposed = false
     private var generation = 0L
     private val avoidanceSession = ImeAvoidanceSession()
-    private val canAutoShow = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    private val canAutoShow = RemoteImeAutoShowPolicy.isSupported(Build.VERSION.SDK_INT)
     // Records the activation that already received its automatic show chance, so
     // later revisions of the same activation never re-open against a dismissal.
     private var autoShownActivationId = 0L
