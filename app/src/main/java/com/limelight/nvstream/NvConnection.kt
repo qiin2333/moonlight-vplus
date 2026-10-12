@@ -755,34 +755,40 @@ open class NvConnection(
                 callback?.onFailure(appContext.getString(R.string.connection_http_failed, e.message.orEmpty()))
                 return@Thread
             }
-            try {
+            // The catch blocks cover only the bitrate operation; callbacks run after it
+            // settles so a throwing callback is not re-reported as a second failure.
+            val failureMessage = try {
                 LimeLog.info("Sending bitrate adjustment request...")
-                val success = h.setBitrate(bitrateKbps)
-                if (success) {
+                if (h.setBitrate(bitrateKbps)) {
                     context.streamConfig.bitrate = bitrateKbps
                     LimeLog.info("Bitrate adjustment successful, updated local config to $bitrateKbps kbps")
-                    callback?.onSuccess(bitrateKbps)
+                    null
                 } else {
                     LimeLog.warning("Bitrate adjustment request failed (server returned false)")
-                    callback?.onFailure(appContext.getString(R.string.connection_server_failed))
+                    appContext.getString(R.string.connection_server_failed)
                 }
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
                 LimeLog.warning("Bitrate adjustment interrupted: ${e.message}")
-                callback?.onFailure(appContext.getString(R.string.connection_operation_interrupted))
+                appContext.getString(R.string.connection_operation_interrupted)
             } catch (e: IOException) {
                 LimeLog.warning("Failed to set bitrate: ${e.message}")
                 e.printStackTrace()
-                callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
+                appContext.getString(R.string.connection_network_error, e.message.orEmpty())
             } catch (e: XmlPullParserException) {
                 LimeLog.warning("Failed to set bitrate: ${e.message}")
                 e.printStackTrace()
-                callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
+                appContext.getString(R.string.connection_network_error, e.message.orEmpty())
             } catch (e: Exception) {
                 // A failed background bitrate adjustment must never kill the process.
                 LimeLog.warning("Unexpected error during bitrate adjustment: ${e.message}")
                 e.printStackTrace()
-                callback?.onFailure(appContext.getString(R.string.connection_network_error, e.message.orEmpty()))
+                appContext.getString(R.string.connection_network_error, e.message.orEmpty())
+            }
+            if (failureMessage != null) {
+                callback?.onFailure(failureMessage)
+            } else {
+                callback?.onSuccess(bitrateKbps)
             }
         }.start()
     }
