@@ -41,6 +41,24 @@ class DiskAssetLoaderSamplingTest {
     }
 
     @Test
+    fun compressesWithoutBreakingAspectRatio() {
+        // 旧实现对横版图把高度独立钳到 400（782×335 → 782×400，拉伸 19%），
+        // 极窄竖条走宽度钳制同理；现在任何比例都保持原宽高比
+        assertEquals(782 to 335, DiskAssetLoader.compressedDimensions(1024, 439, 1024 * 439 * 4, 1024 * 1024))
+        assertEquals(280 to 935, DiskAssetLoader.compressedDimensions(300, 1000, 1200000, 1024 * 1024))
+    }
+
+    @Test
+    fun passesBitmapsBelowBudgetThroughUnchanged() {
+        assertEquals(500 to 400, DiskAssetLoader.compressedDimensions(500, 400, 500 * 400 * 4, 1024 * 1024))
+    }
+
+    @Test
+    fun floorsCompressedDimensionsAtOnePixel() {
+        assertEquals(1 to 1, DiskAssetLoader.compressedDimensions(2, 2, 4 * 1024 * 1024, 1024 * 1024))
+    }
+
+    @Test
     fun ignoresInvalidInputs() {
         assertEquals(1, DiskAssetLoader.capInSampleSize(1, 4900, 4900, 0))
         assertEquals(3, DiskAssetLoader.capInSampleSize(3, 4900, 4900, -1))

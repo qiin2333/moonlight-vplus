@@ -196,7 +196,8 @@ class DiskAssetLoader(context: Context) {
     }
 
     /**
-     * 压缩过大的Bitmap
+     * 压缩过大的Bitmap：等比缩放到 1MB 内。不设最小宽高钳制——
+     * 两维独立钳制会破坏宽高比（横版封面被竖向拉伸）。
      */
     private fun compressLargeBitmap(original: Bitmap?): Bitmap? {
         if (original == null) return null
@@ -206,12 +207,7 @@ class DiskAssetLoader(context: Context) {
 
         if (byteCount > maxSize) {
             try {
-                val scale = sqrt(maxSize.toDouble() / byteCount).toFloat()
-                var newWidth = round(original.width * scale).toInt()
-                var newHeight = round(original.height * scale).toInt()
-
-                newWidth = max(newWidth, 300)
-                newHeight = max(newHeight, 400)
+                val (newWidth, newHeight) = compressedDimensions(original.width, original.height, byteCount, maxSize)
 
                 val compressed = Bitmap.createScaledBitmap(original, newWidth, newHeight, true)
 
@@ -310,6 +306,17 @@ class DiskAssetLoader(context: Context) {
                 sampleSize *= 2
             }
             return sampleSize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        }
+
+        /**
+         * 等比压缩维度：byteCount 超过 maxBytes 时按面积比缩放，宽高比不变。
+         * 不设最小显示尺寸；维度下限 1，防止极端比例 round 到 0 使
+         * createScaledBitmap 抛异常。
+         */
+        fun compressedDimensions(width: Int, height: Int, byteCount: Int, maxBytes: Int): Pair<Int, Int> {
+            if (byteCount <= maxBytes) return width to height
+            val scale = sqrt(maxBytes.toDouble() / byteCount).toFloat()
+            return max(1, round(width * scale).toInt()) to max(1, round(height * scale).toInt())
         }
     }
 }
