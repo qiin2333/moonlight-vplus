@@ -1381,8 +1381,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
         KeyboardAccessibilityService.connectionListener = keyboardAccessibilityConnectionListener
-        bindKeyboardAccessibility(KeyboardAccessibilityService.instance)
-        KeyboardAccessibilityEnabler.requestEnableForCurrentForegroundCycle(this)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
+            bindKeyboardAccessibility(KeyboardAccessibilityService.instance)
+            KeyboardAccessibilityEnabler.requestEnableForCurrentForegroundCycle(this)
+        }
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
@@ -1511,6 +1513,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         micButton?.visibility = if (
             snapshot.microphoneButtonVisible && prefConfig.enableMic
         ) View.VISIBLE else View.GONE
+        bindKeyboardAccessibility(KeyboardAccessibilityService.instance)
+        KeyboardAccessibilityEnabler.requestEnableForCurrentForegroundCycle(this)
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
     }

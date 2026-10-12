@@ -6,6 +6,7 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
+import android.os.RemoteException
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.preferences.PreferenceConfiguration
@@ -15,6 +16,12 @@ object KeyboardAccessibilityEnabler {
     private const val REQUEST_PERMISSION = 26012
     private val attemptLock = Any()
     private var attemptStarted = false
+    private var activeBinding: Binding? = null
+
+    private class Binding(
+        val args: Shizuku.UserServiceArgs,
+        val connection: ServiceConnection
+    )
 
     enum class AuthorizationState {
         NOT_INSTALLED,
@@ -73,9 +80,11 @@ object KeyboardAccessibilityEnabler {
     ): Boolean = enabled && !serviceRunning && authorized && !attemptStarted
 
     fun resetForegroundAttempt() {
-        synchronized(attemptLock) {
+        val binding = synchronized(attemptLock) {
             attemptStarted = false
+            activeBinding.also { activeBinding = null }
         }
+        if (binding != null) unbind(binding)
     }
 
     private fun enableInShell(context: Context) {
@@ -86,22 +95,41 @@ object KeyboardAccessibilityEnabler {
             .processNameSuffix("keyboard_accessibility")
             .debuggable(BuildConfig.DEBUG)
             .version(BuildConfig.VERSION_CODE)
-        try {
-            Shizuku.bindUserService(args, object : ServiceConnection {
-                override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-                    try {
-                        IKeyboardAccessibilityShell.Stub.asInterface(binder).enable(packageName, component)
-                    } catch (e: RuntimeException) {
-                        LimeLog.warning("Shizuku could not enable keyboard accessibility: ${e.message}")
-                    } finally {
-                        Shizuku.unbindUserService(args, this, true)
-                    }
+        lateinit var connection: ServiceConnection
+        connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                val stillActive = synchronized(attemptLock) { activeBinding?.connection === connection }
+                if (!stillActive) return
+                try {
+                    IKeyboardAccessibilityShell.Stub.asInterface(binder).enable(packageName, component)
+                } catch (e: RemoteException) {
+                    LimeLog.warning("Shizuku could not enable keyboard accessibility: ${e.message}")
+                } catch (e: RuntimeException) {
+                    LimeLog.warning("Shizuku could not enable keyboard accessibility: ${e.message}")
                 }
+            }
 
-                override fun onServiceDisconnected(name: ComponentName) = Unit
-            })
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        val binding = Binding(args, connection)
+        synchronized(attemptLock) {
+            activeBinding = binding
+        }
+        try {
+            Shizuku.bindUserService(args, binding.connection)
         } catch (e: RuntimeException) {
+            synchronized(attemptLock) {
+                if (activeBinding === binding) activeBinding = null
+            }
             LimeLog.warning("Shizuku could not start keyboard accessibility service: ${e.message}")
+        }
+    }
+
+    private fun unbind(binding: Binding) {
+        try {
+            Shizuku.unbindUserService(binding.args, binding.connection, true)
+        } catch (e: RuntimeException) {
+            LimeLog.warning("Shizuku could not stop keyboard accessibility service: ${e.message}")
         }
     }
 }
