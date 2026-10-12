@@ -587,6 +587,16 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                     // in destroy(). updateLightbar() above stays outside: it's a blocking
                     // BT/USB write that must not stall the main thread behind this lock.
                     synchronized(handler.lightsSessionLock) {
+                        // This context was read from the map before the lock was taken,
+                        // so re-validate it: the main thread may have migrated it
+                        // (onInputDeviceChanged), removed it (onInputDeviceRemoved),
+                        // or torn the handler down while we waited. Opening a session on
+                        // a stale context would leak it with nothing left to close it.
+                        if (handler.stopped ||
+                            handler.inputDeviceContexts.get(deviceContext.id) !== deviceContext
+                        ) {
+                            return@synchronized
+                        }
                         try {
                             // Create a new light session if one doesn't already exist
                             if (deviceContext.lightsSession == null) {

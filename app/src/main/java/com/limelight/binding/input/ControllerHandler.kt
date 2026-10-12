@@ -555,8 +555,15 @@ class ControllerHandler(
             }
             LimeLog.info("Removed controller: " + context.name + " (" + deviceId + ")")
             releaseControllerNumber(context)
-            context.destroy()
-            inputDeviceContexts.remove(deviceId)
+            // destroy() and the map removal must be atomic with respect to the LED
+            // command thread: it re-validates under lightsSessionLock that the context
+            // is still published before opening a session, so destroy-before-remove
+            // would otherwise let it open a session on a dying context that nothing
+            // will ever close.
+            synchronized(lightsSessionLock) {
+                context.destroy()
+                inputDeviceContexts.remove(deviceId)
+            }
             joyConSupport.peer(context)?.takeIf { it.assignedControllerNumber }?.let {
                 refreshControllerArrival(it)
                 // Destroying the removed half may release a local menu capture.
