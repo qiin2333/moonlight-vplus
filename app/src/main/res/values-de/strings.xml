@@ -347,4 +347,6 @@
     <string name="mouse_axis_correction_90">Um 90 Grad drehen</string>
     <string name="mouse_axis_correction_180">Um 180 Grad drehen</string>
     <string name="mouse_axis_correction_270">Um 270 Grad drehen</string>
+    <string name="summary_checkbox_reverse_resolution">Nur aktivieren, wenn Ausrichtung oder Abmessungen des Bildes nicht stimmen; kann mit der Drehung des Geräts in Konflikt geraten.</string>
+    <string name="summary_checkbox_rotable_screen">Synchronisiert das Stream-Layout automatisch, wenn das Gerät zwischen Hoch- und Querformat wechselt.</string>
 </resources>

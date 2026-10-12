@@ -265,4 +265,6 @@
     <string name="mouse_axis_correction_90">Roter 90 grader</string>
     <string name="mouse_axis_correction_180">Roter 180 grader</string>
     <string name="mouse_axis_correction_270">Roter 270 grader</string>
+    <string name="summary_checkbox_reverse_resolution">Aktiver bare når bilderetningen eller -dimensjonene er feil; kan komme i konflikt med å følge enhetens rotasjon.</string>
+    <string name="summary_checkbox_rotable_screen">Synkroniserer strømmelayouten automatisk når enheten bytter mellom stående og liggende retning.</string>
 </resources>

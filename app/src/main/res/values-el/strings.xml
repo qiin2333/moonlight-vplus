@@ -270,4 +270,6 @@
     <string name="mouse_axis_correction_90">Περιστροφή 90 μοιρών</string>
     <string name="mouse_axis_correction_180">Περιστροφή 180 μοιρών</string>
     <string name="mouse_axis_correction_270">Περιστροφή 270 μοιρών</string>
+    <string name="summary_checkbox_reverse_resolution">Ενεργοποιήστε το μόνο όταν ο προσανατολισμός ή οι διαστάσεις της εικόνας είναι λανθασμένα· μπορεί να έρχεται σε σύγκρουση με την περιστροφή σύμφωνα με τη συσκευή.</string>
+    <string name="summary_checkbox_rotable_screen">Συγχρονίζει αυτόματα τη διάταξη της ροής όταν η συσκευή αλλάζει μεταξύ κατακόρυφου και οριζόντιου προσανατολισμού.</string>
 </resources>

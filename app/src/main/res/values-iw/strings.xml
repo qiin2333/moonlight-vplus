@@ -215,4 +215,6 @@
     <string name="mouse_axis_correction_90">סיבוב של 90 מעלות</string>
     <string name="mouse_axis_correction_180">סיבוב של 180 מעלות</string>
     <string name="mouse_axis_correction_270">סיבוב של 270 מעלות</string>
+    <string name="summary_checkbox_reverse_resolution">הפעל רק כאשר כיוון התמונה או המידות שלה שגויים; עלול להתנגש עם סיבוב בהתאם למכשיר.</string>
+    <string name="summary_checkbox_rotable_screen">מסנכרן אוטומטית את פריסת הסטרימינג כאשר המכשיר עובר בין מצב לאורך למצב לרוחב.</string>
 </resources>

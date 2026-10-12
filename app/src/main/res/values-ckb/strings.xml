@@ -62,4 +62,6 @@
     <string name="mouse_axis_correction_90">سووڕاندن بە ٩٠ پلە</string>
     <string name="mouse_axis_correction_180">سووڕاندن بە ١٨٠ پلە</string>
     <string name="mouse_axis_correction_270">سووڕاندن بە ٢٧٠ پلە</string>
+    <string name="summary_checkbox_reverse_resolution">تەنها کاتێک چالاکی بکە کە ئاراستە یان قەبارەکانی وێنەکە هەڵە بن؛ لەوانەیە لەگەڵ سووڕانەوەی ئامێر ناکۆک بێت.</string>
+    <string name="summary_checkbox_rotable_screen">کاتێک ئامێرەکە لە نێوان ئاراستەی ستوونی و ئاسۆیی دەگۆڕێت، ڕێکخستنی ستریم بە شێوەی خۆکار هاوکات دەکات.</string>
 </resources>

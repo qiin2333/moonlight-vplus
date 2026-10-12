@@ -361,4 +361,6 @@
     <string name="mouse_axis_correction_90">90도 회전</string>
     <string name="mouse_axis_correction_180">180도 회전</string>
     <string name="mouse_axis_correction_270">270도 회전</string>
+    <string name="summary_checkbox_reverse_resolution">이미지 방향이나 크기가 잘못된 경우에만 사용하세요. 기기 회전 따르기와 충돌할 수 있습니다.</string>
+    <string name="summary_checkbox_rotable_screen">기기가 세로와 가로 방향 사이를 전환할 때 스트림 레이아웃을 자동으로 동기화합니다.</string>
 </resources>

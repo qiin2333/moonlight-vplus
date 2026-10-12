@@ -1137,9 +1137,9 @@
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Swap stream width and height</string>
-    <string name="summary_checkbox_reverse_resolution">Request the selected resolution with its width and height exchanged. Use only for portrait or unusual display layouts.</string>
+    <string name="summary_checkbox_reverse_resolution">Enable only when the image orientation or width and height are incorrect; it may conflict with Follow device rotation.</string>
     <string name="title_checkbox_rotable_screen">Follow device rotation</string>
-    <string name="summary_checkbox_rotable_screen">Rotate the stream layout when this device\'s orientation changes.</string>
+    <string name="summary_checkbox_rotable_screen">Automatically synchronize the stream layout when the device switches between portrait and landscape orientation.</string>
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>

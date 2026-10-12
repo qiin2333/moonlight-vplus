@@ -503,9 +503,9 @@
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Inverter resolução</string>
-    <string name="summary_checkbox_reverse_resolution">Trocar valores de largura e altura para requisitos especiais de exibição</string>
+    <string name="summary_checkbox_reverse_resolution">Ative apenas quando a orientação da imagem ou a largura e altura estiverem incorretas; pode entrar em conflito com Seguir rotação da tela.</string>
     <string name="title_checkbox_rotable_screen">Seguir rotação da tela</string>
-    <string name="summary_checkbox_rotable_screen">Quando ativado, a orientação da exibição será ajustada quando o dispositivo girar</string>
+    <string name="summary_checkbox_rotable_screen">Sincroniza automaticamente o layout do streaming quando o dispositivo alterna entre orientação retrato e paisagem.</string>
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Download do Moonlight V+ PC</string>

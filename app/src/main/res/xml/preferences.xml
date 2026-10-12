@@ -374,11 +374,6 @@
             android:summary="@string/summary_checkbox_stretch_video"
             android:defaultValue="false" />
         <CheckBoxPreference
-            android:key="checkbox_reverse_resolution"
-            android:title="@string/title_checkbox_reverse_resolution"
-            android:summary="@string/summary_checkbox_reverse_resolution"
-            android:defaultValue="false" />
-        <CheckBoxPreference
             android:key="checkbox_rotable_screen"
             android:title="@string/title_checkbox_rotable_screen"
             android:summary="@string/summary_checkbox_rotable_screen"
@@ -422,6 +417,11 @@
             seekbar:tickMarks="true"
             android:text="%"
             android:dialogMessage="@string/summary_screen_offset_y" />
+        <CheckBoxPreference
+            android:key="checkbox_reverse_resolution"
+            android:title="@string/title_checkbox_reverse_resolution"
+            android:summary="@string/summary_checkbox_reverse_resolution"
+            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_ui_settings"
         android:key="category_ui_settings"
