@@ -916,9 +916,9 @@
 
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">交换串流宽度和高度</string>
-    <string name="summary_checkbox_reverse_resolution">交换所选分辨率的宽高后向主机请求，仅用于竖屏或特殊显示布局。</string>
+    <string name="summary_checkbox_reverse_resolution">仅在画面方向或宽高显示异常时开启；开启后可能与“跟随设备旋转”冲突。</string>
     <string name="title_checkbox_rotable_screen">跟随设备旋转</string>
-    <string name="summary_checkbox_rotable_screen">本机方向变化时同步旋转串流布局。</string>
+    <string name="summary_checkbox_rotable_screen">在设备切换竖屏或横屏时自动同步旋转串流布局。</string>
 
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>

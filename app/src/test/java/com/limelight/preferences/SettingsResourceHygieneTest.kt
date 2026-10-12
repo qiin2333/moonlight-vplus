@@ -72,6 +72,20 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
+    fun reverseResolutionIsLastDisplayBehaviorPreference() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val category = preferences.documentElement.getElementsByTagName("PreferenceCategory")
+            .asElementSequence()
+            .single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "category_display_behavior" }
+        val keys = category.childNodes.asElementSequence()
+            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+            .filter(String::isNotEmpty)
+            .toList()
+
+        assertEquals("checkbox_reverse_resolution", keys.last())
+    }
+
+    @Test
     fun pyrowaveDiagnosticAndFallbackStringsCoverEveryExistingLocale() {
         val defaultEntries = parse(File(resourceDir, "values/strings.xml"))
             .documentElement.childNodes.asElementSequence()

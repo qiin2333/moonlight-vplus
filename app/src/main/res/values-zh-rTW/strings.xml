@@ -750,9 +750,9 @@
     <string name="title_reset_background_image">恢復智慧背景</string>
     <string name="summary_reset_background_image">清除自訂來源，重新使用建議的自動背景。</string>
     <string name="title_checkbox_reverse_resolution">交換串流寬度和高度</string>
-    <string name="summary_checkbox_reverse_resolution">交換所選解析度的寬高後向主機請求，僅用於直向或特殊顯示版面。</string>
+    <string name="summary_checkbox_reverse_resolution">僅在畫面方向或寬高顯示異常時開啟；開啟後可能與「跟隨裝置旋轉」衝突。</string>
     <string name="title_checkbox_rotable_screen">跟隨裝置旋轉</string>
-    <string name="summary_checkbox_rotable_screen">本機方向變化時同步旋轉串流版面。</string>
+    <string name="summary_checkbox_rotable_screen">在裝置切換直向或橫向時自動同步旋轉串流版面。</string>
     <string name="title_seekbar_output_buffer_queue_limit">解碼影格佇列</string>
     <string name="summary_seekbar_output_buffer_queue_limit">控制渲染前最多可排隊的解碼影格數。較小值降低延遲但可能掉幀；較大值提高流暢度但會增加延遲。設為 1 在部分裝置上可能崩潰，預設為 2。</string>
     <string name="title_capability_diagnostic">視訊能力報告</string>

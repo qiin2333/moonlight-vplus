@@ -981,9 +981,9 @@
     <string name="title_reset_background_image">Вернуть автоматический фон</string>
     <string name="summary_reset_background_image">Сбросить свой источник и включить рекомендуемый автоматический фон.</string>
     <string name="title_checkbox_reverse_resolution">Поменять ширину и высоту</string>
-    <string name="summary_checkbox_reverse_resolution">Запрос разрешения с переставленными шириной и высотой. Для книжной ориентации и особых схем экранов.</string>
+    <string name="summary_checkbox_reverse_resolution">Включайте только при неверной ориентации или соотношении сторон изображения; может конфликтовать с автоповоротом.</string>
     <string name="title_checkbox_rotable_screen">Автоповорот</string>
-    <string name="summary_checkbox_rotable_screen">Поворачивать трансляцию при смене ориентации устройства.</string>
+    <string name="summary_checkbox_rotable_screen">Автоматически синхронизировать ориентацию трансляции при переключении устройства между книжной и альбомной ориентацией.</string>
     <string name="title_moonlight_vplus_pc_download">Скачать Moonlight V+ для ПК</string>
     <string name="title_enable_analytics">Аналитика</string>
     <string name="summary_enable_analytics">Анонимная статистика использования для улучшения приложения</string>
