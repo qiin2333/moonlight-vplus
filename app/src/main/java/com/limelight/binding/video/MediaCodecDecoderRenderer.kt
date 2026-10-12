@@ -1805,12 +1805,15 @@ class MediaCodecDecoderRenderer(
             if (initialException != null) {
                 // This isn't the first time we've had an exception processing video
                 if (SystemClock.uptimeMillis() - initialExceptionTimestamp >= EXCEPTION_REPORT_DELAY_MS) {
-                    // It's been over 3 seconds and we're still getting exceptions. Throw the original now.
+                    // It's been over 3 seconds and we're still getting exceptions. Report the
+                    // failure and stop decoding; the crash listener terminates the stream with
+                    // the standard failure dialog. Throwing from here would escape the codec
+                    // callback (or sync submit) thread and kill the whole process.
                     if (!reportedCrash) {
                         reportedCrash = true
                         crashListener.notifyCrash(initialException!!)
                     }
-                    throw initialException!!
+                    stopping = true
                 }
             } else {
                 // This is the first exception we've hit

@@ -991,6 +991,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                         )
                     }
                     reportedCrash = true
+                    if (decoderRenderer === rendererForFailure) {
+                        // Hardware decoder gave up: end the stream with the standard
+                        // failure dialog instead of crashing the process from the
+                        // codec callback thread.
+                        connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
+                    } else {
+                        LimeLog.info("Ignoring stale renderer crash callback")
+                    }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
                 connMgr.isActiveNetworkMetered,
