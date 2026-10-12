@@ -357,6 +357,9 @@ class ControllerHandler(
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
     private val driverControllerContextsLifecycleLock = Any()
+    // Serializes lights session transfer in migrateContext/close in destroy() (main thread)
+    // against session open/requestLights in handleSetControllerLED (common-c callback thread).
+    internal val lightsSessionLock = Any()
 
     internal val deviceVibrator: Vibrator
     private val deviceVibratorManager: VibratorManager?
@@ -552,8 +555,15 @@ class ControllerHandler(
             }
             LimeLog.info("Removed controller: " + context.name + " (" + deviceId + ")")
             releaseControllerNumber(context)
-            context.destroy()
-            inputDeviceContexts.remove(deviceId)
+            // destroy() and the map removal must be atomic with respect to the LED
+            // command thread: it re-validates under lightsSessionLock that the context
+            // is still published before opening a session, so destroy-before-remove
+            // would otherwise let it open a session on a dying context that nothing
+            // will ever close.
+            synchronized(lightsSessionLock) {
+                context.destroy()
+                inputDeviceContexts.remove(deviceId)
+            }
             joyConSupport.peer(context)?.takeIf { it.assignedControllerNumber }?.let {
                 refreshControllerArrival(it)
                 // Destroying the removed half may release a local menu capture.
@@ -588,10 +598,14 @@ class ControllerHandler(
 
         LimeLog.info("Device changed: " + existingContext.name + " (" + deviceId + ")")
 
-        // Migrate the existing context into this new one by moving any stateful elements
+        // Migrate the existing context into this new one by moving any stateful elements.
+        // Publish the new context under lightsSessionLock so the LED command thread can't
+        // open a session on the old context while it is being migrated and destroyed.
         val newContext = createInputDeviceContextForDevice(device)
-        newContext.migrateContext(existingContext)
-        inputDeviceContexts.put(deviceId, newContext)
+        synchronized(lightsSessionLock) {
+            newContext.migrateContext(existingContext)
+            inputDeviceContexts.put(deviceId, newContext)
+        }
         refreshSystemWaveformRoutes()
         if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
             gyroManager.onControllerSourceChanged(newContext.controllerNumber)

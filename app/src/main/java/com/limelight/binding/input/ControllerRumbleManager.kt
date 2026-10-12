@@ -582,28 +582,58 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
 
                 // Ignore input devices without an RGB LED
                 if (deviceContext.controllerNumber == controllerNumber && deviceContext.hasRgbLed) {
-                    // Create a new light session if one doesn't already exist
-                    if (deviceContext.lightsSession == null) {
-                        deviceContext.lightsSession = deviceContext.inputDevice!!.lightsManager.openSession()
-                    }
+                    // The lock keeps this open/request from interleaving with the main
+                    // thread transferring the session in migrateContext() or closing it
+                    // in destroy(). updateLightbar() above stays outside: it's a blocking
+                    // BT/USB write that must not stall the main thread behind this lock.
+                    synchronized(handler.lightsSessionLock) {
+                        // This context was read from the map before the lock was taken,
+                        // so re-validate it: the main thread may have migrated it
+                        // (onInputDeviceChanged), removed it (onInputDeviceRemoved),
+                        // or torn the handler down while we waited. Opening a session on
+                        // a stale context would leak it with nothing left to close it.
+                        if (handler.stopped ||
+                            handler.inputDeviceContexts.get(deviceContext.id) !== deviceContext
+                        ) {
+                            return@synchronized
+                        }
+                        try {
+                            // Create a new light session if one doesn't already exist
+                            if (deviceContext.lightsSession == null) {
+                                deviceContext.lightsSession = deviceContext.inputDevice!!.lightsManager.openSession()
+                            }
 
-                    // Convert the RGB components into the integer value that LightState uses
-                    val argbValue = 0xFF000000.toInt() or
-                            ((r.toInt() shl 16) and 0xFF0000) or
-                            ((g.toInt() shl 8) and 0xFF00) or
-                            (b.toInt() and 0xFF)
-                    val lightState = LightState.Builder().setColor(argbValue).build()
+                            // Convert the RGB components into the integer value that LightState uses
+                            val argbValue = 0xFF000000.toInt() or
+                                    ((r.toInt() shl 16) and 0xFF0000) or
+                                    ((g.toInt() shl 8) and 0xFF00) or
+                                    (b.toInt() and 0xFF)
+                            val lightState = LightState.Builder().setColor(argbValue).build()
 
-                    // Set the RGB value for each RGB-controllable LED on the device
-                    val lightsRequestBuilder = LightsRequest.Builder()
-                    for (light in deviceContext.inputDevice!!.lightsManager.lights) {
-                        if (light.hasRgbControl()) {
-                            lightsRequestBuilder.addLight(light, lightState)
+                            // Set the RGB value for each RGB-controllable LED on the device
+                            val lightsRequestBuilder = LightsRequest.Builder()
+                            for (light in deviceContext.inputDevice!!.lightsManager.lights) {
+                                if (light.hasRgbControl()) {
+                                    lightsRequestBuilder.addLight(light, lightState)
+                                }
+                            }
+
+                            // Apply the LED changes
+                            deviceContext.lightsSession!!.requestLights(lightsRequestBuilder.build())
+                        } catch (e: Exception) {
+                            // openSession()/requestLights() are Binder calls into
+                            // system_server, which some OEM ROMs crash server-side during
+                            // device re-enumeration. Drop the session so the next command
+                            // starts over instead of killing the callback thread.
+                            LimeLog.warning("Failed to update RGB LED: $e")
+                            val failedSession = deviceContext.lightsSession
+                            deviceContext.lightsSession = null
+                            try {
+                                failedSession?.close()
+                            } catch (ignored: Exception) {
+                            }
                         }
                     }
-
-                    // Apply the LED changes
-                    deviceContext.lightsSession!!.requestLights(lightsRequestBuilder.build())
                 }
             }
         }
