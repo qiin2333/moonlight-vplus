@@ -223,7 +223,7 @@
     <string name="pacing_precise_sync">Präzises Bildtempo (empfohlen)</string>
     <string name="pacing_experimental_low_latency">Ultraniedrige Latenz (experimentell)</string>
     <string name="pacing_balanced">Ausgeglichen (Latenz und flüssige Wiedergabe)</string>
-    <string name="pacing_smoothness">Flüssigkeit zuerst (höhere Latenz)</string>
+    <string name="pacing_smoothness">Flüssige Wiedergabe zuerst (höhere Latenz)</string>
     <string name="perf_overlay_streamdetails">Video Stream: %1$s %2$.2f FPS</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
