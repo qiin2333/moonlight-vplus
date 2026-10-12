@@ -85,6 +85,7 @@ class PreferenceConfiguration {
     var hardwareTouchpadPointerSpeedPercent = DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
     //自定义按键映射
     var enableCustomKeyMap = false
+    var enableShizukuAccessibility = false
     //修复鼠标中键识别
     var fixMouseMiddle = false
     //修复本地鼠标滚轮识别
@@ -1439,6 +1440,7 @@ class PreferenceConfiguration {
                 DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
             ).coerceIn(MIN_HARDWARE_TOUCHPAD_POINTER_SPEED, MAX_HARDWARE_TOUCHPAD_POINTER_SPEED)
             config.enableCustomKeyMap = prefs.getBoolean("checkbox_special_key_map", false)
+            config.enableShizukuAccessibility = prefs.getBoolean("checkbox_shizuku_keyboard_accessibility", false)
             config.fixMouseMiddle = prefs.getBoolean("checkbox_mouse_middle", false)
             config.fixMouseWheel = prefs.getBoolean("checkbox_mouse_wheel", false)
             config.enableSops = prefs.getBoolean(SOPS_PREF_STRING, DEFAULT_SOPS)

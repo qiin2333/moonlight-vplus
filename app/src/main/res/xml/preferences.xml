@@ -941,6 +941,15 @@
             android:text="ms"
             android:title="@string/title_seekbar_double_tap_time_threshold" />
         <CheckBoxPreference
+            android:key="checkbox_shizuku_keyboard_accessibility"
+            android:title="@string/title_shizuku_keyboard_accessibility"
+            android:summary="@string/summary_shizuku_keyboard_accessibility"
+            android:defaultValue="false" />
+        <Preference
+            android:key="shizuku_keyboard_authorization"
+            android:title="@string/title_shizuku_keyboard_authorization"
+            android:persistent="false" />
+        <CheckBoxPreference
             android:key="checkbox_special_key_map"
             android:title="@string/title_special_key_map"
             android:summary="@string/summary_special_key_map"

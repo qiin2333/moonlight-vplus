@@ -1207,6 +1207,13 @@
     <string name="toast_local_cursor_fallback">已自动使用兼容指针模式</string>
 
     <!-- 特殊按键映射 -->
+    <string name="title_shizuku_keyboard_accessibility">使用 Shizuku 启用键盘无障碍</string>
+    <string name="summary_shizuku_keyboard_accessibility">开始串流时，通过已授权的 Shizuku 启用本应用的键盘无障碍服务。</string>
+    <string name="title_shizuku_keyboard_authorization">Shizuku 授权</string>
+    <string name="summary_shizuku_not_installed">请先安装并启动 Shizuku。</string>
+    <string name="summary_shizuku_not_running">请先启动 Shizuku。</string>
+    <string name="summary_shizuku_authorization_required">点按进行授权。</string>
+    <string name="summary_shizuku_authorized">已授权。</string>
     <string name="title_special_key_map">Moonlight 键盘快捷键</string>
     <string name="summary_special_key_map">键盘Home键映射Esc键，Esc+数字键/符号映射F1到F12，Esc+Q键映射串流菜单，安卓截图键映射Windows截图，安卓上一首/播放暂停/下一首分别映射到F5/F10/F11。</string>
 
