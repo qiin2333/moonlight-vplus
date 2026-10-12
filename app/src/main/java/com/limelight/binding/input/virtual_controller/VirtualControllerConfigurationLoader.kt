@@ -181,4 +181,11 @@ object VirtualControllerConfigurationLoader {
             } catch (_: JSONException) { prefs.edit().remove(key).apply() }
         }
     }
+
+    fun clearSavedProfile(context: Context) {
+        context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .apply()
+    }
 }

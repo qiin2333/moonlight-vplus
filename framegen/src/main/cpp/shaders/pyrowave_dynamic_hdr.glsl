@@ -1,6 +1,83 @@
+struct DolbyComponentMapping {
+    float pivots[9];
+    float padding[3];
+    vec4 pieceInfo[8]; // method, polynomial order, MMR order, MMR constant
+    vec4 polynomial[8][3];
+    vec4 mmr[8][3][2]; // seven MMR coefficients packed as 4 + 3 values
+};
+
 layout(std430, set = 0, binding = 4) readonly buffer DynamicHdrMapping {
     float pqMapping[256];
+    DolbyComponentMapping dolby[3];
+    vec4 yccToRgb[3];
+    vec4 yccOffsets;
+    vec4 lmsToRgb[3];
+    vec4 mappingFlags;
 };
+
+vec3 dynamicDolbyReshape(vec3 signal) {
+    if (mappingFlags.y < 0.5) return signal;
+    vec3 reshaped = signal;
+    for (int channel = 0; channel < 3; ++channel) {
+        int piece = 0;
+        for (int index = 1; index < 9; ++index) {
+            // Boundary i starts piece i-1. Unused pivots are zero, so the
+            // strict increase check also limits the loop to the declared
+            // number of pieces without a separate count in std430.
+            if (dolby[channel].pivots[index] > dolby[channel].pivots[index - 1] &&
+                signal[channel] >= dolby[channel].pivots[index]) {
+                piece = index - 1;
+            }
+        }
+        vec4 info = dolby[channel].pieceInfo[piece];
+        float mapped = signal[channel];
+        if (info.x < 0.5) {
+            vec4 coefficients = dolby[channel].polynomial[piece][0];
+            mapped = (coefficients.z * mapped + coefficients.y) * mapped + coefficients.x;
+        } else {
+            int order = clamp(int(info.z + 0.5), 1, 3);
+            vec4 sigX = vec4(signal.x * signal.y, signal.x * signal.z,
+                             signal.y * signal.z, signal.x * signal.y * signal.z);
+            mapped = info.w;
+            for (int row = 0; row < 3; ++row) {
+                if (row >= order) break;
+                vec4 first = dolby[channel].mmr[piece][row][0];
+                vec4 second = dolby[channel].mmr[piece][row][1];
+                mapped += dot(first.xyz, signal) + first.w * sigX.x +
+                          dot(second.xyz, sigX.yzw);
+            }
+        }
+        float upper_bound = 1.0;
+        for (int index = 0; index < 8; ++index) {
+            if (dolby[channel].pivots[index + 1] > dolby[channel].pivots[index]) {
+                upper_bound = dolby[channel].pivots[index + 1];
+            }
+        }
+        reshaped[channel] = clamp(mapped, dolby[channel].pivots[0], upper_bound);
+    }
+    return reshaped;
+}
+vec3 dynamicBaseYuvToRgb(vec3 yuv) {
+    float u = yuv.y - 0.5;
+    float v = yuv.z - 0.5;
+    return vec3(
+        yuv.x + 1.4746 * v,
+        yuv.x - 0.16455 * u - 0.57135 * v,
+        yuv.x + 1.8814 * u);
+}
+
+vec3 dynamicYuvToRgb(vec3 yuv) {
+    // HDR10+ uses the ordinary BT.2020 matrix. Dolby Vision may supply a
+    // per-frame Y'CbCr matrix and reshape curves; apply each independently so
+    // a valid matrix is not lost when the RPU has no reshape pieces.
+    if (pc.dynamicEnabled < 0.5) return dynamicBaseYuvToRgb(yuv);
+    vec3 reshaped = mappingFlags.y > 0.5 ? dynamicDolbyReshape(yuv) : yuv;
+    if (mappingFlags.z < 0.5) return dynamicBaseYuvToRgb(reshaped);
+    return vec3(
+        dot(yccToRgb[0].xyz, reshaped) - yccOffsets.x,
+        dot(yccToRgb[1].xyz, reshaped) - yccOffsets.y,
+        dot(yccToRgb[2].xyz, reshaped) - yccOffsets.z);
+}
 
 vec3 dynamicPqToNits(vec3 signal) {
     vec3 p = pow(clamp(signal, vec3(0.0), vec3(1.0)), vec3(32.0 / 2523.0));
@@ -46,6 +123,12 @@ vec3 applyDynamicHdr(vec3 signal) {
     } else {
         linearRgb = dynamicPqToNits(signal);
     }
+    if (mappingFlags.x > 0.5) {
+        linearRgb = vec3(
+            dot(lmsToRgb[0].xyz, linearRgb),
+            dot(lmsToRgb[1].xyz, linearRgb),
+            dot(lmsToRgb[2].xyz, linearRgb));
+    }
     float peak = max(linearRgb.r, max(linearRgb.g, linearRgb.b));
     if (peak <= 0.0) return vec3(0.0);
     float position = dynamicNitsToPq(vec3(peak)).x * 255.0;
@@ -59,7 +142,11 @@ vec3 applyDynamicHdr(vec3 signal) {
         if (y <= 0.0) return vec3(0.0);
         float gamma = dynamicHlgGamma(pc.targetPeakNits);
         vec3 scene = normalized * pow(max(y, 0.000001), (1.0 - gamma) / gamma);
-        return dynamicSceneToHlg(scene);
+        vec3 outputHlg = dynamicSceneToHlg(scene);
+        float hlgLuma = dot(outputHlg, vec3(0.2627, 0.6780, 0.0593));
+        return mix(vec3(hlgLuma), outputHlg, clamp(pc.saturation, 0.0, 8.0));
     }
-    return dynamicNitsToPq(linearRgb);
+    vec3 outputPq = dynamicNitsToPq(linearRgb);
+    float pqLuma = dot(outputPq, vec3(0.2627, 0.6780, 0.0593));
+    return mix(vec3(pqLuma), outputPq, clamp(pc.saturation, 0.0, 8.0));
 }

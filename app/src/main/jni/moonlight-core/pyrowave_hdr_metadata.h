@@ -73,22 +73,52 @@ inline bool parse_ss_hdr_metadata(const std::uint8_t *bytes, std::size_t size,
                 (static_cast<std::uint16_t>(bytes[i * 2 + 1]) << 8);
   }
   constexpr float kCoordinateScale = 50000.0F;
+  hdr_static_metadata candidate{};
   for (std::size_t i = 0; i < 3; ++i) {
     const auto x = fields[i * 2];
     const auto y = fields[i * 2 + 1];
     if (x > 50000 || y > 50000) return false;
-    metadata.display_primaries[i] = { static_cast<float>(x) / kCoordinateScale,
+    candidate.display_primaries[i] = { static_cast<float>(x) / kCoordinateScale,
                                       static_cast<float>(y) / kCoordinateScale };
   }
   if (fields[6] > 50000 || fields[7] > 50000) return false;
-  metadata.white_point = { static_cast<float>(fields[6]) / kCoordinateScale,
+  candidate.white_point = { static_cast<float>(fields[6]) / kCoordinateScale,
                            static_cast<float>(fields[7]) / kCoordinateScale };
-  metadata.max_display_luminance = static_cast<float>(fields[8]);
-  metadata.min_display_luminance = static_cast<float>(fields[9]) / 10000.0F;
-  metadata.max_content_light_level = static_cast<float>(fields[10]);
-  metadata.max_frame_average_light_level = static_cast<float>(fields[11]);
-  metadata.max_full_frame_luminance = static_cast<float>(fields[12]);
-  return valid_hdr_static_metadata(metadata, true);
+  candidate.max_display_luminance = static_cast<float>(fields[8]);
+  candidate.min_display_luminance = static_cast<float>(fields[9]) / 10000.0F;
+  candidate.max_content_light_level = static_cast<float>(fields[10]);
+  candidate.max_frame_average_light_level = static_cast<float>(fields[11]);
+  candidate.max_full_frame_luminance = static_cast<float>(fields[12]);
+  if (!valid_hdr_static_metadata(candidate, true)) return false;
+  metadata = candidate;
+  return true;
 }
+
+enum class hdr_snapshot_update { cleared, missing, invalid, accepted };
+
+struct hdr_static_snapshot {
+  bool enabled = false;
+  bool valid = false;
+  hdr_static_metadata metadata{};
+
+  hdr_snapshot_update update(bool hdr_enabled, const std::uint8_t *bytes,
+                             std::size_t size) noexcept {
+    enabled = hdr_enabled;
+    if (!enabled) {
+      valid = false;
+      metadata = {};
+      return hdr_snapshot_update::cleared;
+    }
+    bool all_zero = bytes != nullptr && size >= 26;
+    for (std::size_t i = 0; all_zero && i < 26; ++i) all_zero = bytes[i] == 0;
+    if (bytes == nullptr) return size == 0 ? hdr_snapshot_update::missing : hdr_snapshot_update::invalid;
+    if (size == 0 || all_zero) return hdr_snapshot_update::missing;
+    hdr_static_metadata candidate{};
+    if (!parse_ss_hdr_metadata(bytes, size, candidate)) return hdr_snapshot_update::invalid;
+    metadata = candidate;
+    valid = true;
+    return hdr_snapshot_update::accepted;
+  }
+};
 
 }  // namespace moonlight::pyrowave

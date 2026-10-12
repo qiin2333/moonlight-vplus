@@ -3,6 +3,7 @@
 #include <android/native_window.h>
 
 #include <cstddef>
+#include <array>
 #include <cstdint>
 #include <memory>
 
@@ -20,7 +21,7 @@ public:
     PyrowaveVulkanDecoder(const PyrowaveVulkanDecoder&) = delete;
     PyrowaveVulkanDecoder& operator=(const PyrowaveVulkanDecoder&) = delete;
 
-    bool create(int width, int height, int hdrMode, bool fullRange);
+    bool create(int width, int height, int hdrMode, bool fullRange, int dynamicHdrFormat = 0);
     bool setSurface(ANativeWindow* window);
     bool setHdrMetadata(bool enabled, const std::uint8_t* data, std::size_t length);
     bool setDynamicHdr(int format, float targetPeakNits);

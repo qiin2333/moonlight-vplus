@@ -141,6 +141,10 @@ jobs:
       - name: Build NonRoot Debug APK
         run: ./gradlew :app:assembleNonRootDebug --no-daemon --stacktrace
 
+      - name: Build NonRoot Release validation APK
+        if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
+
       - name: Verify PyroWave runtime is packaged
         shell: bash
         run: |
@@ -167,6 +171,13 @@ jobs:
           name: app-nonroot-debug-apk
           path: |
             app/build/outputs/apk/nonRoot/debug/*.apk
+
+      - name: Upload Release validation APK
+        if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-nonroot-release-validation-apk
+          path: app/build/outputs/apk/nonRoot/release/*.apk
 
       # ===== Release (Signed) Build (tags only) =====
       - name: Decode keystore for Release

@@ -440,7 +440,8 @@
     <string name="mic_initial_state_on">Activado</string>
     <string name="mic_initial_state_follow_last">Seguir el último estado</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">Invertir zona de toque mejorada a la izquierda (predeterminado: en el lado derecho de la pantalla)</string>
-    <string name="summary_checkbox_reverse_resolution">Intercambiar valores de ancho y alto para requisitos especiales de visualización</string>
+    <string name="summary_checkbox_reverse_resolution">Actívalo solo cuando la orientación de la imagen o el ancho y alto sean incorrectos; puede entrar en conflicto con Seguir rotación de la pantalla.</string>
+    <string name="summary_checkbox_rotable_screen">Sincroniza automáticamente el diseño de la transmisión cuando el dispositivo cambia entre orientación vertical y horizontal.</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
     <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
     <string name="summary_custom_resolutions">Crear tus propias resoluciones personalizadas</string>
@@ -604,4 +605,10 @@
     <string name="image_saved_successfully">Imagen guardada correctamente en: Picture/vplus</string>
     <string name="image_save_failed_with_error">No se pudo guardar la imagen: %1$s</string>
     <string name="pyrowave_negotiation_fallback">La negociación de PyroWave ha fallado. Se cambia a %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Corrección de la dirección del ratón</string>
+    <string name="summary_list_mouse_axis_correction">Gira el movimiento del ratón capturado antes de enviarlo al host. Cámbialo solo si un dispositivo Android informa de ejes del ratón girados.</string>
+    <string name="mouse_axis_correction_off">Desactivado</string>
+    <string name="mouse_axis_correction_90">Girar 90 grados</string>
+    <string name="mouse_axis_correction_180">Girar 180 grados</string>
+    <string name="mouse_axis_correction_270">Girar 270 grados</string>
 </resources>

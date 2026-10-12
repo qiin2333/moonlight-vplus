@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
+import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.preferences.TouchPointerPresetPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -13,6 +14,31 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 class ConfigurationSyncMergeTest {
+    @Test
+    fun mergePreservesMouseAxisCorrectionWhenAnotherPackageHasNoSetting() {
+        for (correction in MouseAxisCorrection.entries) {
+            val configured = syncPackage(
+                deviceId = "device-a",
+                defaultValues = values(
+                    "list_mouse_axis_correction" to typedValue(
+                        "string", JsonPrimitive(correction.preferenceValue), 1000L, "device-a"
+                    )
+                )
+            )
+            val unconfigured = syncPackage(deviceId = "device-b")
+
+            val merged = preferenceValues(
+                ConfigurationSyncManager.mergeSyncPackagesForTest(listOf(configured, unconfigured)),
+                "defaultPreferences"
+            )
+
+            assertTrue(merged.has("list_mouse_axis_correction"))
+            val encoded = merged["list_mouse_axis_correction"].asJsonObject
+            assertEquals("string", encoded["type"].asString)
+            assertEquals(correction.preferenceValue, encoded["value"].asString)
+        }
+    }
+
     @Test
     fun mergeUnionsDedicatedTouchPointerPresetsById() {
         val presetA = "00000000-0000-0000-0000-000000000001"

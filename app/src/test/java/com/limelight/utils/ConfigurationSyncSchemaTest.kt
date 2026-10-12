@@ -1,5 +1,6 @@
 package com.limelight.utils
 
+import com.limelight.binding.input.virtual_controller.OscSettingsButtonStore
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -15,6 +16,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ConfigurationSyncSchemaTest {
+    @Test
+    fun mouseAxisCorrectionIsPortable() {
+        assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_mouse_axis_correction"))
+    }
+
     @Test
     fun hevcLowLatencyModeIsPortable() {
         assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_hevc_low_latency_mode"))
@@ -309,12 +315,38 @@ class ConfigurationSyncSchemaTest {
         assertTrue("SceneConfigs should be observed", "SceneConfigs" in syncedStores)
         assertTrue("HiddenApps should be observed", "HiddenApps" in syncedStores)
         assertTrue("AppView should be observed", "AppView" in syncedStores)
+        assertTrue("OSC settings button should be observed", OscSettingsButtonStore.PREFERENCES_NAME in syncedStores)
 
         assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey("app_last_settings", "host-app"))
         assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey("custom_resolutions", "custom_resolutions"))
         assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey("SceneConfigs", "scene_1"))
         assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey("HiddenApps", "host_uuid"))
         assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey("AppView", "app_background_mode"))
+        assertTrue(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                OscSettingsButtonStore.PREFERENCES_NAME,
+                "size_scale"
+            )
+        )
+        assertFalse(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                OscSettingsButtonStore.PREFERENCES_NAME,
+                OscSettingsButtonStore.POSITION_X_KEY
+            )
+        )
+        assertFalse(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                OscSettingsButtonStore.PREFERENCES_NAME,
+                OscSettingsButtonStore.POSITION_Y_KEY
+            )
+        )
+        assertTrue(
+            ConfigurationSyncManager.isPortableSharedPreferenceKey(
+                "OSC",
+                "xbox.full.6"
+            )
+        )
+        assertTrue("OSC profiles should be observed", "OSC" in syncedStores)
 
         assertFalse(ConfigurationSyncManager.isPortableSharedPreferenceKey("AppView", "display_selection"))
         assertFalse(ConfigurationSyncManager.isPortableSharedPreferenceKey("unknown", "app_background_mode"))

@@ -29,8 +29,8 @@
         <!-- 减小按钮 -->
         <ImageView
             android:id="@+id/pref_seekbar_btn_minus"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@drawable/pref_adjust_btn_bg"
             android:scaleType="center"
             android:contentDescription="@string/seekbar_decrease"
@@ -64,6 +64,27 @@
                     android:minWidth="60dp"
                     android:gravity="center" />
 
+                <EditText
+                    android:id="@+id/pref_seekbar_input"
+                    android:layout_width="96dp"
+                    android:layout_height="48dp"
+                    android:textSize="22sp"
+                    android:textColor="?attr/appAccent"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:singleLine="true"
+                    android:selectAllOnFocus="true"
+                    android:inputType="numberDecimal"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/pref_seekbar_unit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="12dp"
+                    android:textColor="?attr/appAccent"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
         </LinearLayout>
@@ -71,8 +92,8 @@
         <!-- 增大按钮 -->
         <ImageView
             android:id="@+id/pref_seekbar_btn_plus"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@drawable/pref_adjust_btn_bg"
             android:scaleType="center"
             android:contentDescription="@string/seekbar_increase"

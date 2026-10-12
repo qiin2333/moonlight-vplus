@@ -243,4 +243,12 @@
     <string name="image_save_failed_with_error">Resim kaydedilemedi: %1$s</string>
     <string name="tip_double_tap_mouse">İpucu: mevcut arka plan resmini kaydetmek için bilgisayar listesinin üst kısmındaki boş alana basılı tutun.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave anlaşması başarısız oldu. %1$s kullanılıyor.</string>
+    <string name="title_list_mouse_axis_correction">Fare yönü düzeltmesi</string>
+    <string name="summary_list_mouse_axis_correction">Yakalanan fare hareketini ana bilgisayara göndermeden önce döndürür. Bunu yalnızca bir Android cihaz fare eksenlerinin döndürüldüğünü bildiriyorsa değiştirin.</string>
+    <string name="mouse_axis_correction_off">Kapalı</string>
+    <string name="mouse_axis_correction_90">90 derece döndür</string>
+    <string name="mouse_axis_correction_180">180 derece döndür</string>
+    <string name="mouse_axis_correction_270">270 derece döndür</string>
+    <string name="summary_checkbox_reverse_resolution">Yalnızca görüntü yönü veya boyutları hatalı olduğunda etkinleştirin; cihaz döndürmeyi izleme ayarıyla çakışabilir.</string>
+    <string name="summary_checkbox_rotable_screen">Cihaz dikey ve yatay yön arasında geçiş yaptığında akış düzenini otomatik olarak senkronize eder.</string>
 </resources>

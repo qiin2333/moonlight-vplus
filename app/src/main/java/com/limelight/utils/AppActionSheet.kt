@@ -4,16 +4,22 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
 import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,6 +41,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -49,17 +57,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
@@ -78,7 +90,8 @@ object AppActionSheet {
         val checked: Boolean? = null,
         val sectionStart: Boolean = false,
         val opensSubmenu: Boolean = false,
-        val trailingText: CharSequence? = null
+        val trailingText: CharSequence? = null,
+        val toggle: Boolean = false
     )
 
     /** Hosts custom, live content in the same window, theme, and dismissal model as
@@ -197,7 +210,14 @@ object AppActionSheet {
     }
 
     @Suppress("DEPRECATION")
-    internal fun prepareDialog(dialog: ComponentDialog, contentView: ComposeView) {
+    internal fun prepareDialog(
+        dialog: ComponentDialog,
+        contentView: ComposeView,
+        fullScreen: Boolean = false,
+        hostWindow: Window? = null
+    ) {
+        val resolvedHostWindow = hostWindow ?: (contentView.context as? Activity)?.window
+
         dialog.setContentView(contentView)
         dialog.setCanceledOnTouchOutside(true)
         dialog.setOnKeyListener { _, keyCode, event ->
@@ -206,24 +226,54 @@ object AppActionSheet {
 
         dialog.window?.let { window ->
             window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            (contentView.context as? Activity)?.window?.let { hostWindow ->
-                window.decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
-                if (hostWindow.attributes.flags and
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN != 0
-                ) {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            if (fullScreen) {
+                applyFullScreenWindow(window, resolvedHostWindow)
+                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    window.attributes = window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
                 }
             }
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.attributes = window.attributes.apply {
                 width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = ViewGroup.LayoutParams.WRAP_CONTENT
-                gravity = Gravity.BOTTOM
+                height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
+                else ViewGroup.LayoutParams.WRAP_CONTENT
+                gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM
             }
         }
 
         dialog.show()
-        dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        dialog.window?.let { window ->
+            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            if (fullScreen) {
+                window.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                applyFullScreenWindow(window, resolvedHostWindow)
+                window.decorView.post {
+                    if (dialog.isShowing) applyFullScreenWindow(window, resolvedHostWindow)
+                }
+            }
+        }
+    }
+
+    /** Applies the same immersive contract used by the in-stream game menu. */
+    internal fun applyFullScreenWindow(window: Window, hostWindow: Window? = null) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        hostWindow?.let { host ->
+            window.decorView.systemUiVisibility = host.decorView.systemUiVisibility
+            if (host.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
+        }
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     @Composable
@@ -387,9 +437,16 @@ object AppActionSheet {
     }
 
     @Composable
-    internal fun ActionSheetContainer(content: @Composable ColumnScope.() -> Unit) {
+    internal fun ActionSheetContainer(
+        respectNavigationBars: Boolean = true,
+        shieldBackgroundTouches: Boolean = false,
+        onBoundsChanged: ((Rect) -> Unit)? = null,
+        outerPadding: PaddingValues = PaddingValues(start = 10.dp, end = 10.dp, bottom = 10.dp),
+        content: @Composable ColumnScope.() -> Unit
+    ) {
         val shape = AppShapes.overlay
         val outline = colorResource(R.color.app_dialog_outline)
+        val touchShield = if (shieldBackgroundTouches) remember { MutableInteractionSource() } else null
         val gradient = Brush.verticalGradient(
             listOf(
                 colorResource(R.color.app_dialog_surface_gradient_start),
@@ -401,8 +458,14 @@ object AppActionSheet {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+                .then(if (respectNavigationBars) Modifier.navigationBarsPadding() else Modifier)
+                .then(touchShield?.let {
+                    Modifier.clickable(it, indication = null, onClick = {})
+                } ?: Modifier)
+                .then(onBoundsChanged?.let { callback ->
+                    Modifier.onGloballyPositioned { callback(it.boundsInRoot()) }
+                } ?: Modifier)
+                .padding(outerPadding)
         ) {
             Column(
                 modifier = Modifier
@@ -562,7 +625,10 @@ object AppActionSheet {
                             false
                         }
                     }
-                    .clickable(enabled = action.enabled) { onAction(action) }
+                    .then(if (action.toggle) {
+                        Modifier.toggleable(value = action.checked == true, enabled = action.enabled,
+                            role = Role.Switch, onValueChange = { onAction(action) })
+                    } else Modifier.clickable(enabled = action.enabled) { onAction(action) })
                     .focusable(action.enabled)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -591,7 +657,10 @@ object AppActionSheet {
                         )
                     }
                 }
-                if (!action.trailingText.isNullOrEmpty()) {
+                if (action.toggle) {
+                    Spacer(Modifier.width(10.dp))
+                    Switch(checked = action.checked == true, onCheckedChange = null, enabled = action.enabled)
+                } else if (!action.trailingText.isNullOrEmpty()) {
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = action.trailingText.toString(),

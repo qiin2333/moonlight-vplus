@@ -175,6 +175,8 @@ class InputDeviceContext internal constructor(
     var vibratorManager: VibratorManager? = null
     var vibrator: android.os.Vibrator? = null
     var quadVibrators: Boolean = false
+    // Set when rumble was borrowed from the device's own vibrator because the input device has none.
+    var borrowsDeviceVibrator: Boolean = false
     var lowFreqMotor: Short = 0
     var highFreqMotor: Short = 0
     var leftTriggerMotor: Short = 0

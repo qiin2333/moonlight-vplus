@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Permite tragerea butonului de setări</string>
+    <string name="osc_reset_settings_button_position">Restabilește poziția inițială a butonului de setări</string>
+    <string name="osc_settings_button_size">Dimensiunea butonului de setări</string>
+</resources>

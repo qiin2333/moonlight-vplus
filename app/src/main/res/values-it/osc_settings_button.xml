@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Consenti di trascinare il pulsante impostazioni</string>
+    <string name="osc_reset_settings_button_position">Ripristina la posizione iniziale del pulsante delle impostazioni</string>
+    <string name="osc_settings_button_size">Dimensione del pulsante impostazioni</string>
+</resources>

@@ -503,9 +503,9 @@
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Inverter resolução</string>
-    <string name="summary_checkbox_reverse_resolution">Trocar valores de largura e altura para requisitos especiais de exibição</string>
+    <string name="summary_checkbox_reverse_resolution">Ative apenas quando a orientação da imagem ou a largura e altura estiverem incorretas; pode entrar em conflito com Seguir rotação da tela.</string>
     <string name="title_checkbox_rotable_screen">Seguir rotação da tela</string>
-    <string name="summary_checkbox_rotable_screen">Quando ativado, a orientação da exibição será ajustada quando o dispositivo girar</string>
+    <string name="summary_checkbox_rotable_screen">Sincroniza automaticamente o layout do streaming quando o dispositivo alterna entre orientação retrato e paisagem.</string>
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Download do Moonlight V+ PC</string>
@@ -763,4 +763,10 @@
     <string name="pyrowave_diag_copy_success">Relatório copiado para a área de transferência</string>
     <string name="pyrowave_diag_unavailable">Indisponível</string>
     <string name="pyrowave_negotiation_fallback">A negociação do PyroWave falhou. A mudar para %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correção da direção do rato</string>
+    <string name="summary_list_mouse_axis_correction">Rodar o movimento do rato capturado antes de o enviar para o anfitrião. Altere isto apenas se um dispositivo Android indicar eixos do rato rodados.</string>
+    <string name="mouse_axis_correction_off">Desativado</string>
+    <string name="mouse_axis_correction_90">Rodar 90 graus</string>
+    <string name="mouse_axis_correction_180">Rodar 180 graus</string>
+    <string name="mouse_axis_correction_270">Rodar 270 graus</string>
 </resources>

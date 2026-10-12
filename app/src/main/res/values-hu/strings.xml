@@ -312,4 +312,12 @@
     <string name="image_save_failed_with_error">A kép mentése nem sikerült: %1$s</string>
     <string name="tip_double_tap_mouse">Tipp: a jelenlegi háttérkép mentéséhez tartsa nyomva a számítógéplista tetején lévő üres területet.</string>
     <string name="pyrowave_negotiation_fallback">A PyroWave egyeztetése sikertelen. Átváltás erre: %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Egérirány korrekciója</string>
+    <string name="summary_list_mouse_axis_correction">A rögzített egérmozgás elforgatása a gazdagépre küldés előtt. Csak akkor módosítsa, ha egy Android-eszköz elforgatott egértengelyeket jelez.</string>
+    <string name="mouse_axis_correction_off">Kikapcsolva</string>
+    <string name="mouse_axis_correction_90">Elforgatás 90 fokkal</string>
+    <string name="mouse_axis_correction_180">Elforgatás 180 fokkal</string>
+    <string name="mouse_axis_correction_270">Elforgatás 270 fokkal</string>
+    <string name="summary_checkbox_reverse_resolution">Csak akkor engedélyezze, ha a kép tájolása vagy méretei hibásak; ütközhet az eszközforgatás követésével.</string>
+    <string name="summary_checkbox_rotable_screen">Automatikusan szinkronizálja a stream elrendezését, amikor az eszköz álló és fekvő tájolás között vált.</string>
 </resources>

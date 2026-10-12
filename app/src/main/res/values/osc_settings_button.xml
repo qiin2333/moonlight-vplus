@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">Allow dragging the settings button</string>
+    <string name="osc_reset_settings_button_position">Restore initial settings button position</string>
+    <string name="osc_settings_button_size">Settings button size</string>
+</resources>

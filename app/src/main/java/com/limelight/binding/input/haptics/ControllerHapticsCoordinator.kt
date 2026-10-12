@@ -80,10 +80,7 @@ internal class ControllerHapticsCoordinator(
     private val gamePipeline by lazy {
         GameRumblePipeline(
             renderer = renderer,
-            context = { number -> GameRumbleContext(
-                handler.prefConfig.gameRumbleMode, controllerHasRumble(number),
-                deviceCapabilities.hasVibrator, deviceCapabilities.tier
-            ) },
+            context = ::gameRumbleContext,
             clockMs = SystemClock::elapsedRealtime,
             postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
             removeCallbacks = handler.mainThreadHandler::removeCallbacks
@@ -136,13 +133,21 @@ internal class ControllerHapticsCoordinator(
             ?.toShort()
 
     fun hasRumbleCapability(context: InputDeviceContext): Boolean {
-        if (!context.external) return false
+        // Built-in gamepads (e.g. Switch OLED Joy-Con under LineageOS) report as internal
+        // but still carry real vibrators, so capability must not gate on isExternal. This
+        // mirrors the arrival advertisement in InputDeviceContext, which likewise has no
+        // external filter for LI_CCAP_RUMBLE.
         if (handler.prefConfig.multiController && !context.assignedControllerNumber) return false
         val inputDevice = context.inputDevice ?: return false
+        // Keep the plain X/Y range check first: upstream eligibility relies on motion ranges
+        // alone, so devices passing it must not newly require SOURCE_JOYSTICK. Only when X/Y is
+        // absent do we fall back to hasJoystickAxes() — which does check that flag — so the
+        // right Joy-Con's fallback stick pairs (Z/RZ, RX/RY) stay eligible exactly as far as
+        // device discovery lets them through.
         if (ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_X) == null ||
             ControllerHandler.getMotionRangeForJoystickAxis(inputDevice, MotionEvent.AXIS_Y) == null
         ) {
-            return false
+            if (!ControllerHandler.hasJoystickAxes(inputDevice)) return false
         }
         return context.vibratorManager != null ||
             context.vibrator != null ||
@@ -450,9 +455,7 @@ internal class ControllerHapticsCoordinator(
             if (isStoppingOrStopped()) return@post
             val now = SystemClock.elapsedRealtime()
             for ((number, pending) in latest) {
-                val context = GameRumbleContext(handler.prefConfig.gameRumbleMode,
-                    controllerHasRumble(number), number.toInt() == 0 && deviceCapabilities.hasVibrator,
-                    deviceCapabilities.tier)
+                val context = gameRumbleContext(number)
                 val plan = GameRumbleAllocator.allocate(context, RumbleSignalFeatures(pending.state))
                 renderer.queueController(mixer.submit(number, RumbleSource.AUTHORED,
                     plan.controller ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
@@ -495,7 +498,7 @@ internal class ControllerHapticsCoordinator(
                         try {
                             if (ds5HapticsBindings[controllerId]?.sink === sink) {
                                 if (playing) handler.rumbleManager.handleRumble(controllerNumber, 0, 0)
-                                else onSinkChanged(controllerNumber)
+                                onSinkChanged(controllerNumber)
                             }
                         } finally { completed.countDown() }
                     }
@@ -548,6 +551,11 @@ internal class ControllerHapticsCoordinator(
                 return@post
             }
             onAvailability(HapticAvailability.READY)
+            // onPlaybackChanged only fires on later transitions, so an accepted sink that is
+            // already playing needs an explicit replay (see onSinkChanged for the invariant).
+            if (sink.playbackControl?.playbackActive == true) {
+                onSinkChanged(controllerNumber)
+            }
             replaced.forEach { it.sink.stop() }
         }
     }
@@ -583,7 +591,12 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    /** Replays current logical state when the physical sink for a controller changes. */
+    /**
+     * Replay entry for any change that can flip gameRumbleContext allocation: the waveform
+     * binding set or its playback state. Current triggers are the playback start/stop edge in
+     * onPlaybackChanged and a binding accepted while already playing. Any new trigger of the
+     * same kind must go through here so tracked state is re-routed under the fresh context.
+     */
     fun onSinkChanged(controllerNumber: Short) {
         runOnOutputThread {
             if (isStoppingOrStopped()) return@runOnOutputThread
@@ -658,6 +671,40 @@ internal class ControllerHapticsCoordinator(
             }
         }
         return false
+    }
+
+    // Any capable borrower suppresses the channel — not "all contexts borrow": in a mixed
+    // controller the borrowed actuator is still driven by the controller channel, so the device
+    // channel must yield even though a real-motor context loses its transient compensation.
+    private fun controllerBorrowsDeviceVibrator(controllerNumber: Short): Boolean {
+        for (i in 0 until handler.inputDeviceContexts.size()) {
+            val context = handler.inputDeviceContexts.valueAt(i)
+            if (context.controllerNumber == controllerNumber &&
+                hasRumbleCapability(context) &&
+                context.borrowsDeviceVibrator
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun gameRumbleContext(controllerNumber: Short): GameRumbleContext {
+        val mode = handler.prefConfig.gameRumbleMode
+        val hasController = controllerHasRumble(controllerNumber)
+        // COORDINATED is the only mode where controller and device channels can both fire from one
+        // rumble state. When the controller sink is the device's own borrowed vibrator, the device
+        // channel would double-drive that same actuator, so it must yield — but only while the
+        // controller channel actually dispatches. An active DS5 waveform sink suppresses
+        // writeController, leaving the borrowed vibrator unwritten and the device channel free.
+        val controllerChannelDispatches = ds5HapticsBindings.values.none {
+            it.controllerNumber == controllerNumber && it.sink.playbackControl?.playbackActive == true
+        }
+        val hasDevice = controllerNumber.toInt() == 0 && deviceCapabilities.hasVibrator && !(
+            mode == GameRumbleMode.COORDINATED && hasController && controllerChannelDispatches &&
+                controllerBorrowsDeviceVibrator(controllerNumber)
+            )
+        return GameRumbleContext(mode, hasController, hasDevice, deviceCapabilities.tier)
     }
 
     private fun runOnOutputThread(action: () -> Unit) {

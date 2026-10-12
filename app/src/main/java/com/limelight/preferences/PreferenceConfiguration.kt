@@ -14,6 +14,7 @@ import android.view.Display
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.preference.PreferenceManager
+import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
@@ -81,6 +82,8 @@ class PreferenceConfiguration {
     var doubleTapTimeThreshold = 0
     var enableLocalCursorRendering = false
     var optimizeHardwareTouchpad = false
+    /** Percent. 100 keeps the physical touchpad size reported to the host. */
+    var hardwareTouchpadPointerSpeedPercent = DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
     //自定义按键映射
     var enableCustomKeyMap = false
     //修复鼠标中键识别
@@ -101,6 +104,7 @@ class PreferenceConfiguration {
     var fps = 0
     var resolutionScale = 0
     var bitrate = 0
+    var fecPercentage = -2
     var enableAdaptiveBitrate = false
     var abrMode: String = "balanced"  // quality | balanced | lowLatency
     var longPressflatRegionPixels = 0 //Assigned to NativeTouchContext.INTIAL_ZONE_PIXELS
@@ -192,6 +196,7 @@ class PreferenceConfiguration {
     var framePacing = 0
     var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
+    var mouseAxisCorrection = MouseAxisCorrection.OFF
     var enableNativeMousePointer = false
     var enableAudioFx = false
     var enableSpatializer = false
@@ -375,6 +380,7 @@ class PreferenceConfiguration {
                 .putBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, touchKeyboardAutoInvoke)
                 .putBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, remoteImeAutoShow)
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
+                .putString(MOUSE_AXIS_CORRECTION_PREF_STRING, mouseAxisCorrection.preferenceValue)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
                 .putString(
@@ -388,6 +394,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_DOUBLE_CLICK_DRAG_PREF_STRING, enableDoubleClickDrag)
                 .putBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, enableLocalCursorRendering)
                 .putBoolean(OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING, optimizeHardwareTouchpad)
+                .putInt(HARDWARE_TOUCHPAD_POINTER_SPEED_PREF_STRING, hardwareTouchpadPointerSpeedPercent)
                 .putFloat(GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING, gyroSensitivityMultiplier)
                 .putBoolean(GYRO_INVERT_X_AXIS_PREF_STRING, gyroInvertXAxis)
                 .putBoolean(GYRO_INVERT_Y_AXIS_PREF_STRING, gyroInvertYAxis)
@@ -480,6 +487,7 @@ class PreferenceConfiguration {
         copy.isCustomResolution = this.isCustomResolution
         copy.fps = this.fps
         copy.bitrate = this.bitrate
+        copy.fecPercentage = this.fecPercentage
         copy.enableAdaptiveBitrate = this.enableAdaptiveBitrate
         copy.abrMode = this.abrMode
         copy.videoFormat = this.videoFormat
@@ -527,11 +535,13 @@ class PreferenceConfiguration {
         copy.escMenuKey = this.escMenuKey
         copy.enableStartKeyMenu = this.enableStartKeyMenu
         copy.enableNativeMousePointer = this.enableNativeMousePointer
+        copy.mouseAxisCorrection = this.mouseAxisCorrection
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
         copy.hevcLowLatencyMode = this.hevcLowLatencyMode
         copy.enableDoubleClickDrag = this.enableDoubleClickDrag
         copy.enableLocalCursorRendering = this.enableLocalCursorRendering
         copy.optimizeHardwareTouchpad = this.optimizeHardwareTouchpad
+        copy.hardwareTouchpadPointerSpeedPercent = this.hardwareTouchpadPointerSpeedPercent
         copy.gyroToRightStick = this.gyroToRightStick
         copy.gyroToMouse = this.gyroToMouse
         copy.gyroSensitivityMultiplier = this.gyroSensitivityMultiplier
@@ -559,6 +569,7 @@ class PreferenceConfiguration {
         private const val DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING = "seekbar_double_tap_time_threshold"
         private const val ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING = "pref_enable_local_cursor_rendering"
         private const val OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING = "checkbox_optimize_hardware_touchpad"
+        private const val HARDWARE_TOUCHPAD_POINTER_SPEED_PREF_STRING = "seekbar_hardware_touchpad_pointer_speed"
 
         private const val LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps"
         private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
@@ -624,6 +635,7 @@ class PreferenceConfiguration {
         const val FRAME_PACING_PREF_STRING = "frame_pacing"
         const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
         private const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
+        private const val MOUSE_AXIS_CORRECTION_PREF_STRING = "list_mouse_axis_correction"
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
         private const val SHOW_AUDIO_HAPTICS_CARD_PREF_STRING = "checkbox_show_audio_haptics_card"
@@ -725,6 +737,7 @@ class PreferenceConfiguration {
         // ---- Package-private pref key constants (promoted to public for Kotlin interop) ----
         const val FPS_PREF_STRING = "list_fps"
         const val BITRATE_PREF_STRING = "seekbar_bitrate_kbps"
+        const val AUTO_ADJUST_BITRATE_PREF_STRING = "auto_adjust_bitrate"
         const val HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale"
         const val LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels"
         const val SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display"
@@ -845,6 +858,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_SCREEN_COMBINATION_MODE = "-1"
         const val DEFAULT_FRAME_PACING = "precise-sync"
         private const val DEFAULT_ABSOLUTE_MOUSE_MODE = false
+        private val DEFAULT_MOUSE_AXIS_CORRECTION = MouseAxisCorrection.OFF
         private const val DEFAULT_ENABLE_AUDIO_FX = false
         private const val DEFAULT_ENABLE_SPATIALIZER = false
         private const val DEFAULT_REDUCE_REFRESH_RATE = false
@@ -899,6 +913,9 @@ class PreferenceConfiguration {
         private const val DEFAULT_DOUBLE_TAP_TIME_THRESHOLD = 125 // 默认125ms
         private const val DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING = false
         private const val DEFAULT_OPTIMIZE_HARDWARE_TOUCHPAD = false
+        const val DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED = 100
+        const val MIN_HARDWARE_TOUCHPAD_POINTER_SPEED = 50
+        const val MAX_HARDWARE_TOUCHPAD_POINTER_SPEED = 300
 
         private const val DEFAULT_REVERSE_RESOLUTION = false
         private const val DEFAULT_ROTABLE_SCREEN = false
@@ -1334,6 +1351,11 @@ class PreferenceConfiguration {
                 config.bitrate = getDefaultBitrate(context)
             }
 
+            config.fecPercentage = when (prefs.getString("list_fec_mode", "host")) {
+                "automatic" -> -1
+                "fixed" -> prefs.getInt("seekbar_fec_percentage", 20).coerceIn(0, 100)
+                else -> -2
+            }
             config.enableAdaptiveBitrate = prefs.getBoolean(ADAPTIVE_BITRATE_PREF_STRING, false)
             config.abrMode = prefs.getString(ABR_MODE_PREF_STRING, "balanced") ?: "balanced"
 
@@ -1418,6 +1440,10 @@ class PreferenceConfiguration {
             config.doubleTapTimeThreshold = prefs.getInt(DOUBLE_TAP_TIME_THRESHOLD_PREF_STRING, DEFAULT_DOUBLE_TAP_TIME_THRESHOLD)
             config.enableLocalCursorRendering = prefs.getBoolean(ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING, DEFAULT_ENABLE_LOCAL_CURSOR_RENDERING)
             config.optimizeHardwareTouchpad = prefs.getBoolean(OPTIMIZE_HARDWARE_TOUCHPAD_PREF_STRING, DEFAULT_OPTIMIZE_HARDWARE_TOUCHPAD)
+            config.hardwareTouchpadPointerSpeedPercent = prefs.getInt(
+                HARDWARE_TOUCHPAD_POINTER_SPEED_PREF_STRING,
+                DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
+            ).coerceIn(MIN_HARDWARE_TOUCHPAD_POINTER_SPEED, MAX_HARDWARE_TOUCHPAD_POINTER_SPEED)
             config.enableCustomKeyMap = prefs.getBoolean("checkbox_special_key_map", false)
             config.fixMouseMiddle = prefs.getBoolean("checkbox_mouse_middle", false)
             config.fixMouseWheel = prefs.getBoolean("checkbox_mouse_wheel", false)
@@ -1537,6 +1563,12 @@ class PreferenceConfiguration {
             config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST)
             config.absoluteMouseMode = prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE)
+            config.mouseAxisCorrection = MouseAxisCorrection.fromPreferenceValue(
+                prefs.getString(
+                    MOUSE_AXIS_CORRECTION_PREF_STRING,
+                    DEFAULT_MOUSE_AXIS_CORRECTION.preferenceValue
+                ) ?: DEFAULT_MOUSE_AXIS_CORRECTION.preferenceValue
+            )
 
             config.enableAudioFx = prefs.getBoolean(ENABLE_AUDIO_FX_PREF_STRING, DEFAULT_ENABLE_AUDIO_FX)
             config.enableSpatializer = prefs.getBoolean(ENABLE_SPATIALIZER_PREF_STRING, DEFAULT_ENABLE_SPATIALIZER)

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_allow_drag_settings_button">اجازه کشیدن دکمه تنظیمات</string>
+    <string name="osc_reset_settings_button_position">بازگردانی موقعیت اولیه دکمه تنظیمات</string>
+    <string name="osc_settings_button_size">اندازه دکمه تنظیمات</string>
+</resources>

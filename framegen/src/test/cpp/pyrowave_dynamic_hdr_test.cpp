@@ -1,4 +1,5 @@
 #include "pyrowave_dynamic_hdr.hpp"
+#include "moonlight-common-c/src/DynamicHdr.h"
 #include "moonlight-common-c/src/PyrowaveProtocol.h"
 #include "moonlight-common-c/tests/PyrowaveDynamicHdrFixtures.h"
 
@@ -21,7 +22,6 @@ static std::vector<std::uint8_t> from_hex(const char* hex) {
     }
     return bytes;
 }
-
 static void tlv(std::vector<std::uint8_t>& out, std::uint16_t type, std::uint16_t flags,
                 const std::vector<std::uint8_t>& bytes) {
     out.insert(out.end(), {static_cast<std::uint8_t>(type >> 8), static_cast<std::uint8_t>(type),
@@ -46,7 +46,19 @@ int main() {
             tlv(metadata, LI_PYROWAVE_METADATA_HLG_NOMINAL_PEAK, protected_required, {3, 232});
             CHECK(!parse_dynamic_hdr_frame(without_peak.data(), without_peak.size(), fixture.format, 1920, 1080, scene));
         }
-        CHECK(parse_dynamic_hdr_frame(metadata.data(), metadata.size(), fixture.format, 1920, 1080, scene));
+        dynamic_hdr_payload vivid;
+        CHECK(parse_dynamic_hdr_frame(metadata.data(), metadata.size(), fixture.format, 1920, 1080, scene, &vivid));
+        if (fixture.type == LI_PYROWAVE_METADATA_HDR_VIVID) {
+            CHECK(vivid.data == metadata.data() + 10 + 8 + 5);
+            CHECK(vivid.size == payload.size() - 5 && vivid.data[0] == (fixture.format == 3 ? 2 : 1));
+            CHECK(std::equal(vivid.data, vivid.data + vivid.size, payload.data() + 5));
+            auto wrong_version = metadata;
+            wrong_version[10 + 8 + 5] = fixture.format == 3 ? 1 : 2;
+            dynamic_hdr_scene rejected;
+            CHECK(!parse_dynamic_hdr_frame(wrong_version.data(), wrong_version.size(), fixture.format, 1920, 1080, rejected));
+        } else {
+            CHECK(vivid.data == nullptr && vivid.size == 0);
+        }
         CHECK(scene.format == fixture.format);
         CHECK(scene.maximum_nits > 990 && scene.maximum_nits < 1010);
         CHECK(scene.average_nits > 90 && scene.average_nits < 110);
@@ -70,19 +82,18 @@ int main() {
         changed_scene.average_nits = 350;
         changed_scene.median_nits = 350;
         CHECK(build_dynamic_hdr_lut(changed_scene, 500, lut));
-        CHECK(lut != first_lut); // Per-frame statistics actually change the mapping.
+        CHECK(lut != first_lut);
         CHECK(build_dynamic_hdr_lut(scene, 500, lut));
         CHECK(std::is_sorted(lut.begin(), lut.end()));
         CHECK(pq_to_nits(lut.back()) <= 501);
         for (std::size_t i = 0; i < lut.size(); ++i) {
-            CHECK(std::isfinite(lut[i]) && lut[i] >= 0 && lut[i] <= static_cast<float>(i) / 255.0f);
+            CHECK(std::isfinite(lut[i]) && lut[i] >= 0 && lut[i] <= static_cast<float>(i) / 255.0F);
         }
         CHECK(build_dynamic_hdr_lut(scene, 2000, lut));
         for (std::size_t i = 0; i < lut.size(); ++i) {
-            CHECK(std::abs(lut[i] - std::min(static_cast<float>(i) / 255.0f, nits_to_pq(2000))) < 0.00001f);
+            CHECK(std::abs(lut[i] - std::min(static_cast<float>(i) / 255.0F, nits_to_pq(2000))) < 0.00001F);
         }
-
-        for (std::size_t size = 0; size < without_peak.size(); ++size) {
+        for (std::size_t size = 0; size + 1 < without_peak.size(); ++size) {
             CHECK(!parse_dynamic_hdr_frame(without_peak.data(), size, fixture.format, 1920, 1080, scene));
         }
         CHECK(!parse_dynamic_hdr_frame(nullptr, 0, fixture.format, 1920, 1080, scene));
@@ -92,7 +103,8 @@ int main() {
         CHECK(!parse_dynamic_hdr_frame(duplicate.data(), duplicate.size(), fixture.format, 1920, 1080, scene));
         auto unsupported = metadata;
         tlv(unsupported, 0x7fff, protected_required, {1});
-        CHECK(!parse_dynamic_hdr_frame(unsupported.data(), unsupported.size(), fixture.format, 1920, 1080, scene));
+        CHECK(!parse_dynamic_hdr_frame(unsupported.data(), unsupported.size(), fixture.format, 1920, 1080, scene, &vivid));
+        CHECK(vivid.data == nullptr && vivid.size == 0); // No view escapes a rejected frame.
         auto optional = metadata;
         tlv(optional, 0x7fff, LI_PYROWAVE_METADATA_FLAG_OPTIONAL, {1});
         CHECK(parse_dynamic_hdr_frame(optional.data(), optional.size(), fixture.format, 1920, 1080, scene));
@@ -112,8 +124,8 @@ int main() {
     }
 
     scene = {};
-    scene.format = 1;
-    CHECK(build_dynamic_hdr_lut(scene, 500, lut)); // A valid black scene must remain black.
+    scene.format = DYNAMIC_HDR_FORMAT_HDR10_PLUS;
+    CHECK(build_dynamic_hdr_lut(scene, 500, lut));
     CHECK(pq_to_nits(lut.front()) == 0);
     CHECK(!build_dynamic_hdr_lut(scene, 0, lut));
     CHECK(!build_dynamic_hdr_lut(scene, -1, lut));
@@ -123,6 +135,51 @@ int main() {
     scene.maximum_nits = 1000;
     scene.average_nits = -1;
     CHECK(!build_dynamic_hdr_lut(scene, 500, lut));
+
+    scene = {};
+    scene.format = DYNAMIC_HDR_FORMAT_DOLBY_VISION_PROFILE_81;
+    scene.minimum_nits = 1;
+    scene.maximum_nits = 1000;
+    scene.average_nits = 200;
+    scene.median_nits = 200;
+    scene.dolby_matrix_valid = true;
+    scene.dolby_lms_matrix_valid = true;
+    for (std::size_t i = 0; i < 9; ++i) {
+        scene.dolby_ycc_to_rgb[i] = static_cast<std::int16_t>(i % 4 == 0 ? 8192 : 0);
+        scene.dolby_rgb_to_lms[i] = static_cast<std::int16_t>(i % 4 == 0 ? 16384 : 0);
+    }
+    for (auto &curve : scene.dolby_reshape) {
+        curve.valid = true;
+        curve.pivot_count = 2;
+        curve.pivots[0] = 0.0F;
+        curve.pivots[1] = 1.0F;
+        curve.mapping_idc[0] = 0;
+        curve.poly_order[0] = 1;
+        curve.poly_coefficients[0][0] = 0.0F;
+        curve.poly_coefficients[0][1] = 1.0F;
+    }
+    dynamic_hdr_mapping mapping;
+    CHECK(build_dynamic_hdr_mapping(scene, 500, mapping));
+    CHECK(mapping.mapping_flags[0] > 0.5F && mapping.mapping_flags[1] > 0.5F &&
+          mapping.mapping_flags[2] > 0.5F);
+    CHECK(std::abs(mapping.dolby[0].polynomial[0][0][1] - 1.0F) < 0.0001F);
+    CHECK(std::abs(mapping.lms_to_rgb[0][0] - 1.0F) < 0.0001F);
+
+    scene = {};
+    scene.format = DYNAMIC_HDR_FORMAT_VIVID_PQ;
+    scene.minimum_nits = 1;
+    scene.maximum_nits = 4000;
+    scene.average_nits = 500;
+    scene.median_nits = 500;
+    scene.vivid_base.valid = true;
+    scene.vivid_base.m_p = 2.0F;
+    scene.vivid_base.m_m = 1.0F;
+    scene.vivid_base.m_a = 0.8F;
+    scene.vivid_base.m_n = 0.4F;
+    CHECK(build_dynamic_hdr_lut(scene, 500, lut));
+    CHECK(std::is_sorted(lut.begin(), lut.end()));
+    CHECK(lut.back() <= 1.0F);
+
     std::puts("PASS: generated HDR10+/Vivid/DV profiles, protected frame TLVs and scene-adaptive mapping");
     return 0;
 }

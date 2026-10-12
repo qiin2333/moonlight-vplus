@@ -146,20 +146,9 @@ class AdaptiveBitrateService(
     // -----------------------------------------------------------------------
 
     private fun applyModePreset(mode: String) {
-        when (mode) {
-            MODE_QUALITY -> {
-                minBitrate = maxOf(5000, (initialBitrate * 0.5).toInt())
-                maxBitrate = minOf(150_000, (initialBitrate * 1.5).toInt())
-            }
-            MODE_LOW_LATENCY -> {
-                minBitrate = 2000
-                maxBitrate = (initialBitrate * 1.2).toInt()
-            }
-            else -> {
-                minBitrate = maxOf(3000, (initialBitrate * 0.3).toInt())
-                maxBitrate = minOf(150_000, initialBitrate * 2)
-            }
-        }
+        val range = bitrateRange(initialBitrate, mode)
+        minBitrate = range.first
+        maxBitrate = range.last
     }
 
     private fun resetState() {
@@ -288,6 +277,18 @@ class AdaptiveBitrateService(
         const val MODE_QUALITY = "quality"
         const val MODE_BALANCED = "balanced"
         const val MODE_LOW_LATENCY = "lowLatency"
+
+        /** Preset bounds must remain valid and contain the selected starting bitrate. */
+        fun bitrateRange(initialBitrate: Int, mode: String): IntRange {
+            val baseline = initialBitrate.coerceIn(500, 800_000)
+            val preset = when (mode) {
+                MODE_QUALITY -> maxOf(5000, baseline / 2) to minOf(150_000, (baseline * 1.5).toInt())
+                MODE_LOW_LATENCY -> 2000 to (baseline * 1.2).toInt()
+                else -> maxOf(3000, (baseline * 0.3).toInt()) to minOf(150_000, baseline * 2)
+            }
+            return minOf(baseline, preset.first).coerceAtLeast(500)..
+                maxOf(baseline, preset.second).coerceAtMost(800_000)
+        }
 
         private const val START_DELAY_SECONDS = 3L
         private const val SERVER_RETRY_INTERVAL_TICKS = 5
