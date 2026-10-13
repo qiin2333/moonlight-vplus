@@ -1,5 +1,6 @@
 package com.limelight.gamemenu
 
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import com.limelight.Game
@@ -16,6 +17,12 @@ internal data class MicrophoneMenuState(
     val selectedKey: String = DEFAULT_MICROPHONE_INPUT,
     val status: String = ""
 )
+
+internal fun microphoneRecordingStatusResource(sdkInt: Int, capturing: Boolean, hasRoutedDevice: Boolean): Int = when {
+    !capturing -> R.string.mic_disabled
+    sdkInt < 23 || hasRoutedDevice -> R.string.mic_input_active
+    else -> R.string.mic_input_route_pending
+}
 
 /** Enumeration/listeners exist only while the user is on this page. Never starts recording. */
 internal class MicrophoneMenuController(private val game: Game) {
@@ -61,10 +68,16 @@ internal class MicrophoneMenuController(private val game: Game) {
         val resolvedKey = resolvedMicrophoneInputKey(repository.selectedKey, devices)
         val unavailable = repository.selectedKey != DEFAULT_MICROPHONE_INPUT &&
             resolvedKey == DEFAULT_MICROPHONE_INPUT
-        val recording = when {
-            !manager.isMicrophoneActive() -> game.getString(R.string.mic_disabled)
-            current != null -> game.getString(R.string.mic_input_active, repository.displayName(current))
-            else -> game.getString(R.string.mic_input_route_pending)
+        val recordingStatus = microphoneRecordingStatusResource(
+            sdkInt = Build.VERSION.SDK_INT,
+            capturing = manager.isMicrophoneActive(),
+            hasRoutedDevice = current != null
+        )
+        val recording = if (recordingStatus == R.string.mic_input_active) {
+            val inputName = current?.let(repository::displayName) ?: game.getString(R.string.mic_input_default)
+            game.getString(recordingStatus, inputName)
+        } else {
+            game.getString(recordingStatus)
         }
         val status = if (unavailable) game.getString(R.string.mic_input_unavailable) + "\n" + recording else recording
         listener?.invoke(MicrophoneMenuState(
