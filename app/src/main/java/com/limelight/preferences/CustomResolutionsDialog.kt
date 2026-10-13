@@ -257,7 +257,7 @@ object CustomResolutionsDialog {
         val presets = linkedSetOf<Resolution>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val cutout = displayCutout(display, context)
-            if (cutout != null) {
+            if (cutout != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val widthInsets = cutout.safeInsetLeft + cutout.safeInsetRight
                 val heightInsets = cutout.safeInsetBottom + cutout.safeInsetTop
                 if (widthInsets != 0 || heightInsets != 0) {
