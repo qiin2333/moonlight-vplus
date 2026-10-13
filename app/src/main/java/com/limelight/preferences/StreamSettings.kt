@@ -457,14 +457,18 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
         }
 
-        searchBar?.defaultFocusHighlightEnabled = false
-        closeBtn?.defaultFocusHighlightEnabled = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            searchBar?.defaultFocusHighlightEnabled = false
+            closeBtn?.defaultFocusHighlightEnabled = false
+        }
         val searchIcon = searchBar?.findViewById<View>(R.id.settings_search_icon)
         searchBar?.setOnClickListener { enterSearchInput() }
         searchInput?.setOnClickListener { enterSearchInput() }
         searchIcon?.setOnFocusChangeListener { _, hasFocus -> updateSearchBarHighlight(hasFocus) }
         closeBtn?.setOnFocusChangeListener { view, hasFocus -> updateCloseHighlight(view, hasFocus) }
-        findViewById<View>(R.id.settings_back)?.foreground = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            findViewById<View>(R.id.settings_back)?.foreground = null
+        }
         findViewById<View>(R.id.settings_back)?.setOnKeyListener { _, keyCode, event ->
             moveRightToPreferenceList(keyCode, event)
         }
@@ -545,6 +549,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun updateCloseHighlight(view: View, focused: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         view.foreground = if (!focused) null else GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setStroke((2f * resources.displayMetrics.density).toInt(), UiHelper.accentFocusColor(this@StreamSettings))
