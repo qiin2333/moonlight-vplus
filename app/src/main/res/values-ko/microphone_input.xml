@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">시스템 기본값</string>
+    <string name="mic_input_builtin">내장 마이크</string>
+    <string name="mic_input_wired">유선 헤드셋</string>
+    <string name="mic_input_bluetooth">Bluetooth 마이크</string>
+    <string name="mic_input_usb">USB 마이크</string>
+    <string name="mic_input_active">녹음 장치: %1$s</string>
+    <string name="mic_input_unavailable">선택한 장치를 사용할 수 없습니다.</string>
+    <string name="mic_input_route_pending">오디오 입력 경로 대기 중</string>
+    <string name="mic_input_failed">이 마이크를 선택할 수 없습니다. 다시 시도하세요.</string>
+</resources>

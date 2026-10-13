@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">ברירת המחדל של המערכת</string>
+    <string name="mic_input_builtin">מיקרופון מובנה</string>
+    <string name="mic_input_wired">אוזניות חוטיות</string>
+    <string name="mic_input_bluetooth">מיקרופון Bluetooth</string>
+    <string name="mic_input_usb">מיקרופון USB</string>
+    <string name="mic_input_active">הקלטה מ־%1$s</string>
+    <string name="mic_input_unavailable">המכשיר שנבחר אינו זמין.</string>
+    <string name="mic_input_route_pending">ממתין לניתוב קלט השמע</string>
+    <string name="mic_input_failed">לא ניתן לבחור במיקרופון זה. יש לנסות שוב.</string>
+</resources>

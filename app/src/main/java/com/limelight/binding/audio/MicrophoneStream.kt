@@ -1,5 +1,7 @@
 package com.limelight.binding.audio
 
+import android.media.AudioRecord
+
 import com.limelight.LimeLog
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.jni.MoonBridge
@@ -8,7 +10,8 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MicrophoneStream(
-    private val conn: NvConnection
+    private val conn: NvConnection,
+    private val configureInput: (AudioRecord) -> Boolean = { true }
 ) : MicrophoneCapture.MicrophoneDataCallback {
 
     private var capture: MicrophoneCapture? = null
@@ -84,7 +87,7 @@ class MicrophoneStream(
 
             encoder = OpusEncoder(MicrophoneConfig.SAMPLE_RATE, MicrophoneConfig.CHANNELS, MicrophoneConfig.getOpusBitrate())
 
-            capture = MicrophoneCapture(this)
+            capture = MicrophoneCapture(this, configureInput)
             if (!capture!!.start()) {
                 LimeLog.severe("无法启动麦克风捕获")
                 cleanup()
@@ -153,7 +156,12 @@ class MicrophoneStream(
         return false
     }
 
-    fun isRunning(): Boolean = running.get() && micActive.get()
+    fun isRunning(): Boolean = running.get() && micActive.get() && capture?.isCapturing() == true
+
+    internal fun requestInput(configure: (AudioRecord) -> Boolean): Boolean =
+        capture?.requestInput(configure) == true
+
+    internal fun routedInputId(): Int? = capture?.routedInputId()
 
     fun isInitialized(): Boolean = running.get()
 

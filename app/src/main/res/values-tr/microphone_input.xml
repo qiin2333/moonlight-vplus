@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Sistem varsayılanı</string>
+    <string name="mic_input_builtin">Dahili mikrofon</string>
+    <string name="mic_input_wired">Kablolu kulaklık</string>
+    <string name="mic_input_bluetooth">Bluetooth mikrofon</string>
+    <string name="mic_input_usb">USB mikrofon</string>
+    <string name="mic_input_active">Kayıt kaynağı: %1$s</string>
+    <string name="mic_input_unavailable">Seçilen cihaz kullanılamıyor.</string>
+    <string name="mic_input_route_pending">Ses giriş yolu bekleniyor</string>
+    <string name="mic_input_failed">Bu mikrofon seçilemiyor. Lütfen tekrar deneyin.</string>
+</resources>

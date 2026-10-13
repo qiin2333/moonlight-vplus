@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Mặc định hệ thống</string>
+    <string name="mic_input_builtin">Micrô tích hợp</string>
+    <string name="mic_input_wired">Tai nghe có dây</string>
+    <string name="mic_input_bluetooth">Micrô Bluetooth</string>
+    <string name="mic_input_usb">Micrô USB</string>
+    <string name="mic_input_active">Đang ghi từ: %1$s</string>
+    <string name="mic_input_unavailable">Thiết bị đã chọn không khả dụng.</string>
+    <string name="mic_input_route_pending">Đang chờ tuyến đầu vào âm thanh</string>
+    <string name="mic_input_failed">Không thể chọn micrô này. Vui lòng thử lại.</string>
+</resources>

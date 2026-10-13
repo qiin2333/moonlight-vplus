@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Výchozí systémové zařízení</string>
+    <string name="mic_input_builtin">Vestavěný mikrofon</string>
+    <string name="mic_input_wired">Kabelová sluchátka</string>
+    <string name="mic_input_bluetooth">Bluetooth mikrofon</string>
+    <string name="mic_input_usb">USB mikrofon</string>
+    <string name="mic_input_active">Nahrávání z: %1$s</string>
+    <string name="mic_input_unavailable">Vybrané zařízení není dostupné.</string>
+    <string name="mic_input_route_pending">Čekání na směrování zvukového vstupu</string>
+    <string name="mic_input_failed">Tento mikrofon nelze vybrat. Zkuste to znovu.</string>
+</resources>

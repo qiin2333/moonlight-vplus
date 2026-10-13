@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Predefinito di sistema</string>
+    <string name="mic_input_builtin">Microfono integrato</string>
+    <string name="mic_input_wired">Cuffie con cavo</string>
+    <string name="mic_input_bluetooth">Microfono Bluetooth</string>
+    <string name="mic_input_usb">Microfono USB</string>
+    <string name="mic_input_active">Registrazione da: %1$s</string>
+    <string name="mic_input_unavailable">Il dispositivo selezionato non è disponibile.</string>
+    <string name="mic_input_route_pending">In attesa del percorso di ingresso audio</string>
+    <string name="mic_input_failed">Impossibile selezionare questo microfono. Riprova.</string>
+</resources>

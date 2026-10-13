@@ -3186,10 +3186,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val menu = activeGameMenu ?: return false
         if (!menu.dispatchControllerAxes(
                 sourceId = ControllerHandler.usbGameMenuAxisSourceId(controllerId),
-                axisPairs = listOf(
+                axisPairs = if (menu.usesMicrophoneInput()) listOf(leftStickX to leftStickY) else listOf(
                     leftStickX to leftStickY,
                     rightStickX to rightStickY
-                )
+                ),
+                rightStickY = if (menu.usesMicrophoneInput()) rightStickY else 0f
             )
         ) {
             return false

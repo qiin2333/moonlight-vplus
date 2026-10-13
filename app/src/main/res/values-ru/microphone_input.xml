@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">По умолчанию в системе</string>
+    <string name="mic_input_builtin">Встроенный микрофон</string>
+    <string name="mic_input_wired">Проводная гарнитура</string>
+    <string name="mic_input_bluetooth">Микрофон Bluetooth</string>
+    <string name="mic_input_usb">Микрофон USB</string>
+    <string name="mic_input_active">Запись с: %1$s</string>
+    <string name="mic_input_unavailable">Выбранное устройство недоступно.</string>
+    <string name="mic_input_route_pending">Ожидание маршрутизации аудиовхода</string>
+    <string name="mic_input_failed">Не удалось выбрать этот микрофон. Попробуйте ещё раз.</string>
+</resources>

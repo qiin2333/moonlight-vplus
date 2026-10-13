@@ -7,6 +7,7 @@ import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.Process
+import android.os.Build
 import android.os.SystemClock
 
 import com.limelight.LimeLog
@@ -15,8 +16,10 @@ import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MicrophoneCapture(
-    private val dataCallback: MicrophoneDataCallback
+    private val dataCallback: MicrophoneDataCallback,
+    private val configureInput: (AudioRecord) -> Boolean = { true }
 ) {
+    private val routeLock = Any()
     private var captureThread: Thread? = null
     private var audioRecord: AudioRecord? = null
     private val running = AtomicBoolean(false)
@@ -68,6 +71,10 @@ class MicrophoneCapture(
                 return false
             }
 
+            if (!configureInput(audioRecord!!)) {
+                LimeLog.warning("Microphone input preference rejected; using system default")
+            }
+
             // 从配置加载音量增益及其平衡参数
             volumeProcessor.configure(
                 enabled = MicrophoneConfig.isVolumeProcessingEnabled(),
@@ -99,11 +106,8 @@ class MicrophoneCapture(
                             buffer.get(data, 0, bytesRead)
                             buffer.clear()
                             processAudioData(data, 0, bytesRead)
-                        } else if (bytesRead == AudioRecord.ERROR_INVALID_OPERATION) {
-                            LimeLog.warning("AudioRecord读取错误: ERROR_INVALID_OPERATION")
-                            break
-                        } else if (bytesRead == AudioRecord.ERROR_BAD_VALUE) {
-                            LimeLog.warning("AudioRecord读取错误: ERROR_BAD_VALUE")
+                        } else if (bytesRead < 0) {
+                            LimeLog.warning("AudioRecord read failed: $bytesRead")
                             break
                         }
                     }
@@ -188,7 +192,7 @@ class MicrophoneCapture(
         // are released. Releasing while the capture thread is still inside read() can crash
         // on some Android audio implementations.
         try {
-            audioRecord?.stop()
+            synchronized(routeLock) { audioRecord?.stop() }
         } catch (_: IllegalStateException) { }
 
         var interrupted = false
@@ -211,6 +215,19 @@ class MicrophoneCapture(
         if (interrupted) {
             Thread.currentThread().interrupt()
         }
+    }
+
+    internal fun requestInput(configure: (AudioRecord) -> Boolean): Boolean = synchronized(routeLock) {
+        val record = audioRecord ?: return@synchronized false
+        running.get() && configure(record)
+    }
+
+    internal fun isCapturing(): Boolean = running.get()
+
+    internal fun routedInputId(): Int? = synchronized(routeLock) {
+        if (Build.VERSION.SDK_INT >= 23 && running.get()) {
+            try { audioRecord?.routedDevice?.id } catch (_: RuntimeException) { null }
+        } else null
     }
 
     private fun initializeAudioEffects() {
@@ -330,14 +347,17 @@ class MicrophoneCapture(
         noiseSuppressor = null
     }
 
-    private fun release() {
+    private fun release() = synchronized(routeLock) {
         releaseAudioEffects()
 
         audioRecord?.let {
-            if (it.state == AudioRecord.STATE_INITIALIZED) {
-                it.stop()
+            try {
+                if (it.state == AudioRecord.STATE_INITIALIZED) it.stop()
+            } catch (_: IllegalStateException) {
+                // Startup may fail before recording begins.
+            } finally {
+                it.release()
             }
-            it.release()
         }
         audioRecord = null
     }

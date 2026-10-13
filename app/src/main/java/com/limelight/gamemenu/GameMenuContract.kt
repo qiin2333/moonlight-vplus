@@ -32,6 +32,8 @@ internal data class GameMenuComposeUiState(
     val gyro: GyroCardState,
     val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
+    val microphone: MicrophoneMenuState = MicrophoneMenuState(),
+    val restoreMicrophoneEntry: Boolean = false,
     val quickEditMode: Boolean = false,
     val usbForwardingEnabled: Boolean = false,
     val isSubmenu: Boolean = false,
@@ -40,7 +42,8 @@ internal data class GameMenuComposeUiState(
 
 internal enum class GameMenuPageLayout {
     STANDARD,
-    TOUCH_MODE
+    TOUCH_MODE,
+    MICROPHONE
 }
 
 enum class GameMenuOptionPresentation {
@@ -127,5 +130,7 @@ internal data class GameMenuCallbacks(
     val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
     val onManageTouchPointerSensitivityPresets: () -> Unit,
     val onCustomKey: (CustomKeyData) -> Unit,
-    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> }
+    val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> },
+    val onMicrophoneInput: (String) -> Unit = {},
+    val onMicrophoneScrollReady: (((Float) -> Unit)?) -> Unit = {}
 )

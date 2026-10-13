@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Implicit al sistemului</string>
+    <string name="mic_input_builtin">Microfon integrat</string>
+    <string name="mic_input_wired">Căști cu fir</string>
+    <string name="mic_input_bluetooth">Microfon Bluetooth</string>
+    <string name="mic_input_usb">Microfon USB</string>
+    <string name="mic_input_active">Înregistrare de la: %1$s</string>
+    <string name="mic_input_unavailable">Dispozitivul selectat nu este disponibil.</string>
+    <string name="mic_input_route_pending">Se așteaptă ruta de intrare audio</string>
+    <string name="mic_input_failed">Acest microfon nu poate fi selectat. Încercați din nou.</string>
+</resources>

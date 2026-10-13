@@ -256,6 +256,22 @@ class GameMenu(
     private val waveformHapticsCardController = WaveformHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
     private val touchPointerSensitivityController = TouchPointerSensitivityController(game)
+    private val microphoneMenuController = MicrophoneMenuController(game)
+    private var microphoneScrollBy: ((Float) -> Unit)? = null
+    private val microphoneScrollSources = mutableMapOf<Int, MenuAxisNavigationState>()
+    private var microphoneScrollSource: Int? = null
+    private var microphoneScrollTime = 0L
+    private val microphoneScroll = object : Runnable {
+        override fun run() {
+            if (!usesMicrophoneInput() || activeDialog?.window?.decorView?.hasWindowFocus() != true) return
+            val key = microphoneScrollSources[microphoneScrollSource]?.activeKeyCode ?: return
+            val now = SystemClock.uptimeMillis()
+            val delta = (now - microphoneScrollTime).coerceIn(0, 50) * game.resources.displayMetrics.density * 0.4f
+            microphoneScrollTime = now
+            microphoneScrollBy?.invoke(if (key == KeyEvent.KEYCODE_DPAD_UP) -delta else delta)
+            handler.postDelayed(this, 16L)
+        }
+    }
     private val renderingProfile = GameMenuRenderingProfile.from(game)
     private val systemHapticsEnabled = Settings.System.getInt(
         game.contentResolver,
@@ -372,15 +388,29 @@ class GameMenu(
 
     fun dispatchControllerAxes(
         sourceId: Int,
-        axisPairs: List<Pair<Float, Float>>
+        axisPairs: List<Pair<Float, Float>>,
+        rightStickY: Float = 0f
     ): Boolean {
         val dialog = currentInputDialog() ?: return false
         if (!dialog.isShowing) return false
         val state = axisNavigationStates.getOrPut(sourceId) { MenuAxisNavigationState() }
 
+        if (usesMicrophoneInput()) {
+            val scrollState = microphoneScrollSources.getOrPut(sourceId) { MenuAxisNavigationState() }
+            if (sourceId !in axisSourcesAwaitingNeutral && dialog.window?.decorView?.hasWindowFocus() == true) {
+                val update = scrollState.update(listOf(0f to rightStickY))
+                if (update.changed && update.pressedKeyCode != null) {
+                    microphoneScrollSource = sourceId
+                    microphoneScrollTime = SystemClock.uptimeMillis()
+                    handler.removeCallbacks(microphoneScroll)
+                    handler.post(microphoneScroll)
+                }
+            }
+        }
+
         if (sourceId in axisSourcesAwaitingNeutral) {
             state.reset()
-            if (state.isNeutral(axisPairs)) {
+            if (state.isNeutral(axisPairs) && kotlin.math.abs(rightStickY) < 0.35f) {
                 axisSourcesAwaitingNeutral.remove(sourceId)
             }
             return true
@@ -401,6 +431,11 @@ class GameMenu(
     }
 
     fun releaseControllerAxisSource(sourceId: Int) {
+        microphoneScrollSources.remove(sourceId)
+        if (microphoneScrollSource == sourceId) {
+            microphoneScrollSource = null
+            handler.removeCallbacks(microphoneScroll)
+        }
         axisSourcesAwaitingNeutral.remove(sourceId)
         axisNavigationStates.remove(sourceId)
         controllerDirectionsAwaitingRelease.removeAll { it.first == sourceId }
@@ -461,6 +496,8 @@ class GameMenu(
     }
 
     private fun prepareForInputOwnerChange() {
+        microphoneScrollSources.filterValues { it.activeKeyCode != null }.keys.let(axisSourcesAwaitingNeutral::addAll)
+        stopMicrophoneScroll()
         releaseHeldControllerDirections(awaitForPhysicalRelease = true)
         axisNavigationStates.forEach { (sourceId, state) ->
             if (state.activeKeyCode != null) {
@@ -912,7 +949,9 @@ class GameMenu(
     }
 
     private fun refreshCurrentMenuPage() {
-        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
+        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.MICROPHONE) {
+            return
+        } else if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
             showTouchModeMenu()
         } else {
             rebuildAndReplaceMenu()
@@ -1222,7 +1261,13 @@ class GameMenu(
                 }
             },
             onManageTouchPointerSensitivityPresets = ::showTouchPointerSensitivityPresetManager,
-            onCustomKey = { sendKeys(it.keys) }
+            onCustomKey = { sendKeys(it.keys) },
+            onMicrophoneInput = { key ->
+                if (!microphoneMenuController.select(key)) {
+                    Toast.makeText(game, R.string.mic_input_failed, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onMicrophoneScrollReady = { microphoneScrollBy = it }
         )
 
         val composeView = ComposeView(game).apply {
@@ -1245,10 +1290,15 @@ class GameMenu(
             }
         }
         dialog = object : ComponentDialog(game, R.style.GameMenuDialogStyle) {
+            override fun onWindowFocusChanged(hasFocus: Boolean) {
+                super.onWindowFocusChanged(hasFocus)
+                if (!hasFocus && usesMicrophoneInput()) prepareForInputOwnerChange()
+            }
             override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
                 if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK != 0) {
-                    val axisPairs = game.controllerHandler.getGameMenuNavigationAxisPairs(event)
-                    if (axisPairs != null && dispatchControllerAxes(event.deviceId, axisPairs)) {
+                    val axisPairs = game.controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = !usesMicrophoneInput())
+                    val rightY = if (usesMicrophoneInput()) game.controllerHandler.getMenuRightStickY(event) else 0f
+                    if (axisPairs != null && dispatchControllerAxes(event.deviceId, axisPairs, rightY)) {
                         return true
                     }
                 }
@@ -1318,6 +1368,8 @@ class GameMenu(
             waveformHapticsCardController.dispose()
             gyroCardController.dispose()
             touchPointerSensitivityController.dispose()
+            microphoneMenuController.stop()
+            stopMicrophoneScroll()
             menuStack.clear()
             onDismiss(this)
         }
@@ -1793,11 +1845,18 @@ class GameMenu(
 
     private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false) {
         val state = composeUiState ?: return
+        if (state.value.pageLayout == GameMenuPageLayout.MICROPHONE && page.layout != GameMenuPageLayout.MICROPHONE) {
+            microphoneMenuController.stop()
+            prepareForInputOwnerChange()
+        }
+        val restoreMicrophoneEntry = state.value.pageLayout == GameMenuPageLayout.MICROPHONE &&
+            page.layout == GameMenuPageLayout.STANDARD
         if (pushCurrent) currentMenuPage()?.let(menuStack::push)
         state.value = state.value.copy(
             title = page.title,
             options = page.options,
             isSubmenu = menuStack.isNotEmpty(),
+            restoreMicrophoneEntry = restoreMicrophoneEntry,
             pageLayout = page.layout
         )
     }
@@ -1806,6 +1865,28 @@ class GameMenu(
         if (menuStack.isEmpty()) return false
         showMenuPage(menuStack.pop())
         return true
+    }
+
+    fun usesMicrophoneInput(): Boolean = activeChildDialog == null &&
+        composeUiState?.value?.pageLayout == GameMenuPageLayout.MICROPHONE
+
+    private fun stopMicrophoneScroll() {
+        handler.removeCallbacks(microphoneScroll)
+        microphoneScrollSources.clear()
+        microphoneScrollSource = null
+    }
+
+    private fun showMicrophoneMenu() {
+        if (!game.prefConfig.enableMic || game.microphoneManager == null) {
+            Toast.makeText(game, R.string.toast_enable_mic_redirect, Toast.LENGTH_SHORT).show()
+            return
+        }
+        prepareForInputOwnerChange()
+        microphoneMenuController.start { microphone ->
+            composeUiState?.let { it.value = it.value.copy(microphone = microphone) }
+        }
+        showSubMenu(getString(R.string.mic_button),
+            arrayOf(MenuOption(getString(R.string.mic_input_default), null)), GameMenuPageLayout.MICROPHONE)
     }
 
     /**
@@ -2254,6 +2335,12 @@ class GameMenu(
             showChevron = true
         ))
 
+        if (game.prefConfig.enableMic) {
+            normalOptions.add(MenuOption(getString(R.string.mic_button), false,
+                { showMicrophoneMenu() }, "microphone_input", isShowIcon = true, isKeepDialog = true,
+                showChevron = true))
+        }
+
         normalOptions.add(MenuOption(getString(R.string.game_menu_disconnect), true,
             { game.disconnect() }, "game_menu_disconnect", true))
 
@@ -2324,6 +2411,7 @@ class GameMenu(
         private var mouse_enable_switch = false
 
         private val ICON_MAP = mapOf(
+            "microphone_input" to R.drawable.ic_mic_gm,
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,
             "game_menu_toggle_performance_overlay" to R.drawable.ic_candy_performance,

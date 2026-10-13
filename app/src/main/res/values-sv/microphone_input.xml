@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Systemstandard</string>
+    <string name="mic_input_builtin">Inbyggd mikrofon</string>
+    <string name="mic_input_wired">Trådanslutet headset</string>
+    <string name="mic_input_bluetooth">Bluetooth-mikrofon</string>
+    <string name="mic_input_usb">USB-mikrofon</string>
+    <string name="mic_input_active">Spelar in från: %1$s</string>
+    <string name="mic_input_unavailable">Den valda enheten är inte tillgänglig.</string>
+    <string name="mic_input_route_pending">Väntar på vägen för ljudingång</string>
+    <string name="mic_input_failed">Det går inte att välja den här mikrofonen. Försök igen.</string>
+</resources>

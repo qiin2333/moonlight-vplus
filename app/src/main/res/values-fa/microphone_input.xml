@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">پیش‌فرض سیستم</string>
+    <string name="mic_input_builtin">میکروفون داخلی</string>
+    <string name="mic_input_wired">هدست سیمی</string>
+    <string name="mic_input_bluetooth">میکروفون Bluetooth</string>
+    <string name="mic_input_usb">میکروفون USB</string>
+    <string name="mic_input_active">ضبط از: %1$s</string>
+    <string name="mic_input_unavailable">دستگاه انتخاب‌شده در دسترس نیست.</string>
+    <string name="mic_input_route_pending">در انتظار مسیر ورودی صدا</string>
+    <string name="mic_input_failed">انتخاب این میکروفون ممکن نیست. دوباره تلاش کنید.</string>
+</resources>

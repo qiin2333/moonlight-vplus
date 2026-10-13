@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">System default</string>
+    <string name="mic_input_builtin">Built-in microphone</string>
+    <string name="mic_input_wired">Wired headset</string>
+    <string name="mic_input_bluetooth">Bluetooth microphone</string>
+    <string name="mic_input_usb">USB microphone</string>
+    <string name="mic_input_active">Recording from: %1$s</string>
+    <string name="mic_input_unavailable">Selected device is unavailable.</string>
+    <string name="mic_input_route_pending">Waiting for the audio input route</string>
+    <string name="mic_input_failed">Unable to select this microphone. Please try again.</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+</resources>

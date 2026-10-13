@@ -27,6 +27,7 @@ class MicrophoneManager(
     private var micButton: ImageButton? = null
     private val buttonPreferences = MicrophoneButtonPreferences(context)
     private val initialStateStore = MicrophoneInitialStateStore(context)
+    internal val inputDevices = MicrophoneInputDeviceRepository(context)
     private var pendingInitialStart = false
     private var lifecycleGeneration = 0L
     private var permissionRequestGeneration: Long? = null
@@ -72,7 +73,7 @@ class MicrophoneManager(
         try {
             MicrophoneConfig.updateBitrateFromConfig(context)
             MicrophoneConfig.updateVolumeProcessingFromConfig(context)
-            microphoneStream = MicrophoneStream(activeConnection)
+            microphoneStream = MicrophoneStream(activeConnection, inputDevices::applySaved)
 
             if (!microphoneStream!!.start()) {
                 microphoneStream?.stop()
@@ -194,7 +195,7 @@ class MicrophoneManager(
         MicrophoneConfig.updateVolumeProcessingFromConfig(context)
 
         val activeConnection = connection ?: return
-        microphoneStream = MicrophoneStream(activeConnection)
+        microphoneStream = MicrophoneStream(activeConnection, inputDevices::applySaved)
         if (microphoneStream!!.start()) {
             showMessage(context.getString(R.string.mic_enabled))
             notifyStateChange(true, persistState)
@@ -212,6 +213,14 @@ class MicrophoneManager(
     }
 
     fun isMicrophoneActive(): Boolean = microphoneStream != null && microphoneStream!!.isRunning()
+
+    internal fun selectInputDevice(key: String): Boolean {
+        return selectMicrophoneInput(key, inputDevices.devices(), isMicrophoneActive(),
+            requestRoute = { microphoneStream?.requestInput { inputDevices.apply(it, key) } == true },
+            save = { choice -> inputDevices.saveSelection(key, choice) })
+    }
+
+    internal fun routedInputId(): Int? = microphoneStream?.routedInputId()
 
     fun isMicrophoneAvailable(): Boolean = microphoneStream != null && microphoneStream!!.isMicrophoneAvailable()
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Par défaut du système</string>
+    <string name="mic_input_builtin">Microphone intégré</string>
+    <string name="mic_input_wired">Casque filaire</string>
+    <string name="mic_input_bluetooth">Microphone Bluetooth</string>
+    <string name="mic_input_usb">Microphone USB</string>
+    <string name="mic_input_active">Enregistrement depuis : %1$s</string>
+    <string name="mic_input_unavailable">Le périphérique sélectionné est indisponible.</string>
+    <string name="mic_input_route_pending">En attente du routage de l’entrée audio</string>
+    <string name="mic_input_failed">Impossible de sélectionner ce microphone. Veuillez réessayer.</string>
+</resources>
