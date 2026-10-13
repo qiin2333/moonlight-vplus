@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">Waiting for the audio input route</string>
     <string name="mic_input_failed">Unable to select this microphone. Please try again.</string>
     <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
 </resources>

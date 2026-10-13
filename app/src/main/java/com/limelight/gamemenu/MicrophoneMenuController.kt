@@ -9,6 +9,7 @@ import com.limelight.binding.audio.DEFAULT_MICROPHONE_INPUT
 import com.limelight.binding.audio.MicrophoneInputDevice
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.binding.audio.resolvedMicrophoneInputKey
+import com.limelight.binding.audio.selectableMicrophoneInputs
 
 internal data class MicrophoneMenuChoice(val key: String, val name: String)
 
@@ -63,9 +64,11 @@ internal class MicrophoneMenuController(private val game: Game) {
     private fun publish() {
         val manager = manager ?: return
         val repository = manager.inputDevices
+        val selectable = selectableMicrophoneInputs(devices)
+        val names = repository.displayNames(selectable)
         val routedId = manager.routedInputId()
         val current = devices.firstOrNull { it.id == routedId }
-        val resolvedKey = resolvedMicrophoneInputKey(repository.selectedKey, devices)
+        val resolvedKey = resolvedMicrophoneInputKey(repository.selectedKey, selectable)
         val unavailable = repository.selectedKey != DEFAULT_MICROPHONE_INPUT &&
             resolvedKey == DEFAULT_MICROPHONE_INPUT
         val recordingStatus = microphoneRecordingStatusResource(
@@ -74,7 +77,8 @@ internal class MicrophoneMenuController(private val game: Game) {
             hasRoutedDevice = current != null
         )
         val recording = if (recordingStatus == R.string.mic_input_active) {
-            val inputName = current?.let(repository::displayName) ?: game.getString(R.string.mic_input_default)
+            val inputName = current?.let { names[it.key] ?: repository.displayName(it) }
+                ?: game.getString(R.string.mic_input_default)
             game.getString(recordingStatus, inputName)
         } else {
             game.getString(recordingStatus)
@@ -82,7 +86,7 @@ internal class MicrophoneMenuController(private val game: Game) {
         val status = if (unavailable) game.getString(R.string.mic_input_unavailable) + "\n" + recording else recording
         listener?.invoke(MicrophoneMenuState(
             choices = listOf(MicrophoneMenuChoice(DEFAULT_MICROPHONE_INPUT, game.getString(R.string.mic_input_default))) +
-                devices.map { MicrophoneMenuChoice(it.key, repository.displayName(it)) },
+                selectable.map { MicrophoneMenuChoice(it.key, names.getValue(it.key)) },
             selectedKey = if (unavailable) repository.selectedKey else resolvedKey,
             status = status
         ))

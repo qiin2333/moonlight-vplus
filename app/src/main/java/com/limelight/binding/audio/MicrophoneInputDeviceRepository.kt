@@ -22,7 +22,7 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
     val selectedKey: String get() = selection.selectedKey
 
     fun devices(): List<MicrophoneInputDevice> = if (Build.VERSION.SDK_INT >= 23) {
-        try { Api23.devices(context).also(selection::resolve) } catch (_: RuntimeException) {
+        try { Api23.devices(context).also { selection.resolve(selectableMicrophoneInputs(it)) } } catch (_: RuntimeException) {
             LimeLog.warning("Microphone input enumeration failed")
             emptyList()
         }
@@ -36,7 +36,7 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
     fun applySaved(record: AudioRecord): Boolean {
         if (selectedKey == DEFAULT_MICROPHONE_INPUT) return true
         // A new manager restores the identity; this manager retains its bound attachment.
-        return apply(record, selection.resolve(devices()))
+        return apply(record, selection.resolve(selectableMicrophoneInputs(devices())))
     }
 
     fun apply(record: AudioRecord, key: String): Boolean {
@@ -52,6 +52,12 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         return try { Api23.observe(context, handler, onChanged) } catch (_: RuntimeException) { {} }
     }
 
+    fun displayNames(devices: List<MicrophoneInputDevice>): Map<String, String> = microphoneInputLabels(
+        devices,
+        nameOf = ::displayName,
+        numberedName = { name, number -> context.getString(R.string.mic_input_numbered_device, name, number) }
+    )
+
     fun displayName(device: MicrophoneInputDevice): String {
         // AudioDeviceInfo type protocol values keep newer device types safe on API 22.
         val typeName = context.getString(when (device.type) {
@@ -61,6 +67,7 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
             11, 12, 22 -> R.string.mic_input_usb
             else -> R.string.mic_button
         })
+        if (device.type == 15) return typeName
         return device.name.takeIf(String::isNotBlank)?.let {
             context.getString(R.string.mic_input_named_device, it, typeName)
         } ?: typeName
@@ -84,7 +91,9 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         fun apply(context: Context, record: AudioRecord, key: String): Boolean {
             if (key == DEFAULT_MICROPHONE_INPUT) return record.setPreferredDevice(null)
             val inputs = inputs(context)
-            val choice = choices(inputs).firstOrNull { it.key == key } ?: return false
+            val choice = choices(inputs).firstOrNull {
+                it.key == key && isSelectableMicrophoneInput(it.type)
+            } ?: return false
             val device = inputs.firstOrNull { it.id == choice.id } ?: return false
             return record.setPreferredDevice(device)
         }

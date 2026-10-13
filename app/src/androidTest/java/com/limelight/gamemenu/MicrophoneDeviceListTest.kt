@@ -69,4 +69,20 @@ class MicrophoneDeviceListTest {
         compose.runOnIdle { state.value = initial.copy(choices = initial.choices.take(1)) }
         compose.onNodeWithTag("microphoneInput:default").assertIsFocused()
     }
+
+    @Test fun relabelingAndReorderingKeepFocusAndSelectionOnTheSameAttachment() {
+        val state = mutableStateOf(initial)
+        compose.setContent {
+            AppActionSheet.AppActionSheetTheme {
+                MicrophoneDeviceList(state.value, {}, remember { FocusRequester() }, remember { FocusRequester() })
+            }
+        }
+        compose.onNodeWithTag("microphoneInput:usb").assertIsFocused().assertIsSelected()
+        compose.runOnIdle {
+            state.value = initial.copy(choices = initial.choices.reversed().map { choice ->
+                choice.copy(name = choice.name + " (1)")
+            })
+        }
+        compose.onNodeWithTag("microphoneInput:usb").assertIsFocused().assertIsSelected()
+    }
 }

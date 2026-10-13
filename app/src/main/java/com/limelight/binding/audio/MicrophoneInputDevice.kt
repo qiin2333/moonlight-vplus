@@ -21,6 +21,40 @@ internal data class MicrophoneInputDescriptor(
     val address: String
 )
 
+// AudioDeviceInfo protocol values: radio/tuner, telephony and remote submix are not microphones.
+internal fun isSelectableMicrophoneInput(type: Int): Boolean = when (type) {
+    14, 16, 17, 18, 25 -> false
+    else -> true
+}
+
+internal fun selectableMicrophoneInputs(devices: List<MicrophoneInputDevice>): List<MicrophoneInputDevice> =
+    devices.filter { isSelectableMicrophoneInput(it.type) }.sortedWith(
+        compareBy<MicrophoneInputDevice> {
+            when (it.type) {
+                3, 11, 12, 22 -> 0
+                15 -> 1
+                7, 26 -> 3
+                else -> 2
+            }
+        }.thenBy { it.id }
+    )
+
+internal fun microphoneInputLabels(
+    devices: List<MicrophoneInputDevice>,
+    nameOf: (MicrophoneInputDevice) -> String,
+    numberedName: (String, Int) -> String
+): Map<String, String> {
+    val names = devices.associate { it.key to nameOf(it) }
+    val counts = names.values.groupingBy { it }.eachCount()
+    val occurrences = mutableMapOf<String, Int>()
+    return devices.sortedBy { it.id }.associate { device ->
+        val name = names.getValue(device.key)
+        val number = (occurrences[name] ?: 0) + 1
+        occurrences[name] = number
+        device.key to if (counts.getValue(name) > 1) numberedName(name, number) else name
+    }
+}
+
 /** Attachment keys never depend on other devices; only unambiguous identities may be persisted. */
 internal fun microphoneInputChoices(inputs: List<MicrophoneInputDescriptor>): List<MicrophoneInputDevice> {
     fun fingerprint(input: MicrophoneInputDescriptor): String? {
@@ -83,7 +117,7 @@ internal fun selectMicrophoneInput(
     requestRoute: () -> Boolean,
     save: (MicrophoneInputDevice?) -> Unit
 ): Boolean {
-    val choice = choices.firstOrNull { it.key == key }
+    val choice = choices.firstOrNull { it.key == key && isSelectableMicrophoneInput(it.type) }
     if (key != DEFAULT_MICROPHONE_INPUT && choice == null) return false
     if (capturing && !requestRoute()) return false
     save(choice)
