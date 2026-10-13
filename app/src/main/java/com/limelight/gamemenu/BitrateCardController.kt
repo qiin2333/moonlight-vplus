@@ -85,8 +85,6 @@ internal class BitrateCardController(
             return if (supportsExtendedBitrate) PYROWAVE_MAX_PROGRESS else MAX_PROGRESS
         }
 
-        fun manualBitrateChangeAllowed(adaptiveBitrate: Boolean): Boolean = !adaptiveBitrate
-
         fun getHapticMode(context: Context): HapticMode {
             val prefs = context.getSharedPreferences("game_menu_prefs", Context.MODE_PRIVATE)
             val ordinal = prefs.getInt(PREF_HAPTIC_MODE, HapticMode.KEY_NODES.ordinal)
@@ -300,7 +298,6 @@ internal data class ResolutionSelection(
 
     /** Returns whether this progress change should produce a haptic tick. */
     fun previewProgress(progress: Float): Boolean {
-        if (!manualBitrateChangeAllowed(state.adaptiveBitrate)) return false
         val bounded = progress.coerceIn(0f, maxProgress.toFloat())
         val previousStep = state.progress.roundToInt()
         val currentStep = bounded.roundToInt()

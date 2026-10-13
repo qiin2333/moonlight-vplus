@@ -5,7 +5,7 @@ import android.content.Context
 
 /** Frame rates reuse the resolution dialog. The protected 60 FPS entry uses height zero. */
 object CustomFrameRatesDialog {
-    private const val PROTECTED_FRAME_RATE = 60
+    const val PROTECTED_FRAME_RATE = 60
 
     fun show(
         context: Context,

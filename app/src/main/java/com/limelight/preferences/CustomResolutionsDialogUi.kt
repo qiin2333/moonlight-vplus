@@ -43,7 +43,6 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
@@ -173,7 +172,7 @@ internal fun DialogHeader(
         }
         Text(
             text = stringResource(
-                if (frameRateMode) R.string.title_fps_list else R.string.title_custom_resolutions
+                if (frameRateMode) R.string.title_custom_fps else R.string.title_custom_resolutions
             ),
             modifier = Modifier.weight(1f),
             color = colorResource(R.color.app_dialog_text_primary),
@@ -900,7 +899,8 @@ private fun ResolutionRow(
                 )
             }
         }
-        val protectedFrameRate = resolution.height == 0 && resolution.width == 60
+        val protectedFrameRate = resolution.height == 0 &&
+            resolution.width == CustomFrameRatesDialog.PROTECTED_FRAME_RATE
         if (!protectedFrameRate) {
             DeleteButton(
                 resolution = resolution,

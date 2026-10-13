@@ -108,8 +108,9 @@ private fun ChoiceGrid(
     }
     LaunchedEffect(focusRequest) {
         val value = focusRequest?.first ?: return@LaunchedEffect
+        val index = values.indexOf(value)
         withFrameNanos { }
-        requesters.getOrNull(values.indexOf(value))?.requestFocus()
+        if (index >= 0) requesters.getOrNull(index)?.requestFocus()
         onFocusRestored()
     }
     val view = LocalView.current
