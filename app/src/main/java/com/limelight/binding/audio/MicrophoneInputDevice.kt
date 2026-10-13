@@ -9,8 +9,10 @@ internal data class MicrophoneInputDevice(
     val id: Int,
     val type: Int,
     val name: String,
-    val persistent: Boolean
-)
+    val persistentKey: String?
+) {
+    val persistent: Boolean get() = persistentKey != null
+}
 
 internal data class MicrophoneInputDescriptor(
     val id: Int,
@@ -19,7 +21,7 @@ internal data class MicrophoneInputDescriptor(
     val address: String
 )
 
-/** IDs identify a current attachment, not a device across reconnects. Ambiguous names stay local. */
+/** Attachment keys never depend on other devices; only unambiguous identities may be persisted. */
 internal fun microphoneInputChoices(inputs: List<MicrophoneInputDescriptor>): List<MicrophoneInputDevice> {
     fun fingerprint(input: MicrophoneInputDescriptor): String? {
         val identity = input.address.takeIf(String::isNotBlank)
@@ -32,27 +34,47 @@ internal fun microphoneInputChoices(inputs: List<MicrophoneInputDescriptor>): Li
     val fingerprints = inputs.map(::fingerprint)
     val counts = fingerprints.filterNotNull().groupingBy { it }.eachCount()
     return inputs.mapIndexed { index, input ->
-        val fingerprint = fingerprints[index]?.takeIf { counts[it] == 1 }
         MicrophoneInputDevice(
-            key = fingerprint ?: "session:${input.type}:${input.id}",
+            key = "session:${input.type}:${input.id}",
             id = input.id,
             type = input.type,
             name = input.name,
-            persistent = fingerprint != null
+            persistentKey = fingerprints[index]?.takeIf { counts[it] == 1 }
         )
     }
 }
 
 internal fun resolvedMicrophoneInputKey(selected: String, choices: List<MicrophoneInputDevice>): String {
     choices.firstOrNull { it.key == selected }?.let { return it.key }
-    // A second identical microphone disappearing may make the remaining identity unambiguous.
-    // Session IDs never reach disk, so this only follows an attachment in the current manager.
-    choices.firstOrNull { selected == "session:${it.type}:${it.id}" }?.let { return it.key }
+    choices.firstOrNull { it.persistentKey == selected }?.let { return it.key }
     return DEFAULT_MICROPHONE_INPUT
 }
 
 internal fun persistedMicrophoneInputKey(choice: MicrophoneInputDevice?): String =
-    choice?.takeIf { it.persistent }?.key ?: DEFAULT_MICROPHONE_INPUT
+    choice?.persistentKey ?: DEFAULT_MICROPHONE_INPUT
+
+/** Bind a saved identity once per manager. A missing attachment must not adopt a namesake. */
+internal class MicrophoneInputSelection(savedKey: String) {
+    private var savedKey = savedKey
+    private var attachmentKey: String? = null
+
+    val selectedKey: String
+        @Synchronized get() = attachmentKey ?: savedKey
+
+    @Synchronized
+    fun resolve(choices: List<MicrophoneInputDevice>): String {
+        val resolved = resolvedMicrophoneInputKey(attachmentKey ?: savedKey, choices)
+        if (attachmentKey == null && resolved != DEFAULT_MICROPHONE_INPUT) attachmentKey = resolved
+        return resolved
+    }
+
+    @Synchronized
+    fun select(choice: MicrophoneInputDevice?): String {
+        attachmentKey = choice?.key
+        savedKey = persistedMicrophoneInputKey(choice)
+        return savedKey
+    }
+}
 
 internal fun selectMicrophoneInput(
     key: String,

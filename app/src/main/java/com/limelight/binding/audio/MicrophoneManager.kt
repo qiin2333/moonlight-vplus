@@ -217,7 +217,7 @@ class MicrophoneManager(
     internal fun selectInputDevice(key: String): Boolean {
         return selectMicrophoneInput(key, inputDevices.devices(), isMicrophoneActive(),
             requestRoute = { microphoneStream?.requestInput { inputDevices.apply(it, key) } == true },
-            save = { choice -> inputDevices.saveSelection(key, choice) })
+            save = inputDevices::saveSelection)
     }
 
     internal fun routedInputId(): Int? = microphoneStream?.routedInputId()

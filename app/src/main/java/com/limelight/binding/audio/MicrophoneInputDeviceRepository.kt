@@ -16,27 +16,27 @@ import com.limelight.R
 internal class MicrophoneInputDeviceRepository(context: Context) {
     private val context = context.applicationContext
     private val preferences = this.context.getSharedPreferences("microphone_input_device", Context.MODE_PRIVATE)
-    var selectedKey: String = preferences.getString("selected_input_device_key", DEFAULT_MICROPHONE_INPUT)
+    private val selection = MicrophoneInputSelection(preferences.getString("selected_input_device_key", DEFAULT_MICROPHONE_INPUT)
         ?.takeIf { it == DEFAULT_MICROPHONE_INPUT || it.matches(Regex("device:[a-f0-9]{64}")) }
-        ?: DEFAULT_MICROPHONE_INPUT
-        private set
+        ?: DEFAULT_MICROPHONE_INPUT)
+    val selectedKey: String get() = selection.selectedKey
 
     fun devices(): List<MicrophoneInputDevice> = if (Build.VERSION.SDK_INT >= 23) {
-        try { Api23.devices(context) } catch (_: RuntimeException) {
+        try { Api23.devices(context).also(selection::resolve) } catch (_: RuntimeException) {
             LimeLog.warning("Microphone input enumeration failed")
             emptyList()
         }
     } else emptyList()
 
-    fun saveSelection(key: String, choice: MicrophoneInputDevice?) {
-        selectedKey = key
-        preferences.edit { putString("selected_input_device_key", persistedMicrophoneInputKey(choice)) }
+    fun saveSelection(choice: MicrophoneInputDevice?) {
+        val savedKey = selection.select(choice)
+        preferences.edit { putString("selected_input_device_key", savedKey) }
     }
 
     fun applySaved(record: AudioRecord): Boolean {
         if (selectedKey == DEFAULT_MICROPHONE_INPUT) return true
-        // Reconnects resolve against fresh IDs. An absent device does not erase the preference.
-        return apply(record, resolvedMicrophoneInputKey(selectedKey, devices()))
+        // A new manager restores the identity; this manager retains its bound attachment.
+        return apply(record, selection.resolve(devices()))
     }
 
     fun apply(record: AudioRecord, key: String): Boolean {
