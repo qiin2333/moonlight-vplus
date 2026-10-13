@@ -2,7 +2,9 @@ package com.limelight.services
 
 import android.os.Build
 import android.os.Parcel
+import androidx.annotation.RequiresApi
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -43,8 +45,8 @@ class ShellService : IKeyboardAccessibilityShell.Stub() {
             return null
         }
         return try {
-            if (!process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
+            if (!waitFor(process)) {
+                process.destroy()
                 return null
             }
             if (process.exitValue() != 0) return null
@@ -52,11 +54,30 @@ class ShellService : IKeyboardAccessibilityShell.Stub() {
         } catch (_: IOException) {
             null
         } catch (_: InterruptedException) {
-            process.destroyForcibly()
+            process.destroy()
             Thread.currentThread().interrupt()
             null
         }
     }
+
+    private fun waitFor(process: Process): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) return waitForWithTimeout(process)
+        val finished = CountDownLatch(1)
+        Thread {
+            try {
+                process.waitFor()
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } finally {
+                finished.countDown()
+            }
+        }.start()
+        return finished.await(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun waitForWithTimeout(process: Process): Boolean =
+        process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
     private companion object {
         const val DESTROY_TRANSACTION = 16777114
