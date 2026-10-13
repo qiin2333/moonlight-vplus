@@ -7,6 +7,7 @@ import android.util.AttributeSet
 import androidx.preference.DialogPreference
 
 import com.limelight.R
+import com.limelight.gamemenu.BitrateCardController
 
 import java.util.Locale
 import kotlin.math.exp
@@ -64,17 +65,14 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : DialogPreferenc
     }
 
     fun linearToLog(linearValue: Int): Int {
-        if (linearValue <= minValue) return minValue
-        val normalizedValue = (linearValue - minValue) / linearRange
-        var result = round(exp(minLog + normalizedValue * logRange)).toInt()
-        result = max(minValue, min(maxValue, result))
-        return round(result.toFloat() / stepSize).toInt() * stepSize
+        if (!isLogarithmic) return linearValue
+        return BitrateCardController.progressToBitrateKbps(linearValue, maxValue)
+            .coerceIn(minValue, maxValue)
     }
 
     fun logToLinear(logValue: Int): Int {
-        if (logValue <= minValue) return minValue
-        val normalizedValue = (ln(logValue.toDouble()) - minLog) / logRange
-        return round(minValue + normalizedValue * linearRange).toInt()
+        if (!isLogarithmic) return logValue
+        return BitrateCardController.bitrateToProgress(logValue, maxValue)
     }
 
     fun formatDisplayValue(value: Int): String {
