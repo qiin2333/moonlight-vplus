@@ -3128,9 +3128,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     existingMenu?.dismiss()
                     activeGameMenu = null
 
+                    KeyboardAccessibilityService.setIntercepting(false)
                     val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
                         if (activeGameMenu === dismissedMenu) {
                             activeGameMenu = null
+                            KeyboardAccessibilityService.setIntercepting(true)
                         }
                         if (::controllerHandler.isInitialized) {
                             controllerHandler.onExternalGameMenuDismissed()
