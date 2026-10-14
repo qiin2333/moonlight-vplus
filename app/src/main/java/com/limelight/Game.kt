@@ -223,6 +223,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForwarding?.show()?.let { onShown?.invoke(it) }
     }
     private var activeGameMenu: GameMenu? = null
+    private var streamInForeground = false
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
     private var startHoldWheelView: ComposeView? = null
@@ -1400,13 +1401,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             updateAudioHapticsRuntimeEnabled(true)
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
-        KeyboardAccessibilityService.setIntercepting(true)
+        streamInForeground = true
         val service = KeyboardAccessibilityService.instance
         if (service != null) {
             service.keyEventCallback = this
         } else {
             LimeLog.warning("KeyboardAccessibilityService is not running.")
         }
+        updateKeyboardInterception()
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
@@ -1828,7 +1830,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.suppress()
         }
-        KeyboardAccessibilityService.setIntercepting(false)
+        streamInForeground = false
+        updateKeyboardInterception()
         KeyboardAccessibilityService.instance?.keyEventCallback = null
 
         if (isFinishing) {
@@ -1840,6 +1843,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         }
         super.onPause()
+    }
+
+    private fun updateKeyboardInterception() {
+        val menuVisible = activeGameMenu?.isShowing() == true
+        KeyboardAccessibilityService.setIntercepting(streamInForeground && !menuVisible)
     }
 
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
@@ -3130,11 +3138,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     existingMenu?.dismiss()
                     activeGameMenu = null
 
-                    KeyboardAccessibilityService.setIntercepting(false)
                     val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
                         if (activeGameMenu === dismissedMenu) {
                             activeGameMenu = null
-                            KeyboardAccessibilityService.setIntercepting(true)
+                            updateKeyboardInterception()
                         }
                         if (::controllerHandler.isInitialized) {
                             controllerHandler.onExternalGameMenuDismissed()
@@ -3144,6 +3151,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                         device?.onGameMenuDismissed()
                     }
                     activeGameMenu = menu
+                    updateKeyboardInterception()
                     val opened = activeGameMenu?.isShowing() == true
                     if (opened && !openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                         controllerHandler.onExternalGameMenuOpened()
