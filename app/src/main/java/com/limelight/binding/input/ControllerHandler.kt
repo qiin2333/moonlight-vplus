@@ -66,6 +66,8 @@ class ControllerHandler(
 
     companion object {
         private const val MAXIMUM_BUMPER_UP_DELAY_MS = 100
+        private const val USB_HANDOFF_WITHDRAW_MAX_RETRIES = 5
+        private const val USB_HANDOFF_WITHDRAW_RETRY_DELAY_MS = 50L
 
         // Mirrors the HarmonyOS client's STANDARD_BUTTON_FLAGS for virtual pads.
         private val STANDARD_GAMEPAD_BUTTON_FLAGS = (
@@ -576,6 +578,8 @@ class ControllerHandler(
             driverIds.any { driverControllerContexts[it]?.device !is com.limelight.binding.input.driver.UsbWaveformController } ||
             UsbDriverService.shouldClaimDevice(device, true)
         val lease = UsbForwardingLease(this, usbHandoff.acquire(device.deviceName, identity, gamepad))
+        val pendingWithdrawals = mutableListOf<Short>()
+        val reportedWithdrawals = mutableSetOf<Short>()
         runCatching {
             val affected = mutableSetOf<Short>()
             for (systemDevice in systemDevices) {
@@ -652,23 +656,73 @@ class ControllerHandler(
                             sendControllerInputPacketLocked(defaultContext)
                         } else check(conn.sendControllerInputChecked(number, activeMask) == 0)
                     } else {
-                        check(withdrawControllerSlotLocked(number, activeMask,
-                            sentControllerArrivalMetadata[number.toInt()] != null ||
-                                retired.any { it.controllerNumber == number && it.controllerArrival.isReported }) == 0)
+                        pendingWithdrawals += number
+                        if (sentControllerArrivalMetadata[number.toInt()] != null ||
+                            retired.any { it.controllerNumber == number && it.controllerArrival.isReported }) {
+                            reportedWithdrawals += number
+                        }
                     }
                 }
             }
-            gyroManager.onControllerSourceChanged(0)
-            gyroManager.onSensorsReenabled()
-            hapticsCoordinator.refreshPrimaryController()
         }.fold({
-            // Drain any output already running when the contexts were retired. Sink
-            // teardown is queued on this looper too; export waits for the same barrier.
-            if (!backgroundThreadHandler.post { lease.ready.complete() }) {
-                lease.ready.completeExceptionally(IllegalStateException("Controller output worker stopped"))
+            if (pendingWithdrawals.isEmpty()) {
+                finishUsbForwardingHandoff(lease)
+            } else {
+                retryUsbHandoffWithdrawals(lease, pendingWithdrawals, reportedWithdrawals)
             }
         }, lease.ready::completeExceptionally)
         return lease
+    }
+
+    /** Retry a transient full input queue without removing a slot reused by another source. */
+    private fun retryUsbHandoffWithdrawals(
+        lease: UsbForwardingLease,
+        numbers: List<Short>,
+        reported: Set<Short>,
+        attempt: Int = 0,
+    ) {
+        if (stopped) {
+            lease.ready.completeExceptionally(IllegalStateException("Controller handler stopped during USB handoff"))
+            return
+        }
+        val remaining = synchronized(arrivalMetadataLock) {
+            numbers.filter { number ->
+                if (isControllerSlotEnabled(number)) return@filter false
+                withdrawControllerSlotLocked(
+                    number,
+                    getActiveControllerMask(),
+                    number in reported || sentControllerArrivalMetadata[number.toInt()] != null,
+                ) != 0
+            }
+        }
+        if (remaining.isEmpty()) {
+            finishUsbForwardingHandoff(lease)
+            return
+        }
+        if (attempt >= USB_HANDOFF_WITHDRAW_MAX_RETRIES) {
+            lease.ready.completeExceptionally(
+                IllegalStateException("Unable to withdraw controller slots during USB handoff")
+            )
+            return
+        }
+        val delay = USB_HANDOFF_WITHDRAW_RETRY_DELAY_MS shl attempt.coerceAtMost(4)
+        if (!mainThreadHandler.postDelayed(
+                { retryUsbHandoffWithdrawals(lease, remaining, reported, attempt + 1) },
+                delay,
+            )) {
+            lease.ready.completeExceptionally(IllegalStateException("Controller handler looper stopped during USB handoff"))
+        }
+    }
+
+    private fun finishUsbForwardingHandoff(lease: UsbForwardingLease) {
+        gyroManager.onControllerSourceChanged(0)
+        gyroManager.onSensorsReenabled()
+        hapticsCoordinator.refreshPrimaryController()
+        // Drain any output already running when the contexts were retired. Sink
+        // teardown is queued on this looper too; export waits for the same barrier.
+        if (!backgroundThreadHandler.post { lease.ready.complete() }) {
+            lease.ready.completeExceptionally(IllegalStateException("Controller output worker stopped"))
+        }
     }
 
     private fun withdrawControllerSlotLocked(number: Short, activeMask: Short, wasReported: Boolean): Int {
