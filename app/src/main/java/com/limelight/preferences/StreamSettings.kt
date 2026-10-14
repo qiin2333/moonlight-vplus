@@ -448,7 +448,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         if (searchBar == null || searchInput == null) return
 
-        searchToggle?.setOnClickListener { showSearchBar(enterInput = true) }
+        searchToggle?.setOnClickListener { showSearchBar(enterInput = !searchToggle!!.isFocused) }
         closeBtn?.setOnClickListener {
             if (searchToggle == null) {
                 clearSearchQuery()
@@ -549,10 +549,14 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun updateCloseHighlight(view: View, focused: Boolean) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-        view.foreground = if (!focused) null else GradientDrawable().apply {
+        val highlight = if (!focused) null else GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setStroke((2f * resources.displayMetrics.density).toInt(), UiHelper.accentFocusColor(this@StreamSettings))
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            view.foreground = highlight
+        } else {
+            view.background = highlight
         }
     }
 
@@ -564,7 +568,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         searchToggle?.alpha = 0.38f
         input.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+        input.post { imm?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT) }
     }
 
     private fun leaveSearchInput() {
@@ -1567,7 +1571,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 val recyclerView = listView
                 if (recyclerView != null) {
                     setupScrollListener(recyclerView, settingsActivity)
-
+                    routePreferenceFocusToSearch(recyclerView, settingsActivity)
                 }
             }
         }
@@ -3241,6 +3245,31 @@ class StreamSettings : ThemedAppCompatActivity() {
         /**
          * 设置滚动监听
          */
+        private fun routePreferenceFocusToSearch(
+            recyclerView: RecyclerView,
+            settingsActivity: StreamSettings
+        ) {
+            val searchIconId = R.id.settings_search_icon
+            fun route(view: View) {
+                val target = generateSequence(view) { current ->
+                    if (current.isFocusable || current !is ViewGroup || current.childCount == 0) null
+                    else current.getChildAt(0)
+                }.firstOrNull { it.isFocusable } ?: return
+                if (settingsActivity.searchToggle == null) {
+                    target.nextFocusUpId = searchIconId
+                } else {
+                    target.nextFocusLeftId = searchIconId
+                }
+            }
+            recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+                override fun onChildViewAttachedToWindow(view: View) = route(view)
+                override fun onChildViewDetachedFromWindow(view: View) = Unit
+            })
+            for (index in 0 until recyclerView.childCount) {
+                route(recyclerView.getChildAt(index))
+            }
+        }
+
         private fun setupScrollListener(recyclerView: RecyclerView, settingsActivity: StreamSettings) {
             // 注册数据集变化监听，仅在数据集变化时失效缓存的 category positions
             val adapter = recyclerView.adapter
