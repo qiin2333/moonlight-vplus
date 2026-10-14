@@ -1053,9 +1053,11 @@ private fun ChoiceWrap(
     onSelect: (DisplayChoice) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
+        val initialFocusIndex = choices.indexOfFirst { it.enabled }
         choices.chunked(3).forEachIndexed { rowIndex, row ->
             Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
                 row.forEachIndexed { columnIndex, choice ->
+                    val index = rowIndex * 3 + columnIndex
                     SensitivityPresetButton(
                         name = choice.label,
                         selected = choice.selected,
@@ -1064,7 +1066,7 @@ private fun ChoiceWrap(
                         modifier = Modifier
                             .weight(1f)
                             .then(
-                                if (initialFocusRequester != null && rowIndex == 0 && columnIndex == 0) {
+                                if (initialFocusRequester != null && index == initialFocusIndex) {
                                     Modifier.focusRequester(initialFocusRequester).then(initialFocusModifier)
                                 } else {
                                     Modifier
