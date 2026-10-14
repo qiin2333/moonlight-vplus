@@ -170,11 +170,16 @@ class UsbDriverService : Service(), UsbDriverListener {
         val suppressCallback = sessionLock.withLock {
             synchronized(controllersLock) {
                 controllers.remove(controller)
-                controllerDevices.remove(controller)
             }
             sessionHandoff.isStoppingController(controller.getControllerId())
         }
-        if (!suppressCallback) listener?.deviceRemoved(controller)
+        try {
+            // Removal can precede deviceAdded(). Keep the path available so the
+            // listener can retire an initial slot even without a controller context.
+            if (!suppressCallback) listener?.deviceRemoved(controller)
+        } finally {
+            synchronized(controllersLock) { controllerDevices.remove(controller) }
+        }
         if (controller is UsbWaveformController && started) mainHandler.post {
             sessionLock.withLock {
                 if (started) usbManager?.let { manager ->
@@ -495,10 +500,10 @@ class UsbDriverService : Service(), UsbDriverListener {
                 }
             }
             if (!retained) {
-                synchronized(controllersLock) { controllerDevices.remove(controller) }
                 runCatching { controller.stop() }.onFailure {
                     LimeLog.warning("Unable to stop stale USB controller: ${it.message}")
                 }
+                synchronized(controllersLock) { controllerDevices.remove(controller) }
             }
         }
     }

@@ -652,30 +652,9 @@ class ControllerHandler(
                             sendControllerInputPacketLocked(defaultContext)
                         } else check(conn.sendControllerInputChecked(number, activeMask) == 0)
                     } else {
-                        hapticsCoordinator.retireController(number)
-                        gyroManager.retireController(number)
-                        if (number.toInt() == 0) {
-                            defaultContext.setMouseEmulation(false)
-                            defaultContext.inputMap = 0
-                            defaultContext.leftTrigger = 0
-                            defaultContext.rightTrigger = 0
-                            defaultContext.leftStickX = 0
-                            defaultContext.leftStickY = 0
-                            defaultContext.rightStickX = 0
-                            defaultContext.rightStickY = 0
-                            defaultContext.physRightStickX = 0
-                            defaultContext.physRightStickY = 0
-                            defaultContext.gyroRightStickX = 0
-                            defaultContext.gyroRightStickY = 0
-                            defaultContext.controllerArrival.reset()
-                        }
-                        if (sentControllerArrivalMetadata[number.toInt()] != null ||
-                            retired.any { it.controllerNumber == number && it.controllerArrival.isReported }) {
-                            check(conn.sendControllerInputChecked(number, (activeMask.toInt() or (1 shl number.toInt())).toShort()) == 0)
-                        }
-                        check(conn.sendControllerInputChecked(number, activeMask) == 0)
-                        controllerArrivalMetadata[number.toInt()] = null
-                        sentControllerArrivalMetadata[number.toInt()] = null
+                        check(withdrawControllerSlotLocked(number, activeMask,
+                            sentControllerArrivalMetadata[number.toInt()] != null ||
+                                retired.any { it.controllerNumber == number && it.controllerArrival.isReported }) == 0)
                     }
                 }
             }
@@ -690,6 +669,56 @@ class ControllerHandler(
             }
         }, lease.ready::completeExceptionally)
         return lease
+    }
+
+    private fun withdrawControllerSlotLocked(number: Short, activeMask: Short, wasReported: Boolean): Int {
+        hapticsCoordinator.retireController(number)
+        gyroManager.retireController(number)
+        if (number.toInt() == 0) {
+            defaultContext.setMouseEmulation(false)
+            defaultContext.inputMap = 0
+            defaultContext.leftTrigger = 0
+            defaultContext.rightTrigger = 0
+            defaultContext.leftStickX = 0
+            defaultContext.leftStickY = 0
+            defaultContext.rightStickX = 0
+            defaultContext.rightStickY = 0
+            defaultContext.physRightStickX = 0
+            defaultContext.physRightStickY = 0
+            defaultContext.gyroRightStickX = 0
+            defaultContext.gyroRightStickY = 0
+            defaultContext.controllerArrival.reset()
+        }
+        if (wasReported) {
+            val result = conn.sendControllerInputChecked(number, (activeMask.toInt() or (1 shl number.toInt())).toShort())
+            if (result != 0) return result
+        }
+        val result = conn.sendControllerInputChecked(number, activeMask)
+        if (result == 0) {
+            controllerArrivalMetadata[number.toInt()] = null
+            sentControllerArrivalMetadata[number.toInt()] = null
+        }
+        return result
+    }
+
+    private fun removeInitialControllerSource(source: String) {
+        synchronized(arrivalMetadataLock) {
+            val slot = initialControllerSlots.remove(source) ?: return
+            withdrawInitialControllerSlot(if (prefConfig.multiController) slot.toShort() else 0)
+        }
+    }
+
+    private fun withdrawInitialControllerSlot(number: Short) {
+        synchronized(arrivalMetadataLock) {
+            if (stopped || isControllerSlotEnabled(number)) return
+            val result = withdrawControllerSlotLocked(number, getActiveControllerMask(),
+                sentControllerArrivalMetadata[number.toInt()] != null)
+            if (result != 0) {
+                // The source is gone, so no later report can retry this withdrawal.
+                // Recheck the mask on retry in case a new source has reused the slot.
+                mainThreadHandler.postDelayed({ withdrawInitialControllerSlot(number) }, 50)
+            }
+        }
     }
 
     private fun localControllerContexts(): List<GenericControllerContext> =
@@ -761,7 +790,7 @@ class ControllerHandler(
     }
 
     override fun onInputDeviceRemoved(deviceId: Int) {
-        initialControllerSlots.remove(inputSource(deviceId))
+        removeInitialControllerSource(inputSource(deviceId))
         systemWaveformRoutes.entries.filter { it.value.inputId == deviceId }.forEach {
             invalidateSystemWaveformRoute(it.key, it.value)
         }
@@ -3537,11 +3566,15 @@ class ControllerHandler(
     }
 
     override fun deviceRemoved(controller: AbstractController) {
+        val path = UsbDriverService.devicePathForController(controller)
         val context = synchronized(driverControllerContextsLifecycleLock) {
-            driverControllerContexts[controller.getControllerId()]?.takeIf { it.device === controller }?.also {
+            val current = driverControllerContexts[controller.getControllerId()]
+            if (current != null && current.device !== controller) return
+            current?.also {
                 driverControllerContexts.remove(controller.getControllerId())
             }
         }
+        (context?.usbDevicePath ?: path)?.let { removeInitialControllerSource(usbSource(it)) }
         if (context != null) {
             val wasController0GyroSource = contextWasController0GyroSource(context)
             LimeLog.info("Removed controller: " + controller.getControllerId())
