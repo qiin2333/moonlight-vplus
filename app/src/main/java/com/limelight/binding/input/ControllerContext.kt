@@ -15,6 +15,7 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.widget.Toast
 
+import com.limelight.LimeLog
 import com.limelight.gamemenu.GameMenu
 import com.limelight.R
 import com.limelight.binding.input.driver.AbstractController
@@ -42,6 +43,7 @@ open class GenericControllerContext(
     var triggerDeadzone: Float = 0f
 
     var assignedControllerNumber: Boolean = false
+    @Volatile internal var retired = false
     var reservedControllerNumber: Boolean = false
     internal val controllerArrival = ControllerArrivalTracker()
     var controllerNumber: Short = 0
@@ -74,7 +76,7 @@ open class GenericControllerContext(
 
     val mouseEmulationRunnable: Runnable = object : Runnable {
         override fun run() {
-            if (!mouseEmulationActive) {
+            if (retired || !mouseEmulationActive) {
                 return
             }
 
@@ -145,6 +147,7 @@ open class GenericControllerContext(
     protected open fun onMouseEmulationChanged() = Unit
 
     open fun destroy() {
+        retired = true
         setMouseEmulation(false)
     }
 
@@ -250,10 +253,11 @@ class InputDeviceContext internal constructor(
 
     val batteryStateUpdateRunnable: Runnable = object : Runnable {
         override fun run() {
+            if (retired) return
             handler.rumbleManager.sendControllerBatteryPacket(this@InputDeviceContext)
 
             // Requeue the callback
-            handler.backgroundThreadHandler.postDelayed(this, ControllerHandler.BATTERY_RECHECK_INTERVAL_MS.toLong())
+            if (!retired) handler.backgroundThreadHandler.postDelayed(this, ControllerHandler.BATTERY_RECHECK_INTERVAL_MS.toLong())
         }
     }
 
@@ -261,6 +265,7 @@ class InputDeviceContext internal constructor(
         // Re-read the rates on the main thread: a host disable may have landed while this
         // was queued, and replaying the captured value would resurrect the sensor.
         handler.mainThreadHandler.post {
+            if (retired) return@post
             // A gamepad often enumerates as several InputDevices that all share controller 0.
             // Only the one that actually owns the sensor may re-drive registration, otherwise
             // the sensorless sibling keeps tearing down its neighbour's listener.
@@ -309,7 +314,19 @@ class InputDeviceContext internal constructor(
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            lightsSession?.close()
+            synchronized(handler.lightsSessionLock) {
+                val session = lightsSession
+                lightsSession = null
+                try {
+                    session?.close()
+                } catch (e: Exception) {
+                    // closeLightSession() is a Binder call that some OEM ROMs crash
+                    // server-side when the device is being re-enumerated or removed.
+                    // The remote exception is rethrown here, so it must be caught to
+                    // keep an LED cosmetic from killing the app.
+                    LimeLog.warning("Failed to close lights session: $e")
+                }
+            }
         }
 
         directDualSenseBluetoothOutput?.close()
@@ -461,27 +478,34 @@ class InputDeviceContext internal constructor(
     }
 
     fun migrateContext(oldContext: InputDeviceContext) {
-        // Take ownership of the sensor and light sessions
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            this.lightsSession = oldContext.lightsSession
-            oldContext.lightsSession = null
-        }
-        this.gyroReportRateHz = oldContext.gyroReportRateHz
-        this.accelReportRateHz = oldContext.accelReportRateHz
-        this.lowFreqMotor = oldContext.lowFreqMotor
-        this.highFreqMotor = oldContext.highFreqMotor
-        this.leftTriggerMotor = oldContext.leftTriggerMotor
-        this.rightTriggerMotor = oldContext.rightTriggerMotor
+        // Hold lightsSessionLock across the transfer and the destroy: the LED command
+        // thread opens sessions on the context published in inputDeviceContexts, so
+        // without this it can slip a fresh session into the old context between the
+        // transfer and its close in destroy() (a data race - no synchronization guards
+        // this field across threads).
+        synchronized(handler.lightsSessionLock) {
+            // Take ownership of the sensor and light sessions
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                this.lightsSession = oldContext.lightsSession
+                oldContext.lightsSession = null
+            }
+            this.gyroReportRateHz = oldContext.gyroReportRateHz
+            this.accelReportRateHz = oldContext.accelReportRateHz
+            this.lowFreqMotor = oldContext.lowFreqMotor
+            this.highFreqMotor = oldContext.highFreqMotor
+            this.leftTriggerMotor = oldContext.leftTriggerMotor
+            this.rightTriggerMotor = oldContext.rightTriggerMotor
 
-        // destroy() clears the old mode; preserve it and schedule this Joy-Con's mouse loop first.
-        if (joyCon != null) {
-            setMouseEmulation(oldContext.mouseEmulationActive)
-        }
+            // destroy() clears the old mode; preserve it and schedule this Joy-Con's mouse loop first.
+            if (joyCon != null) {
+                setMouseEmulation(oldContext.mouseEmulationActive)
+            }
 
-        // Don't release the controller number, because we will carry it over if it is present.
-        // We also want to make sure the change is invisible to the host PC to avoid an add/remove
-        // cycle for the gamepad which may break some games.
-        oldContext.destroy()
+            // Don't release the controller number, because we will carry it over if it is present.
+            // We also want to make sure the change is invisible to the host PC to avoid an add/remove
+            // cycle for the gamepad which may break some games.
+            oldContext.destroy()
+        }
 
         // Copy over existing controller number state
         this.assignedControllerNumber = oldContext.assignedControllerNumber
@@ -545,6 +569,7 @@ class InputDeviceContext internal constructor(
 
 class DriverControllerContext(handler: ControllerHandler) : GenericControllerContext(handler) {
     var device: AbstractController? = null
+    internal var usbDevicePath: String? = null
     internal var lastReportedBatteryState: Byte? = null
     internal var lastReportedBatteryPercentage: Byte? = null
     internal val menuKeyDownTimes = ConcurrentHashMap<Int, Long>()

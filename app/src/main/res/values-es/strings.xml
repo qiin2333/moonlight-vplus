@@ -145,9 +145,10 @@
     <string name="no_video_received_error">No se recibe video desde el equipo anfitrión.</string>
     <string name="applist_details_id">ID de Aplicación:</string>
     <string name="title_checkbox_mouse_emulation">Emulación de ratón usando el mando</string>
-    <string name="pacing_latency">Preferir la menor latencia posible</string>
-    <string name="pacing_balanced">Equilibrado</string>
-    <string name="pacing_smoothness">Preferir mayor fluidez de video (puede incrementar significativamente la latencia)</string>
+    <string name="pacing_latency">Baja latencia (respuesta más rápida)</string>
+    <string name="pacing_precise_sync">Ritmo de fotogramas preciso (recomendado)</string>
+    <string name="pacing_balanced">Equilibrado (latencia y fluidez)</string>
+    <string name="pacing_smoothness">Fluidez primero (mayor latencia)</string>
     <string name="perf_overlay_decoder">Decodificador: %1$s</string>
     <string name="perf_overlay_incomingfps">Tasa de cuadros obtenida de la red: %1$.2f FPS</string>
     <string name="perf_overlay_renderingfps">Tasa de Cuadros Renderizada: %1$.2f FPS</string>
@@ -170,8 +171,8 @@
     <string name="audioconf_71surround">7.1 Sonido Envolvente</string>
     <string name="title_troubleshooting">Guía de Solución de Errores</string>
     <string name="resolution_1080p">1080p</string>
-    <string name="summary_frame_pacing">Especificar como balancear la latencia de video y la fluidez</string>
-    <string name="pacing_balanced_alt">Equilibrado con limitador de FPS (Cuadros por Segundo)</string>
+    <string name="summary_frame_pacing">Elige cómo se sincronizan los fotogramas de vídeo. El ritmo preciso puede usar marcas de tiempo de vídeo (PTS) y se recomienda para la mayoría de dispositivos.</string>
+    <string name="pacing_balanced_alt">Limitar FPS de salida (hasta la frecuencia de actualización)</string>
     <string name="audioconf_51surround">5.1 Sonido Envolvente</string>
     <string name="audioconf_stereo">Estéreo</string>
     <string name="check_ports_msg">Revisa la configuración de tu firewall, así como, las reglas de redireccionamiento para él(los) puerto(s):</string>
@@ -398,7 +399,7 @@
     <string name="mic_permission_required">Permiso de micrófono requerido</string>
     <string name="mic_stats_continuity">Continuidad de audio: %1$.1f%% (Capturado:%2$d Codificado:%3$d Enviado:%4$d Perdido:%5$d)</string>
     <string name="notification_icon">Icono de notificación</string>
-    <string name="pacing_experimental_low_latency">Experimental: Latencia ultra-baja (avanzado)</string>
+    <string name="pacing_experimental_low_latency">Latencia ultrabaja (experimental)</string>
     <string name="pcview_menu_sleep_fail">Falló el sueño del host</string>
     <string name="pcview_menu_sleep_success">Éxito del sueño del host</string>
     <string name="perf_decode_latency_title">⏱️ Información de Latencia de Decodificación</string>
@@ -439,7 +440,8 @@
     <string name="mic_initial_state_on">Activado</string>
     <string name="mic_initial_state_follow_last">Seguir el último estado</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">Invertir zona de toque mejorada a la izquierda (predeterminado: en el lado derecho de la pantalla)</string>
-    <string name="summary_checkbox_reverse_resolution">Intercambiar valores de ancho y alto para requisitos especiales de visualización</string>
+    <string name="summary_checkbox_reverse_resolution">Actívalo solo cuando la orientación de la imagen o el ancho y alto sean incorrectos; puede entrar en conflicto con Seguir rotación de la pantalla.</string>
+    <string name="summary_checkbox_rotable_screen">Sincroniza automáticamente el diseño de la transmisión cuando el dispositivo cambia entre orientación vertical y horizontal.</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
     <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
     <string name="summary_custom_resolutions">Crear tus propias resoluciones personalizadas</string>
@@ -603,4 +605,10 @@
     <string name="image_saved_successfully">Imagen guardada correctamente en: Picture/vplus</string>
     <string name="image_save_failed_with_error">No se pudo guardar la imagen: %1$s</string>
     <string name="pyrowave_negotiation_fallback">La negociación de PyroWave ha fallado. Se cambia a %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Corrección de la dirección del ratón</string>
+    <string name="summary_list_mouse_axis_correction">Gira el movimiento del ratón capturado antes de enviarlo al host. Cámbialo solo si un dispositivo Android informa de ejes del ratón girados.</string>
+    <string name="mouse_axis_correction_off">Desactivado</string>
+    <string name="mouse_axis_correction_90">Girar 90 grados</string>
+    <string name="mouse_axis_correction_180">Girar 180 grados</string>
+    <string name="mouse_axis_correction_270">Girar 270 grados</string>
 </resources>

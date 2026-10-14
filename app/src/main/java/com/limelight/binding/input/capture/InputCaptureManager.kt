@@ -4,6 +4,7 @@ import android.app.Activity
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.R
+import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.evdev.EvdevCaptureProviderShim
 import com.limelight.binding.input.evdev.EvdevListener
 import com.limelight.preferences.PreferenceConfiguration
@@ -54,11 +55,25 @@ object InputCaptureManager {
     }
 
     private fun createEvdevCaptureProvider(activity: Activity, rootListener: EvdevListener): InputCaptureProvider {
-        val optimizeHardwareTouchpad = PreferenceConfiguration.readPreferences(activity).optimizeHardwareTouchpad
+        val preferences = PreferenceConfiguration.readPreferences(activity)
+        val correctingListener = CorrectingEvdevListener(
+            rootListener,
+            preferences.mouseAxisCorrection
+        )
         return EvdevCaptureProviderShim.createEvdevCaptureProvider(
             activity,
-            rootListener,
-            optimizeHardwareTouchpad
+            correctingListener,
+            preferences.optimizeHardwareTouchpad
         )
+    }
+
+    private class CorrectingEvdevListener(
+        private val delegate: EvdevListener,
+        private val correction: MouseAxisCorrection
+    ) : EvdevListener by delegate {
+        override fun mouseMove(deltaX: Int, deltaY: Int) {
+            val (correctedX, correctedY) = correction.apply(deltaX.toFloat(), deltaY.toFloat())
+            delegate.mouseMove(correctedX.toInt(), correctedY.toInt())
+        }
     }
 }

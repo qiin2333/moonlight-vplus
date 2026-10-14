@@ -2,9 +2,11 @@
 <resources>
     <string name="pair_incorrect_pin">Неправилен ПИН</string>
     <string name="no_video_received_error">Няма получено видео от хоста.</string>
-    <string name="pacing_latency">Предпочитане на най-ниската латентност</string>
-    <string name="pacing_balanced_alt">Балансирано с FPS лимит</string>
-    <string name="pacing_smoothness">Предпочитане на най-плавно видео (може значително да увеличи латентността)</string>
+    <string name="pacing_latency">Ниска латентност (по-бърза реакция)</string>
+    <string name="pacing_precise_sync">Прецизен ритъм на кадрите (препоръчително)</string>
+    <string name="pacing_experimental_low_latency">Свръхниска латентност (експериментално)</string>
+    <string name="pacing_balanced_alt">Ограничаване на изходния FPS (до честотата на опресняване)</string>
+    <string name="pacing_smoothness">Плавността е на първо място (по-висока латентност)</string>
     <string name="conn_metered">Предупреждение: Вашата активна мрежова връзка се измерва!</string>
     <string name="conn_client_latency_hw">латентност на хардуерния декодер:</string>
     <string name="conn_hardware_latency">Средна латентност на хардуерно декодиране:</string>
@@ -80,9 +82,9 @@
     <string name="audioconf_51surround">5.1 съраунд звук</string>
     <string name="videoformat_auto">Автоматично</string>
     <string name="videoformat_hevcalways">Винаги използване на HEVC (може да крашне)</string>
-    <string name="summary_frame_pacing">Посочете как да се балансира забавянето и плавността на видеото</string>
+    <string name="summary_frame_pacing">Изберете ритъма на видео кадрите. Прецизният ритъм може да използва времеви маркери (PTS) и се препоръчва за повечето устройства.</string>
     <string name="title_frame_pacing">Стъпка на видео кадрите</string>
-    <string name="pacing_balanced">Балансирано</string>
+    <string name="pacing_balanced">Балансирано (латентност и плавност)</string>
     <string name="check_ports_msg">Проверете вашата защитна стена и правилата за препращане на портове за порт(ове):</string>
     <string name="conn_establishing_title">Установяване на връзка</string>
     <string name="conn_establishing_msg">Стартиране на връзка</string>
@@ -212,4 +214,12 @@
     <string name="image_save_failed_with_error">Неуспешно записване на изображението: %1$s</string>
     <string name="tip_double_tap_mouse">Съвет: натиснете и задръжте празната област в горната част на списъка с компютри, за да запазите текущото фоново изображение.</string>
     <string name="pyrowave_negotiation_fallback">Договарянето на PyroWave е неуспешно. Преминаване към %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Корекция на посоката на мишката</string>
+    <string name="summary_list_mouse_axis_correction">Завъртане на засеченото движение на мишката преди изпращане към хоста. Променяйте това само ако устройство с Android съобщава за завъртени оси на мишката.</string>
+    <string name="mouse_axis_correction_off">Изкл.</string>
+    <string name="mouse_axis_correction_90">Завъртане на 90 градуса</string>
+    <string name="mouse_axis_correction_180">Завъртане на 180 градуса</string>
+    <string name="mouse_axis_correction_270">Завъртане на 270 градуса</string>
+    <string name="summary_checkbox_reverse_resolution">Включвайте само когато ориентацията или размерите на изображението са неправилни; може да влезе в конфликт с въртенето според устройството.</string>
+    <string name="summary_checkbox_rotable_screen">Автоматично синхронизира оформлението на поточното предаване, когато устройството превключва между портретна и пейзажна ориентация.</string>
 </resources>

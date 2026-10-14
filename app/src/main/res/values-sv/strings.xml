@@ -181,10 +181,12 @@
     <string name="audioconf_51surround">5.1 surroundljud</string>
     <string name="audioconf_71surround">7.1 surroundljud</string>
     <string name="title_frame_pacing">Videorams fart</string>
-    <string name="pacing_latency">Föredrar lägsta latenstid</string>
-    <string name="pacing_balanced">Balanserad</string>
-    <string name="pacing_balanced_alt">Balanserad med FPS-gräns</string>
-    <string name="pacing_smoothness">Föredrar smidigast video (kan öka latensen avsevärt)</string>
+    <string name="pacing_latency">Låg latens (snabbare svar)</string>
+    <string name="pacing_precise_sync">Exakt bildrutestyrning (rekommenderas)</string>
+    <string name="pacing_experimental_low_latency">Ultralåg latens (experimentellt)</string>
+    <string name="pacing_balanced">Balanserad (latens och jämnhet)</string>
+    <string name="pacing_balanced_alt">Begränsa utgående FPS (upp till skärmens uppdateringsfrekvens)</string>
+    <string name="pacing_smoothness">Jämnhet först (högre latens)</string>
     <string name="nettest_title_done">Nätverkstestet fullföljt</string>
     <string name="nettest_text_failure">Din enhets aktuella nätverksanslutning verkar blockera Moonlight. Streaming via Internet kanske inte fungerar när du är ansluten till det här nätverket.
 \n
@@ -242,7 +244,7 @@
     <string name="summary_setup_guide">Visa instruktioner om hur du utformar din speldator för strömning</string>
     <string name="resolution_1080p">1080p</string>
     <string name="fps_60">60 FPS</string>
-    <string name="summary_frame_pacing">Ange hur du ska balansera videofördröjning och jämnhet</string>
+    <string name="summary_frame_pacing">Välj hur videobildrutorna ska tajmas. Exakt bildrutestyrning kan använda videons tidsstämplar (PTS) och rekommenderas för de flesta enheter.</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_native_fps_dialog">Native FPS varning</string>
     <string name="category_gamepad_settings">Spelkontroller inställningar</string>
@@ -338,4 +340,12 @@
     <string name="image_save_failed_with_error">Det gick inte att spara bilden: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tryck och håll på det tomma området överst i datorlistan för att spara den aktuella bakgrundsbilden.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave-förhandlingen misslyckades. Växlar till %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Korrigering av musriktning</string>
+    <string name="summary_list_mouse_axis_correction">Rotera registrerade musrörelser innan de skickas till värden. Ändra bara detta om en Android-enhet rapporterar roterade musaxlar.</string>
+    <string name="mouse_axis_correction_off">Av</string>
+    <string name="mouse_axis_correction_90">Rotera 90 grader</string>
+    <string name="mouse_axis_correction_180">Rotera 180 grader</string>
+    <string name="mouse_axis_correction_270">Rotera 270 grader</string>
+    <string name="summary_checkbox_reverse_resolution">Aktivera endast när bildens riktning eller mått är felaktiga; kan stå i konflikt med att följa enhetens rotation.</string>
+    <string name="summary_checkbox_rotable_screen">Synkroniserar automatiskt strömningslayouten när enheten växlar mellan stående och liggande orientering.</string>
 </resources>

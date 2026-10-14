@@ -356,12 +356,19 @@ class ComputerManagerService : Service() {
         }
 
         fun invalidateStateForComputer(uuid: String) {
-            synchronized(pollingTuples) {
-                for (tuple in pollingTuples) {
-                    if (uuid == tuple.computer.uuid) {
-                        synchronized(tuple.networkLock) {
-                            tuple.computer.state = ComputerDetails.State.UNKNOWN
-                        }
+            // Lookup and mutation use separate acquisitions: poll threads hold a tuple's
+            // networkLock for the whole runPoll() and take pollingTuples inside it, so
+            // waiting on a networkLock while holding pollingTuples can deadlock them.
+            // Revalidate under networkLock (re-taking pollingTuples there is the one
+            // allowed nesting direction) so a tuple replaced or removed between the
+            // acquisitions is not mutated.
+            val targets = synchronized(pollingTuples) {
+                pollingTuples.filter { uuid == it.computer.uuid }
+            }
+            for (tuple in targets) {
+                synchronized(tuple.networkLock) {
+                    if (synchronized(pollingTuples) { pollingTuples.contains(tuple) }) {
+                        tuple.computer.state = ComputerDetails.State.UNKNOWN
                     }
                 }
             }
@@ -674,17 +681,36 @@ class ComputerManagerService : Service() {
 
         val uuid = computer.uuid
         var canonicalComputer = computer
-        synchronized(pollingTuples) {
-            if (uuid != null) {
-                for (tuple in pollingTuples) {
-                    if (tuple.computer.uuid == uuid) {
-                        canonicalComputer = tuple.computer
-                        synchronized(tuple.networkLock) {
+        // Find the tuple under pollingTuples, then release it before taking the tuple's
+        // networkLock. Poll threads hold networkLock for the whole runPoll() (network I/O
+        // included) and take pollingTuples inside it, so nesting these locks in the other
+        // order deadlocks the poll coroutine and every thread waiting on pollingTuples
+        // with it (e.g. onUnbind on the main thread). Revalidation and the update must
+        // share the same networkLock acquisition — releasing in between lets a poll
+        // overwrite the verified state. If the tuple was removed and re-added meanwhile,
+        // follow the replacement and take its lock instead of mutating it under the
+        // stale lock.
+        if (uuid != null) {
+            var tuple = synchronized(pollingTuples) {
+                pollingTuples.firstOrNull { it.computer.uuid == uuid }
+            }
+            while (tuple != null) {
+                val next = synchronized(tuple.networkLock) {
+                    val current = synchronized(pollingTuples) {
+                        pollingTuples.firstOrNull { it.computer.uuid == uuid }
+                    }
+                    when {
+                        // Removed and not re-added: nothing to update.
+                        current == null -> null
+                        current === tuple -> {
+                            canonicalComputer = tuple.computer
                             tuple.computer.update(verified)
+                            null
                         }
-                        break
+                        else -> current
                     }
                 }
+                tuple = next
             }
         }
 

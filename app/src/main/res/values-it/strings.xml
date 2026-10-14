@@ -179,8 +179,10 @@
     <string name="title_checkbox_mouse_nav_buttons">Abilita i bottoni avanti e indietro del mouse</string>
     <string name="title_osc_opacity">Cambia l\'opavità dei controlli a schermo</string>
     <string name="title_unlock_fps">Sblocca tutti i frame rate possibili</string>
-    <string name="pacing_balanced">Bilanciato</string>
-    <string name="pacing_latency">Preferisci ritardi minori</string>
+    <string name="pacing_balanced">Bilanciato (ritardo e fluidità)</string>
+    <string name="pacing_latency">Bassa latenza (risposta più rapida)</string>
+    <string name="pacing_precise_sync">Ritmo fotogrammi preciso (consigliato)</string>
+    <string name="pacing_experimental_low_latency">Latenza ultra-bassa (sperimentale)</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="resolution_prefix_native">Nativo</string>
     <string name="no_video_received_error">Nessun video ricevuto dal PC sorgente.</string>
@@ -188,7 +190,7 @@
     <string name="category_input_settings">Impostazioni di input</string>
     <string name="title_native_res_dialog">Avviso Risoluzione Nativa</string>
     <string name="dialog_title_osc_opacity">Cambia opacità</string>
-    <string name="pacing_smoothness">Preferisci video più fluido (potrebbe aumentare significativamente il ritardo)</string>
+    <string name="pacing_smoothness">Fluidità prima di tutto (ritardo maggiore)</string>
     <string name="summary_osc_opacity">Rende i controlli a schermo più/meno trasparenti</string>
     <string name="summary_checkbox_mouse_nav_buttons">Abilitare questa opzione può far smettere di funzionare il click destro su alcuni dispositivi</string>
     <string name="title_checkbox_flip_face_buttons">Inverti i bottoni frontali</string>
@@ -210,7 +212,7 @@
     <string name="videoformat_auto">Automatico (Consigliato)</string>
     <string name="videoformat_hevcalways">Preferisci HEVC</string>
     <string name="title_frame_pacing">Bilanciamento frame video</string>
-    <string name="summary_frame_pacing">Specifica come bilanciare il ritardo video e la fluidità</string>
+    <string name="summary_frame_pacing">Scegli come regolare il ritmo dei fotogrammi video. Il ritmo preciso può usare i timestamp video (PTS) ed è consigliato per la maggior parte dei dispositivi.</string>
     <string name="nettest_text_failure">Sembra che l\'attuale connessione di rete del tuo dispositivo stia bloccando Moonlight. Trasmettere via Internet potrebbe non funzionare mentre sei connesso a questa rete.
 \n
 \nQueste porte di rete sono bloccate:
@@ -239,7 +241,7 @@
     <string name="perf_overlay_netlatency">Latenza media della rete: %1$d ms (varianza: %2$d ms)</string>
     <string name="category_help">Aiuto</string>
     <string name="title_setup_guide">Guida configurazione</string>
-    <string name="pacing_balanced_alt">Bilanciato con il limite FPS</string>
+    <string name="pacing_balanced_alt">Limita gli FPS in uscita (fino alla frequenza di aggiornamento)</string>
     <string name="summary_seekbar_deadzone">Nota: Alcuni giochi possono imporre una deadzone più grande di quella che Moonlight è configurato per utilizzare.</string>
     <string name="title_checkbox_absolute_mouse_mode">Modalità mouse desktop remoto</string>
     <string name="summary_checkbox_absolute_mouse_mode">Questo può rendere l\'accelerazione del mouse più naturale per l\'utilizzo del desktop remoto, ma è incompatibile con molti giochi.</string>
@@ -345,4 +347,12 @@
     <string name="image_save_failed_with_error">Salvataggio dell\'immagine non riuscito: %1$s</string>
     <string name="tip_double_tap_mouse">Suggerimento: tieni premuta l\'area vuota in alto nell\'elenco dei computer per salvare l\'immagine di sfondo attuale.</string>
     <string name="pyrowave_negotiation_fallback">La negoziazione di PyroWave non è riuscita. Passaggio a %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correzione della direzione del mouse</string>
+    <string name="summary_list_mouse_axis_correction">Ruota il movimento del mouse acquisito prima di inviarlo all’host. Modifica questa opzione solo se un dispositivo Android segnala assi del mouse ruotati.</string>
+    <string name="mouse_axis_correction_off">Disattivato</string>
+    <string name="mouse_axis_correction_90">Ruota di 90 gradi</string>
+    <string name="mouse_axis_correction_180">Ruota di 180 gradi</string>
+    <string name="mouse_axis_correction_270">Ruota di 270 gradi</string>
+    <string name="summary_checkbox_reverse_resolution">Attiva solo quando l\'orientamento o le dimensioni dell\'immagine sono errati; potrebbe entrare in conflitto con la rotazione del dispositivo.</string>
+    <string name="summary_checkbox_rotable_screen">Sincronizza automaticamente il layout dello streaming quando il dispositivo passa dall\'orientamento verticale a quello orizzontale e viceversa.</string>
 </resources>

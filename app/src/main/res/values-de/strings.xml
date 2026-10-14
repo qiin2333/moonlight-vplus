@@ -217,11 +217,13 @@
     <string name="videoformat_auto">Automatisch</string>
     <string name="videoformat_hevcalways">Immer HEVC verwenden (könnte Crashes verursachen)</string>
     <string name="title_frame_pacing">Video Frame-Pacing</string>
-    <string name="summary_frame_pacing">Lege fest, wie die Videolatenz und die flüssige Wiedergabe ausgeglichen werden sollen</string>
+    <string name="summary_frame_pacing">Lege fest, wie Videobilder getaktet werden. Die präzise Bildausgabe kann Videozeitstempel (PTS) verwenden und wird für die meisten Geräte empfohlen.</string>
     <string name="resolution_prefix_native_fullscreen">Natives Vollbild</string>
-    <string name="pacing_latency">Bevorzuge niedrigste Latenz</string>
-    <string name="pacing_balanced">Ausgeglichen</string>
-    <string name="pacing_smoothness">Bevorzuge flüssige Bildwiedergabe (kann die Latenzzeit deutlich erhöhen)</string>
+    <string name="pacing_latency">Niedrige Latenz (schnellere Reaktion)</string>
+    <string name="pacing_precise_sync">Präzises Bildtempo (empfohlen)</string>
+    <string name="pacing_experimental_low_latency">Ultraniedrige Latenz (experimentell)</string>
+    <string name="pacing_balanced">Ausgeglichen (Latenz und flüssige Wiedergabe)</string>
+    <string name="pacing_smoothness">Flüssige Wiedergabe zuerst (höhere Latenz)</string>
     <string name="perf_overlay_streamdetails">Video Stream: %1$s %2$.2f FPS</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
@@ -238,7 +240,7 @@
     <string name="fps_60">60 FPS</string>
     <string name="fps_90">90 FPS</string>
     <string name="summary_troubleshooting">Tipps zur Diagnose und Behebung häufiger Streaming-Probleme anzeigen</string>
-    <string name="pacing_balanced_alt">Ausbalanciert mit FPS-Limit</string>
+    <string name="pacing_balanced_alt">Ausgabe-FPS begrenzen (bis zur Bildwiederholrate)</string>
     <string name="summary_checkbox_absolute_mouse_mode">Dies kann die Mausbeschleunigung für die Fernsteuerung natürlicher gestalten, ist aber mit vielen Spielen nicht kompatibel.</string>
     <string name="title_troubleshooting">Anleitung zur Fehlersuche</string>
     <string name="title_privacy_policy">Datenschutzbestimmungen</string>
@@ -341,4 +343,12 @@
     <string name="image_save_failed_with_error">Bild konnte nicht gespeichert werden: %1$s</string>
     <string name="tip_double_tap_mouse">Tipp: Halten Sie den leeren Bereich oben in der Computerliste gedrückt, um das aktuelle Hintergrundbild zu speichern.</string>
     <string name="pyrowave_negotiation_fallback">Die PyroWave-Aushandlung ist fehlgeschlagen. Wechsel zu %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Mausrichtung korrigieren</string>
+    <string name="summary_list_mouse_axis_correction">Erfasste Mausbewegungen vor dem Senden an den Host drehen. Ändern Sie dies nur, wenn ein Android-Gerät gedrehte Mausachsen meldet.</string>
+    <string name="mouse_axis_correction_off">Aus</string>
+    <string name="mouse_axis_correction_90">Um 90 Grad drehen</string>
+    <string name="mouse_axis_correction_180">Um 180 Grad drehen</string>
+    <string name="mouse_axis_correction_270">Um 270 Grad drehen</string>
+    <string name="summary_checkbox_reverse_resolution">Nur aktivieren, wenn Ausrichtung oder Abmessungen des Bildes nicht stimmen; kann mit der Drehung des Geräts in Konflikt geraten.</string>
+    <string name="summary_checkbox_rotable_screen">Synchronisiert das Stream-Layout automatisch, wenn das Gerät zwischen Hoch- und Querformat wechselt.</string>
 </resources>

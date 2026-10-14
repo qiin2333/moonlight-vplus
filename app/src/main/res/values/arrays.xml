@@ -225,20 +225,20 @@
     </string-array>
 
     <string-array name="video_frame_pacing_names">
-        <item>@string/pacing_latency</item>
-        <item>@string/pacing_balanced</item>
-        <item>@string/pacing_balanced_alt</item>
-        <item>@string/pacing_smoothness</item>
-        <item>@string/pacing_experimental_low_latency</item>
         <item>@string/pacing_precise_sync</item>
+        <item>@string/pacing_balanced</item>
+        <item>@string/pacing_latency</item>
+        <item>@string/pacing_smoothness</item>
+        <item>@string/pacing_balanced_alt</item>
+        <item>@string/pacing_experimental_low_latency</item>
     </string-array>
     <string-array name="video_frame_pacing_values" translatable="false">
-        <item>latency</item>
-        <item>balanced</item>
-        <item>cap-fps</item>
-        <item>smoothness</item>
-        <item>experimental-low-latency</item>
         <item>precise-sync</item>
+        <item>balanced</item>
+        <item>latency</item>
+        <item>smoothness</item>
+        <item>cap-fps</item>
+        <item>experimental-low-latency</item>
     </string-array>
 
     <string-array name="hevc_low_latency_mode_names">
@@ -505,6 +505,19 @@
         <item>classic</item>
         <item>trackpad</item>
         <item>native</item>
+    </string-array>
+
+    <string-array name="mouse_axis_correction_names">
+        <item>@string/mouse_axis_correction_off</item>
+        <item>@string/mouse_axis_correction_90</item>
+        <item>@string/mouse_axis_correction_180</item>
+        <item>@string/mouse_axis_correction_270</item>
+    </string-array>
+    <string-array name="mouse_axis_correction_values" translatable="false">
+        <item>off</item>
+        <item>90</item>
+        <item>180</item>
+        <item>270</item>
     </string-array>
 
     <string-array name="mic_volume_processing_mode_names">

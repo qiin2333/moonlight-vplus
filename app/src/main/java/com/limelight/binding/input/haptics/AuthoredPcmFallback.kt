@@ -8,6 +8,11 @@ internal class AuthoredPcmFallback {
     private val sequences = mutableMapOf<Short, Int>()
 
     @Synchronized
+    fun reset(controllerNumber: Short) {
+        sequences.remove(controllerNumber)
+    }
+
+    @Synchronized
     fun accept(frame: Ds5HapticsPcmFrame): ControllerRumbleState? {
         if (frame.controllerNumber.toInt() !in 0..15 || frame.sampleRate != 48000 ||
             frame.channelCount.toInt() != 2 || frame.bitsPerSample.toInt() != 16 ||

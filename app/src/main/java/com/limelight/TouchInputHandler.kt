@@ -319,7 +319,15 @@ class TouchInputHandler(private val game: Game) {
                 if (eventHasRelativeMouseAxes) {
                     val rawDeltaX = game.inputCaptureProvider.getRelativeAxisX(event)
                     val rawDeltaY = game.inputCaptureProvider.getRelativeAxisY(event)
-                    val (deltaX, deltaY) = scaleRelativeTouchpadDelta(event, rawDeltaX, rawDeltaY)
+                    val (correctedDeltaX, correctedDeltaY) = game.prefConfig.mouseAxisCorrection.apply(
+                        rawDeltaX,
+                        rawDeltaY
+                    )
+                    val (deltaX, deltaY) = scaleRelativeTouchpadDelta(
+                        event,
+                        correctedDeltaX,
+                        correctedDeltaY
+                    )
                     if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
                         if (game.prefConfig.absoluteMouseMode) {
                             val activeStreamView = game.activeStreamView!!

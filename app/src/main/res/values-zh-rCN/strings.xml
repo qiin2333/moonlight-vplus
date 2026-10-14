@@ -277,7 +277,7 @@
     <string name="title_checkbox_touch_keyboard_auto_invoke">自动弹出电脑触摸键盘</string>
     <string name="summary_checkbox_touch_keyboard_auto_invoke">启用后，串流的电脑在文本框获得焦点时会自动弹出其触摸键盘（需要带有虚拟触摸屏的 Sunshine 主机）。</string>
     <string name="title_checkbox_remote_ime_auto_show">远程文本框自动弹出本地键盘</string>
-    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 13 及以上）。画面上的笔划仍作为远程输入发送。</string>
+    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 11 及以上）。画面上的笔划仍作为远程输入发送。</string>
 
     <string name="title_seekbar_long_press_flat_region">长按防抖半径</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半径内时持续发送初始位置，以减少全屏长按抖动；设为 0 则关闭。</string>
@@ -571,7 +571,7 @@
     <string name="pcview_theme_applied">主题已切换为%1$s</string>
 
     <string name="pcview_press_back_again_to_exit">再按一次返回键退出</string>
-    <string name="title_enable_host_cadence_precise_sync">精确同步更顺滑</string>
+    <string name="title_enable_host_cadence_precise_sync">主机帧节奏增强</string>
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
     <string name="title_perf_overlay_orientation">性能统计布局</string>
     <string name="summary_perf_overlay_orientation">选择横向单行或纵向单列。</string>
@@ -659,8 +659,8 @@
     <string name="videoformat_pyrowave">PyroWave（实验性，不支持帧生成）</string>
     <string name="videoformat_hevcalways">首选 HEVC</string>
     <string name="title_frame_pacing">串流帧节奏</string>
-    <string name="pacing_balanced">平衡</string>
-    <string name="pacing_smoothness">优先视频流畅度（可能会显著增大延迟）</string>
+    <string name="pacing_balanced">平衡（兼顾延迟与流畅）</string>
+    <string name="pacing_smoothness">流畅优先（延迟可能更高）</string>
     <string name="summary_setup_guide">查看有关如何设置游戏电脑以进行流传输的说明。</string>
     <string name="title_privacy_policy">隐私政策</string>
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策。</string>
@@ -706,13 +706,19 @@
     <string name="title_setup_guide">安装向导</string>
     <string name="title_troubleshooting">解决方案向导</string>
     <string name="summary_troubleshooting">查看有关诊断和修复常见流传输问题的提示。</string>
-    <string name="summary_frame_pacing">指定如何平衡视频延迟和流畅度。</string>
-    <string name="pacing_balanced_alt">有FPS限制的平衡</string>
-    <string name="pacing_latency">优先最低延迟</string>
-    <string name="pacing_experimental_low_latency">实验性超低延迟</string>
+    <string name="summary_frame_pacing">选择视频帧的呈现节奏。精准帧节奏可结合视频时间戳（PTS）恢复帧间隔，大多数设备建议使用。</string>
+    <string name="pacing_balanced_alt">限制输出帧率（不超过屏幕刷新率）</string>
+    <string name="pacing_latency">低延迟（优先响应速度）</string>
+    <string name="pacing_experimental_low_latency">超低延迟（实验性）</string>
 
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
+    <string name="title_list_mouse_axis_correction">鼠标方向修正</string>
+    <string name="summary_list_mouse_axis_correction">发送到主机前旋转被捕获的鼠标移动。仅在某些安卓设备错误旋转鼠标轴时修改。</string>
+    <string name="mouse_axis_correction_off">关闭</string>
+    <string name="mouse_axis_correction_90">旋转 90 度</string>
+    <string name="mouse_axis_correction_180">旋转 180 度</string>
+    <string name="mouse_axis_correction_270">旋转 270 度</string>
     <string name="title_optimize_hardware_touchpad">适配平板触摸板</string>
     <string name="summary_optimize_hardware_touchpad">为受支持的平板键盘触摸板使用专用事件处理，Root 与非 Root 版本均可用。</string>
     <string name="title_hardware_touchpad_pointer_speed">触摸板指针速度</string>
@@ -769,7 +775,7 @@
     <string name="title_checkbox_mic_voice_enhancement">人声增强</string>
     <string name="summary_checkbox_mic_voice_enhancement">减少低频噪声并提升语音清晰度，可用于固定增益和音量平衡模式。</string>
     <string name="title_checkbox_reduce_refresh_rate">允许使用较低的屏幕刷新率</string>
-    <string name="summary_checkbox_reduce_refresh_rate">仅用于“平衡”帧节奏。匹配串流的较低刷新率可以省电，但可能增加视频延迟。</string>
+    <string name="summary_checkbox_reduce_refresh_rate">仅用于“平衡”模式。匹配串流的较低屏幕刷新率可以省电，但可能增加视频延迟。</string>
     <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。
 \n
 \n尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</string>
@@ -910,9 +916,9 @@
 
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">交换串流宽度和高度</string>
-    <string name="summary_checkbox_reverse_resolution">交换所选分辨率的宽高后向主机请求，仅用于竖屏或特殊显示布局。</string>
+    <string name="summary_checkbox_reverse_resolution">仅在画面方向或宽高显示异常时开启；开启后可能与“跟随设备旋转”冲突。</string>
     <string name="title_checkbox_rotable_screen">跟随设备旋转</string>
-    <string name="summary_checkbox_rotable_screen">本机方向变化时同步旋转串流布局。</string>
+    <string name="summary_checkbox_rotable_screen">在设备切换竖屏或横屏时自动同步旋转串流布局。</string>
 
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
@@ -1528,7 +1534,7 @@
     <string name="settings_search_match_separator">、</string>
     <string name="no_app_found_for_streaming">未找到可串流的应用</string>
     <string name="notification_icon">通知图标</string>
-    <string name="pacing_precise_sync">精确同步（推荐）</string>
+    <string name="pacing_precise_sync">精准帧节奏（推荐）</string>
     <string name="summary_checkbox_control_only">仅建立控制流连接，不传输音视频流。适用于远程输入控制场景。需要 Sunshine 服务端支持仅控制模式。</string>
     <string name="summary_checkbox_enable_background_audio">隐藏整个窗口并在后台播放音频，可一边使用其他应用一边收听。</string>
     <string name="title_checkbox_control_only">仅控制模式</string>

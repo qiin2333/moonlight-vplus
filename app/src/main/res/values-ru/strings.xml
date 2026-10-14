@@ -767,13 +767,13 @@
     <string name="videoformat_hevcalways">Приоритет HEVC</string>
     <string name="videoformat_h264always">Приоритет H.264</string>
     <string name="title_frame_pacing">Вывод кадров</string>
-    <string name="summary_frame_pacing">Баланс задержки и плавности видео</string>
-    <string name="pacing_latency">Минимальная задержка</string>
-    <string name="pacing_balanced">Баланс</string>
-    <string name="pacing_balanced_alt">Баланс с лимитом FPS</string>
-    <string name="pacing_smoothness">Макс. плавность (может сильно повысить задержку)</string>
-    <string name="pacing_experimental_low_latency">Сверхнизкая задержка (эксп.)</string>
-    <string name="pacing_precise_sync">Точная синхр. (рекомендуется)</string>
+    <string name="summary_frame_pacing">Выберите ритм видеокадров. Точный ритм может использовать временные метки видео (PTS) и рекомендуется для большинства устройств.</string>
+    <string name="pacing_latency">Низкая задержка (быстрый отклик)</string>
+    <string name="pacing_balanced">Баланс (задержка и плавность)</string>
+    <string name="pacing_balanced_alt">Ограничить выходной FPS (до частоты обновления экрана)</string>
+    <string name="pacing_smoothness">Плавность прежде всего (большая задержка)</string>
+    <string name="pacing_experimental_low_latency">Сверхнизкая задержка (экспериментально)</string>
+    <string name="pacing_precise_sync">Точный ритм кадров (рекомендуется)</string>
     <string name="title_analog_scrolling">Прокрутка стиком</string>
     <string name="summary_analog_scrolling">Стик для прокрутки в режиме эмуляции мыши</string>
     <string name="analogscroll_none">Нет (оба стика двигают мышь)</string>
@@ -981,9 +981,9 @@
     <string name="title_reset_background_image">Вернуть автоматический фон</string>
     <string name="summary_reset_background_image">Сбросить свой источник и включить рекомендуемый автоматический фон.</string>
     <string name="title_checkbox_reverse_resolution">Поменять ширину и высоту</string>
-    <string name="summary_checkbox_reverse_resolution">Запрос разрешения с переставленными шириной и высотой. Для книжной ориентации и особых схем экранов.</string>
+    <string name="summary_checkbox_reverse_resolution">Включайте только при неверной ориентации или размерах изображения; может конфликтовать с автоповоротом.</string>
     <string name="title_checkbox_rotable_screen">Автоповорот</string>
-    <string name="summary_checkbox_rotable_screen">Поворачивать трансляцию при смене ориентации устройства.</string>
+    <string name="summary_checkbox_rotable_screen">Автоматически синхронизировать ориентацию трансляции при переключении устройства между книжной и альбомной ориентацией.</string>
     <string name="title_moonlight_vplus_pc_download">Скачать Moonlight V+ для ПК</string>
     <string name="title_enable_analytics">Аналитика</string>
     <string name="summary_enable_analytics">Анонимная статистика использования для улучшения приложения</string>
@@ -2083,4 +2083,10 @@
     <string name="pyrowave_diag_copy_success">Отчёт скопирован в буфер обмена</string>
     <string name="pyrowave_diag_unavailable">Недоступно</string>
     <string name="pyrowave_negotiation_fallback">Не удалось согласовать PyroWave. Переключение на %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Коррекция направления мыши</string>
+    <string name="summary_list_mouse_axis_correction">Поворачивать захваченное движение мыши перед отправкой на хост. Меняйте это только если устройство Android сообщает о повернутых осях мыши.</string>
+    <string name="mouse_axis_correction_off">Выкл.</string>
+    <string name="mouse_axis_correction_90">Поворот на 90 градусов</string>
+    <string name="mouse_axis_correction_180">Поворот на 180 градусов</string>
+    <string name="mouse_axis_correction_270">Поворот на 270 градусов</string>
 </resources>

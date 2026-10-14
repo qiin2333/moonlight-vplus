@@ -494,16 +494,15 @@ class MediaCodecDecoderRenderer(
     private fun failPyrowaveSession(reason: String) {
         destroyPyrowaveDecoder()
         val shouldNotifyConnectionFailure = !stopping && pyrowaveStopPosted.compareAndSet(false, true)
-        val failure = IllegalStateException("PyroWave decoder session failed: $reason")
-        if (!reportedCrash) {
-            reportedCrash = true
-            crashListener.notifyCrash(failure)
-        }
         stopping = true
         if (shouldNotifyConnectionFailure) {
             // Let the existing connection callback path serialize NvConnection
             // shutdown, UI error reporting, and resource cleanup. The callback
             // performs its network stop work off the main thread.
+            //
+            // Deliberately not routed through crashListener: pyrowaveFailureListener
+            // owns PyroWave termination (and crash accounting), so a fatal PyroWave
+            // failure ends the stream exactly once.
             Thread {
                 try {
                     pyrowaveFailureListener(reason)
@@ -1058,17 +1057,23 @@ class MediaCodecDecoderRenderer(
         framegenOutputSwitchRetryCount.set(0)
         framegenOutputSwitchPending =
             pendingFramegenSurface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        // The render target is released concurrently with codec recovery (activity relaunch,
+        // stream stop). Fail with the exception type every configureAndStartDecoder caller
+        // already treats as an invalid surface instead of crashing on a null dereference.
+        fun directOutputSurface(): Surface =
+            renderTarget?.surface
+                ?: throw IllegalArgumentException("Render target was released before decoder configuration")
         val outSurface = if (framegenOutputSwitchPending) {
             LimeLog.info(
                 "Framegen delayed capture active: decoder starts on SurfaceView " +
                     "and will switch to ImageReader after first direct frame"
             )
-            renderTarget!!.surface
+            directOutputSurface()
         } else {
             if (pendingFramegenSurface != null) {
                 LimeLog.info("Framegen capture surface active (decoder output redirected to ImageReader)")
             }
-            pendingFramegenSurface ?: renderTarget!!.surface
+            pendingFramegenSurface ?: directOutputSurface()
         }
         videoDecoder!!.configure(format, outSurface, null, 0)
 
@@ -1081,7 +1086,7 @@ class MediaCodecDecoderRenderer(
                 prefs.hdrMode,
                 getPreferredColorRange(),
             )
-            applyHdrDataSpace(renderTarget!!.surface, "decoder output")
+            applyHdrDataSpace(directOutputSurface(), "decoder output")
         }
 
         configuredFormat = format
@@ -1552,10 +1557,7 @@ class MediaCodecDecoderRenderer(
                         val failure = IllegalStateException(
                             "Decoder configuration did not settle after $recoveryPasses recovery passes"
                         )
-                        if (!reportedCrash) {
-                            reportedCrash = true
-                            crashListener.notifyCrash(failure)
-                        }
+                        notifyCrashOnce(failure)
                         throw RendererException(createDiagnostics(), failure)
                     }
                     recoveryPasses++
@@ -1664,10 +1666,7 @@ class MediaCodecDecoderRenderer(
                             codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
                         } catch (e: IllegalStateException) {
                             // If we failed to recover after all of these attempts, just crash
-                            if (!reportedCrash) {
-                                reportedCrash = true
-                                crashListener.notifyCrash(e)
-                            }
+                            notifyCrashOnce(e)
                             throw RendererException(createDiagnostics(), e)
                         }
                     }
@@ -1717,6 +1716,14 @@ class MediaCodecDecoderRenderer(
     }
 
     // Returns true if the exception is transient
+    /** Report a fatal renderer error to the crash listener exactly once. */
+    private fun notifyCrashOnce(e: Exception) {
+        if (!reportedCrash) {
+            reportedCrash = true
+            crashListener.notifyCrash(e)
+        }
+    }
+
     private fun handleDecoderException(e: IllegalStateException): Boolean {
         // Eat decoder exceptions if we're in the process of stopping
         if (stopping) {
@@ -1799,12 +1806,13 @@ class MediaCodecDecoderRenderer(
             if (initialException != null) {
                 // This isn't the first time we've had an exception processing video
                 if (SystemClock.uptimeMillis() - initialExceptionTimestamp >= EXCEPTION_REPORT_DELAY_MS) {
-                    // It's been over 3 seconds and we're still getting exceptions. Throw the original now.
-                    if (!reportedCrash) {
-                        reportedCrash = true
-                        crashListener.notifyCrash(initialException!!)
-                    }
-                    throw initialException!!
+                    // It's been over 3 seconds and we're still getting exceptions. Stop the
+                    // decode pipeline first (the crash listener terminates the stream via
+                    // the standard failure path, which does network work), then report the
+                    // failure. Throwing from here would escape the codec callback (or sync
+                    // submit) thread and kill the whole process.
+                    stopping = true
+                    notifyCrashOnce(initialException!!)
                 }
             } else {
                 // This is the first exception we've hit
@@ -2089,10 +2097,7 @@ class MediaCodecDecoderRenderer(
             // so generate a decoder hung exception
             if (deltaMs >= 5000 && initialException == null) {
                 val decoderHungException = DecoderHungException(deltaMs)
-                if (!reportedCrash) {
-                    reportedCrash = true
-                    crashListener.notifyCrash(decoderHungException)
-                }
+                notifyCrashOnce(decoderHungException)
                 throw RendererException(createDiagnostics(), decoderHungException)
             }
 
@@ -2866,10 +2871,7 @@ class MediaCodecDecoderRenderer(
             val exception = IllegalArgumentException(
                 "Decode unit length $decodeUnitLength too large for input buffer ${nextInputBuffer!!.limit()}"
             )
-            if (!reportedCrash) {
-                reportedCrash = true
-                crashListener.notifyCrash(exception)
-            }
+            notifyCrashOnce(exception)
             throw RendererException(createDiagnostics(), exception)
         }
 

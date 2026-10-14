@@ -224,11 +224,13 @@
     <string name="videoformat_auto">Automatique (recommandé)</string>
     <string name="videoformat_hevcalways">Préférer HEVC</string>
     <string name="title_frame_pacing">Frame-pacing vidéo</string>
-    <string name="summary_frame_pacing">Spécifiez comment équilibrer latence et fluidité de la vidéo</string>
-    <string name="pacing_latency">Préférer une latence plus faible</string>
-    <string name="pacing_balanced">Équilibré</string>
+    <string name="summary_frame_pacing">Choisissez le rythme des images vidéo. Le rythme précis peut utiliser les horodatages vidéo (PTS) et est recommandé pour la plupart des appareils.</string>
+    <string name="pacing_latency">Faible latence (réponse plus rapide)</string>
+    <string name="pacing_precise_sync">Rythme d’images précis (recommandé)</string>
+    <string name="pacing_experimental_low_latency">Latence ultra-faible (expérimental)</string>
+    <string name="pacing_balanced">Équilibré (latence et fluidité)</string>
     <string name="resolution_720p">720p</string>
-    <string name="pacing_smoothness">Préférer la qualité vidéo (risque d\'augmenter la latence)</string>
+    <string name="pacing_smoothness">Fluidité prioritaire (latence plus élevée)</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_480p">480p</string>
     <string name="resolution_1440p">1440p</string>
@@ -241,7 +243,7 @@
     <string name="summary_privacy_policy">Voir la politique de confidentialité de Moonlight</string>
     <string name="summary_setup_guide">Voir les instructions sur la façon de configurer votre PC de jeu pour le streaming</string>
     <string name="summary_troubleshooting">Voir des conseils pour diagnostiquer et résoudre les problèmes de streaming courants</string>
-    <string name="pacing_balanced_alt">Équilibré avec limite FPS</string>
+    <string name="pacing_balanced_alt">Limiter les FPS de sortie (jusqu’au taux de rafraîchissement)</string>
     <string name="title_checkbox_absolute_mouse_mode">Mode souris pour bureau à distance</string>
     <string name="summary_seekbar_deadzone">Remarque : Certains jeux peuvent imposer une zone morte plus grande que celle que Moonlight est configuré pour utiliser.</string>
     <string name="summary_checkbox_absolute_mouse_mode">Cela peut rendre l\'accélération de la souris plus naturelle pour l\'utilisation du bureau à distance, mais il est incompatible avec de nombreux jeux.</string>
@@ -351,4 +353,12 @@
     <string name="image_save_failed_with_error">Échec de l\'enregistrement de l\'image : %1$s</string>
     <string name="tip_double_tap_mouse">Conseil : maintenez une pression sur la zone vide en haut de la liste des ordinateurs pour enregistrer l\'image de fond actuelle.</string>
     <string name="pyrowave_negotiation_fallback">La négociation PyroWave a échoué. Basculement vers %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Correction de la direction de la souris</string>
+    <string name="summary_list_mouse_axis_correction">Fait pivoter le mouvement de souris capturé avant de l’envoyer à l’hôte. Modifiez ce réglage uniquement si un appareil Android signale des axes de souris pivotés.</string>
+    <string name="mouse_axis_correction_off">Désactivé</string>
+    <string name="mouse_axis_correction_90">Pivoter de 90 degrés</string>
+    <string name="mouse_axis_correction_180">Pivoter de 180 degrés</string>
+    <string name="mouse_axis_correction_270">Pivoter de 270 degrés</string>
+    <string name="summary_checkbox_reverse_resolution">Activez uniquement si l’orientation ou les dimensions de l’image sont incorrectes ; peut entrer en conflit avec la rotation de l’appareil.</string>
+    <string name="summary_checkbox_rotable_screen">Synchronise automatiquement la disposition du flux lorsque l’appareil passe du mode portrait au mode paysage, ou inversement.</string>
 </resources>

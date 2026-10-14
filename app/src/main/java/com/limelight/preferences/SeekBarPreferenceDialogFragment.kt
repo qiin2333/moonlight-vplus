@@ -23,6 +23,7 @@ import androidx.core.widget.doAfterTextChanged
 
 import com.limelight.R
 import com.limelight.binding.input.isZeroControllerDeadzone
+import com.limelight.gamemenu.BitrateCardController
 import com.limelight.utils.AppDialogStyler
 import kotlin.math.roundToInt
 import kotlin.math.abs
@@ -147,6 +148,10 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         seekBar!!.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
                 if (fromUser) useRecommendedBitrate = false
+                if (pref.isLogarithmic) {
+                    if (!syncingNumber) updateValueText(pref.linearToLog(value))
+                    return
+                }
                 // 将 progress 换算为显示值
                 val displayValue = if (usesOffsetRange) value + pref.minValue else value
 
@@ -191,10 +196,10 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
 
         // Initialize seekbar
         // 负值域时 seekbar 最大进度为 (max-min)，进度 = 当前值 - min
-        seekBar!!.max = if (!usesOffsetRange) {
-            pref.maxValue
-        } else {
-            pref.maxValue - pref.minValue
+        seekBar!!.max = when {
+            pref.isLogarithmic -> BitrateCardController.bitrateToProgress(pref.maxValue, pref.maxValue)
+            usesOffsetRange -> pref.maxValue - pref.minValue
+            else -> pref.maxValue
         }
         if (pref.keyStepSize != 0) {
             seekBar!!.keyProgressIncrement = pref.keyStepSize
@@ -255,10 +260,7 @@ class SeekBarPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
         val newProgress: Int
 
         if (pref.isLogarithmic) {
-            val currentBitrate = pref.linearToLog(currentProgress)
-            val adjustStep = if (currentBitrate > 50000) pref.stepSize * 2 else pref.stepSize
-            val newBitrate = maxOf(pref.minValue, minOf(pref.maxValue, currentBitrate + direction * adjustStep))
-            newProgress = pref.logToLinear(newBitrate)
+            newProgress = (currentProgress + direction).coerceIn(0, seekBar.max)
         } else {
             newProgress = maxOf(pref.minValue, minOf(pref.maxValue, currentProgress + direction * pref.stepSize))
         }

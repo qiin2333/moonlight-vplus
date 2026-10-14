@@ -235,10 +235,12 @@
     <string name="summary_troubleshooting">일반적인 스트리밍 문제 진단 및 해결을 위한 팁 보기</string>
     <string name="title_privacy_policy">개인 정보 정책</string>
     <string name="summary_privacy_policy">Moonlight의 개인 정보 보호 정책 보기</string>
-    <string name="summary_frame_pacing">비디오 지연 시간과 부드러움의 균형을 맞추는 방법 설정</string>
-    <string name="pacing_latency">최저 지연 시간 선호</string>
-    <string name="pacing_balanced">균형</string>
-    <string name="pacing_balanced_alt">FPS 제한과 균형</string>
+    <string name="summary_frame_pacing">비디오 프레임 표시 간격을 설정합니다. 정밀 프레임 처리는 비디오 타임스탬프(PTS)를 사용할 수 있으며 대부분의 기기에 권장됩니다.</string>
+    <string name="pacing_latency">낮은 지연 시간(빠른 응답)</string>
+    <string name="pacing_precise_sync">정밀 프레임 처리(권장)</string>
+    <string name="pacing_experimental_low_latency">초저지연(실험적)</string>
+    <string name="pacing_balanced">균형(지연 시간과 부드러움)</string>
+    <string name="pacing_balanced_alt">출력 FPS 제한(디스플레이 주사율 이하)</string>
     <string name="title_checkbox_enable_audiofx">시스템 이퀄라이저 지원 활성화</string>
     <string name="summary_checkbox_enable_audiofx">스트리밍중 오디오 효과가 작동하도록 하지만 오디오 지연시간이 증가할 수 있습니다.</string>
     <string name="title_checkbox_absolute_mouse_mode">원격 데스크톱 마우스 모드</string>
@@ -247,7 +249,7 @@
     <string name="audioconf_51surround">5.1 서라운드 사운드</string>
     <string name="audioconf_71surround">7.1 서라운드 사운드</string>
     <string name="title_frame_pacing">비디오 프레임 처리방식</string>
-    <string name="pacing_smoothness">가장 부드러운 비디오 선호(대기 시간이 크게 증가할 수 있음)</string>
+    <string name="pacing_smoothness">부드러움 우선(지연 시간 증가)</string>
     <string name="category_help">도움말</string>
     <string name="resolution_prefix_native_landscape">(가로)</string>
     <string name="resolution_prefix_native_portrait">(세로)</string>
@@ -355,4 +357,12 @@
     <string name="image_save_failed_with_error">이미지 저장 실패: %1$s</string>
     <string name="tip_double_tap_mouse">팁: PC 목록 상단의 빈 공간을 길게 누르면 현재 배경 이미지를 저장할 수 있습니다.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 협상에 실패했습니다. %1$s(으)로 전환합니다.</string>
+    <string name="title_list_mouse_axis_correction">마우스 방향 보정</string>
+    <string name="summary_list_mouse_axis_correction">호스트로 보내기 전에 캡처된 마우스 움직임을 회전합니다. Android 기기에서 마우스 축이 회전되었다고 보고할 때만 변경하세요.</string>
+    <string name="mouse_axis_correction_off">사용 안 함</string>
+    <string name="mouse_axis_correction_90">90도 회전</string>
+    <string name="mouse_axis_correction_180">180도 회전</string>
+    <string name="mouse_axis_correction_270">270도 회전</string>
+    <string name="summary_checkbox_reverse_resolution">이미지 방향이나 크기가 잘못된 경우에만 사용하세요. 기기 회전 따르기와 충돌할 수 있습니다.</string>
+    <string name="summary_checkbox_rotable_screen">기기가 세로와 가로 방향 사이를 전환할 때 스트림 레이아웃을 자동으로 동기화합니다.</string>
 </resources>

@@ -215,10 +215,12 @@
     <string name="videoformat_auto">Автоматичний (рекомендовано)</string>
     <string name="videoformat_hevcalways">Використовувати HEVC</string>
     <string name="title_frame_pacing">Швидкість кадрів відео</string>
-    <string name="summary_frame_pacing">Укажіть баланс відео затримки та плавності</string>
-    <string name="pacing_latency">Перевага найменшій затримці</string>
-    <string name="pacing_smoothness">Перевага плавному відео (може значно збільшити затримку)</string>
-    <string name="pacing_balanced">Збалансовано</string>
+    <string name="summary_frame_pacing">Виберіть ритм відеокадрів. Точний ритм може використовувати часові мітки відео (PTS) і рекомендований для більшості пристроїв.</string>
+    <string name="pacing_latency">Низька затримка (швидша реакція)</string>
+    <string name="pacing_precise_sync">Точний ритм кадрів (рекомендовано)</string>
+    <string name="pacing_experimental_low_latency">Наднизька затримка (експериментально)</string>
+    <string name="pacing_smoothness">Плавність понад усе (більша затримка)</string>
+    <string name="pacing_balanced">Збалансовано (затримка й плавність)</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_480p">480p</string>
     <string name="resolution_720p">720p</string>
@@ -241,7 +243,7 @@
     <string name="title_checkbox_absolute_mouse_mode">Режим миші віддаленого робочого столу</string>
     <string name="title_setup_guide">Гайд по налаштуванню</string>
     <string name="summary_setup_guide">Переглянути інструкцію, як налаштувати ігровий ПК для стрімінгу</string>
-    <string name="pacing_balanced_alt">Збалансований з лімітом FPS</string>
+    <string name="pacing_balanced_alt">Обмежити вихідний FPS (до частоти оновлення екрана)</string>
     <string name="resolution_prefix_native_landscape">(Горизонтальний)</string>
     <string name="resolution_prefix_native_portrait">(Портретний)</string>
     <string name="title_checkbox_enable_audiofx">Увімкнення підтримки системного еквалайзера</string>
@@ -349,4 +351,12 @@
     <string name="image_save_failed_with_error">Не вдалося зберегти зображення: %1$s</string>
     <string name="tip_double_tap_mouse">Порада: натисніть і утримуйте порожню область угорі списку комп\'ютерів, щоб зберегти поточне фонове зображення.</string>
     <string name="pyrowave_negotiation_fallback">Не вдалося узгодити PyroWave. Перехід на %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Корекція напрямку миші</string>
+    <string name="summary_list_mouse_axis_correction">Повертати зафіксований рух миші перед надсиланням на хост. Змінюйте це лише якщо пристрій Android повідомляє про повернуті осі миші.</string>
+    <string name="mouse_axis_correction_off">Вимкнено</string>
+    <string name="mouse_axis_correction_90">Повернути на 90 градусів</string>
+    <string name="mouse_axis_correction_180">Повернути на 180 градусів</string>
+    <string name="mouse_axis_correction_270">Повернути на 270 градусів</string>
+    <string name="summary_checkbox_reverse_resolution">Вмикайте лише якщо орієнтація або розміри зображення неправильні; може конфліктувати з поворотом відповідно до орієнтації пристрою.</string>
+    <string name="summary_checkbox_rotable_screen">Автоматично синхронізує макет трансляції, коли пристрій перемикається між книжковою та альбомною орієнтацією.</string>
 </resources>

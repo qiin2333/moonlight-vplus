@@ -204,10 +204,13 @@
     <string name="perf_overlay_streamdetails">Tốc độ khung hình: %1$s %2$.2f FPS</string>
     <string name="resolution_prefix_native_fullscreen">Toàn màn hình theo hệ thống</string>
     <string name="title_frame_pacing">Nhịp độ khung hình video</string>
-    <string name="summary_frame_pacing">Chỉ ra cách cân bằng giữa độ trễ video và độ mượt mà</string>
-    <string name="pacing_latency">Ưu tiên độ trễ thấp nhất</string>
-    <string name="pacing_balanced">Cân bằng</string>
-    <string name="pacing_smoothness">Ưu tiên video mượt nhất (có thể tăng độ trễ đáng kể)</string>
+    <string name="summary_frame_pacing">Chọn cách điều chỉnh nhịp khung hình video. Nhịp khung hình chính xác có thể dùng dấu thời gian video (PTS) và được khuyến nghị cho hầu hết thiết bị.</string>
+    <string name="pacing_latency">Độ trễ thấp (phản hồi nhanh hơn)</string>
+    <string name="pacing_precise_sync">Nhịp khung hình chính xác (khuyến nghị)</string>
+    <string name="pacing_experimental_low_latency">Độ trễ siêu thấp (thử nghiệm)</string>
+    <string name="pacing_balanced_alt">Giới hạn FPS đầu ra (không vượt quá tần số quét màn hình)</string>
+    <string name="pacing_balanced">Cân bằng (độ trễ và độ mượt)</string>
+    <string name="pacing_smoothness">Ưu tiên độ mượt (độ trễ cao hơn)</string>
     <string name="resolution_480p">480p</string>
     <string name="fps_120">120 FPS</string>
     <string name="resolution_360p">360p</string>
@@ -285,4 +288,12 @@
     <string name="image_save_failed_with_error">Không thể lưu ảnh: %1$s</string>
     <string name="tip_double_tap_mouse">Mẹo: nhấn và giữ vùng trống phía trên danh sách máy tính để lưu ảnh nền hiện tại.</string>
     <string name="pyrowave_negotiation_fallback">Thương lượng PyroWave thất bại. Chuyển sang %1$s.</string>
+    <string name="title_list_mouse_axis_correction">Điều chỉnh hướng chuột</string>
+    <string name="summary_list_mouse_axis_correction">Xoay chuyển động chuột được ghi nhận trước khi gửi đến máy chủ. Chỉ thay đổi khi thiết bị Android báo các trục chuột bị xoay.</string>
+    <string name="mouse_axis_correction_off">Tắt</string>
+    <string name="mouse_axis_correction_90">Xoay 90 độ</string>
+    <string name="mouse_axis_correction_180">Xoay 180 độ</string>
+    <string name="mouse_axis_correction_270">Xoay 270 độ</string>
+    <string name="summary_checkbox_reverse_resolution">Chỉ bật khi hướng hoặc kích thước hình ảnh không chính xác; có thể xung đột với tính năng xoay theo thiết bị.</string>
+    <string name="summary_checkbox_rotable_screen">Tự động đồng bộ bố cục truyền phát khi thiết bị chuyển giữa hướng dọc và hướng ngang.</string>
 </resources>
