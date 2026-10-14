@@ -708,7 +708,7 @@ class ControllerHandler(
         }
     }
 
-    private fun withdrawInitialControllerSlot(number: Short) {
+    private fun withdrawInitialControllerSlot(number: Short, retryDelayMs: Long = 50L) {
         synchronized(arrivalMetadataLock) {
             if (stopped || isControllerSlotEnabled(number)) return
             val result = withdrawControllerSlotLocked(number, getActiveControllerMask(),
@@ -716,7 +716,9 @@ class ControllerHandler(
             if (result != 0) {
                 // The source is gone, so no later report can retry this withdrawal.
                 // Recheck the mask on retry in case a new source has reused the slot.
-                mainThreadHandler.postDelayed({ withdrawInitialControllerSlot(number) }, 50)
+                mainThreadHandler.postDelayed({
+                    withdrawInitialControllerSlot(number, (retryDelayMs * 2).coerceAtMost(2000L))
+                }, retryDelayMs)
             }
         }
     }
