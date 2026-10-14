@@ -8,6 +8,7 @@ import com.limelight.R
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.CustomFrameRatesStore
 import com.limelight.preferences.CustomResolutionsStore
+import com.limelight.preferences.DisplayChoiceLimits
 import com.limelight.preferences.PreferenceConfiguration
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -17,7 +18,8 @@ internal data class DisplayChoice(
     val label: String,
     val selected: Boolean,
     val description: String? = null,
-    val opensEditor: Boolean = false
+    val opensEditor: Boolean = false,
+    val enabled: Boolean = true
 )
 
 internal data class DisplaySettingsDraft(
@@ -49,7 +51,7 @@ internal data class BitrateCardState(
     val hapticMode: BitrateCardController.HapticMode
 ) {
     val selectedBitrateKbps: Int
-        get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt())
+        get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
 }
 
 /** Owns bitrate card state and stream-side effects without depending on Android Views. */
@@ -378,12 +380,14 @@ internal data class ResolutionSelection(
     }
 
     private fun resolutionChoices(selected: String): List<DisplayChoice> {
+        val limits = displayChoiceLimits()
         return CustomResolutionsStore.load(game).map { resolution ->
             val value = resolution.toString()
             DisplayChoice(
                 value = value,
                 label = value,
-                selected = value == selected
+                selected = value == selected,
+                enabled = limits.supportsResolution(value)
             )
         }
     }
@@ -418,13 +422,22 @@ internal data class ResolutionSelection(
     }
 
     private fun frameRateChoices(selected: String): List<DisplayChoice> {
+        val limits = displayChoiceLimits()
+        val unlockFps = game.prefConfig.unlockFps
         return (CustomFrameRatesStore.load(game) + 60).distinct().sorted().map { fps ->
+            val value = fps.toString()
             DisplayChoice(
-                value = fps.toString(),
+                value = value,
                 label = "$fps FPS",
-                selected = fps.toString() == selected
+                selected = value == selected,
+                enabled = limits.supportsFrameRate(value, unlockFps)
             )
         }
+    }
+
+    private fun displayChoiceLimits(): DisplayChoiceLimits {
+        val display = game.externalDisplayManager?.getTargetDisplay() ?: game.windowManager.defaultDisplay
+        return DisplayChoiceLimits.from(game, display)
     }
 
     private fun screenModeChoices(selected: String): List<DisplayChoice> {

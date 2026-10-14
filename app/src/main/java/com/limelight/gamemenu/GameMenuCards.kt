@@ -522,7 +522,8 @@ internal fun SensitivityPresetButton(
     name: String,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = GameMenuControlShape
@@ -544,7 +545,7 @@ internal fun SensitivityPresetButton(
             )
             .onFocusChanged { focused = it.isFocused }
             .border(if (focused) 2.dp else 0.dp, if (focused) accent else androidx.compose.ui.graphics.Color.Transparent, shape)
-            .clickable(role = Role.Button) {
+            .clickable(enabled = enabled, role = Role.Button) {
                 hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()
             }
@@ -556,7 +557,11 @@ internal fun SensitivityPresetButton(
     ) {
         Text(
             text = name,
-            color = if (selected) accent else colorResource(R.color.game_menu_text_primary),
+            color = when {
+                !enabled -> colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.45f)
+                selected -> accent
+                else -> colorResource(R.color.game_menu_text_primary)
+            },
             fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,

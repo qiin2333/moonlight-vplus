@@ -130,6 +130,8 @@ import java.text.DateFormat
 import java.util.*
 
 import kotlin.concurrent.thread
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -1224,13 +1226,19 @@ class StreamSettings : ThemedAppCompatActivity() {
             val labels = values.indices.associate { index ->
                 values[index] to names.getOrElse(index) { values[index] }
             }
+            val limits = DisplayChoiceLimits.from(requireActivity(), getTargetDisplay())
             val resolutions = CustomResolutionsStore.load(requireActivity())
-            val choiceValues = resolutions.map(Resolution::toString)
+            val choices = resolutions.map { resolution ->
+                val value = resolution.toString()
+                value to (labels[value] ?: value)
+            }
+            val choiceValues = choices.map { it.first }.distinct()
             pref.replaceChoices(
-                resolutions.map { labels[it.toString()] ?: it.toString() } +
+                choiceValues.map { value -> choices.first { it.first == value }.second } +
                     getString(R.string.title_custom_resolutions),
                 choiceValues + CUSTOM_RESOLUTION_MANAGER_VALUE,
-                availableSelection(pref, choiceValues, PreferenceConfiguration.DEFAULT_RESOLUTION)
+                savedSelection(pref, PreferenceConfiguration.DEFAULT_RESOLUTION),
+                choiceValues.filter(limits::supportsResolution).toSet() + CUSTOM_RESOLUTION_MANAGER_VALUE
             )
         }
 
@@ -1241,43 +1249,25 @@ class StreamSettings : ThemedAppCompatActivity() {
             val labels = values.indices.associate { index ->
                 values[index] to names.getOrElse(index) { values[index] }
             }
+            val limits = DisplayChoiceLimits.from(requireActivity(), getTargetDisplay())
+            val unlockFps = PreferenceConfiguration.readPreferences(requireActivity()).unlockFps
             val frameRates = CustomFrameRatesStore.load(requireActivity())
-            val choiceValues = frameRates.map(Int::toString)
+            val choices = frameRates.map { fps ->
+                fps.toString() to (labels[fps.toString()] ?: "$fps ${resources.getString(R.string.fps_suffix_fps)}")
+            }
+            val choiceValues = choices.map { it.first }.distinct()
             pref.replaceChoices(
-                frameRates.map { labels[it.toString()] ?: "$it ${resources.getString(R.string.fps_suffix_fps)}" } +
+                choiceValues.map { value -> choices.first { it.first == value }.second } +
                     getString(R.string.title_custom_fps),
                 choiceValues + CUSTOM_FRAME_RATE_MANAGER_VALUE,
-                availableSelection(pref, choiceValues, PreferenceConfiguration.DEFAULT_FPS)
+                savedSelection(pref, PreferenceConfiguration.DEFAULT_FPS),
+                choiceValues.filter { limits.supportsFrameRate(it, unlockFps) }.toSet() +
+                    CUSTOM_FRAME_RATE_MANAGER_VALUE
             )
         }
 
-        private fun availableSelection(
-            preference: ChoiceGridPreference,
-            values: List<String>,
-            fallback: String
-        ): String {
-            val current = preference.sharedPreferences?.getString(preference.key, null)
-            if (current != null && current in values) return current
-            val replacement = values.lastOrNull { choicePrecedes(it, current) }
-                ?: values.firstOrNull()
-                ?: fallback
-            preference.sharedPreferences?.edit()?.putString(preference.key, replacement)?.apply()
-            return replacement
-        }
-
-        private fun choicePrecedes(candidate: String, current: String?): Boolean {
-            if (current == null) return false
-            val candidateResolution = ResolutionValidator.parseResolution(candidate)
-            val currentResolution = ResolutionValidator.parseResolution(current)
-            if (candidateResolution != null && currentResolution != null) {
-                return candidateResolution.width < currentResolution.width ||
-                    (candidateResolution.width == currentResolution.width &&
-                        candidateResolution.height < currentResolution.height)
-            }
-            val candidateFrameRate = candidate.toIntOrNull()
-            val currentFrameRate = current.toIntOrNull()
-            return candidateFrameRate != null && currentFrameRate != null &&
-                candidateFrameRate < currentFrameRate
+        private fun savedSelection(preference: ChoiceGridPreference, fallback: String): String {
+            return preference.sharedPreferences?.getString(preference.key, null) ?: fallback
         }
 
         private fun removeValue(preferenceKey: String, value: String, onMatched: Runnable) {

@@ -1049,6 +1049,42 @@ class PreferenceConfiguration {
             return isSquarishScreen(width, height)
         }
 
+        private const val DISPLAY_SELECTION_MIGRATION_KEY = "display_selection_migration_version"
+        private const val DISPLAY_SELECTION_MIGRATION_VERSION = 1
+
+        /** 只在迁移版本提升时改写一次旧分辨率或帧率，打开设置页不再重复改写。 */
+        private fun migrateDisplaySelections(context: Context, prefs: SharedPreferences) {
+            if (prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0) >= DISPLAY_SELECTION_MIGRATION_VERSION) return
+            val editor = prefs.edit()
+            val resolution = prefs.getString(RESOLUTION_PREF_STRING, null)
+            when {
+                resolution == null -> Unit
+                resolution.equals("360p", true) || resolution.equals("480p", true) ->
+                    editor.putString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
+                resolution.equals("720p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_720P)
+                resolution.equals("1080p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1080P)
+                resolution.equals("1440p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1440P)
+                resolution.equals("4K", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_4K)
+                resolution == RES_NATIVE -> {
+                    val display = (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
+                    val size = Point()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                        display.getRealSize(size)
+                    } else {
+                        display.getSize(size)
+                    }
+                    editor.putString(
+                        RESOLUTION_PREF_STRING,
+                        "${max(size.x, size.y)}x${min(size.x, size.y)}"
+                    )
+                }
+            }
+            when (val frameRate = prefs.all[FPS_PREF_STRING]) {
+                is Int -> editor.putString(FPS_PREF_STRING, frameRate.toString())
+            }
+            editor.putInt(DISPLAY_SELECTION_MIGRATION_KEY, DISPLAY_SELECTION_MIGRATION_VERSION).apply()
+        }
+
         private fun convertFromLegacyResolutionString(resString: String): String {
             return when {
                 resString.equals("360p", ignoreCase = true) -> RES_360P
@@ -1345,6 +1381,7 @@ class PreferenceConfiguration {
                 prefs.edit().remove(LEGACY_VIBRATE_FALLBACK_PREF_STRING).apply()
             }
 
+            migrateDisplaySelections(context, prefs)
             val resStr = prefs.getString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION) ?: DEFAULT_RESOLUTION
             config.isNativeResolution = resStr == RES_NATIVE
             config.isCustomResolution =

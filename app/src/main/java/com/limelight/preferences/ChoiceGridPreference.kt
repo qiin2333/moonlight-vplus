@@ -40,6 +40,7 @@ class ChoiceGridPreference(
 ) : Preference(context, attrs) {
     private var labels by mutableStateOf(emptyList<String>())
     private var values by mutableStateOf(emptyList<String>())
+    private var enabledValues by mutableStateOf(emptySet<String>())
     private var selected by mutableStateOf("")
     private var focusedChoice: String? = null
     private var focusRequest by mutableStateOf<Pair<String, Int>?>(null)
@@ -55,9 +56,15 @@ class ChoiceGridPreference(
         layoutResource = R.layout.preference_choice_grid
     }
 
-    fun replaceChoices(labels: List<String>, values: List<String>, selected: String) {
+    fun replaceChoices(
+        labels: List<String>,
+        values: List<String>,
+        selected: String,
+        enabledValues: Set<String> = values.toSet()
+    ) {
         this.labels = labels
         this.values = values
+        this.enabledValues = enabledValues
         this.selected = selected
         notifyChanged()
     }
@@ -75,6 +82,7 @@ class ChoiceGridPreference(
             ChoiceGrid(
                 labels = labels,
                 values = values,
+                enabledValues = enabledValues,
                 selected = selected,
                 focusRequest = focusRequest,
                 onFocusRestored = { focusRequest = null },
@@ -97,6 +105,7 @@ class ChoiceGridPreference(
 private fun ChoiceGrid(
     labels: List<String>,
     values: List<String>,
+    enabledValues: Set<String>,
     selected: String,
     focusRequest: Pair<String, Int>?,
     onFocusRestored: () -> Unit,
@@ -132,6 +141,7 @@ private fun ChoiceGrid(
                         SensitivityPresetButton(
                             name = labels.getOrElse(index) { value },
                             selected = value == selected,
+                            enabled = value in enabledValues,
                             onClick = { onSelect(value) },
                             modifier = Modifier
                                 .weight(1f)

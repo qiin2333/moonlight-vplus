@@ -302,8 +302,9 @@ object CustomResolutionsDialog {
     }
 
     private fun targetDisplay(context: Context): Display? {
-        return (context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
-            ?.getDisplay(Display.DEFAULT_DISPLAY)
+        return (context as? com.limelight.Game)?.externalDisplayManager?.getTargetDisplay()
+            ?: (context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
+                ?.getDisplay(Display.DEFAULT_DISPLAY)
     }
 
     private fun displayCutout(display: Display, context: Context): DisplayCutout? {

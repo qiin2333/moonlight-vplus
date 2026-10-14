@@ -840,6 +840,8 @@ private fun ResolutionRow(
     val bg by animateColorAsState(targetValue = targetBg, label = "rowBg")
     val targetBorder = if (showFocus || isJustAdded) accent else outline
     val borderColor by animateColorAsState(targetValue = targetBorder, label = "rowBorder")
+    val protectedFrameRate = resolution.height == 0 &&
+        resolution.width == CustomFrameRatesDialog.PROTECTED_FRAME_RATE
 
     Row(
         modifier = Modifier
@@ -853,7 +855,7 @@ private fun ResolutionRow(
             .clip(rowShape)
             .background(bg)
             .border(if (showFocus || isJustAdded) 1.5.dp else 1.dp, borderColor, rowShape)
-            .clickable { deleteFocus.requestFocus() }
+            .clickable(enabled = !protectedFrameRate) { deleteFocus.requestFocus() }
             .focusable(interactionSource = interaction)
             .padding(
                 start = if (compact) 9.dp else 11.dp,
@@ -899,8 +901,6 @@ private fun ResolutionRow(
                 )
             }
         }
-        val protectedFrameRate = resolution.height == 0 &&
-            resolution.width == CustomFrameRatesDialog.PROTECTED_FRAME_RATE
         if (!protectedFrameRate) {
             DeleteButton(
                 resolution = resolution,

@@ -1059,6 +1059,7 @@ private fun ChoiceWrap(
                     SensitivityPresetButton(
                         name = choice.label,
                         selected = choice.selected,
+                        enabled = choice.enabled,
                         onClick = { onSelect(choice) },
                         modifier = Modifier
                             .weight(1f)
