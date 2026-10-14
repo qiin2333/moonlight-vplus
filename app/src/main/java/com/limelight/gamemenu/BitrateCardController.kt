@@ -76,7 +76,7 @@ internal class BitrateCardController(
 
     companion object {
         const val MAX_PROGRESS = 59
-        const val PYROWAVE_MAX_PROGRESS = 83
+        const val PYROWAVE_MAX_PROGRESS = 67
         val ABR_MODES = listOf("quality", "balanced", "lowLatency")
         private const val PREF_HAPTIC_MODE = "bitrate_seekbar_haptic_mode"
         private val SEGMENT_BOUNDARIES = setOf(0, 9, 24, 39, 49, MAX_PROGRESS)
@@ -104,7 +104,8 @@ internal class BitrateCardController(
                 boundedProgress <= 39 -> 20000 + (boundedProgress - 24) * 2000
                 boundedProgress <= 49 -> 50000 + (boundedProgress - 39) * 5000
                 boundedProgress <= MAX_PROGRESS -> 100000 + (boundedProgress - 49) * 10000
-                else -> 200000 + (boundedProgress - MAX_PROGRESS) * 25000
+                boundedProgress <= 63 -> 200000 + (boundedProgress - MAX_PROGRESS) * 50000
+                else -> 400000 + (boundedProgress - 63) * 100000
             }
         }
 
@@ -115,7 +116,8 @@ internal class BitrateCardController(
                 kbps <= 50000 -> 24 + (kbps - 20000 + 1000) / 2000
                 kbps <= 100000 -> 39 + (kbps - 50000 + 2500) / 5000
                 kbps <= 200000 -> 49 + (kbps - 100000 + 5000) / 10000
-                else -> MAX_PROGRESS + (kbps - 200000 + 12500) / 25000
+                kbps <= 400000 -> MAX_PROGRESS + (kbps - 200000 + 25000) / 50000
+                else -> 63 + (kbps - 400000 + 50000) / 100000
             }
             return unboundedProgress.coerceIn(0, maxProgress)
         }

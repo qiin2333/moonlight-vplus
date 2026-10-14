@@ -36,9 +36,10 @@ class BitrateCardControllerTest {
         val expected = mapOf(
             58 to 190_000,
             59 to 200_000,
-            60 to 225_000,
-            69 to 450_000,
-            83 to 800_000
+            60 to 250_000,
+            63 to 400_000,
+            64 to 500_000,
+            67 to 800_000
         )
 
         expected.forEach { (progress, bitrate) ->
