@@ -137,6 +137,8 @@ class MicrophoneCapture(
                     while (running.get()) {
                         val pending = inputSwitch.get()
                         if (pending != null && pending.recovery == null && !prepareInputSwitch(pending)) continue
+                        // stop() may skip the recorder while route preparation owns the lock.
+                        if (!running.get()) break
                         val bytesRead = try {
                             if (pending != null && Build.VERSION.SDK_INT >= 23) {
                                 audioRecord!!.read(buffer, bufferSize, AudioRecord.READ_NON_BLOCKING)
