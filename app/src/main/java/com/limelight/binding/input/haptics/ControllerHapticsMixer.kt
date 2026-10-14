@@ -119,6 +119,8 @@ internal class ControllerHapticsMixer(
         return mix(controllerNumber, sources)
     }
 
+    fun clearController(controllerNumber: Short) { controllers.remove(controllerNumber) }
+
     /** Returns the current mixed value after applying expiries at [nowMs]. */
     fun mixedState(controllerNumber: Short, nowMs: Long): MixedRumbleState {
         val sources = controllers.getOrPut(controllerNumber) { SourceStates() }

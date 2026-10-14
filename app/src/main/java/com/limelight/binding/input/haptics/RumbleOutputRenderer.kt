@@ -62,6 +62,16 @@ internal class RumbleOutputRenderer(
     /** Forget dedupe history when the physical controller sink changes. */
     fun resetController(number: Short) { slots.remove(number)?.cancel() }
 
+    fun retireController(number: Short) {
+        resetController(number)
+        controllerMixer.clearController(number)
+        deviceMixer.clearController(number)
+        if (number.toInt() == 0) {
+            deviceSlot.cancel()
+            writeDeviceAmplitude(0)
+        }
+    }
+
     /** Cancel logical output; the adapter sends terminal zero and closes its physical sinks. */
     fun stop(): Set<Short> {
         stopped = true

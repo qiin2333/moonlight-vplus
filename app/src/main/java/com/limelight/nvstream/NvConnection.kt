@@ -577,6 +577,17 @@ open class NvConnection(
         }
     }
 
+    /** Used by ownership handoff: a dropped removal must abort USB export. */
+    fun sendControllerInputChecked(
+        controllerNumber: Short, activeGamepadMask: Short, buttonFlags: Int = 0,
+        leftTrigger: Byte = 0, rightTrigger: Byte = 0,
+        leftStickX: Short = 0, leftStickY: Short = 0,
+        rightStickX: Short = 0, rightStickY: Short = 0
+    ): Int = if (isMonkey) 0 else MoonBridge.sendMultiControllerInputChecked(
+        controllerNumber, activeGamepadMask, buttonFlags, leftTrigger, rightTrigger,
+        leftStickX, leftStickY, rightStickX, rightStickY
+    )
+
     fun sendKeyboardInput(keyMap: Short, keyDirection: Byte, modifier: Byte, flags: Byte) {
         if (!isMonkey) {
             MoonBridge.sendKeyboardInput(keyMap, keyDirection, modifier, flags)
