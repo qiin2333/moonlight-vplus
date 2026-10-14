@@ -713,8 +713,10 @@ class ControllerHandler(
                 val context = inputDeviceContexts.get(id)?.takeIf(::isContextUsable)
                     ?: createInputDeviceContextForDevice(device)
                 synchronized(lightsSessionLock) { inputDeviceContexts.put(id, context) }
-                assignControllerNumberIfNeeded(context)
-                sendControllerInputPacket(context)
+                synchronized(arrivalMetadataLock) {
+                    assignControllerNumberIfNeeded(context)
+                    sendControllerInputPacketLocked(context)
+                }
             }
         }
         // A detached physical device gets no synthetic arrival. New driver reports declare
