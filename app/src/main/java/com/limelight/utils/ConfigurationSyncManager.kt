@@ -3478,6 +3478,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_show_onscreen_controls",
             "checkbox_show_onscreen_keyboard",
             "checkbox_small_icon_mode",
+            "checkbox_shizuku_keyboard_accessibility",
             "checkbox_special_key_map",
             "checkbox_stretch_video",
             "checkbox_swap_quit_and_disconnect",

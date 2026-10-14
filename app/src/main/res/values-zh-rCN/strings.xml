@@ -1211,7 +1211,7 @@
     <string name="summary_shizuku_keyboard_accessibility">开始串流时，通过已授权的 Shizuku 启用本应用的键盘无障碍服务。</string>
     <string name="title_shizuku_keyboard_authorization">Shizuku 授权</string>
     <string name="summary_shizuku_not_installed">请先安装并启动 Shizuku。</string>
-    <string name="summary_shizuku_not_running">请先启动 Shizuku。</string>
+    <string name="summary_shizuku_not_running">Shizuku 未运行。</string>
     <string name="summary_shizuku_authorization_required">点按进行授权。</string>
     <string name="summary_shizuku_authorized">已授权。</string>
     <string name="title_special_key_map">Moonlight 键盘快捷键</string>

@@ -3219,7 +3219,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         private fun refreshShizukuAuthorization() {
             val preference = findPreference<Preference>("shizuku_keyboard_authorization") ?: return
             val summary = when (KeyboardAccessibilityEnabler.authorizationState()) {
-                KeyboardAccessibilityEnabler.AuthorizationState.NOT_INSTALLED -> R.string.summary_shizuku_not_installed
+                KeyboardAccessibilityEnabler.AuthorizationState.NOT_INSTALLED,
                 KeyboardAccessibilityEnabler.AuthorizationState.NOT_RUNNING -> R.string.summary_shizuku_not_running
                 KeyboardAccessibilityEnabler.AuthorizationState.AUTHORIZATION_REQUIRED -> R.string.summary_shizuku_authorization_required
                 KeyboardAccessibilityEnabler.AuthorizationState.AUTHORIZED -> R.string.summary_shizuku_authorized

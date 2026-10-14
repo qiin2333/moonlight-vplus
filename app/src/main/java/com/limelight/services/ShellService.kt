@@ -80,7 +80,7 @@ class ShellService : IKeyboardAccessibilityShell.Stub() {
         process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
     private companion object {
-        const val DESTROY_TRANSACTION = 16777114
+        const val DESTROY_TRANSACTION = 16777115
         const val COMMAND_TIMEOUT_SECONDS = 3L
     }
 }
