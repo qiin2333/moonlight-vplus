@@ -37,6 +37,16 @@ class AuthoredPcmFallbackTest {
         assertNull(reducer.accept(Ds5HapticsPcmFrame(0, 0, 1, 0, 48000, 48, 2, 16, ByteArray(191))))
     }
 
+    @Test fun restoredControllerAcceptsRestartedSequencesWithoutResettingOtherPlayers() {
+        val reducer = AuthoredPcmFallback()
+        assertNotNull(reducer.accept(frame(100)))
+        assertNotNull(reducer.accept(frame(100, player = 1)))
+        reducer.reset(0)
+        assertNotNull(reducer.accept(frame(0)))
+        assertNull(reducer.accept(frame(0, player = 1)))
+        assertNotNull(reducer.accept(frame(101, player = 1)))
+    }
+
     @Test fun authoredExpiryAndStopPreserveOrdinaryHostRumbleAndOtherPlayers() {
         val mixer = ControllerHapticsMixer()
         val host = ControllerRumbleState(0.2f, 0.1f)

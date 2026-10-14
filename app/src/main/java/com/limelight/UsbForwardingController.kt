@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.limelight.binding.input.driver.UsbDriverService
+import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.driver.wireless.hci.HciUsbDeviceProbe
 import com.limelight.nvstream.http.LimelightCryptoProvider
 import com.limelight.nvstream.http.NvHTTP
@@ -54,9 +55,8 @@ class UsbForwardingController(
         }
     }
 
-    /** Where one device is in its export journey. Row status and action button are
-     * derived from it, and [claimed] is what keeps Android input suppressed for as
-     * long as the device may still be the one the host is using. */
+    /** Row status/actions include queued requests. Input suppression follows the
+     * actual input lease, so waiting for permission keeps ordinary input alive. */
     private enum class Phase(val status: Int, val claimed: Boolean, val busy: Boolean) {
         Local(R.string.usb_forward_local, false, false),
         Authorizing(R.string.usb_forward_authorizing, true, true),
@@ -82,6 +82,7 @@ class UsbForwardingController(
         @Volatile var export: UsbIpBackend.Export? = null
         @Volatile var tunnel: UsbReverseTunnel? = null
         @Volatile var reservation: UsbDriverService.Companion.ForwardingReservation? = null
+        var inputLease: ControllerHandler.UsbForwardingLease? = null
     }
 
     private val manager = game.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -321,12 +322,22 @@ class UsbForwardingController(
         val device = state.device
         val operation = ++state.generation
         state.phase = Phase.Handoff
+        // Acquire synchronously with input suppression, before driver callbacks can lose
+        // the source-to-slot mapping. Waiting/denied USB permissions never pause input.
+        try {
+            state.inputLease = game.controllerHandler.beginUsbForwarding(device)
+        } catch (error: Exception) {
+            LimeLog.warning("Unable to pause local USB input: $error")
+            releaseGroup(listOf(state), R.string.usb_forward_failed)
+            return
+        }
         enqueue {
             try {
                 // Activity recreation publishes its cleanup before a replacement
                 // controller can enqueue native work.
                 predecessorCleanup.await()
                 if (closed) return@enqueue
+                state.inputLease!!.ready.await(10_000)
                 state.reservation = UsbDriverService.reserveForForwarding(device)
                 state.reservation!!.ready.await(10_000)
                 if (closed) return@enqueue
@@ -387,7 +398,7 @@ class UsbForwardingController(
      * VID/PID pairs share one identity here because Android offers no USB path
      * mapping, so releasing one member releases the whole group. */
     fun consumes(input: InputDevice?): Boolean = input != null && forwarding.values.any {
-        it.device.vendorId == input.vendorId && it.device.productId == input.productId
+        it.inputLease != null && it.device.vendorId == input.vendorId && it.device.productId == input.productId
     }
 
     fun release(resultMessage: Int = R.string.usb_forward_choose) {
@@ -421,28 +432,34 @@ class UsbForwardingController(
                     transport?.close()
                     state.export?.let { backend.release(it).get() }
                     state.export = null
-                    state.reservation?.let { reservation ->
-                        // Native cleanup succeeded. Restore a clean handoff immediately,
-                        // or after a pending stop, without wedging the UI on local failure.
-                        reservation.restoreWhenReady {
-                            LimeLog.warning("Unable to restore local USB driver; reconnect the USB device: $it")
-                        }
-                        state.reservation = null
-                    }
                 }.isSuccess
                 if (!succeeded) released = false
                 game.runOnUiThread {
                     if (closed) return@runOnUiThread
                     // Keep ownership blocked if native cleanup failed.
                     if (succeeded && forwarding[state.device.deviceName] === state) {
-                        forwarding = forwarding - state.device.deviceName
+                        runCatching {
+                            state.inputLease?.restore(manager.deviceList.containsKey(state.device.deviceName))
+                            // Unpause logical ownership before the service can deliver new
+                            // deviceAdded callbacks. Native USB ownership is already released.
+                            state.reservation?.restoreWhenReady {
+                                LimeLog.warning("Unable to restore local USB driver; reconnect the USB device: $it")
+                            }
+                            state.reservation = null
+                            state.inputLease = null
+                            forwarding = forwarding - state.device.deviceName
+                        }.onFailure {
+                            state.phase = Phase.Failed
+                            message = R.string.usb_forward_failed
+                            LimeLog.warning("Unable to restore local controller input: $it")
+                        }
                     } else if (!succeeded) {
                         state.phase = Phase.Failed
                     }
                 }
             }
             game.runOnUiThread {
-                if (!closed) message = if (released) resultMessage else R.string.usb_forward_failed
+                if (!closed) message = if (released && group.none { it.phase == Phase.Failed }) resultMessage else R.string.usb_forward_failed
             }
         }
     }

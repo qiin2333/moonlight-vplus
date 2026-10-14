@@ -472,7 +472,15 @@ class UsbDriverService : Service(), UsbDriverListener {
                 LimeLog.warning("Unable to initialize USB controller: ${it.message}")
             }.getOrNull()
 
-            if (controller == null || !runCatching { controller.start() }.getOrDefault(false)) {
+            if (controller == null) {
+                runCatching { connection.close() }
+                return
+            }
+            // start() can announce the controller before returning. Publish its path first
+            // so the listener can reject a source already leased to USB/IP.
+            synchronized(controllersLock) { controllerDevices[controller] = device.deviceName }
+            if (!runCatching { controller.start() }.getOrDefault(false)) {
+                synchronized(controllersLock) { controllerDevices.remove(controller) }
                 runCatching { connection.close() }
                 return
             }
@@ -487,6 +495,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 }
             }
             if (!retained) {
+                synchronized(controllersLock) { controllerDevices.remove(controller) }
                 runCatching { controller.stop() }.onFailure {
                     LimeLog.warning("Unable to stop stale USB controller: ${it.message}")
                 }
@@ -1053,6 +1062,21 @@ class UsbDriverService : Service(), UsbDriverListener {
                         }
                     }
                 }
+            }
+        }
+
+        /** Snapshot paths before retiring contexts and stopping physical drivers. */
+        fun controllerIdsForDevice(path: String): Set<Int> = forwardingLock.withLock {
+            forwardingServices.flatMap { service ->
+                synchronized(service.controllersLock) {
+                    service.controllerDevices.filterValues { it == path }.keys.map { it.getControllerId() }
+                }
+            }.toSet()
+        }
+
+        fun devicePathForController(controller: AbstractController): String? = forwardingLock.withLock {
+            forwardingServices.firstNotNullOfOrNull { service ->
+                synchronized(service.controllersLock) { service.controllerDevices[controller] }
             }
         }
 

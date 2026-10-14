@@ -593,6 +593,12 @@ public class MoonBridge {
 
     public static native void sendMouseButton(byte buttonEvent, byte mouseButton);
 
+    public static native int sendMultiControllerInputChecked(short controllerNumber,
+                                                            short activeGamepadMask, int buttonFlags,
+                                                            byte leftTrigger, byte rightTrigger,
+                                                            short leftStickX, short leftStickY,
+                                                            short rightStickX, short rightStickY);
+
     public static native void sendMultiControllerInput(short controllerNumber,
                                     short activeGamepadMask, int buttonFlags,
                                     byte leftTrigger, byte rightTrigger,

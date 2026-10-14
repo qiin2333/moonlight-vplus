@@ -5,6 +5,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ControllerArrivalTrackerTest {
+    @Test fun withdrawnSlotMustReportANewArrival() {
+        val tracker = ControllerArrivalTracker(true)
+        tracker.reset()
+        assertFalse(tracker.isReported)
+        assertFalse(tracker.recordAttempt(-2))
+        assertTrue(tracker.recordAttempt(0))
+    }
+
     @Test
     fun failedAttemptRemainsPendingUntilRetrySucceeds() {
         val tracker = ControllerArrivalTracker()
