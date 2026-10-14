@@ -268,8 +268,9 @@ internal data class ResolutionSelection(
             game.prefConfig.isNativeResolution = selection.native
             game.prefConfig.isCustomResolution = selection.custom
             if (!selection.native) {
-                game.prefConfig.width = selection.width
-                game.prefConfig.height = selection.height
+                val reverse = game.prefConfig.reverseResolution
+                game.prefConfig.width = if (reverse) selection.height else selection.width
+                game.prefConfig.height = if (reverse) selection.width else selection.height
             }
         }
         frameRate?.let { game.prefConfig.fps = it }
@@ -368,9 +369,11 @@ internal data class ResolutionSelection(
 
     private fun currentResolutionValue(): String {
         val config = game.prefConfig
+        val width = if (config.reverseResolution) config.height else config.width
+        val height = if (config.reverseResolution) config.width else config.height
         return when {
             config.isNativeResolution -> PreferenceConfiguration.RES_NATIVE
-            else -> "${config.width}x${config.height}"
+            else -> "${width}x${height}"
         }
     }
 
