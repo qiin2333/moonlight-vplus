@@ -21,10 +21,10 @@ internal data class MicrophoneInputDescriptor(
     val address: String
 )
 
-// AudioDeviceInfo protocol values: radio/tuner, telephony and remote submix are not microphones.
+// Only known microphone endpoints. isSource also includes non-recording/vendor audio ports.
 internal fun isSelectableMicrophoneInput(type: Int): Boolean = when (type) {
-    14, 16, 17, 18, 25 -> false
-    else -> true
+    3, 7, 11, 12, 15, 22, 26 -> true
+    else -> false
 }
 
 internal fun selectableMicrophoneInputs(devices: List<MicrophoneInputDevice>): List<MicrophoneInputDevice> =
@@ -114,12 +114,21 @@ internal fun selectMicrophoneInput(
     key: String,
     choices: List<MicrophoneInputDevice>,
     capturing: Boolean,
-    requestRoute: () -> Boolean,
-    save: (MicrophoneInputDevice?) -> Unit
+    requestRoute: ((Boolean) -> Unit) -> Boolean,
+    save: (MicrophoneInputDevice?) -> Unit,
+    canComplete: () -> Boolean = { true },
+    onComplete: (Boolean) -> Unit = {}
 ): Boolean {
     val choice = choices.firstOrNull { it.key == key && isSelectableMicrophoneInput(it.type) }
     if (key != DEFAULT_MICROPHONE_INPUT && choice == null) return false
-    if (capturing && !requestRoute()) return false
-    save(choice)
-    return true
+    if (!capturing) {
+        save(choice)
+        return true
+    }
+    return requestRoute { success ->
+        if (canComplete()) {
+            if (success) save(choice)
+            onComplete(success)
+        }
+    }
 }

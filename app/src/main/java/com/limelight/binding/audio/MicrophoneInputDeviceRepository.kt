@@ -20,9 +20,19 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         ?.takeIf { it == DEFAULT_MICROPHONE_INPUT || it.matches(Regex("device:[a-f0-9]{64}")) }
         ?: DEFAULT_MICROPHONE_INPUT)
     val selectedKey: String get() = selection.selectedKey
+    private var reportedUnsupportedTypes = emptySet<Int>()
 
     fun devices(): List<MicrophoneInputDevice> = if (Build.VERSION.SDK_INT >= 23) {
-        try { Api23.devices(context).also { selection.resolve(selectableMicrophoneInputs(it)) } } catch (_: RuntimeException) {
+        try { Api23.devices(context).also { devices ->
+            selection.resolve(selectableMicrophoneInputs(devices))
+            val unsupported = devices.map { it.type }.filterNot(::isSelectableMicrophoneInput).toSet()
+            synchronized(this) {
+                if (unsupported != reportedUnsupportedTypes) {
+                    reportedUnsupportedTypes = unsupported
+                    LimeLog.info("Microphone inputs excluded by type: ${unsupported.sorted()}")
+                }
+            }
+        } } catch (_: RuntimeException) {
             LimeLog.warning("Microphone input enumeration failed")
             emptyList()
         }

@@ -15,9 +15,8 @@ class MicrophoneInputPresentationTest {
         assertEquals(12, all.size)
     }
 
-    @Test fun unknownAndVendorInputsAreNotDiscardedWithoutEvidence() {
-        assertEquals(setOf(0, 5, 6, 13, 20, 21, 31),
-            selectableMicrophoneInputs(devices(0, 5, 6, 13, 20, 21, 31)).map { it.type }.toSet())
+    @Test fun unknownAndNonMicrophonePortsAreNotPresentedAsSelectableMicrophones() {
+        assertTrue(selectableMicrophoneInputs(devices(0, 5, 6, 13, 20, 21, 31)).isEmpty())
     }
 
     @Test fun displayOrderDoesNotChooseOrChangeTheDefaultRoute() {
@@ -56,7 +55,7 @@ class MicrophoneInputPresentationTest {
     }
 
     @Test fun hiddenInputsCannotBeSelectedOrSavedWhileMutedOrCapturing() {
-        for (device in devices(14, 16, 17, 18, 25)) {
+        for (device in devices(0, 5, 6, 13, 14, 16, 17, 18, 20, 21, 25, 31)) {
             for (capturing in listOf(false, true)) {
                 assertFalse(selectMicrophoneInput(device.key, listOf(device), capturing,
                     requestRoute = { fail("Hidden input must not be routed"); true },

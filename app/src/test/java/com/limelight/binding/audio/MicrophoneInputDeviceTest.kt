@@ -129,10 +129,46 @@ class MicrophoneInputDeviceTest {
             { fail("Removed input must not be routed"); true }, { fail("Must not save") }))
     }
 
-    @Test fun defaultAndActiveSelectionApplyOnceBeforeSaving() {
+    @Test fun defaultAndActiveSelectionWaitForConfirmationBeforeSaving() {
         val events = mutableListOf<String>()
+        var complete: ((Boolean) -> Unit)? = null
         assertTrue(selectMicrophoneInput(DEFAULT_MICROPHONE_INPUT, emptyList(), true,
-            { events.add("route"); true }, { events.add("save"); assertNull(it) }))
+            { complete = it; events.add("route"); true }, { events.add("save"); assertNull(it) }))
+        assertEquals(listOf("route"), events)
+        complete!!(true)
         assertEquals(listOf("route", "save"), events)
+    }
+
+    @Test fun acceptedButFailedSwitchKeepsThePreviousPreference() {
+        var complete: ((Boolean) -> Unit)? = null
+        var result: Boolean? = null
+        assertTrue(selectMicrophoneInput(DEFAULT_MICROPHONE_INPUT, emptyList(), true,
+            { complete = it; true }, { fail("Failed verification must not save") },
+            onComplete = { result = it }))
+        complete!!(false)
+        assertEquals(false, result)
+    }
+
+    @Test fun pauseOrNewStreamInvalidatesALateSuccessAndFailure() {
+        for (success in listOf(true, false)) {
+            var complete: ((Boolean) -> Unit)? = null
+            var valid = true
+            assertTrue(selectMicrophoneInput(DEFAULT_MICROPHONE_INPUT, emptyList(), true,
+                { complete = it; true }, { fail("Stale result must not save") },
+                canComplete = { valid }, onComplete = { fail("Stale result must not update UI") }))
+            valid = false
+            complete!!(success)
+        }
+    }
+
+    @Test fun verifiedExplicitChoiceIsSavedOnlyAfterCompletion() {
+        val device = microphoneInputChoices(listOf(MicrophoneInputDescriptor(1, 15, "", ""))).single()
+        var complete: ((Boolean) -> Unit)? = null
+        var saved: MicrophoneInputDevice? = null
+        assertTrue(selectMicrophoneInput(device.key, listOf(device), true,
+            { complete = it; true }, { saved = it }))
+        assertNull(saved)
+        complete!!(true)
+        assertEquals(device, saved)
     }
 }

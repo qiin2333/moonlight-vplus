@@ -71,7 +71,7 @@ internal class MicrophoneMenuController(private val game: Game) {
         val resolvedKey = resolvedMicrophoneInputKey(repository.selectedKey, selectable)
         val unavailable = repository.selectedKey != DEFAULT_MICROPHONE_INPUT &&
             resolvedKey == DEFAULT_MICROPHONE_INPUT
-        val recordingStatus = microphoneRecordingStatusResource(
+        val recordingStatus = if (manager.isInputSwitchPending()) R.string.mic_input_route_pending else microphoneRecordingStatusResource(
             sdkInt = Build.VERSION.SDK_INT,
             capturing = manager.isMicrophoneActive(),
             hasRoutedDevice = current != null
