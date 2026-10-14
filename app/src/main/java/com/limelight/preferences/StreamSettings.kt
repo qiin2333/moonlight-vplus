@@ -518,6 +518,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         fadeOut(searchToggle)
         fadeOut(menuToggleView)
         fadeIn(searchBar)
+        updateSearchFocusRoutes()
         if (enterInput) {
             searchBar?.post { enterSearchInput() }
         } else {
@@ -586,6 +587,36 @@ class StreamSettings : ThemedAppCompatActivity() {
         fadeOut(searchBar)
         fadeIn(searchToggle)
         fadeIn(menuToggleView)
+        updateSearchFocusRoutes()
+    }
+
+    private fun searchFocusTargetId(): Int {
+        return if (isSearchBarVisible) R.id.settings_search_icon else R.id.settings_search_toggle
+    }
+
+    private fun routePreferenceFocus(view: View, targetId: Int, portrait: Boolean) {
+        val target = generateSequence(view) { current ->
+            if (current.isFocusable || current !is ViewGroup || current.childCount == 0) null
+            else current.getChildAt(0)
+        }.firstOrNull { it.isFocusable } ?: return
+        if (portrait) target.nextFocusUpId = targetId else target.nextFocusLeftId = targetId
+    }
+
+    private fun updateSearchFocusRoutes() {
+        if (searchToggle == null) return
+        val targetId = searchFocusTargetId()
+        categoryList?.let { list ->
+            for (index in 0 until list.childCount) {
+                list.getChildAt(index).findViewById<View>(R.id.category_item_root)?.nextFocusUpId = targetId
+            }
+        }
+        val preferences = supportFragmentManager
+            .findFragmentById(R.id.preference_container) as? SettingsFragment
+        preferences?.listView?.let { list ->
+            for (index in 0 until list.childCount) {
+                routePreferenceFocus(list.getChildAt(index), targetId, portrait = true)
+            }
+        }
     }
 
     private fun clearSearchQuery() {
@@ -772,7 +803,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             // 点击事件
             holder.root.setOnClickListener { selectCategory(holder.bindingAdapterPosition, item) }
-            holder.root.nextFocusUpId = if (position == 0) R.id.settings_search_icon else View.NO_ID
+            holder.root.nextFocusUpId = if (position == 0) searchFocusTargetId() else View.NO_ID
 
             // 焦点变化事件（控制器支持）
             holder.root.setOnFocusChangeListener { _, hasFocus ->
@@ -3249,17 +3280,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             recyclerView: RecyclerView,
             settingsActivity: StreamSettings
         ) {
-            val searchIconId = R.id.settings_search_icon
             fun route(view: View) {
-                val target = generateSequence(view) { current ->
-                    if (current.isFocusable || current !is ViewGroup || current.childCount == 0) null
-                    else current.getChildAt(0)
-                }.firstOrNull { it.isFocusable } ?: return
-                if (settingsActivity.searchToggle == null) {
-                    target.nextFocusUpId = searchIconId
-                } else {
-                    target.nextFocusLeftId = searchIconId
-                }
+                val portrait = settingsActivity.searchToggle != null
+                val targetId = if (portrait) settingsActivity.searchFocusTargetId() else R.id.settings_search_icon
+                settingsActivity.routePreferenceFocus(view, targetId, portrait)
             }
             recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
                 override fun onChildViewAttachedToWindow(view: View) = route(view)

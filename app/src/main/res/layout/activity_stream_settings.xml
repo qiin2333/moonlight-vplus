@@ -71,6 +71,7 @@
                 android:scaleType="center"
                 android:padding="10dp"
                 android:elevation="6dp"
+                android:focusable="true"
                 android:contentDescription="@string/settings_search_hint" />
 
             <!-- 顶部搜索栏（默认隐藏，点击搜索按钮后展开） -->
