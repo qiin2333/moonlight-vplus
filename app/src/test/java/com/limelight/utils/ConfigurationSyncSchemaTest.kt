@@ -55,6 +55,7 @@ class ConfigurationSyncSchemaTest {
             "checkbox_dualsense_wireless_bridge",
             "checkbox_vibrate_osc",
             "checkbox_mouse_emulation",
+            "checkbox_shizuku_keyboard_accessibility",
         ).forEach { key ->
             assertTrue("Expected portable key: $key", ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }

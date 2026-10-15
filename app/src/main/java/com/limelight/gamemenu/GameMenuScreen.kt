@@ -107,6 +107,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
+import com.limelight.ui.ScreenCombinationSegmentedControl
+import com.limelight.ui.AppScreenCombinationOption
 import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.FeatureGuideStore
 import com.limelight.ui.theme.AppCornerRadii
@@ -180,6 +182,7 @@ internal fun GameMenuScreen(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
     hardwareFocusRequestToken: Int,
+    controllerNavigationActive: Boolean = false,
     guideDismissController: GameMenuGuideDismissController,
     useFabricTexture: Boolean = true,
     restoreFocusRequestToken: Int = 0
@@ -189,18 +192,25 @@ internal fun GameMenuScreen(
     val showcaseState = rememberSequenceShowcaseState()
     val initialFocusRequester = remember { FocusRequester() }
     val menuGroupFocusRequester = remember { FocusRequester() }
+    var handledHardwareFocusRequestToken by remember { mutableIntStateOf(0) }
+    val initialFocusModifier = Modifier
+        .onFocusChanged {
+            if (it.isFocused) {
+                handledHardwareFocusRequestToken = hardwareFocusRequestToken
+            }
+        }
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
     var guideActive by remember(appContext) { mutableStateOf(false) }
-    var menuContentLaidOut by remember(state.title, state.isSubmenu) { mutableStateOf(false) }
+    var menuHasFocus by remember { mutableStateOf(false) }
+    var menuContentLaidOut by remember(state.pageGeneration) { mutableStateOf(false) }
     var quickActionGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
         mutableStateOf(false)
     }
     var crownGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
         mutableStateOf(false)
     }
-    var menuHasFocus by remember { mutableStateOf(false) }
     var handledRestoreFocusRequestToken by remember { mutableIntStateOf(0) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
@@ -282,7 +292,8 @@ internal fun GameMenuScreen(
             GameMenuDialogShell(
                 widthFraction = menuWidthFraction,
                 horizontalInset = horizontalInset,
-                onDismissRequest = callbacks.onDismiss
+                onDismissRequest = callbacks.onDismiss,
+                onTouchInteraction = callbacks.onTouchInteraction
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -314,6 +325,7 @@ internal fun GameMenuScreen(
                                     state.pageLayout == GameMenuPageLayout.TOUCH_MODE),
                             maxMenuHeight = maxMenuHeight,
                             initialFocusRequester = initialFocusRequester,
+                            initialFocusModifier = initialFocusModifier,
                             quickActionGuideModifier = quickActionGuideModifier,
                             crownGuideModifier = crownGuideModifier
                         )
@@ -352,15 +364,18 @@ internal fun GameMenuScreen(
 
     LaunchedEffect(
         hardwareFocusRequestToken,
-        state.title,
-        state.isSubmenu,
+        handledHardwareFocusRequestToken,
+        menuHasFocus,
+        state.pageGeneration,
         guideActive,
         menuContentLaidOut
     ) {
-        if (shouldRequestGameMenuFocus(
+        if (state.controllerNavigationActive && shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = hardwareFocusRequestToken,
+                handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                 guideActive = guideActive,
-                hasOptions = state.options.isNotEmpty(),
+                hasFocusTarget = state.options.isNotEmpty() ||
+                    state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS,
                 menuContentLaidOut = menuContentLaidOut,
                 menuHasFocus = menuHasFocus
             )
@@ -403,14 +418,15 @@ internal fun shouldStartGameMenuGuide(
 
 internal fun shouldRequestGameMenuFocus(
     hardwareFocusRequestToken: Int,
+    handledHardwareFocusRequestToken: Int,
     guideActive: Boolean,
-    hasOptions: Boolean,
+    hasFocusTarget: Boolean,
     menuContentLaidOut: Boolean,
     menuHasFocus: Boolean
 ): Boolean {
-    return hardwareFocusRequestToken > 0 &&
+    return hardwareFocusRequestToken > handledHardwareFocusRequestToken &&
         !guideActive &&
-        hasOptions &&
+        hasFocusTarget &&
         menuContentLaidOut &&
         !menuHasFocus
 }
@@ -429,6 +445,7 @@ internal fun GameMenuDialogShell(
     widthFraction: Float,
     horizontalInset: Dp,
     onDismissRequest: () -> Unit,
+    onTouchInteraction: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val backdropInteraction = remember { MutableInteractionSource() }
@@ -469,6 +486,7 @@ internal fun GameMenuDialogShell(
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
+                        onTouchInteraction()
                         waitForUpOrCancellation()
                     }
                 }
@@ -552,13 +570,17 @@ private fun GameMenuContent(
     wideLayout: Boolean,
     maxMenuHeight: Dp,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     quickActionGuideModifier: Modifier = Modifier,
     crownGuideModifier: Modifier = Modifier
 ) {
     var sliderGestureActive by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
     val wideTouchMode = wideLayout && state.pageLayout == GameMenuPageLayout.TOUCH_MODE
+    val displaySettings = state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS
     val touchModeBackFocusRequester = remember { FocusRequester() }
+    val displayWideLayout = LocalConfiguration.current.orientation ==
+        Configuration.ORIENTATION_LANDSCAPE
 
     LaunchedEffect(state.title, state.isSubmenu) {
         menuScrollState.scrollTo(0)
@@ -582,11 +604,11 @@ private fun GameMenuContent(
             state = state,
             callbacks = callbacks,
             crownGuideModifier = crownGuideModifier,
-            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode },
-            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode }
+            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode || displaySettings },
+            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode || displaySettings }
         )
 
-        if (!state.isSubmenu) {
+        if (!state.isSubmenu && state.pageLayout != GameMenuPageLayout.DISPLAY_SETTINGS) {
             QuickActionRow(
                 actions = state.quickActions,
                 superOptions = state.superOptions,
@@ -602,11 +624,21 @@ private fun GameMenuContent(
             )
         }
 
-        if (wideTouchMode) {
+        if (state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS) {
+            DisplaySettingsPage(
+                state = state,
+                callbacks = callbacks,
+                wideLayout = displayWideLayout,
+                initialFocusRequester = initialFocusRequester,
+                initialFocusModifier = initialFocusModifier,
+                onSliderGesture = { sliderGestureActive = it }
+            )
+        } else if (wideTouchMode) {
             TouchModeTable(
                 state = state,
                 callbacks = callbacks,
                 initialFocusRequester = initialFocusRequester,
+                initialFocusModifier = initialFocusModifier,
                 topFocusRequester = touchModeBackFocusRequester,
                 sliderGestureActive = sliderGestureActive,
                 onSliderGesture = { sliderGestureActive = it },
@@ -627,7 +659,8 @@ private fun GameMenuContent(
                     onInlineToggle = callbacks.onInlineToggle,
                     onSegmentClick = callbacks.onSegmentClick,
                     modifier = Modifier.weight(1f),
-                    initialFocusRequester = initialFocusRequester
+                    initialFocusRequester = initialFocusRequester,
+                    optionFocusModifier = initialFocusModifier
                 )
                 GameMenuCards(
                     state = state,
@@ -644,7 +677,8 @@ private fun GameMenuContent(
                     callbacks.onOptionClick,
                     callbacks.onInlineToggle,
                     callbacks.onSegmentClick,
-                    initialFocusRequester = initialFocusRequester
+                    initialFocusRequester = initialFocusRequester,
+                    optionFocusModifier = initialFocusModifier
                 )
                 if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
                     TouchPointerSensitivityControl(
@@ -726,6 +760,7 @@ private fun TouchModeTable(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     topFocusRequester: FocusRequester,
     sliderGestureActive: Boolean,
     onSliderGesture: (Boolean) -> Unit,
@@ -787,6 +822,7 @@ private fun TouchModeTable(
                                 topFocusRequester
                             )
                             .focusRequester(focusRequesters[globalIndex])
+                            .then(if (globalIndex == 0) initialFocusModifier else Modifier)
                     )
                 }
             }
@@ -866,6 +902,213 @@ private fun TouchModeTable(
 }
 
 @Composable
+private fun DisplaySettingsPage(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    wideLayout: Boolean,
+    initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    if (wideLayout) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
+            ) {
+                DisplayChoiceColumn(state, callbacks, initialFocusRequester, initialFocusModifier)
+                ScreenCombinationPanel(
+                    state = state.bitrate,
+                    onSelect = callbacks.onSelectScreenMode
+                )
+                DisplayApplyButton(state, callbacks, initialFocusRequester)
+                Spacer(Modifier.height(GameMenuDimens.section))
+            }
+            DisplaySettingsSide(
+                state = state,
+                callbacks = callbacks,
+                onSliderGesture = onSliderGesture,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)) {
+            DisplayChoiceColumn(state, callbacks, initialFocusRequester, initialFocusModifier)
+            ScreenCombinationPanel(state.bitrate, callbacks.onSelectScreenMode)
+            DisplayApplyButton(state, callbacks, initialFocusRequester)
+            Spacer(Modifier.height(GameMenuDimens.section))
+            DisplaySettingsSide(state, callbacks, onSliderGesture)
+        }
+    }
+}
+
+@Composable
+private fun DisplaySettingsSide(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    onSliderGesture: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
+    ) {
+        BitrateCard(
+            state.bitrate,
+            callbacks,
+            onSliderGesture,
+            callbacks.onEditCards,
+            showDisplayEntry = false
+        )
+    }
+}
+
+@Composable
+private fun DisplayChoiceColumn(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+    ) {
+        Text(
+            text = stringResource(R.string.title_resolution_list),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 11.sp
+        )
+        ChoiceWrap(
+            initialFocusRequester,
+            initialFocusModifier,
+            state.bitrate.resolutions + DisplayChoice(
+                value = "custom-resolution",
+                label = stringResource(R.string.title_custom_resolutions),
+                selected = false,
+                opensEditor = true
+            )
+        ) { choice ->
+            if (choice.opensEditor) callbacks.onEditCustomResolutions()
+            else callbacks.onSelectResolution(choice.value)
+        }
+        Text(
+            text = stringResource(R.string.title_fps_list),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 11.sp
+        )
+        ChoiceWrap(
+            null,
+            Modifier,
+            state.bitrate.frameRates + DisplayChoice(
+                value = "custom-frame-rate",
+                label = stringResource(R.string.title_custom_fps),
+                selected = false,
+                opensEditor = true
+            )
+        ) { choice ->
+            if (choice.opensEditor) callbacks.onEditCustomFrameRates()
+            else callbacks.onSelectFrameRate(choice.value)
+        }
+    }
+}
+
+@Composable
+private fun DisplayApplyButton(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    restoreFocusRequester: FocusRequester
+) {
+    if (state.displayDraft.changedFrom(state.bitrate.appliedDisplay)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
+            SensitivityPresetButton(
+                name = stringResource(android.R.string.cancel),
+                selected = false,
+                onClick = {
+                    restoreFocusRequester.requestFocus()
+                    callbacks.onCancelDisplaySettings()
+                },
+                modifier = Modifier.width(72.dp)
+            )
+            SensitivityPresetButton(
+                name = stringResource(R.string.game_menu_apply_display),
+                selected = true,
+                onClick = callbacks.onApplyDisplaySettings,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChoiceWrap(
+    initialFocusRequester: FocusRequester?,
+    initialFocusModifier: Modifier = Modifier,
+    choices: List<DisplayChoice>,
+    onSelect: (DisplayChoice) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
+        val initialFocusIndex = choices.indexOfFirst { it.enabled }
+        choices.chunked(3).forEachIndexed { rowIndex, row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
+                row.forEachIndexed { columnIndex, choice ->
+                    val index = rowIndex * 3 + columnIndex
+                    SensitivityPresetButton(
+                        name = choice.label,
+                        selected = choice.selected,
+                        enabled = choice.enabled,
+                        onClick = { onSelect(choice) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (initialFocusRequester != null && index == initialFocusIndex) {
+                                    Modifier.focusRequester(initialFocusRequester).then(initialFocusModifier)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    )
+                }
+                repeat(3 - row.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScreenCombinationPanel(
+    state: BitrateCardState,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
+    ) {
+        Text(
+            text = stringResource(R.string.title_screen_combination_mode),
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 11.sp
+        )
+        ScreenCombinationSegmentedControl(
+            options = state.screenModes.mapNotNull { choice ->
+                choice.value.toIntOrNull()?.let { AppScreenCombinationOption(it, choice.label) }
+            },
+            selectedMode = state.screenModes.firstOrNull { it.selected }?.value?.toIntOrNull() ?: -1,
+            isDarkTheme = isSystemInDarkTheme(),
+            onModeSelected = { onSelect(it.toString()) }
+        )
+    }
+}
+
+@Composable
 private fun GameMenuScrollablePane(
     modifier: Modifier = Modifier,
     scrollEnabled: Boolean = true,
@@ -927,7 +1170,7 @@ internal fun GameMenuVerticalScrollbar(
 }
 
 @Composable
-private fun TouchModeChoice(
+internal fun TouchModeChoice(
     option: GameMenu.MenuOption,
     onClick: () -> Unit,
     modifier: Modifier = Modifier

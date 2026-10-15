@@ -33,6 +33,7 @@ androidx-test-espresso = "3.7.0"
 junit = "4.13.2"
 json = "20240303"
 hidden-api-bypass = "6.1"
+shizuku = "13.1.5"
 
 [libraries]
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
@@ -60,6 +61,8 @@ seismic = { module = "com.squareup:seismic", version.ref = "seismic" }
 flexbox = { module = "com.google.android.flexbox:flexbox", version.ref = "flexbox" }
 tvprovider = { module = "androidx.tvprovider:tvprovider", version.ref = "tvprovider" }
 zxing-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxing" }
+shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku" }
+shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }

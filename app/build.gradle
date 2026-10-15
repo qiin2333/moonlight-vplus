@@ -64,8 +64,8 @@ android {
 
         // 记录最近一次发布的版本。发版时由 CI 依据 tag 和发布历史覆写
         // （见 .github/release/version-code.sh）。
-        versionName "12.13.0"
-        versionCode = 121300001
+        versionName "12.13.1-beta.1"
+        versionCode = 121301001
 
         // Optional GitHub OAuth App client ID. Enable Device Flow on the OAuth app,
         // then set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=...,
@@ -93,6 +93,7 @@ android {
     flavorDimensions.add("root")
 
     buildFeatures {
+        aidl = true
         buildConfig = true
         compose = true
     }
@@ -269,6 +270,8 @@ dependencies {
     implementation libs.flexbox
     implementation libs.tvprovider
     implementation libs.zxing.embedded
+    implementation libs.shizuku.api
+    implementation libs.shizuku.provider
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.compose.foundation

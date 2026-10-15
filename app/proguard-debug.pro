@@ -13,6 +13,9 @@
 -keep class com.limelight.utils.AboutDialogLauncher$DialogSnapshot { *; }
 
 # Instrumentation invokes these target-APK symbols after the debug APK is minified.
+-keepclassmembers class com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper {
+    public java.lang.Object queryElementAttribute(long, long, java.lang.String);
+}
 -keep class com.limelight.grid.PcCardDecor { *; }
 -keep class com.limelight.utils.AppTheme { *; }
 -keep class com.limelight.utils.BgAccent { *; }

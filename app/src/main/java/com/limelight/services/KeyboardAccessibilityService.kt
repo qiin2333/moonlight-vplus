@@ -25,6 +25,7 @@ class KeyboardAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         Log.i(TAG, "Accessibility Service connected.")
+        connectionListener?.onKeyboardAccessibilityConnected(this)
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -123,5 +124,11 @@ class KeyboardAccessibilityService : AccessibilityService() {
             Log.d(TAG, "Setting interception to: $enabled")
             interceptingEnabled = enabled
         }
+
+        var connectionListener: ConnectionListener? = null
+    }
+
+    interface ConnectionListener {
+        fun onKeyboardAccessibilityConnected(service: KeyboardAccessibilityService)
     }
 }

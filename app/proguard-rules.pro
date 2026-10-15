@@ -26,3 +26,9 @@
 # jMDNS
 -dontwarn javax.jmdns.impl.DNSCache
 -dontwarn org.slf4j.**
+
+# Shizuku starts this service by class name in another process.
+-keep class com.limelight.services.ShellService { *; }
+-keep class com.limelight.services.IKeyboardAccessibilityShell { *; }
+-keep class com.limelight.services.IKeyboardAccessibilityShell$Stub { *; }
+-keep class com.limelight.services.IKeyboardAccessibilityShell$Stub$Proxy { *; }

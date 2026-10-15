@@ -7,6 +7,21 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class GameRumblePipelineTest {
+    @Test fun withdrawnControllerCannotReplayHeldRumbleOnRestore() = Rig().use { r ->
+        r.host(1f, 0f)
+        r.pipeline.reset(0)
+        r.renderer.retireController(0)
+        r.advance(250)
+        r.controllerWrites.clear()
+        r.pipeline.replay(0)
+        r.advance(40)
+        assertTrue(r.controllerWrites.all { it.isZero })
+        assertEquals(0, r.deviceWrites.last())
+        r.host(0f, 1f)
+        r.advance(40)
+        assertTrue(r.controllerWrites.last().output.highFrequency > 0f)
+    }
+
     private class Rig : AutoCloseable {
         var now = 0L
         val tasks = mutableListOf<Pair<Runnable, Long>>()

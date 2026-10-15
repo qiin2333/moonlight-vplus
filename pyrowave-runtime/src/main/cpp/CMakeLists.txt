@@ -12,7 +12,9 @@ foreach(required_file IN ITEMS
         "${PYROWAVE_SOURCE_DIR}/third_party/Granite/third_party/volk/volk.h"
         "${PYROWAVE_SOURCE_DIR}/third_party/Granite/third_party/khronos/vulkan-headers/include/vulkan/vulkan.h")
     if(NOT EXISTS "${required_file}")
-        message(FATAL_ERROR "PyroWave submodules are missing; run git submodule update --init --recursive third-party/pyrowave")
+        message(FATAL_ERROR
+            "PyroWave dependency is missing: ${required_file}. "
+            "Run git submodule update --init --recursive third-party/pyrowave from the repository root.")
     endif()
 endforeach()
 
