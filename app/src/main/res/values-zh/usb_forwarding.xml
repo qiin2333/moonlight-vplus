@@ -55,4 +55,7 @@
     <string name="usb_type_printer">打印机</string>
     <string name="usb_type_hub">USB 集线器</string>
     <string name="usb_type_generic">USB 设备</string>
+    <string name="usb_forward_auto_title">自动与此电脑共享</string>
+    <string name="usb_forward_auto_type_hint">无序列号：记住此设备类型。相同设备需要手动共享。</string>
+    <string name="usb_forward_auto_ambiguous">检测到相同的 USB 设备。请手动选择与电脑共享。</string>
 </resources>

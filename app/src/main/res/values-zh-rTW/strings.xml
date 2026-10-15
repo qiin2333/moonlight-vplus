@@ -873,6 +873,13 @@
     <string name="title_seekbar_double_tap_time_threshold">雙擊間隔</string>
     <string name="summary_seekbar_double_tap_time_threshold">調整兩次輕觸仍會被辨識為雙擊的最長間隔。</string>
     <string name="dialog_seekbar_double_tap_time_threshold">數值越大，雙擊越容易觸發。</string>
+    <string name="title_shizuku_keyboard_accessibility">使用 Shizuku 啟用鍵盤無障礙</string>
+    <string name="summary_shizuku_keyboard_accessibility">開始串流時，透過已授權的 Shizuku 啟用本應用程式的鍵盤無障礙服務。</string>
+    <string name="title_shizuku_keyboard_authorization">Shizuku 授權</string>
+    <string name="summary_shizuku_not_installed">請先安裝並啟動 Shizuku。</string>
+    <string name="summary_shizuku_not_running">Shizuku 未運行。</string>
+    <string name="summary_shizuku_authorization_required">點按進行授權。</string>
+    <string name="summary_shizuku_authorized">已授權。</string>
     <string name="title_special_key_map">Moonlight 鍵盤快速鍵</string>
     <string name="summary_special_key_map">把 Home 對應為 Esc、Esc 加數字/符號對應為 F1–F12、Esc+Q 對應為串流選單，並對應 Android 截圖與媒體鍵。</string>
     <string name="title_fix_mouse_middle">修正滑鼠中鍵</string>

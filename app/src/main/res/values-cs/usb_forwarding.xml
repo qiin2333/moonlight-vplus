@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="usb_forward_auto_title">Automaticky sdílet s tímto počítačem</string>
+    <string name="usb_forward_auto_type_hint">Bez sériového čísla: zapamatuje si tento typ zařízení. Shodná zařízení je nutné sdílet ručně.</string>
+    <string name="usb_forward_auto_ambiguous">Nalezena shodná USB zařízení. Vyberte sdílení s počítačem ručně.</string>
+</resources>
