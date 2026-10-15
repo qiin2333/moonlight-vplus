@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">所選裝置目前無法使用。</string>
     <string name="mic_input_route_pending">正在等待音訊輸入路由</string>
     <string name="mic_input_failed">無法選擇此麥克風，請重試。</string>
+    <string name="mic_input_bluetooth_quality">使用藍牙麥克風可能降低播放音質。</string>
 </resources>

@@ -9,7 +9,9 @@ internal data class MicrophoneInputDevice(
     val id: Int,
     val type: Int,
     val name: String,
-    val persistentKey: String?
+    val persistentKey: String?,
+    val communication: Boolean = false,
+    val address: String = ""
 ) {
     val persistent: Boolean get() = persistentKey != null
 }
@@ -73,7 +75,8 @@ internal fun microphoneInputChoices(inputs: List<MicrophoneInputDescriptor>): Li
             id = input.id,
             type = input.type,
             name = input.name,
-            persistentKey = fingerprints[index]?.takeIf { counts[it] == 1 }
+            persistentKey = fingerprints[index]?.takeIf { counts[it] == 1 },
+            address = input.address
         )
     }
 }

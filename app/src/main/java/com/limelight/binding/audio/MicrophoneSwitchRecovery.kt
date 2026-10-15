@@ -20,10 +20,12 @@ internal class MicrophoneSwitchRecovery(
     private var hasData = false
     private var terminal: Action? = null
 
-    fun observe(nowMs: Long, routedId: Int?, bytesRead: Int): Action {
+    fun observe(nowMs: Long, routedId: Int?, bytesRead: Int, routeUsable: Boolean = true): Action {
         terminal?.let { return it }
         hasData = hasData || bytesRead > 0
-        return when (verification.observe(nowMs, routedId, bytesRead)) {
+        val result = if (routeUsable) verification.observe(nowMs, routedId, bytesRead)
+            else MicrophoneRouteVerification.Result.FAILED
+        return when (result) {
             MicrophoneRouteVerification.Result.WAITING -> Action.WAIT
             MicrophoneRouteVerification.Result.READY -> {
                 (if (phase == Phase.TARGET) Action.SUCCEEDED else Action.FAILED).also { terminal = it }
@@ -50,8 +52,8 @@ internal class MicrophoneSwitchRecovery(
         return Action.RECREATE
     }
 
-    fun recoveryStarted(nowMs: Long) {
-        verification = MicrophoneRouteVerification(restoreId, nowMs)
+    fun recoveryStarted(nowMs: Long, expectedId: Int? = restoreId) {
+        verification = MicrophoneRouteVerification(expectedId, nowMs)
         hasData = false
     }
 }

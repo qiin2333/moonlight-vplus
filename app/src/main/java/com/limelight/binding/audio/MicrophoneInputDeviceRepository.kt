@@ -16,15 +16,13 @@ import com.limelight.R
 internal class MicrophoneInputDeviceRepository(context: Context) {
     private val context = context.applicationContext
     private val preferences = this.context.getSharedPreferences("microphone_input_device", Context.MODE_PRIVATE)
-    private val selection = MicrophoneInputSelection(preferences.getString("selected_input_device_key", DEFAULT_MICROPHONE_INPUT)
-        ?.takeIf { it == DEFAULT_MICROPHONE_INPUT || it.matches(Regex("device:[a-f0-9]{64}")) }
-        ?: DEFAULT_MICROPHONE_INPUT)
+    private val selection = MicrophoneInputSelection(validMicrophonePreference(
+        preferences.getString("selected_input_device_key", DEFAULT_MICROPHONE_INPUT)))
     val selectedKey: String get() = selection.selectedKey
     private var reportedUnsupportedTypes = emptySet<Int>()
 
     fun devices(): List<MicrophoneInputDevice> = if (Build.VERSION.SDK_INT >= 23) {
         try { Api23.devices(context).also { devices ->
-            selection.resolve(selectableMicrophoneInputs(devices))
             val unsupported = devices.map { it.type }.filterNot(::isSelectableMicrophoneInput).toSet()
             synchronized(this) {
                 if (unsupported != reportedUnsupportedTypes) {
@@ -38,6 +36,19 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         }
     } else emptyList()
 
+    fun choices(): List<MicrophoneInputDevice> {
+        val choices = selectableMicrophoneInputs(devices().filterNot { isBluetoothMicrophone(it.type) } +
+            BluetoothMicrophoneRouteController.choices(context))
+        selection.resolve(choices)
+        return choices
+    }
+
+    fun selectedChoice(): MicrophoneInputDevice? {
+        val choices = choices()
+        val resolved = selection.resolve(choices)
+        return choices.firstOrNull { it.key == resolved }
+    }
+
     fun saveSelection(choice: MicrophoneInputDevice?) {
         val savedKey = selection.select(choice)
         preferences.edit { putString("selected_input_device_key", savedKey) }
@@ -45,8 +56,10 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
 
     fun applySaved(record: AudioRecord): Boolean {
         if (selectedKey == DEFAULT_MICROPHONE_INPUT) return true
-        // A new manager restores the identity; this manager retains its bound attachment.
-        return apply(record, selection.resolve(selectableMicrophoneInputs(devices())))
+        val choice = selectedChoice()
+        // Communication routes are established asynchronously by the recording session.
+        return if (choice == null || choice.communication) apply(record, DEFAULT_MICROPHONE_INPUT)
+            else apply(record, choice.key)
     }
 
     fun apply(record: AudioRecord, key: String): Boolean {
@@ -81,6 +94,11 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         return device.name.takeIf(String::isNotBlank)?.let {
             context.getString(R.string.mic_input_named_device, it, typeName)
         } ?: typeName
+    }
+
+    companion object {
+        internal fun rawDevices(context: Context): List<MicrophoneInputDevice> =
+            if (Build.VERSION.SDK_INT >= 23) Api23.devices(context) else emptyList()
     }
 
     @RequiresApi(23)

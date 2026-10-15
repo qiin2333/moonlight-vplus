@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">دستگاه انتخاب‌شده در دسترس نیست.</string>
     <string name="mic_input_route_pending">در انتظار مسیر ورودی صدا</string>
     <string name="mic_input_failed">انتخاب این میکروفون ممکن نیست. دوباره تلاش کنید.</string>
+    <string name="mic_input_bluetooth_quality">استفاده از میکروفون بلوتوث ممکن است کیفیت پخش را کاهش دهد.</string>
 </resources>

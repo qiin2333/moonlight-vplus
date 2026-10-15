@@ -99,4 +99,34 @@ class MicrophoneSwitchRecoveryTest {
         state.recoveryStarted(100)
         assertEquals(STOP, state.recreate(110))
     }
+
+    @Test fun bluetoothRollbackCanReceiveANewInputId() {
+        val state = MicrophoneSwitchRecovery(2, 1, 1, true, 0)
+        assertEquals(RESTORE, state.observe(2000, 3, pcm))
+        state.recoveryStarted(7000, 4)
+        assertEquals(WAIT, state.observe(7010, 1, pcm))
+        assertEquals(FAILED, state.observe(7100, 4, pcm))
+    }
+
+    @Test fun failedBluetoothPreparationRestoresWithoutSpendingTheRecordingDeadline() {
+        val state = MicrophoneSwitchRecovery(2, 1, 1, false, 5000)
+        state.recoveryStarted(10000, 1)
+        assertEquals(FAILED, state.observe(10100, 1, pcm))
+    }
+
+    @Test fun lostCommunicationRouteDoesNotDiscardAHealthyRecorder() {
+        val state = MicrophoneSwitchRecovery(2, 1, 1, true, 0)
+        assertEquals(RESTORE, state.observe(10, 2, pcm, routeUsable = false))
+        state.recoveryStarted(5000)
+        assertEquals(FAILED, state.observe(5100, 1, pcm))
+    }
+
+    @Test fun systemSilencedInputCannotBeConfirmedFromPcmLengthAlone() {
+        val state = MicrophoneSwitchRecovery(2, 1, 1, true, 0)
+        assertEquals(RESTORE, state.observe(10, 2, pcm, routeUsable = false))
+        state.recoveryStarted(20)
+        assertEquals(RECREATE, state.observe(30, 1, pcm, routeUsable = false))
+        state.recoveryStarted(40)
+        assertEquals(STOP, state.observe(50, 1, pcm, routeUsable = false))
+    }
 }

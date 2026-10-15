@@ -13,7 +13,8 @@ class MicrophoneStream(
     private val conn: NvConnection,
     private val configureInput: (AudioRecord) -> Boolean = { true },
     private val onInputFailure: (Long) -> Unit = {},
-    private val onCaptureStopped: (Long) -> Unit = {}
+    private val onCaptureStopped: (Long) -> Unit = {},
+    private val onCaptureReady: (Long) -> Unit = {}
 ) {
 
     private var capture: MicrophoneCapture? = null
@@ -96,7 +97,8 @@ class MicrophoneStream(
                 onMicrophoneData(generation, data, offset, length)
             }, configureInput,
                 { onInputFailure(generation) },
-                { onCaptureStopped(generation) })
+                { onCaptureStopped(generation) },
+                { onCaptureReady(generation) })
             if (!capture!!.start()) {
                 LimeLog.severe("无法启动麦克风捕获")
                 cleanup()
@@ -171,8 +173,9 @@ class MicrophoneStream(
     internal fun requestInput(
         expectedId: Int?,
         configure: (AudioRecord) -> Boolean,
+        routeChange: MicrophoneRouteChange? = null,
         complete: (Boolean) -> Unit
-    ): Boolean = capture?.requestInput(expectedId, configure, complete) == true
+    ): Boolean = capture?.requestInput(expectedId, configure, routeChange, complete) == true
 
     internal fun isInputSwitchPending(): Boolean = capture?.isInputSwitchPending() == true
 

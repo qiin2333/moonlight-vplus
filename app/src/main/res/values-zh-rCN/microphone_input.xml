@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">所选设备当前不可用。</string>
     <string name="mic_input_route_pending">正在等待音频输入路由</string>
     <string name="mic_input_failed">无法选择此麦克风，请重试。</string>
+    <string name="mic_input_bluetooth_quality">使用蓝牙麦克风可能降低播放音质。</string>
 </resources>

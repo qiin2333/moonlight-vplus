@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">Вибраний пристрій недоступний.</string>
     <string name="mic_input_route_pending">Очікування маршрутизації аудіовходу</string>
     <string name="mic_input_failed">Не вдалося вибрати цей мікрофон. Спробуйте ще раз.</string>
+    <string name="mic_input_bluetooth_quality">Використання мікрофона Bluetooth може знизити якість відтворення.</string>
 </resources>

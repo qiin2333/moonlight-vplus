@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">Den valda enheten är inte tillgänglig.</string>
     <string name="mic_input_route_pending">Väntar på vägen för ljudingång</string>
     <string name="mic_input_failed">Det går inte att välja den här mikrofonen. Försök igen.</string>
+    <string name="mic_input_bluetooth_quality">Användning av Bluetooth-mikrofonen kan försämra uppspelningskvaliteten.</string>
 </resources>

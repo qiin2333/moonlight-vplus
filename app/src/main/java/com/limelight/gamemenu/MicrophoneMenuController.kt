@@ -9,14 +9,14 @@ import com.limelight.binding.audio.DEFAULT_MICROPHONE_INPUT
 import com.limelight.binding.audio.MicrophoneInputDevice
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.binding.audio.resolvedMicrophoneInputKey
-import com.limelight.binding.audio.selectableMicrophoneInputs
 
 internal data class MicrophoneMenuChoice(val key: String, val name: String)
 
 internal data class MicrophoneMenuState(
     val choices: List<MicrophoneMenuChoice> = emptyList(),
     val selectedKey: String = DEFAULT_MICROPHONE_INPUT,
-    val status: String = ""
+    val status: String = "",
+    val bluetoothWarning: String? = null
 )
 
 internal fun microphoneRecordingStatusResource(sdkInt: Int, capturing: Boolean, hasRoutedDevice: Boolean): Int = when {
@@ -64,7 +64,7 @@ internal class MicrophoneMenuController(private val game: Game) {
     private fun publish() {
         val manager = manager ?: return
         val repository = manager.inputDevices
-        val selectable = selectableMicrophoneInputs(devices)
+        val selectable = repository.choices()
         val names = repository.displayNames(selectable)
         val routedId = manager.routedInputId()
         val current = devices.firstOrNull { it.id == routedId }
@@ -88,7 +88,10 @@ internal class MicrophoneMenuController(private val game: Game) {
             choices = listOf(MicrophoneMenuChoice(DEFAULT_MICROPHONE_INPUT, game.getString(R.string.mic_input_default))) +
                 selectable.map { MicrophoneMenuChoice(it.key, names.getValue(it.key)) },
             selectedKey = if (unavailable) repository.selectedKey else resolvedKey,
-            status = status
+            status = status,
+            bluetoothWarning = game.getString(R.string.mic_input_bluetooth_quality).takeIf {
+                selectable.any { it.communication }
+            }
         ))
     }
 

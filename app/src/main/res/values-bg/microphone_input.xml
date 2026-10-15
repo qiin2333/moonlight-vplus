@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">Избраното устройство не е налично.</string>
     <string name="mic_input_route_pending">Изчакване на аудио входа</string>
     <string name="mic_input_failed">Микрофонът не може да бъде избран. Опитайте отново.</string>
+    <string name="mic_input_bluetooth_quality">Използването на Bluetooth микрофона може да намали качеството на възпроизвеждане.</string>
 </resources>

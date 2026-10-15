@@ -56,6 +56,9 @@ internal fun MicrophoneDeviceList(
     }
     Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)) {
         Text(state.status, color = colorResource(R.color.game_menu_text_secondary), fontSize = 12.sp)
+        state.bluetoothWarning?.let {
+            Text(it, color = colorResource(R.color.game_menu_text_secondary), fontSize = 12.sp)
+        }
         Column(Modifier.selectableGroup()) {
             state.choices.forEachIndexed { index, choice ->
                 key(choice.key) {

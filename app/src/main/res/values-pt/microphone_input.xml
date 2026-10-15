@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">O dispositivo selecionado está indisponível.</string>
     <string name="mic_input_route_pending">A aguardar o encaminhamento da entrada de áudio</string>
     <string name="mic_input_failed">Não foi possível selecionar este microfone. Tente novamente.</string>
+    <string name="mic_input_bluetooth_quality">Usar o microfone Bluetooth pode reduzir a qualidade de reprodução.</string>
 </resources>

@@ -8,8 +8,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
@@ -40,7 +42,10 @@ class MicrophoneDeviceListTest {
         compose.onNodeWithTag("microphoneInput:usb").assertIsFocused().assertIsSelected()
         compose.onNodeWithTag("microphoneInput:usb").performKeyInput { pressKey(Key.DirectionUp) }
         compose.onNodeWithTag("microphoneInput:default").assertIsFocused()
-        compose.runOnIdle { state.value = initial.copy(status = "Recording") }
+        compose.runOnIdle {
+            state.value = initial.copy(status = "Recording", bluetoothWarning = "Bluetooth quality warning")
+        }
+        compose.onNodeWithText("Bluetooth quality warning").assertIsDisplayed()
         compose.onNodeWithTag("microphoneInput:default").assertIsFocused()
     }
 

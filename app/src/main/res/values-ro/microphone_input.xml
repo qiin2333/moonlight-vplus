@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">Dispozitivul selectat nu este disponibil.</string>
     <string name="mic_input_route_pending">Se așteaptă ruta de intrare audio</string>
     <string name="mic_input_failed">Acest microfon nu poate fi selectat. Încercați din nou.</string>
+    <string name="mic_input_bluetooth_quality">Utilizarea microfonului Bluetooth poate reduce calitatea redării.</string>
 </resources>

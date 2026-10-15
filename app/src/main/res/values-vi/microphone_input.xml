@@ -9,4 +9,5 @@
     <string name="mic_input_unavailable">Thiết bị đã chọn không khả dụng.</string>
     <string name="mic_input_route_pending">Đang chờ tuyến đầu vào âm thanh</string>
     <string name="mic_input_failed">Không thể chọn micrô này. Vui lòng thử lại.</string>
+    <string name="mic_input_bluetooth_quality">Sử dụng micrô Bluetooth có thể làm giảm chất lượng phát âm thanh.</string>
 </resources>
