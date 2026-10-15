@@ -355,32 +355,7 @@ class SuperConfigDatabaseHelper(context: Context?) :
             insertElement(element)
         }
 
-        for (element in elements) {
-            when (element.getAsLong(Element.COLUMN_INT_ELEMENT_TYPE)?.toInt()) {
-                Element.ELEMENT_TYPE_GROUP_BUTTON -> {
-                    val newValue = StringBuilder("-1")
-                    for (oldChildId in element.getAsString(Element.COLUMN_STRING_ELEMENT_VALUE).split(',')) {
-                        if (oldChildId == "-1" || oldChildId.isEmpty()) continue
-                        val child = oldChildId.toLongOrNull()?.let(oldIdToObject::get) ?: continue
-                        newValue.append(',').append(child.getAsLong(Element.COLUMN_LONG_ELEMENT_ID))
-                    }
-                    element.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue.toString())
-                    updateElement(newConfigId, element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element)
-                }
-                Element.ELEMENT_TYPE_WHEEL_PAD -> {
-                    val oldValue = element.getAsString(Element.COLUMN_STRING_ELEMENT_VALUE)
-                    if (oldValue.isNullOrEmpty()) continue
-                    val newValue = oldValue.split(',').dropLastWhile { it.isEmpty() }.joinToString(",") { segment ->
-                        val value = segment.substringBefore('|')
-                        val name = if ('|' in segment) segment.substring(segment.indexOf('|')) else ""
-                        val group = if (value.startsWith("gb")) value.substring(2).toLongOrNull()?.let(oldIdToObject::get) else null
-                        if (group != null) "gb${group.getAsLong(Element.COLUMN_LONG_ELEMENT_ID)}$name" else segment
-                    }
-                    element.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue)
-                    updateElement(newConfigId, element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element)
-                }
-            }
-        }
+        remapElementReferences(newConfigId, elements, oldIdToObject)
         return 0
     }
 
@@ -396,28 +371,36 @@ class SuperConfigDatabaseHelper(context: Context?) :
 
         val elements = gson.fromJson(exportFile.elements, Array<ContentValues>::class.java)
         sanitizeDirectConfigActions(elements, false)
-        val groups = mutableMapOf<ContentValues, List<ContentValues>>()
-        for (group in elements) {
-            if (group.getAsLong(Element.COLUMN_INT_ELEMENT_TYPE)?.toInt() != Element.ELEMENT_TYPE_GROUP_BUTTON) continue
-            groups[group] = group.getAsString(Element.COLUMN_STRING_ELEMENT_VALUE).split(',')
-                .dropLastWhile { it.isEmpty() }.mapNotNull { childId ->
-                    val id = childId.toLong()
-                    elements.firstOrNull { it.getAsLong(Element.COLUMN_LONG_ELEMENT_ID) == id }
-                }
-        }
+        val oldIdToObject = elements.filter { it.containsKey(Element.COLUMN_LONG_ELEMENT_ID) }
+            .associateBy { it.getAsLong(Element.COLUMN_LONG_ELEMENT_ID) }
         var nextElementId = System.currentTimeMillis()
         for (element in elements) {
             element.put(Element.COLUMN_LONG_ELEMENT_ID, nextElementId++)
             element.put(Element.COLUMN_LONG_CONFIG_ID, existConfigId)
             insertElement(element)
         }
-        for ((group, children) in groups) {
-            val newValue = StringBuilder("-1")
-            for (child in children) newValue.append(',').append(child.getAsLong(Element.COLUMN_LONG_ELEMENT_ID))
-            group.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue.toString())
-            updateElement(group.getAsLong(Element.COLUMN_LONG_CONFIG_ID), group.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), group)
-        }
+        remapElementReferences(existConfigId, elements, oldIdToObject)
         return 0
+    }
+
+    /** Both entry points resolve source IDs against the newly assigned profile-local IDs. */
+    private fun remapElementReferences(
+        configId: Long, elements: Array<ContentValues>, oldIdToObject: Map<Long, ContentValues>
+    ) {
+        val resolveId: (Long) -> Long? = { oldId -> oldIdToObject[oldId]?.getAsLong(Element.COLUMN_LONG_ELEMENT_ID) }
+        for (element in elements) {
+            val oldValue = element.getAsString(Element.COLUMN_STRING_ELEMENT_VALUE)
+            val newValue = when (element.getAsLong(Element.COLUMN_INT_ELEMENT_TYPE)?.toInt()) {
+                Element.ELEMENT_TYPE_GROUP_BUTTON -> ElementReferenceRemapper.group(oldValue, resolveId)
+                Element.ELEMENT_TYPE_WHEEL_PAD -> {
+                    if (oldValue.isNullOrEmpty()) continue
+                    ElementReferenceRemapper.wheel(oldValue, resolveId)
+                }
+                else -> continue
+            }
+            element.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue)
+            updateElement(configId, element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element)
+        }
     }
 
     private fun hasValidChecksum(exportFile: ExportFile): Boolean =

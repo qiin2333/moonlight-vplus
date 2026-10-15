@@ -190,7 +190,47 @@ class SuperConfigDatabaseHelperTest {
             }
             val mergedChild = merged.getValue(Element.ELEMENT_TYPE_DIGITAL_COMMON_BUTTON.toLong())
             val mergedGroup = merged.getValue(Element.ELEMENT_TYPE_GROUP_BUTTON.toLong())
+            val mergedWheel = merged.getValue(Element.ELEMENT_TYPE_WHEEL_PAD.toLong())
             assertEquals("-1,$mergedChild", helper.queryElementAttribute(43, mergedGroup, "element_value"))
+            assertEquals("gb$mergedGroup|Group,66|Key", helper.queryElementAttribute(43, mergedWheel, "element_value"))
+        }
+    }
+
+    @Test
+    fun missingAndMalformedGroupValuesAreSafeForImportBackupAndMerge() {
+        for (value in listOf(null, "", "-1,,bad,100,9223372036854775808,999,")) {
+            for (mode in listOf("import", "backup", "merge")) {
+                SuperConfigDatabaseHelper(context).use { helper ->
+                    val settings = JSONObject().put("config_id", 42).put("config_name", "group-$mode").toString()
+                    val group = JSONObject().put("config_id", 42).put("element_id", 200)
+                        .put("element_type", Element.ELEMENT_TYPE_GROUP_BUTTON).put("element_layer", 0)
+                    if (value != null) group.put("element_value", value)
+                    val elements = JSONArray().put(JSONObject()
+                        .put("config_id", 42).put("element_id", 100)
+                        .put("element_type", Element.ELEMENT_TYPE_DIGITAL_COMMON_BUTTON)
+                        .put("element_value", "65").put("element_layer", 0)).put(group).toString()
+                    val payload = JSONObject().put("version", 9).put("settings", settings).put("elements", elements)
+                        .put("md5", MathUtils.computeMD5("9$settings$elements")).toString()
+                    val result = when (mode) {
+                        "backup" -> helper.importConfigForBackup(payload)
+                        "merge" -> {
+                            helper.writableDatabase.execSQL("INSERT INTO config (config_id, config_name) VALUES (42, 'merge')")
+                            helper.mergeConfig(payload, 42)
+                        }
+                        else -> helper.importConfig(payload)
+                    }
+                    assertEquals(0, result)
+                    val configId = helper.queryAllConfigIds().single()
+                    val ids = helper.queryAllElementIds(configId).associateBy {
+                        helper.queryElementAttribute(configId, it, "element_type") as Long
+                    }
+                    val childId = ids.getValue(Element.ELEMENT_TYPE_DIGITAL_COMMON_BUTTON.toLong())
+                    val groupId = ids.getValue(Element.ELEMENT_TYPE_GROUP_BUTTON.toLong())
+                    assertEquals(if (value.isNullOrEmpty()) "-1" else "-1,$childId",
+                        helper.queryElementAttribute(configId, groupId, "element_value"))
+                }
+                cleanup()
+            }
         }
     }
 
