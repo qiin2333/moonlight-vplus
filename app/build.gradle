@@ -93,6 +93,7 @@ android {
     flavorDimensions.add("root")
 
     buildFeatures {
+        aidl = true
         buildConfig = true
         compose = true
     }
@@ -269,6 +270,8 @@ dependencies {
     implementation libs.flexbox
     implementation libs.tvprovider
     implementation libs.zxing.embedded
+    implementation libs.shizuku.api
+    implementation libs.shizuku.provider
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.compose.foundation

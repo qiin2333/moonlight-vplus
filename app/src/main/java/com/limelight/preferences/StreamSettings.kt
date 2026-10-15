@@ -78,7 +78,9 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.FutureTarget
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
+import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.ui.ThemedAppCompatActivity
+import rikka.shizuku.Shizuku
 import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
 import com.limelight.PcView
@@ -3102,8 +3104,33 @@ class StreamSettings : ThemedAppCompatActivity() {
             super.onDestroyView()
         }
 
+        private val shizukuAuthorizationListener =
+            Shizuku.OnRequestPermissionResultListener { _, _ -> refreshShizukuAuthorization() }
+
+        private fun setupShizukuKeyboardAuthorization() {
+            findPreference<Preference>("shizuku_keyboard_authorization")?.setOnPreferenceClickListener {
+                KeyboardAccessibilityEnabler.requestAuthorization()
+                refreshShizukuAuthorization()
+                true
+            }
+            refreshShizukuAuthorization()
+        }
+
+        private fun refreshShizukuAuthorization() {
+            val preference = findPreference<Preference>("shizuku_keyboard_authorization") ?: return
+            val summary = when (KeyboardAccessibilityEnabler.authorizationState()) {
+                KeyboardAccessibilityEnabler.AuthorizationState.NOT_INSTALLED,
+                KeyboardAccessibilityEnabler.AuthorizationState.NOT_RUNNING -> R.string.summary_shizuku_not_running
+                KeyboardAccessibilityEnabler.AuthorizationState.AUTHORIZATION_REQUIRED -> R.string.summary_shizuku_authorization_required
+                KeyboardAccessibilityEnabler.AuthorizationState.AUTHORIZED -> R.string.summary_shizuku_authorized
+            }
+            preference.setSummary(summary)
+        }
+
         override fun onResume() {
             super.onResume()
+            KeyboardAccessibilityEnabler.addAuthorizationListener(shizukuAuthorizationListener)
+            refreshShizukuAuthorization()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 ContextCompat.checkSelfPermission(
                     requireContext(),
@@ -3130,6 +3157,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         override fun onPause() {
+            KeyboardAccessibilityEnabler.removeAuthorizationListener(shizukuAuthorizationListener)
             flushConfigSyncAutoSnapshot()
             unregisterConfigSyncPreferenceListener()
             super.onPause()
@@ -3406,6 +3434,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             setupMicrophoneButtonPositionPreference()
             setupFloatBallPositionPreference()
             setupLegacyBackedModeSelectors()
+            setupShizukuKeyboardAuthorization()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。

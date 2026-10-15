@@ -1561,6 +1561,13 @@ Tap again to replace it.</string>
     <string name="toast_local_cursor_fallback">Using compatible cursor mode for this host</string>
 
     <!-- Special key mapping -->
+    <string name="title_shizuku_keyboard_accessibility">Enable keyboard accessibility with Shizuku</string>
+    <string name="summary_shizuku_keyboard_accessibility">When a stream starts, use an authorized Shizuku service to enable this app\'s keyboard accessibility service.</string>
+    <string name="title_shizuku_keyboard_authorization">Shizuku authorization</string>
+    <string name="summary_shizuku_not_installed">Install and start Shizuku first.</string>
+    <string name="summary_shizuku_not_running">Shizuku is not running.</string>
+    <string name="summary_shizuku_authorization_required">Tap to authorize.</string>
+    <string name="summary_shizuku_authorized">Authorized.</string>
     <string name="title_special_key_map">Moonlight keyboard shortcuts</string>
     <string name="summary_special_key_map">Maps Home to Esc, Esc+number/symbol to F1-F12, Esc+Q to stream menu, Android screenshot to Windows screenshot, Android prev/play-pause/next to F5/F10/F11.</string>
 

@@ -76,6 +76,7 @@ import com.limelight.utils.UiHelper
 import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.AppSettingsManager
+import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.services.KeyboardAccessibilityService
 
 import android.annotation.SuppressLint
@@ -1428,16 +1429,30 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             updateAudioHapticsRuntimeEnabled(true)
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
-        KeyboardAccessibilityService.setIntercepting(true)
-        val service = KeyboardAccessibilityService.instance
-        if (service != null) {
-            service.keyEventCallback = this
-        } else {
-            LimeLog.warning("KeyboardAccessibilityService is not running.")
+        KeyboardAccessibilityService.connectionListener = keyboardAccessibilityConnectionListener
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
+            bindKeyboardAccessibility(KeyboardAccessibilityService.instance)
+            KeyboardAccessibilityEnabler.requestEnableForCurrentForegroundCycle(this)
         }
 
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
+        }
+    }
+
+    private val keyboardAccessibilityConnectionListener =
+        object : KeyboardAccessibilityService.ConnectionListener {
+            override fun onKeyboardAccessibilityConnected(service: KeyboardAccessibilityService) {
+                if (!isFinishing) bindKeyboardAccessibility(service)
+            }
+        }
+
+    private fun bindKeyboardAccessibility(service: KeyboardAccessibilityService?) {
+        KeyboardAccessibilityService.setIntercepting(true)
+        if (service != null) {
+            service.keyEventCallback = this
+        } else {
+            LimeLog.warning("KeyboardAccessibilityService is not running.")
         }
     }
 
@@ -1547,6 +1562,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         micButton?.visibility = if (
             snapshot.microphoneButtonVisible && prefConfig.enableMic
         ) View.VISIBLE else View.GONE
+        bindKeyboardAccessibility(KeyboardAccessibilityService.instance)
+        KeyboardAccessibilityEnabler.requestEnableForCurrentForegroundCycle(this)
         controllerHandler.enableSensors()
         UiHelper.notifyStreamExitingPiP(this)
     }
@@ -1859,6 +1876,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         KeyboardAccessibilityService.setIntercepting(false)
         KeyboardAccessibilityService.instance?.keyEventCallback = null
+        KeyboardAccessibilityService.connectionListener = null
+        KeyboardAccessibilityEnabler.resetForegroundAttempt()
 
         if (isFinishing) {
             if (::controllerHandler.isInitialized) {

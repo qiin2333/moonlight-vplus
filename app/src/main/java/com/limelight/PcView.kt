@@ -56,7 +56,6 @@ import com.limelight.preferences.ResolutionValidator
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.StreamSettings
-import com.limelight.services.KeyboardAccessibilityService
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.ui.FeatureGuideRegistry
@@ -363,28 +362,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         }
         super.onCreate(savedInstanceState)
         ConfigurationSyncScheduler.runNow(this)
-
-        //自动获取无障碍权限
-        try {
-            val cn = ComponentName(this, KeyboardAccessibilityService::class.java)
-            val myService = cn.flattenToString()
-            var enabledServices = Settings.Secure.getString(contentResolver,
-                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-
-            if (enabledServices == null || !enabledServices.contains(myService)) {
-                enabledServices = if (enabledServices.isNullOrEmpty()) {
-                    myService
-                } else {
-                    "$enabledServices:$myService"
-                }
-
-                // 这里可能会抛异常
-                Settings.Secure.putString(contentResolver,
-                        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, enabledServices)
-            }
-        } catch (e: SecurityException) {
-            // 没无障碍权限
-        }
 
         easyTierController = EasyTierController(this, this)
         inForeground = true
