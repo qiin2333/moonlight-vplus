@@ -45,7 +45,7 @@ class SuperConfigDatabaseHelper(context: Context?) :
                         is Long -> addProperty(key, value)
                         is Double -> addProperty(key, value)
                         is String -> addProperty(key, value)
-                        is ByteArray -> addProperty(key, context.serialize(value).asString)
+                        is ByteArray -> add(key, context.serialize(value))
                     }
                 }
             }

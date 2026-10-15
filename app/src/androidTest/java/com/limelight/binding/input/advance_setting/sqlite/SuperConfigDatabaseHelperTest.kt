@@ -12,6 +12,7 @@ import com.limelight.utils.MathUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -193,6 +194,31 @@ class SuperConfigDatabaseHelperTest {
             val mergedWheel = merged.getValue(Element.ELEMENT_TYPE_WHEEL_PAD.toLong())
             assertEquals("-1,$mergedChild", helper.queryElementAttribute(43, mergedGroup, "element_value"))
             assertEquals("gb$mergedGroup|Group,66|Key", helper.queryElementAttribute(43, mergedWheel, "element_value"))
+        }
+    }
+
+    @Test
+    fun blobElementValuesRoundTripWithoutChangingTheirType() {
+        for (bytes in listOf(byteArrayOf(), byteArrayOf(42), byteArrayOf(0, 127, -1))) {
+            SuperConfigDatabaseHelper(context).use { helper ->
+                helper.writableDatabase.execSQL("INSERT INTO config (config_id, config_name) VALUES (42, 'blob')")
+                helper.writableDatabase.insertOrThrow("element", null, ContentValues().apply {
+                    put("config_id", 42L)
+                    put("element_id", 100L)
+                    put("element_type", Element.ELEMENT_TYPE_DIGITAL_COMMON_BUTTON)
+                    put("element_value", bytes)
+                    put("element_layer", 0)
+                })
+                val payload = helper.exportConfig(42)
+                val encoded = JSONArray(JSONObject(payload).getString("elements"))
+                    .getJSONObject(0).getJSONArray("element_value")
+                assertEquals(bytes.map { it.toInt() }, (0 until encoded.length()).map(encoded::getInt))
+                assertEquals(0, helper.importConfig(payload))
+                val importedId = helper.queryAllConfigIds().single { it != 42L }
+                val elementId = helper.queryAllElementIds(importedId).single()
+                assertArrayEquals(bytes, helper.queryElementAttribute(importedId, elementId, "element_value") as ByteArray)
+            }
+            cleanup()
         }
     }
 
