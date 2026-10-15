@@ -139,6 +139,8 @@ class KeyboardInputHandler(private val game: Game) {
         escTapRelease?.let { handler.removeCallbacks(it) }
         escTapRelease = null
         escState = 0
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        waitingForAllModifiersUp = false
         val keys = forwardedKeys.values.toList()
         forwardedKeys.clear()
         for (key in keys) {
