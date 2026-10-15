@@ -197,20 +197,33 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     var connected = false
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
+    private val usbForwardingReadyActions = mutableListOf<(UsbForwardingController) -> Unit>()
+    private var usbForeground = false
+    private var usbAutoShareSession = UsbAutoShareSession()
 
 
     fun showUsbForwarding(onShown: ((android.app.Dialog) -> Unit)? = null) {
-        if (!connected) return
+        withUsbForwarding { controller ->
+            controller.startForeground()
+            controller.show()?.let { onShown?.invoke(it) }
+        }
+    }
+
+    private fun withUsbForwarding(action: (UsbForwardingController) -> Unit) {
+        if (!connected || !usbForeground || isFinishing || isDestroyed) return
         if (usbForwarding == null) {
             val previousCleanup = UsbForwardingController.previousCleanup()
             if (!previousCleanup.isDone || previousCleanup.isFailed) {
+                usbForwardingReadyActions.add(action)
                 if (!usbForwardingCreationPending) {
                     usbForwardingCreationPending = true
                     previousCleanup.whenComplete { error ->
                         runOnUiThread {
                             usbForwardingCreationPending = false
-                            if (!isDestroyed && connected) {
-                                if (error == null) showUsbForwarding(onShown)
+                            val actions = usbForwardingReadyActions.toList()
+                            usbForwardingReadyActions.clear()
+                            if (!isDestroyed && connected && usbForeground) {
+                                if (error == null) withUsbForwarding { controller -> actions.forEach { it(controller) } }
                                 else Toast.makeText(this, R.string.usb_forward_failed, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -224,10 +237,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 Toast.makeText(this, R.string.usb_forward_unconfigured, Toast.LENGTH_LONG).show()
                 return
             }
+            val streamConnection = conn ?: return
             usbForwarding = UsbForwardingController(this, intent.getStringExtra(EXTRA_HOST) ?: "",
-                cert, PlatformBinding.getCryptoProvider(this), hostId) { conn?.createNvHttp() }
+                cert, PlatformBinding.getCryptoProvider(this), hostId, usbAutoShareSession) {
+                if (conn === streamConnection) streamConnection.createNvHttp() else null
+            }
         }
-        usbForwarding?.show()?.let { onShown?.invoke(it) }
+        usbForwarding?.let(action)
     }
     private var activeGameMenu: GameMenu? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
@@ -347,6 +363,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        usbAutoShareSession = UsbAutoShareSession(savedInstanceState?.getStringArrayList("usb_auto_suppressed").orEmpty())
 
         isChangingResolution = false
 
@@ -1393,6 +1410,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        usbForeground = true
+        withUsbForwarding { it.startForeground() }
         if (::floatBallHandler.isInitialized &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) &&
             !pipInteractiveOverlayState.isActive() &&
@@ -1770,6 +1789,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         usbForwarding?.close()
         usbForwarding = null
+        usbForwardingReadyActions.clear()
         if (isFinishing && !isChangingConfigurations) {
             cancelKeepAliveNotification()
         }
@@ -2011,8 +2031,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         return available
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putStringArrayList("usb_auto_suppressed", ArrayList(usbAutoShareSession.suppressedGroups))
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onStop() {
         super.onStop()
+        usbForeground = false
         usbForwarding?.stopForeground()
 
         if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing) {
@@ -2350,6 +2376,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val startedConnection = conn
         connectionCallbackHandler.connectionStarted()
         runOnUiThread {
+            if (conn === startedConnection) withUsbForwarding { it.startForeground() }
             if (conn === startedConnection && connected && !displayedFailureDialog &&
                 !isFinishing && !isDestroyed && !pyrowaveFallbackDialogShown &&
                 prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE &&

@@ -63,7 +63,7 @@ class UsbDevicePanelTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP)
         compose.waitForIdle()
-        compose.onNode(isToggleable()).performScrollTo().requestFocus()
+        compose.onNodeWithText(label(R.string.usb_forward_toggle_title)).performScrollTo().requestFocus()
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.waitForIdle()
         compose.runOnIdle { assertFalse(enabled.value) }
@@ -78,8 +78,8 @@ class UsbDevicePanelTest {
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(2, refreshes) }
         compose.onRoot().captureToImage().asAndroidBitmap().let { bitmap ->
-            File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null),
-                "usb-panel.png").outputStream().use {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            File(context.getExternalFilesDir(null) ?: context.filesDir, "usb-panel.png").outputStream().use {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
         }
@@ -171,5 +171,26 @@ class UsbDevicePanelTest {
         compose.onNodeWithText(label(R.string.usb_forward_host_disabled)).assertExists()
         compose.onNodeWithText(label(R.string.usb_forward_retry)).performClick()
         compose.runOnIdle { assertEquals(1, retries) }
+    }
+
+    @Test fun automaticSharingRequiresSeparateOptInAndCanBeForgottenWhileMasterIsOff() {
+        var automatic by mutableStateOf(false)
+        var enabled by mutableStateOf(true)
+        var changes = 0
+        compose.setContent {
+            UsbDevicePanel(listOf(panelDevice("usb/pad", "DualSense", UsbDeviceType.GAMEPAD)
+                .copy(autoShare = automatic, typeRule = true)),
+                false, R.string.usb_forward_choose, "Test host", enabled, enabled,
+                { enabled = it }, {}, { error("Opt-in is separate from manual Share") }, {}, {}, {},
+                onAutoShareChange = { path, value -> assertEquals("usb/pad", path); automatic = value; changes++ })
+        }
+        compose.runOnIdle { assertFalse(automatic); assertEquals(0, changes) }
+        compose.onNodeWithText(label(R.string.usb_forward_auto_title)).performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(automatic) }
+        compose.onNodeWithText(label(R.string.usb_forward_auto_type_hint)).assertExists()
+        compose.onNodeWithText(label(R.string.usb_forward_toggle_title)).performScrollTo().performClick()
+        compose.runOnIdle { assertFalse(enabled); assertTrue(automatic) }
+        compose.onNodeWithText(label(R.string.usb_forward_auto_title)).performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertFalse(automatic); assertEquals(2, changes) }
     }
 }
