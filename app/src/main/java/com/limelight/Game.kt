@@ -1402,6 +1402,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
         streamInForeground = true
+        Dialog.setVisibilityListener { updateKeyboardInterception() }
         val service = KeyboardAccessibilityService.instance
         if (service != null) {
             service.keyEventCallback = this
@@ -1831,6 +1832,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             floatBallHandler.suppress()
         }
         streamInForeground = false
+        Dialog.setVisibilityListener(null)
         updateKeyboardInterception()
         KeyboardAccessibilityService.instance?.keyEventCallback = null
 
@@ -1846,8 +1848,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun updateKeyboardInterception() {
-        val menuVisible = activeGameMenu?.isShowing() == true
-        KeyboardAccessibilityService.setIntercepting(streamInForeground && !menuVisible)
+        val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog()
+        KeyboardAccessibilityService.setIntercepting(streamInForeground && !overlayVisible)
     }
 
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
