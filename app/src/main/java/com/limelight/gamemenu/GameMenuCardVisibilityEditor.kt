@@ -58,7 +58,7 @@ internal object GameMenuCardVisibilityEditor {
     }
 
     private fun labels(context: Context): List<String> = listOf(
-        context.getString(R.string.game_menu_tab_bitrate),
+        context.getString(R.string.game_menu_display_settings),
         context.getString(R.string.game_menu_tab_audio_haptics),
         context.getString(R.string.game_menu_tab_gyro),
         context.getString(R.string.game_menu_tab_shortcuts)

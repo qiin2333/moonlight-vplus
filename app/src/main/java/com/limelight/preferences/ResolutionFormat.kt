@@ -35,6 +35,18 @@ fun validateResolutionInput(
     else -> null
 }
 
+/** 帧率只校验正整数范围和重复，不沿用分辨率的宽高、偶数规则。 */
+fun validateFrameRateInput(
+    fps: Int?,
+    existing: List<Resolution>
+): ResolutionInputError? = when {
+    fps == null -> ResolutionInputError(ResolutionField.WIDTH, ResolutionInputReason.EMPTY)
+    fps !in 1..500 -> ResolutionInputError(ResolutionField.WIDTH, ResolutionInputReason.OUT_OF_RANGE)
+    existing.any { it.width == fps } ->
+        ResolutionInputError(null, ResolutionInputReason.DUPLICATE)
+    else -> null
+}
+
 /** 列表与存储共用的排序:按宽升序,同宽按高升序。 */
 val resolutionOrder: Comparator<Resolution> = compareBy({ it.width }, { it.height })
 
