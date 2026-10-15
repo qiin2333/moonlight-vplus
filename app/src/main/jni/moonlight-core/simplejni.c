@@ -51,6 +51,16 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendMultiControllerInput(JNIEnv *env,
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendMultiControllerInputChecked(JNIEnv *env, jclass clazz, jshort controllerNumber,
+                                                           jshort activeGamepadMask, jint buttonFlags,
+                                                           jbyte leftTrigger, jbyte rightTrigger,
+                                                           jshort leftStickX, jshort leftStickY,
+                                                           jshort rightStickX, jshort rightStickY) {
+    return LiSendMultiControllerEvent(controllerNumber, activeGamepadMask, buttonFlags,
+        leftTrigger, rightTrigger, leftStickX, leftStickY, rightStickX, rightStickY);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendTouchEvent(JNIEnv *env, jclass clazz,
                                                           jbyte eventType, jint pointerId,
                                                           jfloat x, jfloat y, jfloat pressureOrDistance,

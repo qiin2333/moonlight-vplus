@@ -511,6 +511,18 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         }
     }
 
+    fun retireController(controllerNumber: Short) {
+        if (controllerNumber.toInt() != 0) return
+        runOnMainThread {
+            controllerGyroDemand.updateHostReportRate(0)
+            handler.defaultContext.gyroReportRateHz = 0
+            handler.defaultContext.accelReportRateHz = 0
+            registerDeviceGyroForDefaultContext(false)
+            activeSource = GyroSource.NONE
+            beginNewSourceLifecycle()
+        }
+    }
+
     /** A reconnected device deserves a fresh evaluation, a still-present one does not. */
     private fun pruneRejectedSources() {
         if (rejectedInputDeviceIds.isNotEmpty()) {
@@ -565,6 +577,11 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun onSensorsReenabled() {
         runOnMainThread {
             if (handler.stopped) return@runOnMainThread
+            if (!handler.isControllerSlotEnabled(0)) {
+                registerDeviceGyroForDefaultContext(false)
+                activeSource = GyroSource.NONE
+                return@runOnMainThread
+            }
             // Contexts created or migrated after the assistant was turned on start with a
             // cleared hold flag, so demand and hold must be rebuilt on every restore.
             updateAssistantDemand()
@@ -784,11 +801,13 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             handler.defaultContext.gyroHoldActive
     }
 
-    fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean): SensorEventListener {
+    fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean,
+                             sourceActive: () -> Boolean = { true }): SensorEventListener {
         return object : SensorEventListener {
             private val lastValues = FloatArray(3)
 
             override fun onSensorChanged(sensorEvent: SensorEvent) {
+                if (!sourceActive() || !handler.isControllerSlotEnabled(controllerNumber)) return
                 if (handler.isControllerLocallyCaptured(controllerNumber)) return
 
                 if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
