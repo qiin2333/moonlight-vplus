@@ -31,6 +31,7 @@ class KeyboardInputHandler(private val game: Game) {
     private var hasShownEscHint = false
 
     private val pressedKeys = HashSet<Int>()
+    private val forwardedKeys = LinkedHashMap<Int, Int>()
     private var escState = 0 // 0 = 空闲，1 = ESC已按下，2 = 已进入组合键
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var escConfirmRunnable: Runnable
@@ -129,6 +130,21 @@ class KeyboardInputHandler(private val game: Game) {
         modifierFlags = 0
     }
 
+    fun releaseForwardedKeys() {
+        val keys = forwardedKeys.toList()
+        forwardedKeys.clear()
+        for ((keyCode, deviceId) in keys) {
+            pressedKeys.remove(keyCode)
+            val translated = keyboardTranslator.translate(keyCode, deviceId)
+            if (translated.toInt() == 0) continue
+            game.conn?.sendKeyboardInput(
+                translated, KeyboardPacket.KEY_UP, getModifierState(),
+                if (keyboardTranslator.hasNormalizedMapping(keyCode, deviceId)) 0 else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
+            )
+        }
+        modifierFlags = 0
+    }
+
     fun handleKeyDown(event: KeyEvent): Boolean {
         when (event.keyCode) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
@@ -156,6 +172,7 @@ class KeyboardInputHandler(private val game: Game) {
                 escConfirmRunnable = Runnable {
                     if (escState == 1) {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
+                        forwardedKeys[KeyEvent.KEYCODE_ESCAPE] = event.deviceId
                         game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                         escState = 0
                     }
@@ -176,6 +193,7 @@ class KeyboardInputHandler(private val game: Game) {
                         escState = 2
                         val fKeyCode = KeyEvent.KEYCODE_F1 + (keyCode - KeyEvent.KEYCODE_1)
                         val translated = keyboardTranslator.translate(fKeyCode, event.deviceId)
+                        forwardedKeys[fKeyCode] = event.deviceId
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_DOWN,
@@ -187,6 +205,7 @@ class KeyboardInputHandler(private val game: Game) {
                     KeyEvent.KEYCODE_0 -> {
                         escState = 2
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_F10, event.deviceId)
+                        forwardedKeys[KeyEvent.KEYCODE_F10] = event.deviceId
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_DOWN,
@@ -198,6 +217,7 @@ class KeyboardInputHandler(private val game: Game) {
                     KeyEvent.KEYCODE_MINUS -> {
                         escState = 2
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_F11, event.deviceId)
+                        forwardedKeys[KeyEvent.KEYCODE_F11] = event.deviceId
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_DOWN,
@@ -209,6 +229,7 @@ class KeyboardInputHandler(private val game: Game) {
                     KeyEvent.KEYCODE_EQUALS -> {
                         escState = 2
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_F12, event.deviceId)
+                        forwardedKeys[KeyEvent.KEYCODE_F12] = event.deviceId
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_DOWN,
@@ -220,6 +241,7 @@ class KeyboardInputHandler(private val game: Game) {
                     else -> {
                         // 非自定义组合键，不做处理
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
+                        forwardedKeys[KeyEvent.KEYCODE_ESCAPE] = event.deviceId
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_DOWN,
@@ -292,6 +314,7 @@ class KeyboardInputHandler(private val game: Game) {
                 return true
             }
 
+            forwardedKeys[event.keyCode] = event.deviceId
             game.conn?.sendKeyboardInput(
                 translated, KeyboardPacket.KEY_DOWN, getModifierState(event),
                 if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0 else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
@@ -348,6 +371,7 @@ class KeyboardInputHandler(private val game: Game) {
                 when (escState) {
                     1 -> {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
+                        forwardedKeys[KeyEvent.KEYCODE_ESCAPE] = event.deviceId
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_DOWN,
@@ -355,6 +379,7 @@ class KeyboardInputHandler(private val game: Game) {
                             MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
                         )
                         handler.postDelayed({
+                            forwardedKeys.remove(KeyEvent.KEYCODE_ESCAPE)
                             game.conn?.sendKeyboardInput(
                                 translated,
                                 KeyboardPacket.KEY_UP,
@@ -369,6 +394,7 @@ class KeyboardInputHandler(private val game: Game) {
                     }
                     else -> {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
+                        forwardedKeys.remove(KeyEvent.KEYCODE_ESCAPE)
                         game.conn?.sendKeyboardInput(
                             translated,
                             KeyboardPacket.KEY_UP,
@@ -388,21 +414,25 @@ class KeyboardInputHandler(private val game: Game) {
                 if (keyCode in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9) {
                     val fKeyCode = KeyEvent.KEYCODE_F1 + (keyCode - KeyEvent.KEYCODE_1)
                     val translated = keyboardTranslator.translate(fKeyCode, event.deviceId)
+                    forwardedKeys.remove(fKeyCode)
                     game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                     return true
                 }
                 if (keyCode == KeyEvent.KEYCODE_0) {
                     val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_F10, event.deviceId)
+                    forwardedKeys.remove(KeyEvent.KEYCODE_F10)
                     game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                     return true
                 }
                 if (keyCode == KeyEvent.KEYCODE_MINUS) {
                     val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_F11, event.deviceId)
+                    forwardedKeys.remove(KeyEvent.KEYCODE_F11)
                     game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                     return true
                 }
                 if (keyCode == KeyEvent.KEYCODE_EQUALS) {
                     val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_F12, event.deviceId)
+                    forwardedKeys.remove(KeyEvent.KEYCODE_F12)
                     game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                     return true
                 }
@@ -455,6 +485,7 @@ class KeyboardInputHandler(private val game: Game) {
                         (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0
             }
 
+            forwardedKeys.remove(event.keyCode)
             game.conn?.sendKeyboardInput(
                 translated, KeyboardPacket.KEY_UP, getModifierState(event),
                 if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0 else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED

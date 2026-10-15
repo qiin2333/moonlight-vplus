@@ -1849,7 +1849,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     private fun updateKeyboardInterception() {
         val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog()
-        KeyboardAccessibilityService.setIntercepting(streamInForeground && !overlayVisible)
+        val intercepting = streamInForeground && !overlayVisible
+        if (!intercepting && KeyboardAccessibilityService.interceptingEnabled) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
+        KeyboardAccessibilityService.setIntercepting(intercepting)
     }
 
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
