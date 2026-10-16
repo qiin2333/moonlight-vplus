@@ -2253,6 +2253,17 @@ class MediaCodecDecoderRenderer(
             }
         }
 
+        // Stop codec callbacks before detaching or releasing the decoder. Pending recovery work
+        // must finish while the decoder reference is still valid.
+        val callbackThread = codecCallbackThread
+        if (callbackThread != null) {
+            callbackThread.quitSafely()
+            codecCallbackThread = null
+            if (callbackThread !== Thread.currentThread()) {
+                callbackThread.join()
+            }
+        }
+
         destroyPyrowaveDecoder()
         currentHdrMetadata = null
         dolbyVisionRoutingActive = false
@@ -2269,16 +2280,6 @@ class MediaCodecDecoderRenderer(
             }
         }
         clearTimestampTracking()
-
-        // Stop codec callback thread (async mode)
-        val callbackThread = codecCallbackThread
-        if (callbackThread != null) {
-            callbackThread.quitSafely()
-            codecCallbackThread = null
-            if (callbackThread !== Thread.currentThread()) {
-                callbackThread.join()
-            }
-        }
     }
 
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
