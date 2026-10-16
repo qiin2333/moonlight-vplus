@@ -194,6 +194,12 @@ class MediaCodecDecoderRenderer(
     private var codecRecoveryThreadQuiescedFlags = 0
     private var codecRecoveryAttempts = 0
 
+    // Serializes codec access with cleanup. A native decode callback may outlive Surface
+    // destruction, so detaching videoDecoder alone cannot protect nextInputBuffer writes.
+    private val codecOperationMonitor = Any()
+    private var activeCodecOperations = 0
+    private var codecOperationsBlocked = false
+
     private var inputFormat: MediaFormat? = null
     private var outputFormat: MediaFormat? = null
     private val stableOutputFormatTracker = StableOutputFormatTracker()
@@ -618,6 +624,9 @@ class MediaCodecDecoderRenderer(
                 activeWindowVideoStats.totalFramesRendered++
                 frameIntervalTracker.recordFrame()
             }
+
+            override fun withCodecOperation(action: (MediaCodec) -> Unit): Boolean =
+                this@MediaCodecDecoderRenderer.withCodecOperation { decoder -> action(decoder) } != null
 
             override fun onDecoderException(e: IllegalStateException): Boolean {
                 return handleDecoderException(e)
@@ -1832,7 +1841,7 @@ class MediaCodecDecoderRenderer(
      * renderer thread in startRendererThread() releases output buffers directly and does
      * not go through this method.
      */
-    private fun deliverDecodedFrame(bufferIndex: Int, hostPtsUs: Long = -1L) {
+    private fun deliverDecodedFrame(decoder: MediaCodec, bufferIndex: Int, hostPtsUs: Long = -1L) {
         if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED ||
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY ||
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
@@ -1850,12 +1859,12 @@ class MediaCodecDecoderRenderer(
                         // 偏平滑档(MAX_SMOOTHNESS/CAP_FPS)权衡少量缓冲延迟换取无判抖，语义相符。
                         val fps = if (refreshRate > 0) refreshRate else 60
                         val frameIntervalNs = 1_000_000_000L / fps
-                        videoDecoder!!.releaseOutputBuffer(bufferIndex, hostCadenceClock.presentTimeNs(hostPtsUs, frameIntervalNs))
+                        decoder.releaseOutputBuffer(bufferIndex, hostCadenceClock.presentTimeNs(hostPtsUs, frameIntervalNs))
                     } else {
-                        videoDecoder!!.releaseOutputBuffer(bufferIndex, 0)
+                        decoder.releaseOutputBuffer(bufferIndex, 0)
                     }
                 } else {
-                    videoDecoder!!.releaseOutputBuffer(bufferIndex, System.nanoTime())
+                    decoder.releaseOutputBuffer(bufferIndex, System.nanoTime())
                 }
                 activeWindowVideoStats.totalFramesRendered++
                 frameIntervalTracker.recordFrame()
@@ -1892,30 +1901,29 @@ class MediaCodecDecoderRenderer(
             }
 
             override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
-                if (stopping) return
+                withCodecOperation { decoder ->
+                    numFramesOut++
+                    hdr10PlusOutputObserver.observeOutput(codec, index, info.presentationTimeUs)
 
-                numFramesOut++
-                hdr10PlusOutputObserver.observeOutput(codec, index, info.presentationTimeUs)
-
-                // Deliver to frame pacing. Remove the host PTS before decoder-time tracking,
-                // because calculateDecoderTime() removes the paired enqueue entry.
-                val hostPtsUs = if (needsHostPtsMapping) {
-                    frameTimestampTracker.takeHostPresentationTime(info.presentationTimeUs, -1L)
-                } else {
-                    -1L
-                }
-
-                // Calculate decoder time
-                val delta = calculateDecoderTime(info.presentationTimeUs)
-                if (delta >= 0 && delta < 1000) {
-                    activeWindowVideoStats.decoderTimeMs += delta
-                    if (!USE_FRAME_RENDER_TIME) {
-                        activeWindowVideoStats.totalTimeMs += delta
+                    // Deliver to frame pacing. Remove the host PTS before decoder-time tracking,
+                    // because calculateDecoderTime() removes the paired enqueue entry.
+                    val hostPtsUs = if (needsHostPtsMapping) {
+                        frameTimestampTracker.takeHostPresentationTime(info.presentationTimeUs, -1L)
+                    } else {
+                        -1L
                     }
+
+                    // Calculate decoder time
+                    val delta = calculateDecoderTime(info.presentationTimeUs)
+                    if (delta >= 0 && delta < 1000) {
+                        activeWindowVideoStats.decoderTimeMs += delta
+                        if (!USE_FRAME_RENDER_TIME) {
+                            activeWindowVideoStats.totalTimeMs += delta
+                        }
+                    }
+
+                    deliverDecodedFrame(decoder, index, hostPtsUs)
                 }
-
-                deliverDecodedFrame(index, hostPtsUs)
-
                 doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
             }
 
@@ -1944,75 +1952,76 @@ class MediaCodecDecoderRenderer(
 
                 val info = BufferInfo()
                 while (!stopping) {
-                    try {
-                        // Try to output a frame
-                        var outIndex = videoDecoder!!.dequeueOutputBuffer(info, 50000)
-                        if (outIndex >= 0) {
-                            hdr10PlusOutputObserver.observeOutput(videoDecoder!!, outIndex, info.presentationTimeUs)
-                            var presentationTimeUs = info.presentationTimeUs
-                            var lastIndex = outIndex
+                    withCodecOperation { decoder ->
+                        try {
+                            // Try to output a frame
+                            var outIndex = decoder.dequeueOutputBuffer(info, 50000)
+                            if (outIndex >= 0) {
+                                hdr10PlusOutputObserver.observeOutput(decoder, outIndex, info.presentationTimeUs)
+                                var presentationTimeUs = info.presentationTimeUs
+                                var lastIndex = outIndex
 
-                            numFramesOut++
+                                numFramesOut++
 
-                            // Render the latest frame now if frame pacing isn't in balanced mode or Surface Flinger mode
-                            if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED &&
-                                prefs.framePacing != PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY &&
-                                prefs.framePacing != PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
-                            ) {
-                                // Get the last output buffer in the queue
-                                while (videoDecoder!!.dequeueOutputBuffer(info, 0).also { outIndex = it } >= 0) {
-                                    hdr10PlusOutputObserver.observeOutput(videoDecoder!!, outIndex, info.presentationTimeUs)
-                                    videoDecoder!!.releaseOutputBuffer(lastIndex, false)
-
-                                    numFramesOut++
-
-                                    lastIndex = outIndex
-                                    presentationTimeUs = info.presentationTimeUs
-                                }
-
-                                if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
-                                    prefs.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS
+                                // Render the latest frame now if frame pacing isn't in balanced mode or Surface Flinger mode
+                                if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED &&
+                                    prefs.framePacing != PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY &&
+                                    prefs.framePacing != PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
                                 ) {
-                                    // In max smoothness or cap FPS mode, we want to never drop frames
-                                    // Use a PTS that will cause this frame to never be dropped
-                                    videoDecoder!!.releaseOutputBuffer(lastIndex, 0)
+                                    // Get the last output buffer in the queue
+                                    while (decoder.dequeueOutputBuffer(info, 0).also { outIndex = it } >= 0) {
+                                        hdr10PlusOutputObserver.observeOutput(decoder, outIndex, info.presentationTimeUs)
+                                        decoder.releaseOutputBuffer(lastIndex, false)
+
+                                        numFramesOut++
+
+                                        lastIndex = outIndex
+                                        presentationTimeUs = info.presentationTimeUs
+                                    }
+
+                                    if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
+                                        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS
+                                    ) {
+                                        // In max smoothness or cap FPS mode, we want to never drop frames
+                                        // Use a PTS that will cause this frame to never be dropped
+                                        decoder.releaseOutputBuffer(lastIndex, 0)
+                                    } else {
+                                        // Use a PTS that will cause this frame to be dropped if another comes in within
+                                        // the same V-sync period
+                                        decoder.releaseOutputBuffer(lastIndex, System.nanoTime())
+                                    }
+
+                                    activeWindowVideoStats.totalFramesRendered++
+                                    frameIntervalTracker.recordFrame()
                                 } else {
-                                    // Use a PTS that will cause this frame to be dropped if another comes in within
-                                    // the same V-sync period
-                                    videoDecoder!!.releaseOutputBuffer(lastIndex, System.nanoTime())
+                                    // Buffered modes: deliver to frame pacing controller
+                                    framePacingController.offerOutputBuffer(lastIndex)
                                 }
 
-                                activeWindowVideoStats.totalFramesRendered++
-                                frameIntervalTracker.recordFrame()
+                                // Add delta time to the totals (excluding probable outliers)
+                                val delta = calculateDecoderTime(presentationTimeUs)
+                                if (delta >= 0 && delta < 1000) {
+                                    activeWindowVideoStats.decoderTimeMs += delta
+                                    if (!USE_FRAME_RENDER_TIME) {
+                                        activeWindowVideoStats.totalTimeMs += delta
+                                    }
+                                    // Report to PerformanceHintManager for DVFS optimization
+                                    perfBoostManager.reportActualWorkDuration(delta * 1000000L)
+                                }
                             } else {
-                                // Buffered modes: deliver to frame pacing controller
-                                framePacingController.offerOutputBuffer(lastIndex)
-                            }
-
-                            // Add delta time to the totals (excluding probable outliers)
-                            val delta = calculateDecoderTime(presentationTimeUs)
-                            if (delta >= 0 && delta < 1000) {
-                                activeWindowVideoStats.decoderTimeMs += delta
-                                if (!USE_FRAME_RENDER_TIME) {
-                                    activeWindowVideoStats.totalTimeMs += delta
+                                when (outIndex) {
+                                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                                        handleOutputFormatChanged(decoder.outputFormat, "sync")
+                                    }
+                                    MediaCodec.INFO_TRY_AGAIN_LATER -> {}
+                                    else -> {}
                                 }
-                                // Report to PerformanceHintManager for DVFS optimization
-                                perfBoostManager.reportActualWorkDuration(delta * 1000000L)
                             }
-                        } else {
-                            when (outIndex) {
-                                MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                                    handleOutputFormatChanged(videoDecoder!!.outputFormat, "sync")
-                                }
-                                MediaCodec.INFO_TRY_AGAIN_LATER -> {}
-                                else -> {}
-                            }
+                        } catch (e: IllegalStateException) {
+                            handleDecoderException(e)
                         }
-                    } catch (e: IllegalStateException) {
-                        handleDecoderException(e)
-                    } finally {
-                        doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
                     }
+                    doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
                 }
             }
         }
@@ -2128,6 +2137,43 @@ class MediaCodecDecoderRenderer(
         return false
     }
 
+    /** Runs a codec operation while keeping cleanup from releasing its codec or buffers. */
+    private fun <T> withCodecOperation(action: (MediaCodec) -> T): T? {
+        val decoder: MediaCodec
+        synchronized(codecOperationMonitor) {
+            if (stopping || isProcessingPaused || codecOperationsBlocked) return null
+            decoder = videoDecoder ?: return null
+            activeCodecOperations++
+        }
+
+        return try {
+            action(decoder)
+        } finally {
+            synchronized(codecOperationMonitor) {
+                activeCodecOperations--
+                if (activeCodecOperations == 0) {
+                    (codecOperationMonitor as Object).notifyAll()
+                }
+            }
+        }
+    }
+
+    private fun blockCodecOperationsAndWait() {
+        var interrupted = false
+        synchronized(codecOperationMonitor) {
+            codecOperationsBlocked = true
+            stopping = true
+            while (activeCodecOperations != 0) {
+                try {
+                    (codecOperationMonitor as Object).wait()
+                } catch (e: InterruptedException) {
+                    interrupted = true
+                }
+            }
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+    }
+
     override fun start() {
         if (pyrowaveDecoderActive) {
             return
@@ -2188,6 +2234,25 @@ class MediaCodecDecoderRenderer(
     }
 
     override fun cleanup() {
+        // Block new producers first, then wait for any input/output operation already holding the
+        // codec. This makes cleanup safe even when it is called directly from extreme resume.
+        blockCodecOperationsAndWait()
+        framePacingController.prepareForStop()
+        framePacingController.joinThreads()
+        rendererThread?.let { thread ->
+            if (thread !== Thread.currentThread()) {
+                var interrupted = false
+                while (thread.isAlive) {
+                    try {
+                        thread.join()
+                    } catch (e: InterruptedException) {
+                        interrupted = true
+                    }
+                }
+                if (interrupted) Thread.currentThread().interrupt()
+            }
+        }
+
         destroyPyrowaveDecoder()
         currentHdrMetadata = null
         dolbyVisionRoutingActive = false
@@ -2206,9 +2271,13 @@ class MediaCodecDecoderRenderer(
         clearTimestampTracking()
 
         // Stop codec callback thread (async mode)
-        if (codecCallbackThread != null) {
-            codecCallbackThread!!.quitSafely()
+        val callbackThread = codecCallbackThread
+        if (callbackThread != null) {
+            callbackThread.quitSafely()
             codecCallbackThread = null
+            if (callbackThread !== Thread.currentThread()) {
+                callbackThread.join()
+            }
         }
     }
 
@@ -2550,8 +2619,21 @@ class MediaCodecDecoderRenderer(
                                          frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
                                          hostPresentationTimeUs, frameMetadata)
 
-    @Suppress("deprecation")
     private fun submitDecodeUnitWithMetadata(
+        decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
+        frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
+        receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
+        frameMetadata: ByteArray?,
+    ): Int = withCodecOperation {
+        submitDecodeUnitWithMetadataInternal(
+            decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber, frameType,
+            frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs, hostPresentationTimeUs,
+            frameMetadata,
+        )
+    } ?: MoonBridge.DR_OK
+
+    @Suppress("deprecation")
+    private fun submitDecodeUnitWithMetadataInternal(
         decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
         frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
         receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,

@@ -35,6 +35,7 @@ internal class FramePacingController(
 
     interface Callbacks {
         fun onFrameRendered()
+        fun withCodecOperation(action: (MediaCodec) -> Unit): Boolean
         fun onDecoderException(e: IllegalStateException): Boolean
         fun onCodecRecoveryCheck(flag: Int): Boolean
     }
@@ -147,7 +148,7 @@ internal class FramePacingController(
             try {
                 takeHostTarget(dropped)
                 if (dropped >= 0) {
-                    videoDecoder?.releaseOutputBuffer(dropped, false)
+                    callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(dropped, false) }
                 }
             } catch (_: IllegalStateException) {
                 // Buffer index may be stale after codec recovery
@@ -166,7 +167,7 @@ internal class FramePacingController(
         if (!outputBufferQueue.offer(bufferIndex)) {
             takeHostTarget(bufferIndex)
             try {
-                videoDecoder?.releaseOutputBuffer(bufferIndex, false)
+                callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(bufferIndex, false) }
             } catch (_: IllegalStateException) {
                 // Buffer index may be stale after codec recovery
             }
@@ -216,13 +217,13 @@ internal class FramePacingController(
                     adjustedTime -= 500_000_000L / refreshRate
                 }
                 try {
-                    videoDecoder?.releaseOutputBuffer(nextOutputBuffer, adjustedTime)
+                    callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(nextOutputBuffer, adjustedTime) }
                     lastRenderedFrameTimeNanos = adjustedTime
                     JitterMonitor.recordPresent(adjustedTime)
                     callbacks.onFrameRendered()
                 } catch (_: IllegalStateException) {
                     try {
-                        videoDecoder?.releaseOutputBuffer(nextOutputBuffer, false)
+                        callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(nextOutputBuffer, false) }
                     } catch (e: IllegalStateException) {
                         e.printStackTrace()
                         callbacks.onDecoderException(e)
@@ -357,7 +358,7 @@ internal class FramePacingController(
                 } else {
                     calculatePresentationTime(currentTime, vsyncOffsetNs, presentationDeadlineNs)
                 }
-            videoDecoder?.releaseOutputBuffer(nextOutputBuffer, presentationTimeNs)
+            callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(nextOutputBuffer, presentationTimeNs) }
             if (presentStats != null || JitterMonitor.enabled) {
                 // presentationTimeNs==0 表示立即呈现 → 用 currentTime snap 近似 SurfaceFlinger 落点
                 val effectivePresentNs = if (presentationTimeNs > 0) presentationTimeNs
