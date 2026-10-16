@@ -121,7 +121,7 @@
         android:focusable="true"
         android:background="@drawable/appview_focusable_entry_bg" />
 
-    <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示，不参与遥控器焦点导航。 -->
+    <!-- 常驻提示当前选择的显示器；仅用于信息展示，不参与遥控器焦点导航。 -->
     <TextView
         android:id="@+id/appViewTargetReminder"
         android:layout_width="match_parent"

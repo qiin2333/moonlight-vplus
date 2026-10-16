@@ -64,11 +64,13 @@ import com.limelight.ui.AppScreenCombinationOption
 import com.limelight.ui.AppSettingsPanel
 import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.ScreenCombinationModePickerView
+import com.limelight.ui.ScreenCombinationModeSpan
 import com.limelight.ui.SelectionIndicatorAnimator
 import com.limelight.ui.TopPanelHandleController
 import com.limelight.ui.VIRTUAL_DISPLAY_ID
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
+import com.limelight.ui.screenCombinationModeIconRes
 import com.limelight.ui.screenCombinationModeShortLabelRes
 import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.AppActionSheet
@@ -150,6 +152,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     private lateinit var uuidString: String
     private var computer: ComputerDetails? = null
     private lateinit var computerName: String
+    private var titleAppName: String? = null
     private var lastRawApplist: String? = null
     private var hasUsableAppList = false
     private var lastRunningAppId = 0
@@ -530,7 +533,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         val label = findViewById<TextView>(R.id.appListText)
         title = computerName
-        label.text = computerName
+        updateTitle(null)
         // 点击标题恢复串流
         label.setOnClickListener {
             LimeLog.info("Title clicked, lastRunningAppId=$lastRunningAppId")
@@ -655,30 +658,42 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     @SuppressLint("SetTextI18n")
     private fun updateTitle(appName: String?) {
+        titleAppName = appName
         val label = findViewById<TextView>(R.id.appListText)
         val hasRunningApp = lastRunningAppId != 0
         val arrow = if (hasRunningApp) " ▸" else ""
         updateResumeTitleInteractivity(label)
 
-        if (!appName.isNullOrEmpty()) {
-            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val separator = if (isLandscape) " - " else "\n"
-            val text = "$computerName$separator$appName$arrow"
+        val mode = selectedScreenCombinationMode.takeIf { it != -1 }
+        val icon = mode?.let { screenCombinationModeIconRes(it) }?.let { getDrawable(it)?.mutate() }
+        val prefix = if (icon != null) "\uFFFC\u00A0" else ""
+        val separator = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            " - "
+        } else {
+            "\n"
+        }
+        val appTitle = if (appName.isNullOrEmpty()) "" else "$separator$appName"
+        val text = "$prefix$computerName$appTitle$arrow"
+        val spannableString = SpannableString(text)
 
-            val spannableString = SpannableString(text)
-            val appNameStart = computerName.length + separator.length
-
+        if (appTitle.isNotEmpty()) {
+            val appNameStart = prefix.length + computerName.length + separator.length
             spannableString.setSpan(
                     RelativeSizeSpan(0.85f),
                     appNameStart,
                     text.length,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
-
-            label.text = spannableString
-        } else {
-            label.text = "$computerName$arrow"
         }
+        if (icon != null) {
+            spannableString.setSpan(ScreenCombinationModeSpan(icon), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        label.text = spannableString
+        val modeLabel = mode?.let { value ->
+            screenCombinationModeShortLabelRes(value)?.let { getString(it) }
+                ?: screenCombinationOptions.firstOrNull { it.value == value }?.label
+        }
+        label.contentDescription = listOfNotNull(modeLabel, text.removePrefix(prefix)).joinToString(", ")
     }
 
     private fun updateResumeTitleInteractivity(label: TextView) {
@@ -1236,18 +1251,12 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     }
 
     /**
-     * Shows only the launch-time options that differ from their defaults. This is
-     * deliberately non-focusable so it cannot add a stop to D-pad navigation.
+     * Refreshes the title's screen-mode icon and the non-focusable display reminder.
      */
     private fun updateAppViewTargetReminder() {
+        if (::computerName.isInitialized) updateTitle(titleAppName)
         if (!::appViewTargetReminder.isInitialized) return
 
-        val screenModeLabel = selectedScreenCombinationMode
-            .takeIf { it != -1 }
-            ?.let { mode ->
-                screenCombinationModeShortLabelRes(mode)?.let { getString(it) }
-                    ?: screenCombinationOptions.firstOrNull { it.value == mode }?.label
-            }
         val displayLabel = selectedDisplayId?.let { id ->
             if (id == VIRTUAL_DISPLAY_ID) {
                 getString(R.string.appview_display_selection_virtual)
@@ -1255,9 +1264,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 displayOptions.firstOrNull { it.id == id }?.label
             }
         }
-        val reminder = listOfNotNull(screenModeLabel, displayLabel)
-            .filter { it.isNotBlank() }
-            .joinToString("\n")
+        val reminder = displayLabel.orEmpty()
 
         appViewTargetReminder.text = reminder
         appViewTargetReminder.contentDescription = reminder.takeIf { it.isNotEmpty() }
