@@ -1,6 +1,5 @@
 package com.limelight.preferences
 
-import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -12,8 +11,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -39,17 +36,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -73,29 +66,20 @@ internal val PRESETS = listOf(
     Preset(3840, 2160, R.string.custom_resolution_tag_4k),
     Preset(3440, 1440, R.string.custom_resolution_tag_ultrawide),
     Preset(2560, 1440, R.string.custom_resolution_tag_2k),
-    Preset(1920, 1080, R.string.custom_resolution_tag_1080p),
-    Preset(1280, 720, R.string.custom_resolution_tag_720p),
-    Preset(854, 480, R.string.custom_resolution_tag_480p),
-    Preset(640, 360, R.string.custom_resolution_tag_360p)
+    Preset(1920, 1080, R.string.custom_resolution_tag_1080p)
 )
 
-internal val FRAME_RATE_PRESETS = listOf(30, 60, 120)
-
 @Composable
-internal fun ResolutionInputError.text(frameRateMode: Boolean = false): String = stringResource(
+internal fun ResolutionInputError.text(): String = stringResource(
     when (reason) {
         ResolutionInputReason.EMPTY ->
-            if (frameRateMode) {
-                R.string.custom_frame_rate_error_empty
-            } else if (field == ResolutionField.WIDTH) {
+            if (field == ResolutionField.WIDTH) {
                 R.string.custom_resolution_error_empty_width
             } else {
                 R.string.custom_resolution_error_empty_height
             }
         ResolutionInputReason.OUT_OF_RANGE ->
-            if (frameRateMode) {
-                R.string.custom_frame_rate_error_range
-            } else if (field == ResolutionField.WIDTH) {
+            if (field == ResolutionField.WIDTH) {
                 R.string.custom_resolution_error_range_width
             } else {
                 R.string.custom_resolution_error_range_height
@@ -113,11 +97,7 @@ internal fun ResolutionInputError.text(frameRateMode: Boolean = false): String =
 private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
     onPreviewKeyEvent { event ->
         val nativeEvent = event.nativeKeyEvent
-        if (nativeEvent.keyCode != KeyEvent.KEYCODE_BUTTON_A &&
-            nativeEvent.keyCode != KeyEvent.KEYCODE_DPAD_CENTER &&
-            nativeEvent.keyCode != KeyEvent.KEYCODE_ENTER &&
-            nativeEvent.keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER
-        ) {
+        if (nativeEvent.keyCode != KeyEvent.KEYCODE_BUTTON_A) {
             false
         } else {
             if (nativeEvent.action == KeyEvent.ACTION_UP) onConfirm()
@@ -125,12 +105,18 @@ private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
         }
     }
 
-/** 焦点指示跟随当前输入模式：触控不显示，手柄或键盘切回后立即显示。 */
+/** 焦点指示仅在手柄/键盘导航（非触摸模式）下显示，避免触摸打开时出现焦点框。 */
 @Composable
 private fun focusIndicationVisible(focused: Boolean): Boolean {
     val view = LocalView.current
-    val inputMode = LocalInputModeManager.current.inputMode
-    return focused && (inputMode == InputMode.Keyboard || !view.isInTouchMode)
+    var touchMode by remember(view) { mutableStateOf(view.isInTouchMode) }
+    DisposableEffect(view) {
+        val observer = view.viewTreeObserver
+        val listener = android.view.ViewTreeObserver.OnTouchModeChangeListener { touchMode = it }
+        observer.addOnTouchModeChangeListener(listener)
+        onDispose { observer.removeOnTouchModeChangeListener(listener) }
+    }
+    return focused && !touchMode
 }
 
 /**
@@ -148,11 +134,7 @@ private fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifie
     }
 
 @Composable
-internal fun DialogHeader(
-    frameRateMode: Boolean = false,
-    infoExpanded: Boolean,
-    onToggleInfo: () -> Unit
-) {
+internal fun DialogHeader(infoExpanded: Boolean, onToggleInfo: () -> Unit) {
     val accent = appAccentColor()
     val accentSoft = appAccentSoftColor()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -171,9 +153,7 @@ internal fun DialogHeader(
             )
         }
         Text(
-            text = stringResource(
-                if (frameRateMode) R.string.title_custom_fps else R.string.title_custom_resolutions
-            ),
+            text = stringResource(R.string.title_custom_resolutions),
             modifier = Modifier.weight(1f),
             color = colorResource(R.color.app_dialog_text_primary),
             fontSize = 17.sp,
@@ -282,7 +262,7 @@ internal fun Composer(
                 onImeAction = { heightFocus.requestFocus() },
                 focus = widthFocus,
                 downTarget = heightFocus,
-                rightTarget = heightFocus,
+                upTarget = widthFocus,
                 leftTarget = leftTarget,
                 modifier = Modifier.weight(1f)
             )
@@ -307,8 +287,7 @@ internal fun Composer(
                 focus = heightFocus,
                 downTarget = downFromHeight,
                 upTarget = widthFocus,
-                rightTarget = addFocus,
-                leftTarget = widthFocus,
+                leftTarget = leftTarget,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -364,13 +343,7 @@ internal fun Composer(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) { readout() }
             }
-            AddButton(
-                onAdd = onAdd,
-                focus = addFocus,
-                upTarget = heightFocus,
-                leftTarget = heightFocus,
-                downTarget = downFromHeight
-            )
+            AddButton(onAdd = onAdd, focus = addFocus, upTarget = heightFocus)
         }
     }
 }
@@ -386,16 +359,12 @@ private fun NumberField(
     onImeAction: () -> Unit,
     focus: FocusRequester,
     downTarget: FocusRequester,
-    upTarget: FocusRequester? = null,
-    rightTarget: FocusRequester? = null,
+    upTarget: FocusRequester,
     leftTarget: FocusRequester?,
     modifier: Modifier = Modifier
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val focusManager = LocalFocusManager.current
-    val hostView = LocalView.current
-    val inputModeManager = LocalInputModeManager.current
     val outline = colorResource(R.color.app_dialog_outline)
     val accent = appAccentColor()
     val danger = colorResource(R.color.app_action_sheet_danger)
@@ -433,48 +402,10 @@ private fun NumberField(
             interactionSource = interaction,
             modifier = Modifier
                 .focusRequester(focus)
-                .onPreviewKeyEvent { event ->
-                    val nativeEvent = event.nativeKeyEvent
-                    if (nativeEvent.keyCode == KeyEvent.KEYCODE_TAB) {
-                        if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
-                            val backward = nativeEvent.isShiftPressed
-                            val target = if (backward) leftTarget ?: upTarget else rightTarget ?: downTarget
-                            hostView.isFocusableInTouchMode = false
-                            inputModeManager.requestInputMode(InputMode.Keyboard)
-                            target?.requestFocus() ?: focusManager.moveFocus(
-                                if (backward) FocusDirection.Previous else FocusDirection.Next
-                            )
-                        }
-                        return@onPreviewKeyEvent true
-                    }
-                    val direction = when (nativeEvent.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
-                        KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
-                        KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
-                        else -> null
-                    }
-                    val target = when (direction) {
-                        FocusDirection.Up -> upTarget
-                        FocusDirection.Down -> downTarget
-                        FocusDirection.Left -> leftTarget
-                        FocusDirection.Right -> rightTarget
-                        else -> null
-                    }
-                    if (direction == null) {
-                        false
-                    } else {
-                        if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
-                            target?.requestFocus() ?: focusManager.moveFocus(direction)
-                        }
-                        true
-                    }
-                }
                 .focusProperties {
                     down = downTarget
-                    if (upTarget != null) up = upTarget
-                    if (leftTarget != null) left = leftTarget
-                    if (rightTarget != null) right = rightTarget
+                    up = upTarget
+                    left = leftTarget ?: FocusRequester.Default
                 },
             decorationBox = { innerTextField ->
                 Box(
@@ -503,13 +434,7 @@ private fun NumberField(
 }
 
 @Composable
-private fun AddButton(
-    onAdd: () -> Unit,
-    focus: FocusRequester,
-    upTarget: FocusRequester,
-    leftTarget: FocusRequester? = null,
-    downTarget: FocusRequester? = null
-) {
+private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusRequester) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
@@ -525,11 +450,7 @@ private fun AddButton(
     Row(
         modifier = Modifier
             .focusRequester(focus)
-            .focusProperties {
-                up = upTarget
-                if (leftTarget != null) left = leftTarget
-                if (downTarget != null) down = downTarget
-            }
+            .focusProperties { up = upTarget }
             .clip(CircleShape)
             .background(gradient)
             .then(
@@ -562,171 +483,10 @@ private fun AddButton(
 }
 
 @Composable
-internal fun FrameRateComposer(
-    fpsText: String,
-    onFpsChange: (String) -> Unit,
-    error: ResolutionInputError?,
-    fpsFocus: FocusRequester,
-    addFocus: FocusRequester,
-    downTarget: FocusRequester,
-    leftTarget: FocusRequester?,
-    onAdd: () -> Unit
-) {
-    val invalid = error != null
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            NumberField(
-                label = stringResource(R.string.title_fps_list),
-                value = fpsText,
-                onValueChange = onFpsChange,
-                placeholder = "60",
-                invalid = invalid,
-                imeAction = ImeAction.Done,
-                onImeAction = onAdd,
-                focus = fpsFocus,
-                downTarget = downTarget,
-                upTarget = fpsFocus,
-                rightTarget = addFocus,
-                leftTarget = leftTarget,
-                modifier = Modifier.weight(1f)
-            )
-            AddButton(
-                onAdd = onAdd,
-                focus = addFocus,
-                upTarget = fpsFocus,
-                leftTarget = fpsFocus,
-                downTarget = downTarget
-            )
-        }
-        if (error != null) {
-            Text(
-                text = error.text(frameRateMode = true),
-                color = colorResource(R.color.app_action_sheet_danger),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun FrameRatePresetRow(
-    nativeFrameRates: List<Int>,
-    focusFor: (Int) -> FocusRequester,
-    upTarget: FocusRequester,
-    onPreset: (Int) -> Unit
-) {
-    val values = (nativeFrameRates + FRAME_RATE_PRESETS).distinct().sorted()
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        values.forEachIndexed { index, fps ->
-            TextPresetChip(
-                label = fps.toString(),
-                focus = focusFor(index),
-                previous = values.getOrNull(index - 1)?.let { focusFor(index - 1) },
-                next = values.getOrNull(index + 1)?.let { focusFor(index + 1) },
-                upTarget = upTarget,
-                onClick = { onPreset(fps) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun TextPresetChip(
-    label: String,
-    focus: FocusRequester,
-    previous: FocusRequester?,
-    next: FocusRequester?,
-    upTarget: FocusRequester,
-    onClick: () -> Unit
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val showFocus = focusIndicationVisible(focused)
-    val outline = colorResource(R.color.app_dialog_outline)
-    val accent = appAccentColor()
-    Box(
-        modifier = Modifier
-            .focusRequester(focus)
-            .focusProperties {
-                up = upTarget
-                if (previous != null) left = previous
-                if (next != null) right = next
-            }
-            .onPreviewKeyEvent { event ->
-                val nativeEvent = event.nativeKeyEvent
-                if (nativeEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
-                val target = when (nativeEvent.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_LEFT -> previous
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> next
-                    KeyEvent.KEYCODE_DPAD_UP -> upTarget
-                    KeyEvent.KEYCODE_TAB -> if (nativeEvent.isShiftPressed) previous ?: upTarget else next
-                    else -> null
-                } ?: return@onPreviewKeyEvent false
-                target.requestFocus()
-                true
-            }
-            .clip(CircleShape)
-            .then(
-                focusHighlight(
-                    highlighted = showFocus,
-                    shape = CircleShape,
-                    fallback = Modifier.border(1.dp, outline, CircleShape)
-                )
-            )
-            .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
-            .padding(horizontal = 11.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = if (showFocus) accent else colorResource(R.color.app_dialog_text_secondary),
-            fontSize = 11.5.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun PresetRow(
-    nativePresets: List<Resolution>,
-    focusFor: (Int) -> FocusRequester,
-    upTarget: FocusRequester,
-    onPreset: (Preset) -> Unit
-) {
-    val nativeLabel = stringResource(R.string.resolution_prefix_native)
-    val presets = nativePresets.map { resolution ->
-        Preset(resolution.width, resolution.height, R.string.resolution_prefix_native)
-    } + PRESETS
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        val visiblePresets = presets.distinctBy { it.width to it.height }
-        visiblePresets.forEachIndexed { index, preset ->
-            val label = if (preset.labelRes == R.string.resolution_prefix_native) {
-                "$nativeLabel ${preset.width}×${preset.height}"
-            } else {
-                stringResource(preset.labelRes)
-            }
-            TextPresetChip(
-                label = label,
-                focus = focusFor(index),
-                previous = visiblePresets.getOrNull(index - 1)?.let { focusFor(index - 1) },
-                next = visiblePresets.getOrNull(index + 1)?.let { focusFor(index + 1) },
-                upTarget = upTarget,
-                onClick = { onPreset(preset) }
-            )
+internal fun PresetRow(onPreset: (Preset) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        PRESETS.forEach { preset ->
+            PresetChip(preset = preset, onClick = { onPreset(preset) })
         }
     }
 }
@@ -794,18 +554,16 @@ internal fun ResolutionList(
         return
     }
     LazyColumn(
-        modifier = modifier.fillMaxWidth().heightIn(max = 10_000.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        itemsIndexed(resolutions, key = { _, resolution -> "${resolution.width}x${resolution.height}" }) { index, resolution ->
+        items(resolutions, key = { "${it.width}x${it.height}" }) { resolution ->
             ResolutionRow(
                 resolution = resolution,
                 isJustAdded = justAdded == resolution,
                 compact = compact,
                 pixelsText = pixelsText,
                 focusRequester = focusFor(resolution),
-                upNeighbor = resolutions.getOrNull(index - 1)?.let(focusFor),
-                downNeighbor = resolutions.getOrNull(index + 1)?.let(focusFor),
                 rightNeighbor = rightNeighbor,
                 onDelete = onDelete
             )
@@ -820,8 +578,6 @@ private fun ResolutionRow(
     compact: Boolean,
     pixelsText: (Int) -> String,
     focusRequester: FocusRequester,
-    upNeighbor: FocusRequester?,
-    downNeighbor: FocusRequester?,
     rightNeighbor: FocusRequester?,
     onDelete: (Resolution) -> Unit
 ) {
@@ -840,22 +596,17 @@ private fun ResolutionRow(
     val bg by animateColorAsState(targetValue = targetBg, label = "rowBg")
     val targetBorder = if (showFocus || isJustAdded) accent else outline
     val borderColor by animateColorAsState(targetValue = targetBorder, label = "rowBorder")
-    val protectedFrameRate = resolution.height == 0 &&
-        resolution.width == CustomFrameRatesDialog.PROTECTED_FRAME_RATE
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(focusRequester)
-            .focusProperties {
-                if (upNeighbor != null) up = upNeighbor
-                if (downNeighbor != null) down = downNeighbor
-                right = deleteFocus
-            }
+            .focusProperties { right = deleteFocus }
             .clip(rowShape)
             .background(bg)
             .border(if (showFocus || isJustAdded) 1.5.dp else 1.dp, borderColor, rowShape)
-            .clickable(enabled = !protectedFrameRate) { deleteFocus.requestFocus() }
+            .handleGamepadConfirm { deleteFocus.requestFocus() }
+            .clickable { deleteFocus.requestFocus() }
             .focusable(interactionSource = interaction)
             .padding(
                 start = if (compact) 9.dp else 11.dp,
@@ -866,18 +617,15 @@ private fun ResolutionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp)
     ) {
-        val frameRate = resolution.height == 0
-        if (!frameRate) {
-            RatioGlyph(width = resolution.width, height = resolution.height)
-        }
+        RatioGlyph(width = resolution.width, height = resolution.height)
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (frameRate) "${resolution.width} FPS" else "${resolution.width}×${resolution.height}",
+                text = "${resolution.width}×${resolution.height}",
                 color = colorResource(R.color.app_dialog_text_primary),
                 fontSize = if (compact) 13.5.sp else 15.5.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (!compact && !frameRate) {
+            if (!compact) {
                 val pixels = pixelsText(resolution.width * resolution.height)
                 Text(
                     text = "${ratioText(resolution.width, resolution.height)} · $pixels",
@@ -886,7 +634,7 @@ private fun ResolutionRow(
                 )
             }
         }
-        if (!frameRate) resolutionTag(resolution.width, resolution.height)?.let { tagRes ->
+        resolutionTag(resolution.width, resolution.height)?.let { tagRes ->
             Box(
                 modifier = Modifier
                     .clip(AppShapes.extraSmall)
@@ -901,17 +649,13 @@ private fun ResolutionRow(
                 )
             }
         }
-        if (!protectedFrameRate) {
-            DeleteButton(
-                resolution = resolution,
-                focus = deleteFocus,
-                compact = compact,
-                rightNeighbor = rightNeighbor,
-                onDelete = onDelete
-            )
-        } else {
-            Spacer(Modifier.size(if (compact) 30.dp else 34.dp))
-        }
+        DeleteButton(
+            resolution = resolution,
+            focus = deleteFocus,
+            compact = compact,
+            rightNeighbor = rightNeighbor,
+            onDelete = onDelete
+        )
     }
 }
 
@@ -1004,12 +748,12 @@ internal fun FooterRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         FooterButton(
-            label = stringResource(R.string.game_menu_cancel).trim(),
+            label = stringResource(R.string.game_menu_cancel),
             onClick = onCancel
         )
         Spacer(Modifier.width(4.dp))
         FooterButton(
-            label = stringResource(R.string.custom_list_save),
+            label = stringResource(R.string.game_menu_ok),
             onClick = onConfirm
         )
     }
