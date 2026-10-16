@@ -2162,11 +2162,16 @@ class MediaCodecDecoderRenderer(
         }
     }
 
-    private fun blockCodecOperationsAndWait() {
-        var interrupted = false
+    private fun blockCodecOperations() {
         synchronized(codecOperationMonitor) {
             codecOperationsBlocked = true
             stopping = true
+        }
+    }
+
+    private fun waitForCodecOperations() {
+        var interrupted = false
+        synchronized(codecOperationMonitor) {
             while (activeCodecOperations != 0) {
                 try {
                     (codecOperationMonitor as Object).wait()
@@ -2176,6 +2181,13 @@ class MediaCodecDecoderRenderer(
             }
         }
         if (interrupted) Thread.currentThread().interrupt()
+    }
+
+    private fun stopCodecRecovery() {
+        synchronized(codecRecoveryMonitor) {
+            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+            (codecRecoveryMonitor as Object).notifyAll()
+        }
     }
 
     override fun start() {
@@ -2206,10 +2218,7 @@ class MediaCodecDecoderRenderer(
         framePacingController.prepareForStop()
 
         // Stop any active codec recovery operations
-        synchronized(codecRecoveryMonitor) {
-            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-            (codecRecoveryMonitor as Object).notifyAll()
-        }
+        stopCodecRecovery()
     }
 
     override fun stop() {
@@ -2238,10 +2247,15 @@ class MediaCodecDecoderRenderer(
     }
 
     override fun cleanup() {
-        // Block new producers first, then wait for any input/output operation already holding the
-        // codec. This makes cleanup safe even when it is called directly from extreme resume.
-        blockCodecOperationsAndWait()
+        // Stop pacing and cancel any pending codec recovery before waiting for active codec
+        // operations. An input operation may be waiting for pacing threads to quiesce; stopping
+        // those threads first would otherwise leave cleanup waiting forever.
+        blockCodecOperations()
         framePacingController.prepareForStop()
+        stopCodecRecovery()
+        // Wait for any input/output operation already holding the codec. This makes cleanup safe
+        // even when it is called directly from extreme resume.
+        waitForCodecOperations()
         framePacingController.joinThreads()
         rendererThread?.let { thread ->
             if (thread !== Thread.currentThread()) {
@@ -2633,13 +2647,26 @@ class MediaCodecDecoderRenderer(
         frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
         receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
         frameMetadata: ByteArray?,
-    ): Int = withCodecOperation {
-        submitDecodeUnitWithMetadataInternal(
-            decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber, frameType,
-            frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs, hostPresentationTimeUs,
-            frameMetadata,
-        )
-    } ?: MoonBridge.DR_OK
+    ): Int {
+        // PyroWave owns a separate decoder handle and intentionally has no MediaCodec instance.
+        // Keep it on its existing path instead of treating the absent videoDecoder as a rejected
+        // MediaCodec operation.
+        if (videoFormat == MoonBridge.VIDEO_FORMAT_PYROWAVE) {
+            return submitDecodeUnitWithMetadataInternal(
+                decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber, frameType,
+                frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs, hostPresentationTimeUs,
+                frameMetadata,
+            )
+        }
+
+        return withCodecOperation {
+            submitDecodeUnitWithMetadataInternal(
+                decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber, frameType,
+                frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs, hostPresentationTimeUs,
+                frameMetadata,
+            )
+        } ?: MoonBridge.DR_OK
+    }
 
     @Suppress("deprecation")
     private fun submitDecodeUnitWithMetadataInternal(
