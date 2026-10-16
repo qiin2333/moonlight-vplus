@@ -1845,13 +1845,18 @@ class MediaCodecDecoderRenderer(
      * renderer thread in startRendererThread() releases output buffers directly and does
      * not go through this method.
      */
-    private fun deliverDecodedFrame(decoder: MediaCodec, bufferIndex: Int, hostPtsUs: Long = -1L) {
+    private fun deliverDecodedFrame(
+        decoder: MediaCodec,
+        bufferIndex: Int,
+        hostPtsUs: Long = -1L,
+    ): (() -> Unit)? {
         if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED ||
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY ||
             prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC
         ) {
             // Buffered modes - queue for frame pacing controller
             framePacingController.offerOutputBuffer(bufferIndex, hostPtsUs)
+            return null
         } else {
             // Direct render modes (MIN_LATENCY, MAX_SMOOTHNESS, CAP_FPS)
             try {
@@ -1876,13 +1881,14 @@ class MediaCodecDecoderRenderer(
                 // 这里 release 已发出，SurfaceFlinger 会在下一次 vsync 合成；UI 层 dismiss 时再延一帧能避开缝隙。
                 if (!firstFrameDelivered) {
                     firstFrameDelivered = true
-                    try { firstFrameCallback?.invoke() } catch (_: Throwable) {}
                     requestFramegenOutputSurfaceSwitch("first released frame")
+                    return firstFrameCallback
                 }
             } catch (e: IllegalStateException) {
                 handleDecoderException(e)
             }
         }
+        return null
     }
 
     /**
@@ -1905,6 +1911,7 @@ class MediaCodecDecoderRenderer(
             }
 
             override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
+                var firstFrameCallbackToInvoke: (() -> Unit)? = null
                 withCodecOperation { decoder ->
                     numFramesOut++
                     hdr10PlusOutputObserver.observeOutput(codec, index, info.presentationTimeUs)
@@ -1926,8 +1933,9 @@ class MediaCodecDecoderRenderer(
                         }
                     }
 
-                    deliverDecodedFrame(decoder, index, hostPtsUs)
+                    firstFrameCallbackToInvoke = deliverDecodedFrame(decoder, index, hostPtsUs)
                 }
+                try { firstFrameCallbackToInvoke?.invoke() } catch (_: Throwable) {}
                 doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
             }
 
@@ -2186,6 +2194,7 @@ class MediaCodecDecoderRenderer(
     private fun stopCodecRecovery() {
         synchronized(codecRecoveryMonitor) {
             codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+            codecRecoveryThreadQuiescedFlags = 0
             (codecRecoveryMonitor as Object).notifyAll()
         }
     }
