@@ -102,6 +102,7 @@ class MediaCodecDecoderRenderer(
 
     private val context: Context = activity
     private val activity: Activity = activity
+    @Volatile
     private var videoDecoder: MediaCodec? = null
     @Volatile
     private var dolbyVisionRoutingActive = false
@@ -2032,6 +2033,14 @@ class MediaCodecDecoderRenderer(
         startTime = SystemClock.uptimeMillis()
 
         try {
+            // Decoder recovery and teardown can replace or clear the codec while a direct-submit
+            // decode callback is already in flight. Keep one snapshot for this operation so a
+            // concurrent clear becomes an IllegalStateException on the codec call (which is
+            // handled below) instead of an uncaught Kotlin `!!` NPE.
+            val decoder = videoDecoder ?: return reportDecoderUnavailable(
+                "Cannot fetch an input buffer without an active decoder"
+            )
+
             // If we don't have an input buffer index yet, fetch one now
             if (asyncModeEnabled) {
                 // Async mode: input buffers arrive via onInputBufferAvailable callback
@@ -2049,7 +2058,7 @@ class MediaCodecDecoderRenderer(
             } else {
                 // Sync mode: poll the decoder directly
                 while (nextInputBufferIndex < 0 && !stopping) {
-                    nextInputBufferIndex = videoDecoder!!.dequeueInputBuffer(5000)
+                    nextInputBufferIndex = decoder.dequeueInputBuffer(5000)
                 }
             }
 
@@ -2057,7 +2066,7 @@ class MediaCodecDecoderRenderer(
             if (nextInputBufferIndex >= 0) {
                 // Using the new getInputBuffer() API on Lollipop allows
                 // the framework to do some performance optimizations for us
-                nextInputBuffer = videoDecoder!!.getInputBuffer(nextInputBufferIndex)
+                nextInputBuffer = decoder.getInputBuffer(nextInputBufferIndex)
                 if (nextInputBuffer == null) {
                     // According to the Android docs, getInputBuffer() can return null "if the
                     // index is not a dequeued input buffer". I don't think this ever should
@@ -2105,6 +2114,18 @@ class MediaCodecDecoderRenderer(
         }
 
         return true
+    }
+
+    /**
+     * Convert a missing decoder into the renderer's normal failure path. This can happen when a
+     * direct-submit callback races a failed codec reconfiguration or stream teardown.
+     */
+    private fun reportDecoderUnavailable(reason: String): Boolean {
+        if (!stopping && codecRecoveryType.get() == CR_RECOVERY_TYPE_NONE) {
+            stopping = true
+            notifyCrashOnce(IllegalStateException(reason))
+        }
+        return false
     }
 
     override fun start() {
@@ -2170,9 +2191,13 @@ class MediaCodecDecoderRenderer(
         destroyPyrowaveDecoder()
         currentHdrMetadata = null
         dolbyVisionRoutingActive = false
-        if (videoDecoder != null) {
+        nextInputBufferIndex = -1
+        nextInputBuffer = null
+        val decoder = videoDecoder
+        videoDecoder = null
+        if (decoder != null) {
             try {
-                videoDecoder!!.release()
+                decoder.release()
             } catch (e: Exception) {
                 // Ignore exceptions during shutdown
                 LimeLog.warning("Exception during decoder release: " + e.message)
@@ -2401,6 +2426,10 @@ class MediaCodecDecoderRenderer(
         val codecRecovered: Boolean
 
         try {
+            val decoder = videoDecoder ?: return reportDecoderUnavailable(
+                "Cannot queue an input buffer without an active decoder"
+            )
+
             // Record the enqueue time for this timestamp
             recordQueuedTimestamp(timestampUs, codecFlags, hostPresentationTimeUs)
 
@@ -2416,7 +2445,7 @@ class MediaCodecDecoderRenderer(
                         nextInputBuffer!!.flip()
                         mapped.put(nextInputBuffer!!)
 
-                        videoDecoder!!.getQueueRequest(nextInputBufferIndex)
+                        decoder.getQueueRequest(nextInputBufferIndex)
                             .setLinearBlock(block, 0, dataSize)
                             .setPresentationTimeUs(timestampUs)
                             .setFlags(codecFlags)
@@ -2429,13 +2458,13 @@ class MediaCodecDecoderRenderer(
                     LimeLog.warning("LinearBlock failed, falling back: " + e.message)
                     linearBlockEnabled = false
                     nextInputBuffer!!.flip()
-                    videoDecoder!!.queueInputBuffer(
+                    decoder.queueInputBuffer(
                         nextInputBufferIndex,
                         0, nextInputBuffer!!.limit(), timestampUs, codecFlags
                     )
                 }
             } else {
-                videoDecoder!!.queueInputBuffer(
+                decoder.queueInputBuffer(
                     nextInputBufferIndex,
                     0, nextInputBuffer!!.position(),
                     timestampUs, codecFlags
