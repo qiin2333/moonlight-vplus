@@ -1550,6 +1550,12 @@ class MediaCodecDecoderRenderer(
 
         // We need some sort of recovery, so quiesce all threads before starting that
         synchronized(codecRecoveryMonitor) {
+            // Cleanup may cancel recovery after the fast-path check above but before this
+            // thread acquires the monitor. Do not add a stale quiescence flag in that case.
+            if (codecRecoveryType.get() == CR_RECOVERY_TYPE_NONE) {
+                return false
+            }
+
             if (!framePacingController.hasActiveTimingThread()) {
                 // If we have no frame pacing thread, mark it as quiesced right now.
                 codecRecoveryThreadQuiescedFlags = codecRecoveryThreadQuiescedFlags or CR_FLAG_CHOREOGRAPHER
