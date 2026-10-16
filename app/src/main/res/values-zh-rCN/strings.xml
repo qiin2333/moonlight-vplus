@@ -171,8 +171,6 @@
     <string name="game_menu_bitrate_adjustment_success">码率调整成功至 %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
-    <string name="custom_list_save">保存</string>
-    <string name="game_menu_apply_display">应用</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
     <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
@@ -224,29 +222,22 @@
     <string name="custom_resolution_error_empty_width">请输入宽度</string>
     <string name="custom_resolution_error_empty_height">请输入高度</string>
     <string name="custom_resolution_error_range_width">宽度需在 320–7680 之间</string>
-    <string name="custom_frame_rate_error_empty">请输入帧率</string>
-    <string name="custom_frame_rate_error_range">帧率需在 1–500 之间</string>
     <string name="custom_resolution_error_range_height">高度需在 240–4320 之间</string>
     <string name="custom_resolution_error_even_width">宽度必须为偶数</string>
     <string name="custom_resolution_error_even_height">高度必须为偶数</string>
     <string name="custom_resolution_empty_title">还没有自定义分辨率</string>
     <string name="custom_resolution_empty_hint">在上方输入宽和高，或点一个预设快速填入</string>
     <string name="custom_resolution_tag_ultrawide">带鱼屏</string>
-    <string name="custom_resolution_tag_720p">720p</string>
-    <string name="custom_resolution_tag_480p">480p</string>
-    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_portrait">竖屏</string>
     <string name="custom_resolution_delete_contentdesc">删除 %1$d×%2$d</string>
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
-    <string name="title_custom_fps">自定义帧率</string>
     <string name="title_seekbar_bitrate">串流码率</string>
-    <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
-    <string name="title_adaptive_bitrate">智能码率</string>
-    <string name="summary_adaptive_bitrate">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策，不支持时回退到客户端本地控制器。</string>
-    <string name="game_menu_adaptive_bitrate_tip">根据丢包/延迟自动调节码率，优先由 Sunshine 服务端决策。智能码率从基准码率开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
-    <string name="title_abr_mode">智能码率模式</string>
-    <string name="summary_abr_mode">画质优先：偏向高码率；低延迟：丢包时降档更快。</string>
+    <string name="summary_seekbar_bitrate">提高码率可改善画质，也会增加带宽消耗。</string>
+    <string name="title_adaptive_bitrate">自动调整码率（ABR）</string>
+    <string name="summary_adaptive_bitrate">根据网络状况调整视频码率，可与丢包保护独立使用。</string>
+    <string name="title_abr_mode">码率调整偏好</string>
+    <string name="summary_abr_mode">选择画质与响应速度之间的取舍。</string>
     <string name="abr_mode_quality">画质优先</string>
     <string name="abr_mode_balanced">均衡</string>
     <string name="abr_mode_low_latency">低延迟</string>
@@ -286,7 +277,7 @@
     <string name="title_checkbox_touch_keyboard_auto_invoke">自动弹出电脑触摸键盘</string>
     <string name="summary_checkbox_touch_keyboard_auto_invoke">启用后，串流的电脑在文本框获得焦点时会自动弹出其触摸键盘（需要带有虚拟触摸屏的 Sunshine 主机）。</string>
     <string name="title_checkbox_remote_ime_auto_show">远程文本框自动弹出本地键盘</string>
-    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 13 及以上）。画面上的笔划仍作为远程输入发送。</string>
+    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 11 及以上）。画面上的笔划仍作为远程输入发送。</string>
 
     <string name="title_seekbar_long_press_flat_region">长按防抖半径</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半径内时持续发送初始位置，以减少全屏长按抖动；设为 0 则关闭。</string>
@@ -546,7 +537,7 @@
     <string name="title_disable_frame_drop"> 永不掉帧 </string>
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟。 </string>
     <string name="title_video_format">视频编解码器</string>
-    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
+    <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR；PyroWave 会在兼容的 Sunshine 主机上使用实验性 Vulkan 路径，颜色范围跟随当前设置，并且不支持帧生成。</string>
     <string name="title_enable_hdr">启用 HDR</string>
     <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用屏幕最高亮度</string>
@@ -580,7 +571,7 @@
     <string name="pcview_theme_applied">主题已切换为%1$s</string>
 
     <string name="pcview_press_back_again_to_exit">再按一次返回键退出</string>
-    <string name="title_enable_host_cadence_precise_sync">精确同步更顺滑</string>
+    <string name="title_enable_host_cadence_precise_sync">主机帧节奏增强</string>
     <string name="summary_enable_host_cadence_precise_sync">网络稳定时可减少规律性小卡顿，90/120 FPS 下更容易感觉到。可能增加约 1-3 ms 延迟。</string>
     <string name="title_perf_overlay_orientation">性能统计布局</string>
     <string name="summary_perf_overlay_orientation">选择横向单行或纵向单列。</string>
@@ -638,7 +629,7 @@
     <string name="pcview_menu_header_unknown">刷新中</string>
     <string name="pcview_menu_header_offline">离线</string>
     <string name="pcview_menu_header_online">在线</string>
-    <string name="resolution_prefix_native">原生</string>
+    <string name="resolution_prefix_native">本地</string>
     <string name="text_native_res_dialog">流媒体服务器可能不支持原始分辨率或者 FPS。您可能需要手动为主机配置匹配的自定义显示模式。
 \n
 \n如果您选择在 NVIDIA 控制面板中创建与屏幕设置相匹配的自定义分辨率，请确保您已阅读并理解 NVIDIA 关于显示器可能损坏、电脑不稳定和其他潜在问题的警告。
@@ -646,7 +637,7 @@
 \n我们不对因在电脑上创建自定义分辨率而导致的任何问题负责。
 \n
 \n您的显示器可能不支持必要的显示配置。如果是这样，您可以尝试设置虚拟显示器。最后，如果您的设备或主机不支持以特定分辨率或刷新率进行流式传输，那就很不幸了。</string>
-    <string name="title_native_res_dialog">原生分辨率警告</string>
+    <string name="title_native_res_dialog">本地分辨率警告</string>
     <string name="applist_menu_hide_app">隐藏游戏</string>
     <string name="check_ports_msg">请检查您的防火墙和端口转发规则中的端口：</string>
     <string name="early_termination_error">开始串流时您的主机电脑出了点问题。
@@ -668,8 +659,8 @@
     <string name="videoformat_pyrowave">PyroWave（实验性，不支持帧生成）</string>
     <string name="videoformat_hevcalways">首选 HEVC</string>
     <string name="title_frame_pacing">串流帧节奏</string>
-    <string name="pacing_balanced">平衡</string>
-    <string name="pacing_smoothness">优先视频流畅度（可能会显著增大延迟）</string>
+    <string name="pacing_balanced">平衡（兼顾延迟与流畅）</string>
+    <string name="pacing_smoothness">流畅优先（延迟可能更高）</string>
     <string name="summary_setup_guide">查看有关如何设置游戏电脑以进行流传输的说明。</string>
     <string name="title_privacy_policy">隐私政策</string>
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策。</string>
@@ -715,10 +706,10 @@
     <string name="title_setup_guide">安装向导</string>
     <string name="title_troubleshooting">解决方案向导</string>
     <string name="summary_troubleshooting">查看有关诊断和修复常见流传输问题的提示。</string>
-    <string name="summary_frame_pacing">指定如何平衡视频延迟和流畅度。</string>
-    <string name="pacing_balanced_alt">有FPS限制的平衡</string>
-    <string name="pacing_latency">优先最低延迟</string>
-    <string name="pacing_experimental_low_latency">实验性超低延迟</string>
+    <string name="summary_frame_pacing">选择视频帧的呈现节奏。精准帧节奏可结合视频时间戳（PTS）恢复帧间隔，大多数设备建议使用。</string>
+    <string name="pacing_balanced_alt">限制输出帧率（不超过屏幕刷新率）</string>
+    <string name="pacing_latency">低延迟（优先响应速度）</string>
+    <string name="pacing_experimental_low_latency">超低延迟（实验性）</string>
 
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
@@ -784,7 +775,7 @@
     <string name="title_checkbox_mic_voice_enhancement">人声增强</string>
     <string name="summary_checkbox_mic_voice_enhancement">减少低频噪声并提升语音清晰度，可用于固定增益和音量平衡模式。</string>
     <string name="title_checkbox_reduce_refresh_rate">允许使用较低的屏幕刷新率</string>
-    <string name="summary_checkbox_reduce_refresh_rate">仅用于“平衡”帧节奏。匹配串流的较低刷新率可以省电，但可能增加视频延迟。</string>
+    <string name="summary_checkbox_reduce_refresh_rate">仅用于“平衡”模式。匹配串流的较低屏幕刷新率可以省电，但可能增加视频延迟。</string>
     <string name="frame_conversion_error">主机 PC 报告了致命的视频编码错误。
 \n
 \n尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</string>
@@ -925,16 +916,16 @@
 
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">交换串流宽度和高度</string>
-    <string name="summary_checkbox_reverse_resolution">交换所选分辨率的宽高后向主机请求，仅用于竖屏或特殊显示布局。</string>
+    <string name="summary_checkbox_reverse_resolution">仅在画面方向或宽高显示异常时开启；开启后可能与“跟随设备旋转”冲突。</string>
     <string name="title_checkbox_rotable_screen">跟随设备旋转</string>
-    <string name="summary_checkbox_rotable_screen">本机方向变化时同步旋转串流布局。</string>
+    <string name="summary_checkbox_rotable_screen">在设备切换竖屏或横屏时自动同步旋转串流布局。</string>
 
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 串流小课堂：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
-    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
+    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以保存当前背景图片。</string>
     <string name="tip_long_press_controller">💡 串流小课堂：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
     <string name="tip_volume_keys">💡 串流小课堂：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
     <string name="tip_wallpaper_change">💡 串流小课堂：壁纸API选项可以设置随机壁纸来源的API，也可以是单张图片地址哦</string>
@@ -1125,8 +1116,8 @@
     <string name="image_download_failed_with_error">图片下载失败: %1$s</string>
     <string name="image_not_loaded_please_retry">图片未加载，请稍后再试</string>
     <string name="image_invalid">图片无效</string>
-    <string name="image_saved_successfully">涩图成功保存到了系统目录(Picture/setu)</string>
-    <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
+    <string name="image_saved_successfully">图片成功保存到：Picture/vplus</string>
+    <string name="image_save_failed_with_error">图片保存失败：%1$s</string>
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">场景%1$d未配置</string>
@@ -1187,8 +1178,6 @@
     <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
 
     <string name="game_menu_change_resolution">更改分辨率</string>
-    <string name="game_menu_display_settings">显示设置</string>
-    <string name="game_menu_display_summary">%1$s · %2$s</string>
     <string name="game_menu_resolution_current">%1$s（当前）</string>
     <string name="game_menu_resolution_custom">%1$s（自定义）</string>
     <string name="game_menu_resolution_custom_current">%1$s（自定义、当前）</string>
@@ -1552,7 +1541,7 @@
     <string name="settings_search_match_separator">、</string>
     <string name="no_app_found_for_streaming">未找到可串流的应用</string>
     <string name="notification_icon">通知图标</string>
-    <string name="pacing_precise_sync">精确同步（推荐）</string>
+    <string name="pacing_precise_sync">精准帧节奏（推荐）</string>
     <string name="summary_checkbox_control_only">仅建立控制流连接，不传输音视频流。适用于远程输入控制场景。需要 Sunshine 服务端支持仅控制模式。</string>
     <string name="summary_checkbox_enable_background_audio">隐藏整个窗口并在后台播放音频，可一边使用其他应用一边收听。</string>
     <string name="title_checkbox_control_only">仅控制模式</string>
@@ -2232,7 +2221,7 @@
     <string name="dualsense_output_mode_wireless_bridge">外置 USB 蓝牙桥接</string>
     <string name="dualsense_output_mode_both">同时使用两种输出路径</string>
     <string name="title_seekbar_bitrate_baseline">基准码率</string>
-    <string name="summary_seekbar_bitrate_baseline">智能码率从此数值开始，并围绕它动态调整；最低和最高范围由所选智能码率模式决定。</string>
+    <string name="summary_seekbar_bitrate_baseline">自动调整从此基准开始，在所选偏好的范围内变化。</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">启用音频直通时不可用，因为直通会绕过系统音频效果。</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">启用音频直通时不可用，因为直通会绕过 Android 空间音频。</string>
     <string name="title_decoder_input_buffer_mode">解码输入缓冲区</string>
@@ -2268,6 +2257,7 @@
     <string name="waveform_test_cancel">停止触觉测试</string>
     <string name="title_host_gamepad_selection">主机虚拟手柄</string>
     <string name="summary_host_gamepad_selection">选择向 Sunshine 请求的手柄类型，对所有玩家生效。自动模式会为已识别的波形手柄或屏幕触摸板请求 DS5。更改后重新串流。</string>
+    <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string name="title_pyrowave_capability_diagnostic">PyroWave 能力检测</string>
     <string name="summary_pyrowave_capability_diagnostic">查看 Vulkan 能力及当前 PyroWave 解码器所需条件。</string>
     <string name="pyrowave_diag_loading">正在检测 PyroWave 能力…</string>
@@ -2318,5 +2308,4 @@
     <string name="summary_fec_fixed">客户端指定比例优先于兼容主机的 FEC 设置，下次连接生效。</string>
     <string name="numeric_parameter_range">请输入 %1$s–%2$s %3$s 内的有效数值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>
-    <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
 </resources>
