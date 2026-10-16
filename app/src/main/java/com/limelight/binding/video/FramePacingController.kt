@@ -217,10 +217,13 @@ internal class FramePacingController(
                     adjustedTime -= 500_000_000L / refreshRate
                 }
                 try {
-                    callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(nextOutputBuffer, adjustedTime) }
-                    lastRenderedFrameTimeNanos = adjustedTime
-                    JitterMonitor.recordPresent(adjustedTime)
-                    callbacks.onFrameRendered()
+                    if (callbacks.withCodecOperation { decoder ->
+                            decoder.releaseOutputBuffer(nextOutputBuffer, adjustedTime)
+                        }) {
+                        lastRenderedFrameTimeNanos = adjustedTime
+                        JitterMonitor.recordPresent(adjustedTime)
+                        callbacks.onFrameRendered()
+                    }
                 } catch (_: IllegalStateException) {
                     try {
                         callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(nextOutputBuffer, false) }
@@ -358,7 +361,11 @@ internal class FramePacingController(
                 } else {
                     calculatePresentationTime(currentTime, vsyncOffsetNs, presentationDeadlineNs)
                 }
-            callbacks.withCodecOperation { decoder -> decoder.releaseOutputBuffer(nextOutputBuffer, presentationTimeNs) }
+            if (!callbacks.withCodecOperation { decoder ->
+                    decoder.releaseOutputBuffer(nextOutputBuffer, presentationTimeNs)
+                }) {
+                return
+            }
             if (presentStats != null || JitterMonitor.enabled) {
                 // presentationTimeNs==0 表示立即呈现 → 用 currentTime snap 近似 SurfaceFlinger 落点
                 val effectivePresentNs = if (presentationTimeNs > 0) presentationTimeNs
