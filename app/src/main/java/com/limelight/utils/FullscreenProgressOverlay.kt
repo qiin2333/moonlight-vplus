@@ -31,7 +31,6 @@ class FullscreenProgressOverlay(
     private val random = Random()
     private val backgroundMode = AppBackgroundMode.read(activity)
     private var isShowing = false
-    private var reconnectBackdrop: Bitmap? = null
     private var posterRequestSerial = 0
     var computer: ComputerDetails? = null
 
@@ -90,7 +89,7 @@ class FullscreenProgressOverlay(
                 isShowing = true
 
                 applySoftColorFallback()
-                reconnectBackdrop?.let { applyPoster(it) } ?: loadAppImage()
+                loadAppImage()
             }
         }
     }
@@ -120,9 +119,8 @@ class FullscreenProgressOverlay(
 
         activity.runOnUiThread {
             if (poster != null) {
-                reconnectBackdrop = poster
                 applyPoster(poster)
-            } else if (reconnectBackdrop == null) {
+            } else {
                 applyMissingPoster()
             }
         }
@@ -177,7 +175,6 @@ class FullscreenProgressOverlay(
                         overlayView.alpha = 1f
                         appPosterBackgroundBlur.setImageDrawable(null)
                         appPosterBackgroundClear.setImageDrawable(null)
-                        reconnectBackdrop = null
                         if (overlayView.parent != null) {
                             rootView.removeView(overlayView)
                         }
@@ -194,7 +191,7 @@ class FullscreenProgressOverlay(
         val curComputer = computer ?: return
         val cached = AppIconCache.instance.getFullIcon(curComputer, curApp)
         if (cached != null) {
-            if (reconnectBackdrop == null) applyPoster(cached)
+            applyPoster(cached)
             return
         }
 
@@ -213,7 +210,7 @@ class FullscreenProgressOverlay(
             } ?: return@Thread
             AppIconCache.instance.putFullIcon(curComputer, curApp, bitmap)
             activity.runOnUiThread {
-                if (isShowing && reconnectBackdrop == null) applyPoster(bitmap)
+                if (isShowing) applyPoster(bitmap)
             }
         }, "OverlayPosterLoader").start()
     }

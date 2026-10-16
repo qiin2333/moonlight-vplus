@@ -27,7 +27,6 @@ internal data class GameMenuComposeUiState(
     val quickActions: List<GameMenuQuickAction>,
     val visibleCards: GameMenuVisibleCards,
     val bitrate: BitrateCardState,
-    val displayDraft: DisplaySettingsDraft,
     val audioHaptics: AudioHapticsCardState,
     val waveformHaptics: WaveformHapticsCardState,
     val gyro: GyroCardState,
@@ -38,16 +37,13 @@ internal data class GameMenuComposeUiState(
     val quickEditMode: Boolean = false,
     val usbForwardingEnabled: Boolean = false,
     val isSubmenu: Boolean = false,
-    val pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD,
-    val pageGeneration: Int = 0,
-    val controllerNavigationActive: Boolean = false
+    val pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
 )
 
 internal enum class GameMenuPageLayout {
     STANDARD,
     TOUCH_MODE,
-    MICROPHONE,
-    DISPLAY_SETTINGS
+    MICROPHONE
 }
 
 enum class GameMenuOptionPresentation {
@@ -103,7 +99,6 @@ internal data class GameMenuCallbacks(
     val onCrownToggle: () -> Unit,
     val onEditOpacity: (GameMenuOpacityAnchor) -> Unit,
     val onOptionClick: (GameMenu.MenuOption) -> Unit,
-    val onTouchInteraction: () -> Unit = {},
     val onInlineToggle: (GameMenu.InlineControl.Toggle) -> Unit,
     val onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     val onEmptySuperCommandClick: () -> Unit,
@@ -115,17 +110,7 @@ internal data class GameMenuCallbacks(
     val onEditCards: () -> Unit,
     val onBitrateProgress: (Float) -> Boolean,
     val onBitrateApply: () -> Unit,
-    val onBitrateAdaptive: (Boolean) -> Unit,
-    val onAbrMode: (String) -> Unit,
     val onBitrateHapticMode: () -> Unit,
-    val onOpenDisplaySettings: () -> Unit = {},
-    val onSelectResolution: (String) -> Unit = {},
-    val onSelectFrameRate: (String) -> Unit = {},
-    val onSelectScreenMode: (String) -> Unit = {},
-    val onApplyDisplaySettings: () -> Unit = {},
-    val onCancelDisplaySettings: () -> Unit = {},
-    val onEditCustomResolutions: () -> Unit = {},
-    val onEditCustomFrameRates: () -> Unit = {},
     val onAudioHapticsEnabled: (Boolean) -> Unit,
     val onAudioHapticsStrength: (Float) -> Boolean,
     val onAudioHapticsStrengthFinished: () -> Unit,

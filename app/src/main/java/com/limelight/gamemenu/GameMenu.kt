@@ -55,9 +55,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
-import com.limelight.preferences.activeCustomDialogController
-import com.limelight.preferences.CustomFrameRatesDialog
-import com.limelight.preferences.CustomResolutionsDialog
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
@@ -186,15 +184,12 @@ class GameMenu(
     private var activeChildDismissKeyHandler: ((KeyEvent) -> Boolean)? = null
     private var activeComposeView: ComposeView? = null
     private var parentFocusRestoreRequestState: MutableIntState? = null
-    private var hardwareFocusRequestState: MutableIntState? = null
     private var composeUiState: MutableState<GameMenuComposeUiState>? = null
     private val guideDismissController = GameMenuGuideDismissController()
     // 标志：上一次运行的选项是否打开了子菜单（由 showSubMenu 设置）
     private var lastActionOpenedSubmenu = false
     // 菜单历史栈，用于二级/多级菜单的回退
     private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
-    private var displaySettingsPage: DisplaySettingsPage? = null
-    private var lastControllerNavigationAt = 0L
     private val handler = Handler(Looper.getMainLooper())
     private data class HeldControllerDirection(
         val targetDialog: Dialog,
@@ -241,18 +236,7 @@ class GameMenu(
             activeAxisRepeatCount++
             val now = SystemClock.uptimeMillis()
             dialog.dispatchKeyEvent(
-                KeyEvent(
-                    activeAxisDownTime,
-                    now,
-                    KeyEvent.ACTION_DOWN,
-                    keyCode,
-                    activeAxisRepeatCount,
-                    0,
-                    activeAxisSourceId ?: 0,
-                    0,
-                    0,
-                    InputDevice.SOURCE_JOYSTICK
-                )
+                KeyEvent(activeAxisDownTime, now, KeyEvent.ACTION_DOWN, keyCode, activeAxisRepeatCount)
             )
             handler.postDelayed(this, AXIS_REPEAT_INTERVAL_MS)
         }
@@ -333,9 +317,7 @@ class GameMenu(
                     val currentTarget = currentInputDialog() ?: return false
                     heldControllerDirections[identity] = HeldControllerDirection(
                         targetDialog = currentTarget,
-                        downEvent = KeyEvent(event).apply {
-                            source = event.source
-                        }
+                        downEvent = KeyEvent(event)
                     )
                     startControllerDirectionRepeat(identity)
                     currentTarget
@@ -376,7 +358,6 @@ class GameMenu(
     }
 
     private fun dispatchControllerKeyEventToOwner(dialog: Dialog, event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) rememberControllerNavigation(event)
         if (dialog === activeChildDialog) {
             if (!dialog.isShowing) return true
             if (activeChildDismissKeyHandler?.invoke(event) == true) return true
@@ -441,7 +422,6 @@ class GameMenu(
         if (transition.pressedKeyCode != null &&
             canActivateGameMenuAxisSource(activeAxisSourceId, sourceId)
         ) {
-            rememberControllerNavigationForNavigation()
             activateAxisSource(sourceId, transition.pressedKeyCode, dialog)
         } else if (activeAxisSourceId == sourceId) {
             releaseActiveAxisKey()
@@ -487,18 +467,7 @@ class GameMenu(
         activeAxisDownTime = SystemClock.uptimeMillis()
         activeAxisRepeatCount = 0
         dialog.dispatchKeyEvent(
-            KeyEvent(
-                activeAxisDownTime,
-                activeAxisDownTime,
-                KeyEvent.ACTION_DOWN,
-                keyCode,
-                0,
-                0,
-                sourceId,
-                0,
-                0,
-                InputDevice.SOURCE_JOYSTICK
-            )
+            KeyEvent(activeAxisDownTime, activeAxisDownTime, KeyEvent.ACTION_DOWN, keyCode, 0)
         )
         handler.postDelayed(axisRepeatRunnable, AXIS_REPEAT_INITIAL_DELAY_MS)
     }
@@ -634,8 +603,7 @@ class GameMenu(
     private data class MenuPage(
         val title: String,
         val options: List<MenuOption>,
-        val layout: GameMenuPageLayout = GameMenuPageLayout.STANDARD,
-        val generation: Int = 0
+        val layout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
     )
 
     /**
@@ -964,7 +932,6 @@ class GameMenu(
     private fun rebuildAndReplaceMenu() {
         activeDialog ?: return
 
-        displaySettingsPage = null
         menuStack.clear()
 
         val normalOptions = mutableListOf<MenuOption>()
@@ -983,10 +950,6 @@ class GameMenu(
 
     private fun refreshCurrentMenuPage() {
         if (composeUiState?.value?.pageLayout == GameMenuPageLayout.MICROPHONE) {
-            return
-        }
-        if (displaySettingsPage != null) {
-            showDisplaySettings(displaySettingsPage)
             return
         }
         if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
@@ -1131,76 +1094,63 @@ class GameMenu(
         game.controllerHandler.playDeviceTouchHaptic(motor, motor, durationMs)
     }
 
-    private fun refreshOpenDisplaySettings() {
-        bitrateCardController.refreshDisplayChoices()
-        composeUiState?.let { state ->
-            state.value = state.value.copy(
-                bitrate = bitrateCardController.snapshot(),
-                displayDraft = bitrateCardController.displayDraft()
-            )
-        }
-    }
+    /**
+     * 显示分辨率选择菜单
+     */
+    private fun showResolutionMenu() {
+        val options = mutableListOf<MenuOption>()
+        val currentResStr = "${game.prefConfig.width}x${game.prefConfig.height}"
+        val prefs = PreferenceManager.getDefaultSharedPreferences(game)
+        val showLowResolutionPresets = prefs.getBoolean(
+            PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
+            false
+        ) || PreferenceConfiguration.isLowResolutionPreset(currentResStr)
 
-    private fun showDisplaySettings(page: DisplaySettingsPage? = DisplaySettingsPage.ROOT) {
-        val target = page ?: DisplaySettingsPage.ROOT
-        if (target == DisplaySettingsPage.ROOT) {
-            displaySettingsPage = target
-            showSubMenu(
-                getString(R.string.game_menu_display_settings),
-                emptyArray(),
-                GameMenuPageLayout.DISPLAY_SETTINGS
-            )
-            return
-        }
-        val state = bitrateCardController.snapshot()
-        val entries = when (target) {
-            DisplaySettingsPage.RESOLUTION ->
-                DisplaySettingsMenu.choices(target, state.resolutions)
-            DisplaySettingsPage.FRAME_RATE ->
-                DisplaySettingsMenu.choices(target, state.frameRates)
-            else -> emptyList()
-        }
-        val title = when (target) {
-            DisplaySettingsPage.RESOLUTION -> getString(R.string.title_resolution_list)
-            DisplaySettingsPage.FRAME_RATE -> getString(R.string.title_fps_list)
-            else -> getString(R.string.game_menu_display_settings)
-        }
-        val replaceCurrent = displaySettingsPage == target
-        val currentGeneration = composeUiState?.value?.pageGeneration ?: 0
-        displaySettingsPage = target
-        showSubMenu(
-            title,
-            entries.map(::displaySettingsOption).toTypedArray(),
-            replaceCurrent = replaceCurrent,
-            pageGeneration = if (replaceCurrent) currentGeneration else 0
-        )
-    }
-
-    private fun displaySettingsOption(entry: DisplaySettingsEntry): MenuOption {
-        return MenuOption(
-            label = entry.label,
-            isWithGameFocus = false,
-            runnable = Runnable { runDisplaySettingsEntry(entry) },
-            iconKey = null,
-            isShowIcon = false,
-            isKeepDialog = true,
-            subtitle = entry.description ?: entry.value,
-            showChevron = entry.page != null && entry.choiceValue == null || entry.opensCustomResolutions,
-            selected = entry.selected
-        )
-    }
-
-    private fun runDisplaySettingsEntry(entry: DisplaySettingsEntry) {
-        when {
-            entry.opensCustomResolutions -> showCustomDisplayEditor(frameRate = false)
-            entry.choiceValue != null -> when (entry.page) {
-                DisplaySettingsPage.RESOLUTION -> bitrateCardController.stageResolution(entry.choiceValue)
-                DisplaySettingsPage.FRAME_RATE -> bitrateCardController.stageFrameRate(entry.choiceValue)
-                DisplaySettingsPage.SCREEN -> bitrateCardController.stageScreenMode(entry.choiceValue)
-                else -> Unit
+        // 预设分辨率
+        for (res in PreferenceConfiguration.RESOLUTIONS) {
+            if (!showLowResolutionPresets && PreferenceConfiguration.isLowResolutionPreset(res)) {
+                continue
             }
-            entry.page != null -> showDisplaySettings(entry.page)
+            val label = if (res == currentResStr) {
+                game.getString(R.string.game_menu_resolution_current, res)
+            } else {
+                res
+            }
+            options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
         }
+
+        // 自定义分辨率
+        for (resolution in CustomResolutionsStore.load(game)) {
+            val res = resolution.toString()
+            if (PreferenceConfiguration.RESOLUTIONS.contains(res)) continue
+
+            val label = if (res == currentResStr) {
+                game.getString(R.string.game_menu_resolution_custom_current, res)
+            } else {
+                game.getString(R.string.game_menu_resolution_custom, res)
+            }
+
+            options.add(MenuOption(label, false, { changeResolution(res) }, null, false))
+        }
+
+        showSubMenu(getString(R.string.game_menu_change_resolution), options.toTypedArray())
+    }
+
+    private fun changeResolution(resString: String) {
+        @Suppress("DEPRECATION")
+        android.preference.PreferenceManager.getDefaultSharedPreferences(game)
+            .edit {
+                putString(PreferenceConfiguration.RESOLUTION_PREF_STRING, resString)
+            }
+
+        Toast.makeText(
+            game,
+            game.getString(R.string.game_menu_resolution_restarting, resString),
+            Toast.LENGTH_SHORT
+        ).show()
+
+        game.changeResolution()
+        activeDialog?.dismiss()
     }
 
     /**
@@ -1226,7 +1176,6 @@ class GameMenu(
                 quickActions = buildComposeQuickActions(),
                 visibleCards = readVisibleCards(),
                 bitrate = bitrateCardController.snapshot(),
-                displayDraft = bitrateCardController.displayDraft(),
                 audioHaptics = audioHapticsCardController.snapshot(),
                 waveformHaptics = waveformHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
@@ -1239,15 +1188,9 @@ class GameMenu(
         val hardwareFocusRequest = mutableIntStateOf(0)
         val parentFocusRestoreRequest = mutableIntStateOf(0)
         composeUiState = state
-        hardwareFocusRequestState = hardwareFocusRequest
         parentFocusRestoreRequestState = parentFocusRestoreRequest
         bitrateCardController.start { bitrate ->
-            composeUiState?.let {
-                it.value = it.value.copy(
-                    bitrate = bitrate,
-                    displayDraft = bitrateCardController.displayDraft()
-                )
-            }
+            composeUiState?.let { it.value = it.value.copy(bitrate = bitrate) }
         }
         audioHapticsCardController.start { audioHaptics ->
             composeUiState?.let { it.value = it.value.copy(audioHaptics = audioHaptics) }
@@ -1275,7 +1218,6 @@ class GameMenu(
             onCrownToggle = ::toggleCrownFeature,
             onEditOpacity = ::showOpacityDialog,
             onOptionClick = { handleComposeOptionClick(it, dialog) },
-            onTouchInteraction = ::rememberTouchNavigation,
             onInlineToggle = ::handleInlineToggle,
             onSegmentClick = ::handleInlineSegmentClick,
             onEmptySuperCommandClick = ::showSuperCommandHint,
@@ -1287,17 +1229,7 @@ class GameMenu(
             onEditCards = ::showCardEditorDialog,
             onBitrateProgress = bitrateCardController::previewProgress,
             onBitrateApply = bitrateCardController::applySelectedBitrate,
-            onBitrateAdaptive = bitrateCardController::setAdaptiveBitrate,
-            onAbrMode = bitrateCardController::setAbrMode,
             onBitrateHapticMode = bitrateCardController::cycleHapticMode,
-            onOpenDisplaySettings = ::showDisplaySettings,
-            onSelectResolution = bitrateCardController::stageResolution,
-            onSelectFrameRate = bitrateCardController::stageFrameRate,
-            onSelectScreenMode = bitrateCardController::stageScreenMode,
-            onApplyDisplaySettings = bitrateCardController::applyDisplayDraft,
-            onCancelDisplaySettings = bitrateCardController::discardDisplayDraft,
-            onEditCustomResolutions = { showCustomDisplayEditor(frameRate = false) },
-            onEditCustomFrameRates = { showCustomDisplayEditor(frameRate = true) },
             onAudioHapticsEnabled = audioHapticsCardController::setEnabled,
             onAudioHapticsStrength = audioHapticsCardController::previewStrength,
             onAudioHapticsStrengthFinished = audioHapticsCardController::persistStrength,
@@ -1342,9 +1274,6 @@ class GameMenu(
         val composeView = ComposeView(game).apply {
             isFocusable = true
             isFocusableInTouchMode = true
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                defaultFocusHighlightEnabled = false
-            }
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 CompositionLocalProvider(
@@ -1355,7 +1284,6 @@ class GameMenu(
                         callbacks = callbacks,
                         useFabricTexture = renderingProfile.useFabricTexture,
                         hardwareFocusRequestToken = hardwareFocusRequest.intValue,
-                        controllerNavigationActive = controllerNavigationIsCurrent(),
                         restoreFocusRequestToken = parentFocusRestoreRequest.intValue,
                         guideDismissController = guideDismissController
                     )
@@ -1403,13 +1331,7 @@ class GameMenu(
 
         // 返回键监听器
         dialog.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                rememberControllerNavigation(event)
-            }
-            if (event.action == KeyEvent.ACTION_DOWN &&
-                isGameMenuNavigationKey(keyCode) &&
-                !composeView.hasFocus()
-            ) {
+            if (event.action == KeyEvent.ACTION_DOWN && isGameMenuNavigationKey(keyCode)) {
                 hardwareFocusRequest.intValue++
             }
             if (UiDismissKeyHandler.handle(
@@ -1437,15 +1359,12 @@ class GameMenu(
             resetAxisNavigation()
             if (this.activeDialog == dialog) this.activeDialog = null
             if (this.activeComposeView === composeView) this.activeComposeView = null
-            if (this.hardwareFocusRequestState === hardwareFocusRequest) {
-                this.hardwareFocusRequestState = null
-            }
             if (this.parentFocusRestoreRequestState === parentFocusRestoreRequest) {
                 this.parentFocusRestoreRequestState = null
             }
             this.composeUiState = null
             guideDismissController.clear()
-            bitrateCardController.stop()
+            bitrateCardController.dispose()
             audioHapticsCardController.dispose()
             waveformHapticsCardController.dispose()
             gyroCardController.dispose()
@@ -1728,65 +1647,10 @@ class GameMenu(
         }
     )
 
-    private fun rememberControllerNavigation(event: KeyEvent) {
-        val controllerSource = event.source and (
-            InputDevice.SOURCE_GAMEPAD or
-                InputDevice.SOURCE_JOYSTICK or
-                InputDevice.SOURCE_CLASS_JOYSTICK or
-                InputDevice.SOURCE_DPAD or
-                InputDevice.SOURCE_KEYBOARD
-            ) != 0
-        if (!controllerSource) return
-        lastControllerNavigationAt = SystemClock.uptimeMillis()
-        rememberControllerNavigationForNavigation()
-    }
-
-    private fun controllerNavigationIsCurrent(): Boolean {
-        return composeUiState?.value?.controllerNavigationActive == true
-    }
-
-    private fun rememberTouchNavigation() {
-        composeUiState?.let { state ->
-            state.value = state.value.copy(controllerNavigationActive = false)
-        }
-    }
-
-    private fun rememberControllerNavigationForNavigation() {
-        val wasActive = composeUiState?.value?.controllerNavigationActive == true
-        composeUiState?.let { state ->
-            if (!wasActive) {
-                state.value = state.value.copy(controllerNavigationActive = true)
-            }
-        }
-        if (!wasActive) {
-            hardwareFocusRequestState?.let { request -> request.intValue++ }
-        }
-    }
-
-    private fun showCustomDisplayEditor(frameRate: Boolean) {
-        lateinit var dialog: Dialog
-        val onClosed = {
-            finishChildDialog(dialog) {
-                refreshOpenDisplaySettings()
-                val page = displaySettingsPage
-                if (page != null && page != DisplaySettingsPage.ROOT) {
-                    showDisplaySettings(page)
-                }
-            }
-        }
-        dialog = if (frameRate) {
-            CustomFrameRatesDialog.show(game, onClosed, controllerNavigationIsCurrent())
-        } else {
-            CustomResolutionsDialog.show(game, onClosed, controllerNavigationIsCurrent())
-        }
-        registerChildDialog(dialog, installDismissListener = false)
-    }
-
     private fun registerChildDialog(
         dialog: Dialog,
         onDismiss: () -> Unit = {},
-        onDismissKey: ((KeyEvent) -> Boolean)? = null,
-        installDismissListener: Boolean = true
+        onDismissKey: ((KeyEvent) -> Boolean)? = null
     ) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
         prepareForInputOwnerChange()
@@ -1795,9 +1659,6 @@ class GameMenu(
 
         val decorView = dialog.window?.decorView
         decorView?.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                rememberControllerNavigation(event)
-            }
             if (activeChildDialog === dialog && dialog.isShowing &&
                 isGameMenuDiagonalKey(keyCode)
             ) {
@@ -1812,35 +1673,28 @@ class GameMenu(
                 event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0
             ) {
                 false
-            } else if (activeCustomDialogController?.dispatchAxes(event) == true) {
-                true
             } else {
                 val axisPairs = game.controllerHandler.getGameMenuNavigationAxisPairs(event)
                 axisPairs != null && dispatchControllerAxes(event.deviceId, axisPairs)
             }
         }
 
-        if (installDismissListener) {
-            dialog.setOnDismissListener { finishChildDialog(dialog, onDismiss) }
-        }
-    }
-
-    private fun finishChildDialog(dialog: Dialog, onDismiss: () -> Unit) {
-        if (activeChildDialog !== dialog) return
-        val decorView = dialog.window?.decorView
-        prepareForInputOwnerChange()
-        activeChildDialog = null
-        activeChildDismissKeyHandler = null
-        onDismiss()
-        decorView?.setOnKeyListener(null)
-        decorView?.setOnGenericMotionListener(null)
-        val parentDialog = activeDialog
-        val parentComposeView = activeComposeView
-        parentComposeView?.post {
-            if (parentDialog?.isShowing == true && activeChildDialog == null) {
-                parentComposeView.requestFocus()
-                parentFocusRestoreRequestState?.let { request ->
-                    request.intValue++
+        dialog.setOnDismissListener {
+            if (activeChildDialog !== dialog) return@setOnDismissListener
+            prepareForInputOwnerChange()
+            activeChildDialog = null
+            activeChildDismissKeyHandler = null
+            onDismiss()
+            decorView?.setOnKeyListener(null)
+            decorView?.setOnGenericMotionListener(null)
+            val parentDialog = activeDialog
+            val parentComposeView = activeComposeView
+            parentComposeView?.post {
+                if (parentDialog?.isShowing == true && activeChildDialog == null) {
+                    parentComposeView.requestFocus()
+                    parentFocusRestoreRequestState?.let { request ->
+                        request.intValue++
+                    }
                 }
             }
         }
@@ -1987,12 +1841,10 @@ class GameMenu(
     }
 
     private fun currentMenuPage(): MenuPage? {
-        return composeUiState?.value?.let {
-            MenuPage(it.title, it.options, it.pageLayout, it.pageGeneration)
-        }
+        return composeUiState?.value?.let { MenuPage(it.title, it.options, it.pageLayout) }
     }
 
-    private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false, replaceCurrent: Boolean = false) {
+    private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false) {
         val state = composeUiState ?: return
         if (state.value.pageLayout == GameMenuPageLayout.MICROPHONE && page.layout != GameMenuPageLayout.MICROPHONE) {
             microphoneMenuController.stop()
@@ -2000,29 +1852,19 @@ class GameMenu(
         }
         val restoreMicrophoneEntry = state.value.pageLayout == GameMenuPageLayout.MICROPHONE &&
             page.layout == GameMenuPageLayout.STANDARD
-        if (pushCurrent && !replaceCurrent) currentMenuPage()?.let(menuStack::push)
+        if (pushCurrent) currentMenuPage()?.let(menuStack::push)
         state.value = state.value.copy(
             title = page.title,
             options = page.options,
             isSubmenu = menuStack.isNotEmpty(),
             restoreMicrophoneEntry = restoreMicrophoneEntry,
-            pageLayout = page.layout,
-            pageGeneration = if (pushCurrent && !replaceCurrent) {
-                state.value.pageGeneration + 1
-            } else {
-                page.generation
-            }
+            pageLayout = page.layout
         )
-        if (controllerNavigationIsCurrent()) {
-            hardwareFocusRequestState?.let { request -> request.intValue++ }
-        }
     }
 
     private fun navigateBack(): Boolean {
         if (menuStack.isEmpty()) return false
-        val page = menuStack.pop()
-        if (menuStack.isEmpty()) displaySettingsPage = null
-        showMenuPage(page)
+        showMenuPage(menuStack.pop())
         return true
     }
 
@@ -2054,18 +1896,12 @@ class GameMenu(
     private fun showSubMenu(
         title: String,
         subOptions: Array<MenuOption>,
-        pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD,
-        replaceCurrent: Boolean = false,
-        pageGeneration: Int = 0
+        pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
     ) {
         val dialog = activeDialog
         if (dialog != null && dialog.isShowing) {
             lastActionOpenedSubmenu = true
-            showMenuPage(
-                MenuPage(title, subOptions.toList(), pageLayout, pageGeneration),
-                pushCurrent = true,
-                replaceCurrent = replaceCurrent
-            )
+            showMenuPage(MenuPage(title, subOptions.toList(), pageLayout), pushCurrent = true)
         } else {
             showMenuDialog(title, subOptions, emptyArray(), pageLayout)
         }
@@ -2475,6 +2311,12 @@ class GameMenu(
             isShowIcon = true,
             isKeepDialog = true,
             inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments())
+        ))
+
+        normalOptions.add(MenuOption(
+            getString(R.string.game_menu_change_resolution), false,
+            { showResolutionMenu() }, "game_menu_change_resolution", isShowIcon = true, isKeepDialog = true,
+            showChevron = true
         ))
 
         if (game.prefConfig.onscreenController) {

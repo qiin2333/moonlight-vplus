@@ -83,9 +83,8 @@ class GameMenuKeyEventTest {
         assertTrue(
             !shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 1,
-                handledHardwareFocusRequestToken = 0,
                 guideActive = false,
-                hasFocusTarget = true,
+                hasOptions = true,
                 menuContentLaidOut = false,
                 menuHasFocus = false
             )
@@ -93,9 +92,8 @@ class GameMenuKeyEventTest {
         assertTrue(
             shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 1,
-                handledHardwareFocusRequestToken = 0,
                 guideActive = false,
-                hasFocusTarget = true,
+                hasOptions = true,
                 menuContentLaidOut = true,
                 menuHasFocus = false
             )
@@ -107,21 +105,10 @@ class GameMenuKeyEventTest {
         assertTrue(
             !shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = 2,
-                handledHardwareFocusRequestToken = 2,
                 guideActive = false,
-                hasFocusTarget = true,
+                hasOptions = true,
                 menuContentLaidOut = true,
                 menuHasFocus = true
-            )
-        )
-        assertTrue(
-            shouldRequestGameMenuFocus(
-                hardwareFocusRequestToken = 2,
-                handledHardwareFocusRequestToken = 1,
-                guideActive = false,
-                hasFocusTarget = true,
-                menuContentLaidOut = true,
-                menuHasFocus = false
             )
         )
     }
