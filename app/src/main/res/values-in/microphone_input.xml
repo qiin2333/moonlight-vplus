@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">Menunggu rute input audio</string>
     <string name="mic_input_failed">Tidak dapat memilih mikrofon ini. Coba lagi.</string>
     <string name="mic_input_bluetooth_quality">Menggunakan mikrofon Bluetooth dapat menurunkan kualitas pemutaran.</string>
+    <string name="mic_input_system_silenced">Mikrofon dibisukan oleh sistem</string>
 </resources>

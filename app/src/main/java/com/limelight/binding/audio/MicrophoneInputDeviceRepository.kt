@@ -36,12 +36,13 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         }
     } else emptyList()
 
-    fun choices(): List<MicrophoneInputDevice> {
-        val choices = selectableMicrophoneInputs(devices().filterNot { isBluetoothMicrophone(it.type) } +
-            BluetoothMicrophoneRouteController.choices(context))
-        selection.resolve(choices)
-        return choices
+    fun snapshot(): MicrophoneDeviceSnapshot {
+        val snapshot = MicrophoneDeviceSnapshot(devices(), BluetoothMicrophoneRouteController.choices(context))
+        selection.resolve(snapshot.choices)
+        return snapshot
     }
+
+    fun choices(): List<MicrophoneInputDevice> = snapshot().choices
 
     fun selectedChoice(): MicrophoneInputDevice? {
         val choices = choices()

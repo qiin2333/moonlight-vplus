@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">Várakozás a hangbemenet útvonalára</string>
     <string name="mic_input_failed">Ez a mikrofon nem választható ki. Próbálja újra.</string>
     <string name="mic_input_bluetooth_quality">A Bluetooth-mikrofon használata ronthatja a lejátszás minőségét.</string>
+    <string name="mic_input_system_silenced">A rendszer elnémította a mikrofont</string>
 </resources>

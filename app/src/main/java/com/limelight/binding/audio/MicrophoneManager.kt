@@ -342,6 +342,8 @@ class MicrophoneManager(
 
     internal fun routedInputId(): Int? = microphoneStream?.routedInputId()
 
+    internal fun isSystemSilenced(): Boolean = microphoneStream?.isSystemSilenced() == true
+
     fun isMicrophoneAvailable(): Boolean = microphoneStream != null && microphoneStream!!.isMicrophoneAvailable()
 
     fun isMicrophoneTrulyAvailable(): Boolean {

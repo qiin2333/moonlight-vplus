@@ -23,6 +23,24 @@ internal data class MicrophoneInputDescriptor(
     val address: String
 )
 
+/** One enumeration per menu refresh; communication targets and recording ports have distinct IDs. */
+internal class MicrophoneDeviceSnapshot(
+    val inputs: List<MicrophoneInputDevice>,
+    communicationDevices: List<MicrophoneInputDevice>
+) {
+    val choices: List<MicrophoneInputDevice> = selectableMicrophoneInputs(
+        inputs.filter { !it.communication && !isBluetoothMicrophone(it.type) } +
+            communicationDevices.filter { it.communication && isBluetoothMicrophone(it.type) }
+    ).distinctBy { it.key }
+
+    fun displayDevice(routedId: Int?): MicrophoneInputDevice? {
+        val input = inputs.firstOrNull { !it.communication && it.id == routedId } ?: return null
+        if (!isBluetoothMicrophone(input.type)) return input
+        return choices.filter { it.communication && matchingBluetoothInput(it, inputs)?.key == input.key }
+            .singleOrNull() ?: input
+    }
+}
+
 // Only known microphone endpoints. isSource also includes non-recording/vendor audio ports.
 internal fun isSelectableMicrophoneInput(type: Int): Boolean = when (type) {
     3, 7, 11, 12, 15, 22, 26 -> true

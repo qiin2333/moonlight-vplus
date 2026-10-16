@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">Čekání na směrování zvukového vstupu</string>
     <string name="mic_input_failed">Tento mikrofon nelze vybrat. Zkuste to znovu.</string>
     <string name="mic_input_bluetooth_quality">Používání mikrofonu Bluetooth může snížit kvalitu přehrávání.</string>
+    <string name="mic_input_system_silenced">Mikrofon byl ztlumen systémem</string>
 </resources>

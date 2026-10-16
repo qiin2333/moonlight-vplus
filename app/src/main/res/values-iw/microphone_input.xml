@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">ממתין לניתוב קלט השמע</string>
     <string name="mic_input_failed">לא ניתן לבחור במיקרופון זה. יש לנסות שוב.</string>
     <string name="mic_input_bluetooth_quality">שימוש במיקרופון Bluetooth עשוי להפחית את איכות ההשמעה.</string>
+    <string name="mic_input_system_silenced">המיקרופון הושתק על ידי המערכת</string>
 </resources>

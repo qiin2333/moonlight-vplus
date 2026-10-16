@@ -2,6 +2,8 @@ package com.limelight.binding.audio
 
 import android.media.AudioFormat
 import android.media.AudioRecord
+import android.media.AudioManager
+import android.media.AudioRecordingConfiguration
 import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
@@ -17,6 +19,7 @@ import com.limelight.LimeLog
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.Executor
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -57,6 +60,8 @@ class MicrophoneCapture(
     private var frameCount = 0L
     @Volatile private var cachedRoutedId: Int? = null
     private val routeRefreshRequested = AtomicBoolean(true)
+    @Volatile private var systemSilenced = false
+    private var unregisterRecordingCallback: (() -> Unit)? = null
     private var lastPcmRouteId: Int? = null
     @Volatile private var acceptingInput = false
 
@@ -171,8 +176,18 @@ class MicrophoneCapture(
                             AudioRecord.ERROR_INVALID_OPERATION
                         }
                         if (!running.get()) break
-                        if (routeRefreshRequested.getAndSet(false) || pending != null) {
+                        val refreshRequested = routeRefreshRequested.getAndSet(false)
+                        if (refreshRequested || pending != null) {
                             cachedRoutedId = queryRoutedInputId()
+                        }
+                        val verifyingCommunicationRoute = pending?.recovery != null && pending.routeChange != null
+                        if (Build.VERSION.SDK_INT >= 29 && (refreshRequested || verifyingCommunicationRoute)) {
+                            RecordingState.isSilenced(audioRecord!!)?.let { silenced ->
+                                if (silenced != systemSilenced) {
+                                    LimeLog.info("Microphone system silence changed: silenced=$silenced")
+                                }
+                                systemSilenced = silenced
+                            }
                         }
                         if (bytesRead > 0) {
                             if (lastPcmRouteId != cachedRoutedId) frameBufferPos = 0
@@ -182,8 +197,7 @@ class MicrophoneCapture(
                             processAudioData(data, 0, bytesRead)
                         }
                         if (pending?.recovery != null && pending.restoreAction == null) {
-                            val silenced = pending.routeChange != null && Build.VERSION.SDK_INT >= 29 &&
-                                RecordingState.isSilenced(audioRecord!!)
+                            val silenced = pending.routeChange != null && systemSilenced
                             val routeLost = !pending.restoring && pending.routeChange?.isReady?.invoke() == false
                             val action = pending.recovery!!.observe(SystemClock.elapsedRealtime(), cachedRoutedId,
                                 bytesRead, routeUsable = !silenced && !routeLost)
@@ -434,6 +448,10 @@ class MicrophoneCapture(
                 LimeLog.warning("Microphone input preference rejected; using system default")
                 onInputFailure()
             }
+            if (Build.VERSION.SDK_INT >= 29) {
+                unregisterRecordingCallback = RecordingState.observe(record) { routeRefreshRequested.set(true) }
+            }
+            routeRefreshRequested.set(true)
             return record
         } catch (e: RuntimeException) {
             record.release()
@@ -442,6 +460,8 @@ class MicrophoneCapture(
     }
 
     internal fun isCapturing(): Boolean = running.get()
+
+    internal fun isSystemSilenced(): Boolean = running.get() && systemSilenced
 
     internal fun routedInputId(): Int? {
         if (!running.get()) return null
@@ -471,9 +491,30 @@ class MicrophoneCapture(
 
     @RequiresApi(29)
     private object RecordingState {
-        fun isSilenced(record: AudioRecord): Boolean = try {
-            record.activeRecordingConfiguration?.isClientSilenced == true
-        } catch (_: RuntimeException) { false }
+        fun isSilenced(record: AudioRecord): Boolean? = try {
+            record.activeRecordingConfiguration?.isClientSilenced
+        } catch (_: RuntimeException) { null }
+
+        fun observe(record: AudioRecord, changed: () -> Unit): () -> Unit {
+            val enabled = AtomicBoolean(true)
+            val callback = object : AudioManager.AudioRecordingCallback() {
+                override fun onRecordingConfigChanged(configs: MutableList<AudioRecordingConfiguration>) {
+                    // Only request a refresh. Never publish an old recorder's state after recreation.
+                    if (enabled.get()) changed()
+                }
+            }
+            try {
+                record.registerAudioRecordingCallback(Executor { it.run() }, callback)
+            } catch (_: RuntimeException) {
+                enabled.set(false)
+                LimeLog.warning("Microphone recording state callback unavailable")
+            }
+            return {
+                if (enabled.getAndSet(false)) {
+                    try { record.unregisterAudioRecordingCallback(callback) } catch (_: RuntimeException) { }
+                }
+            }
+        }
     }
 
     private fun initializeAudioEffects() {
@@ -594,6 +635,9 @@ class MicrophoneCapture(
     }
 
     private fun release() = routeLock.withLock {
+        unregisterRecordingCallback?.invoke()
+        unregisterRecordingCallback = null
+        systemSilenced = false
         releaseAudioEffects()
 
         audioRecord?.let {

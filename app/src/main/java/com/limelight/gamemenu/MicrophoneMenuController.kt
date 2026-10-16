@@ -6,7 +6,6 @@ import android.os.Looper
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.audio.DEFAULT_MICROPHONE_INPUT
-import com.limelight.binding.audio.MicrophoneInputDevice
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.binding.audio.resolvedMicrophoneInputKey
 
@@ -19,8 +18,11 @@ internal data class MicrophoneMenuState(
     val bluetoothWarning: String? = null
 )
 
-internal fun microphoneRecordingStatusResource(sdkInt: Int, capturing: Boolean, hasRoutedDevice: Boolean): Int = when {
+internal fun microphoneRecordingStatusResource(
+    sdkInt: Int, capturing: Boolean, hasRoutedDevice: Boolean, systemSilenced: Boolean = false
+): Int = when {
     !capturing -> R.string.mic_disabled
+    sdkInt >= 29 && systemSilenced -> R.string.mic_input_system_silenced
     sdkInt < 23 || hasRoutedDevice -> R.string.mic_input_active
     else -> R.string.mic_input_route_pending
 }
@@ -31,7 +33,6 @@ internal class MicrophoneMenuController(private val game: Game) {
     private var unsubscribe: (() -> Unit)? = null
     private var manager: MicrophoneManager? = null
     private var listener: ((MicrophoneMenuState) -> Unit)? = null
-    private var devices = emptyList<MicrophoneInputDevice>()
     private val refresh = object : Runnable {
         override fun run() {
             if (listener == null) return
@@ -57,24 +58,25 @@ internal class MicrophoneMenuController(private val game: Game) {
 
     private fun refreshDevices() {
         if (listener == null) return
-        devices = manager?.inputDevices?.devices().orEmpty()
         publish()
     }
 
     private fun publish() {
         val manager = manager ?: return
         val repository = manager.inputDevices
-        val selectable = repository.choices()
+        val snapshot = repository.snapshot()
+        val selectable = snapshot.choices
         val names = repository.displayNames(selectable)
         val routedId = manager.routedInputId()
-        val current = devices.firstOrNull { it.id == routedId }
+        val current = snapshot.displayDevice(routedId)
         val resolvedKey = resolvedMicrophoneInputKey(repository.selectedKey, selectable)
         val unavailable = repository.selectedKey != DEFAULT_MICROPHONE_INPUT &&
             resolvedKey == DEFAULT_MICROPHONE_INPUT
         val recordingStatus = if (manager.isInputSwitchPending()) R.string.mic_input_route_pending else microphoneRecordingStatusResource(
             sdkInt = Build.VERSION.SDK_INT,
             capturing = manager.isMicrophoneActive(),
-            hasRoutedDevice = current != null
+            hasRoutedDevice = current != null,
+            systemSilenced = manager.isSystemSilenced()
         )
         val recording = if (recordingStatus == R.string.mic_input_active) {
             val inputName = current?.let { names[it.key] ?: repository.displayName(it) }
@@ -101,6 +103,5 @@ internal class MicrophoneMenuController(private val game: Game) {
         unsubscribe?.invoke()
         unsubscribe = null
         manager = null
-        devices = emptyList()
     }
 }

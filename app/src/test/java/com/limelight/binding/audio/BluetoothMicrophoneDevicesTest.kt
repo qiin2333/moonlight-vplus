@@ -4,6 +4,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BluetoothMicrophoneDevicesTest {
+    @Test fun actualScoAudioCanConfirmAMissedConnectedBroadcast() {
+        assertTrue(confirmedLegacyScoState(false, true))
+    }
+
+    @Test fun actualDisconnectedAudioOverridesAnOldConnectedBroadcast() {
+        assertFalse(confirmedLegacyScoState(true, false))
+    }
+
+    @Test fun unavailableProfileQueryDoesNotDiscardBroadcastEvidence() {
+        assertTrue(confirmedLegacyScoState(true, null))
+        assertFalse(confirmedLegacyScoState(false, null))
+    }
+
     private fun output(id: Int = 10, type: Int = 7, address: String = "headset-a", name: String = "Phone") =
         MicrophoneInputDescriptor(id, type, name, address)
     private fun input(id: Int = 20, type: Int = 7, address: String = "headset-a", name: String = "Phone") =

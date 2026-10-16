@@ -183,6 +183,8 @@ class MicrophoneStream(
 
     internal fun routedInputId(): Int? = capture?.routedInputId()
 
+    internal fun isSystemSilenced(): Boolean = capture?.isSystemSilenced() == true
+
     fun isInitialized(): Boolean = running.get()
 
     fun getAudioContinuityStatus(): String = AudioDiagnostics.getCurrentStats()

@@ -5,6 +5,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MicrophoneMenuStatusTest {
+    @Test fun systemSilencedRecordingDoesNotClaimItIsUsingTheDevice() {
+        for (hasRoutedDevice in listOf(false, true)) {
+            assertEquals(R.string.mic_input_system_silenced,
+                microphoneRecordingStatusResource(29, true, hasRoutedDevice, systemSilenced = true))
+        }
+    }
+
+    @Test fun stoppedRecordingDoesNotRetainTheSystemSilencedStatus() {
+        assertEquals(R.string.mic_disabled,
+            microphoneRecordingStatusResource(36, false, true, systemSilenced = true))
+    }
+
+    @Test fun legacyAndroidDoesNotClaimSystemSilenceDetection() {
+        assertEquals(R.string.mic_input_active,
+            microphoneRecordingStatusResource(28, true, true, systemSilenced = true))
+    }
+
     @Test fun api22ActiveCaptureUsesSystemDefaultRatherThanWaitingForARoute() {
         assertEquals(R.string.mic_input_active,
             microphoneRecordingStatusResource(sdkInt = 22, capturing = true, hasRoutedDevice = false))

@@ -30,9 +30,9 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
     private var unregister: (() -> Unit)? = null
     private var timeout: Runnable? = null
     private var drainTask: Runnable? = null
-    private var savedMode: Int? = null
-    private var requested = false
+    private var activeLease: MicrophoneRouteOwnership.Lease? = null
     private var legacyConnected = false
+    private var legacyAudioState: LegacyBluetoothAudioState? = null
     private var active = false
 
     @Volatile var input: MicrophoneInputDevice? = null
@@ -44,7 +44,7 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
         val token = generation.incrementAndGet()
         worker.post {
             if (generation.get() != token || !isCurrent()) return@post
-            if (!clearOwnedRoute()) {
+            if (!clearOwnedRoute() || !ownership.retryPendingCleanup()) {
                 complete(false)
                 return@post
             }
@@ -57,10 +57,12 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
 
     private fun activateOnWorker(device: MicrophoneInputDevice, token: Long, isCurrent: () -> Boolean,
                                  onRouteLost: () -> Unit, complete: (Boolean) -> Unit) {
-        if (owner != null && owner !== ownerToken) {
+        val lease = createLease()
+        if (!ownership.acquire(lease)) {
             complete(false)
             return
         }
+        activeLease = lease
         val start = SystemClock.elapsedRealtime()
         var completed = false
         fun finish(success: Boolean) {
@@ -81,7 +83,9 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 return
             }
             try {
-                if (Build.VERSION.SDK_INT < 31 && legacyConnected && requested) audio.isBluetoothScoOn = true
+                if (Build.VERSION.SDK_INT < 31 && legacyConnected && activeLease?.routeRequested == true) {
+                    audio.isBluetoothScoOn = true
+                }
                 val connected = audio.mode == AudioManager.MODE_IN_COMMUNICATION &&
                     if (Build.VERSION.SDK_INT >= 31) Api31.isSelected(audio, device.id) else legacyConnected
                 if (connected) {
@@ -107,16 +111,19 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 finish(false)
                 return
             }
-            owner = ownerToken
-            savedMode = audio.mode
             // Do not compete with a phone call or another communication owner.
-            if (savedMode != AudioManager.MODE_NORMAL) {
+            if (audio.mode != AudioManager.MODE_NORMAL) {
+                finish(false)
+                return
+            }
+            if (Build.VERSION.SDK_INT < 31 && !audio.isBluetoothScoAvailableOffCall) {
                 finish(false)
                 return
             }
             unregister = if (Build.VERSION.SDK_INT >= 31) {
                 Api31.observe(audio, ::changed)
             } else {
+                legacyAudioState = LegacyBluetoothAudioState(worker).also { it.open(context) }
                 val receiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
                         if (generation.get() != token || !isCurrent()) return
@@ -131,8 +138,9 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 val removeReceiver: () -> Unit = { this.context.unregisterReceiver(receiver) }
                 removeReceiver
             }
-            requested = true
+            lease.modeRequested = true
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
+            lease.routeRequested = true
             val accepted = if (Build.VERSION.SDK_INT >= 31) Api31.select(audio, device.id)
                 else {
                     @Suppress("DEPRECATION")
@@ -146,9 +154,14 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
             val poll = object : Runnable {
                 override fun run() {
                     if (completed || generation.get() != token) return
+                    val expired = SystemClock.elapsedRealtime() - start >= 5000L
+                    if (Build.VERSION.SDK_INT < 31 && (!legacyConnected || expired)) {
+                        // Some systems establish SCO without delivering its connected broadcast.
+                        legacyConnected = confirmedLegacyScoState(legacyConnected, legacyAudioState?.isAudioConnected())
+                    }
                     changed()
                     if (!completed) {
-                        if (SystemClock.elapsedRealtime() - start >= 5000L) finish(false)
+                        if (expired) finish(false)
                         else worker.postDelayed(this, 100L)
                     }
                 }
@@ -199,48 +212,44 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
     }
 
     private fun clearOwnedRoute(): Boolean {
-        var success = true
         drainTask?.let(worker::removeCallbacks)
         drainTask = null
         timeout?.let(worker::removeCallbacks)
         timeout = null
         try { unregister?.invoke() } catch (_: RuntimeException) { }
         unregister = null
+        legacyAudioState?.close()
+        legacyAudioState = null
         active = false
         input = null
-        if (owner === ownerToken) {
-            try {
-                if (requested) {
-                    if (Build.VERSION.SDK_INT >= 31) Api31.clear(audio)
-                    else {
-                        legacyDrain.begin(SystemClock.elapsedRealtime())
-                        @Suppress("DEPRECATION")
-                        audio.stopBluetoothSco()
-                        audio.isBluetoothScoOn = false
-                    }
-                }
-            } catch (e: RuntimeException) {
-                success = false
-                LimeLog.warning("Bluetooth microphone release failed: ${e.javaClass.simpleName}")
-            } finally {
-                try {
-                    if (requested && audio.mode == AudioManager.MODE_IN_COMMUNICATION) {
-                        savedMode?.let { audio.mode = it }
-                    }
-                } catch (_: RuntimeException) { success = false }
-                if (success) owner = null
-            }
-        }
-        if (success) requested = false
+        activeLease = null
         legacyConnected = false
-        if (success) savedMode = null
-        return success
+        return ownership.release(ownerToken)
+    }
+
+    private fun createLease(): MicrophoneRouteOwnership.Lease {
+        // Pending cleanup retains only the application AudioManager, never this controller's callbacks.
+        val manager = audio
+        return MicrophoneRouteOwnership.Lease(ownerToken,
+            clearRoute = {
+                if (Build.VERSION.SDK_INT >= 31) Api31.clear(manager)
+                else {
+                    legacyDrain.begin(SystemClock.elapsedRealtime())
+                    @Suppress("DEPRECATION")
+                    manager.stopBluetoothSco()
+                    manager.isBluetoothScoOn = false
+                }
+            },
+            clearMode = { manager.mode = AudioManager.MODE_NORMAL },
+            onFailure = { operation, error ->
+                LimeLog.warning("Bluetooth microphone $operation cleanup failed: ${error.javaClass.simpleName}")
+            })
     }
 
     companion object {
         // Serialize teardown across managers, including an immediate reconnect to another stream.
         private val worker by lazy { Handler(HandlerThread("MicrophoneRoute").apply { start() }.looper) }
-        private var owner: Any? = null
+        private val ownership = MicrophoneRouteOwnership()
         private val legacyDrain = MicrophoneRouteDrain()
 
         fun choices(context: Context): List<MicrophoneInputDevice> = try {
@@ -251,7 +260,8 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                     @Suppress("DEPRECATION")
                     val connected = BluetoothAdapter.getDefaultAdapter()
                         ?.getProfileConnectionState(BluetoothProfile.HEADSET) == BluetoothAdapter.STATE_CONNECTED
-                    if (connected) listOf(MicrophoneInputDevice("bluetooth:system", -1, 7, "", null, true))
+                    if (connected && audio.isBluetoothScoAvailableOffCall)
+                        listOf(MicrophoneInputDevice("bluetooth:system", -1, 7, "", null, true))
                     else emptyList()
                 }
                 else -> emptyList()
@@ -269,7 +279,7 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
 
         fun select(audio: AudioManager, id: Int): Boolean {
             val target = audio.availableCommunicationDevices.firstOrNull {
-                it.id == id && isBluetoothMicrophone(it.type)
+                it.isSink && it.id == id && isBluetoothMicrophone(it.type)
             } ?: return false
             return audio.setCommunicationDevice(target)
         }

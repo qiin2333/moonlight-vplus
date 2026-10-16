@@ -47,6 +47,12 @@ class MicrophoneDeviceListTest {
         }
         compose.onNodeWithText("Bluetooth quality warning").assertIsDisplayed()
         compose.onNodeWithTag("microphoneInput:default").assertIsFocused()
+        compose.runOnIdle {
+            state.value = state.value.copy(status = "Microphone muted by Android")
+        }
+        compose.onNodeWithText("Microphone muted by Android").assertIsDisplayed()
+        compose.onNodeWithTag("microphoneInput:default").assertIsFocused()
+        compose.onNodeWithTag("microphoneInput:usb").assertIsSelected()
     }
 
     @Test fun touchAndGamepadConfirmActivateExactlyOnce() {

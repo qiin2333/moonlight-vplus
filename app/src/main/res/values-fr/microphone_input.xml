@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">En attente du routage de l’entrée audio</string>
     <string name="mic_input_failed">Impossible de sélectionner ce microphone. Veuillez réessayer.</string>
     <string name="mic_input_bluetooth_quality">L’utilisation du microphone Bluetooth peut réduire la qualité de lecture.</string>
+    <string name="mic_input_system_silenced">Microphone désactivé par le système</string>
 </resources>

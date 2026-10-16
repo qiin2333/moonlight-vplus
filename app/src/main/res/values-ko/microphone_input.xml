@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">오디오 입력 경로 대기 중</string>
     <string name="mic_input_failed">이 마이크를 선택할 수 없습니다. 다시 시도하세요.</string>
     <string name="mic_input_bluetooth_quality">블루투스 마이크를 사용하면 재생 음질이 저하될 수 있습니다.</string>
+    <string name="mic_input_system_silenced">시스템에서 마이크를 음소거했습니다</string>
 </resources>

@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">چاوەڕوانی ڕێڕەوی هاتنی دەنگ</string>
     <string name="mic_input_failed">ناتوانرێت ئەم مایکرۆفۆنە هەڵبژێردرێت. دووبارە هەوڵ بدە.</string>
     <string name="mic_input_bluetooth_quality">بەکارهێنانی مایکرۆفۆنی بلوتووس لەوانەیە کوالێتی پەخش کەم بکاتەوە.</string>
+    <string name="mic_input_system_silenced">مایکرۆفۆن لەلایەن سیستەمەوە بێدەنگ کراوە</string>
 </resources>

@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">Venter på ruten for lydinngang</string>
     <string name="mic_input_failed">Kan ikke velge denne mikrofonen. Prøv igjen.</string>
     <string name="mic_input_bluetooth_quality">Bruk av Bluetooth-mikrofonen kan redusere avspillingskvaliteten.</string>
+    <string name="mic_input_system_silenced">Mikrofonen er dempet av systemet</string>
 </resources>

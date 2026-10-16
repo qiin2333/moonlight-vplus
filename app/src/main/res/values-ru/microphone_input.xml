@@ -10,4 +10,5 @@
     <string name="mic_input_route_pending">Ожидание маршрутизации аудиовхода</string>
     <string name="mic_input_failed">Не удалось выбрать этот микрофон. Попробуйте ещё раз.</string>
     <string name="mic_input_bluetooth_quality">Использование микрофона Bluetooth может снизить качество воспроизведения.</string>
+    <string name="mic_input_system_silenced">Микрофон отключён системой</string>
 </resources>

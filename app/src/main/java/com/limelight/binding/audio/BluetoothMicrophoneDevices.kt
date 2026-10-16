@@ -4,6 +4,9 @@ import java.security.MessageDigest
 
 internal fun isBluetoothMicrophone(type: Int): Boolean = type == 7 || type == 26
 
+internal fun confirmedLegacyScoState(broadcastConnected: Boolean, actualConnected: Boolean?): Boolean =
+    actualConnected ?: broadcastConnected
+
 /** Communication output identities must never be confused with AudioRecord input IDs. */
 internal fun communicationMicrophoneChoices(outputs: List<MicrophoneInputDescriptor>): List<MicrophoneInputDevice> {
     val headsets = outputs.filter { isBluetoothMicrophone(it.type) }
