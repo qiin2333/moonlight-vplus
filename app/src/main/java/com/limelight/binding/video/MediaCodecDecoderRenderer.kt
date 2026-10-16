@@ -826,6 +826,10 @@ class MediaCodecDecoderRenderer(
 
         // 重置停止标志，允许渲染线程运行
         stopping = false
+        synchronized(codecOperationMonitor) {
+            codecOperationsBlocked = false
+            (codecOperationMonitor as Object).notifyAll()
+        }
 
         // 清理输出缓冲区队列，移除 prepareForStop 放入的 -1 信号
         framePacingController.clearBuffers()
@@ -2260,7 +2264,11 @@ class MediaCodecDecoderRenderer(
             callbackThread.quitSafely()
             codecCallbackThread = null
             if (callbackThread !== Thread.currentThread()) {
-                callbackThread.join()
+                try {
+                    callbackThread.join()
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
             }
         }
 
