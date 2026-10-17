@@ -19,7 +19,7 @@ internal class ScreenCombinationModeSpan(
         start: Int,
         end: Int,
         fm: Paint.FontMetricsInt?
-    ): Int = paint.textSize.toInt()
+    ): Int = (paint.textSize * 1.08f).toInt()
 
     override fun draw(
         canvas: Canvas,
