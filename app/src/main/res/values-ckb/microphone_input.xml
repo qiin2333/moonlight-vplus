@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">بنەڕەتی سیستەم</string>
+    <string name="mic_input_builtin">مایکرۆفۆنی ناوخۆ</string>
+    <string name="mic_input_wired">هێدسێتی بە وایەر</string>
+    <string name="mic_input_bluetooth">مایکرۆفۆنی Bluetooth</string>
+    <string name="mic_input_usb">مایکرۆفۆنی USB</string>
+    <string name="mic_input_active">تۆمارکردن لە: %1$s</string>
+    <string name="mic_input_unavailable">ئامێری هەڵبژێردراو بەردەست نییە.</string>
+    <string name="mic_input_route_pending">چاوەڕوانی ڕێڕەوی هاتنی دەنگ</string>
+    <string name="mic_input_failed">ناتوانرێت ئەم مایکرۆفۆنە هەڵبژێردرێت. دووبارە هەوڵ بدە.</string>
+    <string name="mic_input_bluetooth_quality">بەکارهێنانی مایکرۆفۆنی بلوتووس لەوانەیە کوالێتی پەخش کەم بکاتەوە.</string>
+    <string name="mic_input_system_silenced">مایکرۆفۆن لەلایەن سیستەمەوە بێدەنگ کراوە</string>
+</resources>

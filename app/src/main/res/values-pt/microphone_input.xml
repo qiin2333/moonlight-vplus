@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Predefinição do sistema</string>
+    <string name="mic_input_builtin">Microfone integrado</string>
+    <string name="mic_input_wired">Auscultadores com fio</string>
+    <string name="mic_input_bluetooth">Microfone Bluetooth</string>
+    <string name="mic_input_usb">Microfone USB</string>
+    <string name="mic_input_active">A gravar de: %1$s</string>
+    <string name="mic_input_unavailable">O dispositivo selecionado está indisponível.</string>
+    <string name="mic_input_route_pending">A aguardar o encaminhamento da entrada de áudio</string>
+    <string name="mic_input_failed">Não foi possível selecionar este microfone. Tente novamente.</string>
+    <string name="mic_input_bluetooth_quality">Usar o microfone Bluetooth pode reduzir a qualidade de reprodução.</string>
+    <string name="mic_input_system_silenced">Microfone silenciado pelo sistema</string>
+</resources>

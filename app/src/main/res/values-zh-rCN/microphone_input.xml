@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">系统默认</string>
+    <string name="mic_input_builtin">内置麦克风</string>
+    <string name="mic_input_wired">有线耳机麦克风</string>
+    <string name="mic_input_bluetooth">蓝牙麦克风</string>
+    <string name="mic_input_usb">USB麦克风</string>
+    <string name="mic_input_active">正在使用：%1$s</string>
+    <string name="mic_input_unavailable">所选设备当前不可用。</string>
+    <string name="mic_input_route_pending">正在等待音频输入路由</string>
+    <string name="mic_input_failed">无法选择此麦克风，请重试。</string>
+    <string name="mic_input_bluetooth_quality">使用蓝牙麦克风可能降低播放音质。</string>
+    <string name="mic_input_system_silenced">麦克风已被系统静音</string>
+</resources>

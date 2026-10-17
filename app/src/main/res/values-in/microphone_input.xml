@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Default sistem</string>
+    <string name="mic_input_builtin">Mikrofon bawaan</string>
+    <string name="mic_input_wired">Headset berkabel</string>
+    <string name="mic_input_bluetooth">Mikrofon Bluetooth</string>
+    <string name="mic_input_usb">Mikrofon USB</string>
+    <string name="mic_input_active">Merekam dari: %1$s</string>
+    <string name="mic_input_unavailable">Perangkat yang dipilih tidak tersedia.</string>
+    <string name="mic_input_route_pending">Menunggu rute input audio</string>
+    <string name="mic_input_failed">Tidak dapat memilih mikrofon ini. Coba lagi.</string>
+    <string name="mic_input_bluetooth_quality">Menggunakan mikrofon Bluetooth dapat menurunkan kualitas pemutaran.</string>
+    <string name="mic_input_system_silenced">Mikrofon dibisukan oleh sistem</string>
+</resources>
