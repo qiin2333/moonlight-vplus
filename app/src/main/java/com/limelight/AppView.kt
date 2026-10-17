@@ -152,7 +152,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     private lateinit var uuidString: String
     private var computer: ComputerDetails? = null
     private lateinit var computerName: String
-    private var titleAppName: String? = null
     private var lastRawApplist: String? = null
     private var hasUsableAppList = false
     private var lastRunningAppId = 0
@@ -299,6 +298,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        refreshTitle()
 
         // If appGridAdapter is initialized, let it know about the configuration change.
         // If not, it will pick it up when it initializes.
@@ -533,7 +533,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         val label = findViewById<TextView>(R.id.appListText)
         title = computerName
-        updateTitle(null)
+        refreshTitle()
         // 点击标题恢复串流
         label.setOnClickListener {
             LimeLog.info("Title clicked, lastRunningAppId=$lastRunningAppId")
@@ -635,15 +635,17 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     }
 
     /**
-     * 更新标题中恢复箭头的显示
+     * 从当前选中项和运行状态刷新标题。
      */
-    private fun updateRestoreButtonVisibility(hasRunningApp: Boolean) {
+    private fun refreshTitle() {
+        if (!::computerName.isInitialized) return
+
         // 找到当前选中的应用名，或运行中的应用名
         var appName: String? = null
         if (selectedPosition >= 0 && appGridAdapter != null && selectedPosition < (appGridAdapter?.count ?: 0)) {
             val app = appGridAdapter?.getItem(selectedPosition) as AppObject
             appName = app.app.appName
-        } else if (hasRunningApp && appGridAdapter != null) {
+        } else if (lastRunningAppId != 0 && appGridAdapter != null) {
             // 没有选中项时，尝试显示运行中应用的名称
             for (i in 0 until (appGridAdapter?.count ?: 0)) {
                 val app = appGridAdapter?.getItem(i) as AppObject
@@ -658,7 +660,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     @SuppressLint("SetTextI18n")
     private fun updateTitle(appName: String?) {
-        titleAppName = appName
         val label = findViewById<TextView>(R.id.appListText)
         val hasRunningApp = lastRunningAppId != 0
         val arrow = if (hasRunningApp) " ▸" else ""
@@ -860,7 +861,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
      */
     private fun handleSelectionChange(position: Int, app: AppObject) {
         selectedPosition = position
-        updateTitle(app.app.appName)
+        refreshTitle()
         if (appGridAdapter != null) {
             appGridAdapter?.selectedPosition = position
         }
@@ -1130,7 +1131,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         displayOptions = options
         selectedDisplayId = null
-        refreshScreenCombinationModeFromPreferences()
+        updateAppViewTargetReminder()
     }
 
     /**
@@ -1229,7 +1230,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     private fun refreshScreenCombinationModeFromPreferences() {
         refreshScreenCombinationModeOptions()
         selectedScreenCombinationMode = PreferenceConfiguration.readPreferences(this).screenCombinationMode
-        updateAppViewTargetReminder()
+        refreshTitle()
     }
 
     private fun persistScreenCombinationMode() {
@@ -1242,19 +1243,18 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         if (selectedScreenCombinationMode == mode) return
         selectedScreenCombinationMode = mode
         persistScreenCombinationMode()
-        updateAppViewTargetReminder()
+        refreshTitle()
     }
 
     private fun clearDisplaySelection() {
         selectedDisplayId = null
-        refreshScreenCombinationModeFromPreferences()
+        updateAppViewTargetReminder()
     }
 
     /**
-     * Refreshes the title's screen-mode icon and the non-focusable display reminder.
+     * Refreshes the non-focusable display reminder.
      */
     private fun updateAppViewTargetReminder() {
-        if (::computerName.isInitialized) updateTitle(titleAppName)
         if (!::appViewTargetReminder.isInitialized) return
 
         val displayLabel = selectedDisplayId?.let { id ->
@@ -1702,7 +1702,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                         existingApp.app.appId == details.runningGameId) {
                     // This app was running and still is, so we're done now
                     // 但仍需要确保箭头可见
-                    updateRestoreButtonVisibility(details.runningGameId != 0)
+                    refreshTitle()
                     return@runOnUiThread
                 } else if (existingApp.app.appId == details.runningGameId) {
                     // This app wasn't running but now is
@@ -1726,7 +1726,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             }
 
             // 根据是否有运行中的应用来显示/隐藏恢复按钮
-            updateRestoreButtonVisibility(details.runningGameId != 0)
+            refreshTitle()
         }
     }
 
