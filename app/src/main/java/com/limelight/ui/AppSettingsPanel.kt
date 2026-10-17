@@ -3,6 +3,8 @@ package com.limelight.ui
 import android.content.res.Configuration
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -98,16 +100,10 @@ private data class DisplaySegmentOption(
     val enabled: Boolean = true
 )
 
-private enum class SegmentIcon {
+private enum class BackgroundModeIcon {
     Artwork,
     Acrylic,
-    SoftColor,
-    FollowHost,
-    NoOperation,
-    Activate,
-    Primary,
-    Secondary,
-    Exclusive
+    SoftColor
 }
 
 internal const val VIRTUAL_DISPLAY_ID = 212333
@@ -486,17 +482,17 @@ private fun BackgroundModeSegmentedControl(
         Triple(
             AppBackgroundMode.Artwork,
             stringResource(R.string.appview_background_mode_artwork),
-            SegmentIcon.Artwork
+            BackgroundModeIcon.Artwork
         ),
         Triple(
             AppBackgroundMode.Acrylic,
             stringResource(R.string.appview_background_mode_acrylic),
-            SegmentIcon.Acrylic
+            BackgroundModeIcon.Acrylic
         ),
         Triple(
             AppBackgroundMode.SoftColor,
             stringResource(R.string.appview_background_mode_soft_color),
-            SegmentIcon.SoftColor
+            BackgroundModeIcon.SoftColor
         )
     )
 
@@ -519,7 +515,7 @@ private fun BackgroundModeSegmentedControl(
             SegmentButton(
                 label = label,
                 selected = mode == selectedMode,
-                icon = icon,
+                icon = { tint, modifier -> BackgroundModeIconView(icon, tint, modifier) },
                 modifier = Modifier.weight(1f),
                 onClick = { onModeSelected(mode) }
             )
@@ -532,7 +528,7 @@ private fun SegmentButton(
     label: String,
     selected: Boolean,
     enabled: Boolean = true,
-    icon: SegmentIcon? = null,
+    icon: @Composable ((Color, Modifier) -> Unit)? = null,
     verticalIcon: Boolean = false,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
@@ -585,9 +581,7 @@ private fun SegmentButton(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                icon?.let {
-                    SegmentIconView(icon = it, tint = contentColor, modifier = Modifier.size(17.dp))
-                }
+                icon?.invoke(contentColor, Modifier.size(17.dp))
                 labelText()
             }
         } else {
@@ -595,9 +589,7 @@ private fun SegmentButton(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                icon?.let {
-                    SegmentIconView(icon = it, tint = contentColor, modifier = Modifier.size(16.dp))
-                }
+                icon?.invoke(contentColor, Modifier.size(16.dp))
                 labelText()
             }
         }
@@ -605,8 +597,8 @@ private fun SegmentButton(
 }
 
 @Composable
-private fun SegmentIconView(
-    icon: SegmentIcon,
+private fun BackgroundModeIconView(
+    icon: BackgroundModeIcon,
     tint: Color,
     modifier: Modifier = Modifier
 ) {
@@ -625,32 +617,8 @@ private fun SegmentIconView(
             )
         }
 
-        fun arrow(startX: Float, endX: Float, y: Float) {
-            drawLine(
-                tint,
-                Offset(size.width * startX, size.height * y),
-                Offset(size.width * endX, size.height * y),
-                strokeWidth,
-                StrokeCap.Round
-            )
-            drawLine(
-                tint,
-                Offset(size.width * endX, size.height * y),
-                Offset(size.width * (endX - 0.09f), size.height * (y - 0.09f)),
-                strokeWidth,
-                StrokeCap.Round
-            )
-            drawLine(
-                tint,
-                Offset(size.width * endX, size.height * y),
-                Offset(size.width * (endX - 0.09f), size.height * (y + 0.09f)),
-                strokeWidth,
-                StrokeCap.Round
-            )
-        }
-
         when (icon) {
-            SegmentIcon.Artwork -> {
+            BackgroundModeIcon.Artwork -> {
                 display(0.08f, 0.12f, 0.84f, 0.76f)
                 drawCircle(tint, size.minDimension * 0.08f, Offset(size.width * 0.7f, size.height * 0.34f))
                 val landscape = Path().apply {
@@ -662,7 +630,7 @@ private fun SegmentIconView(
                 }
                 drawPath(landscape, tint, style = stroke)
             }
-            SegmentIcon.Acrylic -> {
+            BackgroundModeIcon.Acrylic -> {
                 repeat(3) { index ->
                     drawRoundRect(
                         tint.copy(alpha = 1f - index * 0.22f),
@@ -673,7 +641,7 @@ private fun SegmentIconView(
                     )
                 }
             }
-            SegmentIcon.SoftColor -> {
+            BackgroundModeIcon.SoftColor -> {
                 val drop = Path().apply {
                     moveTo(size.width * 0.5f, size.height * 0.08f)
                     cubicTo(
@@ -695,40 +663,6 @@ private fun SegmentIconView(
                 }
                 drawPath(drop, tint, style = stroke)
             }
-            SegmentIcon.FollowHost -> {
-                display(0.05f, 0.14f, 0.48f, 0.58f)
-                drawLine(tint, Offset(size.width * 0.22f, size.height * 0.82f), Offset(size.width * 0.38f, size.height * 0.82f), strokeWidth, StrokeCap.Round)
-                drawCircle(tint, size.minDimension * 0.11f, Offset(size.width * 0.48f, size.height * 0.7f), style = stroke)
-                arrow(0.62f, 0.92f, 0.42f)
-            }
-            SegmentIcon.NoOperation -> {
-                display(0.04f, 0.22f, 0.27f, 0.42f)
-                display(0.69f, 0.22f, 0.27f, 0.42f)
-                drawLine(tint, Offset(size.width * 0.4f, size.height * 0.38f), Offset(size.width * 0.6f, size.height * 0.38f), strokeWidth, StrokeCap.Round)
-                drawLine(tint, Offset(size.width * 0.4f, size.height * 0.5f), Offset(size.width * 0.6f, size.height * 0.5f), strokeWidth, StrokeCap.Round)
-                drawRoundRect(tint, Offset(size.width * 0.44f, size.height * 0.64f), Size(size.width * 0.12f, size.height * 0.16f), radius, style = stroke)
-            }
-            SegmentIcon.Activate -> {
-                display(0.03f, 0.22f, 0.28f, 0.48f, tint.copy(alpha = 0.55f))
-                arrow(0.39f, 0.62f, 0.46f)
-                display(0.69f, 0.16f, 0.28f, 0.6f)
-            }
-            SegmentIcon.Primary -> {
-                display(0.05f, 0.2f, 0.38f, 0.5f)
-                display(0.54f, 0.14f, 0.4f, 0.58f)
-                drawCircle(tint, size.minDimension * 0.09f, Offset(size.width * 0.78f, size.height * 0.62f))
-            }
-            SegmentIcon.Secondary -> {
-                display(0.05f, 0.14f, 0.4f, 0.58f)
-                drawLine(tint, Offset(size.width * 0.48f, size.height * 0.43f), Offset(size.width * 0.57f, size.height * 0.43f), strokeWidth, StrokeCap.Round)
-                display(0.6f, 0.22f, 0.35f, 0.48f)
-                drawCircle(tint, size.minDimension * 0.055f, Offset(size.width * 0.78f, size.height * 0.62f))
-            }
-            SegmentIcon.Exclusive -> {
-                display(0.03f, 0.3f, 0.22f, 0.34f, tint.copy(alpha = 0.35f))
-                display(0.34f, 0.12f, 0.32f, 0.62f)
-                display(0.75f, 0.3f, 0.22f, 0.34f, tint.copy(alpha = 0.35f))
-            }
         }
     }
 }
@@ -737,11 +671,8 @@ private fun SegmentIconView(
 private fun screenModeCompactLabel(option: AppScreenCombinationOption): String =
     screenCombinationModeShortLabelRes(option.value)?.let { stringResource(it) } ?: option.label
 
-/**
- * Returns the compact label resource shared by the quick-settings control and the
- * app-page reminder. Unknown values deliberately fall back to the full
- * server-provided label instead of hiding a setting we do not recognize yet.
- */
+/** Compact labels shared by quick settings and title accessibility descriptions. */
+@StringRes
 internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
     -1 -> R.string.appview_screen_mode_host_short
     0 -> R.string.appview_screen_mode_noop_short
@@ -752,14 +683,15 @@ internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
     else -> null
 }
 
-private fun screenModeIcon(mode: Int): SegmentIcon = when (mode) {
-    -1 -> SegmentIcon.FollowHost
-    0 -> SegmentIcon.NoOperation
-    1 -> SegmentIcon.Activate
-    2 -> SegmentIcon.Primary
-    4 -> SegmentIcon.Secondary
-    3 -> SegmentIcon.Exclusive
-    else -> SegmentIcon.Activate
+@DrawableRes
+internal fun screenCombinationModeIconRes(mode: Int): Int? = when (mode) {
+    -1 -> R.drawable.ic_screen_mode_host
+    0 -> R.drawable.ic_screen_mode_noop
+    1 -> R.drawable.ic_screen_mode_activate
+    2 -> R.drawable.ic_screen_mode_primary
+    4 -> R.drawable.ic_screen_mode_secondary
+    3 -> R.drawable.ic_screen_mode_exclusive
+    else -> null
 }
 
 @Composable
@@ -795,7 +727,16 @@ private fun ScreenCombinationSegmentedControl(
                     SegmentButton(
                         label = screenModeCompactLabel(option),
                         selected = selectedMode == option.value,
-                        icon = screenModeIcon(option.value),
+                        icon = { tint, modifier ->
+                            screenCombinationModeIconRes(option.value)?.let { iconRes ->
+                                Icon(
+                                    painter = painterResource(iconRes),
+                                    contentDescription = null,
+                                    tint = tint,
+                                    modifier = modifier
+                                )
+                            }
+                        },
                         verticalIcon = true,
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
