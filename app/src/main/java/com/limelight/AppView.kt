@@ -686,7 +686,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             )
         }
         if (icon != null) {
-            spannableString.setSpan(ScreenCombinationModeSpan(icon), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannableString.setSpan(ScreenCombinationModeSpan(icon, computerName), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         label.text = spannableString
         val modeLabel = mode?.let { value ->
