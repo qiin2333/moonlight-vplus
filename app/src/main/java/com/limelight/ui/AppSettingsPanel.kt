@@ -671,7 +671,11 @@ private fun BackgroundModeIconView(
 private fun screenModeCompactLabel(option: AppScreenCombinationOption): String =
     screenCombinationModeShortLabelRes(option.value)?.let { stringResource(it) } ?: option.label
 
-/** Compact labels shared by quick settings and title accessibility descriptions. */
+/**
+ * Returns the compact label resource shared by the quick-settings control and the
+ * title's accessibility description. Unknown values deliberately fall back to the full
+ * server-provided label instead of hiding a setting we do not recognize yet.
+ */
 @StringRes
 internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
     -1 -> R.string.appview_screen_mode_host_short

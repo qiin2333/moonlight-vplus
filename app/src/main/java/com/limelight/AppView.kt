@@ -1252,7 +1252,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     }
 
     /**
-     * Refreshes the non-focusable display reminder.
+     * Shows only the launch-time options that differ from their defaults. This is
+     * deliberately non-focusable so it cannot add a stop to D-pad navigation.
      */
     private fun updateAppViewTargetReminder() {
         if (!::appViewTargetReminder.isInitialized) return
