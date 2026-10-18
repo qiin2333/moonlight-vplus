@@ -287,6 +287,15 @@
     <string name="title_checkbox_flip_face_buttons">交換 A/B 與 X/Y 按鍵</string>
     <string name="summary_checkbox_flip_face_buttons">同時交換實體手把和螢幕控制上的這兩組按鍵。</string>
     <string name="category_on_screen_controls_settings">螢幕虛擬手把按鈕</string>
+    <string name="category_stream_overlay">串流懸浮層</string>
+    <string name="title_stream_overlay_float_ball">懸浮球</string>
+    <string name="summary_stream_overlay_float_ball">進入懸浮球設定</string>
+    <string name="title_stream_overlay_performance">效能監控圖層</string>
+    <string name="summary_stream_overlay_performance">進入效能監控圖層設定</string>
+    <string name="title_stream_overlay_virtual_controller">虛擬手把</string>
+    <string name="summary_stream_overlay_virtual_controller">進入螢幕虛擬手把設定</string>
+    <string name="title_stream_overlay_crown">王冠虛擬按鈕</string>
+    <string name="summary_stream_overlay_crown">進入王冠虛擬按鈕設定</string>
     <string name="title_checkbox_show_onscreen_controls">顯示螢幕控制按鈕</string>
     <string name="summary_checkbox_show_onscreen_controls">在觸控式螢幕上顯示一層虛擬控制器</string>
     <string name="title_checkbox_vibrate_osc"> 啟用震動 </string>
