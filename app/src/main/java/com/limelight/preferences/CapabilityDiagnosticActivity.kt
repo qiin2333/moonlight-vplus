@@ -99,6 +99,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import com.limelight.ui.ThemedComponentActivity
 import com.limelight.R
+import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.ControllerPageScrollState
 import com.limelight.binding.input.resolveControllerPageRightStickYAxis
@@ -433,7 +434,11 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             return card
         }
 
-        val capInfo = HdrCapabilityHelper.getFullCapabilityInfo(this)
+        val outputDisplay = TargetDisplayResolver(this).resolve(
+            PreferenceConfiguration.isExternalDisplayEnabled(this)
+        )
+        val prefConfig = PreferenceConfiguration.readPreferences(this, outputDisplay)
+        val capInfo = HdrCapabilityHelper.getFullCapabilityInfo(this, outputDisplay)
         val brightness = capInfo.brightness
         val ts = capInfo.typeSupport
 
@@ -481,18 +486,18 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
         card.divider()
         card.section(tr(R.string.diag_screen_brightness))
 
-        var maxDesc = String.format("%.0f nits", brightness.maxLuminance)
-        if (brightness.isDefault) maxDesc += " (${tr(R.string.diag_default_suffix)})"
-        else if (brightness.isFromHdrCaps) maxDesc += " (EDID)"
+        fun luminance(value: Float): String = if (value.isFinite()) "$value nits" else "—"
+        var maxDesc = luminance(brightness.maxLuminance)
+        if (brightness.isFromHdrCaps) maxDesc += " (EDID)"
         card.keyValue(tr(R.string.diag_peak_brightness), maxDesc)
-        card.keyValue(tr(R.string.diag_min_brightness), String.format("%.4f nits", brightness.minLuminance))
-        card.keyValue(tr(R.string.diag_avg_brightness), String.format("%.0f nits", brightness.maxAvgLuminance))
+        card.keyValue(tr(R.string.diag_min_brightness), luminance(brightness.minLuminance))
+        card.keyValue(tr(R.string.diag_avg_brightness), luminance(brightness.maxAvgLuminance))
 
         plainTextReport.append("  ").append(tr(R.string.diag_peak_brightness)).append(": ").append(maxDesc).append("\n")
         plainTextReport.append("  ").append(tr(R.string.diag_min_brightness)).append(": ")
-                .append(String.format("%.4f", brightness.minLuminance)).append("\n")
+                .append(luminance(brightness.minLuminance)).append("\n")
         plainTextReport.append("  ").append(tr(R.string.diag_avg_brightness)).append(": ")
-                .append(String.format("%.0f", brightness.maxAvgLuminance)).append("\n")
+                .append(luminance(brightness.maxAvgLuminance)).append("\n")
 
         when {
             brightness.isDefault -> card.badge(tr(R.string.diag_edid_brightness_missing), DiagnosticTone.Warning)
@@ -522,23 +527,27 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             plainTextReport.append("  ").append(tr(R.string.diag_highest_ratio)).append(": ")
                     .append(String.format("%.2f", brightness.highestHdrSdrRatio)).append("\n")
 
-            if (brightness.isComputedFromRatio && brightness.computedPeakBrightness > 0) {
-                card.keyValue(tr(R.string.diag_ratio_peak), String.format("%.0f nits", brightness.computedPeakBrightness))
-                plainTextReport.append("  ").append(tr(R.string.diag_ratio_peak)).append(": ").append(
-                        String.format("%.0f", brightness.computedPeakBrightness)).append("\n")
-            }
             card.badge(tr(R.string.diag_sdr_nits_limited), DiagnosticTone.Info)
         }
 
         card.divider()
         card.section(tr(R.string.diag_report_to_host))
 
-        val sv = HdrCapabilityHelper.getBrightnessRangeAsInts(this)
-        card.keyValue("minBrightness", "${sv[0]} nits")
-        card.keyValue("maxBrightness", "${sv[1]} nits")
-        card.keyValue("maxAvgBrightness", "${sv[2]} nits")
-        plainTextReport.append("  ").append(tr(R.string.diag_report_to_host)).append(": min=").append(sv[0]).append(" max=").append(sv[1])
-                .append(" avg=").append(sv[2]).append("\n")
+        val report = HdrCapabilityHelper.getBrightnessReport(
+            outputDisplay,
+            prefConfig.hdrPeakBrightnessNits.takeIf { prefConfig.enableHdr && prefConfig.hdrBrightnessOverride },
+        )
+        if (report == null) {
+            val fallback = tr(R.string.diag_hdr_brightness_host_fallback)
+            card.badge(fallback, DiagnosticTone.Warning)
+            plainTextReport.append("  ").append(fallback).append("\n")
+        } else {
+            card.keyValue("minBrightness", luminance(report.minNits))
+            card.keyValue("maxBrightness", luminance(report.maxNits))
+            card.keyValue("maxAverageBrightness", luminance(report.maxFullFrameNits))
+            plainTextReport.append("  ").append(tr(R.string.diag_report_to_host)).append(": min=").append(report.minNits)
+                    .append(" max=").append(report.maxNits).append(" avg=").append(report.maxFullFrameNits).append("\n")
+        }
 
         card.divider()
         card.section(tr(R.string.diag_system_brightness))

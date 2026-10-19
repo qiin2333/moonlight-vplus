@@ -793,9 +793,7 @@ class NvHTTP(
             "&remoteControllersBitmap=${streamConfig.attachedGamepadMask}" +
             "&gcmap=${streamConfig.attachedGamepadMask}" +
             "&gcpersist=${if (streamConfig.getPersistGamepadsAfterDisconnect()) 1 else 0}" +
-            "&minBrightness=${context.minBrightness}" +
-            "&maxBrightness=${context.maxBrightness}" +
-            "&maxAverageBrightness=${context.maxAverageBrightness}"
+            context.hdrBrightness?.toQueryParameters().orEmpty()
 
         streamConfig.getUseVdd()?.let { useVdd ->
             queryParams += "&useVdd=${if (useVdd) 1 else 0}"

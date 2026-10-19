@@ -2039,6 +2039,7 @@
     <string name="diag_min_brightness">最小亮度</string>
     <string name="diag_avg_brightness">平均亮度</string>
     <string name="diag_edid_brightness_missing">驱动未报告 EDID 亮度</string>
+    <string name="diag_hdr_brightness_host_fallback">不发送亮度参数，由服务端选择回退值</string>
     <string name="diag_hdr_panel_high">高阶 HDR 面板 ≥1000 nits</string>
     <string name="diag_hdr_panel_mid">中等 HDR 面板</string>
     <string name="diag_peak_low">峰值亮度偏低 &lt;400 nits</string>

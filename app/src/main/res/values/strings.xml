@@ -2109,6 +2109,7 @@ Tap again to replace it.</string>
     <string name="diag_min_brightness">Minimum Brightness</string>
     <string name="diag_avg_brightness">Average Brightness</string>
     <string name="diag_edid_brightness_missing">Driver did not report EDID brightness</string>
+    <string name="diag_hdr_brightness_host_fallback">Brightness not reported; the host selects its fallback</string>
     <string name="diag_hdr_panel_high">High-end HDR panel ≥1000 nits</string>
     <string name="diag_hdr_panel_mid">Midrange HDR panel</string>
     <string name="diag_peak_low">Peak brightness is low &lt;400 nits</string>
