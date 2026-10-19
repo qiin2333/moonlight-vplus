@@ -1,7 +1,8 @@
 package com.limelight.nvstream.http
 
-import com.google.gson.Gson
 import com.google.gson.JsonArray
+import com.google.gson.JsonParser
+import com.google.gson.JsonSyntaxException
 import com.limelight.LimeLog
 
 class NvApp {
@@ -42,7 +43,16 @@ class NvApp {
     fun isInitialized(): Boolean = this.initialized
 
     fun setCmdList(cmdList: String) {
-        this.cmdList = Gson().fromJson(cmdList, JsonArray::class.java)
+        // SuperCmds is already a JSON tree; avoid Gson's TypeToken-based object adapter path.
+        if (cmdList.isBlank()) {
+            this.cmdList = null
+            return
+        }
+        val commands = JsonParser.parseString(cmdList)
+        if (!commands.isJsonArray) {
+            throw JsonSyntaxException("Expected a JSON array for SuperCmds")
+        }
+        this.cmdList = commands.asJsonArray
     }
 
     override fun toString(): String {
