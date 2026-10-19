@@ -1938,6 +1938,7 @@
     <string name="easytier_subnet_mismatch">网段不匹配</string>
     <string name="easytier_relayed">中转</string>
     <string name="easytier_manager_uninitialized">EasyTier Manager尚未初始化</string>
+    <string name="easytier_native_libraries_unavailable">当前安装包未包含适用于本应用运行架构的 EasyTier 本地库，无法使用 EasyTier。</string>
     <string name="easytier_starting">EasyTier服务正在启动…</string>
     <string name="easytier_vpn_permission_required">需要VPN权限才能启动服务。</string>
     <string name="easytier_status_refreshed">状态已刷新</string>
