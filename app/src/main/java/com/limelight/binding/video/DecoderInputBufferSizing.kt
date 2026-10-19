@@ -83,6 +83,16 @@ internal object DecoderInputBufferSizing {
             booleanArrayOf(true)
         }
 
+    /** Grow from the observed access-unit size, rather than a bitrate/resolution estimate. */
+    fun expandedInputSize(requiredSize: Long, currentCapacity: Int, previousRequest: Int): Int? {
+        // If the codec ignored an adequate request, repeating it cannot fix the buffer.
+        if (requiredSize <= currentCapacity || requiredSize <= previousRequest || requiredSize > Int.MAX_VALUE) {
+            return null
+        }
+        return maxOf(requiredSize, currentCapacity.toLong() * 2L)
+            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
     fun requiresReconfiguration(
         currentWidth: Int,
         currentHeight: Int,
