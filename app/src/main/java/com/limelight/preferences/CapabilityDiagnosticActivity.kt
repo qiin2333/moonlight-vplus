@@ -489,8 +489,9 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
         card.section(tr(R.string.diag_screen_brightness))
 
         fun luminance(value: Float): String = if (value.isFinite()) "$value nits" else "—"
-        var maxDesc = luminance(brightness.maxLuminance)
-        if (brightness.isFromHdrCaps) maxDesc += " (EDID)"
+        val claimedPeak = brightness.edidPeakNits
+        var maxDesc = luminance(claimedPeak ?: brightness.maxLuminance)
+        if (claimedPeak != null) maxDesc += " (EDID)"
         card.keyValue(tr(R.string.diag_peak_brightness), maxDesc)
         card.keyValue(tr(R.string.diag_min_brightness), luminance(brightness.minLuminance))
         card.keyValue(tr(R.string.diag_avg_brightness), luminance(brightness.maxAvgLuminance))
@@ -502,6 +503,8 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
                 .append(luminance(brightness.maxAvgLuminance)).append("\n")
 
         when {
+            brightness.report == null && brightness.edidPeakNits != null ->
+                card.badge(tr(R.string.diag_edid_brightness_incomplete), DiagnosticTone.Warning)
             brightness.isDefault -> card.badge(tr(R.string.diag_edid_brightness_missing), DiagnosticTone.Warning)
             brightness.maxLuminance >= 1000 -> card.badge(tr(R.string.diag_hdr_panel_high), DiagnosticTone.Success)
             brightness.maxLuminance >= 600 -> card.badge(tr(R.string.diag_hdr_panel_mid), DiagnosticTone.Success)

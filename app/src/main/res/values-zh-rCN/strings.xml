@@ -2039,6 +2039,7 @@
     <string name="diag_min_brightness">最小亮度</string>
     <string name="diag_avg_brightness">平均亮度</string>
     <string name="diag_edid_brightness_missing">驱动未报告 EDID 亮度</string>
+    <string name="diag_edid_brightness_incomplete">EDID 亮度不完整：已报峰值，黑位/全屏缺失</string>
     <string name="diag_hdr_brightness_host_fallback">不发送亮度参数，由服务端选择回退值</string>
     <string name="diag_hdr_brightness_estimated">含粗略估算：HDR/SDR 比值 × 300 尼特；未知全屏亮度取峰值 20%，未知黑位取 0.001 尼特</string>
     <string name="diag_edid_ratio_conflict">EDID 峰值 %1$s 搭配 HDR/SDR 比值 %2$s×，隐含 SDR 白仅 %3$s，疑似驱动低报；若面板实际更高，请在设置中手动指定峰值</string>
