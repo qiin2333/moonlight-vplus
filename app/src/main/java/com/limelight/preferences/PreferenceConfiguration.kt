@@ -271,6 +271,10 @@ class PreferenceConfiguration {
 
     var useExternalDisplay = false
 
+    // Client-driven dynamic resolution: each trigger is independently gated
+    var followExternalDisplayResolution = false
+    var followWindowResolution = false
+
     // 悬浮球设置
     var enableFloatBall = false
     var floatBallAutoHideDelay = 0
@@ -337,6 +341,8 @@ class PreferenceConfiguration {
                 .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
+                .putBoolean(FOLLOW_EXTERNAL_DISPLAY_RESOLUTION_PREF_STRING, followExternalDisplayResolution)
+                .putBoolean(FOLLOW_WINDOW_RESOLUTION_PREF_STRING, followWindowResolution)
                 .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                 .putBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, showDisplaySettingsCard)
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
@@ -566,6 +572,8 @@ class PreferenceConfiguration {
         copy.perfOverlayClockFormat = this.perfOverlayClockFormat
         copy.reverseResolution = this.reverseResolution
         copy.rotableScreen = this.rotableScreen
+        copy.followExternalDisplayResolution = this.followExternalDisplayResolution
+        copy.followWindowResolution = this.followWindowResolution
         copy.screenPosition = this.screenPosition
         copy.screenOffsetX = this.screenOffsetX
         copy.screenOffsetY = this.screenOffsetY
@@ -778,6 +786,8 @@ class PreferenceConfiguration {
         private const val REVERSE_RESOLUTION_PREF_STRING = "checkbox_reverse_resolution"
         private const val USE_EXTERNAL_DISPLAY_PREF_STRING = "use_external_display"
         private const val ROTABLE_SCREEN_PREF_STRING = "checkbox_rotable_screen"
+        private const val FOLLOW_EXTERNAL_DISPLAY_RESOLUTION_PREF_STRING = "checkbox_follow_external_display_resolution"
+        private const val FOLLOW_WINDOW_RESOLUTION_PREF_STRING = "checkbox_follow_window_resolution"
 
         // 画面位置常量
         private const val SCREEN_POSITION_PREF_STRING = "list_screen_position"
@@ -987,6 +997,8 @@ class PreferenceConfiguration {
 
         private const val DEFAULT_REVERSE_RESOLUTION = false
         private const val DEFAULT_ROTABLE_SCREEN = false
+        private const val DEFAULT_FOLLOW_EXTERNAL_DISPLAY_RESOLUTION = false
+        private const val DEFAULT_FOLLOW_WINDOW_RESOLUTION = false
 
         // 默认值
         private const val DEFAULT_SCREEN_POSITION = "center" // 居中
@@ -1752,6 +1764,8 @@ class PreferenceConfiguration {
 
             config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION)
             config.rotableScreen = prefs.getBoolean(ROTABLE_SCREEN_PREF_STRING, DEFAULT_ROTABLE_SCREEN)
+            config.followExternalDisplayResolution = prefs.getBoolean(FOLLOW_EXTERNAL_DISPLAY_RESOLUTION_PREF_STRING, DEFAULT_FOLLOW_EXTERNAL_DISPLAY_RESOLUTION)
+            config.followWindowResolution = prefs.getBoolean(FOLLOW_WINDOW_RESOLUTION_PREF_STRING, DEFAULT_FOLLOW_WINDOW_RESOLUTION)
 
             // 如果启用了分辨率反转，则交换宽度和高度
             if (config.reverseResolution) {

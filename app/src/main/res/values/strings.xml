@@ -1483,6 +1483,10 @@ Tap again to replace it.</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>
     <string name="host_resolution_changed">Host resolution changed to %1$dx%2$d</string>
+    <string name="title_follow_external_display_resolution">Follow external display resolution</string>
+    <string name="summary_follow_external_display_resolution">Ask the host to match the stream resolution to the external display while streaming to it. Requires host support.</string>
+    <string name="title_follow_window_resolution">Follow window size</string>
+    <string name="summary_follow_window_resolution">Ask the host to match the stream resolution to the app window whenever its size changes (split-screen, freeform, foldable, DeX, and rotation when Follow device rotation is on). Requires host support.</string>
 
     <!-- Drawer Menu -->
     <string name="menu">Menu</string>
