@@ -1095,11 +1095,12 @@ class MediaCodecDecoderRenderer(
         try {
             videoDecoder!!.configure(format, outSurface, null, 0)
         } catch (e: IllegalArgumentException) {
-            // A valid output surface means an enlarged format was rejected, not torn down.
-            // Do not let recovery's invalid-surface handlers turn this into a frozen stream.
+            // Keep growth rejection out of recovery's invalid-surface handlers. The state-error
+            // path tries reset/recreation and all configuration candidates before reporting failure.
             if (requiredInputBufferSize > 0 && !stopping && outSurface.isValid) {
-                notifyCrashOnce(e)
-                throw RendererException(createDiagnostics(), e)
+                throw IllegalStateException(
+                    "Decoder rejected input buffer size $requiredInputBufferSize: ${e.message}", e
+                )
             }
             throw e
         }
