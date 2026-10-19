@@ -1,6 +1,7 @@
 package com.limelight.binding.input.advance_setting.superpage
 
 import android.content.Context
+import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.LinearLayout
@@ -23,6 +24,8 @@ class NumberSeekbar : LinearLayout {
     private lateinit var numberSeekbarAdd: android.view.View
     private lateinit var numberSeekbarSeekbar: SeekBar
     private var onNumberSeekbarChangeListener: OnNumberSeekbarChangeListener? = null
+    private var minimumValue = 0
+    private var correctingProgress = false
 
     constructor(context: Context) : super(context) {
         init(context, null)
@@ -48,6 +51,7 @@ class NumberSeekbar : LinearLayout {
         numberSeekbarNumber = findViewById(R.id.number_seekbar_number)
         numberSeekbarAdd = findViewById(R.id.number_seekbar_add)
         numberSeekbarSeekbar = findViewById(R.id.number_seekbar_seekbar)
+        minimumValue = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) numberSeekbarSeekbar.min else 0
         numberSeekbarNumber.text = numberSeekbarSeekbar.progress.toString()
 
         if (attrs != null) {
@@ -57,9 +61,9 @@ class NumberSeekbar : LinearLayout {
                 val minValue = a.getInt(R.styleable.NumberSeekbar_min, 0)
                 val progressValue = a.getInt(R.styleable.NumberSeekbar_progress, 0)
                 numberSeekbarSeekbar.max = maxValue
-                numberSeekbarSeekbar.min = minValue
-                numberSeekbarSeekbar.progress = progressValue
-                numberSeekbarNumber.text = progressValue.toString()
+                setProgressMin(minValue)
+                numberSeekbarSeekbar.progress = progressValue.coerceAtLeast(minimumValue)
+                numberSeekbarNumber.text = numberSeekbarSeekbar.progress.toString()
 
                 val title = a.getString(R.styleable.NumberSeekbar_text)
                 numberSeekbarTitle.text = title
@@ -70,8 +74,17 @@ class NumberSeekbar : LinearLayout {
 
         numberSeekbarSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                numberSeekbarNumber.text = progress.toString()
-                onNumberSeekbarChangeListener?.onProgressChanged(seekBar, progress, fromUser)
+                if (correctingProgress) return
+                val value = progress.coerceAtLeast(minimumValue)
+                if (value != progress) {
+                    // Pre-O SeekBar has no minimum. Keep its real progress in range so callers
+                    // reading SeekBar.getProgress() in stop callbacks still receive the value.
+                    correctingProgress = true
+                    seekBar.progress = value
+                    correctingProgress = false
+                }
+                numberSeekbarNumber.text = value.toString()
+                onNumberSeekbarChangeListener?.onProgressChanged(seekBar, value, fromUser)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -85,7 +98,7 @@ class NumberSeekbar : LinearLayout {
 
         numberSeekbarMinus.setOnClickListener {
             val progress = numberSeekbarSeekbar.progress
-            if (progress > numberSeekbarSeekbar.min) {
+            if (progress > minimumValue) {
                 onNumberSeekbarChangeListener?.let { listener ->
                     listener.onStartTrackingTouch(numberSeekbarSeekbar)
                     numberSeekbarSeekbar.progress = progress - 1
@@ -109,8 +122,8 @@ class NumberSeekbar : LinearLayout {
     fun setValueWithNoCallBack(value: Int) {
         val temp = onNumberSeekbarChangeListener
         onNumberSeekbarChangeListener = null
-        numberSeekbarSeekbar.progress = value
-        numberSeekbarNumber.text = value.toString()
+        numberSeekbarSeekbar.progress = value.coerceAtLeast(minimumValue)
+        numberSeekbarNumber.text = numberSeekbarSeekbar.progress.toString()
         onNumberSeekbarChangeListener = temp
     }
 
@@ -119,11 +132,17 @@ class NumberSeekbar : LinearLayout {
     }
 
     fun setProgressMax(max: Int) {
-        numberSeekbarSeekbar.max = max
+        numberSeekbarSeekbar.max = max.coerceAtLeast(minimumValue)
     }
 
     fun setProgressMin(min: Int) {
-        numberSeekbarSeekbar.min = min
+        minimumValue = min.coerceAtMost(numberSeekbarSeekbar.max)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            numberSeekbarSeekbar.min = minimumValue
+        } else if (numberSeekbarSeekbar.progress < minimumValue) {
+            numberSeekbarSeekbar.progress = minimumValue
+        }
+        numberSeekbarNumber.text = numberSeekbarSeekbar.progress.toString()
     }
 
     fun setOnNumberSeekbarChangeListener(listener: OnNumberSeekbarChangeListener?) {
