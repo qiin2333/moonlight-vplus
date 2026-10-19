@@ -24,7 +24,6 @@ import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import org.jcodec.codecs.h264.io.model.SeqParameterSet
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -204,9 +203,6 @@ class MediaCodecDecoderRenderer(
     private val decoderConfigurationTracker = DecoderConfigurationTracker()
     @Volatile
     private var decoderConfigurationDirty = false
-
-    private var needsBaselineSpsHack = false
-    private var savedSps: SeqParameterSet? = null
 
     private var initialException: RendererException? = null
     private var initialExceptionTimestamp: Long = 0
@@ -1096,7 +1092,17 @@ class MediaCodecDecoderRenderer(
             }
             pendingFramegenSurface ?: directOutputSurface()
         }
-        videoDecoder!!.configure(format, outSurface, null, 0)
+        try {
+            videoDecoder!!.configure(format, outSurface, null, 0)
+        } catch (e: IllegalArgumentException) {
+            // A valid output surface means an enlarged format was rejected, not torn down.
+            // Do not let recovery's invalid-surface handlers turn this into a frozen stream.
+            if (requiredInputBufferSize > 0 && !stopping && outSurface.isValid) {
+                notifyCrashOnce(e)
+                throw RendererException(createDiagnostics(), e)
+            }
+            throw e
+        }
 
         // Set DataSpace on the output Surface for HDR content.
         // Equivalent to HarmonyOS OH_NativeWindow_SetColorSpace().
@@ -1117,6 +1123,7 @@ class MediaCodecDecoderRenderer(
         vpsBuffers.clear()
         spsBuffers.clear()
         ppsBuffers.clear()
+        spsPatcher?.onCodecConfigured()
         clearTimestampTracking()
 
         // This will contain the actual accepted input format attributes
@@ -1319,7 +1326,7 @@ class MediaCodecDecoderRenderer(
 
             // These fixups only apply to H264 decoders
             needsSpsBitstreamFixup = MediaCodecHelper.decoderNeedsSpsBitstreamRestrictions(selectedDecoderInfo.name)
-            needsBaselineSpsHack = MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
+            val needsBaselineSpsHack = MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
             constrainedHighProfile = MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.name)
             isExynos4 = MediaCodecHelper.isExynos4Device()
             if (needsSpsBitstreamFixup) {
@@ -1339,7 +1346,7 @@ class MediaCodecDecoderRenderer(
 
             spsPatcher = SpsPatcher(
                 constrainedHighProfile, needsSpsBitstreamFixup,
-                isExynos4, hevcDecoder != null, av1Decoder != null
+                isExynos4, hevcDecoder != null, av1Decoder != null, needsBaselineSpsHack
             )
         } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
             // Dolby Vision Profile 8 routing: the wire stream is HEVC either
@@ -2793,17 +2800,13 @@ class MediaCodecDecoderRenderer(
             if (decodeUnitType == MoonBridge.BUFFER_TYPE_SPS && (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
                 numSpsIn++
 
-                val result = spsPatcher!!.patchSps(
+                val patchedNalu = spsPatcher!!.patchSps(
                     decodeUnitData, decodeUnitLength,
                     refFrameInvalidationActive, initialWidth, initialHeight,
-                    refreshRate, needsBaselineSpsHack
+                    refreshRate
                 )
 
-                if (result.savedSps != null) {
-                    savedSps = result.savedSps
-                }
-
-                spsBuffers.add(result.patchedNalu)
+                spsBuffers.add(patchedNalu)
                 return MoonBridge.DR_OK
             } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_VPS) {
                 numVpsIn++
@@ -2865,9 +2868,7 @@ class MediaCodecDecoderRenderer(
                     // Remember that we submitted CSD globally for this MediaCodec instance
                     submittedCsd = true
 
-                    if (needsBaselineSpsHack) {
-                        needsBaselineSpsHack = false
-
+                    if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 && spsPatcher!!.needsBaselineSpsReplay) {
                         if (!replaySps()) {
                             return MoonBridge.DR_NEED_IDR
                         }
@@ -2956,17 +2957,18 @@ class MediaCodecDecoderRenderer(
             return false
         }
 
-        val replayNalu = spsPatcher!!.buildReplaySps(savedSps!!)
+        val replayNalu = spsPatcher!!.buildReplaySps()
         if (!ensureInputBufferCapacity(replayNalu.size.toLong())) {
             return false
         }
         nextInputBuffer!!.put(replayNalu)
 
-        // No need for the SPS anymore
-        savedSps = null
-
         // Queue the new SPS
-        return queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
+        if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
+            return false
+        }
+        spsPatcher!!.onReplaySubmitted()
+        return true
     }
 
     override fun getCapabilities(): Int {
