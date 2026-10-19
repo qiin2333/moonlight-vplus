@@ -150,24 +150,15 @@ class HdrBrightnessTest {
 
     @Test
     fun edidUnderreportHintFiresOnlyForImplausiblyDimImpliedSdrWhite() {
-        val edidReport = HdrBrightness.create(400.125f, 0f, 300f)!!
-        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(null, 5f))
-        assertNull(
-            HdrBrightness.impliedSdrWhiteIfPeakUnderreported(
-                HdrBrightness.fromDisplay(-1f, Float.NaN, -1f, 5f), 5f))
-        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidReport, null))
+        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(400.125f, null))
         for (ratio in listOf(-1f, 0f, 1f, Float.NaN, Float.POSITIVE_INFINITY)) {
-            assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidReport, ratio))
+            assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(400.125f, ratio))
         }
-        assertEquals(80.025f, HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidReport, 5f)!!, 0.001f)
-        assertEquals(
-            99.8f,
-            HdrBrightness.impliedSdrWhiteIfPeakUnderreported(HdrBrightness.create(499f, 0f, 400f)!!, 5f)!!,
-            0.001f)
-        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(HdrBrightness.create(500f, 0f, 400f)!!, 5f))
-        assertEquals(
-            99.01f,
-            HdrBrightness.impliedSdrWhiteIfPeakUnderreported(HdrBrightness.create(10000f, 0f, 9000f)!!, 101f)!!,
-            0.01f)
+        // A claimed peak is cross-checked even when the missing black level withholds the
+        // complete report from the host.
+        assertEquals(80.025f, HdrBrightness.impliedSdrWhiteIfPeakUnderreported(400.125f, 5f)!!, 0.001f)
+        assertEquals(99.8f, HdrBrightness.impliedSdrWhiteIfPeakUnderreported(499f, 5f)!!, 0.001f)
+        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(500f, 5f))
+        assertEquals(99.01f, HdrBrightness.impliedSdrWhiteIfPeakUnderreported(10000f, 101f)!!, 0.01f)
     }
 }

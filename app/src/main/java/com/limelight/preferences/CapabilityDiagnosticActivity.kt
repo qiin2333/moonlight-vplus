@@ -508,14 +508,14 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             brightness.maxLuminance < 400 -> card.badge(tr(R.string.diag_peak_low), DiagnosticTone.Warning)
         }
 
-        val systemReport = brightness.report
+        val edidPeak = brightness.edidPeakNits
         val bestRatio = brightness.bestHdrSdrRatio
-        if (systemReport != null && bestRatio != null) {
-            val impliedSdr = HdrBrightness.impliedSdrWhiteIfPeakUnderreported(systemReport, bestRatio)
+        if (edidPeak != null && bestRatio != null) {
+            val impliedSdr = HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidPeak, bestRatio)
             if (impliedSdr != null) {
                 val hint = tr(
                     R.string.diag_edid_ratio_conflict,
-                    luminance(systemReport.maxNits),
+                    luminance(edidPeak),
                     String.format(Locale.ROOT, "%.2f", bestRatio),
                     luminance(impliedSdr),
                 )

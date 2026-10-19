@@ -18,6 +18,15 @@ object HdrCapabilityHelper {
 
     class BrightnessInfo {
         var report: HdrBrightness? = null
+
+        /**
+         * Peak as the driver's EDID/mode metadata claims it, before complete-report validation
+         * and independent of [report]: the host report is withheld as one atomic set when the
+         * black level is missing, but a claimed peak still exists to cross-check against the
+         * HDR/SDR ratio. Null when the driver gave no positive finite value.
+         */
+        var edidPeakNits: Float? = null
+
         val maxLuminance: Float get() = report?.maxNits ?: Float.NaN
         val minLuminance: Float get() = report?.minNits ?: Float.NaN
         val maxAvgLuminance: Float get() = report?.maxFullFrameNits ?: Float.NaN
@@ -100,6 +109,7 @@ object HdrCapabilityHelper {
             }
         }
 
+        info.edidPeakNits = maxLum.takeIf { it.isFinite() && it > 0f }
         info.report = HdrBrightness.fromDisplay(maxLum, minLum, maxAvgLum, info.bestHdrSdrRatio)
         if (info.report?.isEstimatedFromRatio == true) {
             LimeLog.info("HDR brightness estimated using ratio=${info.bestHdrSdrRatio} and assumed SDR white=300 nits: " +

@@ -20,15 +20,16 @@ class HdrBrightness private constructor(
             ratio?.takeIf { it.isFinite() && it > 1f }
 
         /**
-         * The SDR white implied by an EDID-sourced [report] and [bestHdrSdrRatio], or null when
-         * the two are consistent. An implied SDR white below [IMPLAUSIBLE_SDR_WHITE_NITS] means
-         * both cannot be true, so the driver peak is likely underreported. Diagnostic hint only
-         * — never alters a report.
+         * The SDR white implied by the driver-claimed EDID peak [edidPeakNits] and
+         * [bestHdrSdrRatio], or null when the two are consistent. An implied SDR white below
+         * [IMPLAUSIBLE_SDR_WHITE_NITS] means both cannot be true, so the driver peak is likely
+         * underreported. Takes the raw peak so the hint still fires when the complete report is
+         * withheld from the host over a missing black level. Diagnostic only — never alters a
+         * report.
          */
-        fun impliedSdrWhiteIfPeakUnderreported(report: HdrBrightness?, bestHdrSdrRatio: Float?): Float? {
-            if (report == null || report.isEstimatedFromRatio) return null
+        fun impliedSdrWhiteIfPeakUnderreported(edidPeakNits: Float, bestHdrSdrRatio: Float?): Float? {
             val ratio = usableHdrSdrRatio(bestHdrSdrRatio) ?: return null
-            return (report.maxNits / ratio).takeIf { it < IMPLAUSIBLE_SDR_WHITE_NITS }
+            return (edidPeakNits / ratio).takeIf { it < IMPLAUSIBLE_SDR_WHITE_NITS }
         }
 
         fun create(maxNits: Float, minNits: Float, maxFullFrameNits: Float): HdrBrightness? {
