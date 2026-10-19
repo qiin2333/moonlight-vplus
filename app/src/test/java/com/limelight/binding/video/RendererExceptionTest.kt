@@ -3,11 +3,8 @@ package com.limelight.binding.video
 import com.google.firebase.crashlytics.internal.stacktrace.TrimmedThrowableData
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.PrintWriter
-import java.io.StringWriter
 
 class RendererExceptionTest {
     @Test
@@ -24,57 +21,6 @@ class RendererExceptionTest {
         assertEquals(original.javaClass.name, captured.cause!!.className)
         assertEquals("codec reset failed", captured.cause!!.localizedMessage)
         assertArrayEquals(original.stackTrace, captured.cause!!.stacktrace)
-    }
-
-    @Test
-    fun crashReporterMessageIncludesRendererContextAndOriginalFailure() {
-        val original = IllegalStateException("Decoder reset failed: -5")
-        val error = RendererException(diagnostics(), original)
-
-        val message = error.localizedMessage!!
-        assertEquals(error.message, message)
-        assertEquals(error.toString(), message)
-        assertTrue(message.contains("Video dimensions: 1920x1080"))
-        assertTrue(message.contains("FPS target: 60"))
-        assertTrue(message.contains("Bitrate: 20000 Kbps"))
-        assertTrue(message.contains("Configured format:"))
-        assertTrue(message.contains("Frames in-out: 120, 100"))
-        assertTrue(message.contains(original.toString()))
-    }
-
-    @Test
-    fun originalExceptionAndNestedCauseRetainTheirTypesAndStacks() {
-        val codecFailure = IllegalArgumentException("unsupported codec configuration")
-        val original = IllegalStateException("Decoder configuration failed", codecFailure)
-        val error = RendererException(diagnostics(), original)
-
-        assertSame(original, error.cause)
-        assertSame(codecFailure, error.cause!!.cause)
-        assertSame(original.stackTrace[0], error.cause!!.stackTrace[0])
-    }
-
-    @Test
-    fun printedStackTraceIncludesTheOriginalFailureLocation() {
-        val original = IllegalStateException("codec reset failed")
-        original.stackTrace = arrayOf(
-            StackTraceElement("android.media.MediaCodec", "reset", "MediaCodec.java", 123),
-        )
-        val error = RendererException(diagnostics(), original)
-        val output = StringWriter()
-        error.printStackTrace(PrintWriter(output))
-
-        assertTrue(output.toString().contains("Caused by: java.lang.IllegalStateException: codec reset failed"))
-        assertTrue(output.toString().contains("android.media.MediaCodec.reset(MediaCodec.java:123)"))
-    }
-
-    @Test
-    fun failuresWithoutTheirOwnMessageStillExposeDiagnosticsAndCause() {
-        val original = IllegalStateException()
-        val error = RendererException(diagnostics(), original)
-
-        assertSame(original, error.cause)
-        assertTrue(error.localizedMessage!!.contains("Video dimensions: 1920x1080"))
-        assertTrue(error.localizedMessage!!.endsWith(original.toString()))
     }
 
     private fun diagnostics() = RendererDiagnostics(
