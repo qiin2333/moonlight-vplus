@@ -708,6 +708,24 @@ open class NvConnection(
         }
     }
 
+    /** The host enabled client-driven resolution changes for this session; valid once connected. */
+    val supportsClientResolutionChange: Boolean
+        get() = !isMonkey &&
+            (MoonBridge.getHostFeatureFlags() and MoonBridge.LI_FF_CLIENT_RESOLUTION_CHANGE) != 0
+
+    /**
+     * Request a server-side resolution change (client-driven dynamic resolution).
+     * Returns 0 on success; -1 invalid dims, -2 not enabled for this session, -3 not connected,
+     * -4 send error.
+     */
+    fun sendResolutionChangeRequest(width: Int, height: Int): Int {
+        return if (!isMonkey) {
+            MoonBridge.sendResolutionChangeRequest(width, height)
+        } else {
+            MoonBridge.LI_ERR_UNSUPPORTED
+        }
+    }
+
     @Throws(IOException::class, XmlPullParserException::class)
     fun doStopAndQuit() {
         this.stop()

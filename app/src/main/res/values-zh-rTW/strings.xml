@@ -753,6 +753,10 @@
     <string name="summary_checkbox_reverse_resolution">僅在畫面方向或寬高顯示異常時開啟；開啟後可能與「跟隨裝置旋轉」衝突。</string>
     <string name="title_checkbox_rotable_screen">跟隨裝置旋轉</string>
     <string name="summary_checkbox_rotable_screen">在裝置切換直向或橫向時自動同步旋轉串流版面。</string>
+    <string name="title_follow_window_resolution">跟隨視窗大小</string>
+    <string name="summary_follow_window_resolution">應用程式視窗大小改變時（分割畫面、自由視窗、摺疊螢幕、DeX，以及開啟「跟隨裝置旋轉」後的旋轉），請求主機將串流解析度匹配視窗（需主機支援）。</string>
+    <string name="title_follow_external_display_resolution">跟隨外接顯示器解析度</string>
+    <string name="summary_follow_external_display_resolution">串流到外接顯示器時，請求主機將串流解析度匹配該顯示器（需主機支援）。</string>
     <string name="title_seekbar_output_buffer_queue_limit">解碼影格佇列</string>
     <string name="summary_seekbar_output_buffer_queue_limit">控制渲染前最多可排隊的解碼影格數。較小值降低延遲但可能掉幀；較大值提高流暢度但會增加延遲。設為 1 在部分裝置上可能崩潰，預設為 2。</string>
     <string name="title_capability_diagnostic">視訊能力報告</string>

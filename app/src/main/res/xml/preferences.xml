@@ -378,10 +378,20 @@
             android:title="@string/title_checkbox_rotable_screen"
             android:summary="@string/summary_checkbox_rotable_screen"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_follow_window_resolution"
+            android:title="@string/title_follow_window_resolution"
+            android:summary="@string/summary_follow_window_resolution"
+            android:defaultValue="false" />
         <com.limelight.preferences.ExternalDisplayPreference
             android:key="use_external_display"
             android:title="@string/title_use_external_display"
             android:summary="@string/summary_use_external_display"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_follow_external_display_resolution"
+            android:title="@string/title_follow_external_display_resolution"
+            android:summary="@string/summary_follow_external_display_resolution"
             android:defaultValue="false" />
         <com.limelight.preferences.IconListPreference
             android:key="list_screen_position"
