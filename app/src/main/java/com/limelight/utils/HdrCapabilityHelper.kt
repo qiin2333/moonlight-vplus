@@ -21,7 +21,7 @@ object HdrCapabilityHelper {
         val maxLuminance: Float get() = report?.maxNits ?: Float.NaN
         val minLuminance: Float get() = report?.minNits ?: Float.NaN
         val maxAvgLuminance: Float get() = report?.maxFullFrameNits ?: Float.NaN
-        val isFromHdrCaps: Boolean get() = report != null
+        val isFromHdrCaps: Boolean get() = report?.isEstimatedFromRatio == false
         val isDefault: Boolean get() = report == null
 
         var hdrSdrRatio: Float = 1.0f
@@ -49,24 +49,26 @@ object HdrCapabilityHelper {
     fun getBrightnessInfoForDisplay(display: Display?): BrightnessInfo {
         val info = BrightnessInfo()
         if (display == null || !display.isValid) return info
+        var maxLum = Float.NaN
+        var minLum = Float.NaN
+        var maxAvgLum = Float.NaN
 
         // 第一步：从 EDID (HdrCapabilities) 获取基础亮度值 (Android 7.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             try {
                 val hdrCaps = display.hdrCapabilities
                 if (hdrCaps != null) {
-                    val maxLum = hdrCaps.desiredMaxLuminance
-                    val minLum = hdrCaps.desiredMinLuminance
-                    val maxAvgLum = hdrCaps.desiredMaxAverageLuminance
+                    maxLum = hdrCaps.desiredMaxLuminance
+                    minLum = hdrCaps.desiredMinLuminance
+                    maxAvgLum = hdrCaps.desiredMaxAverageLuminance
                     LimeLog.info("HdrCapabilities raw: max=$maxLum, min=$minLum, avg=$maxAvgLum")
-                    info.report = HdrBrightness.create(maxLum, minLum, maxAvgLum)
                 }
             } catch (e: Exception) {
                 LimeLog.warning("Failed to get display luminance: ${e.message}")
             }
         }
 
-        // Ratios are diagnostic only: an absolute SDR white point is not available here.
+        // Use the available ratio only when a complete system report is missing.
         if (Build.VERSION.SDK_INT >= 34) {
             try {
                 info.isHdrSdrRatioAvailable = display.isHdrSdrRatioAvailable
@@ -90,6 +92,15 @@ object HdrCapabilityHelper {
             }
         }
 
+        val ratio = if (info.isHdrSdrRatioAvailable) {
+            listOf(info.hdrSdrRatio, info.highestHdrSdrRatio)
+                .filter { it.isFinite() && it > 1f }.maxOrNull()
+        } else null
+        info.report = HdrBrightness.fromDisplay(maxLum, minLum, maxAvgLum, ratio)
+        if (info.report?.isEstimatedFromRatio == true) {
+            LimeLog.info("HDR brightness estimated using ratio=$ratio and assumed SDR white=300 nits: " +
+                "max=${info.maxLuminance}, min=${info.minLuminance}, avg=${info.maxAvgLuminance}")
+        }
         return info
     }
 

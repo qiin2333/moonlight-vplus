@@ -4,9 +4,78 @@ import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HdrBrightnessTest {
+    @Test
+    fun completeSystemReportAlwaysWinsOverRatio() {
+        for (ratio in listOf(null, 5f, Float.NaN, Float.POSITIVE_INFINITY, Float.MAX_VALUE)) {
+            val report = HdrBrightness.fromDisplay(400.125f, 0f, 300.25f, ratio)!!
+            assertEquals(400.125f, report.maxNits, 0f)
+            assertEquals(0f, report.minNits, 0f)
+            assertEquals(300.25f, report.maxFullFrameNits, 0f)
+            assertFalse(report.isEstimatedFromRatio)
+        }
+    }
+
+    @Test
+    fun missingSystemLuminanceUsesRatioAutomatically() {
+        val report = HdrBrightness.fromDisplay(-1f, Float.NaN, -1f, 5f)!!
+        assertEquals(1500f, report.maxNits, 0f)
+        assertEquals(0.001f, report.minNits, 0f)
+        assertEquals(300f, report.maxFullFrameNits, 0f)
+        assertTrue(report.isEstimatedFromRatio)
+        val fractionalRatio = HdrBrightness.fromDisplay(-1f, -1f, -1f, 3.25f)!!
+        assertEquals(975f, fractionalRatio.maxNits, 0f)
+        assertEquals(195f, fractionalRatio.maxFullFrameNits, 0f)
+    }
+
+    @Test
+    fun ratioFallbackPreservesEachKnownSystemValue() {
+        val missingPeak = HdrBrightness.fromDisplay(-1f, 0.0004f, 600.125f, 5f)!!
+        assertEquals(1500f, missingPeak.maxNits, 0f)
+        assertEquals(0.0004f, missingPeak.minNits, 0f)
+        assertEquals(600.125f, missingPeak.maxFullFrameNits, 0f)
+        val missingMinimum = HdrBrightness.fromDisplay(400.125f, -1f, 300.25f, 5f)!!
+        assertEquals(400.125f, missingMinimum.maxNits, 0f)
+        assertEquals(300.25f, missingMinimum.maxFullFrameNits, 0f)
+        val missingFullFrame = HdrBrightness.fromDisplay(400f, 100f, -1f, 5f)!!
+        assertEquals(400f, missingFullFrame.maxNits, 0f)
+        assertEquals(100f, missingFullFrame.minNits, 0f)
+        assertEquals(100f, missingFullFrame.maxFullFrameNits, 0f)
+    }
+
+    @Test
+    fun knownFullFrameIsALowerBoundForAnEstimatedPeak() {
+        val report = HdrBrightness.fromDisplay(-1f, 0f, 1200.25f, 3f)!!
+        assertEquals(1200.25f, report.maxNits, 0f)
+        assertEquals(1200.25f, report.maxFullFrameNits, 0f)
+    }
+
+    @Test
+    fun unavailableOrInvalidRatiosLeaveUnknownCapabilitiesToTheHost() {
+        for (ratio in listOf(null, -1f, 0f, 1f, Float.NaN, Float.POSITIVE_INFINITY, Float.MAX_VALUE, 100f)) {
+            assertNull(HdrBrightness.fromDisplay(-1f, -1f, -1f, ratio))
+        }
+    }
+
+    @Test
+    fun ratioDoesNotOverwriteContradictoryKnownValues() {
+        assertNull(HdrBrightness.fromDisplay(400f, 0.001f, 600f, 5f))
+        assertNull(HdrBrightness.fromDisplay(1000f, 20f, 10f, 5f))
+    }
+
+    @Test
+    fun explicitManualTargetStillOverridesAnAutomaticEstimate() {
+        val estimate = HdrBrightness.fromDisplay(-1f, 0.0004f, -1f, 5f)!!
+        val manual = HdrBrightness.forSession(estimate, 1000)!!
+        assertEquals(1000f, manual.maxNits, 0f)
+        assertEquals(0.0004f, manual.minNits, 0f)
+        assertFalse(manual.isEstimatedFromRatio)
+    }
+
     @Test
     fun preservesFractionalNitsAndZeroBlackLevel() {
         for (minimum in listOf(0f, 0.0000004f, 0.001f, 0.01f, 0.1f)) {
@@ -39,7 +108,7 @@ class HdrBrightnessTest {
     }
 
     @Test
-    fun unknownCapabilitiesStayAbsentInAutomaticMode() {
+    fun unknownCapabilitiesStayAbsentWithoutARatioOrOverride() {
         val report = HdrBrightness.forSession(null)
         assertNull(report)
         assertEquals("", report?.toQueryParameters().orEmpty())
@@ -73,7 +142,7 @@ class HdrBrightnessTest {
     }
 
     @Test
-    fun onlyAnExplicitManualTargetCanReplaceUnknownCapabilities() {
+    fun manualTargetCanReplaceUnknownCapabilitiesWithoutARatio() {
         val target = HdrBrightness.forSession(null, 1000)!!
         assertEquals(1000f, target.maxNits, 0f)
         assertEquals(0f, target.minNits, 0f)

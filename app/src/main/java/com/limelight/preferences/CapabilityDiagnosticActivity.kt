@@ -542,6 +542,11 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             card.badge(fallback, DiagnosticTone.Warning)
             plainTextReport.append("  ").append(fallback).append("\n")
         } else {
+            if (report.isEstimatedFromRatio) {
+                val estimated = tr(R.string.diag_hdr_brightness_estimated)
+                card.badge(estimated, DiagnosticTone.Warning)
+                plainTextReport.append("  ").append(estimated).append("\n")
+            }
             card.keyValue("minBrightness", luminance(report.minNits))
             card.keyValue("maxBrightness", luminance(report.maxNits))
             card.keyValue("maxAverageBrightness", luminance(report.maxFullFrameNits))
