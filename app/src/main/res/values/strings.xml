@@ -2018,6 +2018,7 @@ Tap again to replace it.</string>
     <string name="easytier_subnet_mismatch">subnet mismatch</string>
     <string name="easytier_relayed">relayed</string>
     <string name="easytier_manager_uninitialized">EasyTier manager is not ready</string>
+    <string name="easytier_native_libraries_unavailable">EasyTier is unavailable because this installation does not include its native libraries for the current app architecture.</string>
     <string name="easytier_starting">EasyTier service is starting…</string>
     <string name="easytier_vpn_permission_required">VPN permission is required to start the service.</string>
     <string name="easytier_status_refreshed">Status refreshed</string>

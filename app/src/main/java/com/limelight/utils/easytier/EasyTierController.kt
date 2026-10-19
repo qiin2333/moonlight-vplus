@@ -62,11 +62,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.doOnLayout
+import com.easytier.jni.EasyTierJNI
 import com.easytier.jni.EasyTierManager
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppDialogStyler
+import dalvik.system.BaseDexClassLoader
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -151,6 +153,8 @@ class EasyTierController(
     // ==================== 主要公共方法 ====================
 
     fun showControlDialog() {
+        if (!checkNativeLibrariesAvailable()) return
+
         if (easyTierManager == null) {
             Toast.makeText(activity, R.string.easytier_manager_uninitialized, Toast.LENGTH_SHORT).show()
             return
@@ -161,6 +165,8 @@ class EasyTierController(
 
     fun handleVpnPermissionResult(resultCode: Int) {
         if (resultCode == Activity.RESULT_OK) {
+            if (!checkNativeLibrariesAvailable()) return
+
             LimeLog.info("$TAG: VPN权限已获取，启动EasyTier Manager。")
             easyTierManager?.start()
             Toast.makeText(activity, R.string.easytier_starting, Toast.LENGTH_SHORT).show()
@@ -168,6 +174,19 @@ class EasyTierController(
             LimeLog.warning("$TAG: VPN权限被拒绝。")
             Toast.makeText(activity, R.string.easytier_vpn_permission_required, Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun checkNativeLibrariesAvailable(): Boolean {
+        // Use the JNI class's loader: device ABIs may also include 64-bit ABIs when
+        // this process is 32-bit. findLibrary also handles libraries loaded from APKs.
+        val loader = EasyTierJNI::class.java.classLoader as? BaseDexClassLoader
+        if (loader?.findLibrary("easytier_android_jni") != null &&
+                loader.findLibrary("easytier_ffi") != null) {
+            return true
+        }
+
+        Toast.makeText(activity, R.string.easytier_native_libraries_unavailable, Toast.LENGTH_LONG).show()
+        return false
     }
 
     // ==================== 对话框管理 ====================
