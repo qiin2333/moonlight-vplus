@@ -24,7 +24,6 @@ import com.limelight.nvstream.ColorRangePolicy
 import com.limelight.nvstream.av.video.VideoDecoderRenderer
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import org.jcodec.codecs.h264.io.model.SeqParameterSet
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -99,6 +98,8 @@ class MediaCodecDecoderRenderer(
 
     private var nextInputBufferIndex = -1
     private var nextInputBuffer: ByteBuffer? = null
+    @Volatile
+    private var requiredInputBufferSize = 0
 
     private val context: Context = activity
     private val activity: Activity = activity
@@ -202,9 +203,6 @@ class MediaCodecDecoderRenderer(
     private val decoderConfigurationTracker = DecoderConfigurationTracker()
     @Volatile
     private var decoderConfigurationDirty = false
-
-    private var needsBaselineSpsHack = false
-    private var savedSps: SeqParameterSet? = null
 
     private var initialException: RendererException? = null
     private var initialExceptionTimestamp: Long = 0
@@ -1004,6 +1002,15 @@ class MediaCodecDecoderRenderer(
         hdr10PlusOutputObserver.restartCodecConfiguration()
         stableOutputFormatTracker.reset()
 
+        // Keep the observed access-unit requirement across restarts, resets, and full rebuilds.
+        // Configuration fallbacks must not revert to buffers that already proved too small.
+        if (requiredInputBufferSize > 0) {
+            val requestedSize = if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
+                format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
+            } else 0
+            format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, maxOf(requestedSize, requiredInputBufferSize))
+        }
+
         // Set HDR metadata if present
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             if (currentHdrMetadata != null) {
@@ -1085,7 +1092,18 @@ class MediaCodecDecoderRenderer(
             }
             pendingFramegenSurface ?: directOutputSurface()
         }
-        videoDecoder!!.configure(format, outSurface, null, 0)
+        try {
+            videoDecoder!!.configure(format, outSurface, null, 0)
+        } catch (e: IllegalArgumentException) {
+            // Keep growth rejection out of recovery's invalid-surface handlers. The state-error
+            // path tries reset/recreation and all configuration candidates before reporting failure.
+            if (requiredInputBufferSize > 0 && !stopping && outSurface.isValid) {
+                throw IllegalStateException(
+                    "Decoder rejected input buffer size $requiredInputBufferSize: ${e.message}", e
+                )
+            }
+            throw e
+        }
 
         // Set DataSpace on the output Surface for HDR content.
         // Equivalent to HarmonyOS OH_NativeWindow_SetColorSpace().
@@ -1106,6 +1124,7 @@ class MediaCodecDecoderRenderer(
         vpsBuffers.clear()
         spsBuffers.clear()
         ppsBuffers.clear()
+        spsPatcher?.onCodecConfigured()
         clearTimestampTracking()
 
         // This will contain the actual accepted input format attributes
@@ -1308,7 +1327,7 @@ class MediaCodecDecoderRenderer(
 
             // These fixups only apply to H264 decoders
             needsSpsBitstreamFixup = MediaCodecHelper.decoderNeedsSpsBitstreamRestrictions(selectedDecoderInfo.name)
-            needsBaselineSpsHack = MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
+            val needsBaselineSpsHack = MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
             constrainedHighProfile = MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.name)
             isExynos4 = MediaCodecHelper.isExynos4Device()
             if (needsSpsBitstreamFixup) {
@@ -1328,7 +1347,7 @@ class MediaCodecDecoderRenderer(
 
             spsPatcher = SpsPatcher(
                 constrainedHighProfile, needsSpsBitstreamFixup,
-                isExynos4, hevcDecoder != null, av1Decoder != null
+                isExynos4, hevcDecoder != null, av1Decoder != null, needsBaselineSpsHack
             )
         } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
             // Dolby Vision Profile 8 routing: the wire stream is HEVC either
@@ -1497,6 +1516,7 @@ class MediaCodecDecoderRenderer(
     override fun setup(format: Int, width: Int, height: Int, redrawRate: Int): Int {
         this.initialWidth = width
         this.initialHeight = height
+        requiredInputBufferSize = 0
         synchronized(decoderConfigurationLock) {
             decoderConfigurationTracker.reset(width, height)
             decoderConfigurationDirty = false
@@ -2536,6 +2556,41 @@ class MediaCodecDecoderRenderer(
                                          frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
                                          hostPresentationTimeUs, frameMetadata)
 
+    private fun codecConfigSize(): Long =
+        vpsBuffers.sumOf { it.size.toLong() } +
+            spsBuffers.sumOf { it.size.toLong() } + ppsBuffers.sumOf { it.size.toLong() }
+
+    /** Returns false when reconfiguration invalidated the current frame and a new IDR is needed. */
+    private fun ensureInputBufferCapacity(additionalBytes: Long): Boolean {
+        val buffer = nextInputBuffer!!
+        if (additionalBytes <= buffer.remaining()) return true
+
+        val requiredSize = buffer.position().toLong() + additionalBytes
+        val expandedSize = if (prefs.decoderInputBufferMode != DecoderInputBufferMode.FORCE_DISABLED &&
+            codecRecoveryAttempts < CR_MAX_TRIES
+        ) {
+            DecoderInputBufferSizing.expandedInputSize(requiredSize, buffer.limit(), requiredInputBufferSize)
+        } else null
+
+        if (expandedSize == null) {
+            val exception = IllegalArgumentException(
+                "Decode unit length $requiredSize too large for input buffer ${buffer.limit()} " +
+                    "(requested $requiredInputBufferSize)"
+            )
+            notifyCrashOnce(exception)
+            throw RendererException(createDiagnostics(), exception)
+        }
+
+        LimeLog.warning("Growing decoder input buffer: ${buffer.limit()} -> $expandedSize (required $requiredSize)")
+        requiredInputBufferSize = expandedSize
+        // Reuse the existing quiescence protocol; never reconfigure while output threads use the codec.
+        if (!codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
+            codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART)
+        }
+        doCodecRecoveryIfRequired(CR_FLAG_INPUT_THREAD)
+        return false
+    }
+
     @Suppress("deprecation")
     private fun submitDecodeUnitWithMetadata(
         decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
@@ -2746,17 +2801,13 @@ class MediaCodecDecoderRenderer(
             if (decodeUnitType == MoonBridge.BUFFER_TYPE_SPS && (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
                 numSpsIn++
 
-                val result = spsPatcher!!.patchSps(
+                val patchedNalu = spsPatcher!!.patchSps(
                     decodeUnitData, decodeUnitLength,
                     refFrameInvalidationActive, initialWidth, initialHeight,
-                    refreshRate, needsBaselineSpsHack
+                    refreshRate
                 )
 
-                if (result.savedSps != null) {
-                    savedSps = result.savedSps
-                }
-
-                spsBuffers.add(result.patchedNalu)
+                spsBuffers.add(patchedNalu)
                 return MoonBridge.DR_OK
             } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_VPS) {
                 numVpsIn++
@@ -2792,6 +2843,10 @@ class MediaCodecDecoderRenderer(
                         return MoonBridge.DR_NEED_IDR
                     }
 
+                    if (!ensureInputBufferCapacity(codecConfigSize())) {
+                        return MoonBridge.DR_NEED_IDR
+                    }
+
                     // Submit all CSD when we receive the first non-CSD blob in an IDR frame
                     for (vpsBuffer in vpsBuffers) {
                         nextInputBuffer!!.put(vpsBuffer)
@@ -2814,9 +2869,7 @@ class MediaCodecDecoderRenderer(
                     // Remember that we submitted CSD globally for this MediaCodec instance
                     submittedCsd = true
 
-                    if (needsBaselineSpsHack) {
-                        needsBaselineSpsHack = false
-
+                    if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 && spsPatcher!!.needsBaselineSpsReplay) {
                         if (!replaySps()) {
                             return MoonBridge.DR_NEED_IDR
                         }
@@ -2853,6 +2906,14 @@ class MediaCodecDecoderRenderer(
             return MoonBridge.DR_NEED_IDR
         }
 
+        // Check the whole access unit before writing any CSD or payload into the codec buffer.
+        val fusedCsdSize = if (frameType == MoonBridge.FRAME_TYPE_IDR && fusedIdrFrame && !csdSubmittedForThisFrame) {
+            codecConfigSize()
+        } else 0L
+        if (!ensureInputBufferCapacity(decodeUnitLength.toLong() + fusedCsdSize)) {
+            return MoonBridge.DR_NEED_IDR
+        }
+
         var codecFlags = 0
 
         if (frameType == MoonBridge.FRAME_TYPE_IDR) {
@@ -2882,14 +2943,6 @@ class MediaCodecDecoderRenderer(
 
         numFramesIn++
 
-        if (decodeUnitLength > nextInputBuffer!!.limit() - nextInputBuffer!!.position()) {
-            val exception = IllegalArgumentException(
-                "Decode unit length $decodeUnitLength too large for input buffer ${nextInputBuffer!!.limit()}"
-            )
-            notifyCrashOnce(exception)
-            throw RendererException(createDiagnostics(), exception)
-        }
-
         // Copy data from our buffer list into the input buffer
         nextInputBuffer!!.put(decodeUnitData, 0, decodeUnitLength)
 
@@ -2905,14 +2958,18 @@ class MediaCodecDecoderRenderer(
             return false
         }
 
-        val replayNalu = spsPatcher!!.buildReplaySps(savedSps!!)
+        val replayNalu = spsPatcher!!.buildReplaySps()
+        if (!ensureInputBufferCapacity(replayNalu.size.toLong())) {
+            return false
+        }
         nextInputBuffer!!.put(replayNalu)
 
-        // No need for the SPS anymore
-        savedSps = null
-
         // Queue the new SPS
-        return queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
+        if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
+            return false
+        }
+        spsPatcher!!.onReplaySubmitted()
+        return true
     }
 
     override fun getCapabilities(): Int {
