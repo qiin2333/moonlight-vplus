@@ -13,6 +13,18 @@ class HdrBrightness private constructor(
 
     companion object {
         private const val ASSUMED_SDR_WHITE_NITS = 300f
+        private const val IMPLAUSIBLE_SDR_WHITE_NITS = 100f
+
+        /**
+         * True when a valid EDID peak and the available HDR/SDR ratio cannot both be true:
+         * the ratio implies an SDR white below [IMPLAUSIBLE_SDR_WHITE_NITS], so the driver
+         * peak is likely underreported. Diagnostic hint only — never alters a report.
+         */
+        fun isEdidPeakLikelyUnderreported(maxNits: Float, bestHdrSdrRatio: Float?): Boolean {
+            if (bestHdrSdrRatio == null || !bestHdrSdrRatio.isFinite() || bestHdrSdrRatio <= 1f) return false
+            if (!maxNits.isFinite() || maxNits < 1f) return false
+            return maxNits / bestHdrSdrRatio < IMPLAUSIBLE_SDR_WHITE_NITS
+        }
 
         fun create(maxNits: Float, minNits: Float, maxFullFrameNits: Float): HdrBrightness? {
             if (!maxNits.isFinite() || !minNits.isFinite() || !maxFullFrameNits.isFinite() ||

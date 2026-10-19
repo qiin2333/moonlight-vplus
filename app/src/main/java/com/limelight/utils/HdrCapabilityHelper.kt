@@ -27,6 +27,9 @@ object HdrCapabilityHelper {
         var hdrSdrRatio: Float = 1.0f
         var highestHdrSdrRatio: Float = 1.0f
         var isHdrSdrRatioAvailable: Boolean = false
+
+        /** Largest finite usable ratio, or null when no usable ratio exists. */
+        var bestHdrSdrRatio: Float? = null
     }
 
     class HdrTypeSupport {
@@ -96,6 +99,7 @@ object HdrCapabilityHelper {
             listOf(info.hdrSdrRatio, info.highestHdrSdrRatio)
                 .filter { it.isFinite() && it > 1f }.maxOrNull()
         } else null
+        info.bestHdrSdrRatio = ratio
         info.report = HdrBrightness.fromDisplay(maxLum, minLum, maxAvgLum, ratio)
         if (info.report?.isEstimatedFromRatio == true) {
             LimeLog.info("HDR brightness estimated using ratio=$ratio and assumed SDR white=300 nits: " +

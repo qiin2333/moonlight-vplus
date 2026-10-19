@@ -105,10 +105,12 @@ import com.limelight.binding.input.ControllerPageScrollState
 import com.limelight.binding.input.resolveControllerPageRightStickYAxis
 import com.limelight.ui.UiDialogKeyHandler
 import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.HdrBrightness
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.UiHelper
 import kotlinx.coroutines.launch
 import com.limelight.utils.appAccentColor
+import java.util.Locale
 
 /**
  * 编解码与屏幕能力检测页面。
@@ -504,6 +506,22 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
             brightness.maxLuminance >= 1000 -> card.badge(tr(R.string.diag_hdr_panel_high), DiagnosticTone.Success)
             brightness.maxLuminance >= 600 -> card.badge(tr(R.string.diag_hdr_panel_mid), DiagnosticTone.Success)
             brightness.maxLuminance < 400 -> card.badge(tr(R.string.diag_peak_low), DiagnosticTone.Warning)
+        }
+
+        val systemReport = brightness.report
+        val bestRatio = brightness.bestHdrSdrRatio
+        if (systemReport != null && bestRatio != null && !systemReport.isEstimatedFromRatio &&
+            HdrBrightness.isEdidPeakLikelyUnderreported(systemReport.maxNits, bestRatio)
+        ) {
+            val impliedSdr = luminance(systemReport.maxNits / bestRatio)
+            val hint = tr(
+                R.string.diag_edid_ratio_conflict,
+                luminance(systemReport.maxNits),
+                String.format(Locale.ROOT, "%.2f", bestRatio),
+                impliedSdr,
+            )
+            card.badge(hint, DiagnosticTone.Warning)
+            plainTextReport.append("  ").append(hint).append("\n")
         }
 
         card.divider()

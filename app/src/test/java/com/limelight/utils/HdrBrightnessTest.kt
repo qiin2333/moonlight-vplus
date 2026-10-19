@@ -147,4 +147,20 @@ class HdrBrightnessTest {
         assertEquals(300f, HdrBrightness.forSession(null, 1)!!.maxNits, 0f)
         assertEquals(4000f, HdrBrightness.forSession(null, 10000)!!.maxNits, 0f)
     }
+
+    @Test
+    fun edidUnderreportHintFiresOnlyForImplausiblyDimImpliedSdrWhite() {
+        for (ratio in listOf(null, -1f, 0f, 1f, Float.NaN, Float.POSITIVE_INFINITY)) {
+            assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(400.125f, ratio))
+        }
+        for (maxNits in listOf(Float.NaN, 0f, -1f, Float.POSITIVE_INFINITY)) {
+            assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(maxNits, 5f))
+        }
+        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(400.125f, 5f))
+        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(499f, 5f))
+        assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(500f, 5f))
+        assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(1000f, 5f))
+        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(749f, 8f))
+        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(10000f, 101f))
+    }
 }

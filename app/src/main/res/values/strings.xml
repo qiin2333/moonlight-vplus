@@ -2111,6 +2111,7 @@ Tap again to replace it.</string>
     <string name="diag_edid_brightness_missing">Driver did not report EDID brightness</string>
     <string name="diag_hdr_brightness_host_fallback">Brightness not reported; the host selects its fallback</string>
     <string name="diag_hdr_brightness_estimated">Includes rough estimates: HDR/SDR ratio × 300 nits; unknown full-frame brightness uses 20% of peak and unknown black level uses 0.001 nits</string>
+    <string name="diag_edid_ratio_conflict">EDID peak %1$s with HDR/SDR ratio %2$s× implies an SDR white of only %3$s; the driver likely underreports — set the peak manually if the panel is brighter</string>
     <string name="diag_hdr_panel_high">High-end HDR panel ≥1000 nits</string>
     <string name="diag_hdr_panel_mid">Midrange HDR panel</string>
     <string name="diag_peak_low">Peak brightness is low &lt;400 nits</string>
