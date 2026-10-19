@@ -150,17 +150,24 @@ class HdrBrightnessTest {
 
     @Test
     fun edidUnderreportHintFiresOnlyForImplausiblyDimImpliedSdrWhite() {
-        for (ratio in listOf(null, -1f, 0f, 1f, Float.NaN, Float.POSITIVE_INFINITY)) {
-            assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(400.125f, ratio))
+        val edidReport = HdrBrightness.create(400.125f, 0f, 300f)!!
+        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(null, 5f))
+        assertNull(
+            HdrBrightness.impliedSdrWhiteIfPeakUnderreported(
+                HdrBrightness.fromDisplay(-1f, Float.NaN, -1f, 5f), 5f))
+        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidReport, null))
+        for (ratio in listOf(-1f, 0f, 1f, Float.NaN, Float.POSITIVE_INFINITY)) {
+            assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidReport, ratio))
         }
-        for (maxNits in listOf(Float.NaN, 0f, -1f, Float.POSITIVE_INFINITY)) {
-            assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(maxNits, 5f))
-        }
-        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(400.125f, 5f))
-        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(499f, 5f))
-        assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(500f, 5f))
-        assertFalse(HdrBrightness.isEdidPeakLikelyUnderreported(1000f, 5f))
-        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(749f, 8f))
-        assertTrue(HdrBrightness.isEdidPeakLikelyUnderreported(10000f, 101f))
+        assertEquals(80.025f, HdrBrightness.impliedSdrWhiteIfPeakUnderreported(edidReport, 5f)!!, 0.001f)
+        assertEquals(
+            99.8f,
+            HdrBrightness.impliedSdrWhiteIfPeakUnderreported(HdrBrightness.create(499f, 0f, 400f)!!, 5f)!!,
+            0.001f)
+        assertNull(HdrBrightness.impliedSdrWhiteIfPeakUnderreported(HdrBrightness.create(500f, 0f, 400f)!!, 5f))
+        assertEquals(
+            99.01f,
+            HdrBrightness.impliedSdrWhiteIfPeakUnderreported(HdrBrightness.create(10000f, 0f, 9000f)!!, 101f)!!,
+            0.01f)
     }
 }

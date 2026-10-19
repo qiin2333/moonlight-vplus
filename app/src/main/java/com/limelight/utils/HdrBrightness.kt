@@ -15,15 +15,20 @@ class HdrBrightness private constructor(
         private const val ASSUMED_SDR_WHITE_NITS = 300f
         private const val IMPLAUSIBLE_SDR_WHITE_NITS = 100f
 
+        /** A ratio is usable only when finite and greater than 1 (1 means SDR-equal, no headroom). */
+        fun usableHdrSdrRatio(ratio: Float?): Float? =
+            ratio?.takeIf { it.isFinite() && it > 1f }
+
         /**
-         * True when a valid EDID peak and the available HDR/SDR ratio cannot both be true:
-         * the ratio implies an SDR white below [IMPLAUSIBLE_SDR_WHITE_NITS], so the driver
-         * peak is likely underreported. Diagnostic hint only — never alters a report.
+         * The SDR white implied by an EDID-sourced [report] and [bestHdrSdrRatio], or null when
+         * the two are consistent. An implied SDR white below [IMPLAUSIBLE_SDR_WHITE_NITS] means
+         * both cannot be true, so the driver peak is likely underreported. Diagnostic hint only
+         * — never alters a report.
          */
-        fun isEdidPeakLikelyUnderreported(maxNits: Float, bestHdrSdrRatio: Float?): Boolean {
-            if (bestHdrSdrRatio == null || !bestHdrSdrRatio.isFinite() || bestHdrSdrRatio <= 1f) return false
-            if (!maxNits.isFinite() || maxNits < 1f) return false
-            return maxNits / bestHdrSdrRatio < IMPLAUSIBLE_SDR_WHITE_NITS
+        fun impliedSdrWhiteIfPeakUnderreported(report: HdrBrightness?, bestHdrSdrRatio: Float?): Float? {
+            if (report == null || report.isEstimatedFromRatio) return null
+            val ratio = usableHdrSdrRatio(bestHdrSdrRatio) ?: return null
+            return (report.maxNits / ratio).takeIf { it < IMPLAUSIBLE_SDR_WHITE_NITS }
         }
 
         fun create(maxNits: Float, minNits: Float, maxFullFrameNits: Float): HdrBrightness? {
@@ -41,8 +46,8 @@ class HdrBrightness private constructor(
             if (maxNits.isFinite() && maxNits in 1f..10000f) {
                 return create(maxNits, minNits, maxFullFrameNits)
             }
-            if (hdrSdrRatio == null || !hdrSdrRatio.isFinite() || hdrSdrRatio <= 1f) return null
-            val estimatedPeak = ASSUMED_SDR_WHITE_NITS * hdrSdrRatio
+            val ratio = usableHdrSdrRatio(hdrSdrRatio) ?: return null
+            val estimatedPeak = ASSUMED_SDR_WHITE_NITS * ratio
             if (!estimatedPeak.isFinite() || estimatedPeak !in 1f..10000f) return null
 
             val knownFullFrame = maxFullFrameNits.takeIf { it.isFinite() && it in 1f..10000f }

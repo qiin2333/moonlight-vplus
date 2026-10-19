@@ -510,18 +510,18 @@ class CapabilityDiagnosticActivity : ThemedComponentActivity() {
 
         val systemReport = brightness.report
         val bestRatio = brightness.bestHdrSdrRatio
-        if (systemReport != null && bestRatio != null && !systemReport.isEstimatedFromRatio &&
-            HdrBrightness.isEdidPeakLikelyUnderreported(systemReport.maxNits, bestRatio)
-        ) {
-            val impliedSdr = luminance(systemReport.maxNits / bestRatio)
-            val hint = tr(
-                R.string.diag_edid_ratio_conflict,
-                luminance(systemReport.maxNits),
-                String.format(Locale.ROOT, "%.2f", bestRatio),
-                impliedSdr,
-            )
-            card.badge(hint, DiagnosticTone.Warning)
-            plainTextReport.append("  ").append(hint).append("\n")
+        if (systemReport != null && bestRatio != null) {
+            val impliedSdr = HdrBrightness.impliedSdrWhiteIfPeakUnderreported(systemReport, bestRatio)
+            if (impliedSdr != null) {
+                val hint = tr(
+                    R.string.diag_edid_ratio_conflict,
+                    luminance(systemReport.maxNits),
+                    String.format(Locale.ROOT, "%.2f", bestRatio),
+                    luminance(impliedSdr),
+                )
+                card.badge(hint, DiagnosticTone.Warning)
+                plainTextReport.append("  ").append(hint).append("\n")
+            }
         }
 
         card.divider()
