@@ -33,18 +33,11 @@ class HdrBrightnessTest {
     }
 
     @Test
-    fun ratioFallbackPreservesEachKnownSystemValue() {
+    fun estimatedPeakPreservesKnownBlackLevelAndFullFrame() {
         val missingPeak = HdrBrightness.fromDisplay(-1f, 0.0004f, 600.125f, 5f)!!
         assertEquals(1500f, missingPeak.maxNits, 0f)
         assertEquals(0.0004f, missingPeak.minNits, 0f)
         assertEquals(600.125f, missingPeak.maxFullFrameNits, 0f)
-        val missingMinimum = HdrBrightness.fromDisplay(400.125f, -1f, 300.25f, 5f)!!
-        assertEquals(400.125f, missingMinimum.maxNits, 0f)
-        assertEquals(300.25f, missingMinimum.maxFullFrameNits, 0f)
-        val missingFullFrame = HdrBrightness.fromDisplay(400f, 100f, -1f, 5f)!!
-        assertEquals(400f, missingFullFrame.maxNits, 0f)
-        assertEquals(100f, missingFullFrame.minNits, 0f)
-        assertEquals(100f, missingFullFrame.maxFullFrameNits, 0f)
     }
 
     @Test
@@ -62,9 +55,13 @@ class HdrBrightnessTest {
     }
 
     @Test
-    fun ratioDoesNotOverwriteContradictoryKnownValues() {
-        assertNull(HdrBrightness.fromDisplay(400f, 0.001f, 600f, 5f))
-        assertNull(HdrBrightness.fromDisplay(1000f, 20f, 10f, 5f))
+    fun validPeakNeverTriggersSecondaryFieldRepair() {
+        for (ratio in listOf(null, 5f, Float.NaN, Float.POSITIVE_INFINITY)) {
+            assertNull(HdrBrightness.fromDisplay(400.125f, -1f, 300.25f, ratio))
+            assertNull(HdrBrightness.fromDisplay(400f, 0.001f, -1f, ratio))
+            assertNull(HdrBrightness.fromDisplay(400f, 0.001f, 600f, ratio))
+            assertNull(HdrBrightness.fromDisplay(1000f, 20f, 10f, ratio))
+        }
     }
 
     @Test

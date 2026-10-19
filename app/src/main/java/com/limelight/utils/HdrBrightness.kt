@@ -26,14 +26,15 @@ class HdrBrightness private constructor(
             maxNits: Float, minNits: Float, maxFullFrameNits: Float,
             hdrSdrRatio: Float?,
         ): HdrBrightness? {
-            create(maxNits, minNits, maxFullFrameNits)?.let { return it }
+            if (maxNits.isFinite() && maxNits in 1f..10000f) {
+                return create(maxNits, minNits, maxFullFrameNits)
+            }
             if (hdrSdrRatio == null || !hdrSdrRatio.isFinite() || hdrSdrRatio <= 1f) return null
             val estimatedPeak = ASSUMED_SDR_WHITE_NITS * hdrSdrRatio
             if (!estimatedPeak.isFinite() || estimatedPeak !in 1f..10000f) return null
 
             val knownFullFrame = maxFullFrameNits.takeIf { it.isFinite() && it in 1f..10000f }
-            val peak = maxNits.takeIf { it.isFinite() && it in 1f..10000f }
-                ?: maxOf(estimatedPeak, knownFullFrame ?: 0f)
+            val peak = maxOf(estimatedPeak, knownFullFrame ?: 0f)
             val minimum = minNits.takeIf { it.isFinite() && it in 0f..100f } ?: 0.001f
             val fullFrame = knownFullFrame ?: maxOf(minimum, peak * 0.2f)
             // Preserve known fields; contradictory system values still fall back to the host.

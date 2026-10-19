@@ -68,7 +68,7 @@ object HdrCapabilityHelper {
             }
         }
 
-        // Use the available ratio only when a complete system report is missing.
+        // An available ratio can supply a rough estimate when the system peak is missing.
         if (Build.VERSION.SDK_INT >= 34) {
             try {
                 info.isHdrSdrRatioAvailable = display.isHdrSdrRatioAvailable
