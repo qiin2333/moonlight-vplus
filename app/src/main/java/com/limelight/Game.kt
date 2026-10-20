@@ -824,7 +824,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             connectionContext,
             ComputerDetails.AddressTuple(host, port),
             httpsPort, uniqueId, pairName, config,
-            PlatformBinding.getCryptoProvider(this), serverCert, displayName, forceResumeCurrentSession
+            PlatformBinding.getCryptoProvider(this), serverCert, currentTargetDisplay, displayName, forceResumeCurrentSession
         )
         orientationManager.connection = conn
         controllerHandler = ControllerHandler(

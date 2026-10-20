@@ -17,24 +17,33 @@ import com.limelight.LimeLog
 object HdrCapabilityHelper {
 
     class BrightnessInfo {
-        var maxLuminance: Float = DEFAULT_MAX
-        var minLuminance: Float = DEFAULT_MIN
-        var maxAvgLuminance: Float = DEFAULT_AVG
-        var isFromHdrCaps: Boolean = false
-        var isDefault: Boolean = true
+        var report: HdrBrightness? = null
+
+        /**
+         * Peak as the driver's EDID/mode metadata claims it, before complete-report validation
+         * and independent of [report]: the host report is withheld as one atomic set when the
+         * black level is missing, but a claimed peak still exists to cross-check against the
+         * HDR/SDR ratio. Null when the driver gave no positive finite value.
+         */
+        var edidPeakNits: Float? = null
+
+        val maxLuminance: Float get() = report?.maxNits ?: Float.NaN
+        val minLuminance: Float get() = report?.minNits ?: Float.NaN
+        val maxAvgLuminance: Float get() = report?.maxFullFrameNits ?: Float.NaN
+        val isFromHdrCaps: Boolean get() = report?.isEstimatedFromRatio == false
+        val isDefault: Boolean get() = report == null
 
         var hdrSdrRatio: Float = 1.0f
         var highestHdrSdrRatio: Float = 1.0f
         var isHdrSdrRatioAvailable: Boolean = false
 
-        var computedPeakBrightness: Float = -1f
-        var isComputedFromRatio: Boolean = false
-
-        companion object {
-            const val DEFAULT_MAX = 500f
-            const val DEFAULT_MIN = 2f
-            const val DEFAULT_AVG = 200f
-        }
+        /** Largest usable captured ratio, or null when none is usable. */
+        val bestHdrSdrRatio: Float?
+            get() = if (isHdrSdrRatioAvailable) {
+                listOf(hdrSdrRatio, highestHdrSdrRatio)
+                    .mapNotNull(HdrBrightness::usableHdrSdrRatio)
+                    .maxOrNull()
+            } else null
     }
 
     class HdrTypeSupport {
@@ -54,39 +63,29 @@ object HdrCapabilityHelper {
     }
 
     @SuppressLint("NewApi")
-    fun getBrightnessInfo(context: Context?): BrightnessInfo {
+    fun getBrightnessInfoForDisplay(display: Display?): BrightnessInfo {
         val info = BrightnessInfo()
-        if (context == null) return info
-
-        val display = getDefaultDisplay(context) ?: return info
+        if (display == null || !display.isValid) return info
+        var maxLum = Float.NaN
+        var minLum = Float.NaN
+        var maxAvgLum = Float.NaN
 
         // 第一步：从 EDID (HdrCapabilities) 获取基础亮度值 (Android 7.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val hdrCaps = display.hdrCapabilities
-            if (hdrCaps != null) {
-                val maxLum = hdrCaps.desiredMaxLuminance
-                val minLum = hdrCaps.desiredMinLuminance
-                val maxAvgLum = hdrCaps.desiredMaxAverageLuminance
-
-                LimeLog.info("HdrCapabilities raw: max=$maxLum, min=$minLum, avg=$maxAvgLum")
-
-                if (maxLum.isFinite() && maxLum > 0.1f) {
-                    info.maxLuminance = maxLum
-                    info.isFromHdrCaps = true
-                    info.isDefault = false
+            try {
+                val hdrCaps = display.hdrCapabilities
+                if (hdrCaps != null) {
+                    maxLum = hdrCaps.desiredMaxLuminance
+                    minLum = hdrCaps.desiredMinLuminance
+                    maxAvgLum = hdrCaps.desiredMaxAverageLuminance
+                    LimeLog.info("HdrCapabilities raw: max=$maxLum, min=$minLum, avg=$maxAvgLum")
                 }
-                if (maxAvgLum.isFinite() && maxAvgLum > 0.1f) {
-                    info.maxAvgLuminance = maxAvgLum
-                    info.isDefault = false
-                }
-                if (minLum.isFinite() && minLum >= 0f) {
-                    info.minLuminance = maxOf(0.001f, minLum)
-                    info.isDefault = false
-                }
+            } catch (e: Exception) {
+                LimeLog.warning("Failed to get display luminance: ${e.message}")
             }
         }
 
-        // 第二步：使用 HDR/SDR ratio 获取更精确的峰值亮度 (Android 14+ / API 34+)
+        // An available ratio can supply a rough estimate when the system peak is missing.
         if (Build.VERSION.SDK_INT >= 34) {
             try {
                 info.isHdrSdrRatioAvailable = display.isHdrSdrRatioAvailable
@@ -104,41 +103,18 @@ object HdrCapabilityHelper {
                     } else {
                         info.highestHdrSdrRatio = info.hdrSdrRatio
                     }
-
-                    val bestRatio = maxOf(info.highestHdrSdrRatio, info.hdrSdrRatio)
-
-                    if (bestRatio > 1.0f && !info.isFromHdrCaps) {
-                        val assumedSdrNits = 300f
-                        val computedPeak = assumedSdrNits * bestRatio
-                        info.computedPeakBrightness = computedPeak
-                        info.isComputedFromRatio = true
-
-                        if (computedPeak > info.maxLuminance) {
-                            info.maxLuminance = computedPeak
-                            info.isDefault = false
-                        }
-                        LimeLog.info("Computed peak brightness (no EDID): $computedPeak nits (assumedSdr=$assumedSdrNits, ratio=$bestRatio)")
-                    } else if (bestRatio > 1.0f && info.isFromHdrCaps) {
-                        val impliedSdrNits = info.maxLuminance / bestRatio
-                        info.computedPeakBrightness = info.maxLuminance
-                        info.isComputedFromRatio = true
-
-                        if (impliedSdrNits < 100f) {
-                            val correctedPeak = 300f * bestRatio
-                            if (correctedPeak > info.maxLuminance) {
-                                info.computedPeakBrightness = correctedPeak
-                                info.maxLuminance = correctedPeak
-                                LimeLog.info("EDID likely underreporting: corrected peak=$correctedPeak nits (impliedSdr=$impliedSdrNits was too low)")
-                            }
-                        }
-                        LimeLog.info("Peak brightness with EDID+ratio: peak=${info.computedPeakBrightness}, edidMax=${info.maxLuminance}, impliedSdr=$impliedSdrNits")
-                    }
                 }
             } catch (e: Exception) {
                 LimeLog.warning("Failed to get HDR/SDR ratio: ${e.message}")
             }
         }
 
+        info.edidPeakNits = maxLum.takeIf { it.isFinite() && it > 0f }
+        info.report = HdrBrightness.fromDisplay(maxLum, minLum, maxAvgLum, info.bestHdrSdrRatio)
+        if (info.report?.isEstimatedFromRatio == true) {
+            LimeLog.info("HDR brightness estimated using ratio=${info.bestHdrSdrRatio} and assumed SDR white=300 nits: " +
+                "max=${info.maxLuminance}, min=${info.minLuminance}, avg=${info.maxAvgLuminance}")
+        }
         return info
     }
 
@@ -203,19 +179,19 @@ object HdrCapabilityHelper {
     }
 
     @SuppressLint("NewApi")
-    fun getFullCapabilityInfo(context: Context?): HdrCapabilityInfo {
+    fun getFullCapabilityInfo(context: Context?, display: Display? = context?.let(::getDefaultDisplay)): HdrCapabilityInfo {
         val capInfo = HdrCapabilityInfo()
-        capInfo.brightness = getBrightnessInfo(context)
-        capInfo.typeSupport = getHdrTypeSupport(context)
+        capInfo.brightness = getBrightnessInfoForDisplay(display)
+        capInfo.typeSupport = getHdrTypeSupport(display)
 
         if (context != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
-                    capInfo.isScreenHdr = context.resources.configuration.isScreenHdr
+                    val displayContext = display?.let(context::createDisplayContext) ?: context
+                    capInfo.isScreenHdr = displayContext.resources.configuration.isScreenHdr
                 } catch (_: Exception) {}
             }
 
-            val display = getDefaultDisplay(context)
             if (display != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
                     capInfo.isWideColorGamut = display.isWideColorGamut
@@ -232,25 +208,8 @@ object HdrCapabilityHelper {
         return capInfo
     }
 
-    fun getBrightnessRangeAsInts(context: Context?): IntArray {
-        val info = getBrightnessInfo(context)
-        val min = maxOf(1, info.minLuminance.toInt())
-
-        var effectiveMax = info.maxLuminance
-        if (info.isComputedFromRatio && info.computedPeakBrightness > effectiveMax) {
-            effectiveMax = info.computedPeakBrightness
-        }
-
-        val max = maxOf(min + 1, Math.ceil(effectiveMax.toDouble()).toInt())
-        val avg = maxOf(min, Math.ceil(info.maxAvgLuminance.toDouble()).toInt())
-        return intArrayOf(min, max, avg)
-    }
-
-    fun applyBrightnessOverride(range: IntArray, peakBrightnessNits: Int): IntArray {
-        val min = range.getOrElse(0) { 1 }.coerceAtLeast(1)
-        val peak = maxOf(min + 1, peakBrightnessNits.coerceIn(300, 4000))
-        val avg = (peak * 0.2f).toInt().coerceIn(100, 1000)
-        return intArrayOf(min, peak, maxOf(min, avg))
+    fun getBrightnessReport(display: Display?, peakOverride: Int? = null): HdrBrightness? {
+        return HdrBrightness.forSession(getBrightnessInfoForDisplay(display).report, peakOverride)
     }
 
     fun getSystemBrightness(context: Context): Int {

@@ -56,7 +56,7 @@ internal class DecoderHungException(private val hangTimeMs: Int) : RuntimeExcept
 internal class RendererException(
     diag: RendererDiagnostics,
     originalException: Exception,
-) : RuntimeException() {
+) : RuntimeException(null, originalException) {
 
     companion object {
         private const val serialVersionUID = 8985937536997012406L
@@ -64,6 +64,10 @@ internal class RendererException(
     }
 
     private val text = generateText(diag, originalException)
+
+    // Crash reporters read getLocalizedMessage()/getCause(), not our custom toString().
+    override val message: String
+        get() = text
 
     override fun toString(): String = text
 
