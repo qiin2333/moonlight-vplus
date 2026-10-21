@@ -13,19 +13,16 @@
 
   [English](README_EN.md) | 中文
 
+  <a href="./assets/readme/moonlight-vplus-promo.mp4">
+    <img src="./assets/readme/moonlight-vplus-promo.gif" width="800" alt="Moonlight V+：启动应用、浏览游戏库与游戏画面预览">
+  </a>
+  <br/>
+  <sub>启动 → 游戏库 → 连接 → 游戏画面预览 · 点击观看清晰版视频</sub>
+  <br/>
+  <sub>界面为真机录屏，游戏画面由《无人深空》官方预告片合成。<a href="./assets/readme/README.md">素材说明</a></sub>
 </div>
 
 ---
-
-## 截图
-
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/bb174547-9b0d-4827-81cf-59308f3cfa9e" width="640" alt="主界面">
-  <br/>
-  <img src="https://github.com/user-attachments/assets/5e227bab-afaa-4452-ae38-ac2cc9d22988" width="240" alt="游戏列表">
-  <img src="https://github.com/user-attachments/assets/9101bf19-782e-4c6f-977f-34b138b93990" width="240" alt="串流界面">
-  <img src="https://github.com/user-attachments/assets/5046dd58-7013-494e-9f17-26e4de56a7dd" width="240" alt="设置界面">
-</div>
 
 ## 与上游 Moonlight 的区别
 
