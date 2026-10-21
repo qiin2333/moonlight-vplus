@@ -74,6 +74,7 @@ def prepare_overlay(ffmpeg, source, destination):
         "-f", "rawvideo", "-pix_fmt", "rgba", "-s", "1312x44", "-r", "30",
         "-i", "-", "-an", "-c:v", "ffv1", "-pix_fmt", "bgra", str(destination),
     ], stdin=subprocess.PIPE)
+    pipe_error = None
     try:
         for pixels in frames:
             observed = pixels.astype(np.float32)
@@ -100,10 +101,17 @@ def prepare_overlay(ffmpeg, source, destination):
             # edges without importing black fringes into the new background.
             image = Image.fromarray(rgba).resize((1312, 44), Image.Resampling.LANCZOS)
             encoder.stdin.write(image.tobytes())
+    except BrokenPipeError as error:
+        pipe_error = error
     finally:
-        encoder.stdin.close()
-        if encoder.wait() != 0:
-            raise RuntimeError("Native overlay preparation failed")
+        try:
+            encoder.stdin.close()
+        except BrokenPipeError as error:
+            pipe_error = error
+        finally:
+            return_code = encoder.wait()
+        if pipe_error is not None or return_code != 0:
+            raise RuntimeError("Native overlay preparation failed") from pipe_error
 
 
 def prepare_launch(ffmpeg, source, launcher, destination):
@@ -121,6 +129,7 @@ def prepare_launch(ffmpeg, source, launcher, destination):
         "-pix_fmt", "rgb24", "-s", "1408x614", "-r", "30", "-i", "-",
         "-an", "-c:v", "ffv1", str(destination),
     ], stdin=subprocess.PIPE)
+    pipe_error = None
     try:
         for index in range(32):
             image = desktop.copy()
@@ -144,10 +153,17 @@ def prepare_launch(ffmpeg, source, launcher, destination):
                 if index == 31:
                     image = splash
             encoder.stdin.write(image.tobytes())
+    except BrokenPipeError as error:
+        pipe_error = error
     finally:
-        encoder.stdin.close()
-        if encoder.wait() != 0:
-            raise RuntimeError("Privacy-safe launcher preparation failed")
+        try:
+            encoder.stdin.close()
+        except BrokenPipeError as error:
+            pipe_error = error
+        finally:
+            return_code = encoder.wait()
+        if pipe_error is not None or return_code != 0:
+            raise RuntimeError("Privacy-safe launcher preparation failed") from pipe_error
 
 
 def main():
@@ -167,6 +183,10 @@ def main():
     for source in (args.ui, args.trailer, args.loading, args.overlay, args.launcher):
         if not source.is_file():
             parser.error(f"Missing recording: {source}")
+    missing_fonts = [args.font_dir / name for name in ("segoeui.ttf", "segoeuib.ttf")
+                     if not (args.font_dir / name).is_file()]
+    if missing_fonts:
+        parser.error("Missing fonts: " + ", ".join(map(str, missing_fonts)))
     args.out.mkdir(parents=True, exist_ok=True)
 
     def run(*command):
