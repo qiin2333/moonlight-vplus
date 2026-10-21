@@ -13,19 +13,16 @@
 
   English | [中文](README.md)
 
+  <a href="./assets/readme/moonlight-vplus-promo.mp4">
+    <img src="./assets/readme/moonlight-vplus-promo.gif" width="800" alt="Moonlight V+: app launch, game library, and game preview">
+  </a>
+  <br/>
+  <sub>Launch → Library → Connect → Game preview · Click for the high-quality video</sub>
+  <br/>
+  <sub>Android UI recording composited with the official No Man's Sky trailer. <a href="./assets/readme/README.md">Media credits</a></sub>
 </div>
 
 ---
-
-## Screenshots
-
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/bb174547-9b0d-4827-81cf-59308f3cfa9e" width="640" alt="Home">
-  <br/>
-  <img src="https://github.com/user-attachments/assets/5e227bab-afaa-4452-ae38-ac2cc9d22988" width="240" alt="App List">
-  <img src="https://github.com/user-attachments/assets/9101bf19-782e-4c6f-977f-34b138b93990" width="240" alt="Streaming">
-  <img src="https://github.com/user-attachments/assets/5046dd58-7013-494e-9f17-26e4de56a7dd" width="240" alt="Settings">
-</div>
 
 ## What's Different from Upstream Moonlight
 
