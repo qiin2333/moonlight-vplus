@@ -44,6 +44,16 @@ class StylusToolClassifierTest {
     }
 
     @Test
+    fun mixedPointerEventsPreferTheActionStylusPointer() {
+        assertEquals(
+            1,
+            findStylusToolPointerIndex(2, 1) {
+                if (it == 0) MotionEvent.TOOL_TYPE_FINGER else MotionEvent.TOOL_TYPE_STYLUS
+            }
+        )
+    }
+
+    @Test
     fun historicalMotionSamplesAreVisitedBeforeCurrentSamples() {
         val visited = mutableListOf<Pair<Int, Int>>()
 

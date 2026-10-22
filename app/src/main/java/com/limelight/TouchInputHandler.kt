@@ -38,6 +38,27 @@ internal inline fun containsStylusTool(pointerCount: Int, toolTypeAt: (Int) -> I
     return false
 }
 
+internal fun findStylusToolPointerIndex(
+    pointerCount: Int,
+    actionIndex: Int,
+    toolTypeAt: (Int) -> Int
+): Int {
+    if (actionIndex in 0 until pointerCount &&
+        (toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_STYLUS ||
+            toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_ERASER)
+    ) {
+        return actionIndex
+    }
+    for (i in 0 until pointerCount) {
+        if (toolTypeAt(i) == MotionEvent.TOOL_TYPE_STYLUS ||
+            toolTypeAt(i) == MotionEvent.TOOL_TYPE_ERASER
+        ) {
+            return i
+        }
+    }
+    return -1
+}
+
 internal fun pointerEventRequiresCapture(hasStylusTool: Boolean, captureActive: Boolean): Boolean =
     !hasStylusTool && !captureActive
 
@@ -360,7 +381,12 @@ class TouchInputHandler(private val game: Game) {
                         }
                     }
                 } else if (view != null) {
-                    updateMousePosition(view, event)
+                    val pointerIndex = if (hasStylusTool) {
+                        findStylusPointerIndex(event)
+                    } else {
+                        0
+                    }
+                    updateMousePosition(view, event, pointerIndex)
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
@@ -409,67 +435,7 @@ class TouchInputHandler(private val game: Game) {
                     }
                 }
 
-                // 触控笔按下/抬起
-                if (event.pointerCount == 1 && event.actionIndex == 0) {
-                    when (event.actionMasked) {
-                        MotionEvent.ACTION_DOWN -> {
-                            when (event.getToolType(0)) {
-                                MotionEvent.TOOL_TYPE_STYLUS -> {
-                                    lastAbsTouchDownTime = event.eventTime
-                                    lastAbsTouchDownX = event.getX(0)
-                                    lastAbsTouchDownY = event.getY(0)
-                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                                }
-                                MotionEvent.TOOL_TYPE_ERASER -> {
-                                    lastAbsTouchDownTime = event.eventTime
-                                    lastAbsTouchDownX = event.getX(0)
-                                    lastAbsTouchDownY = event.getY(0)
-                                    game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                                }
-
-                                MotionEvent.TOOL_TYPE_FINGER -> {
-                                    logIgnoredStylusBranchToolType(event, 0, "down")
-                                }
-
-                                MotionEvent.TOOL_TYPE_MOUSE -> {
-                                    logIgnoredStylusBranchToolType(event, 0, "down")
-                                }
-
-                                MotionEvent.TOOL_TYPE_UNKNOWN -> {
-                                    logIgnoredStylusBranchToolType(event, 0, "down")
-                                }
-                            }
-                        }
-                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                            when (event.getToolType(0)) {
-                                MotionEvent.TOOL_TYPE_STYLUS -> {
-                                    lastAbsTouchUpTime = event.eventTime
-                                    lastAbsTouchUpX = event.getX(0)
-                                    lastAbsTouchUpY = event.getY(0)
-                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                                }
-                                MotionEvent.TOOL_TYPE_ERASER -> {
-                                    lastAbsTouchUpTime = event.eventTime
-                                    lastAbsTouchUpX = event.getX(0)
-                                    lastAbsTouchUpY = event.getY(0)
-                                    game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                                }
-
-                                MotionEvent.TOOL_TYPE_FINGER -> {
-                                    logIgnoredStylusBranchToolType(event, 0, "up")
-                                }
-
-                                MotionEvent.TOOL_TYPE_MOUSE -> {
-                                    logIgnoredStylusBranchToolType(event, 0, "up")
-                                }
-
-                                MotionEvent.TOOL_TYPE_UNKNOWN -> {
-                                    logIgnoredStylusBranchToolType(event, 0, "up")
-                                }
-                            }
-                        }
-                    }
-                }
+                handleFallbackStylusButton(event)
 
                 lastButtonState = buttonState
             } else {
@@ -754,26 +720,26 @@ class TouchInputHandler(private val game: Game) {
 
     // ---- updateMousePosition ----
 
-    private fun updateMousePosition(touchedView: View?, event: MotionEvent) {
+    private fun updateMousePosition(touchedView: View?, event: MotionEvent, pointerIndex: Int = 0) {
         val activeStreamView = game.activeStreamView ?: return
 
         var eventX: Float
         var eventY: Float
 
         if (touchedView == activeStreamView) {
-            eventX = event.getX(0)
-            eventY = event.getY(0)
+            eventX = event.getX(pointerIndex)
+            eventY = event.getY(pointerIndex)
         } else if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
-            eventX = event.getX(0)
-            eventY = event.getY(0)
+            eventX = event.getX(pointerIndex)
+            eventY = event.getY(pointerIndex)
         } else {
-            eventX = event.getX(0) - activeStreamView.x
-            eventY = event.getY(0) - activeStreamView.y
+            eventX = event.getX(pointerIndex) - activeStreamView.x
+            eventY = event.getY(pointerIndex) - activeStreamView.y
         }
 
-        if (event.pointerCount == 1 && event.actionIndex == 0 &&
-            (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
+        if (event.pointerCount >= 1 &&
+            (event.getToolType(pointerIndex) == MotionEvent.TOOL_TYPE_ERASER ||
+                event.getToolType(pointerIndex) == MotionEvent.TOOL_TYPE_STYLUS)
         ) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_HOVER_ENTER,
@@ -805,6 +771,35 @@ class TouchInputHandler(private val game: Game) {
         }
 
         game.conn?.sendMousePosition(eventX.toInt().toShort(), eventY.toInt().toShort(), activeStreamView.width.toShort(), activeStreamView.height.toShort())
+    }
+
+    private fun findStylusPointerIndex(event: MotionEvent): Int =
+        findStylusToolPointerIndex(event.pointerCount, event.actionIndex) { event.getToolType(it) }
+
+    private fun handleFallbackStylusButton(event: MotionEvent) {
+        val pointerIndex = findStylusPointerIndex(event)
+        if (pointerIndex < 0) return
+
+        val toolType = event.getToolType(pointerIndex)
+        val button = if (toolType == MotionEvent.TOOL_TYPE_ERASER) {
+            MouseButtonPacket.BUTTON_RIGHT
+        } else {
+            MouseButtonPacket.BUTTON_LEFT
+        }
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                lastAbsTouchDownTime = event.eventTime
+                lastAbsTouchDownX = event.getX(pointerIndex)
+                lastAbsTouchDownY = event.getY(pointerIndex)
+                game.conn?.sendMouseButtonDown(button)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                lastAbsTouchUpTime = event.eventTime
+                lastAbsTouchUpX = event.getX(pointerIndex)
+                lastAbsTouchUpY = event.getY(pointerIndex)
+                game.conn?.sendMouseButtonUp(button)
+            }
+        }
     }
 
     // ---- Touch/Pen 事件发送 ----
@@ -1362,15 +1357,6 @@ class TouchInputHandler(private val game: Game) {
 
     private fun getTouchContext(actionIndex: Int): TouchContext? =
         if (actionIndex < touchContextMap.size) touchContextMap[actionIndex] else null
-
-    private fun logIgnoredStylusBranchToolType(event: MotionEvent, pointerIndex: Int, phase: String) {
-        LimeLog.warning(
-            "Ignoring non-stylus tool type in stylus branch: phase=$phase" +
-                ", toolType=${event.getToolType(pointerIndex)}" +
-                ", source=${event.source}" +
-                ", action=${event.actionMasked}"
-        )
-    }
 
     private fun eventHasStylusTool(event: MotionEvent): Boolean =
         containsStylusTool(event.pointerCount) { event.getToolType(it) }
