@@ -28,6 +28,7 @@ class KishiPcmEncoderTest {
         val packets = mutableListOf<ByteArray>()
         val encoder = KishiPcmEncoder(1f)
         encoder.encode(frame(48000, 480) { i, ch -> if (i == 0 && ch == 0) 30000 else 0 }, packets::add)
+        assertEquals(3, packets.size) // 10 ms at 4 kHz leaves three complete 12-frame packets.
         assertTrue(samples(packets, 0).any { it != 0 })
         assertTrue(samples(packets, 1).all { it == 0 })
     }

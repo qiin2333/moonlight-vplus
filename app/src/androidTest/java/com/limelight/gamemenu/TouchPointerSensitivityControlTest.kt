@@ -133,7 +133,8 @@ class TouchPointerSensitivityControlTest {
 
     @Test
     fun presetButtonAppliesSavedValueOnce() {
-        var applied = -1
+        var appliedId: String? = null
+        var applyCount = 0
         lateinit var inputModeManager: InputModeManager
         composeTestRule.setContent {
             inputModeManager = LocalInputModeManager.current
@@ -148,7 +149,8 @@ class TouchPointerSensitivityControlTest {
                 onValueChangeFinished = {},
                 onSavePreset = {},
                 onApplyPreset = { id ->
-                    applied = id.removePrefix("preset-").toInt()
+                    appliedId = id
+                    applyCount++
                 },
                 onManagePresets = {},
                 onSliderGesture = {}
@@ -166,7 +168,8 @@ class TouchPointerSensitivityControlTest {
             pressKey(Key.DirectionCenter)
         }
         composeTestRule.runOnIdle {
-            assertEquals(150, applied)
+            assertEquals("preset-150", appliedId)
+            assertEquals(1, applyCount)
         }
     }
 

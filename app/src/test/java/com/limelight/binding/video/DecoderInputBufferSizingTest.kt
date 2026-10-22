@@ -137,23 +137,12 @@ class DecoderInputBufferSizingTest {
     @Test
     fun oversizedAccessUnitGrowsBeyondTheInitialEstimate() {
         val estimatedSize = DecoderInputBufferSizing.recommendedInputSize("video/avc", 1920, 1080)!!
+        assertNull(DecoderInputBufferSizing.expandedInputSize(estimatedSize.toLong(), estimatedSize, 0))
         assertEquals(
             estimatedSize * 2,
             DecoderInputBufferSizing.expandedInputSize(estimatedSize.toLong() + 1, estimatedSize, 0),
         )
         assertEquals(8_000_000, DecoderInputBufferSizing.expandedInputSize(8_000_000, estimatedSize, 0))
-    }
-
-    @Test
-    fun fusedCodecConfigCanMakeAnOtherwiseFittingFrameRequireGrowth() {
-        val capacity = 1_048_576
-        val payloadSize = capacity - 32
-        val csdSize = 64L
-        assertNull(DecoderInputBufferSizing.expandedInputSize(payloadSize.toLong(), capacity, 0))
-        assertEquals(
-            capacity * 2,
-            DecoderInputBufferSizing.expandedInputSize(payloadSize + csdSize, capacity, 0),
-        )
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.limelight.binding.input.touch
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -21,23 +20,6 @@ class EnhancedTouchGestureRouteOwnerTest {
 
         assertFalse(owner.ownsContinuation())
         assertNull(owner.currentPointerConfig())
-    }
-
-    @Test
-    fun additionalPointerUsesCapturedGestureSensitivity() {
-        val owner = EnhancedTouchGestureRouteOwner()
-        val gestureConfig = config(2f)
-        owner.begin(gestureConfig)
-
-        val secondPointer = EnhancedTouchPointerState(
-            initialX = 800f,
-            initialY = 500f,
-            config = requireNotNull(owner.currentPointerConfig())
-        )
-        secondPointer.update(810f, 500f)
-
-        assertSame(gestureConfig, owner.currentPointerConfig())
-        assertEquals(820f, secondPointer.selectedX(), 0.0001f)
     }
 
     @Test

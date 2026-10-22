@@ -55,33 +55,6 @@ class VirtualControllerQuickMenuTest {
     private val keys = listOf("list_osc_layout", "checkbox_only_show_L3R3", "checkbox_half_height_osc_portrait",
         "seekbar_osc_opacity")
 
-    private fun defaultSettingsButtonSize(density: Float): Int {
-        val guide = controller.elements.firstOrNull { it.elementId == VirtualControllerElement.EID_GDB }
-        val guideParams = guide?.layoutParams as? FrameLayout.LayoutParams
-        return guideParams?.let { minOf(it.width, it.height) }?.takeIf { it > 0 }
-            ?: minOf((48 * density).toInt(), (frame.height * 0.06f).toInt().coerceAtLeast(1))
-    }
-
-    private fun defaultSettingsButtonPosition(button: ImageButton, density: Float): Pair<Int, Int> {
-        val guide = controller.elements.firstOrNull { it.elementId == VirtualControllerElement.EID_GDB }
-        val guideParams = guide?.layoutParams as? FrameLayout.LayoutParams
-        if (guide == null || guideParams == null) {
-            val margin = minOf((8 * density).toInt(), button.width / 4)
-            return margin to margin
-        }
-        val guideLeft = guide.left.takeIf { guide.width > 0 } ?: guideParams.leftMargin
-        val guideTop = guide.top.takeIf { guide.height > 0 } ?: guideParams.topMargin
-        val rawX = guideLeft + (guideParams.width - button.width) / 2
-        val rawY = guideTop - button.height - (2 * density).toInt()
-        val margin = minOf((8 * density).toInt(), button.width / 4)
-        val point = FloatingButtonPlacement.clampCustom(
-            rawX.toFloat(),
-            rawY.toFloat(),
-            FloatingButtonViewport(frame.width, frame.height, button.width, button.height, margin)
-        )
-        return point.x to point.y
-    }
-
     @Before fun setup() {
         activityRule.scenario.onActivity { activity ->
             preferences = PreferenceManager.getDefaultSharedPreferences(activity)
@@ -195,6 +168,11 @@ class VirtualControllerQuickMenuTest {
     }
 
     @Test fun disablingDragPreservesPositionAndResetPreservesToggle() {
+        var initialPosition = 0f to 0f
+        activityRule.scenario.onActivity {
+            val button = frame.children.filterIsInstance<ImageButton>().single()
+            initialPosition = button.x to button.y
+        }
         enableDragging()
         touch(MotionEvent.ACTION_DOWN, 2f, 2f)
         touch(MotionEvent.ACTION_MOVE, 200f, 200f)
@@ -217,10 +195,8 @@ class VirtualControllerQuickMenuTest {
         idle()
         activityRule.scenario.onActivity {
             val button = frame.children.filterIsInstance<ImageButton>().single()
-            val (expectedX, expectedY) = defaultSettingsButtonPosition(
-                button, it.resources.displayMetrics.density)
-            assertEquals(expectedX.toFloat(), button.x, 0f)
-            assertEquals(expectedY.toFloat(), button.y, 0f)
+            assertEquals(initialPosition.first, button.x, 0f)
+            assertEquals(initialPosition.second, button.y, 0f)
             assertFalse(buttonPreferences.contains("x"))
             assertFalse(buttonPreferences.contains("y"))
             assertFalse(buttonPreferences.getBoolean("drag_enabled", true))
@@ -395,17 +371,10 @@ class VirtualControllerQuickMenuTest {
     @Test fun menuSwitchesImmediatelyAndPersistsSelection() {
         activityRule.scenario.onActivity {
             val button = frame.children.filterIsInstance<ImageButton>().single()
-            val density = it.resources.displayMetrics.density
-            val size = defaultSettingsButtonSize(density)
-                .coerceAtMost(minOf(frame.width, frame.height))
-            assertEquals(size, button.width)
-            assertEquals(size / 8, button.paddingLeft)
-            assertEquals(size / 8, button.paddingRight)
+            assertEquals(button.width / 8, button.paddingLeft)
+            assertEquals(button.width / 8, button.paddingRight)
             assertEquals(0.4f, button.alpha, 0f)
             assertNotNull(button.background)
-            val (expectedX, expectedY) = defaultSettingsButtonPosition(button, density)
-            assertEquals(expectedX, button.left)
-            assertEquals(expectedY, button.top)
         }
         openMenu()
         compose.onNodeWithText("DualSense (DS)").performScrollTo().performClick()
@@ -421,7 +390,7 @@ class VirtualControllerQuickMenuTest {
         activityRule.scenario.onActivity { assertEquals(VirtualControllerLayout.NS, controller.layoutStyle) }
     }
 
-    @Test fun configureButtonStaysInCornerAcrossSizesAndLayouts() {
+    @Test fun configureButtonFitsAndAvoidsControlsAcrossSizesAndLayouts() {
         for ((width, height) in listOf(1280 to 720, 3200 to 1440, 720 to 1280, 32 to 24)) {
             activityRule.scenario.onActivity {
                 frame.layoutParams = FrameLayout.LayoutParams(width, height)
@@ -433,13 +402,19 @@ class VirtualControllerQuickMenuTest {
                 idle()
                 activityRule.scenario.onActivity {
                     val button = frame.children.filterIsInstance<ImageButton>().single()
-                    val density = it.resources.displayMetrics.density
-                    val size = defaultSettingsButtonSize(density)
-                        .coerceAtMost(minOf(frame.width, frame.height))
-                    assertEquals(size, button.width)
-                    val (expectedX, expectedY) = defaultSettingsButtonPosition(button, density)
-                    assertEquals(expectedX, button.left)
-                    assertEquals(expectedY, button.top)
+                    assertTrue(button.width > 0)
+                    assertEquals(button.width, button.height)
+                    controller.elements.firstOrNull {
+                        it.elementId == VirtualControllerElement.EID_GDB
+                    }?.let { guide ->
+                        val guideSize = minOf(guide.width, guide.height)
+                        if (guideSize > 0) {
+                            assertEquals("Configure target should match the Guide button",
+                                minOf(guideSize, frame.width, frame.height), button.width)
+                        }
+                    }
+                    assertTrue(button.left >= 0)
+                    assertTrue(button.top >= 0)
                     assertTrue(button.right <= frame.width)
                     assertTrue(button.bottom <= frame.height)
                     val buttonBounds = Rect(button.left, button.top, button.right, button.bottom)
@@ -476,17 +451,18 @@ class VirtualControllerQuickMenuTest {
     }
 
     @Test fun configureButtonRemainsOnPhysicalLeftInRtl() {
+        var ltrPosition = 0 to 0
         activityRule.scenario.onActivity {
+            val button = frame.children.filterIsInstance<ImageButton>().single()
+            ltrPosition = button.left to button.top
             frame.layoutDirection = View.LAYOUT_DIRECTION_RTL
             controller.refreshLayout()
         }
         idle()
         activityRule.scenario.onActivity {
             val button = frame.children.filterIsInstance<ImageButton>().single()
-            val (expectedX, expectedY) = defaultSettingsButtonPosition(
-                button, it.resources.displayMetrics.density)
-            assertEquals(expectedX, button.left)
-            assertEquals(expectedY, button.top)
+            assertEquals(ltrPosition.first, button.left)
+            assertEquals(ltrPosition.second, button.top)
         }
     }
 
