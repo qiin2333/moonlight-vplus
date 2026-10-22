@@ -61,34 +61,6 @@ class ControllerMotionSenderTest {
     }
 
     @Test
-    fun zeroGyroImmediatelyCancelsQueuedRotation() {
-        val f = Fixture()
-        f.sender.setReportRate(0, 2, 100)
-        f.gyro(10f)
-        f.advanceTo(1)
-        f.gyro(20f)
-        f.advanceTo(2)
-        f.gyro(0f)
-        assertEquals(2_000_000L, f.packets.last().time)
-        f.advanceTo(100)
-        assertEquals(listOf(10f, 0f), f.packets.map { it.x })
-    }
-
-    @Test
-    fun disableStopsRotationAndDropsPendingAndFutureSamples() {
-        val f = Fixture()
-        f.sender.setReportRate(0, 2, 100)
-        f.gyro(10f)
-        f.advanceTo(1)
-        f.gyro(20f)
-        f.sender.setReportRate(0, 2, 0)
-        f.gyro(30f)
-        f.advanceTo(100)
-        assertEquals(listOf(10f, 0f), f.packets.map { it.x })
-        assertTrue(f.tasks.isEmpty())
-    }
-
-    @Test
     fun accelerometerGyroscopeAndPlayersHaveIndependentBudgets() {
         val f = Fixture()
         f.sender.setReportRate(0, 1, 50)
@@ -116,72 +88,23 @@ class ControllerMotionSenderTest {
             f.gyro(1f)
             f.gyro(2f)
             f.sender.reset(0, clearDemand)
+            f.sender.pauseGyro(0) // A surviving host slot still needs its previous rotation cleared.
             f.gyro(3f)
             f.advanceTo(100)
-            assertEquals(if (clearDemand) listOf(1f) else listOf(1f, 3f), f.packets.map { it.x })
+            assertEquals(if (clearDemand) listOf(1f) else listOf(1f, 0f, 3f), f.packets.map { it.x })
             assertTrue(f.tasks.isEmpty())
             f.sender.setReportRate(0, 2, 100)
             f.gyro(4f)
             assertEquals(4f, f.packets.last().x)
+            f.gyro(5f)
+            f.sender.close()
+            f.sender.setReportRate(0, 2, 100)
+            f.gyro(6f)
+            f.sender.stopGyro(0)
+            f.advanceTo(200)
+            assertEquals(4f, f.packets.last().x)
+            assertTrue(f.tasks.isEmpty())
         }
-    }
-
-    @Test
-    fun failedSendRetriesLatestSampleWithoutExceedingTheRate() {
-        val f = Fixture()
-        f.sender.setReportRate(0, 2, 100)
-        f.result = -2
-        f.gyro(1f)
-        f.advanceTo(1)
-        f.gyro(2f)
-        assertEquals(1, f.packets.size)
-        f.result = 0
-        f.advanceTo(10)
-        assertEquals(listOf(1f, 2f), f.packets.map { it.x })
-    }
-
-    @Test
-    fun streamStopCancelsAllTasksAndPreventsNewSends() {
-        val f = Fixture()
-        f.sender.setReportRate(0, 2, 100)
-        f.gyro(1f)
-        f.gyro(2f)
-        f.sender.close()
-        f.sender.setReportRate(0, 2, 100)
-        f.gyro(3f)
-        f.sender.stopGyro(0)
-        f.advanceTo(100)
-        assertEquals(listOf(1f), f.packets.map { it.x })
-        assertTrue(f.tasks.isEmpty())
-    }
-
-    @Test
-    fun localAssistantCancelsHostMotionOnlyOnceAndPreservesDemand() {
-        val f = Fixture()
-        f.sender.setReportRate(0, 2, 100)
-        f.gyro(10f)
-        f.gyro(20f)
-        repeat(20) { f.sender.pauseGyro(0) }
-        f.advanceTo(100)
-        assertEquals(listOf(10f, 0f), f.packets.map { it.x })
-        f.gyro(30f)
-        assertEquals(30f, f.packets.last().x)
-    }
-
-    @Test
-    fun failedFocusLossStopIsRetriedWithoutRevivingTheOldRotation() {
-        val f = Fixture()
-        f.sender.setReportRate(0, 2, 100)
-        f.gyro(10f)
-        f.gyro(20f)
-        f.result = -2
-        f.sender.stopGyro(0)
-        f.result = 0
-        f.advanceTo(10)
-        assertEquals(listOf(10f, 0f, 0f), f.packets.map { it.x })
-        f.advanceTo(20)
-        f.gyro(30f)
-        assertEquals(30f, f.packets.last().x)
     }
 
     @Test
@@ -245,24 +168,50 @@ class ControllerMotionSenderTest {
     }
 
     @Test
-    fun partialFrameFailureRetriesTheLatestPairAtTheSharedRate() {
-        val f = Fixture()
-        f.enableFrame()
-        f.failedType = 1
-        f.frame(1f)
-        f.advanceTo(1); f.frame(2f)
-        f.failedType = null
-        f.advanceTo(10)
-        assertEquals(listOf(1f, -1f, 2f, -2f), f.packets.map { it.x })
-        assertTrue(f.tasks.isEmpty())
-        f.failedType = 2
-        f.advanceTo(11); f.frame(0f)
-        f.advanceTo(12); f.frame(0f)
-        assertEquals(6, f.packets.size) // The failed stop is immediate once, then rate-limited.
-        f.failedType = null
-        f.advanceTo(21)
-        assertEquals(listOf(0L, 10_000_000L, 11_000_000L, 21_000_000L),
-            f.packets.filter { it.type.toInt() == 2 }.map { it.time })
-        assertTrue(f.tasks.isEmpty())
+    fun rejectedSamplesRetryLatestValuesAtTheSharedBudget() {
+        for (type in listOf<Byte>(1, 2)) {
+            val f = Fixture()
+            f.enableFrame()
+            f.failedType = type
+            f.frame(1f)
+            f.advanceTo(1); f.frame(2f)
+            assertEquals(2, f.packets.size) // Both sensors are attempted even if gyro fails.
+            f.failedType = null
+            f.advanceTo(10)
+            assertEquals(listOf(1f, -1f, 2f, -2f), f.packets.map { it.x })
+            assertTrue(f.tasks.isEmpty())
+        }
+    }
+
+    @Test
+    fun terminalZeroIsImmediateOnceAndRetriesEvenAfterRateChangesOrDisable() {
+        for (mode in 0..4) { // Raw zero, local assistant, disable, USB pair, focus-loss stop.
+            val f = Fixture()
+            f.enableFrame()
+            if (mode == 3) f.frame(1f) else f.gyro(1f)
+            f.advanceTo(1)
+            if (mode == 3) f.frame(2f) else f.gyro(2f)
+            f.failedType = 2
+            if (mode == 1) f.sender.setReportRate(0, 2, 50)
+            fun stop() = when (mode) {
+                0 -> f.gyro(0f)
+                1 -> f.sender.pauseGyro(0)
+                2 -> f.sender.setReportRate(0, 2, 0)
+                3 -> f.frame(0f)
+                else -> f.sender.stopGyro(0)
+            }
+            stop()
+            for (ms in 2L..10L) {
+                f.advanceTo(ms); stop()
+                if (mode == 2) f.gyro(9f) // Disabled ordinary motion must stay dropped.
+            }
+            assertEquals(listOf(1f, 0f), f.packets.filter { it.type.toInt() == 2 }.map { it.x })
+            f.failedType = null
+            f.advanceTo(21)
+            val gyro = f.packets.filter { it.type.toInt() == 2 }
+            assertEquals(listOf(1f, 0f, 0f), gyro.map { it.x })
+            assertEquals(if (mode == 1) 21_000_000L else 11_000_000L, gyro.last().time)
+            assertTrue(f.tasks.isEmpty())
+        }
     }
 }

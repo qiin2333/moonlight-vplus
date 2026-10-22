@@ -793,8 +793,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         for (c in handler.driverControllerContexts.values) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
-        for (i in 0 until handler.inputDeviceContexts.size()) {
-            val c = handler.inputDeviceContexts.valueAt(i)
+        for (c in handler.inputDeviceContextSnapshot) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
         return handler.defaultContext.controllerNumber == controllerNumber &&

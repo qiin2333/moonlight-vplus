@@ -21,13 +21,22 @@ internal class ControllerMotionSender(
         var y = 0f
         var z = 0f
         var paired: Sensor? = null
+        val isZero: Boolean get() = x == 0f && y == 0f && z == 0f
 
-        val periodNanos: Long get() = (1_000_000_000L + rate - 1) / rate
+        // A disabled gyro may still owe the host its final zero.
+        val periodNanos: Long get() = if (rate > 0) (1_000_000_000L + rate - 1) / rate else 10_000_000L
+
+        fun update(x: Float, y: Float, z: Float): Boolean {
+            val stopped = type == GYRO && x == 0f && y == 0f && z == 0f && !lastWasZero &&
+                !isZero
+            this.x = x; this.y = y; this.z = z
+            return stopped
+        }
 
         override fun run() = synchronized(this@ControllerMotionSender) {
             if (!scheduled) return
             scheduled = false
-            if (!closed && rate > 0) flush(this)
+            if (!closed) flush(this)
         }
     }
 
@@ -48,9 +57,8 @@ internal class ControllerMotionSender(
         unpair(controller)
         clearPending(state)
         state.rate = rate
-        if (rate == 0 && type == GYRO && !state.lastWasZero) stopGyro(controller)
         state.hasAttempted = false
-        state.lastWasZero = true
+        if (type == GYRO && !state.lastWasZero && (rate == 0 || state.isZero)) stopGyro(controller)
     }
 
     @Synchronized
@@ -58,13 +66,9 @@ internal class ControllerMotionSender(
         val state = sensor(controller, type) ?: return
         if (closed || state.rate == 0) return
         unpair(controller)
-        state.x = x
-        state.y = y
-        state.z = z
         // A gyro stop is reliable in moonlight-common-c. Never leave rotation stuck
         // because its final zero happened inside the forwarding interval.
-        flush(state, immediate = type == GYRO && x == 0f && y == 0f && z == 0f &&
-            !state.lastWasZero)
+        flush(state, immediate = state.update(x, y, z))
     }
 
     /** A USB report's sensors share one budget when the host requests equal rates. */
@@ -85,10 +89,8 @@ internal class ControllerMotionSender(
             gyro.sentAt = maxOf(gyro.sentAt, accel.sentAt)
             gyro.paired = accel
         }
-        val stopped = gx == 0f && gy == 0f && gz == 0f && !gyro.lastWasZero &&
-            (gyro.x != 0f || gyro.y != 0f || gyro.z != 0f)
-        gyro.x = gx; gyro.y = gy; gyro.z = gz
-        accel.x = ax; accel.y = ay; accel.z = az
+        val stopped = gyro.update(gx, gy, gz)
+        accel.update(ax, ay, az)
         // A stop flushes the complete frame immediately, once per transition.
         flush(gyro, immediate = stopped)
     }
@@ -99,10 +101,7 @@ internal class ControllerMotionSender(
         val state = sensor(controller, GYRO) ?: return
         if (closed) return
         unpair(controller)
-        state.x = 0f
-        state.y = 0f
-        state.z = 0f
-        flush(state, immediate = true)
+        flush(state, immediate = state.update(0f, 0f, 0f))
     }
 
     /** A local assistant takes ownership without forwarding or delaying its samples. */
@@ -122,8 +121,10 @@ internal class ControllerMotionSender(
         sensors.getOrNull(controller.toInt())?.forEach {
             clearPending(it)
             it.hasAttempted = false
-            it.lastWasZero = true
-            if (clearDemand) it.rate = 0
+            if (clearDemand) {
+                it.lastWasZero = true
+                it.rate = 0
+            }
         }
     }
 
@@ -135,7 +136,7 @@ internal class ControllerMotionSender(
 
     private fun flush(state: Sensor, immediate: Boolean = false) {
         val now = nowNanos()
-        val remaining = if (state.hasAttempted && state.rate > 0) state.periodNanos - (now - state.sentAt) else 0L
+        val remaining = if (state.hasAttempted) state.periodNanos - (now - state.sentAt) else 0L
         if (!immediate && remaining > 0) {
             enqueue(state, remaining)
             return
@@ -151,7 +152,7 @@ internal class ControllerMotionSender(
         }
         val sent = transmit(state)
         val pairedSent = paired?.let(::transmit) ?: true
-        if ((!sent || !pairedSent) && state.rate > 0) {
+        if (!sent || !pairedSent) {
             // JNI can reject a sample before the control stream is ready. Retain
             // the latest one and retry at a bounded rate, rather than caching success.
             enqueue(state, state.periodNanos)
@@ -160,7 +161,7 @@ internal class ControllerMotionSender(
 
     private fun transmit(state: Sensor): Boolean {
         if (send(state.controller, state.type, state.x, state.y, state.z) != 0) return false
-        state.lastWasZero = state.x == 0f && state.y == 0f && state.z == 0f
+        state.lastWasZero = state.isZero
         return true
     }
 

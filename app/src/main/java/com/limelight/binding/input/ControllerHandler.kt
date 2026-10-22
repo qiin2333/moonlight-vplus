@@ -359,6 +359,8 @@ class ControllerHandler(
     private val emulatedMouseButtonHolds = EmulatedButtonHolds()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
+    @Volatile internal var inputDeviceContextSnapshot: List<InputDeviceContext> = emptyList()
+        private set
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
     private val driverControllerContextsLifecycleLock = Any()
     // Serializes lights session transfer in migrateContext/close in destroy() (main thread)
@@ -622,7 +624,7 @@ class ControllerHandler(
                     if (context.inputDevice?.let(::isUsbForwarded) != true) continue
                     context.retired = true
                     if (context.assignedControllerNumber) affected.add(context.controllerNumber)
-                    inputDeviceContexts.removeAt(i)
+                    updateInputDeviceContext(inputDeviceContexts.keyAt(i), null)
                     retired.add(context)
                 }
             }
@@ -806,8 +808,14 @@ class ControllerHandler(
         }
     }
 
+    // Publish a stable structure for deferred motion checks; never enumerate SparseArray on that worker.
+    private fun updateInputDeviceContext(id: Int, context: InputDeviceContext?) = synchronized(inputDeviceContexts) {
+        if (context == null) inputDeviceContexts.remove(id) else inputDeviceContexts.put(id, context)
+        inputDeviceContextSnapshot = (0 until inputDeviceContexts.size()).map { inputDeviceContexts.valueAt(it) }
+    }
+
     private fun localControllerContexts(): List<GenericControllerContext> =
-        (0 until inputDeviceContexts.size()).map { inputDeviceContexts.valueAt(it) } + driverControllerContexts.values
+        inputDeviceContextSnapshot + driverControllerContexts.values
 
     private fun restoreUsbForwarding(lease: UsbForwardingLease, devicePresent: Boolean) {
         check(Looper.myLooper() == mainThreadHandler.looper)
@@ -826,7 +834,7 @@ class ControllerHandler(
                 if (!hasJoystickAxes(device) && !hasGamepadButtons(device)) continue
                 val context = inputDeviceContexts.get(id)?.takeIf(::isContextUsable)
                     ?: createInputDeviceContextForDevice(device)
-                synchronized(lightsSessionLock) { inputDeviceContexts.put(id, context) }
+                synchronized(lightsSessionLock) { updateInputDeviceContext(id, context) }
                 synchronized(arrivalMetadataLock) {
                     assignControllerNumberIfNeeded(context)
                     sendControllerInputPacketLocked(context)
@@ -869,7 +877,7 @@ class ControllerHandler(
 
         val context = createInputDeviceContextForDevice(device)
         if (hapticsCoordinator.hasRumbleCapability(context) || context.joyCon?.combineEnabled == true) {
-            inputDeviceContexts.put(deviceId, context)
+            updateInputDeviceContext(deviceId, context)
             hapticsCoordinator.onSinkChanged(context.controllerNumber)
         }
     }
@@ -894,7 +902,7 @@ class ControllerHandler(
             // will ever close.
             synchronized(lightsSessionLock) {
                 context.destroy()
-                inputDeviceContexts.remove(deviceId)
+                updateInputDeviceContext(deviceId, null)
             }
             joyConSupport.peer(context)?.takeIf { it.assignedControllerNumber }?.let {
                 refreshControllerArrival(it)
@@ -937,7 +945,7 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         synchronized(lightsSessionLock) {
             newContext.migrateContext(existingContext)
-            inputDeviceContexts.put(deviceId, newContext)
+            updateInputDeviceContext(deviceId, newContext)
         }
         refreshSystemWaveformRoutes()
         if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
@@ -1306,7 +1314,7 @@ class ControllerHandler(
                     // Create a new context for the associated device if one doesn't exist
                     if (associatedDeviceContext == null) {
                         associatedDeviceContext = createInputDeviceContextForDevice(associatedDevice)
-                        inputDeviceContexts.put(associatedDevice.id, associatedDeviceContext)
+                        updateInputDeviceContext(associatedDevice.id, associatedDeviceContext)
                     }
 
                     // Assign a controller number for the associated device if one isn't assigned
@@ -1869,7 +1877,7 @@ class ControllerHandler(
 
         // Otherwise create a new context
         context = createInputDeviceContextForDevice(event.device)
-        inputDeviceContexts.put(event.deviceId, context)
+        updateInputDeviceContext(event.deviceId, context)
 
         return context
     }
@@ -2071,17 +2079,10 @@ class ControllerHandler(
         synchronized(arrivalMetadataLock) { action() }
     }
 
-    internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean {
-        for (i in 0 until inputDeviceContexts.size()) {
-            val context = inputDeviceContexts.valueAt(i)
-            if (context.controllerNumber == controllerNumber && context.isLocalInputCaptureActive()) {
-                return true
-            }
-        }
-        return driverControllerContexts.values.any {
+    internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean =
+        localControllerContexts().any {
             it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
         }
-    }
 
     private fun sendControllerInputPacketLocked(
         originalContext: GenericControllerContext,

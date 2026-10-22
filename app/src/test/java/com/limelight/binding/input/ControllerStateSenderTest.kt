@@ -4,17 +4,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ControllerStateSenderTest {
-    private data class Packet(
-        val controller: Short, val mask: Short, val buttons: Int, val lt: Byte, val rt: Byte,
-        val lx: Short, val ly: Short, val rx: Short, val ry: Short
-    )
+    private data class Packet(val controller: Short, val buttons: Int, val rx: Short)
 
     private class Fixture {
         var time = 0L
         val packets = mutableListOf<Packet>()
         var result = 0
-        val sender = ControllerStateSender(nowNanos = { time }) { c, m, b, lt, rt, lx, ly, rx, ry ->
-            packets += Packet(c, m, b, lt, rt, lx, ly, rx, ry)
+        val sender = ControllerStateSender(nowNanos = { time }) { c, _, b, _, _, _, _, rx, _ ->
+            packets += Packet(c, b, rx)
             result
         }
         fun submit(
@@ -64,24 +61,18 @@ class ControllerStateSenderTest {
     }
 
     @Test
-    fun playersDoNotSuppressEachOthersInitialState() {
+    fun cachesArePerPlayerAndResetOrForcedNeutralAlwaysSends() {
         val f = Fixture()
-        f.submit(controller = 0, mask = 3)
-        f.submit(controller = 1, mask = 3)
-        f.submit(controller = 0, mask = 3)
-        f.submit(controller = 1, mask = 3)
-        assertEquals(listOf<Short>(0, 1), f.packets.map { it.controller })
-    }
-
-    @Test
-    fun reconnectAndForcedNeutralBypassTheCachedState() {
-        val f = Fixture()
-        f.submit()
+        repeat(2) {
+            f.submit(controller = 0, mask = 3)
+            f.submit(controller = 1, mask = 3)
+        }
         f.sender.reset(0)
-        f.submit()
-        f.submit(force = true)
-        f.submit()
-        assertEquals(3, f.packets.size)
+        f.submit(mask = 3)
+        f.submit(mask = 3, force = true)
+        f.submit(mask = 3)
+        f.submit(controller = 1, mask = 3)
+        assertEquals(listOf<Short>(0, 1, 0, 0), f.packets.map { it.controller })
     }
 
     @Test
