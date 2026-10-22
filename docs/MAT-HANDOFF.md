@@ -5,6 +5,14 @@ Companion repositories: AlkaidLab/foundation-sunshine branch
 `codex/atmos-mat-transport` (PR base **mic**). Use the common-c gitlink committed
 here; do not run `git submodule update --remote`.
 
+2026-10-22 upstream refresh: the shared dependency now includes mic
+`2aa14ffeb877f9093993d9c9cf3c3440e2d2220d`, pinned here as
+`cdd4aaecd7919878a0472e6ca18a65461a85984a`. The host PR merges master
+`c211d711` and uses its PyroWave/Granite gitlinks. The new RTSP parser retains
+upstream case-folded coalescing/node ownership while preserving MAT duplicate
+ACK rejection. Fresh no-device test results and transfer evidence are recorded
+separately in the companion host's `MAT-UPSTREAM-RESULT.txt` and handoff.
+
 ## Implemented
 
 Codec 4 is still dump-only: an app-private unique file is published only after
