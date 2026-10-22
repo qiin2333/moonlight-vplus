@@ -17,6 +17,10 @@ class CuteFeatureGuideLayoutSpecTest {
         )) {
             val spec = cuteFeatureGuideLayoutSpec(orientation, height)
             assertEquals("orientation=$orientation height=$height", compact, spec.compact)
+            if (compact) {
+                val expectedFraction = if (orientation == Configuration.ORIENTATION_PORTRAIT) 0.62f else 0.72f
+                assertEquals("orientation=$orientation height=$height", expectedFraction, spec.maximumHeightFraction, 0f)
+            }
         }
     }
 

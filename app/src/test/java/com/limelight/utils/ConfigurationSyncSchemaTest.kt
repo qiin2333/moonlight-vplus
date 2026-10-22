@@ -145,7 +145,16 @@ class ConfigurationSyncSchemaTest {
             assertEquals("int", values["seekbar_bitrate_kbps"].asJsonObject["type"].asString)
             assertEquals(1, sections["crownProfiles"].asJsonArray.size())
             if (fixture == "schema-v2.example.json") {
-                assertEquals(1, sections["pairing"].asJsonObject["computers"].asJsonArray.size())
+                val computers = sections["pairing"].asJsonObject["computers"].asJsonArray
+                assertEquals(1, computers.size())
+                val computer = computers[0].asJsonObject
+                assertEquals("host-uuid", computer["uuid"].asString)
+                assertEquals("Gaming PC", computer["name"].asString)
+                for (field in listOf("localAddress", "activeAddress")) {
+                    val address = computer[field].asJsonObject
+                    assertEquals(field, "192.168.1.10", address["address"].asString)
+                    assertEquals(field, 47989, address["port"].asInt)
+                }
             }
         }
     }

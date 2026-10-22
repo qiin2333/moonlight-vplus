@@ -185,27 +185,57 @@ class SettingsResourceHygieneTest {
             .asElementSequence()
             .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
             .toSet()
-        val requiredKeys = setOf(
-            "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
-            "list_fec_mode", "seekbar_fec_percentage", "video_format",
-            "checkbox_enable_hdr", "checkbox_enable_hdr_high_brightness", "checkbox_hdr_brightness_override",
-            "seekbar_hdr_peak_brightness_nits", "list_hdr_mode", "checkbox_full_range",
-            "capability_diagnostic", "pyrowave_capability_diagnostic", "list_background_stream_behavior",
-            "list_quit_behavior", "checkbox_resume_stream", "checkbox_extreme_resume",
-            "checkbox_background_audio", "checkbox_enable_stun", "checkbox_enable_float_ball",
-            "list_float_ball_position", "seekbar_float_ball_auto_hide_delay", "list_float_ball_single_click_action",
-            "list_float_ball_double_click_action", "list_float_ball_long_click_action", "checkbox_enable_mic",
-            "list_mic_initial_state", "list_mic_menu_action_mode", "checkbox_show_mic_button",
-            "list_mic_button_position", "seekbar_mic_bitrate_kbps", "list_mic_icon_color",
-            "list_mic_volume_processing_mode", "checkbox_mic_volume_processing", "checkbox_mic_gain",
-            "seekbar_mic_gain_db", "checkbox_mic_balance", "seekbar_mic_balance_target",
-            "checkbox_mic_voice_enhancement", "checkbox_enable_enhanced_touch", "seekbar_flat_region_pixels",
-            "checkbox_enhanced_touch_on_which_side", "enhanced_touch_zone_divider", "pointer_velocity_factor",
-            "list_dualsense_output_mode", "checkbox_dualsense_direct_bluetooth", "checkbox_dualsense_wireless_bridge",
-            "checkbox_reverse_resolution",
+        val requiredKeysByCategory = mapOf(
+            "category_basic_settings" to setOf(
+                "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
+                "list_fec_mode", "seekbar_fec_percentage",
+            ),
+            "category_host_settings" to setOf(
+                "list_background_stream_behavior", "list_quit_behavior", "checkbox_resume_stream",
+                "checkbox_extreme_resume", "checkbox_background_audio", "checkbox_enable_stun",
+            ),
+            "category_screen_position" to setOf(
+                "video_format", "checkbox_enable_hdr", "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override", "seekbar_hdr_peak_brightness_nits", "list_hdr_mode",
+                "checkbox_full_range", "capability_diagnostic", "pyrowave_capability_diagnostic",
+            ),
+            "category_display_behavior" to setOf("checkbox_reverse_resolution"),
+            "category_ui_settings" to setOf(
+                "checkbox_enable_float_ball", "list_float_ball_position", "seekbar_float_ball_auto_hide_delay",
+                "list_float_ball_single_click_action", "list_float_ball_double_click_action",
+                "list_float_ball_long_click_action",
+            ),
+            "category_microphone_settings" to setOf(
+                "checkbox_enable_mic", "list_mic_initial_state", "list_mic_menu_action_mode",
+                "checkbox_show_mic_button", "list_mic_button_position", "seekbar_mic_bitrate_kbps",
+                "list_mic_icon_color", "list_mic_volume_processing_mode", "checkbox_mic_volume_processing",
+                "checkbox_mic_gain", "seekbar_mic_gain_db", "checkbox_mic_balance",
+                "seekbar_mic_balance_target", "checkbox_mic_voice_enhancement",
+            ),
+            "category_input_settings" to setOf(
+                "checkbox_enable_enhanced_touch", "seekbar_flat_region_pixels",
+                "checkbox_enhanced_touch_on_which_side", "enhanced_touch_zone_divider", "pointer_velocity_factor",
+            ),
+            "category_gamepad_settings" to setOf(
+                "list_dualsense_output_mode", "checkbox_dualsense_direct_bluetooth", "checkbox_dualsense_wireless_bridge",
+            ),
         )
+        val requiredKeys = requiredKeysByCategory.values.flatten().toSet()
         val missingKeys = requiredKeys - actualKeys
         assertTrue("Missing settings: $missingKeys", missingKeys.isEmpty())
+
+        val categoriesByKey = preferences.documentElement.childNodes.asElementSequence()
+            .filter { it.tagName == "PreferenceCategory" }
+            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+        requiredKeysByCategory.forEach { (categoryKey, expectedKeys) ->
+            val category = categoriesByKey[categoryKey]
+            assertNotNull("Missing settings category: $categoryKey", category)
+            val childKeys = category!!.childNodes.asElementSequence()
+                .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+                .toSet()
+            val misplacedKeys = expectedKeys - childKeys
+            assertTrue("Settings missing from $categoryKey: $misplacedKeys", misplacedKeys.isEmpty())
+        }
     }
 
     @Test
