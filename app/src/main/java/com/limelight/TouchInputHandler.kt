@@ -59,6 +59,27 @@ internal fun findStylusToolPointerIndex(
     return -1
 }
 
+internal fun stylusActionPointer(
+    actionMasked: Int,
+    actionIndex: Int,
+    pointerCount: Int,
+    toolTypeAt: (Int) -> Int
+): Boolean {
+    if (pointerCount == 0) return false
+    return when (actionMasked) {
+        MotionEvent.ACTION_MOVE, MotionEvent.ACTION_CANCEL ->
+            containsStylusTool(pointerCount, toolTypeAt)
+        MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP ->
+            actionIndex in 0 until pointerCount &&
+                (toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_STYLUS ||
+                    toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_ERASER)
+        else ->
+            actionIndex in 0 until pointerCount &&
+                (toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_STYLUS ||
+                    toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_ERASER)
+    }
+}
+
 internal fun pointerEventRequiresCapture(hasStylusTool: Boolean, captureActive: Boolean): Boolean =
     !hasStylusTool && !captureActive
 
@@ -317,11 +338,13 @@ class TouchInputHandler(private val game: Game) {
             if (eventSource == InputDevice.SOURCE_MOUSE ||
                 (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
                 eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
-                hasStylusTool ||
+                stylusActionPointer(
+                    event.actionMasked,
+                    event.actionIndex,
+                    event.pointerCount
+                ) { event.getToolType(it) } ||
                 (event.pointerCount >= 1 &&
-                    (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
-                        event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
-                        event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
                 eventSource == 12290
             ) {
                 var buttonState = event.buttonState
@@ -779,6 +802,17 @@ class TouchInputHandler(private val game: Game) {
     private fun handleFallbackStylusButton(event: MotionEvent) {
         val pointerIndex = findStylusPointerIndex(event)
         if (pointerIndex < 0) return
+
+        if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN ||
+            event.actionMasked == MotionEvent.ACTION_POINTER_UP
+        ) {
+            val actionToolType = event.getToolType(event.actionIndex)
+            if (actionToolType != MotionEvent.TOOL_TYPE_STYLUS &&
+                actionToolType != MotionEvent.TOOL_TYPE_ERASER
+            ) {
+                return
+            }
+        }
 
         val toolType = event.getToolType(pointerIndex)
         val button = if (toolType == MotionEvent.TOOL_TYPE_ERASER) {

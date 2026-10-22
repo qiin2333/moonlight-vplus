@@ -54,6 +54,24 @@ class StylusToolClassifierTest {
     }
 
     @Test
+    fun fingerPointerTransitionsStayOnTheFingerPathWhenStylusRemainsDown() {
+        assertFalse(
+            stylusActionPointer(
+                MotionEvent.ACTION_POINTER_UP,
+                actionIndex = 1,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_STYLUS else MotionEvent.TOOL_TYPE_FINGER }
+        )
+        assertTrue(
+            stylusActionPointer(
+                MotionEvent.ACTION_POINTER_UP,
+                actionIndex = 0,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_STYLUS else MotionEvent.TOOL_TYPE_FINGER }
+        )
+    }
+
+    @Test
     fun historicalMotionSamplesAreVisitedBeforeCurrentSamples() {
         val visited = mutableListOf<Pair<Int, Int>>()
 
