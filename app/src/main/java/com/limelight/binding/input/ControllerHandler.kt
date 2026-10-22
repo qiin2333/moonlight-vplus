@@ -1199,6 +1199,7 @@ class ControllerHandler(
             updateControllerSlot(context.controllerNumber.toInt(), reserve = false)
         }
 
+        val wasAssigned = context.assignedControllerNumber
         context.assignedControllerNumber = false
         context.reservedControllerNumber = false
 
@@ -1209,11 +1210,13 @@ class ControllerHandler(
         // An assigned controller whose arrival is still pending has never sent a
         // normal input packet. Sending a removal packet for it can create a legacy
         // Xbox controller on hosts that keep controller 0 active.
-        if (context.controllerArrival.isReported) {
+        if (wasAssigned || context.controllerArrival.isReported) {
             synchronized(arrivalMetadataLock) {
                 val activeMask = getActiveControllerMask()
                 motionSender.reset(context.controllerNumber,
                     clearDemand = (activeMask.toInt() and (1 shl context.controllerNumber.toInt())) == 0)
+                // A failed arrival may still have forwarded motion using an existing slot's demand.
+                if (!context.controllerArrival.isReported) return
                 conn.sendControllerInput(
                     context.controllerNumber, activeMask,
                     0,
