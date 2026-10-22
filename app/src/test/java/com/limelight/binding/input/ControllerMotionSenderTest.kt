@@ -185,6 +185,12 @@ class ControllerMotionSenderTest {
 
     @Test
     fun terminalZeroIsImmediateOnceAndRetriesEvenAfterRateChangesOrDisable() {
+        val idle = Fixture()
+        idle.failedType = 2
+        idle.sender.stopGyro(0) // No demand or previous rotation: an unsupported stop needs no retry.
+        idle.advanceTo(100)
+        assertEquals(1, idle.packets.size)
+        assertTrue(idle.tasks.isEmpty())
         for (mode in 0..4) { // Raw zero, local assistant, disable, USB pair, focus-loss stop.
             val f = Fixture()
             f.enableFrame()

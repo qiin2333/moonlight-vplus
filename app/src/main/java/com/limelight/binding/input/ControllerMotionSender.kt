@@ -152,7 +152,7 @@ internal class ControllerMotionSender(
         }
         val sent = transmit(state)
         val pairedSent = paired?.let(::transmit) ?: true
-        if (!sent || !pairedSent) {
+        if ((!sent || !pairedSent) && (state.rate > 0 || !state.lastWasZero)) {
             // JNI can reject a sample before the control stream is ready. Retain
             // the latest one and retry at a bounded rate, rather than caching success.
             enqueue(state, state.periodNanos)
