@@ -38,6 +38,9 @@ internal inline fun containsStylusTool(pointerCount: Int, toolTypeAt: (Int) -> I
     return false
 }
 
+internal fun pointerEventRequiresCapture(hasStylusTool: Boolean, captureActive: Boolean): Boolean =
+    !hasStylusTool && !captureActive
+
 internal const val CURRENT_MOTION_SAMPLE = -1
 
 internal inline fun visitMotionEventSamples(
@@ -293,6 +296,7 @@ class TouchInputHandler(private val game: Game) {
             if (eventSource == InputDevice.SOURCE_MOUSE ||
                 (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
                 eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
+                hasStylusTool ||
                 (event.pointerCount >= 1 &&
                     (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
                         event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
@@ -311,7 +315,7 @@ class TouchInputHandler(private val game: Game) {
                     changedButtons = buttonState xor lastButtonState
                 }
 
-                if (!game.inputCaptureProvider.isCapturingActive()) {
+                if (pointerEventRequiresCapture(hasStylusTool, game.inputCaptureProvider.isCapturingActive())) {
                     return true
                 }
 

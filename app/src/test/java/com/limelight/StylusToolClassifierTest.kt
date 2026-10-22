@@ -33,6 +33,17 @@ class StylusToolClassifierTest {
     }
 
     @Test
+    fun stylusDoesNotRequirePointerCapture() {
+        assertFalse(pointerEventRequiresCapture(hasStylusTool = true, captureActive = false))
+    }
+
+    @Test
+    fun mouseStillRequiresPointerCapture() {
+        assertTrue(pointerEventRequiresCapture(hasStylusTool = false, captureActive = false))
+        assertFalse(pointerEventRequiresCapture(hasStylusTool = false, captureActive = true))
+    }
+
+    @Test
     fun historicalMotionSamplesAreVisitedBeforeCurrentSamples() {
         val visited = mutableListOf<Pair<Int, Int>>()
 
