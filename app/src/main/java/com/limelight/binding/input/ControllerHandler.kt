@@ -1216,7 +1216,16 @@ class ControllerHandler(
                 motionSender.reset(context.controllerNumber,
                     clearDemand = (activeMask.toInt() and (1 shl context.controllerNumber.toInt())) == 0)
                 // A failed arrival may still have forwarded motion using an existing slot's demand.
-                if (!context.controllerArrival.isReported) return
+                if (!context.controllerArrival.isReported) {
+                    localControllerContexts().firstOrNull {
+                        isContextUsable(it) && it.assignedControllerNumber && it.controllerArrival.isReported &&
+                            it.controllerNumber == context.controllerNumber
+                    }?.let { survivor ->
+                        sendControllerInputPacketLocked(survivor,
+                            forceNeutral = isControllerLocallyCaptured(survivor.controllerNumber))
+                    }
+                    return
+                }
                 conn.sendControllerInput(
                     context.controllerNumber, activeMask,
                     0,
