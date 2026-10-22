@@ -11,6 +11,7 @@
 #include <cpu-features.h>
 
 #include "audio_haptics_android_adapter_bridge.h"
+#include "mat_carrier_bridge.h"
 
 #define AUDIO_BACKLOG_DROP_THRESHOLD_MS 40
 
@@ -34,6 +35,8 @@ static jmethodID BridgeArStopMethod;
 static jmethodID BridgeArCleanupMethod;
 static jmethodID BridgeArPlaySampleMethod;
 static jmethodID BridgeArPlayEncodedSampleMethod;
+static jmethodID BridgeArGetMatConsumerMethod;
+static void* LiveMatBridge;
 static jmethodID BridgeClStageStartingMethod;
 static jmethodID BridgeClStageCompleteMethod;
 static jmethodID BridgeClStageFailedMethod;
@@ -115,6 +118,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeArCleanupMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArCleanup", "()V");
     BridgeArPlaySampleMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArPlaySample", "([S)V");
     BridgeArPlayEncodedSampleMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArPlayEncodedSample", "([BI)V");
+    BridgeArGetMatConsumerMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArGetMatConsumer", "()Lcom/limelight/binding/audio/MatCarrierConsumer;");
     BridgeClStageStartingMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClStageStarting", "(I)V");
     BridgeClStageCompleteMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClStageComplete", "(I)V");
     BridgeClStageFailedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClStageFailed", "(II)V");
@@ -261,6 +265,12 @@ int BridgeDrSubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
     }
 }
 
+static int BridgeMatCycle(void* context,const unsigned char* bytes,int length,uint64_t epoch,uint64_t domain,uint64_t index,uint64_t pts) {
+    return MatPlaybackBridgeCycle(context,GetThreadEnv(),bytes,length,epoch,domain,index,pts);
+}
+static int BridgeMatEnd(void* context,uint64_t cycles) {
+    return MatPlaybackBridgeEnd(context,GetThreadEnv(),cycles);
+}
 int BridgeArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, void* context, int flags) {
     JNIEnv* env = GetThreadEnv();
     int err;
@@ -296,6 +306,22 @@ int BridgeArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusCon
 
             audio_haptics_android_adapter_init(
                 opusConfig->sampleRate, opusConfig->channelCount);
+        } else if (negotiatedCodec == AUDIO_CODEC_MAT_IEC61937) {
+            Decoder=NULL;
+            jobject consumer=(*env)->CallStaticObjectMethod(env,GlobalBridgeClass,BridgeArGetMatConsumerMethod);
+            if(!(*env)->ExceptionCheck(env) && consumer) LiveMatBridge=MatPlaybackBridgeCreate(env,consumer);
+            if(consumer)(*env)->DeleteLocalRef(env,consumer);
+            if(!LiveMatBridge || (*env)->ExceptionCheck(env)) {
+                if((*env)->ExceptionCheck(env))(*env)->ExceptionClear(env);
+                (*env)->CallStaticVoidMethod(env,GlobalBridgeClass,BridgeArCleanupMethod);
+                return -1;
+            }
+            LI_MAT_PLAYBACK_CALLBACKS callbacks={BridgeMatCycle,BridgeMatEnd,LiveMatBridge};
+            LiSetMatPlaybackCallbacks(&callbacks);
+        } else if (negotiatedCodec == AUDIO_CODEC_MAT_DUMP) {
+            // Native AudioStream owns reassembly + private dump + SHA256. No
+            // Opus decoder, AudioTrack, JNI sample arrays or haptics analysis.
+            Decoder = NULL;
         } else {
             // Encoded passthrough (AC3 / E-AC3): skip Opus decoder, allocate raw byte buffer.
             Decoder = NULL;
@@ -323,6 +349,8 @@ void BridgeArStop(void) {
 
 void BridgeArCleanup() {
     JNIEnv* env = GetThreadEnv();
+    LiSetMatPlaybackCallbacks(NULL);
+    MatPlaybackBridgeDestroy(LiveMatBridge,env);LiveMatBridge=NULL;
 
     audio_haptics_android_adapter_cleanup();
 
@@ -345,6 +373,11 @@ void BridgeArCleanup() {
 }
 
 void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
+    if (AUDIO_CODEC_IS_MAT(LiGetNegotiatedAudioCodec())) {
+        __android_log_print(ANDROID_LOG_ERROR,"moonlight-jni","MAT incorrectly reached renderer callback");
+        LiInterruptConnection();
+        return;
+    }
     JNIEnv* env = GetThreadEnv();
 
     // Encoded passthrough path (AC3 / E-AC3): hand the raw bitstream to Java
@@ -806,7 +839,17 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
                                                            jint videoCapabilities,
                                                            jint colorSpace, jint colorRange, jint hdrMode,
                                                            jboolean enableMic, jboolean controlOnly,
-                                                           jint audioCodec, jint audioBitrate, jboolean authoredPcmHaptics, jint fecPercentage) {
+                                                           jint audioCodec, jint audioBitrate, jboolean authoredPcmHaptics, jint fecPercentage, jstring matDumpPath) {
+    char dumpPath[1024] = {0};
+    if (audioCodec == AUDIO_CODEC_MAT_DUMP) {
+        if (!matDumpPath) return -1;
+        const char* p = (*env)->GetStringUTFChars(env,matDumpPath,NULL);
+        if (!p) return -1;
+        size_t n = strlen(p);
+        if (n && n < sizeof(dumpPath)) memcpy(dumpPath,p,n+1);
+        (*env)->ReleaseStringUTFChars(env,matDumpPath,p);
+        if (!dumpPath[0]) return -1;
+    }
     SERVER_INFORMATION serverInfo = {
             .address = (*env)->GetStringUTFChars(env, address, 0),
             .serverInfoAppVersion = (*env)->GetStringUTFChars(env, appVersion, 0),
@@ -838,6 +881,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
             .dynamicHdrPreference = s_dynamicHdrPreference
     };
 
+    memcpy(streamConfig.matDumpPath,dumpPath,sizeof(dumpPath));
     // Consume the staged negotiation state so it never leaks into a later
     // connection that skipped the setter (per-connection semantics, no
     // reliance on caller discipline).

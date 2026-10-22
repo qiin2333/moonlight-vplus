@@ -243,6 +243,15 @@ open class NvConnection(
     }
 
     /** Start the native connection with the current negotiated session state. */
+    private fun matDumpPath(): String? {
+        if (context.streamConfig.audioCodec != MoonBridge.AUDIO_CODEC_MAT_DUMP) return null
+        val dir = java.io.File(appContext.filesDir, "mat-dumps")
+        if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Cannot create MAT dump directory")
+        val path = java.io.File(dir, "mat-${java.util.UUID.randomUUID()}.raw").absolutePath
+        LimeLog.info("MAT dump-only destination: $path")
+        return path
+    }
+
     private fun startNativeConnection(ib: ByteBuffer): Int =
         MoonBridge.startConnection(
             context.serverAddress.address,
@@ -264,7 +273,8 @@ open class NvConnection(
             context.streamConfig.audioCodec,
             context.streamConfig.audioBitrate,
             context.streamConfig.authoredPcmHaptics,
-            context.streamConfig.fecPercentage
+            context.streamConfig.fecPercentage,
+            matDumpPath()
         )
 
     @Throws(XmlPullParserException::class, IOException::class, InterruptedException::class)

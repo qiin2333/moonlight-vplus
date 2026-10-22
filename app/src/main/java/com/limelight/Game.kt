@@ -1224,7 +1224,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // When the user has disabled audio passthrough, force-negotiate Opus
             // so the host sends a decoded stream that AndroidAudioRenderer can play
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
-            .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
+            .setAudioCodec(if (prefConfig.enableAudioPassthrough || prefConfig.audioCodec == MoonBridge.AUDIO_CODEC_MAT_DUMP) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
             .setAuthoredPcmHaptics(prefConfig.hostGamepadSelection.requestsAuthoredPcm(
                 waveformController,

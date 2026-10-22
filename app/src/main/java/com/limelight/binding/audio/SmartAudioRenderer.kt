@@ -23,7 +23,7 @@ class SmartAudioRenderer(
     private val onSystemAudioHapticsActiveChanged: (Boolean) -> Unit = {},
     private val onAudioPresentationClock: (framePosition: Long, systemNanoTime: Long, sampleRate: Int) -> Unit = { _, _, _ -> },
     private val useAc3Iec61937: Boolean = false
-) : AudioRenderer {
+) : AudioRenderer, MatCarrierConsumer {
 
     private var delegate: AudioRenderer? = null
 
@@ -35,6 +35,18 @@ class SmartAudioRenderer(
         bitrate: Int
     ): Int {
         onAudioPresentationClock(-1L, -1L, 0)
+        if (codec == MoonBridge.AUDIO_CODEC_MAT_IEC61937) {
+            val mat = MatPassthroughRenderer(context)
+            val result = mat.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
+            if (result == 0) delegate = mat else mat.cleanup()
+            return result
+        }
+        if (codec == MoonBridge.AUDIO_CODEC_MAT_DUMP) {
+            val dump = MatDumpRenderer()
+            val result = dump.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
+            if (result == 0) delegate = dump
+            return result
+        }
         // Route by negotiated codec:
         //   PCM_S16  -> PcmPassthroughRenderer (raw LPCM, lowest latency)
         //   AC3/EAC3 -> Ac3PassthroughRenderer (encoded bitstream to AVR)
@@ -111,6 +123,9 @@ class SmartAudioRenderer(
     override fun playEncodedAudio(audioData: ByteArray, length: Int) {
         delegate?.playEncodedAudio(audioData, length)
     }
+    override fun offerMatCycle(bytes: ByteArray, length: Int, epoch: Long, domain: Long, index: Long, pts48k: Long): Boolean =
+        (delegate as? MatCarrierConsumer)?.offerMatCycle(bytes, length, epoch, domain, index, pts48k) ?: false
+    override fun endMatStream(cycles: Long): Boolean = (delegate as? MatCarrierConsumer)?.endMatStream(cycles) ?: false
 
     override fun cleanup() {
         onAudioPresentationClock(-1L, -1L, 0)

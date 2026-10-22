@@ -611,6 +611,11 @@
             android:entries="@array/audio_codec_names"
             android:entryValues="@array/audio_codec_values"
             android:defaultValue="auto" />
+        <CheckBoxPreference
+            android:key="checkbox_mat_dump"
+            android:title="@string/title_mat_dump"
+            android:summary="@string/summary_mat_dump"
+            android:defaultValue="false" />
         <ListPreference
             android:key="list_audio_passthrough_buffer"
             android:dependency="checkbox_enable_audio_passthrough"
