@@ -54,6 +54,7 @@ import org.cgutman.shieldcontrollerextensions.SceManager
 
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class ControllerHandler(
     internal val activityContext: Activity,
@@ -383,7 +384,7 @@ class ControllerHandler(
     private var hasGameController = false
     @Volatile internal var stopped = false
 
-    private var currentControllers: Short = 0
+    private val currentControllers = AtomicInteger()
     private val initialControllerSlots = InitialControllerSlots()
     private val initialControllers: Short get() = initialControllerSlots.mask.toShort()
     private val usbHandoff = UsbControllerHandoff()
@@ -650,13 +651,13 @@ class ControllerHandler(
             }.forEach { (id, _) -> onSystemWaveformSinkGone(id) }
 
             synchronized(arrivalMetadataLock) {
-                val oldMask = currentControllers.toInt()
+                val oldMask = currentControllers.get()
                 affected.forEach { number ->
                     val remaining = localControllerContexts().filter {
                         isContextUsable(it) && it.assignedControllerNumber && it.controllerNumber == number
                     }
                     if (remaining.isEmpty()) {
-                        currentControllers = (currentControllers.toInt() and (1 shl number.toInt()).inv()).toShort()
+                        updateControllerSlot(number.toInt(), reserve = false)
                     } else if (oldMask and (1 shl number.toInt()) != 0) {
                         remaining.first().reservedControllerNumber = true
                     }
@@ -1165,6 +1166,17 @@ class ControllerHandler(
 
     // ========== Controller Number Management ==========
 
+    // Claim/release one bit without losing concurrent lifecycle updates; motion reads never lock.
+    private fun updateControllerSlot(number: Int, reserve: Boolean): Boolean {
+        val bit = 1 shl number
+        while (true) {
+            val current = currentControllers.get()
+            if (reserve && (current and bit) != 0) return false
+            val updated = if (reserve) current or bit else current and bit.inv()
+            if (currentControllers.compareAndSet(current, updated)) return true
+        }
+    }
+
     private fun releaseControllerNumber(context: GenericControllerContext) {
         // A split controller owns one reservation. Keep the surviving half and its held
         // inputs alive, while excluding all state belonging to the disconnected half.
@@ -1184,7 +1196,7 @@ class ControllerHandler(
         // If we reserved a controller number, remove that reservation
         if (context.reservedControllerNumber) {
             LimeLog.info("Controller number " + context.controllerNumber + " is now available")
-            currentControllers = (currentControllers.toInt() and (1 shl context.controllerNumber.toInt()).inv()).toShort()
+            updateControllerSlot(context.controllerNumber.toInt(), reserve = false)
         }
 
         context.assignedControllerNumber = false
@@ -1278,9 +1290,7 @@ class ControllerHandler(
 
                 LimeLog.info("Reserving the next available controller number")
                 for (i in slotOrder(context)) {
-                    if ((currentControllers.toInt() and (1 shl i)) == 0) {
-                        // Found an unused controller value
-                        currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
+                    if (updateControllerSlot(i, reserve = true)) {
 
                         // Take this value out of the initial gamepad set
                         source(context)?.let { initialControllerSlots.consume(it, i) }
@@ -1342,9 +1352,7 @@ class ControllerHandler(
 
                 LimeLog.info("Reserving the next available controller number")
                 for (i in slotOrder(context)) {
-                    if ((currentControllers.toInt() and (1 shl i)) == 0) {
-                        // Found an unused controller value
-                        currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
+                    if (updateControllerSlot(i, reserve = true)) {
 
                         // Take this value out of the initial gamepad set
                         source(context)?.let { initialControllerSlots.consume(it, i) }
@@ -1900,7 +1908,7 @@ class ControllerHandler(
         val local = localControllerContexts().filter { isContextUsable(it) && it.assignedControllerNumber }
             .fold(0) { mask, context -> mask or (1 shl context.controllerNumber.toInt()) }
         val screen = if (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad) 1 else 0
-        return usbHandoff.activeMask(prefConfig.multiController, currentControllers.toInt(), initialControllers.toInt(), local, screen)
+        return usbHandoff.activeMask(prefConfig.multiController, currentControllers.get(), initialControllers.toInt(), local, screen)
     }
 
     /**
@@ -2080,7 +2088,9 @@ class ControllerHandler(
     }
 
     internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean =
-        localControllerContexts().any {
+        inputDeviceContextSnapshot.any {
+            it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
+        } || driverControllerContexts.values.any {
             it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
         }
 
