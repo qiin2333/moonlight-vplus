@@ -72,6 +72,31 @@ class StylusToolClassifierTest {
     }
 
     @Test
+    fun mixedMoveAndCancelStayOnTheFingerPath() {
+        assertFalse(
+            stylusActionPointer(
+                MotionEvent.ACTION_MOVE,
+                actionIndex = 0,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_STYLUS else MotionEvent.TOOL_TYPE_FINGER }
+        )
+        assertFalse(
+            stylusActionPointer(
+                MotionEvent.ACTION_CANCEL,
+                actionIndex = 0,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_FINGER else MotionEvent.TOOL_TYPE_ERASER }
+        )
+        assertTrue(
+            stylusActionPointer(
+                MotionEvent.ACTION_MOVE,
+                actionIndex = 0,
+                pointerCount = 1
+            ) { MotionEvent.TOOL_TYPE_STYLUS }
+        )
+    }
+
+    @Test
     fun historicalMotionSamplesAreVisitedBeforeCurrentSamples() {
         val visited = mutableListOf<Pair<Int, Int>>()
 

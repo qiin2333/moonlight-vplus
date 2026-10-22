@@ -67,8 +67,18 @@ internal fun stylusActionPointer(
 ): Boolean {
     if (pointerCount == 0) return false
     return when (actionMasked) {
-        MotionEvent.ACTION_MOVE, MotionEvent.ACTION_CANCEL ->
-            containsStylusTool(pointerCount, toolTypeAt)
+        MotionEvent.ACTION_MOVE, MotionEvent.ACTION_CANCEL -> {
+            var hasStylus = false
+            var hasOtherTool = false
+            for (i in 0 until pointerCount) {
+                when (toolTypeAt(i)) {
+                    MotionEvent.TOOL_TYPE_STYLUS,
+                    MotionEvent.TOOL_TYPE_ERASER -> hasStylus = true
+                    else -> hasOtherTool = true
+                }
+            }
+            hasStylus && !hasOtherTool
+        }
         MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP ->
             actionIndex in 0 until pointerCount &&
                 (toolTypeAt(actionIndex) == MotionEvent.TOOL_TYPE_STYLUS ||
@@ -463,6 +473,23 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                // A pen event that is unsupported by the host must not prevent an
+                // already active finger contact from receiving move/cancel events.
+                // Keep the finger path as the owner of the mixed event and forward
+                // the stylus through the mouse fallback alongside it.
+                if (hasStylusTool &&
+                    (event.actionMasked == MotionEvent.ACTION_MOVE ||
+                        event.actionMasked == MotionEvent.ACTION_CANCEL)
+                ) {
+                    val stylusPointerIndex = findStylusPointerIndex(event)
+                    if (stylusPointerIndex >= 0) {
+                        if (event.actionMasked == MotionEvent.ACTION_MOVE && view != null) {
+                            updateMousePosition(view, event, stylusPointerIndex)
+                        }
+                        handleFallbackStylusButton(event)
+                    }
+                }
+
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                     enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
