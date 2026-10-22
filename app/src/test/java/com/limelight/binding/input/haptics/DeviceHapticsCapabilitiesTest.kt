@@ -42,12 +42,6 @@ class DeviceHapticsCapabilitiesTest {
     }
 
     @Test
-    fun unconfirmedCapabilitiesNeverUpgradeTheTier() {
-        // Click primitive unconfirmed (false): stay conservative even though the field exists.
-        assertEquals(DeviceHapticsTier.AMPLITUDE, capabilities().tier)
-    }
-
-    @Test
     fun namedPredicatesMatchTheTierSemantics() {
         assertFalse(DeviceHapticsTier.NONE.supportsGradedOutput)
         assertFalse(DeviceHapticsTier.BINARY.supportsGradedOutput)

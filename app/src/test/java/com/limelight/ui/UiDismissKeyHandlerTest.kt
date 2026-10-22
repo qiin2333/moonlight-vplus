@@ -8,18 +8,16 @@ import org.junit.Test
 
 class UiDismissKeyHandlerTest {
     @Test
-    fun remoteBackIsConsumedFromDownAndDismissesOnceOnUp() {
-        assertDismissKeyPress(KeyEvent.KEYCODE_BACK)
-    }
+    fun allDismissKeysAreConsumedFromDownAndDismissOnceOnUp() {
+        for (keyCode in listOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_BUTTON_B)) {
+            var dismissCount = 0
+            val dismiss = { dismissCount += 1 }
 
-    @Test
-    fun keyboardEscapeIsConsumedFromDownAndDismissesOnceOnUp() {
-        assertDismissKeyPress(KeyEvent.KEYCODE_ESCAPE)
-    }
-
-    @Test
-    fun gamepadButtonBIsConsumedFromDownAndDismissesOnceOnUp() {
-        assertDismissKeyPress(KeyEvent.KEYCODE_BUTTON_B)
+            assertTrue(UiDismissKeyHandler.handle(KeyEvent.ACTION_DOWN, keyCode, dismiss))
+            assertEquals(0, dismissCount)
+            assertTrue(UiDismissKeyHandler.handle(KeyEvent.ACTION_UP, keyCode, dismiss))
+            assertEquals(1, dismissCount)
+        }
     }
 
     @Test
@@ -45,16 +43,6 @@ class UiDismissKeyHandlerTest {
             )
         )
         assertEquals(0, dismissCount)
-    }
-
-    private fun assertDismissKeyPress(keyCode: Int) {
-        var dismissCount = 0
-        val dismiss = { dismissCount += 1 }
-
-        assertTrue(UiDismissKeyHandler.handle(KeyEvent.ACTION_DOWN, keyCode, dismiss))
-        assertEquals(0, dismissCount)
-        assertTrue(UiDismissKeyHandler.handle(KeyEvent.ACTION_UP, keyCode, dismiss))
-        assertEquals(1, dismissCount)
     }
 
     private companion object {
