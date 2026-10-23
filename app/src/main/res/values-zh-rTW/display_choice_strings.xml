@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="display_frame_rate_above_refresh_rate">高於螢幕更新率：延遲可能降低，負載與耗電量可能增加。</string>
+</resources>

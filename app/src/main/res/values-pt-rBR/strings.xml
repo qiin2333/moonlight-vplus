@@ -7,7 +7,6 @@
     <string name="pacing_experimental_low_latency">Latência ultrabaixa (experimental)</string>
     <string name="summary_enable_hdr">Transmita HDR quando o jogo e a GPU do PC suportarem. O HDR requer uma GPU da série GTX 1000 ou posterior.</string>
     <string name="summary_enable_post_stream_toast">Exibe uma mensagem com informações de latência após o término da transmissão</string>
-    <string name="summary_unlock_fps">Transmitir a 90 ou 120 FPS pode reduzir a latência em dispositivos de última geração, mas pode causar atraso ou instabilidade em dispositivos que não suportam</string>
     <string name="summary_checkbox_vibrate_osc">Vibra seu dispositivo para emular rumble nos controles de tela</string>
     <string name="pcview_menu_header_offline">Indisponível</string>
     <string name="pcview_menu_header_unknown">Atualizando</string>
@@ -193,7 +192,6 @@
     <string name="summary_checkbox_flip_face_buttons">Inverte os botões A/B e X/Y dos gamepads e controles de tela</string>
     <string name="category_on_screen_controls_settings">Configurações de Controles de Tela</string>
     <string name="title_checkbox_flip_face_buttons">Inverter botões</string>
-    <string name="title_unlock_fps">Liberar todas as taxas de quadros possíveis</string>
     <string name="category_advanced_settings">Configurações Avançadas</string>
     <string name="title_checkbox_host_audio">Reproduzir áudio no PC</string>
     <string name="summary_checkbox_host_audio">Reproduz o áudio do computador e deste dispositivo</string>

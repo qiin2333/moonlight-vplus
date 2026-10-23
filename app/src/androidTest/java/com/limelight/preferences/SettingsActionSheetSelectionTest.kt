@@ -26,6 +26,7 @@ import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroupAdapter
 import androidx.preference.PreferenceManager
+import androidx.preference.PreferenceScreen
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -59,9 +60,7 @@ class SettingsActionSheetSelectionTest {
     @Before
     fun launchSettings() {
         preferences = PreferenceManager.getDefaultSharedPreferences(context)
-        originalPreferences = preferences.all.mapValues { (_, value) ->
-            if (value is Set<*>) value.toSet() else value
-        }
+        originalPreferences = snapshotSettingsPreferences(preferences)
         preferences.edit()
             .putString(VIDEO_FORMAT_KEY, "auto")
             .putString(SCREEN_POSITION_KEY, "center")
@@ -76,18 +75,7 @@ class SettingsActionSheetSelectionTest {
     @After
     fun restoreSettings() {
         scenario?.close()
-        val editor = preferences.edit().clear()
-        for ((key, value) in originalPreferences) {
-            when (value) {
-                is Boolean -> editor.putBoolean(key, value)
-                is Int -> editor.putInt(key, value)
-                is Long -> editor.putLong(key, value)
-                is Float -> editor.putFloat(key, value)
-                is String -> editor.putString(key, value)
-                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
-            }
-        }
-        editor.commit()
+        restoreSettingsPreferences(preferences, originalPreferences)
     }
 
     @Test
@@ -288,7 +276,34 @@ class SettingsActionSheetSelectionTest {
 
     @SuppressLint("RestrictedApi")
     private fun focusPreference(key: String) {
-        withFragment { it.applySearchFilter(key) }
+        var screenKey: String? = null
+        withFragment { fragment ->
+            val preference = requireNotNull(fragment.findPreference<Preference>(key))
+            var parent = preference.parent
+            while (parent != null && parent !== fragment.preferenceScreen) {
+                if (parent is PreferenceScreen) {
+                    screenKey = parent.key
+                    break
+                }
+                parent = parent.parent
+            }
+            if (fragment.activeSettingsScreenKey != screenKey) fragment.closeSettingsScreen()
+            fragment.applySearchFilter(key)
+            screenKey?.let { target ->
+                if (fragment.activeSettingsScreenKey != target) fragment.openSettingsScreen(target, key)
+            }
+        }
+        compose.waitUntil(10_000) {
+            var ready = false
+            requireNotNull(scenario).onActivity { activity ->
+                val fragment = activity.supportFragmentManager.fragments
+                    .filterIsInstance<StreamSettings.SettingsFragment>().single()
+                val list = activity.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
+                ready = fragment.activeSettingsScreenKey == screenKey && activity.hasWindowFocus() &&
+                    list.isAttachedToWindow && list.isLaidOut && !list.isLayoutRequested
+            }
+            ready
+        }
         compose.waitForIdle()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         var position = RecyclerView.NO_POSITION
@@ -299,6 +314,14 @@ class SettingsActionSheetSelectionTest {
             val preference = requireNotNull(adapter.getItem(position))
             assertTrue("The tested setting must be enabled", preference.isEnabled)
             list.scrollToPosition(position)
+        }
+        compose.waitUntil(5_000) {
+            var laidOut = false
+            requireNotNull(scenario).onActivity { activity ->
+                val list = activity.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
+                laidOut = list.findViewHolderForAdapterPosition(position)?.itemView?.isLaidOut == true
+            }
+            laidOut
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         requireNotNull(scenario).onActivity { activity ->

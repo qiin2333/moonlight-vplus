@@ -16,7 +16,6 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -65,9 +64,6 @@ import com.limelight.utils.AppActionSheet
 import com.limelight.utils.KeyCodeMapper
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStreamReader
 import java.util.ArrayDeque
 
 /** Int → Short 快捷转换 */
@@ -193,7 +189,6 @@ class GameMenu(
     private var lastActionOpenedSubmenu = false
     // 菜单历史栈，用于二级/多级菜单的回退
     private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
-    private var displaySettingsOpen = false
     private var lastControllerNavigationAt = 0L
     private val handler = Handler(Looper.getMainLooper())
     private data class HeldControllerDirection(
@@ -927,7 +922,6 @@ class GameMenu(
     private fun rebuildAndReplaceMenu() {
         activeDialog ?: return
 
-        displaySettingsOpen = false
         menuStack.clear()
 
         val normalOptions = mutableListOf<MenuOption>()
@@ -945,10 +939,6 @@ class GameMenu(
     }
 
     private fun refreshCurrentMenuPage() {
-        if (displaySettingsOpen) {
-            showDisplaySettings()
-            return
-        }
         if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
             showTouchModeMenu()
         } else {
@@ -1052,33 +1042,6 @@ class GameMenu(
         )
     }
 
-    /**
-     * 本地测试震动
-     */
-    private fun testLocalRumbleAll() {
-        try {
-            val ch = game.controllerHandler
-
-            val on: Short = 0xFFFF.toShort()
-            val off: Short = 0
-            for (n in 0.toShort()..3.toShort()) {
-                ch.handleTestRumble(n.toShort(), on, on)
-            }
-
-            handler.postDelayed({
-                try {
-                    for (n in 0.toShort()..3.toShort()) {
-                        ch.handleTestRumble(n.toShort(), off, off)
-                    }
-                } catch (_: Exception) {}
-            }, 1000)
-
-            Toast.makeText(game, getString(R.string.toast_vibration_test_sent), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(game, game.getString(R.string.toast_vibration_test_failed, e.message), Toast.LENGTH_SHORT).show()
-        }
-    }
-
     /** Routes menu touch feedback through the non-blocking phone-vibration coordinator. */
     private fun dispatchHapticFeedback(feedbackConstant: Int) {
         if (!systemHapticsEnabled) return
@@ -1100,12 +1063,87 @@ class GameMenu(
         }
     }
 
-    private fun showDisplaySettings() {
-        displaySettingsOpen = true
-        showSubMenu(
-            getString(R.string.game_menu_display_settings),
-            emptyArray(),
-            GameMenuPageLayout.DISPLAY_SETTINGS
+    private fun showDisplayChoiceSheet(
+        title: String,
+        choices: List<DisplayChoice>,
+        onSelected: (DisplayChoice) -> Unit,
+        includeCustomResolution: Boolean = false
+    ) {
+        val availableChoices = choices.filter { it.enabled }
+        if (availableChoices.isEmpty()) return
+        val customActionId = availableChoices.size
+        val actions = availableChoices.mapIndexed { index, choice ->
+            AppActionSheet.Action(
+                id = index,
+                title = choice.label,
+                description = choice.subLabel,
+                checked = choice.selected,
+                enabled = choice.enabled,
+                emphasized = choice.emphasized
+            )
+        }.let { base ->
+            if (includeCustomResolution) {
+                base + AppActionSheet.Action(
+                    id = customActionId,
+                    title = getString(R.string.display_custom_resolution_short),
+                    opensSubmenu = true
+                )
+            } else {
+                base
+            }
+        }
+        registerChildDialog(
+            AppActionSheet.show(
+                context = game,
+                title = title,
+                actions = actions,
+                initialActionId = availableChoices.indexOfFirst { it.selected }.takeIf { it >= 0 },
+                singleChoice = true,
+                onAction = { action ->
+                    if (includeCustomResolution && action.id == customActionId) {
+                        showCustomDisplayEditor()
+                    } else {
+                        availableChoices.getOrNull(action.id)?.let(onSelected)
+                    }
+                }
+            )
+        )
+    }
+
+    private fun showResolutionSheet() {
+        val state = bitrateCardController.snapshot()
+        showDisplayChoiceSheet(
+            title = getString(R.string.title_resolution_list),
+            choices = state.resolutions,
+            includeCustomResolution = true,
+            onSelected = {
+                bitrateCardController.stageResolution(it.value)
+                bitrateCardController.applyDisplayDraft()
+            }
+        )
+    }
+
+    private fun showFrameRateSheet() {
+        val state = bitrateCardController.snapshot()
+        showDisplayChoiceSheet(
+            title = getString(R.string.title_fps_list),
+            choices = state.frameRates,
+            onSelected = {
+                bitrateCardController.stageFrameRate(it.value)
+                bitrateCardController.applyDisplayDraft()
+            }
+        )
+    }
+
+    private fun showScreenModeSheet() {
+        val state = bitrateCardController.snapshot()
+        showDisplayChoiceSheet(
+            title = getString(R.string.title_screen_combination_mode),
+            choices = state.screenModes,
+            onSelected = {
+                bitrateCardController.stageScreenMode(it.value)
+                bitrateCardController.applyDisplayDraft()
+            }
         )
     }
 
@@ -1194,13 +1232,10 @@ class GameMenu(
             onBitrateAdaptive = bitrateCardController::setAdaptiveBitrate,
             onAbrMode = bitrateCardController::setAbrMode,
             onBitrateHapticMode = bitrateCardController::cycleHapticMode,
-            onOpenDisplaySettings = ::showDisplaySettings,
-            onSelectResolution = bitrateCardController::stageResolution,
-            onSelectFrameRate = bitrateCardController::stageFrameRate,
-            onSelectScreenMode = bitrateCardController::stageScreenMode,
-            onApplyDisplaySettings = bitrateCardController::applyDisplayDraft,
-            onCancelDisplaySettings = bitrateCardController::discardDisplayDraft,
-            onEditCustomResolutions = { showCustomDisplayEditor() },
+            onOpenResolutionSheet = ::showResolutionSheet,
+            onOpenFrameRateSheet = ::showFrameRateSheet,
+            onOpenScreenModeSheet = ::showScreenModeSheet,
+            onSetDisplayScale = bitrateCardController::setDisplayScale,
             onAudioHapticsEnabled = audioHapticsCardController::setEnabled,
             onAudioHapticsStrength = audioHapticsCardController::previewStrength,
             onAudioHapticsStrengthFinished = audioHapticsCardController::persistStrength,
@@ -1892,12 +1927,6 @@ class GameMenu(
     private fun navigateBack(): Boolean {
         if (menuStack.isEmpty()) return false
         val page = menuStack.pop()
-        if (menuStack.isEmpty()) {
-            if (displaySettingsOpen) {
-                bitrateCardController.discardDisplayDraft()
-            }
-            displaySettingsOpen = false
-        }
         showMenuPage(page)
         return true
     }
@@ -2000,24 +2029,6 @@ class GameMenu(
             options.add(MenuOption(keyData.name, false, { sendKeys(keyData.keys) }, null, false))
         }
         return true
-    }
-
-    private fun readRawResourceAsString(resourceId: Int): String {
-        try {
-            game.resources.openRawResource(resourceId).use { inputStream ->
-                BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                    val builder = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        builder.append(line)
-                    }
-                    return builder.toString()
-                }
-            }
-        } catch (e: IOException) {
-            LimeLog.warning("Failed to read raw resource file: $resourceId: $e")
-            return ""
-        }
     }
 
     private fun saveCustomKey(name: String, keysString: String) {
@@ -2319,15 +2330,6 @@ class GameMenu(
                 toggleAction = Runnable { setCrownFeatureEnabled(!game.isCrownFeatureEnabled) }
             )
         ))
-
-        // 显示设置状态卡被隐藏时,根菜单保留显示设置入口
-        if (!readVisibleCards().display) {
-            normalOptions.add(MenuOption(
-                getString(R.string.game_menu_display_settings), false,
-                { showDisplaySettings() }, "game_menu_display_settings", isShowIcon = true, isKeepDialog = true,
-                showChevron = true
-            ))
-        }
 
         // 性能显示
         normalOptions.add(MenuOption(

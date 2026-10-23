@@ -325,8 +325,7 @@ internal fun GameMenuScreen(
                             callbacks = callbacks,
                             wideLayout = wideLayout &&
                                 (!state.isSubmenu ||
-                                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE ||
-                                    state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS),
+                                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE),
                             maxMenuHeight = maxMenuHeight,
                             initialFocusRequester = initialFocusRequester,
                             initialFocusModifier = initialFocusModifier,
@@ -379,7 +378,7 @@ internal fun GameMenuScreen(
                 handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                 guideActive = guideActive,
                 hasFocusTarget = state.options.isNotEmpty() ||
-                    state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS,
+                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE,
                 menuContentLaidOut = menuContentLaidOut,
                 menuHasFocus = menuHasFocus
             )
@@ -581,8 +580,6 @@ private fun GameMenuContent(
     var sliderGestureActive by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
     val wideTouchMode = wideLayout && state.pageLayout == GameMenuPageLayout.TOUCH_MODE
-    val displaySettings = state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS
-    val displayWideLayout = wideLayout && displaySettings
     val touchModeBackFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(state.title, state.isSubmenu) {
@@ -607,11 +604,11 @@ private fun GameMenuContent(
             state = state,
             callbacks = callbacks,
             crownGuideModifier = crownGuideModifier,
-            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode || displaySettings },
-            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode || displaySettings }
+            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode },
+            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode }
         )
 
-        if (!state.isSubmenu && state.pageLayout != GameMenuPageLayout.DISPLAY_SETTINGS) {
+        if (!state.isSubmenu) {
             QuickActionRow(
                 actions = state.quickActions,
                 superOptions = state.superOptions,
@@ -627,15 +624,7 @@ private fun GameMenuContent(
             )
         }
 
-        if (state.pageLayout == GameMenuPageLayout.DISPLAY_SETTINGS) {
-            DisplaySettingsPage(
-                state = state,
-                callbacks = callbacks,
-                wideLayout = displayWideLayout,
-                initialFocusRequester = initialFocusRequester,
-                initialFocusModifier = initialFocusModifier
-            )
-        } else if (wideTouchMode) {
+        if (wideTouchMode) {
             TouchModeTable(
                 state = state,
                 callbacks = callbacks,
@@ -900,354 +889,6 @@ private fun TouchModeTable(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun DisplaySettingsPage(
-    state: GameMenuComposeUiState,
-    callbacks: GameMenuCallbacks,
-    wideLayout: Boolean,
-    initialFocusRequester: FocusRequester,
-    initialFocusModifier: Modifier
-) {
-    if (wideLayout) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
-            ) {
-                DisplayChoiceColumn(
-                    state,
-                    callbacks,
-                    initialFocusRequester,
-                    initialFocusModifier,
-                    columns = 3
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)
-            ) {
-                ScreenCombinationPanel(state.bitrate, callbacks.onSelectScreenMode)
-                DisplayApplyButton(state, callbacks)
-                Spacer(Modifier.height(GameMenuDimens.section))
-            }
-        }
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(GameMenuDimens.section)) {
-            DisplayChoiceColumn(
-                state,
-                callbacks,
-                initialFocusRequester,
-                initialFocusModifier,
-                columns = 4
-            )
-            ScreenCombinationPanel(state.bitrate, callbacks.onSelectScreenMode)
-            DisplayApplyButton(state, callbacks)
-            Spacer(Modifier.height(GameMenuDimens.section))
-        }
-    }
-}
-
-@Composable
-private fun DisplayChoiceColumn(
-    state: GameMenuComposeUiState,
-    callbacks: GameMenuCallbacks,
-    initialFocusRequester: FocusRequester,
-    initialFocusModifier: Modifier,
-    columns: Int,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
-    ) {
-        Text(
-            text = stringResource(R.string.title_resolution_list),
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 11.sp
-        )
-        DisplayTileGrid(
-            choices = state.bitrate.resolutions,
-            columns = columns,
-            initialFocusRequester = initialFocusRequester,
-            initialFocusModifier = initialFocusModifier,
-            onSelect = { callbacks.onSelectResolution(it.value) },
-            plusContentDescription = stringResource(R.string.title_custom_resolutions),
-            onPlus = { callbacks.onEditCustomResolutions() }
-        )
-        Text(
-            text = stringResource(R.string.title_fps_list),
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 11.sp
-        )
-        DisplayTileGrid(
-            choices = state.bitrate.frameRates,
-            columns = columns,
-            initialFocusRequester = null,
-            initialFocusModifier = Modifier,
-            onSelect = { callbacks.onSelectFrameRate(it.value) }
-        )
-    }
-}
-
-/** 34dp 小瓦片网格:6dp 圆角、选中强调色描边填充、支持尾缀「＋」虚线动作瓦片。 */
-@Composable
-private fun DisplayTileGrid(
-    choices: List<DisplayChoice>,
-    columns: Int,
-    initialFocusRequester: FocusRequester?,
-    initialFocusModifier: Modifier,
-    onSelect: (DisplayChoice) -> Unit,
-    plusContentDescription: String? = null,
-    onPlus: (() -> Unit)? = null
-) {
-    val initialFocusIndex = choices.indexOfFirst { it.enabled && it.selected }
-        .takeIf { it >= 0 } ?: choices.indexOfFirst { it.enabled }
-    val tileShape = RoundedCornerShape(6.dp)
-    val normalBorder = colorResource(R.color.game_menu_list_item_border)
-    Column(
-        modifier = Modifier.selectableGroup(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        val cells = choices.map { TileCell.Choice(it) } +
-            (if (onPlus != null) listOf(TileCell.Plus) else emptyList())
-        cells.chunked(columns).forEachIndexed { rowIndex, row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEachIndexed { columnIndex, cell ->
-                    val index = rowIndex * columns + columnIndex
-                    val tileModifier = Modifier
-                        .weight(1f)
-                        .then(
-                            if (initialFocusRequester != null && index == initialFocusIndex) {
-                                Modifier.focusRequester(initialFocusRequester)
-                                    .then(initialFocusModifier)
-                            } else {
-                                Modifier
-                            }
-                        )
-                    when (cell) {
-                        is TileCell.Plus -> DisplayPlusTile(
-                            contentDescription = plusContentDescription.orEmpty(),
-                            shape = tileShape,
-                            borderColor = normalBorder,
-                            onClick = onPlus,
-                            modifier = tileModifier
-                        )
-                        is TileCell.Choice -> DisplayChoiceTile(
-                            choice = cell.choice,
-                            shape = tileShape,
-                            normalBorderColor = normalBorder,
-                            onClick = { onSelect(cell.choice) },
-                            modifier = tileModifier
-                        )
-                    }
-                }
-                repeat(columns - row.size) {
-                    Spacer(Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-private sealed interface TileCell {
-    data class Choice(val choice: DisplayChoice) : TileCell
-    data object Plus : TileCell
-}
-
-@Composable
-private fun DisplayChoiceTile(
-    choice: DisplayChoice,
-    shape: Shape,
-    normalBorderColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val accent = appAccentColor()
-    Box(
-        modifier = modifier
-            .alpha(if (choice.enabled) 1f else 0.45f)
-            .height(40.dp)
-            .clip(shape)
-            .background(
-                if (choice.selected) accent.copy(alpha = 0.12f)
-                else colorResource(R.color.game_menu_list_item_normal),
-                shape
-            )
-            .border(
-                1.dp,
-                if (choice.selected) accent else normalBorderColor,
-                shape
-            )
-            .gamepadFocusOutline(shape)
-            .selectable(
-                selected = choice.selected,
-                enabled = choice.enabled,
-                role = Role.RadioButton,
-                onClick = onClick
-            )
-            .padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(1.dp)
-        ) {
-            if (choice.iconRes != null) {
-                Icon(
-                    painter = painterResource(choice.iconRes),
-                    contentDescription = null,
-                    tint = when {
-                        !choice.enabled ->
-                            colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.38f)
-                        choice.selected -> accent
-                        else -> colorResource(R.color.game_menu_text_primary)
-                    },
-                    modifier = Modifier.size(18.dp)
-                )
-                Text(
-                    text = choice.label,
-                    color = when {
-                        !choice.enabled ->
-                            colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.38f)
-                        choice.selected -> accent
-                        else -> colorResource(R.color.game_menu_text_primary)
-                    },
-                    fontSize = 10.sp,
-                    fontWeight = if (choice.selected) FontWeight.Medium else FontWeight.Normal,
-                    lineHeight = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            } else {
-                Text(
-                    text = choice.label,
-                    color = when {
-                        !choice.enabled ->
-                            colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.38f)
-                        choice.selected -> accent
-                        else -> colorResource(R.color.game_menu_text_primary)
-                    },
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Light,
-                    lineHeight = 16.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (choice.subLabel != null) {
-                    Text(
-                        text = choice.subLabel,
-                        color = colorResource(R.color.game_menu_text_secondary)
-                            .copy(alpha = if (choice.selected) 0.8f else 1f),
-                        fontSize = 9.sp,
-                        lineHeight = 10.sp,
-                        modifier = Modifier.offset(y = (-1).dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DisplayPlusTile(
-    contentDescription: String,
-    shape: Shape,
-    borderColor: Color,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier
-) {
-    val plusBorder = colorResource(R.color.game_menu_text_secondary).copy(alpha = 0.55f)
-    Box(
-        modifier = modifier
-            .height(40.dp)
-            .clip(shape)
-            .background(Color.Transparent, shape)
-            .drawBehind {
-                drawRoundRect(
-                    color = plusBorder,
-                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx()),
-                    style = Stroke(
-                        width = 1.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(16f, 10f))
-                    )
-                )
-            }
-            .gamepadFocusOutline(shape)
-            .clickable(role = Role.Button) { onClick?.invoke() }
-            .semantics { this.contentDescription = contentDescription }
-            .padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "＋ ${stringResource(R.string.display_custom_resolution_short)}",
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun DisplayApplyButton(
-    state: GameMenuComposeUiState,
-    callbacks: GameMenuCallbacks
-) {
-    if (state.bitrate.displayDraft.changedFrom(state.bitrate.appliedDisplay)) {
-        SensitivityPresetButton(
-            name = stringResource(R.string.game_menu_apply_display),
-            selected = true,
-            onClick = callbacks.onApplyDisplaySettings,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = stringResource(R.string.game_menu_apply_reconnect_hint),
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 9.sp,
-            lineHeight = 12.sp,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun ScreenCombinationPanel(
-    state: BitrateCardState,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(GameMenuDimens.compact)
-    ) {
-        Text(
-            text = stringResource(R.string.title_screen_combination_mode),
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 11.sp
-        )
-        DisplayTileGrid(
-            choices = state.screenModes.map { choice ->
-                choice.copy(
-                    iconRes = screenCombinationModeIconRes(
-                        choice.value.toIntOrNull() ?: -1
-                    )
-                )
-            },
-            columns = 3,
-            initialFocusRequester = null,
-            initialFocusModifier = Modifier,
-            onSelect = { onSelect(it.value) }
-        )
     }
 }
 

@@ -174,8 +174,6 @@
     <string name="title_checkbox_small_icon_mode">Gunakan seni kotak kecil</string>
     <string name="summary_checkbox_host_audio">Putar audio dari komputer dan perangkat ini</string>
     <string name="category_advanced_settings">Pengaturan lanjutan</string>
-    <string name="title_unlock_fps">Buka kunci semua frekuensi gambar yang memungkinkan</string>
-    <string name="summary_unlock_fps">Streaming pada 90 atau 120 FPS dapat mengurangi latensi pada perangkat kelas atas, tetapi dapat menyebabkan kelambatan atau ketidakstabilan pada perangkat yang tidak dapat mendukungnya</string>
     <string name="title_checkbox_reduce_refresh_rate">Izinkan pengurangan kecepatan penyegaran</string>
     <string name="summary_checkbox_reduce_refresh_rate">Kecepatan refresh tampilan yang lebih rendah dapat menghemat daya dengan mengorbankan beberapa latensi video tambahan</string>
     <string name="applist_refresh_error_title">Kesalahan</string>

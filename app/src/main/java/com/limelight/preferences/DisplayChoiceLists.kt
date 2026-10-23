@@ -39,13 +39,16 @@ internal object DisplayChoiceLists {
         retainedValues: List<String> = emptyList()
     ): List<String> {
         val retained = listOf(currentResolution) + retainedValues
-        val values = (storeValues + retained).filter(::isFixedResolution).distinct()
         val lowPresets = if (showLowResolutionPresets || retained.any(PreferenceConfiguration::isLowResolutionPreset)) {
             listOf(PreferenceConfiguration.RES_360P, PreferenceConfiguration.RES_480P)
         } else {
             emptyList()
         }
-        return lowPresets + values.filterNot { it in lowPresets } + PreferenceConfiguration.RES_NATIVE
+        val values = (lowPresets + storeValues + retained)
+            .filter(::isFixedResolution)
+            .distinct()
+            .sortedWith(compareBy(resolutionOrder) { ResolutionValidator.parseResolution(it)!! })
+        return values + PreferenceConfiguration.RES_NATIVE
     }
 
     private fun isFixedResolution(value: String): Boolean {

@@ -189,8 +189,6 @@
     <string name="title_enable_hdr">HDR활성화 (실험용)</string>
     <string name="summary_disable_frame_drop">일부 장치에서 미세한 끊김 현상을 줄일 수 있지만 지연 시간이 늘어날 수 있습니다.</string>
     <string name="title_disable_frame_drop">프레임드랍 최적화</string>
-    <string name="summary_unlock_fps">90 또는 120FPS로 스트리밍하면 지연 시간이 줄어들 수 있지만 이를 지원할 수 없는 장치에서는 지연 또는 불안정 할 수 있습니다</string>
-    <string name="title_unlock_fps">모든 프레임 속도 잠금 해제</string>
     <string name="summary_checkbox_enable_pip">PIP모드를 사용하는 중에 화면은 볼 수 있지만 제어는 할 수 없습니다</string>
     <string name="dialog_title_osc_opacity">투명도 조절</string>
     <string name="summary_osc_opacity">가상컨트롤러의 투명도를 조절할 수 있습니다</string>

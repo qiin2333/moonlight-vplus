@@ -30,6 +30,9 @@
 -keepclassmembers class com.limelight.preferences.IconListPreference {
     public int[] getEntryIcons();
 }
+-keepclassmembers class com.limelight.preferences.DisplayChoicePreference {
+    public java.util.Set getEnabledValues();
+}
 
 # Virtual-controller instrumentation calls across the target/test APK boundary.
 -keep class com.limelight.binding.input.virtual_controller.** { *; }
@@ -80,7 +83,33 @@
     public *** *Resolution(...);
     public *** *AbrMode(...);
     public *** *ScreenCombinationMode(...);
+    public boolean getShowDisplaySettingsCard();
+    public boolean getShowAudioHapticsCard();
+    public int getPerfOverlayBgOpacity();
 }
 -keepclassmembers class com.limelight.preferences.PreferenceConfiguration$Companion {
     public int getDefaultBitrate(java.lang.String, java.lang.String);
+    public com.limelight.preferences.PreferenceConfiguration readPreferences(android.content.Context, android.view.Display);
+}
+
+# Feature-page navigation is exercised by instrumentation after R8.
+-keep class com.limelight.preferences.StreamSettings$SettingsFragment {
+    public <init>();
+    public java.lang.String getActiveSettingsScreenKey();
+    public void applySearchFilter(java.lang.String);
+    public void openSettingsScreen(java.lang.String, java.lang.String);
+    public boolean closeSettingsScreen();
+}
+
+# Backup instrumentation exercises the public exporter/importer across APKs.
+-keep class com.limelight.utils.ConfigurationSyncManager {
+    public <init>(android.content.Context);
+    public java.lang.String exportSyncPackage();
+    public com.limelight.utils.ConfigurationSyncManager$ImportResult importSyncPackage(java.lang.String, java.lang.String);
+}
+-keep class com.limelight.utils.ConfigurationSyncManager$ImportResult {
+    public int getDefaultPreferencesImported();
+    public int getTotalImported();
+    public int getCrownProfilesFailed();
+    public int getPairingItemsFailed();
 }

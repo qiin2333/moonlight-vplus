@@ -177,8 +177,6 @@
     <string name="title_checkbox_host_audio">Jouer l\'audio sur le PC</string>
     <string name="summary_checkbox_host_audio">Lire l\'audio sur l\'ordinateur et sur cet appareil</string>
     <string name="category_advanced_settings">Réglages avancés</string>
-    <string name="title_unlock_fps">Débloquer toutes les fréquences d\'images possibles</string>
-    <string name="summary_unlock_fps">Le streaming à 90 ou 120 FPS peut réduire la latence sur les appareils haut de gamme, mais peut entraîner un décalage ou une instabilité sur les appareils qui ne le supporte pas</string>
     <string name="summary_checkbox_disable_warnings">Désactive les messages d\'avertissement sur la connexion pendant le stream</string>
     <string name="title_disable_frame_drop">Ne jamais perdre d\'images</string>
     <string name="summary_disable_frame_drop">Peut réduire les micro-saccades sur certains appareils, mais peut augmenter la latence</string>

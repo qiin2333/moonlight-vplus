@@ -166,6 +166,7 @@ class PreferenceConfiguration {
     var controllerMouseSpeedPercent = 100
     var controllerMouseDpadArrows = false
     var mouseNavButtons = false
+    // Retained for older scene configurations and backups; frame-rate selection is unrestricted.
     var unlockFps = false
     var gameRumbleMode = GameRumbleMode.CONTROLLER
     var deviceRumbleStrength = 0
@@ -1046,36 +1047,31 @@ class PreferenceConfiguration {
         private const val DISPLAY_SELECTION_MIGRATION_KEY = "display_selection_migration_version"
         private const val DISPLAY_SELECTION_MIGRATION_VERSION = 2
 
-        /** 只在迁移版本提升时改写一次旧分辨率或帧率，打开设置页不再重复改写。 */
+        /** 旧备份可能重新带回历史表示；只在发现旧值或迁移版本落后时写入。 */
         internal fun migrateDisplaySelections(prefs: SharedPreferences) {
-            if (prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0) >= DISPLAY_SELECTION_MIGRATION_VERSION) return
-            val editor = prefs.edit()
+            val migrationVersion = prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0)
             val resolution = prefs.getString(RESOLUTION_PREF_STRING, null)
-            when {
-                resolution == null -> Unit
-                resolution.equals("360p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_360P)
-                resolution.equals("480p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_480P)
-                resolution.equals("720p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_720P)
-                resolution.equals("1080p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1080P)
-                resolution.equals("1440p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1440P)
-                resolution.equals("4K", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_4K)
+            val canonicalResolution = when {
+                resolution == null -> null
+                resolution.equals("360p", true) -> RES_360P
+                resolution.equals("480p", true) -> RES_480P
+                resolution.equals("720p", true) -> RES_720P
+                resolution.equals("1080p", true) -> RES_1080P
+                resolution.equals("1440p", true) -> RES_1440P
+                resolution.equals("4K", true) -> RES_4K
+                else -> null
             }
-            when (val frameRate = prefs.all[FPS_PREF_STRING]) {
-                is Int -> editor.putString(FPS_PREF_STRING, frameRate.toString())
-            }
-            editor.putInt(DISPLAY_SELECTION_MIGRATION_KEY, DISPLAY_SELECTION_MIGRATION_VERSION).apply()
-        }
+            val frameRate = prefs.all[FPS_PREF_STRING]
+            if (migrationVersion >= DISPLAY_SELECTION_MIGRATION_VERSION &&
+                canonicalResolution == null && frameRate !is Int) return
 
-        private fun convertFromLegacyResolutionString(resString: String): String {
-            return when {
-                resString.equals("360p", ignoreCase = true) -> RES_360P
-                resString.equals("480p", ignoreCase = true) -> RES_480P
-                resString.equals("720p", ignoreCase = true) -> RES_720P
-                resString.equals("1080p", ignoreCase = true) -> RES_1080P
-                resString.equals("1440p", ignoreCase = true) -> RES_1440P
-                resString.equals("4K", ignoreCase = true) -> RES_4K
-                else -> RES_1080P // Should be unreachable
+            val editor = prefs.edit()
+            canonicalResolution?.let { editor.putString(RESOLUTION_PREF_STRING, it) }
+            if (frameRate is Int) editor.putString(FPS_PREF_STRING, frameRate.toString())
+            if (migrationVersion < DISPLAY_SELECTION_MIGRATION_VERSION) {
+                editor.putInt(DISPLAY_SELECTION_MIGRATION_KEY, DISPLAY_SELECTION_MIGRATION_VERSION)
             }
+            editor.apply()
         }
 
         private fun getWidthFromResolutionString(resString: String): Int {
@@ -1094,17 +1090,6 @@ class PreferenceConfiguration {
                 // 如果解析失败，返回默认高度
                 DEFAULT_RESOLUTION.split("x")[1].toInt()
             }
-        }
-
-        private fun getResolutionString(width: Int, height: Int): String {
-            // 使用数组简化分辨率获取
-            for (res in RESOLUTIONS) {
-                val dimensions = res.split("x")
-                if (height == dimensions[1].toInt()) {
-                    return res
-                }
-            }
-            return RES_1080P // 默认返回1080P
         }
 
         fun getDefaultBitrate(resString: String, fpsString: String): Int {

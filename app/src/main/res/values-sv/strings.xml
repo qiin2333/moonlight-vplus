@@ -149,7 +149,6 @@
     <string name="title_checkbox_host_audio">Spela upp ljud på datorn</string>
     <string name="summary_checkbox_host_audio">Spela upp ljud från datorn och den här enheten</string>
     <string name="category_advanced_settings">Utvecklade inställningar</string>
-    <string name="title_unlock_fps">Lås upp alla möjliga bildfrekvenser</string>
     <string name="title_checkbox_reduce_refresh_rate">Tillåt minskning av uppdateringsfrekvensen</string>
     <string name="title_checkbox_disable_warnings">Ta bort varningsmedelanden</string>
     <string name="summary_checkbox_disable_warnings">Ta bort varningsmeddelanden om inmatning på skärmen när du strömmar</string>
@@ -231,7 +230,6 @@
     <string name="summary_osc_opacity">Gör kontrollerna på skärmen mer/mindre genomskinliga</string>
     <string name="summary_checkbox_enable_pip">Gör det möjligt att se strömmen (men inte att styra den) medan du gör andra saker samtidigt</string>
     <string name="category_ui_settings">Inställningar för användargränssnittet</string>
-    <string name="summary_unlock_fps">Streaming med 90 eller 120 FPS kan minska latenstiden på avancerade enheter, men kan orsaka fördröjning eller instabilitet på enheter som inte har stöd för det</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lägre uppdateringsfrekvenser på skärmen kan spara ström på bekostnad av ytterligare videolatens</string>
     <string name="summary_full_range">Detta kan leda till förlust av detalj i ljusa och mörka områden om enheten inte visar videoinnehåll med fullt omfång på rätt sätt.</string>
     <string name="title_enable_post_stream_toast">Visa meddelande om latenstid efter strömning</string>

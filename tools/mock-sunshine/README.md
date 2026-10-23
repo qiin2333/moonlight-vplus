@@ -11,6 +11,15 @@ This mock host reproduces the cold-start downgrade bug:
 Ignoring untrusted NOT_PAIRED poll for locally paired host Mock Paired PC
 ```
 
+The mock also exposes a Windows-style display-scale API for in-stream UI checks:
+
+- `GET /displays`
+- `GET /display-scale-options`
+- `POST /display-scale`
+
+The default display advertises 100%, 125%, and 150%; a successful POST updates the
+current value for subsequent reads.
+
 ## Run
 
 From the repository root:

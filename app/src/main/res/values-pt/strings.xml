@@ -104,8 +104,6 @@
     <string name="summary_checkbox_small_icon_mode">Diminui o tamanho dos ícones permitindo que mais apps sejam visíveis no ecrã</string>
     <string name="summary_checkbox_host_audio">Reproduz o áudio do computador e deste aparelho</string>
     <string name="category_advanced_settings">Configurações Avançadas</string>
-    <string name="title_unlock_fps">Liberar todas as taxas de quadros possíveis</string>
-    <string name="summary_unlock_fps">Transmitir a 90 ou 120 FPS pode reduzir a latência em aparelhos de última geração, mas pode causar atraso ou instabilidade em aparelhos que não suportam</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir redução de taxa de atualização</string>
     <string name="summary_checkbox_reduce_refresh_rate">Taxas menores de atualização do display podem gravar energia ao custo de latência de video adicional</string>
     <string name="summary_checkbox_disable_warnings">Desativa as mensagens de aviso de conexão no ecrã durante a transmissão</string>
@@ -281,7 +279,6 @@
     <string name="game_menu_send_keys_alt_home">Enviar ALT + HOME (Alternar RTSS)</string>
     <string name="game_menu_adjust_bitrate">Ajustar taxa de bits</string>
     <string name="game_menu_bitrate_custom">Taxa de bits personalizada</string>
-    <string name="game_menu_bitrate_current">Atual: %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_success">Taxa de bits ajustada com sucesso para %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">Falha ao ajustar taxa de bits</string>
     <string name="game_menu_ok">OK</string>
@@ -450,11 +447,9 @@
     <string name="category_crown_features">Área de recursos Crown</string>
     <string name="title_crown_super_features">Super recursos Crown</string>
     <string name="summary_crown_super_features">Uma solução de botões virtuais na tela. Alterne os botões na tela, as ações rápidas, o modo de toque e as configurações de vibração como perfis nomeados.</string>
-    <string name="title_export_super_config">Exportar configuração</string>
     <string name="summary_export_super_config">Exportar arquivo de configuração de botões personalizados e configurações de streaming</string>
     <string name="title_import_super_config">Importar configuração</string>
     <string name="summary_import_super_config">Importar arquivo de configuração de botões personalizados e configurações de streaming</string>
-    <string name="title_merge_super_config">Mesclar configuração</string>
     <string name="summary_merge_super_config">Mesclar novos botões de configuração na configuração existente</string>
     <string name="crown_toggle_button">Crown</string>
     <string name="crown_mode_normal">Modo normal</string>

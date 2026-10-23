@@ -178,7 +178,6 @@
     <string name="summary_checkbox_touchscreen_trackpad">Se abilitato, lo schermo touch si comporta come un trackpad. Se disabilitato, lo schermo touch controlla direttamente il cursore del mouse.</string>
     <string name="title_checkbox_mouse_nav_buttons">Abilita i bottoni avanti e indietro del mouse</string>
     <string name="title_osc_opacity">Cambia l\'opavità dei controlli a schermo</string>
-    <string name="title_unlock_fps">Sblocca tutti i frame rate possibili</string>
     <string name="pacing_balanced">Bilanciato (ritardo e fluidità)</string>
     <string name="pacing_latency">Bassa latenza (risposta più rapida)</string>
     <string name="pacing_precise_sync">Ritmo fotogrammi preciso (consigliato)</string>
@@ -221,7 +220,6 @@
     <string name="early_termination_error">Qualcosa è andato storto sul PC sorgente mentre la trasmissione veniva avviata.
 \n
 \nAssicurati di non avere nessun contenuto protetto da DRM aperto sul PC sorgente. Puoi anche provare a spengere e riaccendere il PC sorgente.</string>
-    <string name="summary_unlock_fps">Trasmettere a 90 o 120 FPS potrebbe ridurre il ritardo su dispositivi di fascia alta, ma può provocare ritardi i instabilità sui dispositivi che non lo supportano</string>
     <string name="summary_enable_post_stream_toast">Molstra un messaggio con informazioni sulla latenza dopo che la trasmissione è conclusa</string>
     <string name="text_native_res_dialog">Le impostazioni di risoluzione nativa e/o di FPS possono non essere supportate dal server per lo streaming. Dovrai aggiungerle manualmente all\'interno delle impostazioni del PC o del server.
 \n

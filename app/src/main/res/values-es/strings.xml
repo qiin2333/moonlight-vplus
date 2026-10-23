@@ -204,8 +204,6 @@
     <string name="summary_checkbox_usb_bind_all">Usar el controlador de USB de Moonlight para todos los mandos soportados, incluso si el control de Xbox se encuentra presente</string>
     <string name="summary_checkbox_mouse_emulation">Presionar por un periodo largo el botón de inicio hará cambiar el mando a modo de ratón</string>
     <string name="title_checkbox_mouse_nav_buttons">Activar los botones atrás y adelante del ratón</string>
-    <string name="title_unlock_fps">Desbloquear todas las opciones de tasa de cuadros disponibles</string>
-    <string name="summary_unlock_fps">Transmitir a 90 o 120 FPS puede reducir latencia en dispositivos de gama alta pero puede causar retrasos en dispositivos que no lo soporten</string>
     <string name="summary_enable_post_stream_toast">Mostrar un mensaje sobre la información de latencia cuando la transmisión termine</string>
     <string name="help">Ayuda</string>
     <string name="delete_pc_msg">¿Estás seguro de eliminar este PC\?</string>
@@ -318,7 +316,6 @@
     <string name="game_menu_adjust_bitrate">Ajustar Tasa de Bits</string>
     <string name="game_menu_bitrate_adjustment_failed">Error al ajustar tasa de bits</string>
     <string name="game_menu_bitrate_adjustment_success">Tasa de bits ajustada exitosamente a %d Mbps</string>
-    <string name="game_menu_bitrate_current">Actual: %d Mbps</string>
     <string name="game_menu_bitrate_custom">Tasa de Bits Personalizada</string>
     <string name="game_menu_bitrate_range">Rango de Tasa de Bits:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
@@ -486,10 +483,8 @@
     <string name="title_enable_analytics">Habilitar Análisis</string>
     <string name="title_enable_perf_overlay">Mostrar estadísticas de rendimiento mientras transmites</string>
     <string name="title_enhanced_touch_zone_divider">Divisor de zona de toque mejorada</string>
-    <string name="title_export_super_config">Exportar Configuración</string>
     <string name="title_fixed_x_velocity">Establecer velocidad X (horizontal) fija</string>
     <string name="title_import_super_config">Importar Configuración</string>
-    <string name="title_merge_super_config">Fusionar Configuración</string>
     <string name="title_moonlight_vplus_pc_download">Descarga de Moonlight V+ PC</string>
     <string name="title_perf_overlay_display_items">Elementos de Visualización de Superposición de Rendimiento</string>
     <string name="title_perf_overlay_orientation">Orientación de Superposición de Rendimiento</string>

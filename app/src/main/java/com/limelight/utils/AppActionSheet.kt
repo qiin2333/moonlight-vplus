@@ -96,7 +96,8 @@ object AppActionSheet {
         val opensSubmenu: Boolean = false,
         val trailingText: CharSequence? = null,
         val toggle: Boolean = false,
-        val iconRes: Int? = null
+        val iconRes: Int? = null,
+        val emphasized: Boolean = false
     )
 
     /** Hosts custom, live content in the same window, theme, and dismissal model as
@@ -670,6 +671,7 @@ object AppActionSheet {
         multiChoice: Boolean = false
     ) {
         val rowShape = AppShapes.medium
+        val emphasizedColor = if (action.emphasized && action.enabled) MaterialTheme.colorScheme.primary else null
         var focused by remember(action.id) { mutableStateOf(false) }
         val activate = { if (action.enabled) onAction(action) }
         Column {
@@ -728,7 +730,8 @@ object AppActionSheet {
                     Icon(
                         painter = painterResource(iconRes),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (action.enabled) 1f else 0.38f),
+                        tint = (emphasizedColor ?: MaterialTheme.colorScheme.onSurface)
+                            .copy(alpha = if (action.enabled) 1f else 0.38f),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(Modifier.width(12.dp))
@@ -739,7 +742,7 @@ object AppActionSheet {
                         color = when {
                             !action.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             action.destructive -> colorResource(R.color.app_action_sheet_danger)
-                            else -> MaterialTheme.colorScheme.onSurface
+                            else -> emphasizedColor ?: MaterialTheme.colorScheme.onSurface
                         },
                         fontSize = 14.sp,
                         maxLines = 2,
@@ -748,7 +751,7 @@ object AppActionSheet {
                     if (!action.description.isNullOrEmpty()) {
                         Text(
                             text = action.description.toString(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            color = (emphasizedColor ?: MaterialTheme.colorScheme.onSurfaceVariant).copy(
                                 alpha = if (action.enabled) 1f else 0.38f
                             ),
                             fontSize = 12.sp,
@@ -783,7 +786,7 @@ object AppActionSheet {
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = "›",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = emphasizedColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 20.sp
                     )
                 }

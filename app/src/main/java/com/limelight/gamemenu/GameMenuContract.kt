@@ -42,8 +42,7 @@ internal data class GameMenuComposeUiState(
 
 internal enum class GameMenuPageLayout {
     STANDARD,
-    TOUCH_MODE,
-    DISPLAY_SETTINGS
+    TOUCH_MODE
 }
 
 enum class GameMenuOptionPresentation {
@@ -115,13 +114,10 @@ internal data class GameMenuCallbacks(
     val onBitrateAdaptive: (Boolean) -> Unit,
     val onAbrMode: (String) -> Unit,
     val onBitrateHapticMode: () -> Unit,
-    val onOpenDisplaySettings: () -> Unit = {},
-    val onSelectResolution: (String) -> Unit = {},
-    val onSelectFrameRate: (String) -> Unit = {},
-    val onSelectScreenMode: (String) -> Unit = {},
-    val onApplyDisplaySettings: () -> Unit = {},
-    val onCancelDisplaySettings: () -> Unit = {},
-    val onEditCustomResolutions: () -> Unit = {},
+    val onOpenResolutionSheet: () -> Unit = {},
+    val onOpenFrameRateSheet: () -> Unit = {},
+    val onOpenScreenModeSheet: () -> Unit = {},
+    val onSetDisplayScale: (Int) -> Unit = {},
     val onAudioHapticsEnabled: (Boolean) -> Unit,
     val onAudioHapticsStrength: (Float) -> Boolean,
     val onAudioHapticsStrengthFinished: () -> Unit,

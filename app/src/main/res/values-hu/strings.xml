@@ -10,8 +10,6 @@
     <string name="title_disable_frame_drop">Soha ne ejtse le a kereteket</string>
     <string name="summary_checkbox_disable_warnings">Streaming közben tiltsa le a képernyőn megjelenő csatlakozási figyelmeztető üzeneteket</string>
     <string name="title_checkbox_disable_warnings">Tiltsa le a figyelmeztető üzeneteket</string>
-    <string name="summary_unlock_fps">A 90 vagy 120 FPS sebességgel történő streaming csökkentheti a csúcskategóriás eszközök késését, de késést vagy instabilitást okozhat azokon az eszközökön, amelyek ezt nem támogatják</string>
-    <string name="title_unlock_fps">Oldja fel az összes lehetséges képsebességet</string>
     <string name="category_advanced_settings">További beállítások</string>
     <string name="summary_checkbox_host_audio">Hang lejátszása a számítógépről és az eszközről</string>
     <string name="title_checkbox_host_audio">Hang lejátszása PC-n</string>

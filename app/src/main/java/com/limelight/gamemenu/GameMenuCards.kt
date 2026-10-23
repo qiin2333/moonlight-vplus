@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -90,6 +89,7 @@ import com.limelight.binding.audio.AudioVibrationService
 import com.limelight.ui.theme.AppShapes
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.limelight.preferences.compactResolutionLabel
 import com.limelight.utils.appAccentSoftColor
 import com.limelight.utils.appAccentColor
@@ -107,7 +107,12 @@ internal fun GameMenuCards(
         verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
     ) {
         if (state.visibleCards.display) {
-            DisplayStatusCard(state.bitrate, callbacks, callbacks.onEditCards)
+            DisplayStatusCard(
+                state = state.bitrate,
+                callbacks = callbacks,
+                onConfigure = callbacks.onEditCards,
+                onSliderGesture = onSliderGesture
+            )
         }
         if (state.visibleCards.bitrate) {
             BitrateCard(state.bitrate, callbacks, onSliderGesture, callbacks.onEditCards)
@@ -614,16 +619,16 @@ private fun SensitivityPresetActionButton(
 }
 
 /**
- * 显示设置状态卡:三列 HUD 读数(分辨率/帧率/屏幕组合),整卡可点进编辑页。
+ * 显示设置状态卡:三列 HUD 读数(分辨率/帧率/屏幕组合),下方按需提供主机显示缩放快捷入口。
  * 状态常驻可见,不进卡片可见性开关——它是功能入口而非可隐藏的控件面。
  */
 @Composable
 internal fun DisplayStatusCard(
     state: BitrateCardState,
     callbacks: GameMenuCallbacks,
-    onConfigure: () -> Unit
+    onConfigure: () -> Unit,
+    onSliderGesture: (Boolean) -> Unit
 ) {
-    val description = stringResource(R.string.game_menu_display_settings)
     val screenLabel = state.screenModes.firstOrNull { it.selected }?.label ?: "—"
     val resolutionValue = compactResolutionLabel(state.resolutionLabel)
     val specValues = listOf(resolutionValue, state.fpsLabel, screenLabel)
@@ -641,10 +646,6 @@ internal fun DisplayStatusCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(AppShapes.small)
-                .gamepadFocusOutline(AppShapes.small)
-                .clickable(role = Role.Button) { callbacks.onOpenDisplaySettings() }
-                .semantics { contentDescription = description }
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -653,6 +654,7 @@ internal fun DisplayStatusCard(
                 value = resolutionValue,
                 fontSize = specFontSize,
                 accent = accent,
+                onClick = callbacks.onOpenResolutionSheet,
                 modifier = Modifier.weight(1f)
             )
             DisplaySpecDivider()
@@ -661,6 +663,7 @@ internal fun DisplayStatusCard(
                 value = state.fpsLabel,
                 fontSize = specFontSize,
                 accent = accent,
+                onClick = callbacks.onOpenFrameRateSheet,
                 modifier = Modifier.weight(1f)
             )
             DisplaySpecDivider()
@@ -669,16 +672,94 @@ internal fun DisplayStatusCard(
                 value = screenLabel,
                 fontSize = specFontSize,
                 accent = accent,
+                onClick = callbacks.onOpenScreenModeSheet,
                 modifier = Modifier.weight(1f)
             )
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_right),
-                contentDescription = null,
-                tint = colorResource(R.color.game_menu_text_secondary),
+        }
+        if (state.displayScale.loading || state.displayScale.available) {
+            val scale = state.displayScale
+            val supported = scale.supportedPercents
+            val statePercent = scale.pendingPercent ?: scale.currentPercent
+            val stateIndex = statePercent?.let { supported.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+            var sliderIndex by remember(supported, statePercent) { mutableStateOf(stateIndex.toFloat()) }
+            val selectedPercent = supported.getOrNull(sliderIndex.roundToInt()) ?: statePercent
+            val scaleSummary = when {
+                selectedPercent != null && selectedPercent == scale.recommendedPercent ->
+                    stringResource(R.string.display_scale_value_recommended, selectedPercent)
+                selectedPercent != null -> stringResource(R.string.display_scale_value, selectedPercent)
+                scale.loading -> stringResource(R.string.display_scale_loading)
+                else -> stringResource(R.string.display_scale_unavailable)
+            }
+            val currentScalePercent = scale.currentPercent
+            val scaleDescription = if (currentScalePercent != null) {
+                stringResource(R.string.display_scale_content_description, currentScalePercent)
+            } else {
+                stringResource(R.string.display_scale_title)
+            }
+            Column(
                 modifier = Modifier
-                    .padding(horizontal = GameMenuDimens.compact)
-                    .size(12.dp)
-            )
+                    .fillMaxWidth()
+                    .clip(AppShapes.small)
+                    .gamepadFocusOutline(AppShapes.small)
+                    .semantics {
+                        contentDescription = scaleDescription
+                    }
+                    .padding(horizontal = GameMenuDimens.section, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ui_settings),
+                        contentDescription = null,
+                        tint = accent.copy(alpha = if (scale.available) 1f else 0.45f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.display_scale_title),
+                        color = colorResource(R.color.game_menu_text_primary),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = GameMenuDimens.section)
+                    )
+                    Text(
+                        text = scaleSummary,
+                        color = colorResource(R.color.game_menu_text_secondary),
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Slider(
+                    value = sliderIndex,
+                    onValueChange = { sliderIndex = it },
+                    onValueChangeFinished = {
+                        supported.getOrNull(sliderIndex.roundToInt())?.let(callbacks.onSetDisplayScale)
+                    },
+                    valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
+                    steps = (supported.size - 2).coerceAtLeast(0),
+                    enabled = scale.available && !scale.loading && supported.size > 1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(GameMenuSliderSpec.height)
+                        .gamepadFocusOutline(GameMenuControlShape)
+                        .handleSliderDpad(
+                            value = sliderIndex,
+                            step = 1f,
+                            valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
+                            onValueChange = { sliderIndex = it },
+                            onValueChangeFinished = {
+                                supported.getOrNull(sliderIndex.roundToInt())
+                                    ?.let(callbacks.onSetDisplayScale)
+                            }
+                        )
+                        .lockParentScrollDuringGesture(onSliderGesture)
+                )
+            }
         }
     }
 }
@@ -689,10 +770,16 @@ private fun DisplaySpecCell(
     value: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     accent: Color,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .clip(AppShapes.small)
+            .gamepadFocusOutline(AppShapes.small)
+            .clickable(role = Role.Button, onClick = onClick ?: {})
+            .semantics { contentDescription = "$label, $value" }
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {

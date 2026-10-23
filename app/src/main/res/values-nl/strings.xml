@@ -204,8 +204,6 @@
     <string name="title_checkbox_usb_bind_all">Standaard Xbox gamepad-ondersteuning overschrijven</string>
     <string name="summary_reset_osc">Herstelt alle on-screen besturingselementen naar hun originele grootte en positie</string>
     <string name="dialog_title_osc_opacity">Transparantie wijzigen</string>
-    <string name="title_unlock_fps">Alle mogelijke frame rates ontgrendelen</string>
-    <string name="summary_unlock_fps">Streamen op 90 of 120 FPS kan vertraging op high-end apparaten verminderen, maar het kan lag of instabiliteit veroorzaken op toestellen die het niet ondersteunen</string>
     <string name="summary_checkbox_enable_pip">Laat toe de stream te bekijken (maar niet bedienen) bij het multitasken</string>
     <string name="title_checkbox_flip_face_buttons">Face-knoppen omdraaien</string>
     <string name="title_enable_post_stream_toast">Vertragingsbericht tonen na het streamen</string>

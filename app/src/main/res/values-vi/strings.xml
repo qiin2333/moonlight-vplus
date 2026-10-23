@@ -10,8 +10,6 @@
     <string name="title_disable_frame_drop">Không bao giờ giảm khung hình</string>
     <string name="summary_checkbox_disable_warnings">Tắt các thông báo cảnh báo kết nối trên màn hình trong khi stream</string>
     <string name="title_checkbox_disable_warnings">Tắt các thông báo cảnh báo</string>
-    <string name="summary_unlock_fps">Việc stream tại 90 hoặc 120 FPS có thể sẽ giảm độ trễ trên các thiết bị tầm cao nhưng có thể sẽ gây ra lag hoặc mất ổn định trên các thiết bị không thể hỗ trợ việc đó</string>
-    <string name="title_unlock_fps">Mở khoá tất cả tốc độ khung hình có thể có</string>
     <string name="category_advanced_settings">Cài đặt nâng cao</string>
     <string name="summary_checkbox_host_audio">Phát âm thanh từ máy tính và thiết bị này</string>
     <string name="title_checkbox_host_audio">Phát âm thanh trên PC</string>

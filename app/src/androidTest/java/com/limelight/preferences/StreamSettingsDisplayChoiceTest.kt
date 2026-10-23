@@ -3,10 +3,14 @@ package com.limelight.preferences
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.hardware.display.DisplayManager
+import android.os.Build
 import android.os.SystemClock
+import android.view.Display
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.accessibility.AccessibilityEvent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
@@ -14,6 +18,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.preference.Preference
 import androidx.preference.PreferenceGroupAdapter
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
@@ -24,12 +29,15 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.R
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Collections
+import kotlin.math.ceil
 
 @RunWith(AndroidJUnit4::class)
 class StreamSettingsDisplayChoiceTest {
@@ -51,8 +59,8 @@ class StreamSettingsDisplayChoiceTest {
     fun prepareSettings() {
         preferences = PreferenceManager.getDefaultSharedPreferences(context)
         customPreferences = context.getSharedPreferences("custom_resolutions", Context.MODE_PRIVATE)
-        originalPreferences = preferences.all.toMap()
-        originalCustomPreferences = customPreferences.all.toMap()
+        originalPreferences = snapshotSettingsPreferences(preferences)
+        originalCustomPreferences = snapshotSettingsPreferences(customPreferences)
         preferences.edit()
             .putString(PreferenceConfiguration.RESOLUTION_PREF_STRING, ORIGINAL_RESOLUTION)
             .putString(PreferenceConfiguration.FPS_PREF_STRING, FRAME_RATE)
@@ -66,8 +74,8 @@ class StreamSettingsDisplayChoiceTest {
     @After
     fun restoreSettings() {
         scenario?.close()
-        restore(preferences, originalPreferences)
-        restore(customPreferences, originalCustomPreferences)
+        restoreSettingsPreferences(preferences, originalPreferences)
+        restoreSettingsPreferences(customPreferences, originalCustomPreferences)
     }
 
     private fun launchSettings(autoAdjust: Boolean = true) {
@@ -83,6 +91,96 @@ class StreamSettingsDisplayChoiceTest {
 
         sendKey(KeyEvent.KEYCODE_DPAD_DOWN)
 
+        assertFocusedPreference(PreferenceConfiguration.FPS_PREF_STRING)
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun controllerCanChooseFrameRatesWithTheLegacyUnlockFlagDisabled() {
+        val display = (context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager)
+            .getDisplay(Display.DEFAULT_DISPLAY)
+        val refreshRates = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            display.supportedModes.map { it.refreshRate } + display.refreshRate
+        } else {
+            listOf(display.refreshRate)
+        }
+        val maxRefreshRate = refreshRates.filter { it.isFinite() && it > 0f }.maxOrNull() ?: 0f
+        val savedFrameRate = (ceil(maxRefreshRate.toDouble()).toInt().coerceAtLeast(240) + 30).toString()
+        preferences.edit()
+            .putBoolean(PreferenceConfiguration.UNLOCK_FPS_STRING, false)
+            .putString(PreferenceConfiguration.FPS_PREF_STRING, savedFrameRate)
+            .commit()
+        launchSettings(autoAdjust = false)
+
+        var savedLabel = ""
+        var targetLabel = ""
+        var previousLabel = ""
+        var notice = ""
+        var targetSteps = 0
+        requireNotNull(scenario).onActivity { activity ->
+            val fragment = fragment(activity)
+            assertNull(fragment.findPreference<Preference>(PreferenceConfiguration.UNLOCK_FPS_STRING))
+            val preference = requireNotNull(fragment.findPreference<DisplayChoicePreference>(
+                PreferenceConfiguration.FPS_PREF_STRING))
+            val values = preference.entryValues.map(CharSequence::toString)
+            assertEquals(values.toSet(), preference.enabledValues)
+            assertEquals(savedFrameRate, preference.value)
+            assertTrue("Frame-rate choices must not have persistent descriptions",
+                values.all { preference.descriptionFor(it) == null })
+            notice = activity.getString(R.string.display_frame_rate_above_refresh_rate)
+            savedLabel = labelFor(preference, savedFrameRate)
+            if (maxRefreshRate > 0f) {
+                assertTrue("A frame rate above the display limit must have a compact marker",
+                    savedLabel.endsWith(activity.getString(R.string.display_frame_rate_above_refresh_rate_marker)))
+            }
+            targetLabel = labelFor(preference, "30")
+            val savedIndex = values.indexOf(savedFrameRate)
+            previousLabel = labelFor(preference, values[savedIndex - 1])
+            targetSteps = savedIndex - values.indexOf("30")
+            assertTrue(targetSteps > 0)
+        }
+
+        focusResolutionRow()
+        sendKey(KeyEvent.KEYCODE_DPAD_DOWN)
+        assertFocusedPreference(PreferenceConfiguration.FPS_PREF_STRING)
+        sendKey(KeyEvent.KEYCODE_BUTTON_A)
+        compose.onNodeWithText(savedLabel).assertIsDisplayed().assertIsFocused().assertIsSelected()
+        compose.onAllNodesWithText(notice).assertCountEquals(0)
+        sendKey(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithText(previousLabel).assertIsFocused()
+        sendKey(KeyEvent.KEYCODE_BUTTON_B)
+        assertFocusedPreference(PreferenceConfiguration.FPS_PREF_STRING)
+        assertEquals(savedFrameRate, preferences.getString(PreferenceConfiguration.FPS_PREF_STRING, null))
+
+        sendKey(KeyEvent.KEYCODE_BUTTON_A)
+        compose.onNodeWithText(savedLabel).assertIsDisplayed().assertIsFocused().assertIsSelected()
+        repeat(targetSteps) { sendKey(KeyEvent.KEYCODE_DPAD_UP) }
+        compose.onNodeWithText(targetLabel).assertIsFocused()
+        sendKey(KeyEvent.KEYCODE_BUTTON_A)
+
+        assertEquals("30", preferences.getString(PreferenceConfiguration.FPS_PREF_STRING, null))
+        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
+        assertFalse(preferences.getBoolean(PreferenceConfiguration.UNLOCK_FPS_STRING, true))
+        assertFocusedPreference(PreferenceConfiguration.FPS_PREF_STRING)
+
+        sendKey(KeyEvent.KEYCODE_BUTTON_A)
+        repeat(targetSteps) { sendKey(KeyEvent.KEYCODE_DPAD_DOWN) }
+        compose.onNodeWithText(savedLabel).assertIsFocused()
+        compose.onAllNodesWithText(notice).assertCountEquals(0)
+        if (maxRefreshRate > 0f) {
+            // Observe the system toast after confirmation; it lives outside the Compose sheet.
+            val event = InstrumentationRegistry.getInstrumentation().uiAutomation.executeAndWaitForEvent(
+                { sendKey(KeyEvent.KEYCODE_BUTTON_A) },
+                { event -> event.eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED &&
+                    event.text.any { it.toString() == notice } },
+                5_000
+            )
+            event.recycle()
+        } else {
+            sendKey(KeyEvent.KEYCODE_BUTTON_A)
+        }
+        assertEquals(savedFrameRate, preferences.getString(PreferenceConfiguration.FPS_PREF_STRING, null))
+        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
         assertFocusedPreference(PreferenceConfiguration.FPS_PREF_STRING)
     }
 
@@ -296,12 +394,23 @@ class StreamSettingsDisplayChoiceTest {
 
     private fun labelFor(preference: DisplayChoicePreference, value: String): String {
         val index = preference.entryValues.indexOfFirst { it.toString() == value }
-        assertTrue("Missing resolution $value", index >= 0)
+        assertTrue("Missing display choice $value", index >= 0)
         return preference.entries[index].toString()
     }
 
     @SuppressLint("RestrictedApi")
     private fun focusResolutionRow() {
+        // Resolution and frame rate are direct main-page choices; feature navigation must not
+        // introduce an intermediate page or an expander before either controller row.
+        compose.waitUntil(10_000) {
+            var ready = false
+            requireNotNull(scenario).onActivity { activity ->
+                val list = activity.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
+                ready = fragment(activity).activeSettingsScreenKey == null && activity.hasWindowFocus() &&
+                    list.isAttachedToWindow && list.isLaidOut && !list.isLayoutRequested
+            }
+            ready
+        }
         var position = RecyclerView.NO_POSITION
         requireNotNull(scenario).onActivity { activity ->
             val list = activity.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
@@ -310,7 +419,23 @@ class StreamSettingsDisplayChoiceTest {
                 adapter.getItem(index)?.key == PreferenceConfiguration.RESOLUTION_PREF_STRING
             }
             assertTrue(adapter.getItem(position) is DisplayChoicePreference)
+            assertEquals("The main page must expose one resolution choice", 1,
+                (0 until adapter.itemCount).count {
+                    adapter.getItem(it)?.key == PreferenceConfiguration.RESOLUTION_PREF_STRING
+                })
+            assertEquals("The main page must expose one frame-rate choice", 1,
+                (0 until adapter.itemCount).count {
+                    adapter.getItem(it)?.key == PreferenceConfiguration.FPS_PREF_STRING
+                })
             list.scrollToPosition(position)
+        }
+        compose.waitUntil(5_000) {
+            var laidOut = false
+            requireNotNull(scenario).onActivity { activity ->
+                val list = activity.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
+                laidOut = list.findViewHolderForAdapterPosition(position)?.itemView?.isLaidOut == true
+            }
+            laidOut
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         requireNotNull(scenario).onActivity { activity ->
@@ -344,21 +469,6 @@ class StreamSettingsDisplayChoiceTest {
 
     private fun fragment(activity: StreamSettings): StreamSettings.SettingsFragment =
         activity.supportFragmentManager.fragments.filterIsInstance<StreamSettings.SettingsFragment>().single()
-
-    private fun restore(prefs: SharedPreferences, snapshot: Map<String, *>) {
-        val editor = prefs.edit().clear()
-        for ((key, value) in snapshot) {
-            when (value) {
-                is Boolean -> editor.putBoolean(key, value)
-                is Int -> editor.putInt(key, value)
-                is Long -> editor.putLong(key, value)
-                is Float -> editor.putFloat(key, value)
-                is String -> editor.putString(key, value)
-                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
-            }
-        }
-        editor.commit()
-    }
 
     private companion object {
         private const val ORIGINAL_RESOLUTION = "1920x1080"

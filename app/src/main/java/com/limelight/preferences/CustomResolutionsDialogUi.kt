@@ -1,6 +1,5 @@
 package com.limelight.preferences
 
-import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -31,11 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -641,37 +637,6 @@ internal fun PresetRow(
                 onClick = { onPreset(preset) }
             )
         }
-    }
-}
-
-@Composable
-private fun PresetChip(preset: Preset, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val showFocus = focusIndicationVisible(focused)
-    val outline = colorResource(R.color.app_dialog_outline)
-    val accent = appAccentColor()
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .then(
-                focusHighlight(
-                    highlighted = showFocus,
-                    shape = CircleShape,
-                    fallback = Modifier.border(1.dp, outline, CircleShape)
-                )
-            )
-            .handleGamepadConfirm(onClick)
-            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
-            .padding(horizontal = 11.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = stringResource(preset.labelRes),
-            color = if (showFocus) accent else colorResource(R.color.app_dialog_text_secondary),
-            fontSize = 11.5.sp,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }
 

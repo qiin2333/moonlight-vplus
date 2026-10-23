@@ -7,6 +7,7 @@ import androidx.preference.PreferenceManager
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.http.NvHTTP
 import com.limelight.preferences.DisplayChoiceLimits
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.PreferenceConfiguration
@@ -25,7 +26,8 @@ internal data class DisplayChoice(
     /** 第二行小注(如 "1280×720"/"FPS"),空则瓦片单行居中。 */
     val subLabel: String? = null,
     /** 瓦片顶部图标(屏幕组合等模式类选项),空则用文字两行布局。 */
-    val iconRes: Int? = null
+    val iconRes: Int? = null,
+    val emphasized: Boolean = false
 )
 
 internal data class DisplaySettingsDraft(
@@ -38,6 +40,22 @@ internal data class DisplaySettingsDraft(
             frameRate != current.frameRate ||
             screenMode != current.screenMode
     }
+}
+
+internal data class DisplayScaleState(
+    val available: Boolean = false,
+    val loading: Boolean = false,
+    val friendlyName: String = "",
+    val displayName: String = "",
+    val deviceId: String = "",
+    val currentPercent: Int? = null,
+    val recommendedPercent: Int? = null,
+    val supportedPercents: List<Int> = emptyList(),
+    val errorCode: String? = null,
+    val pendingPercent: Int? = null
+) {
+    val summaryLabel: String
+        get() = currentPercent?.let { "$it%" } ?: "—"
 }
 
 internal data class BitrateCardState(
@@ -54,7 +72,8 @@ internal data class BitrateCardState(
     val resolutions: List<DisplayChoice>,
     val frameRates: List<DisplayChoice>,
     val screenModes: List<DisplayChoice>,
-    val hapticMode: BitrateCardController.HapticMode
+    val hapticMode: BitrateCardController.HapticMode,
+    val displayScale: DisplayScaleState = DisplayScaleState()
 ) {
     val selectedBitrateKbps: Int
         get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
@@ -223,6 +242,11 @@ internal class BitrateCardController(
     private var appliedDraft = currentDraft()
     private var draft = appliedDraft
 
+    private var displayScaleState = DisplayScaleState()
+    private var displayScaleThread: Thread? = null
+    /** Interrupting OkHttp is best effort, so reject stale responses by generation. */
+    @Volatile
+    private var displayScaleRequestGeneration = 0L
     // 声明须晚于 draft:构造期的 createState 会带出当前草稿
     private var state = createState(conn.currentBitrate)
 
@@ -239,6 +263,7 @@ internal class BitrateCardController(
         state = createState(conn.currentBitrate)
         emitState()
         bindAbrListener()
+        refreshDisplayScale()
     }
 
     private fun bindAbrListener() {
@@ -302,6 +327,9 @@ internal class BitrateCardController(
         if (draft.frameRate == value || state.frameRates.none { it.value == value && it.enabled }) return
         draft = draft.copy(frameRate = value)
         emitState()
+        if (displayChoiceLimits().exceedsRefreshRate(value)) {
+            Toast.makeText(game, R.string.display_frame_rate_above_refresh_rate, Toast.LENGTH_LONG).show()
+        }
     }
 
     fun stageScreenMode(value: String) {
@@ -348,6 +376,143 @@ internal class BitrateCardController(
     fun refreshDisplayChoices() {
         invalidateChoiceCaches()
         emitState()
+    }
+
+    fun refreshDisplayScale() {
+        val requestGeneration = ++displayScaleRequestGeneration
+        displayScaleThread?.interrupt()
+        displayScaleState = displayScaleState.copy(
+            loading = true,
+            errorCode = null,
+            pendingPercent = null
+        )
+        emitState()
+        val targetDeviceId = conn.displayName()
+        displayScaleThread = Thread {
+            try {
+                val http = conn.createNvHttp()
+                val catalog = http.getDisplays()
+                val target = if (targetDeviceId.isNullOrBlank()) {
+                    catalog.displays.firstOrNull { it.isPrimary } ?: catalog.displays.firstOrNull()
+                } else {
+                    catalog.displays.firstOrNull { display ->
+                        display.guid == targetDeviceId ||
+                            display.displayName == targetDeviceId ||
+                            display.friendlyName == targetDeviceId ||
+                            display.name == targetDeviceId
+                    } ?: catalog.displays.firstOrNull { it.isPrimary }
+                        ?: catalog.displays.firstOrNull()
+                }
+                var scale = target?.let { display ->
+                    NvHTTP.DisplayScaleInfo(
+                        displayName = display.displayName,
+                        deviceId = display.guid,
+                        friendlyName = display.friendlyName,
+                        isPrimary = display.isPrimary,
+                        currentScalePercent = display.currentScalePercent,
+                        recommendedScalePercent = display.recommendedScalePercent,
+                        supportedScalePercents = display.supportedScalePercents,
+                        scaleSetSupported = display.scaleSetSupported
+                    )
+                }
+                if (scale == null || !scale.isAvailable) {
+                    scale = http.getDisplayScaleOptions(
+                        target?.displayName?.takeIf { it.isNotBlank() },
+                        target?.guid?.takeIf { it.isNotBlank() }
+                    )
+                }
+                val resolved = scale
+                game.runOnUiThread {
+                    if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
+                    displayScaleState = DisplayScaleState(
+                        available = resolved.isAvailable,
+                        friendlyName = resolved.friendlyName,
+                        displayName = resolved.displayName,
+                        deviceId = resolved.deviceId,
+                        currentPercent = resolved.currentScalePercent,
+                        recommendedPercent = resolved.recommendedScalePercent,
+                        supportedPercents = resolved.supportedScalePercents,
+                        loading = false
+                    )
+                    emitState()
+                }
+            } catch (e: Exception) {
+                if (e is InterruptedException) return@Thread
+                val errorCode = (e as? NvHTTP.DisplayScaleException)?.errorCode
+                game.runOnUiThread {
+                    if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
+                    displayScaleState = displayScaleState.copy(
+                        available = false,
+                        loading = false,
+                        errorCode = errorCode
+                    )
+                    emitState()
+                }
+            }
+        }.also { it.name = "display-scale-load"; it.start() }
+    }
+
+    fun setDisplayScale(percent: Int) {
+        val current = displayScaleState
+        if (!current.available || current.loading || percent !in current.supportedPercents) return
+        val requestGeneration = ++displayScaleRequestGeneration
+        displayScaleState = current.copy(loading = true, pendingPercent = percent, errorCode = null)
+        emitState()
+        displayScaleThread?.interrupt()
+        displayScaleThread = Thread {
+            try {
+                val http = conn.createNvHttp()
+                val result = http.setDisplayScale(
+                    current.displayName.takeIf { it.isNotBlank() },
+                    current.deviceId.takeIf { it.isNotBlank() },
+                    percent
+                )
+                val refreshed = runCatching {
+                    http.getDisplayScaleOptions(
+                        result.displayName.takeIf { it.isNotBlank() },
+                        result.deviceId.takeIf { it.isNotBlank() }
+                    )
+                }.getOrNull()
+                game.runOnUiThread {
+                    if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
+                    displayScaleState = displayScaleState.copy(
+                        friendlyName = refreshed?.friendlyName ?: displayScaleState.friendlyName,
+                        displayName = refreshed?.displayName ?: result.displayName,
+                        deviceId = refreshed?.deviceId ?: result.deviceId,
+                        currentPercent = refreshed?.currentScalePercent ?: result.currentScalePercent ?: percent,
+                        recommendedPercent = refreshed?.recommendedScalePercent ?: displayScaleState.recommendedPercent,
+                        supportedPercents = refreshed?.supportedScalePercents?.ifEmpty {
+                            result.supportedScalePercents.ifEmpty { current.supportedPercents }
+                        } ?: result.supportedScalePercents.ifEmpty { current.supportedPercents },
+                        loading = false,
+                        pendingPercent = null
+                    )
+                    emitState()
+                    val message = when {
+                        result.restartRequired -> game.getString(R.string.display_scale_restart_required)
+                        !result.effectiveImmediately -> game.getString(R.string.display_scale_applied_later)
+                        else -> game.getString(R.string.display_scale_applied, result.currentScalePercent ?: percent)
+                    }
+                    showBitrateToast(message)
+                    // The host may clamp the requested value or update its supported
+                    // list while applying it. Read the authoritative state back so the
+                    // card and the next action sheet never advertise a stale value.
+                    refreshDisplayScale()
+                }
+            } catch (e: Exception) {
+                if (e is InterruptedException) return@Thread
+                game.runOnUiThread {
+                    if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
+                    displayScaleState = displayScaleState.copy(
+                        loading = false,
+                        pendingPercent = null,
+                        errorCode = (e as? NvHTTP.DisplayScaleException)?.errorCode
+                    )
+                    emitState()
+                    showBitrateToast(game.getString(R.string.display_scale_apply_failed))
+                }
+            }
+        }.also { it.name = "display-scale-set"; it.start() }
     }
 
     private fun currentDraft(): DisplaySettingsDraft {
@@ -399,6 +564,8 @@ internal class BitrateCardController(
 
     fun stop() {
         dispose()
+        displayScaleThread?.interrupt()
+        displayScaleThread = null
         onStateChanged = null
     }
 
@@ -423,7 +590,8 @@ internal class BitrateCardController(
             resolutions = resolutions,
             frameRates = frameRates,
             screenModes = screenModes,
-            hapticMode = getHapticMode(game)
+            hapticMode = getHapticMode(game),
+            displayScale = displayScaleState
         )
     }
 
@@ -483,26 +651,31 @@ internal class BitrateCardController(
             displayDraft = draft,
             resolutions = resolutionChoices(draft.resolution),
             frameRates = frameRateChoices(draft.frameRate),
-            screenModes = screenModeChoices(draft.screenMode)
+            screenModes = screenModeChoices(draft.screenMode),
+            displayScale = displayScaleState
         )
         onStateChanged?.invoke(state)
     }
 
     private fun frameRateChoices(selected: String): List<DisplayChoice> {
         val limits = displayChoiceLimits()
-        val unlockFps = game.prefConfig.unlockFps
         val frameRates = DisplayChoiceLists.frameRateValues(
             game.resources.getStringArray(R.array.fps_values).toList(),
             limits.maxRefreshRate,
             listOf(game.prefConfig.fps.toString(), selected)
         )
         return frameRates.map { value ->
+            val emphasized = limits.exceedsRefreshRate(value)
             DisplayChoice(
                 value = value,
-                label = value,
+                label = if (emphasized) {
+                    "$value ${game.getString(R.string.display_frame_rate_above_refresh_rate_marker)}"
+                } else {
+                    value
+                },
                 selected = value == selected,
-                enabled = limits.supportsFrameRate(value, unlockFps),
-                subLabel = game.getString(R.string.fps_suffix_fps)
+                subLabel = game.getString(R.string.fps_suffix_fps),
+                emphasized = emphasized
             )
         }
     }

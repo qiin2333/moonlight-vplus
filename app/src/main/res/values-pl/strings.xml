@@ -100,10 +100,8 @@
     <string name="title_checkbox_host_audio">Odtwarzanie dźwięku na komputerze</string>
     <string name="summary_checkbox_host_audio">Odtwarzanie dźwięku z komputera i tego urządzenia</string>
     <string name="category_advanced_settings">Ustawienia zaawansowane</string>
-    <string name="title_unlock_fps">Odblokuj wszystkie możliwe liczby klatek na sekundę</string>
     <string name="title_checkbox_reduce_refresh_rate">Zezwalaj na zmniejszenie częstotliwości odświeżania</string>
     <string name="summary_checkbox_reduce_refresh_rate">Niższe częstotliwości odświeżania wyświetlacza mogą oszczędzać energię kosztem dodatkowych opóźnień wideo</string>
-    <string name="summary_unlock_fps">Przesyłanie strumieniowe w 90 lub 120 klatkach na sekundę może zmniejszyć opóźnienia na urządzeniach wysokiej klasy, ale może powodować opóźnienia lub niestabilność na urządzeniach, które nie są w stanie tego obsłużyć</string>
     <string name="title_checkbox_disable_warnings">Wyłączanie komunikatów ostrzegawczych</string>
     <string name="summary_checkbox_disable_warnings">Wyłączanie wyświetlanych na ekranie komunikatów ostrzegawczych o połączeniu podczas przesyłania strumieniowego</string>
     <string name="title_disable_frame_drop">Nigdy nie porzucaj klatek</string>

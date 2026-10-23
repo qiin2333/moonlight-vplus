@@ -42,5 +42,6 @@
     <dimen name="appview_bottom_margin">10dp</dimen>
     <dimen name="appview_icon_button_size">48dp</dimen>
     <dimen name="appview_panel_elevation">12dp</dimen>
+    <dimen name="appview_title_text_size">20sp</dimen>
 
 </resources>

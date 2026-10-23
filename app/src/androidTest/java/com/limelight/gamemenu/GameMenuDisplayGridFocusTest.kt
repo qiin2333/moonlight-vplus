@@ -1,28 +1,15 @@
 package com.limelight.gamemenu
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotFocused
-import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import com.limelight.R
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -36,23 +23,17 @@ class GameMenuDisplayGridFocusTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun directionalBrowsingKeepsSelectionUntilConfirmationAndCustomActionIsReachable() {
+    fun displaySummaryRowsOpenIndependentChoiceActions() {
         val selectionCount = AtomicInteger(0)
-        val customActionCount = AtomicInteger(0)
-        val customLabel = InstrumentationRegistry.getInstrumentation().targetContext
-            .getString(R.string.title_custom_resolutions)
 
         composeTestRule.setContent {
-            var selected by remember { mutableStateOf("1920x1080") }
             val guideDismissController = remember { GameMenuGuideDismissController() }
             GameMenuScreen(
-                state = displayState(selected),
+                state = displayState("1920x1080"),
                 callbacks = displayCallbacks(
-                    onSelectResolution = {
+                    onOpenResolutionSheet = {
                         selectionCount.incrementAndGet()
-                        selected = it
-                    },
-                    onEditCustomResolutions = { customActionCount.incrementAndGet() }
+                    }
                 ),
                 hardwareFocusRequestToken = 1,
                 guideDismissController = guideDismissController,
@@ -61,33 +42,10 @@ class GameMenuDisplayGridFocusTest {
             )
         }
 
-        val current = composeTestRule.onNodeWithText("1080p")
-        val next = composeTestRule.onNodeWithText("1440p")
-        val custom = composeTestRule.onNodeWithContentDescription(customLabel)
-        val radioRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
-
-        // The saved value is the second tile, so this also catches first-item focus regressions.
-        current.assertIsFocused().assertIsSelected().assert(radioRole)
-        composeTestRule.onNodeWithText("720p").assertIsNotFocused().assertIsNotSelected()
-        current.performKeyInput { pressKey(Key.DirectionRight) }
-
-        next.assertIsFocused().assertIsNotSelected().assert(radioRole)
-        current.assertIsNotFocused().assertIsSelected()
-        assertEquals("Browsing must not stage a resolution change", 0, selectionCount.get())
-        next.performKeyInput { pressKey(Key.DirectionCenter) }
-
-        next.assertIsFocused().assertIsSelected()
-        current.assertIsNotSelected()
-        assertEquals("Confirmation stages exactly one change", 1, selectionCount.get())
-
-        // This action stays a button, outside the resolution radio selection.
-        custom.requestFocus()
-        custom.assertIsFocused()
+        composeTestRule.onNodeWithContentDescription("Resolution, 1080p")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-        next.assertIsSelected()
-        custom.performKeyInput { pressKey(Key.DirectionCenter) }
-        assertEquals(1, customActionCount.get())
-        assertEquals("Opening custom management must not select a resolution", 1, selectionCount.get())
+            .performClick()
+        assertEquals("Resolution summary is an independent action", 1, selectionCount.get())
     }
 
     private fun displayState(selected: String): GameMenuComposeUiState {
@@ -135,16 +93,15 @@ class GameMenuDisplayGridFocusTest {
             customKeys = emptyList(),
             quickEditMode = false,
             usbForwardingEnabled = false,
-            isSubmenu = true,
-            pageLayout = GameMenuPageLayout.DISPLAY_SETTINGS,
+            isSubmenu = false,
+            pageLayout = GameMenuPageLayout.STANDARD,
             pageGeneration = 0,
             controllerNavigationActive = true
         )
     }
 
     private fun displayCallbacks(
-        onSelectResolution: (String) -> Unit,
-        onEditCustomResolutions: () -> Unit
+        onOpenResolutionSheet: () -> Unit
     ) = GameMenuCallbacks(
         onDismiss = {},
         onUsbDevices = {},
@@ -169,13 +126,7 @@ class GameMenuDisplayGridFocusTest {
         onBitrateAdaptive = {},
         onAbrMode = {},
         onBitrateHapticMode = {},
-        onOpenDisplaySettings = {},
-        onSelectResolution = onSelectResolution,
-        onSelectFrameRate = {},
-        onSelectScreenMode = {},
-        onApplyDisplaySettings = {},
-        onCancelDisplaySettings = {},
-        onEditCustomResolutions = onEditCustomResolutions,
+        onOpenResolutionSheet = onOpenResolutionSheet,
         onAudioHapticsEnabled = {},
         onAudioHapticsStrength = { false },
         onAudioHapticsStrengthFinished = {},
