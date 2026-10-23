@@ -2403,4 +2403,5 @@ Tap again to replace it.</string>
     <string name="display_choice_unavailable">Unavailable on this device</string>
     <string name="display_custom_resolution_action">Manage custom resolutions…</string>
     <string name="display_custom_resolution_short">Custom</string>
+    <string name="settings_show_more">More settings</string>
 </resources>

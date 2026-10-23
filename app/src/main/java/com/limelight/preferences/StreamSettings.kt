@@ -1060,7 +1060,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             private const val QUIT_BEHAVIOR_PREF_KEY = "list_quit_behavior"
             private const val DUALSENSE_OUTPUT_MODE_PREF_KEY = "list_dualsense_output_mode"
             private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
-            private const val ANDROIDX_EXPAND_BUTTON_CLASS = "androidx.preference.ExpandButton"
             private const val EXPAND_FOCUS_RESTORE_ATTEMPTS = 3
             private const val MANAGE_DISPLAY_RESOLUTIONS_ACTION = -1
             private const val MULTI_CHOICE_KEY = "settings.multiChoice.key"
@@ -3462,7 +3461,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val adapter = recyclerView.adapter as? PreferenceGroupAdapter ?: return false
             val preference = adapter.getItem(position) ?: return false
-            if (preference.javaClass.name != ANDROIDX_EXPAND_BUTTON_CLASS) return false
+            if (!isSettingsExpandButton(preference)) return false
 
             cancelExpandFocusRestore()
             pendingExpandFocusRequest = ExpandFocusRequest(
@@ -3500,7 +3499,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
 
             val oldPosition = request.position.coerceAtMost(itemCount - 1)
-            if (adapter.getItem(oldPosition)?.javaClass?.name == ANDROIDX_EXPAND_BUTTON_CLASS) {
+            if (isSettingsExpandButton(adapter.getItem(oldPosition))) {
                 if (attemptsLeft > 0) {
                     postExpandFocusCallback(request, onAnimation = true) {
                         restoreExpandedPreferenceFocus(request, attemptsLeft - 1)
@@ -3607,6 +3606,9 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
             return -1
         }
+
+        override fun onCreateAdapter(preferenceScreen: PreferenceScreen): RecyclerView.Adapter<*> =
+            SettingsPreferenceGroupAdapter(preferenceScreen)
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             // 添加阴影主题

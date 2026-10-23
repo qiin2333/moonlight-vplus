@@ -1085,4 +1085,5 @@
     <string name="display_choice_unavailable">此裝置暫不支援</string>
     <string name="display_custom_resolution_action">管理自訂解析度…</string>
     <string name="display_custom_resolution_short">自訂</string>
+    <string name="settings_show_more">更多設定</string>
 </resources>

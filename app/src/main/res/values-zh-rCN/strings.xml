@@ -2317,4 +2317,5 @@
     <string name="display_choice_unavailable">此设备暂不支持</string>
     <string name="display_custom_resolution_action">管理自定义分辨率…</string>
     <string name="display_custom_resolution_short">自定义</string>
+    <string name="settings_show_more">更多设置</string>
 </resources>
