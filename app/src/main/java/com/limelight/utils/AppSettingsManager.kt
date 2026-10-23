@@ -160,6 +160,9 @@ class AppSettingsManager(private val context: Context) {
         if (settings.showBitrateCard) {
             summary.append(" | ").append(context.getString(R.string.setting_bitrate_card_enabled))
         }
+        if (settings.showDisplaySettingsCard) {
+            summary.append(" | ").append(context.getString(R.string.game_menu_display_settings))
+        }
         if (settings.showAudioHapticsCard) {
             summary.append(" | ").append(context.getString(R.string.setting_audio_haptics_card_enabled))
         }
@@ -241,6 +244,7 @@ class AppSettingsManager(private val context: Context) {
             put("gyroToRightStick", settings.gyroToRightStick)
             put("gyroToMouse", settings.gyroToMouse)
             put("showBitrateCard", settings.showBitrateCard)
+            put("showDisplaySettingsCard", settings.showDisplaySettingsCard)
             put("showAudioHapticsCard", settings.showAudioHapticsCard)
             put("showGyroCard", settings.showGyroCard)
             put("showQuickKeyCard", settings.showQuickKeyCard)
@@ -261,6 +265,7 @@ class AppSettingsManager(private val context: Context) {
         settings.reverseResolution = false
         settings.rotableScreen = false
         settings.showBitrateCard = false
+        settings.showDisplaySettingsCard = false
         settings.showAudioHapticsCard = false
         settings.showGyroCard = false
         settings.showQuickKeyCard = false

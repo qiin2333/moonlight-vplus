@@ -62,14 +62,6 @@
         <item>3840x2160</item>
     </string-array>
 
-    <string-array name="fps_names">
-        <item>@string/fps_30</item>
-        <item>@string/fps_60</item>
-        <item>@string/fps_90</item>
-        <item>@string/fps_120</item>
-        <item>@string/fps_144</item>
-        <item>@string/fps_165</item>
-    </string-array>
     <string-array name="fps_values" translatable="false">
         <item>30</item>
         <item>60</item>

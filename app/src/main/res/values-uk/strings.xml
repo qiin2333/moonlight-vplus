@@ -264,7 +264,6 @@
     <string name="videoformat_av1always">Використовувати AV1 (експериментальний)</string>
     <string name="videoformat_h264always">Використовувати H.264</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Попередження рідного FPS</string>
     <string name="category_gamepad_settings">Налаштування геймпада</string>
     <string name="title_analog_scrolling">Використовувати аналоговий стік для прокручування</string>
     <string name="summary_analog_scrolling">Виберіть аналоговий стік для прокручування під час режиму емуляції миші</string>

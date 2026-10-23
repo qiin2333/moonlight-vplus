@@ -261,7 +261,6 @@
     <string name="title_checkbox_reduce_refresh_rate">Consenti riduzione della frequenza di aggiornamento</string>
     <string name="summary_full_range">Ciò causerà la perdita di dettagli in aree chiare e scure se il dispositivo non visualizza correttamente i contenuti video a gamma completa.</string>
     <string name="title_full_range">Forza video full range (sperimentale)</string>
-    <string name="title_native_fps_dialog">Avviso FPS nativi</string>
     <string name="videoformat_av1always">Preferisci AV1 (Sperimentale)</string>
     <string name="pcview_menu_eol">Terminazione del servizio NVIDIA GameStream</string>
     <string name="title_checkbox_gamepad_motion_sensors">Permetti l\'uso dei sensori giroscopici del gamepad</string>

@@ -47,7 +47,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Rozciągnięcie wideo do pełnego ekranu</string>
     <string name="resolution_prefix_native">Natywna</string>
-    <string name="title_native_fps_dialog">Ostrzeżenie o natywnym FPS</string>
     <string name="title_checkbox_enable_audiofx">Włącz obsługę korektora systemowego</string>
     <string name="category_gamepad_settings">Ustawienia gamepada</string>
     <string name="title_checkbox_multi_controller">Automatyczne wykrywanie obecności gamepada</string>

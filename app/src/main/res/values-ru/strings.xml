@@ -178,7 +178,6 @@
     <string name="game_menu_ok">ОК</string>
     <string name="game_menu_bitrate_range">Диапазон битрейта:</string>
     <string name="game_menu_bitrate_range_value">0,5–200 Мбит/с</string>
-    <string name="game_menu_bitrate_tip">Двигайте ползунок для изменения битрейта в реальном времени. Высокие значения улучшают изображение, но требуют быстрой и стабильной сети.</string>
     <string name="title_add_pc">Добавить ПК</string>
     <string name="title_add_pc_choose">Добавить ПК</string>
     <string name="addpc_manual">Ввести IP-адрес</string>
@@ -219,6 +218,7 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_adaptive_bitrate">Адаптивный битрейт</string>
     <string name="summary_adaptive_bitrate">Автоподстройка по потерям пакетов и задержке. Если сервер не поддерживает ABR, битрейтом управляет клиент.</string>
+    <string name="game_menu_adaptive_bitrate_tip">Автоматически подстраивать битрейт по потерям пакетов и задержке, отдавая предпочтение управлению на стороне Sunshine. Адаптивный битрейт начинается с базового значения и изменяется вокруг него. Выбранный режим ABR задаёт минимальный и максимальный диапазон.</string>
     <string name="title_abr_mode">Режим ABR</string>
     <string name="summary_abr_mode">«Качество» держит высокий битрейт; «Мин. задержка» быстрее снижает его при потерях.</string>
     <string name="abr_mode_quality">Качество</string>
@@ -233,7 +233,9 @@
     <string name="resolution_prefix_native_landscape">(Альбомное)</string>
     <string name="resolution_prefix_native_portrait">(Книжное)</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Родная частота кадров</string>
+    <string name="custom_list_save">Сохранить</string>
+    <string name="game_menu_apply_reconnect_hint">Применится после переподключения стрима</string>
+    <string name="game_menu_apply_display">Применить</string>
     <string name="title_custom_resolutions">Свои разрешения</string>
     <string name="summary_custom_resolutions">Добавление и удаление разрешений из списка трансляции</string>
     <string name="width_hint">напр. 1920</string>
@@ -258,6 +260,9 @@
     <string name="custom_resolution_tag_4k">4K</string>
     <string name="custom_resolution_tag_2k">2K</string>
     <string name="custom_resolution_tag_1080p">1080p</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_ultrawide">Сверхширокий</string>
     <string name="custom_resolution_tag_portrait">Книжный</string>
     <string name="custom_resolution_delete_contentdesc">Удалить %1$d×%2$d</string>
@@ -1293,10 +1298,10 @@
     <string name="settings_search_close">Закрыть поиск</string>
     <string name="settings_search_no_results">Настройки не найдены</string>
     <string name="game_menu_change_resolution">Разрешение</string>
-    <string name="game_menu_resolution_current">%1$s (текущее)</string>
-    <string name="game_menu_resolution_custom">%1$s (своё)</string>
-    <string name="game_menu_resolution_custom_current">%1$s (своё, текущее)</string>
-    <string name="game_menu_resolution_restarting">Разрешение: %1$s. Перезапуск трансляции…</string>
+    <string name="game_menu_display_settings">Настройки экрана</string>
+    <string name="display_spec_resolution">Разрешение</string>
+    <string name="display_spec_fps">Частота</string>
+    <string name="display_spec_screen">Экран</string>
     <string name="notification_content_streaming">Трансляция: %1$s (%2$s)</string>
     <string name="title_checkbox_audio_vibration">Вибрация из звука</string>
     <string name="summary_checkbox_audio_vibration">Создавать вибрацию из баса и других звуков. Не связано с вибрацией, передаваемой игрой.</string>

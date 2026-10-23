@@ -246,7 +246,6 @@
     <string name="fps_60">60 FPS</string>
     <string name="summary_frame_pacing">Välj hur videobildrutorna ska tajmas. Exakt bildrutestyrning kan använda videons tidsstämplar (PTS) och rekommenderas för de flesta enheter.</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Native FPS varning</string>
     <string name="category_gamepad_settings">Spelkontroller inställningar</string>
     <string name="title_checkbox_gamepad_motion_sensors">Tillåt användning av spelkontrollens rörelsesensorer</string>
     <string name="videoformat_auto">Automatisk (Rekommenderad)</string>

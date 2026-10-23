@@ -294,13 +294,11 @@
     <string name="game_menu_ok">OK</string>
     <string name="game_menu_bitrate_range">Intervalo de taxa de bits:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
-    <string name="game_menu_bitrate_tip">Arraste o controle deslizante para ajustar a taxa de bits em tempo real. Valores mais altos significam melhor qualidade, mas exigem melhor rede.</string>
     
     <!-- Resolution settings -->
     <string name="title_seekbar_scale">Escala de resolução do host</string>
     <string name="summary_seekbar_scale">A resolução solicitada ao host é equivalente à resolução base do cliente × fator de escala. Isso alterará a precisão do material de renderização do jogo no host (streaming de super resolução).</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Aviso de FPS nativo</string>
     <string name="title_custom_resolutions">Resoluções personalizadas</string>
     <string name="summary_custom_resolutions">Crie suas próprias resoluções personalizadas</string>
     <string name="width_hint">ex: 1920</string>

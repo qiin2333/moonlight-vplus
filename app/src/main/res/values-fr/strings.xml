@@ -263,7 +263,6 @@
     <string name="category_gamepad_settings">Paramètres manette</string>
     <string name="perf_overlay_hostprocessinglatency">Latence de traitement de l\'hôte min/max/moyenne : %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Avertissement sur le FPS natif</string>
     <string name="title_checkbox_gamepad_motion_sensors">Autoriser l\'utilisation des capteurs de mouvement de la manette</string>
     <string name="videoformat_av1always">Préférer AV1 (expérimental)</string>
     <string name="videoformat_h264always">Préférer H.264</string>
