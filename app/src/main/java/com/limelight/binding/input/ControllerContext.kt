@@ -536,6 +536,7 @@ class InputDeviceContext internal constructor(
     }
 
     fun disableSensors() {
+        handler.motionSender.reset(controllerNumber)
         // Stop any pending enablement
         handler.backgroundThreadHandler.removeCallbacks(enableSensorRunnable)
 
@@ -545,7 +546,7 @@ class InputDeviceContext internal constructor(
             gyroListener = null
 
             // Send a gyro event to ensure the virtual controller is stationary
-            handler.conn.sendControllerMotionEvent(controllerNumber.toByte(), MoonBridge.LI_MOTION_TYPE_GYRO, 0f, 0f, 0f)
+            handler.motionSender.stopGyro(controllerNumber)
         }
         if (accelListener != null) {
             sensorManager?.unregisterListener(accelListener)
