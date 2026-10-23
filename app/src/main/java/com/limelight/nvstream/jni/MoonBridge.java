@@ -129,6 +129,7 @@ public class MoonBridge {
 
     public static final int LI_FF_TOUCHPAD_FRAME_EVENTS = 0x20;
     public static final int LI_FF_CURSOR_SHAPE = 0x40;
+    public static final int LI_FF_CLIENT_RESOLUTION_CHANGE = 0x400;
 
     public static final int LI_CURSOR_UPDATE_FLAG_SHAPE = 0x01;
     public static final int LI_CURSOR_UPDATE_FLAG_VISIBLE = 0x02;
@@ -642,6 +643,9 @@ public class MoonBridge {
      * helper that builds it.
      */
     private static native int sendClipboardFrameNative(byte[] frame);
+
+    /** Send a client-driven resolution change request (0x5506). Returns 0 on success; negative on error. */
+    public static native int sendResolutionChangeRequest(int width, int height);
 
     public static native String getStageName(int stage);
 

@@ -188,6 +188,8 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             game.connected = true
             game.orientationManager.connected = true
+            game.dynResManager.onConnected(game.prefConfig.width, game.prefConfig.height, game.prefConfig.resolutionScale)
+            game.requestViewportResolution()
             game.connecting = false
             game.updatePipAutoEnter()
 
@@ -303,6 +305,7 @@ class ConnectionCallbackHandler(private val game: Game) {
             game.connecting = false
             game.connected = false
             game.orientationManager.connected = false
+            game.dynResManager.onDisconnected()
             game.updatePipAutoEnter()
 
             // 停止智能码率

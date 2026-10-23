@@ -919,6 +919,10 @@
     <string name="summary_checkbox_reverse_resolution">仅在画面方向或宽高显示异常时开启；开启后可能与“跟随设备旋转”冲突。</string>
     <string name="title_checkbox_rotable_screen">跟随设备旋转</string>
     <string name="summary_checkbox_rotable_screen">在设备切换竖屏或横屏时自动同步旋转串流布局。</string>
+    <string name="title_follow_window_resolution">跟随窗口大小</string>
+    <string name="summary_follow_window_resolution">应用窗口大小改变时（分屏、自由窗口、折叠屏、DeX，以及开启“跟随设备旋转”后的旋转），请求主机将串流分辨率匹配窗口（需主机支持）。</string>
+    <string name="title_follow_external_display_resolution">跟随外接显示器分辨率</string>
+    <string name="summary_follow_external_display_resolution">串流到外接显示器时，请求主机将串流分辨率匹配该显示器（需主机支持）。</string>
 
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
