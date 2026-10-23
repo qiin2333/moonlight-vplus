@@ -42,3 +42,8 @@
 # copies RemoteTextContext fixtures across the APK boundary.
 -keep class com.limelight.utils.RemoteImeController { <init>(...); }
 -keep class com.limelight.nvstream.RemoteTextContext { *; }
+
+# Instrumentation verifies the logical value of the controller's numeric slider.
+-keepclassmembers class com.limelight.binding.input.advance_setting.superpage.NumberSeekbar {
+    public int getValue();
+}
