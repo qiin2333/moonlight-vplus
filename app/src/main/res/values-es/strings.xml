@@ -139,7 +139,6 @@
 \nSi estas intentado transmitir mediante Internet, instala en tu pc la Moonlight Internet Hosting Tool y ejecuta el Internet Streaming Tester incluido para comprobar la conexión de tu PC a internet.</string>
     <string name="nettest_text_blocked">La conexión de red actual de tu dispositivo esta bloqueando Moonlight. La Transmisión mediante Internet puede no funcionar mientras estés conectado a esta red.</string>
     <string name="pair_already_in_progress">Emparejamiento ya en progreso</string>
-    <string name="resolution_prefix_native_fullscreen">Pantalla Completa Nativa</string>
     <string name="title_audio_config_list">Configuración de Sonido Envolvente</string>
     <string name="title_decoding_reset">Reiniciar Opciones de Video</string>
     <string name="no_video_received_error">No se recibe video desde el equipo anfitrión.</string>
@@ -167,7 +166,6 @@
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">Activar modo Pantalla-en-Pantalla para modo espectador</string>
     <string name="resolution_720p">720p</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_71surround">7.1 Sonido Envolvente</string>
     <string name="title_troubleshooting">Guía de Solución de Errores</string>
     <string name="resolution_1080p">1080p</string>
@@ -246,15 +244,10 @@
     <string name="summary_setup_guide">Mostrar instrucciones para como configurar tu PC para juegos para la transmisión</string>
     <string name="summary_privacy_policy">Mostrar la política de privacidad de Moonlight</string>
     <string name="resolution_480p">480p</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
     <string name="title_frame_pacing">Ritmo de cuadros por segundo en video</string>
-    <string name="resolution_prefix_native_portrait">(Retrato)</string>
     <string name="frame_conversion_error">El PC anfitrión ha reportado un error fatal en el codificador de video.
 \n
 \nIntenta deshabilitar el modo HDR, cambiar la resolución de la transmisión, o cambiar la resolución de pantalla del PC anfitrión.</string>
-    <string name="resolution_prefix_native_landscape">(Panorama)</string>
     <string name="summary_checkbox_reduce_refresh_rate">Tasa de refresco menores pueden ahorrar energía a cambio de una mayor latencia de video</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir reducción de la tasa de refresco</string>
     <string name="title_full_range">Forzar video de rango completo (Experimental)</string>
@@ -321,8 +314,6 @@
     <string name="dialog_title_pointer_velocity_factor">Establecer factor de velocidad del puntero para la zona de toque mejorada. Establecer 100% para deshabilitar</string>
     <string name="dialog_title_select_keys_to_delete">Seleccionar el botón a eliminar</string>
     <string name="dialog_virtual_keyboard_hint">Haz clic en las teclas para crear una combinación</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
     <string name="game_menu_add_custom_key">Agregar botón personalizado</string>
     <string name="game_menu_adjust_bitrate">Ajustar Tasa de Bits</string>
     <string name="game_menu_bitrate_adjustment_failed">Error al ajustar tasa de bits</string>
@@ -442,7 +433,6 @@
     <string name="summary_checkbox_rotable_screen">Sincroniza automáticamente el diseño de la transmisión cuando el dispositivo cambia entre orientación vertical y horizontal.</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
     <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
-    <string name="summary_custom_resolutions">Crear tus propias resoluciones personalizadas</string>
     <string name="summary_enable_analytics">Ayudar a mejorar la aplicación compartiendo estadísticas de uso anónimas</string>
     <string name="summary_enable_perf_overlay">Mostrar información de rendimiento de transmisión en tiempo real mientras transmites</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">Define dónde dividir zonas de toque nativo y toque mejorado, menos del 50% significa dividir desde un punto a la izquierda, más del 50% significa derecha</string>

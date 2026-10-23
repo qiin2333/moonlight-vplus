@@ -1,6 +1,7 @@
 package com.limelight.preferences
 
 import android.annotation.SuppressLint
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.preference.PreferenceGroupAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -95,14 +96,20 @@ class StreamSettingsExpandFocusTest {
 
         activityRule.scenario.recreate()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        awaitRecreatedListFocus(oldRecyclerView)
 
         activityRule.scenario.onActivity { activity ->
             val newRecyclerView: RecyclerView =
                 activity.findViewById(androidx.preference.R.id.recycler_view)
             assertNotSame(oldRecyclerView, newRecyclerView)
+            assertTrue(!oldRecyclerView.isAttachedToWindow)
             assertTrue(newRecyclerView.isAttachedToWindow)
             activity.currentFocus?.let { focusedView ->
-                assertTrue(newRecyclerView.findContainingItemView(focusedView) != null)
+                val focusId = if (focusedView.id == android.view.View.NO_ID) "no-id"
+                    else runCatching { activity.resources.getResourceName(focusedView.id) }
+                        .getOrElse { focusedView.id.toString() }
+                assertTrue("Recreated list lost focus to ${focusedView.javaClass.name} ($focusId)",
+                    newRecyclerView.findContainingItemView(focusedView) != null)
             }
         }
     }
@@ -149,6 +156,27 @@ class StreamSettingsExpandFocusTest {
         return activity.supportFragmentManager.fragments
             .filterIsInstance<StreamSettings.SettingsFragment>()
             .single()
+    }
+
+    /** RESUMED precedes restored window focus on API 22; wait for the new view hierarchy. */
+    private fun awaitRecreatedListFocus(oldRecyclerView: RecyclerView) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        do {
+            var ready = false
+            activityRule.scenario.onActivity { activity ->
+                val recycler = activity.findViewById<RecyclerView>(androidx.preference.R.id.recycler_view)
+                val focusedView = activity.currentFocus
+                ready = !oldRecyclerView.isAttachedToWindow && recycler !== oldRecyclerView &&
+                    recycler != null && recycler.isAttachedToWindow && recycler.isLaidOut &&
+                    !recycler.isLayoutRequested && activity.hasWindowFocus() &&
+                    (focusedView == null || recycler.findContainingItemView(focusedView) != null)
+            }
+            if (ready) return
+            instrumentation.waitForIdleSync()
+            SystemClock.sleep(16)
+        } while (SystemClock.uptimeMillis() < deadline)
+        // The assertions in the caller report the actual final hierarchy/focus on timeout.
     }
 
     @SuppressLint("RestrictedApi")

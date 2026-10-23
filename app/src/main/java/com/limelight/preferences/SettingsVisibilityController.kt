@@ -26,6 +26,8 @@ internal class SettingsVisibilityController(
 
     fun isSearching(): Boolean = activeQuery.trim().isNotEmpty()
 
+    fun refreshSearch() = applySearch(activeQuery)
+
     /** 标题没命中、但下拉文案命中时，返回用户能看到的选项名。 */
     fun matchedDropdownLabels(preference: Preference): List<String> {
         val query = activeQuery.trim().lowercase(Locale.getDefault())
@@ -106,11 +108,13 @@ internal class SettingsVisibilityController(
 
     /** 只匹配用户在下拉里看到的文案，不匹配内部 entryValues。 */
     private fun dropdownLabels(preference: Preference): Array<out CharSequence> = when (preference) {
+        is DisplayChoicePreference -> preference.searchLabels.toTypedArray()
         is ListPreference -> preference.entries
         is MultiSelectListPreference -> preference.entries
         else -> null
     } ?: emptyArray()
 
     private fun containsQuery(text: CharSequence?, query: String): Boolean =
-        text?.toString()?.lowercase(Locale.getDefault())?.contains(query) == true
+        text?.toString()?.lowercase(Locale.getDefault())?.replace('×', 'x')
+            ?.contains(query.replace('×', 'x')) == true
 }

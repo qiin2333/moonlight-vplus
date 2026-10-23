@@ -111,8 +111,6 @@
     <string name="dialog_title_reset_osc">Atur Ulang Tata Letak</string>
     <string name="dialog_text_reset_osc">Yakin ingin menghapus tata letak kontrol di layar yang tersimpan\?</string>
     <string name="toast_reset_osc_success">Kontrol di layar diatur ulang ke default</string>
-    <string name="resolution_prefix_native_landscape">(Lanskap)</string>
-    <string name="resolution_prefix_native_portrait">(Potret)</string>
     <string name="summary_checkbox_enable_audiofx">Mengizinkan efek audio berfungsi saat streaming, tetapi dapat meningkatkan latensi audio</string>
     <string name="category_input_settings">Pengaturan Masukan</string>
     <string name="title_checkbox_touchscreen_trackpad">Gunakan layar sentuh sebagai trackpad</string>
@@ -148,7 +146,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Regangkan video ke layar penuh</string>
     <string name="resolution_prefix_native">Asli</string>
-    <string name="resolution_prefix_native_fullscreen">Layar Penuh Asli</string>
     <string name="category_audio_settings">Pengaturan Audio</string>
     <string name="title_audio_config_list">Konfigurasi suara surround</string>
     <string name="title_checkbox_enable_audiofx">Aktifkan dukungan equalizer sistem</string>

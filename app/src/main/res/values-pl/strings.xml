@@ -123,10 +123,6 @@
     <string name="resolution_720p">720p</string>
     <string name="toast_controller_type_changed">Typ gamepada może zostać zmieniony z powodu emulacji czujnika ruchu</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="videoformat_h264always">Preferowany H.264</string>
     <string name="pacing_balanced_alt">Ogranicz wyjściowe FPS (do częstotliwości odświeżania)</string>
     <string name="pacing_smoothness">Płynność przede wszystkim (większe opóźnienie)</string>
@@ -213,9 +209,6 @@
     <string name="perf_overlay_netdrops">Ramki porzucone przez połączenie sieciowe: %1$.2f%%</string>
     <string name="perf_overlay_dectime">Średni czas dekodowania: %1$.2f ms</string>
     <string name="addpc_success">Dodano komputer z powodzeniem</string>
-    <string name="resolution_prefix_native_landscape">(Panoramiczny)</string>
-    <string name="resolution_prefix_native_fullscreen">Natywny pełny ekran</string>
-    <string name="resolution_prefix_native_portrait">(Portretowy)</string>
     <string name="resolution_1080p">1080p</string>
     <string name="help_loading_msg">Ładowanie strony pomocy…</string>
     <string name="pcview_menu_header_online">Online</string>

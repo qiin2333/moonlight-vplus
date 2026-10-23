@@ -53,15 +53,11 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
     <string name="videoformat_hevcalways">Prefira HEVC</string>
     <string name="videoformat_auto">Automático (recomendado)</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround</string>
     <string name="audioconf_71surround">7.1 Surround</string>
-    <string name="fps_90">90 FPS</string>
     <string name="scut_deleted_pc">PC deletado</string>
     <string name="scut_not_paired">PC não pareado</string>
     <string name="help_loading_title">Ver Ajuda</string>
@@ -173,7 +169,6 @@
     <string name="summary_seekbar_bitrate">Uma taxa de bits mais alta melhora a qualidade da imagem, mas usa mais largura de banda; uma taxa mais baixa é melhor para redes lentas ou instáveis. Se a transmissão travar, reduza-a primeiro e aumente-a quando a rede estiver estável, mas a imagem continuar pouco nítida; para 1080p60, comece com cerca de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Esticar vídeo para tela cheia</string>
     <string name="resolution_prefix_native">Nativa</string>
-    <string name="resolution_prefix_native_fullscreen">Nativa Tela Cheia</string>
     <string name="category_audio_settings">Configurações de Áudio</string>
     <string name="title_audio_config_list">Configurações de som Surround</string>
     <string name="summary_audio_config_list">Habilita o som Surround 5.1 ou 7.1 para sistemas de home theater</string>
@@ -236,10 +231,8 @@
     <string name="pacing_balanced_alt">Limitar FPS de saída (até a taxa de atualização)</string>
     <string name="summary_seekbar_deadzone">Nota: Alguns jogos podem impor uma zona morta maior do que o Moonlight está configurado para usar.</string>
     <string name="title_checkbox_absolute_mouse_mode">Modo de mouse para área de trabalho remota</string>
-    <string name="resolution_prefix_native_landscape">(Paisagem)</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir redução de taxa de atualização</string>
     <string name="summary_checkbox_reduce_refresh_rate">Taxas menores de atualização do display podem salvar energia ao custo de latência de video adicional</string>
-    <string name="resolution_prefix_native_portrait">(Retrato)</string>
     <string name="title_checkbox_enable_audiofx">Habilitar sistema de suporte à equalização</string>
     <string name="summary_checkbox_enable_audiofx">Permitir que efeitos de audio funcionem durante o streaming, pode acrescentar latência de audio</string>
     <string name="title_full_range">Forçar vídeo de gama completa de cores (Experimental)</string>

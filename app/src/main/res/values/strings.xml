@@ -283,12 +283,8 @@
     <string name="title_checkbox_stretch_video">Stretch video to full-screen</string>
     <string name="summary_checkbox_stretch_video">Fill the display by changing the stream image\'s aspect ratio. This can distort the picture.</string>
     <string name="resolution_prefix_native">Native</string>
-    <string name="resolution_prefix_native_fullscreen">Native Full-Screen</string>
-    <string name="resolution_prefix_native_landscape">(Landscape)</string>
-    <string name="resolution_prefix_native_portrait">(Portrait)</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_custom_resolutions">Custom resolutions</string>
-    <string name="summary_custom_resolutions">Add or remove resolutions offered by the stream resolution list</string>
     <string name="width_hint">e.g. 1920</string>
     <string name="height_hint">e.g. 1080</string>
     <string name="resolution_already_exists">This resolution already exists</string>
@@ -874,12 +870,6 @@
     <string name="title_show_low_resolution_presets">Show low-bandwidth resolutions</string>
     <string name="summary_show_low_resolution_presets">Add 360p and 480p compatibility options for very slow networks and lower-end devices.</string>
 
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
 
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>
@@ -1518,7 +1508,6 @@ Tap again to replace it.</string>
     <string name="settings_search_open_category">View in category</string>
     <string name="settings_search_contains">Includes: %1$s</string>
     <string name="settings_search_match_separator">, </string>
-    <string name="game_menu_change_resolution">Resolution</string>
     <string name="game_menu_display_settings">Display settings</string>
     <string name="display_spec_resolution">Resolution</string>
     <string name="display_spec_fps">Frame rate</string>
@@ -2410,4 +2399,8 @@ Tap again to replace it.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave negotiation failed. Falling back to %1$s.</string>
     <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
+    <string name="display_native_resolution_description">Follow the target display · %1$s</string>
+    <string name="display_choice_unavailable">Unavailable on this device</string>
+    <string name="display_custom_resolution_action">Manage custom resolutions…</string>
+    <string name="display_custom_resolution_short">Custom</string>
 </resources>

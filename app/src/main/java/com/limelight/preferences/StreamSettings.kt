@@ -40,7 +40,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -80,6 +79,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.ui.ThemedAppCompatActivity
+import com.limelight.ui.UiDismissKeyHandler
 import rikka.shizuku.Shizuku
 import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
@@ -106,9 +106,10 @@ import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
 import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.AppActionSheet
 import com.limelight.utils.HdrCapabilityHelper
 import com.limelight.utils.RemoteImeAutoShowPolicy
-import com.limelight.ui.ScreenCombinationModePickerView
+import com.limelight.ui.screenCombinationModeIconRes
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
 import com.limelight.utils.background.PipwImages
@@ -176,7 +177,6 @@ class StreamSettings : ThemedAppCompatActivity() {
     private var preSearchCategoryKey: String? = null
     private var pendingRestoreCategoryKey: String? = null
     private var lastQueryBlank = true
-    private var screenCombinationModeReturnFocus: View? = null
     private var lastNightMode = false
 
     // 状态保存键
@@ -586,60 +586,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         preferenceContainer?.requestFocus()
     }
 
-    fun showScreenCombinationModePicker(preference: ListPreference) {
-        val entries = preference.entries ?: return
-        val values = preference.entryValues ?: return
-        val overlay = findViewById<FrameLayout>(R.id.screen_combination_mode_overlay) ?: return
-        val currentValue = preference.value ?: values.firstOrNull()?.toString().orEmpty()
-        val checkedIndex = values.indexOfFirst { it.toString() == currentValue }.let { index ->
-            if (index >= 0) index else 0
-        }
-
-        screenCombinationModeReturnFocus = currentFocus
-        overlay.removeAllViews()
-        overlay.addView(
-            ScreenCombinationModePickerView(
-                context = this,
-                names = Array(entries.size) { index -> entries[index].toString() },
-                descriptions = resources.getStringArray(R.array.screen_combination_mode_descriptions),
-                values = Array(values.size) { index -> values[index].toString() },
-                checkedIndex = checkedIndex,
-                onClose = { hideScreenCombinationModePicker() },
-                onModeSelected = { modeValue ->
-                    val newValue = modeValue.toString()
-                    if (preference.callChangeListener(newValue)) {
-                        preference.value = newValue
-                    }
-                    hideScreenCombinationModePicker()
-                }
-            ),
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-        overlay.visibility = View.VISIBLE
-        overlay.requestFocus()
-    }
-
-    private fun hideScreenCombinationModePicker(): Boolean {
-        val overlay = findViewById<FrameLayout>(R.id.screen_combination_mode_overlay) ?: return false
-        if (overlay.visibility != View.VISIBLE) {
-            return false
-        }
-
-        overlay.visibility = View.GONE
-        overlay.removeAllViews()
-        val returnFocus = screenCombinationModeReturnFocus
-        screenCombinationModeReturnFocus = null
-        if (returnFocus?.isAttachedToWindow == true && returnFocus.isShown && returnFocus.isFocusable) {
-            returnFocus.post { returnFocus.requestFocus() }
-        } else {
-            focusPreferenceList()
-        }
-        return true
-    }
-
     /**
      * dp 转 px
      */
@@ -873,7 +819,14 @@ class StreamSettings : ThemedAppCompatActivity() {
         // 设置抽屉模式
         updateDrawerMode()
 
-        reloadSettings()
+        // FragmentManager restores the preference view and an unconfirmed multi-choice
+        // draft before this callback. Replacing it here would discard both on rotation.
+        if (supportFragmentManager.findFragmentById(R.id.preference_container) !is SettingsFragment) {
+            reloadSettings()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val mode = windowManager.defaultDisplay.mode
+            previousDisplayPixelCount = mode.physicalWidth * mode.physicalHeight
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -1050,10 +1003,6 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (hideScreenCombinationModePicker()) {
-            return
-        }
-
         // 搜索栏可见时，优先关闭搜索而不是退出
         if (isSearchBarVisible) {
             hideSearchBar()
@@ -1113,9 +1062,11 @@ class StreamSettings : ThemedAppCompatActivity() {
             private const val BLUETOOTH_CONNECT_PERMISSION_REQUEST = 4721
             private const val ANDROIDX_EXPAND_BUTTON_CLASS = "androidx.preference.ExpandButton"
             private const val EXPAND_FOCUS_RESTORE_ATTEMPTS = 3
+            private const val MANAGE_DISPLAY_RESOLUTIONS_ACTION = -1
+            private const val MULTI_CHOICE_KEY = "settings.multiChoice.key"
+            private const val MULTI_CHOICE_VALUES = "settings.multiChoice.values"
+            private const val MULTI_CHOICE_CHANGED = "settings.multiChoice.changed"
         }
-
-
 
         private var exportConfigString: String = ""
         private var pendingCrownShareExportString: String = ""
@@ -1173,6 +1124,13 @@ class StreamSettings : ThemedAppCompatActivity() {
         private var developerForegroundPollRunning = false
         private var developerDeviceCodeDialog: AlertDialog? = null
         private var customResolutionsDialog: android.app.Dialog? = null
+        private var settingsChoiceDialog: android.app.Dialog? = null
+        private var settingsChoiceGeneration = 0
+        private var settingsChoiceViewDestroyed = false
+        private var choiceReturnFocus: View? = null
+        private data class MultiChoiceDraft(val key: String, val values: Set<String>, val changed: Boolean = false)
+        private var multiChoiceDraft: MultiChoiceDraft? = null
+        private var multiChoiceSession: Any? = null
 
         /**
          * 获取目标显示器（优先使用外接显示器）
@@ -1191,18 +1149,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             return showStyledDialog(create())
         }
 
-        private fun AlertDialog.Builder.showStyledChoiceList(): AlertDialog {
-            return showStyledDialog(create(), styleSystemChoiceList = true)
-        }
-
-        private fun showStyledDialog(dialog: AlertDialog, styleSystemChoiceList: Boolean = false): AlertDialog {
+        private fun showStyledDialog(dialog: AlertDialog): AlertDialog {
             hideKeyboardBeforeDialog()
             dialog.show()
-            if (styleSystemChoiceList) {
-                AppDialogStyler.applySystemChoiceList(dialog, requireContext())
-            } else {
-                AppDialogStyler.apply(dialog, requireContext())
-            }
+            AppDialogStyler.apply(dialog, requireContext())
             return dialog
         }
 
@@ -1220,38 +1170,36 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         private fun replaceSavedResolutionEntries() {
-            val pref = findPreference<ChoiceGridPreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
-            val names = resources.getStringArray(R.array.resolution_names)
-            val values = resources.getStringArray(R.array.resolution_values)
-            val labels = values.indices.associate { index ->
-                values[index] to names.getOrElse(index) { values[index] }
-            }
-            val savedRaw = savedSelection(pref, PreferenceConfiguration.DEFAULT_RESOLUTION)
+            val pref = findPreference<DisplayChoicePreference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!
+            val labels = DisplayChoiceLists.labelLookup(
+                resources, R.array.resolution_names, R.array.resolution_values
+            )
+            val saved = savedSelection(pref, PreferenceConfiguration.DEFAULT_RESOLUTION)
             val displayNative = DisplayChoiceLists.nativeSize(requireActivity(), getTargetDisplay())
-            val saved = DisplayChoiceLists.normalizeSelection(savedRaw, displayNative)
-            val storeValues = CustomResolutionsStore.load(requireActivity()).map { it.toString() }
             val choiceValues = DisplayChoiceLists.resolutionValues(
-                storeValues,
-                displayNative,
+                DisplayChoiceLists.resolutionStoreValues(requireActivity()),
                 saved,
                 PreferenceManager.getDefaultSharedPreferences(requireActivity())
                     .getBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, false)
             )
-            val choices = choiceValues.map { value ->
-                value to when {
+            val choiceLabels = choiceValues.map { value ->
+                when {
                     value == PreferenceConfiguration.RES_NATIVE -> getString(R.string.resolution_prefix_native)
-                    else -> labels[value] ?: value
+                    else -> labels[value] ?: value.replace("x", "×")
                 }
             }
             val subs = choiceValues.map { value ->
                 if (value == PreferenceConfiguration.RES_NATIVE) {
-                    null
-                } else {
+                    val size = displayNative?.let { "${it.first}×${it.second}" } ?: "—"
+                    getString(R.string.display_native_resolution_description, size)
+                } else if (value in labels) {
                     value.replace("x", "×")
+                } else {
+                    null
                 }
             }
             pref.replaceChoices(
-                choices.map { it.second },
+                choiceLabels,
                 choiceValues,
                 saved,
                 choiceValues.filter { value ->
@@ -1259,39 +1207,225 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }.toSet(),
                 subs
             )
-            pref.setAction(getString(R.string.title_custom_resolutions)) { openCustomResolutionsEditor(pref) }
+            pref.setAction(getString(R.string.display_custom_resolution_action))
         }
 
-        private fun openCustomResolutionsEditor(pref: ChoiceGridPreference) {
-            val restoreFocus = pref.isActionFocused()
-            customResolutionsDialog?.dismiss()
+        private fun openCustomResolutionsEditor(pref: DisplayChoicePreference, restoreHardwareFocus: Boolean) {
             customResolutionsDialog = CustomResolutionsDialog.show(
                 requireContext(),
                 targetDisplay = getTargetDisplay(),
+                requestInitialFocus = restoreHardwareFocus,
                 onClosed = {
                     customResolutionsDialog = null
-                    if (isAdded) {
+                    if (isAdded && !settingsChoiceViewDestroyed) {
                         replaceSavedResolutionEntries()
-                        if (restoreFocus) pref.restoreActionFocus()
+                        visibilityController.refreshSearch()
+                        refreshSearchPresentation()
+                        listView?.post {
+                            if (isAdded && !settingsChoiceViewDestroyed && findAdapterPositionForPreference(pref) >= 0) {
+                                showListChoiceSheet(pref, MANAGE_DISPLAY_RESOLUTIONS_ACTION, restoreHardwareFocus)
+                            }
+                        }
                     }
                 }
             )
         }
 
         private fun replaceSavedFrameRateEntries() {
-            val pref = findPreference<ChoiceGridPreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
+            val pref = findPreference<DisplayChoicePreference>(PreferenceConfiguration.FPS_PREF_STRING)!!
             val unlockFps = PreferenceManager.getDefaultSharedPreferences(requireActivity())
                 .getBoolean(PreferenceConfiguration.UNLOCK_FPS_STRING, false)
-            val choiceValues = resources.getStringArray(R.array.fps_values)
-                .mapNotNull { it.toIntOrNull() }.distinct().sorted().map { it.toString() }
-            val subLabels = choiceValues.map { resources.getString(R.string.fps_suffix_fps) }
-            pref.replaceChoices(
-                choiceValues,
-                choiceValues,
-                savedSelection(pref, PreferenceConfiguration.DEFAULT_FPS),
-                choiceValues.filter { displayLimits().supportsFrameRate(it, unlockFps) }.toSet(),
-                subLabels
+            val saved = savedSelection(pref, PreferenceConfiguration.DEFAULT_FPS)
+            val choiceValues = DisplayChoiceLists.frameRateValues(
+                resources.getStringArray(R.array.fps_values).toList(),
+                displayLimits().maxRefreshRate,
+                listOf(saved)
             )
+            pref.replaceChoices(
+                choiceValues.map { "$it ${getString(R.string.fps_suffix_fps)}" },
+                choiceValues,
+                saved,
+                choiceValues.filter { displayLimits().supportsFrameRate(it, unlockFps) }.toSet()
+            )
+        }
+
+        private fun showListChoiceSheet(
+            pref: ListPreference,
+            initialActionId: Int? = null,
+            openedWithHardwareFocus: Boolean = listView?.isInTouchMode == false
+        ) {
+            val entries = pref.entries ?: return
+            val values = pref.entryValues?.map(CharSequence::toString) ?: return
+            if (entries.size != values.size) return
+            val displayPref = pref as? DisplayChoicePreference
+            val screenDescriptions = if (pref.key == SCREEN_COMBINATION_MODE_PREF_KEY) {
+                resources.getStringArray(R.array.screen_combination_mode_descriptions)
+            } else null
+            val actions = values.mapIndexed { index, value ->
+                val enabled = displayPref == null || value in displayPref.enabledValues
+                val description = listOfNotNull(
+                    displayPref?.descriptionFor(value) ?: screenDescriptions?.getOrNull(index),
+                    if (enabled) null else getString(R.string.display_choice_unavailable)
+                ).joinToString(" · ").ifBlank { null }
+                AppActionSheet.Action(
+                    id = index,
+                    title = entries[index],
+                    description = description,
+                    enabled = enabled,
+                    checked = value == pref.value,
+                    iconRes = (pref as? IconListPreference)?.entryIcons?.getOrNull(index)?.takeIf { it != 0 }
+                        ?: if (screenDescriptions != null) value.toIntOrNull()?.let(::screenCombinationModeIconRes) else null
+                )
+            } + listOfNotNull(displayPref?.actionLabel?.let { label ->
+                AppActionSheet.Action(
+                    id = MANAGE_DISPLAY_RESOLUTIONS_ACTION,
+                    title = label,
+                    sectionStart = true,
+                    opensSubmenu = true
+                )
+            })
+            var selectedAction: AppActionSheet.Action? = null
+            showSettingsChoiceDialog(pref, openedWithHardwareFocus,
+                restoreOnDismiss = { selectedAction?.id != MANAGE_DISPLAY_RESOLUTIONS_ACTION }
+            ) { hasHardwareInput, dismissed ->
+                AppActionSheet.show(
+                    requireContext(),
+                    title = pref.title ?: "",
+                    actions = actions,
+                    initialActionId = initialActionId ?: values.indexOf(pref.value).takeIf { it >= 0 },
+                    singleChoice = true,
+                    onAction = { action ->
+                        if (!settingsChoiceViewDestroyed) {
+                            if (action.id == MANAGE_DISPLAY_RESOLUTIONS_ACTION && displayPref != null) {
+                                openCustomResolutionsEditor(displayPref, hasHardwareInput())
+                            } else {
+                                values.getOrNull(action.id)?.let { value ->
+                                    if (displayPref != null) displayPref.selectValue(value)
+                                    // Some position preferences reset a dragged position even when the value is unchanged.
+                                    else if (pref.callChangeListener(value)) pref.value = value
+                                }
+                            }
+                        }
+                    },
+                    onDismiss = { action -> selectedAction = action; dismissed() }
+                )
+            }
+        }
+
+        private fun showMultiChoiceSheet(pref: MultiSelectListPreference, restored: MultiChoiceDraft? = null) {
+            val entries = pref.entries ?: return
+            val values = pref.entryValues?.map(CharSequence::toString) ?: return
+            if (entries.size != values.size) return
+            val draft = restored ?: MultiChoiceDraft(pref.key, pref.values.toSet())
+            val session = Any()
+            multiChoiceSession = session
+            multiChoiceDraft = draft
+            val retainedValues = draft.values - values.toSet()
+            showSettingsChoiceDialog(pref) { hasHardwareInput, dismissed ->
+                AppActionSheet.showMultiSelect(
+                    requireContext(),
+                    title = pref.title ?: "",
+                    actions = values.mapIndexed { index, value ->
+                        AppActionSheet.Action(index, entries[index], checked = value in draft.values)
+                    },
+                    confirmLabel = getString(android.R.string.ok),
+                    cancelLabel = getString(android.R.string.cancel),
+                    forceInitialFocus = hasHardwareInput(),
+                    onSelectionChanged = { ids ->
+                        if (multiChoiceSession === session) {
+                            multiChoiceDraft = MultiChoiceDraft(pref.key,
+                                ids.mapNotNull(values::getOrNull).toSet() + retainedValues, changed = true)
+                        }
+                    },
+                    onConfirm = { ids ->
+                        val selected = ids.mapNotNull(values::getOrNull).toSet() + retainedValues
+                        if (!settingsChoiceViewDestroyed && multiChoiceSession === session && multiChoiceDraft?.changed == true &&
+                            pref.callChangeListener(selected)) pref.values = selected
+                        if (multiChoiceSession === session) multiChoiceDraft = null
+                    },
+                    onDismiss = {
+                        if (!settingsChoiceViewDestroyed && multiChoiceSession === session) multiChoiceDraft = null
+                        dismissed()
+                    }
+                )
+            }
+        }
+
+        private fun showActionMenu(
+            title: CharSequence,
+            actions: List<AppActionSheet.Action>,
+            onAction: (AppActionSheet.Action) -> Unit
+        ) {
+            showSettingsChoiceDialog { _, dismissed ->
+                AppActionSheet.show(requireContext(), title, actions = actions,
+                    onAction = { if (!settingsChoiceViewDestroyed) onAction(it) },
+                    onDismiss = { dismissed() })
+            }
+        }
+
+        /** Keeps one settings sheet alive and restores the originating row for hardware input. */
+        private fun showSettingsChoiceDialog(
+            preference: Preference? = null,
+            openedWithHardwareFocus: Boolean = listView?.isInTouchMode == false,
+            restoreOnDismiss: () -> Boolean = { true },
+            build: (hasHardwareInput: () -> Boolean, dismissed: () -> Unit) -> android.app.Dialog
+        ) {
+            if (preference !is MultiSelectListPreference) {
+                multiChoiceSession = null
+                multiChoiceDraft = null
+            }
+            var hardwareInput = openedWithHardwareFocus
+            val generation = ++settingsChoiceGeneration
+            val returnFocus = if (settingsChoiceDialog != null) {
+                choiceReturnFocus ?: activity?.currentFocus
+            } else activity?.currentFocus
+            choiceReturnFocus = returnFocus
+            settingsChoiceDialog?.dismiss()
+            hideKeyboardBeforeDialog()
+            val hasHardwareInput = { hardwareInput || listView?.isInTouchMode == false }
+            settingsChoiceDialog = build(hasHardwareInput) {
+                if (generation == settingsChoiceGeneration) {
+                    settingsChoiceDialog = null
+                    if (restoreOnDismiss() && hasHardwareInput()) {
+                        if (preference != null) restoreSettingsChoiceFocus(preference, generation)
+                        else returnFocus?.post {
+                            if (!settingsChoiceViewDestroyed && generation == settingsChoiceGeneration &&
+                                settingsChoiceDialog == null && returnFocus.isAttachedToWindow && returnFocus.isShown) {
+                                returnFocus.requestFocusFromTouch()
+                            }
+                        }
+                    }
+                }
+            }.apply {
+                setOnKeyListener { _, keyCode, event ->
+                    // B/Back can dismiss a touch-opened sheet without leaving Android touch mode.
+                    // Remember that input explicitly so the original settings row can regain focus.
+                    if (event.action == KeyEvent.ACTION_DOWN) hardwareInput = true
+                    UiDismissKeyHandler.handle(event.action, keyCode, ::cancel)
+                }
+            }
+        }
+
+        private fun restoreSettingsChoiceFocus(pref: Preference, generation: Int) {
+            val recycler = listView ?: return
+            recycler.post {
+                if (!isAdded || settingsChoiceViewDestroyed || generation != settingsChoiceGeneration ||
+                    settingsChoiceDialog != null || customResolutionsDialog != null) return@post
+                val position = findAdapterPositionForPreference(pref)
+                if (position < 0) return@post
+                // The row normally remains visible under the sheet; keep its scroll offset.
+                val row = recycler.findViewHolderForAdapterPosition(position)?.itemView
+                if (row != null) {
+                    row.requestFocusFromTouch()
+                } else {
+                    recycler.scrollToPosition(position)
+                    recycler.post {
+                        if (!settingsChoiceViewDestroyed && generation == settingsChoiceGeneration) {
+                            recycler.findViewHolderForAdapterPosition(position)?.itemView?.requestFocusFromTouch()
+                        }
+                    }
+                }
+            }
         }
 
         /** 设备能力一次计算整个视图生命周期内复用,避免每次建表都枚举解码器。 */
@@ -1303,7 +1437,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                     .also { cachedDisplayLimits = it }
         }
 
-        private fun savedSelection(preference: ChoiceGridPreference, fallback: String): String {
+        private fun savedSelection(preference: DisplayChoicePreference, fallback: String): String {
             return preference.sharedPreferences?.getString(preference.key, null) ?: fallback
         }
 
@@ -1354,7 +1488,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                 fpsValue = prefs.getString(PreferenceConfiguration.FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS)
             }
 
-            val defaultBitrate = PreferenceConfiguration.getDefaultBitrate(resValue!!, fpsValue!!)
+            val defaultBitrate = DisplayChoiceLists.recommendedBitrate(
+                resValue!!, fpsValue!!, DisplayChoiceLists.nativeSize(requireActivity(), getTargetDisplay())
+            )
             val bitratePreference = findPreference<SeekBarPreference>(PreferenceConfiguration.BITRATE_PREF_STRING)
             if (bitratePreference != null) {
                 bitratePreference.setProgress(defaultBitrate)
@@ -1384,6 +1520,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+            settingsChoiceViewDestroyed = false
             val view = super.onCreateView(inflater, container, savedInstanceState)
             // 确保列表背景透明
             view.setBackgroundColor(Color.TRANSPARENT)
@@ -1416,6 +1553,26 @@ class StreamSettings : ThemedAppCompatActivity() {
                     setupScrollListener(recyclerView, settingsActivity)
 
                 }
+            }
+            val pendingKey = savedInstanceState?.getString(MULTI_CHOICE_KEY)
+            if (pendingKey != null) {
+                val draft = MultiChoiceDraft(pendingKey,
+                    savedInstanceState.getStringArrayList(MULTI_CHOICE_VALUES).orEmpty().toSet(),
+                    savedInstanceState.getBoolean(MULTI_CHOICE_CHANGED))
+                listView?.post {
+                    if (isAdded && !settingsChoiceViewDestroyed) {
+                        findPreference<MultiSelectListPreference>(pendingKey)?.let { showMultiChoiceSheet(it, draft) }
+                    }
+                }
+            }
+        }
+
+        override fun onSaveInstanceState(outState: Bundle) {
+            super.onSaveInstanceState(outState)
+            multiChoiceDraft?.let { draft ->
+                outState.putString(MULTI_CHOICE_KEY, draft.key)
+                outState.putStringArrayList(MULTI_CHOICE_VALUES, ArrayList(draft.values))
+                outState.putBoolean(MULTI_CHOICE_CHANGED, draft.changed)
             }
         }
 
@@ -1609,6 +1766,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                     // 装 SummaryProvider 会与其 super.setSummary 调用互斥。
                     // 命中说明改由它在拼接时询问，避免被当成新的原始说明保存。
                     child is IconListPreference -> child.searchMatchNoteProvider = { searchMatchNote(child) }
+                    child is DisplayChoicePreference -> applyHighlightedSummary(child, valueText, disabledAccent) {
+                        it.currentLabel
+                    }
                     child is ListPreference -> applyHighlightedSummary(child, valueText, disabledAccent) {
                         val entry = it.entry?.toString()
                         if (entry.isNullOrBlank()) "—" else entry
@@ -2438,21 +2598,23 @@ class StreamSettings : ThemedAppCompatActivity() {
                     getString(R.string.crown_config_action_merge)
             )
 
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.title_crown_config_management)
-                    .setItems(options) { _, which ->
-                        when (which) {
-                            0 -> openCrownStore()
-                            1 -> showCrownStorePublishProfileDialog()
-                            2 -> openCrownShareDocument()
-                            3 -> showCrownShareUrlImportDialog()
-                            4 -> showCrownShareExportConfigDialog()
-                            5 -> openConfigDocument(2)
-                            6 -> showCrownExportConfigDialog()
-                            7 -> showCrownMergeConfigDialog()
-                        }
-                    }
-                    .showStyledChoiceList()
+            showActionMenu(
+                title = getString(R.string.title_crown_config_management),
+                actions = options.mapIndexed { index, label ->
+                    AppActionSheet.Action(index, label, opensSubmenu = true)
+                }
+            ) { action ->
+                when (action.id) {
+                    0 -> openCrownStore()
+                    1 -> showCrownStorePublishProfileDialog()
+                    2 -> openCrownShareDocument()
+                    3 -> showCrownShareUrlImportDialog()
+                    4 -> showCrownShareExportConfigDialog()
+                    5 -> openConfigDocument(2)
+                    6 -> showCrownExportConfigDialog()
+                    7 -> showCrownMergeConfigDialog()
+                }
+            }
         }
 
         private fun showCrownShareExportConfigDialog() {
@@ -2465,25 +2627,27 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val ids = configMap.keys.toTypedArray()
             val names = configMap.values.toTypedArray<CharSequence>()
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.crown_share_action_export)
-                    .setItems(names) { _, which ->
-                        val id = ids[which]
-                        val profileName = configMap[id] ?: "Crown Profile"
-                        val payload = helper.exportConfig(id.toLong())
-                        try {
-                            pendingCrownShareExportString = CrownProfileShareManager.createBundle(
-                                profileName = profileName,
-                                payload = payload,
-                                metadata = currentCrownShareExportMetadata()
-                            )
-                            createCrownShareDocument(profileName)
-                        } catch (e: Exception) {
-                            Log.e("CrownShare", "Failed to export Crown share package", e)
-                            Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                    .showStyledChoiceList()
+            showActionMenu(
+                title = getString(R.string.crown_share_action_export),
+                actions = names.mapIndexed { index, name ->
+                    AppActionSheet.Action(index, name, opensSubmenu = true)
+                }
+            ) { action ->
+                val id = ids[action.id]
+                val profileName = configMap[id] ?: "Crown Profile"
+                val payload = helper.exportConfig(id.toLong())
+                try {
+                    pendingCrownShareExportString = CrownProfileShareManager.createBundle(
+                        profileName = profileName,
+                        payload = payload,
+                        metadata = currentCrownShareExportMetadata()
+                    )
+                    createCrownShareDocument(profileName)
+                } catch (e: Exception) {
+                    Log.e("CrownShare", "Failed to export Crown share package", e)
+                    Toast.makeText(context, R.string.toast_crown_share_export_failed, Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         private fun currentCrownShareExportMetadata(): CrownProfileShareManager.ExportMetadata {
@@ -2579,42 +2743,31 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         private fun showCrownStoreDialog(profiles: List<CrownProfileShareManager.StoreProfile>) {
-            val labels = profiles.map { crownStoreProfileLabel(it) }.toTypedArray<CharSequence>()
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.crown_store_action_browse)
-                    .setItems(labels) { _, which ->
-                        val profile = profiles[which]
-                        val profileUrl = try {
-                            CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
-                        } catch (e: Exception) {
-                            Log.e("CrownStore", "Invalid Crown store profile URL", e)
-                            Toast.makeText(context, R.string.toast_crown_store_profile_failed, Toast.LENGTH_LONG).show()
-                            return@setItems
-                        }
-                        importCrownShareFromUrl(
-                                profileUrl,
-                                sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
-                                failureToastRes = R.string.toast_crown_store_profile_failed
-                        )
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .showStyledChoiceList()
-        }
-
-        private fun crownStoreProfileLabel(profile: CrownProfileShareManager.StoreProfile): String {
-            val details = arrayOf(profile.game, profile.author)
-                    .filter { it.isNotBlank() }
-                    .joinToString(" - ")
-            return buildString {
-                append(profile.name)
-                if (details.isNotBlank()) {
-                    append('\n')
-                    append(details)
+            showActionMenu(
+                title = getString(R.string.crown_store_action_browse),
+                actions = profiles.mapIndexed { index, profile ->
+                    val details = listOf(profile.game, profile.author)
+                        .filter { it.isNotBlank() }.joinToString(" - ")
+                    val description = listOf(details, profile.summary)
+                        .filter { it.isNotBlank() }.joinToString("\n").ifBlank { null }
+                    AppActionSheet.Action(
+                        index, profile.name, description = description, opensSubmenu = true
+                    )
                 }
-                if (profile.summary.isNotBlank()) {
-                    append('\n')
-                    append(profile.summary)
+            ) { action ->
+                val profile = profiles[action.id]
+                val profileUrl = try {
+                    CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
+                } catch (e: Exception) {
+                    Log.e("CrownStore", "Invalid Crown store profile URL", e)
+                    Toast.makeText(context, R.string.toast_crown_store_profile_failed, Toast.LENGTH_LONG).show()
+                    return@showActionMenu
                 }
+                importCrownShareFromUrl(
+                    profileUrl,
+                    sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
+                    failureToastRes = R.string.toast_crown_store_profile_failed
+                )
             }
         }
 
@@ -2641,12 +2794,14 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val ids = configMap.keys.toTypedArray()
             val names = configMap.values.toTypedArray<CharSequence>()
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.crown_store_action_publish)
-                    .setItems(names) { _, which ->
-                        showCrownStorePublishMetadataDialog(ids[which], configMap[ids[which]] ?: "Crown Profile")
-                    }
-                    .showStyledChoiceList()
+            showActionMenu(
+                title = getString(R.string.crown_store_action_publish),
+                actions = names.mapIndexed { index, name ->
+                    AppActionSheet.Action(index, name, opensSubmenu = true)
+                }
+            ) { action ->
+                showCrownStorePublishMetadataDialog(ids[action.id], configMap[ids[action.id]] ?: "Crown Profile")
+            }
         }
 
         private fun showCrownStorePublishMetadataDialog(configId: String, defaultName: String) {
@@ -3006,23 +3161,23 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val ids = configMap.keys.toTypedArray()
             val names = configMap.values.toTypedArray<CharSequence>()
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.crown_share_merge_into_existing)
-                    .setItems(names) { _, which ->
-                        val helper = SuperConfigDatabaseHelper(context)
-                        val errorCode = helper.mergeConfig(profile.payload, ids[which].toLong())
-                        if (errorCode == 0) {
-                            pendingCrownShareImport = null
-                            requestConfigSyncAutoSnapshot(delayMs = 0L)
-                            Toast.makeText(context, R.string.toast_crown_share_merge_success, Toast.LENGTH_SHORT).show()
-                            Handler(Looper.getMainLooper()).post {
-                                (activity as? StreamSettings)?.reloadSettings()
-                            }
-                        } else {
-                            Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
-                        }
+            showActionMenu(
+                title = getString(R.string.crown_share_merge_into_existing),
+                actions = names.mapIndexed { index, name -> AppActionSheet.Action(index, name) }
+            ) { action ->
+                val helper = SuperConfigDatabaseHelper(context)
+                val errorCode = helper.mergeConfig(profile.payload, ids[action.id].toLong())
+                if (errorCode == 0) {
+                    pendingCrownShareImport = null
+                    requestConfigSyncAutoSnapshot(delayMs = 0L)
+                    Toast.makeText(context, R.string.toast_crown_share_merge_success, Toast.LENGTH_SHORT).show()
+                    Handler(Looper.getMainLooper()).post {
+                        (activity as? StreamSettings)?.reloadSettings()
                     }
-                    .showStyledChoiceList()
+                } else {
+                    Toast.makeText(context, R.string.toast_crown_share_import_failed, Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         private fun showCrownExportConfigDialog() {
@@ -3035,14 +3190,16 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val ids = configMap.keys.toTypedArray()
             val names = configMap.values.toTypedArray<CharSequence>()
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.title_export_super_config)
-                    .setItems(names) { _, which ->
-                        val id = ids[which]
-                        exportConfigString = helper.exportConfig(id.toLong())
-                        createConfigDocument(configMap[id] ?: "crown_config")
-                    }
-                    .showStyledChoiceList()
+            showActionMenu(
+                title = getString(R.string.title_export_super_config),
+                actions = names.mapIndexed { index, name ->
+                    AppActionSheet.Action(index, name, opensSubmenu = true)
+                }
+            ) { action ->
+                val id = ids[action.id]
+                exportConfigString = helper.exportConfig(id.toLong())
+                createConfigDocument(configMap[id] ?: "crown_config")
+            }
         }
 
         private fun showCrownMergeConfigDialog() {
@@ -3054,13 +3211,15 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val ids = configMap.keys.toTypedArray()
             val names = configMap.values.toTypedArray<CharSequence>()
-            AlertDialog.Builder(requireActivity(), R.style.AppDialogStyle)
-                    .setTitle(R.string.title_merge_super_config)
-                    .setItems(names) { _, which ->
-                        exportConfigString = ids[which]
-                        openConfigDocument(3)
-                    }
-                    .showStyledChoiceList()
+            showActionMenu(
+                title = getString(R.string.title_merge_super_config),
+                actions = names.mapIndexed { index, name ->
+                    AppActionSheet.Action(index, name, opensSubmenu = true)
+                }
+            ) { action ->
+                exportConfigString = ids[action.id]
+                openConfigDocument(3)
+            }
         }
 
         /**
@@ -3121,6 +3280,11 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         override fun onDestroyView() {
+            settingsChoiceViewDestroyed = true
+            settingsChoiceGeneration++
+            settingsChoiceDialog?.dismiss()
+            settingsChoiceDialog = null
+            choiceReturnFocus = null
             cancelExpandFocusRestore()
             unregisterConfigSyncPreferenceListener()
             configSyncSnapshotHandler.removeCallbacks(configSyncSnapshotRunnable)
@@ -3755,7 +3919,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
 
             // Add a listener to the FPS and resolution preference
-            // so the bitrate can be auto-adjusted            findPreference<Preference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!.onPreferenceChangeListener =
+            // so the bitrate can be auto-adjusted
+            findPreference<Preference>(PreferenceConfiguration.RESOLUTION_PREF_STRING)!!.onPreferenceChangeListener =
                     Preference.OnPreferenceChangeListener { _, newValue ->
                         val prefs = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireActivity())
                         val valueStr = newValue as String
@@ -3785,15 +3950,27 @@ class StreamSettings : ThemedAppCompatActivity() {
                         // Allow the original preference change to take place
                         true
                     }
-            // 低分辨率预设/解锁帧率开关切换后立即重建候选网格(持久化在监听返回后才落盘,故 post 到下一帧)
+            // 持久化在监听返回后才落盘，故下一帧重建候选。
             findPreference<Preference>(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING)!!.onPreferenceChangeListener =
                     Preference.OnPreferenceChangeListener { _, _ ->
-                        listView?.post { if (isAdded) replaceSavedResolutionEntries() }
+                        listView?.post {
+                            if (isAdded && !settingsChoiceViewDestroyed) {
+                                replaceSavedResolutionEntries()
+                                visibilityController.refreshSearch()
+                                refreshSearchPresentation()
+                            }
+                        }
                         true
                     }
             findPreference<Preference>(PreferenceConfiguration.UNLOCK_FPS_STRING)!!.onPreferenceChangeListener =
                     Preference.OnPreferenceChangeListener { _, _ ->
-                        listView?.post { if (isAdded) replaceSavedFrameRateEntries() }
+                        listView?.post {
+                            if (isAdded && !settingsChoiceViewDestroyed) {
+                                replaceSavedFrameRateEntries()
+                                visibilityController.refreshSearch()
+                                refreshSearchPresentation()
+                            }
+                        }
                         true
                     }
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =
@@ -3934,34 +4111,14 @@ class StreamSettings : ThemedAppCompatActivity() {
                     f.setTargetFragment(this, 0)
                     f.show(parentFragmentManager, "ConfirmDeleteOscPreference")
                 }
-                is IconListPreference -> {
-                    val f = IconListPreferenceDialogFragment.newInstance(preference.key)
-                    @Suppress("DEPRECATION")
-                    f.setTargetFragment(this, 0)
-                    f.show(parentFragmentManager, "IconListPreference")
-                }
                 is EditTextPreference -> {
                     val f = StyledEditTextPreferenceDialogFragment.newInstance(preference.key)
                     @Suppress("DEPRECATION")
                     f.setTargetFragment(this, 0)
                     f.show(parentFragmentManager, "StyledEditTextPreference")
                 }
-                is MultiSelectListPreference -> {
-                    val f = StyledMultiSelectListPreferenceDialogFragment.newInstance(preference.key)
-                    @Suppress("DEPRECATION")
-                    f.setTargetFragment(this, 0)
-                    f.show(parentFragmentManager, "StyledMultiSelectListPreference")
-                }
-                is ListPreference -> {
-                    if (preference.key == SCREEN_COMBINATION_MODE_PREF_KEY) {
-                        (requireActivity() as? StreamSettings)?.showScreenCombinationModePicker(preference)
-                    } else {
-                        val f = StyledListPreferenceDialogFragment.newInstance(preference.key)
-                        @Suppress("DEPRECATION")
-                        f.setTargetFragment(this, 0)
-                        f.show(parentFragmentManager, "StyledListPreference")
-                    }
-                }
+                is MultiSelectListPreference -> showMultiChoiceSheet(preference)
+                is ListPreference -> showListChoiceSheet(preference)
                 else -> super.onDisplayPreferenceDialog(preference)
             }
         }

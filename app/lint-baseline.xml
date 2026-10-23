@@ -3390,24 +3390,6 @@
 
     <issue
         id="PrivateResource"
-        message="Overriding `@drawable/icon_background` which is marked as private in androidx.core:core-splashscreen:1.0.1. If deliberate, use tools:override=&quot;true&quot;, otherwise pick a different name.">
-        <location
-            file="src/main/res/drawable/icon_background.xml"/>
-    </issue>
-
-    <issue
-        id="PrivateResource"
-        message="The resource `@drawable/icon_background` is marked as private in androidx.core:core-splashscreen:1.0.1"
-        errorLine1="        android:background=&quot;@drawable/icon_background&quot;>"
-        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/icon_list_item.xml"
-            line="19"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="PrivateResource"
         message="Overriding `@layout/preference_category_material` which is marked as private in androidx.preference:preference:1.2.1. If deliberate, use tools:override=&quot;true&quot;, otherwise pick a different name.">
         <location
             file="src/main/res/layout/preference_category_material.xml"/>
@@ -12226,17 +12208,6 @@
             file="src/main/res/layout/game_menu_super_list_item.xml"
             line="32"
             column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="        &lt;ImageView"
-        errorLine2="         ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/icon_list_item.xml"
-            line="21"
-            column="10"/>
     </issue>
 
     <issue

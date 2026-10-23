@@ -132,26 +132,17 @@ class BitrateCardControllerTest {
     }
 
     @Test
-    fun lowResolutionPresetsStayHiddenUntilRequestedOrSelected() {
-        assertFalse(
-            PreferenceConfiguration.includeLowResolutionPreset("640x360", "1920x1080", false)
-        )
-        assertTrue(
-            PreferenceConfiguration.includeLowResolutionPreset("1920x1080", "1920x1080", false)
-        )
-        assertTrue(
-            PreferenceConfiguration.includeLowResolutionPreset("640x360", "1920x1080", true)
-        )
-        assertTrue(
-            PreferenceConfiguration.includeLowResolutionPreset("854x480", "640x360", false)
-        )
-    }
-
-    @Test
     fun unchangedDisplayDraftDoesNotRequestApply() {
         val current = DisplaySettingsDraft("1920x1080", "60", "2")
 
         assertFalse(current.changedFrom(current))
+        assertFalse(current.copy(resolution = current.resolution).changedFrom(current))
+    }
+
+    @Test
+    fun fixedSizeAndNativeHaveDifferentSelectionSemantics() {
+        val current = DisplaySettingsDraft("1920x1080", "60", "2")
+        assertTrue(current.copy(resolution = PreferenceConfiguration.RES_NATIVE).changedFrom(current))
     }
 
     @Test

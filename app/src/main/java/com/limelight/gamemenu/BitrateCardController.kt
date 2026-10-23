@@ -7,7 +7,6 @@ import androidx.preference.PreferenceManager
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
-import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.DisplayChoiceLimits
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.PreferenceConfiguration
@@ -161,14 +160,49 @@ internal class BitrateCardController(
                 height = resolution.height
             )
         }
+
+        /** Prepare and save a complete combination before touching the running configuration. */
+        internal fun persistDisplayDraft(
+            current: PreferenceConfiguration,
+            draft: DisplaySettingsDraft,
+            nativeSize: Pair<Int, Int>?,
+            autoAdjustBitrate: Boolean,
+            persist: (PreferenceConfiguration) -> Boolean
+        ): PreferenceConfiguration? {
+            val currentWidth = if (current.reverseResolution) current.height else current.width
+            val currentHeight = if (current.reverseResolution) current.width else current.height
+            val resolution = parseResolutionSelection(
+                draft.resolution,
+                nativeSize?.first ?: currentWidth,
+                nativeSize?.second ?: currentHeight
+            ) ?: return null
+            val fps = draft.frameRate.toIntOrNull()?.takeIf { it > 0 } ?: return null
+            val screenMode = draft.screenMode.toIntOrNull() ?: return null
+            val next = current.copy().apply {
+                isNativeResolution = resolution.native
+                isCustomResolution = resolution.custom
+                width = if (reverseResolution) resolution.height else resolution.width
+                height = if (reverseResolution) resolution.width else resolution.height
+                this.fps = fps
+                screenCombinationMode = screenMode
+            }
+            if (autoAdjustBitrate) {
+                next.bitrate = DisplayChoiceLists.recommendedBitrate(
+                    "${resolution.width}x${resolution.height}",
+                    draft.frameRate,
+                    nativeSize
+                )
+            }
+            return next.takeIf(persist)
+        }
     }
 
-internal data class ResolutionSelection(
-    val native: Boolean,
-    val custom: Boolean,
-    val width: Int,
-    val height: Int
-)
+    internal data class ResolutionSelection(
+        val native: Boolean,
+        val custom: Boolean,
+        val width: Int,
+        val height: Int
+    )
 
     private var abrListener: ((Int, String) -> Unit)? = null
     private var onStateChanged: ((BitrateCardState) -> Unit)? = null
@@ -179,14 +213,13 @@ internal data class ResolutionSelection(
 
     // 声明须早于 state:构造期的 createState 会读标签表与缓存字段
     private val resolutionLabels: Map<String, String> by lazy {
-        labelLookup(R.array.resolution_names, R.array.resolution_values)
+        DisplayChoiceLists.labelLookup(game.resources, R.array.resolution_names, R.array.resolution_values)
     }
 
     // 设备能力与商店列表在一次会话内不变,缓存避免拖动滑条时逐帧重算
     private var cachedLimits: DisplayChoiceLimits? = null
     private var cachedNativeSize: Pair<Int, Int>? = null
     private var cachedStoreResolutions: List<String>? = null
-    private var cachedStoreFrameRates: List<Int>? = null
     private var appliedDraft = currentDraft()
     private var draft = appliedDraft
 
@@ -229,7 +262,6 @@ internal data class ResolutionSelection(
         cachedLimits = null
         cachedNativeSize = null
         cachedStoreResolutions = null
-        cachedStoreFrameRates = null
     }
 
     fun setAdaptiveBitrate(enabled: Boolean) {
@@ -261,56 +293,50 @@ internal data class ResolutionSelection(
     }
 
     fun stageResolution(value: String) {
-        if (parseResolutionSelection(value, game.prefConfig.width, game.prefConfig.height) == null) return
+        if (draft.resolution == value || state.resolutions.none { it.value == value && it.enabled }) return
         draft = draft.copy(resolution = value)
         emitState()
     }
 
     fun stageFrameRate(value: String) {
-        val fps = value.toIntOrNull() ?: return
-        if (fps <= 0) return
-        draft = draft.copy(frameRate = fps.toString())
+        if (draft.frameRate == value || state.frameRates.none { it.value == value && it.enabled }) return
+        draft = draft.copy(frameRate = value)
         emitState()
     }
 
     fun stageScreenMode(value: String) {
-        if (state.screenModes.none { it.value == value }) return
+        if (draft.screenMode == value || state.screenModes.none { it.value == value && it.enabled }) return
         draft = draft.copy(screenMode = value)
         emitState()
     }
 
     fun applyDisplayDraft(): Boolean {
         if (!hasPendingDisplayChanges()) return false
-        val resolution = if (draft.resolution == appliedDraft.resolution) {
-            null
-        } else {
-            parseResolutionSelection(
-                draft.resolution,
-                game.prefConfig.width,
-                game.prefConfig.height
-            ) ?: return false
+        displayChoiceLimits()
+        val streamSizeChanged = draft.resolution != appliedDraft.resolution ||
+            draft.frameRate != appliedDraft.frameRate
+        val autoAdjustBitrate = streamSizeChanged && PreferenceManager.getDefaultSharedPreferences(game)
+            .getBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true)
+        val next = persistDisplayDraft(game.prefConfig, draft, cachedNativeSize, autoAdjustBitrate) {
+            it.writeDisplayPreferences(game, synchronous = true)
         }
-        val frameRate = draft.frameRate.toIntOrNull()?.takeIf { fps ->
-            fps > 0 && fps.toString() != appliedDraft.frameRate
+        if (next == null) {
+            showBitrateToast(game.getString(R.string.config_save_failed))
+            return false
         }
-        val screenMode = draft.screenMode.toIntOrNull()?.takeIf { mode ->
-            mode.toString() != appliedDraft.screenMode
+        // Keep the existing object: other stream components retain references to prefConfig.
+        game.prefConfig.apply {
+            isNativeResolution = next.isNativeResolution
+            isCustomResolution = next.isCustomResolution
+            width = next.width
+            height = next.height
+            fps = next.fps
+            bitrate = next.bitrate
+            screenCombinationMode = next.screenCombinationMode
         }
-        resolution?.let { selection ->
-            game.prefConfig.isNativeResolution = selection.native
-            game.prefConfig.isCustomResolution = selection.custom
-            if (!selection.native) {
-                val reverse = game.prefConfig.reverseResolution
-                game.prefConfig.width = if (reverse) selection.height else selection.width
-                game.prefConfig.height = if (reverse) selection.width else selection.height
-            }
-        }
-        frameRate?.let { game.prefConfig.fps = it }
-        screenMode?.let { game.prefConfig.screenCombinationMode = it }
-        game.prefConfig.writeDisplayPreferences(game, synchronous = true)
-        game.changeResolution()
         appliedDraft = currentDraft()
         draft = appliedDraft
+        game.changeResolution()
         return true
     }
 
@@ -416,19 +442,17 @@ internal data class ResolutionSelection(
         val showLow = PreferenceManager.getDefaultSharedPreferences(game)
             .getBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, false)
         val storeValues = cachedStoreResolutions
-            ?: CustomResolutionsStore.load(game).map { it.toString() }.also { cachedStoreResolutions = it }
+            ?: DisplayChoiceLists.resolutionStoreValues(game).also { cachedStoreResolutions = it }
         return DisplayChoiceLists
-            .resolutionValues(storeValues, cachedNativeSize, currentResolutionValue(), showLow)
+            .resolutionValues(storeValues, currentResolutionValue(), showLow, listOf(selected))
             .map { value ->
-                val isSelected = value == DisplayChoiceLists.normalizeSelection(
-                    selected,
-                    cachedNativeSize
-                )
+                val isSelected = value == selected
                 when (value) {
                     PreferenceConfiguration.RES_NATIVE -> DisplayChoice(
                         value = value,
                         label = game.getString(R.string.resolution_prefix_native),
-                        selected = isSelected
+                        selected = isSelected,
+                        subLabel = cachedNativeSize?.let { prettyResolution("${it.first}x${it.second}") }
                     )
                     else -> DisplayChoice(
                         value = value,
@@ -440,10 +464,6 @@ internal data class ResolutionSelection(
                     )
                 }
             }
-    }
-
-    private fun labelLookup(namesRes: Int, valuesRes: Int): Map<String, String> {
-        return DisplayChoiceLists.labelLookup(game.resources, namesRes, valuesRes)
     }
 
     private fun resourceChoices(names: Int, values: Int, selected: String): List<DisplayChoice> {
@@ -471,14 +491,12 @@ internal data class ResolutionSelection(
     private fun frameRateChoices(selected: String): List<DisplayChoice> {
         val limits = displayChoiceLimits()
         val unlockFps = game.prefConfig.unlockFps
-        val frameRates = cachedStoreFrameRates
-            ?: game.resources.getStringArray(R.array.fps_values)
-                .mapNotNull { it.toIntOrNull() }
-                .distinct()
-                .sorted()
-                .also { cachedStoreFrameRates = it }
-        return frameRates.map { fps ->
-            val value = fps.toString()
+        val frameRates = DisplayChoiceLists.frameRateValues(
+            game.resources.getStringArray(R.array.fps_values).toList(),
+            limits.maxRefreshRate,
+            listOf(game.prefConfig.fps.toString(), selected)
+        )
+        return frameRates.map { value ->
             DisplayChoice(
                 value = value,
                 label = value,

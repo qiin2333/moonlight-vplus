@@ -6,7 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
@@ -188,8 +189,7 @@ private fun InfoToggleButton(expanded: Boolean, onToggle: () -> Unit) {
             .clip(CircleShape)
             .then(focusHighlight(showFocus || expanded, CircleShape))
             .handleGamepadConfirm(onToggle)
-            .clickable(onClick = onToggle)
-            .focusable(interactionSource = interaction),
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onToggle),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -243,7 +243,8 @@ internal fun Composer(
     downFromHeight: FocusRequester,
     leftTarget: FocusRequester?,
     onAdd: () -> Unit,
-    onHeightDone: () -> Unit
+    onHeightDone: () -> Unit,
+    onAddPlaced: () -> Unit = {}
 ) {
     val accent = appAccentColor()
     val accentSoft = appAccentSoftColor()
@@ -357,7 +358,8 @@ internal fun Composer(
                 focus = addFocus,
                 upTarget = heightFocus,
                 leftTarget = heightFocus,
-                downTarget = downFromHeight
+                downTarget = downFromHeight,
+                onPlaced = onAddPlaced
             )
         }
     }
@@ -496,7 +498,8 @@ private fun AddButton(
     focus: FocusRequester,
     upTarget: FocusRequester,
     leftTarget: FocusRequester? = null,
-    downTarget: FocusRequester? = null
+    downTarget: FocusRequester? = null,
+    onPlaced: () -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -513,6 +516,7 @@ private fun AddButton(
     Row(
         modifier = Modifier
             .focusRequester(focus)
+            .onGloballyPositioned { onPlaced() }
             .focusProperties {
                 up = upTarget
                 if (leftTarget != null) left = leftTarget
@@ -528,8 +532,7 @@ private fun AddButton(
                 }
             )
             .handleGamepadConfirm(onAdd)
-            .clickable(onClick = onAdd)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onAdd)
             .padding(start = 12.dp, end = 15.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -593,8 +596,7 @@ private fun TextPresetChip(
                 )
             )
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 11.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -660,8 +662,7 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
                 )
             )
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 11.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -764,8 +765,7 @@ private fun ResolutionRow(
             .clip(rowShape)
             .background(bg)
             .border(if (showFocus || isJustAdded) 1.5.dp else 1.dp, borderColor, rowShape)
-            .clickable { deleteFocus.requestFocus() }
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { deleteFocus.requestFocus() }
             .padding(
                 start = if (compact) 9.dp else 11.dp,
                 end = if (compact) 5.dp else 7.dp,
@@ -837,8 +837,7 @@ private fun DeleteButton(
             .clip(CircleShape)
             .then(focusHighlight(showFocus, CircleShape))
             .handleGamepadConfirm { onDelete(resolution) }
-            .clickable { onDelete(resolution) }
-            .focusable(interactionSource = interaction),
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { onDelete(resolution) },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -931,8 +930,7 @@ private fun FooterButton(
             .clip(AppShapes.small)
             .then(focusHighlight(showFocus, AppShapes.small))
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 13.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {

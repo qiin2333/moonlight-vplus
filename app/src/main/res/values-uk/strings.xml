@@ -178,7 +178,6 @@
     <string name="nettest_text_success">Схоже що ваша мережа не блокує Moonlight. Якщо у вас й надалі проблеми з підключенням, перевірте налаштування брандмауера.
 \n
 \nЯкщо ви намагаєтеся транслювати через Інтернет, встановіть на своєму пристрої Moonlight Internet Hosting Tool, та запустіть випробування мережі щоб перевірити ваше з\'єднання до Інтернету.</string>
-    <string name="resolution_prefix_native_fullscreen">Рідний повноекранний</string>
     <string name="resolution_prefix_native">Рідна</string>
     <string name="suffix_seekbar_bitrate_mbps">Мб/с</string>
     <string name="text_native_res_dialog">Власна роздільна здатність і/або FPS можуть не підтримуватися потоковим сервером. Ймовірно, вам доведеться вручну налаштувати відповідний спеціальний режим відображення для головного ПК.
@@ -227,10 +226,6 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 кадрів/сек</string>
-    <string name="fps_60">60 кадрів/сек</string>
-    <string name="fps_90">90 кадрів/сек</string>
-    <string name="fps_120">120 кадрів/сек</string>
     <string name="audioconf_stereo">Стерео</string>
     <string name="audioconf_51surround">5.1 Об\'ємний Звук</string>
     <string name="audioconf_71surround">7.1 Об\'ємний Звук</string>
@@ -244,8 +239,6 @@
     <string name="title_setup_guide">Гайд по налаштуванню</string>
     <string name="summary_setup_guide">Переглянути інструкцію, як налаштувати ігровий ПК для стрімінгу</string>
     <string name="pacing_balanced_alt">Обмежити вихідний FPS (до частоти оновлення екрана)</string>
-    <string name="resolution_prefix_native_landscape">(Горизонтальний)</string>
-    <string name="resolution_prefix_native_portrait">(Портретний)</string>
     <string name="title_checkbox_enable_audiofx">Увімкнення підтримки системного еквалайзера</string>
     <string name="summary_checkbox_absolute_mouse_mode">Це може зробити прискорення миші більш природним під час використання віддаленого робочого столу, але воно несумісне з багатьма іграми.</string>
     <string name="title_checkbox_reduce_refresh_rate">Дозволити зниження частоти оновлення</string>

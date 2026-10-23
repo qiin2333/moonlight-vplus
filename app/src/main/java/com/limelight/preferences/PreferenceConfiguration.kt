@@ -1006,17 +1006,6 @@ class PreferenceConfiguration {
             }
         }
 
-        /** Hidden low presets stay hidden unless the setting or current value asks for them. */
-        fun includeLowResolutionPreset(
-            resolution: String,
-            currentResolution: String,
-            showLowResolutionPresets: Boolean
-        ): Boolean {
-            return showLowResolutionPresets ||
-                isLowResolutionPreset(currentResolution) ||
-                !isLowResolutionPreset(resolution)
-        }
-
         // ---- Public static methods ----
 
         /**
@@ -1055,17 +1044,17 @@ class PreferenceConfiguration {
         }
 
         private const val DISPLAY_SELECTION_MIGRATION_KEY = "display_selection_migration_version"
-        private const val DISPLAY_SELECTION_MIGRATION_VERSION = 1
+        private const val DISPLAY_SELECTION_MIGRATION_VERSION = 2
 
         /** 只在迁移版本提升时改写一次旧分辨率或帧率，打开设置页不再重复改写。 */
-        private fun migrateDisplaySelections(prefs: SharedPreferences) {
+        internal fun migrateDisplaySelections(prefs: SharedPreferences) {
             if (prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0) >= DISPLAY_SELECTION_MIGRATION_VERSION) return
             val editor = prefs.edit()
             val resolution = prefs.getString(RESOLUTION_PREF_STRING, null)
             when {
                 resolution == null -> Unit
-                resolution.equals("360p", true) || resolution.equals("480p", true) ->
-                    editor.putString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
+                resolution.equals("360p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_360P)
+                resolution.equals("480p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_480P)
                 resolution.equals("720p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_720P)
                 resolution.equals("1080p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1080P)
                 resolution.equals("1440p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1440P)

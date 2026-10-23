@@ -229,15 +229,11 @@
     <string name="title_checkbox_stretch_video">Растянуть на весь экран</string>
     <string name="summary_checkbox_stretch_video">Заполняет экран, меняя пропорции изображения. Возможны искажения.</string>
     <string name="resolution_prefix_native">Родное</string>
-    <string name="resolution_prefix_native_fullscreen">Родное, весь экран</string>
-    <string name="resolution_prefix_native_landscape">(Альбомное)</string>
-    <string name="resolution_prefix_native_portrait">(Книжное)</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="custom_list_save">Сохранить</string>
     <string name="game_menu_apply_reconnect_hint">Применится после переподключения стрима</string>
     <string name="game_menu_apply_display">Применить</string>
     <string name="title_custom_resolutions">Свои разрешения</string>
-    <string name="summary_custom_resolutions">Добавление и удаление разрешений из списка трансляции</string>
     <string name="width_hint">напр. 1920</string>
     <string name="height_hint">напр. 1080</string>
     <string name="resolution_already_exists">Такое разрешение уже есть</string>
@@ -757,12 +753,6 @@
     <string name="resolution_4k">4K</string>
     <string name="title_show_low_resolution_presets">Низкие разрешения</string>
     <string name="summary_show_low_resolution_presets">Добавить 360p и 480p для очень медленной сети и слабых устройств.</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
     <string name="audioconf_stereo">Стерео</string>
     <string name="audioconf_51surround">Объёмный 5.1</string>
     <string name="audioconf_71surround">Объёмный 7.1</string>
@@ -1297,7 +1287,6 @@
     <string name="settings_search_hint">Поиск настроек…</string>
     <string name="settings_search_close">Закрыть поиск</string>
     <string name="settings_search_no_results">Настройки не найдены</string>
-    <string name="game_menu_change_resolution">Разрешение</string>
     <string name="game_menu_display_settings">Настройки экрана</string>
     <string name="display_spec_resolution">Разрешение</string>
     <string name="display_spec_fps">Частота</string>

@@ -27,6 +27,9 @@
 -keep class com.limelight.UsbPanelDevice { *; }
 -keep class com.limelight.UsbDeviceType** { *; }
 -keep class com.limelight.utils.AppActionSheet** { *; }
+-keepclassmembers class com.limelight.preferences.IconListPreference {
+    public int[] getEntryIcons();
+}
 
 # Virtual-controller instrumentation calls across the target/test APK boundary.
 -keep class com.limelight.binding.input.virtual_controller.** { *; }
@@ -42,3 +45,42 @@
 # copies RemoteTextContext fixtures across the APK boundary.
 -keep class com.limelight.utils.RemoteImeController { <init>(...); }
 -keep class com.limelight.nvstream.RemoteTextContext { *; }
+
+# Display-panel instrumentation constructs state and calls the target APK's
+# composables/persistence seam. These symbols must retain their cross-APK ABI.
+# Test composables also read Compose-generated $stable fields on these models.
+-keep class com.limelight.gamemenu.GameMenuScreenKt {
+    public static void GameMenuScreen(...);
+}
+-keep class com.limelight.gamemenu.GameMenuCallbacks { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.GameMenuComposeUiState { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.GameMenuVisibleCards { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.GameMenuGuideDismissController { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.BitrateCardState { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.DisplayChoice { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.DisplaySettingsDraft { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.AudioHapticsCardState { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.WaveformHapticsCardState { <init>(...); public static final int $stable; }
+-keep class com.limelight.gamemenu.GyroCardState { <init>(...); public static final int $stable; }
+-keepclassmembers class com.limelight.gamemenu.BitrateCardController {
+    public static final com.limelight.gamemenu.BitrateCardController$Companion Companion;
+}
+-keep class com.limelight.gamemenu.BitrateCardController$Companion {
+    *** persistDisplayDraft*(...);
+}
+-keepclassmembers class com.limelight.preferences.DisplayPreferenceValues {
+    public java.util.Map of(...);
+}
+-keepclassmembers class com.limelight.preferences.PreferenceConfiguration {
+    public <init>();
+    public *** *Width(...);
+    public *** *Height(...);
+    public *** *Fps(...);
+    public *** *Bitrate(...);
+    public *** *Resolution(...);
+    public *** *AbrMode(...);
+    public *** *ScreenCombinationMode(...);
+}
+-keepclassmembers class com.limelight.preferences.PreferenceConfiguration$Companion {
+    public int getDefaultBitrate(java.lang.String, java.lang.String);
+}

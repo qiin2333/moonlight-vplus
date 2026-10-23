@@ -107,9 +107,6 @@
     <string name="title_seekbar_bitrate">Videobitrate</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbit/s</string>
     <string name="resolution_prefix_native">Ursprung</string>
-    <string name="resolution_prefix_native_fullscreen">Ursprungshelskärm</string>
-    <string name="resolution_prefix_native_landscape">(Landskap)</string>
-    <string name="resolution_prefix_native_portrait">(Porträtt)</string>
     <string name="category_audio_settings">Ljudinställningar</string>
     <string name="title_audio_config_list">Konfiguration av surroundljud</string>
     <string name="title_checkbox_enable_audiofx">Aktivera stöd för systemets equalizer</string>
@@ -175,8 +172,6 @@
     <string name="resolution_720p">720p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_90">90 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 surroundljud</string>
     <string name="audioconf_71surround">7.1 surroundljud</string>
@@ -239,11 +234,9 @@
     <string name="summary_unlock_fps">Streaming med 90 eller 120 FPS kan minska latenstiden på avancerade enheter, men kan orsaka fördröjning eller instabilitet på enheter som inte har stöd för det</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lägre uppdateringsfrekvenser på skärmen kan spara ström på bekostnad av ytterligare videolatens</string>
     <string name="summary_full_range">Detta kan leda till förlust av detalj i ljusa och mörka områden om enheten inte visar videoinnehåll med fullt omfång på rätt sätt.</string>
-    <string name="fps_120">120 FPS</string>
     <string name="title_enable_post_stream_toast">Visa meddelande om latenstid efter strömning</string>
     <string name="summary_setup_guide">Visa instruktioner om hur du utformar din speldator för strömning</string>
     <string name="resolution_1080p">1080p</string>
-    <string name="fps_60">60 FPS</string>
     <string name="summary_frame_pacing">Välj hur videobildrutorna ska tajmas. Exakt bildrutestyrning kan använda videons tidsstämplar (PTS) och rekommenderas för de flesta enheter.</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="category_gamepad_settings">Spelkontroller inställningar</string>

@@ -76,8 +76,6 @@
 \n
 \nPor fim, o seu aparelho ou PC host pode não suportar transmissões na resolução nativa. Se não funcionar no seu aparelho, está sem sorte, infelizmente.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="resolution_prefix_native_landscape">(Paisagem)</string>
-    <string name="resolution_prefix_native_portrait">(Retrato)</string>
     <string name="title_audio_config_list">Configurações de som Surround</string>
     <string name="title_checkbox_enable_audiofx">Ativar sistema de suporte à equalização</string>
     <string name="title_checkbox_multi_controller">Detecção automática de gamepad</string>
@@ -121,9 +119,6 @@
     <string name="summary_troubleshooting">Veja dicas para diagnosticar e corrigir problemas comuns de streaming</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround</string>
     <string name="videoformat_auto">Automático (recomendado)</string>
@@ -184,7 +179,6 @@
     <string name="summary_seekbar_bitrate">Uma taxa de bits mais alta melhora a qualidade da imagem, mas usa mais largura de banda; uma taxa mais baixa é melhor para redes lentas ou instáveis. Se a transmissão travar, reduza-a primeiro e aumente-a quando a rede estiver estável, mas a imagem continuar pouco nítida; para 1080p60, comece com cerca de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Esticar vídeo ao ecrã cheio</string>
     <string name="resolution_prefix_native">Nativa</string>
-    <string name="resolution_prefix_native_fullscreen">Ecrã Cheio Nativo</string>
     <string name="category_audio_settings">Configurações de Áudio</string>
     <string name="summary_audio_config_list">Ativa o som Surround 5.1 ou 7.1 para sistemas de home theater</string>
     <string name="category_input_settings">Configurações de Controles</string>
@@ -235,7 +229,6 @@
     <string name="summary_setup_guide">Veja instruções sobre como configurar o seu PC para streaming</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
     <string name="pacing_latency">Baixa latência (resposta mais rápida)</string>
     <string name="title_checkbox_mouse_nav_buttons">Ativar os botões de voltar e avançar do rato</string>
     <string name="summary_checkbox_mouse_nav_buttons">Ativar esta opção pode bugar o clique com o botão direito em alguns aparelhos com bugs</string>
@@ -300,12 +293,9 @@
     <string name="summary_seekbar_scale">A resolução solicitada ao host é equivalente à resolução base do cliente × fator de escala. Isso alterará a precisão do material de renderização do jogo no host (streaming de super resolução).</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="title_custom_resolutions">Resoluções personalizadas</string>
-    <string name="summary_custom_resolutions">Crie suas próprias resoluções personalizadas</string>
     <string name="width_hint">ex: 1920</string>
     <string name="height_hint">ex: 1080</string>
     <string name="resolution_already_exists">Esta resolução já existe</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
     
     <!-- Audio settings -->
     <string name="title_checkbox_enable_spatializer">Ativar áudio espacial (Android 13+)</string>

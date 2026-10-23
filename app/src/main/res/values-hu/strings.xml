@@ -200,7 +200,6 @@
     <string name="scut_pc_not_found">Pc nem található</string>
     <string name="scut_not_paired">PC nincs csatlakoztatva</string>
     <string name="scut_deleted_pc">PC eltávolítva</string>
-    <string name="resolution_prefix_native_fullscreen">Natív teljes képernyős</string>
     <string name="summary_setup_guide">Útmutató a játék-PC streamingre való beállításához</string>
     <string name="title_troubleshooting">Hibaelhárítási útmutató</string>
     <string name="title_checkbox_reduce_refresh_rate">A frissítési sebesség csökkentésének engedélyezése</string>
@@ -212,7 +211,6 @@
     <string name="summary_privacy_policy">A Moonlight adatvédelmi szabályzatának megtekintése</string>
     <string name="resolution_4k">4K</string>
     <string name="pacing_smoothness">Folyamatosság elsőként (nagyobb késleltetés)</string>
-    <string name="fps_120">120 FPS</string>
     <string name="category_help">Segítség</string>
     <string name="videoformat_av1always">AV1 előnyben részesítése (kísérleti)</string>
     <string name="audioconf_71surround">7.1 Térhatású hangzás</string>
@@ -229,10 +227,8 @@
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_480p">480p</string>
     <string name="videoformat_hevcalways">HEVC előnyben részesítése</string>
-    <string name="fps_60">60 FPS</string>
     <string name="audioconf_51surround">5.1 Térhatású hangzás</string>
     <string name="summary_checkbox_enable_audiofx">Lehetővé teszi az audioeffektek működését streaming közben, de növelheti a hang késleltetését</string>
-    <string name="fps_90">90 FPS</string>
     <string name="summary_checkbox_gamepad_motion_sensors">Lehetővé teszi a támogatott hosztok számára, hogy mozgásérzékelős adatokat kérjenek, amikor mozgásérzékelőkkel ellátott gamepadot emulálnak. A letiltás némileg csökkentheti az energia- és hálózathasználatot, ha a játékban nem használnak mozgásérzékelőket.</string>
     <string name="resolution_1080p">1080p</string>
     <string name="summary_seekbar_deadzone">Megjegyzés: Egyes játékok nagyobb holtteret kényszeríthetnek ki, mint amire a Moonlight be van állítva.</string>
@@ -241,17 +237,14 @@
     <string name="title_privacy_policy">Adatvédelmi irányelvek</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="category_gamepad_settings">Gamepad beállítások</string>
-    <string name="fps_30">30 FPS</string>
     <string name="summary_troubleshooting">Tippek a gyakori streaming problémák diagnosztizálásához és javításához</string>
     <string name="title_checkbox_absolute_mouse_mode">Távoli asztali egér mód</string>
     <string name="title_full_range">Teljeskörű videó erőltetése (kísérleti)</string>
     <string name="summary_checkbox_reduce_refresh_rate">Az alacsonyabb kijelzőfrissítési frekvencia energiát takaríthat meg némi további videokésleltetés árán</string>
-    <string name="resolution_prefix_native_portrait">(Portré)</string>
     <string name="summary_checkbox_absolute_mouse_mode">Ezáltal az egérgyorsítás természetesebben viselkedik a távoli asztali használat során, de sok játékkal nem kompatibilis.</string>
     <string name="pair_pairing_help">Ha a számítógépen Sunshine fut, lépj a Sunshine webes felhasználói felületére a PIN-kód megadásához.</string>
     <string name="title_setup_guide">Telepítési útmutató</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Az egeret mindig az érintőpaddal vezérelje</string>
-    <string name="resolution_prefix_native_landscape">(Tájkép)</string>
     <string name="perf_overlay_hostprocessinglatency">Host feldolgozási késleltetés min/max/átlag: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="pacing_latency">Alacsony késleltetés (gyorsabb reakció)</string>
     <string name="pacing_precise_sync">Pontos képkockaütemezés (ajánlott)</string>

@@ -4,22 +4,18 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
-import android.os.Build
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,17 +27,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,24 +62,27 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
-import com.limelight.utils.appAccentSoftColor
-import com.limelight.utils.appAccentColor
+import kotlinx.coroutines.flow.first
 
 object AppActionSheet {
     data class Action(
@@ -91,7 +95,8 @@ object AppActionSheet {
         val sectionStart: Boolean = false,
         val opensSubmenu: Boolean = false,
         val trailingText: CharSequence? = null,
-        val toggle: Boolean = false
+        val toggle: Boolean = false,
+        val iconRes: Int? = null
     )
 
     /** Hosts custom, live content in the same window, theme, and dismissal model as
@@ -115,6 +120,8 @@ object AppActionSheet {
         subtitle: CharSequence? = null,
         activeStatus: Boolean = false,
         actions: List<Action>,
+        initialActionId: Int? = null,
+        singleChoice: Boolean = false,
         onAction: (Action) -> Unit,
         onDismiss: ((Action?) -> Unit)? = null
     ): Dialog {
@@ -130,11 +137,15 @@ object AppActionSheet {
                         subtitle = subtitle?.toString(),
                         activeStatus = activeStatus,
                         actions = actions,
+                        initialActionId = initialActionId,
+                        singleChoice = singleChoice,
                         focusRequestToken = focusRequestToken.intValue,
                         onAction = { action ->
-                            selectedAction = action
-                            dialog.dismiss()
-                            onAction(action)
+                            if (action.enabled && selectedAction == null) {
+                                selectedAction = action
+                                dialog.dismiss()
+                                onAction(action)
+                            }
                         }
                     )
                 }
@@ -147,6 +158,28 @@ object AppActionSheet {
         return dialog
     }
 
+    internal data class InitialActionPosition(val scrollIndex: Int?, val focusIndex: Int?)
+
+    /** A saved, disabled choice should still be shown, while focus needs an actionable row. */
+    internal fun initialActionPosition(actions: List<Action>, initialActionId: Int?): InitialActionPosition {
+        if (actions.isEmpty()) return InitialActionPosition(null, null)
+        val selectedIndex = actions.indexOfFirst { it.id == initialActionId }.takeIf { it >= 0 }
+        val enabledIndices = actions.indices.filter { actions[it].enabled }
+        val focusIndex = if (selectedIndex == null) {
+            enabledIndices.firstOrNull()
+        } else {
+            // Prefer the following row when equally close, matching forward list navigation.
+            enabledIndices.minWithOrNull(
+                compareBy<Int> { kotlin.math.abs(it - selectedIndex) }
+                    .thenBy { if (it >= selectedIndex) 0 else 1 }
+            )
+        }
+        return InitialActionPosition(selectedIndex ?: focusIndex ?: 0, focusIndex)
+    }
+
+    internal fun initialMultiSelectPosition(actions: List<Action>): InitialActionPosition =
+        initialActionPosition(actions, actions.firstOrNull { it.checked == true }?.id)
+
     fun showMultiSelect(
         context: Context,
         title: CharSequence,
@@ -157,9 +190,12 @@ object AppActionSheet {
         minimumSelectionCount: Int = 0,
         onConfirm: (Set<Int>) -> Unit,
         onReset: (() -> Unit)? = null,
-        forceInitialFocus: Boolean = false
+        forceInitialFocus: Boolean = false,
+        onDismiss: (() -> Unit)? = null,
+        onSelectionChanged: ((Set<Int>) -> Unit)? = null
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        var completed = false
         val focusRequestToken = mutableIntStateOf(0)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
@@ -181,28 +217,42 @@ object AppActionSheet {
                         resetLabel = resetLabel?.toString(),
                         focusRequestToken = focusRequestToken.intValue,
                         onToggle = { action ->
-                            selectedIds = if (action.id in selectedIds) {
+                            val nextSelection = if (action.id in selectedIds) {
                                 if (selectedIds.size > minimumSelectionCount) selectedIds - action.id
                                 else selectedIds
                             } else {
                                 selectedIds + action.id
                             }
+                            if (nextSelection != selectedIds) {
+                                selectedIds = nextSelection
+                                onSelectionChanged?.invoke(nextSelection)
+                            }
                         },
                         onConfirm = {
-                            dialog.dismiss()
-                            onConfirm(selectedIds)
+                            if (!completed && selectedIds.size >= minimumSelectionCount) {
+                                completed = true
+                                dialog.dismiss()
+                                onConfirm(selectedIds)
+                            }
                         },
                         onCancel = dialog::dismiss,
                         onReset = onReset?.let { reset ->
                             {
-                                dialog.dismiss()
-                                reset()
+                                if (!completed) {
+                                    completed = true
+                                    dialog.dismiss()
+                                    reset()
+                                }
                             }
                         },
                         forceInitialFocus = forceInitialFocus
                     )
                 }
             }
+        }
+        dialog.setOnDismissListener {
+            completed = true
+            onDismiss?.invoke()
         }
         prepareDialog(dialog, composeView)
         composeView.post { focusRequestToken.intValue++ }
@@ -306,22 +356,38 @@ object AppActionSheet {
         subtitle: String?,
         activeStatus: Boolean,
         actions: List<Action>,
+        initialActionId: Int?,
+        singleChoice: Boolean,
         focusRequestToken: Int,
         onAction: (Action) -> Unit
     ) {
-        val initialFocusRequester = remember { FocusRequester() }
+        val initialPosition = remember(actions, initialActionId) {
+            initialActionPosition(actions, initialActionId)
+        }
+        val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPosition.scrollIndex ?: 0)
+        val focusRequesters = remember(actions) { actions.map { FocusRequester() } }
         val shouldRequestFocus = isControllerFocusMode()
         val inputModeManager = LocalInputModeManager.current
-        val initialFocusPlaced = remember { mutableStateOf(false) }
+        val windowFocused = LocalWindowInfo.current.isWindowFocused
+        var initialFocusRequested by remember { mutableStateOf(false) }
         LaunchedEffect(
-            actions,
             shouldRequestFocus,
-            initialFocusPlaced.value,
+            windowFocused,
             focusRequestToken
         ) {
-            if (shouldRequestFocus && actions.isNotEmpty() && initialFocusPlaced.value) {
+            val focusIndex = initialPosition.focusIndex
+            // A posted show() token can precede window focus on older Android versions.
+            // Wait for both the focused window and target layout before acquiring focus once.
+            if (shouldRequestFocus && windowFocused && focusRequestToken > 0 && !initialFocusRequested && focusIndex != null) {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                initialFocusRequester.requestFocus()
+                snapshotFlow { listState.layoutInfo.totalItemsCount > 0 }.first { it }
+                if (listState.layoutInfo.visibleItemsInfo.none { it.index == focusIndex }) {
+                    listState.scrollToItem(focusIndex)
+                }
+                snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == focusIndex } }
+                    .first { it }
+                focusRequesters[focusIndex].requestFocus()
+                initialFocusRequested = true
             }
         }
         ActionSheetContainer {
@@ -330,19 +396,18 @@ object AppActionSheet {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = maxListHeight),
+                    .heightIn(max = maxListHeight)
+                    .then(if (singleChoice) Modifier.selectableGroup() else Modifier),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 itemsIndexed(actions, key = { _, action -> action.id }) { index, action ->
                     ActionSheetRow(
-                        action,
-                        onAction,
-                        if (index == 0) {
-                            Modifier
-                                .focusRequester(initialFocusRequester)
-                                .onGloballyPositioned { initialFocusPlaced.value = true }
-                        } else Modifier
+                        action = action,
+                        onAction = onAction,
+                        modifier = Modifier.focusRequester(focusRequesters[index]),
+                        singleChoice = singleChoice
                     )
                 }
             }
@@ -365,19 +430,37 @@ object AppActionSheet {
         onReset: (() -> Unit)?,
         forceInitialFocus: Boolean
     ) {
-        val initialFocusRequester = remember { FocusRequester() }
+        val initialPosition = remember(actions) { initialMultiSelectPosition(actions) }
+        val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPosition.scrollIndex ?: 0)
+        val focusRequesters = remember(actions) { actions.map { FocusRequester() } }
+        val cancelFocusRequester = remember { FocusRequester() }
         val shouldRequestFocus = forceInitialFocus || isControllerFocusMode()
         val inputModeManager = LocalInputModeManager.current
-        val initialFocusPlaced = remember { mutableStateOf(false) }
+        val windowFocused = LocalWindowInfo.current.isWindowFocused
+        var cancelFocusPlaced by remember { mutableStateOf(false) }
+        var initialFocusRequested by remember { mutableStateOf(false) }
         LaunchedEffect(
-            actions,
             shouldRequestFocus,
-            initialFocusPlaced.value,
-            focusRequestToken
+            windowFocused,
+            focusRequestToken,
+            cancelFocusPlaced
         ) {
-            if (shouldRequestFocus && initialFocusPlaced.value) {
+            if (shouldRequestFocus && windowFocused && focusRequestToken > 0 && !initialFocusRequested) {
+                val focusIndex = initialPosition.focusIndex
+                if (focusIndex == null && !cancelFocusPlaced) return@LaunchedEffect
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                initialFocusRequester.requestFocus()
+                if (focusIndex == null) {
+                    cancelFocusRequester.requestFocus()
+                } else {
+                    snapshotFlow { listState.layoutInfo.totalItemsCount > 0 }.first { it }
+                    if (listState.layoutInfo.visibleItemsInfo.none { it.index == focusIndex }) {
+                        listState.scrollToItem(focusIndex)
+                    }
+                    snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == focusIndex } }
+                        .first { it }
+                    focusRequesters[focusIndex].requestFocus()
+                }
+                initialFocusRequested = true
             }
         }
         ActionSheetContainer {
@@ -387,6 +470,7 @@ object AppActionSheet {
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = maxListHeight),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
@@ -394,11 +478,8 @@ object AppActionSheet {
                     ActionSheetRow(
                         action = action.copy(checked = action.id in selectedIds),
                         onAction = onToggle,
-                        modifier = if (index == 0) {
-                            Modifier
-                                .focusRequester(initialFocusRequester)
-                                .onGloballyPositioned { initialFocusPlaced.value = true }
-                        } else Modifier
+                        modifier = Modifier.focusRequester(focusRequesters[index]),
+                        multiChoice = true
                     )
                 }
             }
@@ -421,11 +502,9 @@ object AppActionSheet {
                 ActionSheetFooterAction(
                     cancelLabel,
                     onCancel,
-                    modifier = if (actions.isEmpty()) {
-                        Modifier
-                            .focusRequester(initialFocusRequester)
-                            .onGloballyPositioned { initialFocusPlaced.value = true }
-                    } else Modifier
+                    modifier = Modifier
+                        .focusRequester(cancelFocusRequester)
+                        .onGloballyPositioned { cancelFocusPlaced = true }
                 )
                 ActionSheetFooterAction(
                     label = confirmLabel,
@@ -516,14 +595,13 @@ object AppActionSheet {
                 .onPreviewKeyEvent { event ->
                     val nativeEvent = event.nativeKeyEvent
                     if (enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                        if (nativeEvent.action == KeyEvent.ACTION_UP) onClick()
+                        if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) onClick()
                         true
                     } else {
                         false
                     }
                 }
                 .clickable(enabled = enabled, onClick = onClick)
-                .focusable(enabled)
                 .padding(
                     horizontal = if (compact) 10.dp else 14.dp,
                     vertical = if (compact) 6.dp else 10.dp
@@ -587,10 +665,13 @@ object AppActionSheet {
     internal fun ActionSheetRow(
         action: Action,
         onAction: (Action) -> Unit,
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        singleChoice: Boolean = false,
+        multiChoice: Boolean = false
     ) {
         val rowShape = AppShapes.medium
         var focused by remember(action.id) { mutableStateOf(false) }
+        val activate = { if (action.enabled) onAction(action) }
         Column {
             if (action.sectionStart) {
                 HorizontalDivider(
@@ -619,20 +700,39 @@ object AppActionSheet {
                     .onPreviewKeyEvent { event ->
                         val nativeEvent = event.nativeKeyEvent
                         if (action.enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                            if (nativeEvent.action == KeyEvent.ACTION_UP) onAction(action)
+                            if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) activate()
                             true
                         } else {
                             false
                         }
                     }
-                    .then(if (action.toggle) {
-                        Modifier.toggleable(value = action.checked == true, enabled = action.enabled,
-                            role = Role.Switch, onValueChange = { onAction(action) })
-                    } else Modifier.clickable(enabled = action.enabled) { onAction(action) })
-                    .focusable(action.enabled)
+                    .then(when {
+                        action.toggle -> Modifier.toggleable(
+                            value = action.checked == true, enabled = action.enabled,
+                            role = Role.Switch, onValueChange = { activate() }
+                        )
+                        multiChoice && action.checked != null -> Modifier.toggleable(
+                            value = action.checked, enabled = action.enabled,
+                            role = Role.Checkbox, onValueChange = { activate() }
+                        )
+                        singleChoice && action.checked != null -> Modifier.selectable(
+                            selected = action.checked, enabled = action.enabled,
+                            role = Role.RadioButton, onClick = activate
+                        )
+                        else -> Modifier.clickable(enabled = action.enabled, onClick = activate)
+                    })
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                action.iconRes?.let { iconRes ->
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (action.enabled) 1f else 0.38f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = action.title.toString(),

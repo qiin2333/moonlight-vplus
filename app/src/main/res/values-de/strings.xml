@@ -218,7 +218,6 @@
     <string name="videoformat_hevcalways">Immer HEVC verwenden (könnte Crashes verursachen)</string>
     <string name="title_frame_pacing">Video Frame-Pacing</string>
     <string name="summary_frame_pacing">Lege fest, wie Videobilder getaktet werden. Die präzise Bildausgabe kann Videozeitstempel (PTS) verwenden und wird für die meisten Geräte empfohlen.</string>
-    <string name="resolution_prefix_native_fullscreen">Natives Vollbild</string>
     <string name="pacing_latency">Niedrige Latenz (schnellere Reaktion)</string>
     <string name="pacing_precise_sync">Präzises Bildtempo (empfohlen)</string>
     <string name="pacing_experimental_low_latency">Ultraniedrige Latenz (experimentell)</string>
@@ -233,12 +232,8 @@
     <string name="audioconf_51surround">5.1 Surround Sound</string>
     <string name="audioconf_71surround">7.1 Surround Sound</string>
     <string name="perf_overlay_netlatency">Durchschnittliche Netzwerklatenz: %1$d ms (Abweichung: %2$d ms)</string>
-    <string name="fps_30">30 FPS</string>
     <string name="resolution_480p">480p</string>
-    <string name="fps_120">120 FPS</string>
     <string name="resolution_720p">720p</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
     <string name="summary_troubleshooting">Tipps zur Diagnose und Behebung häufiger Streaming-Probleme anzeigen</string>
     <string name="pacing_balanced_alt">Ausgabe-FPS begrenzen (bis zur Bildwiederholrate)</string>
     <string name="summary_checkbox_absolute_mouse_mode">Dies kann die Mausbeschleunigung für die Fernsteuerung natürlicher gestalten, ist aber mit vielen Spielen nicht kompatibel.</string>
@@ -252,10 +247,8 @@
     <string name="summary_privacy_policy">Moonlight\'s Datenschutzbestimmungen anzeigen</string>
     <string name="summary_seekbar_deadzone">Hinweis: Einige Spiele können eine größere Controller-Totzone erzwingen als die, die in Moonlight konfiguriert ist.</string>
     <string name="summary_checkbox_enable_audiofx">Ermöglicht das Funktionieren von Audioeffekten beim Streaming, kann aber die Audio-Latenz erhöhen</string>
-    <string name="resolution_prefix_native_portrait">(Portrait)</string>
     <string name="title_checkbox_reduce_refresh_rate">Aktualisierungsrate verringern erlauben</string>
     <string name="summary_checkbox_reduce_refresh_rate">Durch das Verringern der Display Aktualisierungsrate, kann, auf Kosten der Video-Latenz, der Akkuverbrauch reduziert werden</string>
-    <string name="resolution_prefix_native_landscape">(Landscape)</string>
     <string name="frame_conversion_error">Der Host-PC hat einen schwerwiegenden Videocodierungsfehler gemeldet.
 \n
 \nVersuchen Sie, den HDR-Modus zu deaktivieren, die Streaming-Auflösung zu ändern oder die Bildschirmauflösung des Host-PCs zu ändern.</string>

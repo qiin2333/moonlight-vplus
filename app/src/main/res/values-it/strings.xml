@@ -186,7 +186,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="resolution_prefix_native">Nativo</string>
     <string name="no_video_received_error">Nessun video ricevuto dal PC sorgente.</string>
-    <string name="resolution_prefix_native_fullscreen">Schermo intero nativo</string>
     <string name="category_input_settings">Impostazioni di input</string>
     <string name="title_native_res_dialog">Avviso Risoluzione Nativa</string>
     <string name="dialog_title_osc_opacity">Cambia opacità</string>
@@ -202,10 +201,6 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">Surround 5.1</string>
     <string name="audioconf_71surround">Surround 7.1</string>
@@ -254,8 +249,6 @@
 \n
 \nProva a disabilitare la modalità HDR, modificare la risoluzione dello streaming o la risoluzione del display del tuo PC host.</string>
     <string name="summary_checkbox_reduce_refresh_rate">Una minore frequenza di aggiornamento del display può risparmiare energia a scapito di una latenza video aggiuntiva</string>
-    <string name="resolution_prefix_native_landscape">(Panorama)</string>
-    <string name="resolution_prefix_native_portrait">(Ritratto)</string>
     <string name="title_checkbox_enable_audiofx">Abilita il supporto per l\'equalizzatore di sistema</string>
     <string name="summary_checkbox_enable_audiofx">Consente agli effetti audio di funzionare durante lo streaming, ma può aumentare la latenza audio</string>
     <string name="title_checkbox_reduce_refresh_rate">Consenti riduzione della frequenza di aggiornamento</string>

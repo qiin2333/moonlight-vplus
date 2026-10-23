@@ -5,7 +5,6 @@
     <string name="conn_error_msg">Spouštění se nezdařilo</string>
     <string name="conn_client_latency_hw">zpoždění hardwarového dekodéru:</string>
     <string name="conn_terminated_title">Spojení ukončeno</string>
-    <string name="resolution_prefix_native_fullscreen">Nativní celá obrazovka</string>
     <string name="summary_checkbox_enable_audiofx">Umožňuje fungování zvukových efektů během streamování, ale může zvýšit zpoždění zvuku</string>
     <string name="early_termination_error">Na hostitelském PC se něco pokazilo při spouštění streamu.
 \n
@@ -89,7 +88,6 @@
     <string name="summary_checkbox_disable_warnings">Zakáže varování o pomalém připojení během streamování</string>
     <string name="title_disable_frame_drop">Nezahazovat snímky</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
     <string name="title_troubleshooting">Průvodce řešením problémů</string>
     <string name="summary_troubleshooting">Zobrazit tipy pro diagnózu a opravu běžných problémů se streamováním</string>
     <string name="resolution_720p">720p</string>
@@ -99,16 +97,11 @@
     <string name="audioconf_71surround">7.1 prostorový zvuk</string>
     <string name="pacing_balanced">Vyvážené (zpoždění a plynulost)</string>
     <string name="pacing_smoothness">Plynulost na prvním místě (vyšší zpoždění)</string>
-    <string name="resolution_prefix_native_landscape">(na šířku)</string>
-    <string name="resolution_prefix_native_portrait">(na výšku)</string>
     <string name="category_audio_settings">Nastavení zvuku</string>
     <string name="title_checkbox_enable_audiofx">Povolit podporu systémového ekvalizéru</string>
     <string name="category_input_settings">Nastavení vstupu</string>
     <string name="summary_setup_guide">Zobrazit instrukce k nastavení vašeho herního PC pro streamování</string>
     <string name="dialog_title_osc_opacity">Změnit průhlednost</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 prostorový zvuk</string>
     <string name="help_loading_msg">Načítání stránky s nápovědou…</string>

@@ -6,6 +6,7 @@ import android.util.DisplayMetrics
 import android.view.Display
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * 设置页与游戏内显示页共用的候选列表来源。
@@ -13,7 +14,7 @@ import kotlin.math.min
  */
 internal object DisplayChoiceLists {
 
-    /** 面板真实尺寸(横屏归一化),用于把与原生同尺寸的条目与 Native 伪选项去重。 */
+    /** 面板真实尺寸(横屏归一化)，仅用于 Native 的摘要和推荐码率。 */
     fun nativeSize(context: Context, display: Display?): Pair<Int, Int>? {
         val resolved = display
             ?: (context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
@@ -29,40 +30,61 @@ internal object DisplayChoiceLists {
     }
 
     /**
-     * 纯决策:候选值 = 低分辨率预设(按策略显隐) + 商店列表 + Native。
-     * 与面板真实尺寸同值的商店行会被 Native 档取代(同一输出只留一行,且跟随面板的语义更完整)。
+     * 固定尺寸与跟随显示器始终是不同选项。旧值和草稿值只补入候选，不写回商店。
      */
     fun resolutionValues(
         storeValues: List<String>,
-        native: Pair<Int, Int>?,
         currentResolution: String,
-        showLowResolutionPresets: Boolean
+        showLowResolutionPresets: Boolean,
+        retainedValues: List<String> = emptyList()
     ): List<String> {
-        val nativeValue = native?.let { "${it.first}x${it.second}" }
-        val values = storeValues.filterNot { it.equals(nativeValue, ignoreCase = true) }.toMutableList()
-        val lowPresets = listOf(PreferenceConfiguration.RES_360P, PreferenceConfiguration.RES_480P)
-            .filter { preset ->
-                preset !in values &&
-                    PreferenceConfiguration.includeLowResolutionPreset(
-                        preset,
-                        currentResolution,
-                        showLowResolutionPresets
-                    )
-            }
-        return lowPresets + values + PreferenceConfiguration.RES_NATIVE
-    }
-
-    /** 与面板同尺寸的已存值在选择展示上归一为 Native(两者输出一致,Native 语义更完整)。 */
-    fun normalizeSelection(selected: String, native: Pair<Int, Int>?): String {
-        val nativeValue = native?.let { "${it.first}x${it.second}" } ?: return selected
-        return if (selected.equals(nativeValue, ignoreCase = true)) {
-            PreferenceConfiguration.RES_NATIVE
+        val retained = listOf(currentResolution) + retainedValues
+        val values = (storeValues + retained).filter(::isFixedResolution).distinct()
+        val lowPresets = if (showLowResolutionPresets || retained.any(PreferenceConfiguration::isLowResolutionPreset)) {
+            listOf(PreferenceConfiguration.RES_360P, PreferenceConfiguration.RES_480P)
         } else {
-            selected
+            emptyList()
         }
+        return lowPresets + values.filterNot { it in lowPresets } + PreferenceConfiguration.RES_NATIVE
     }
 
-    /** 商店列表;清空视为未显式配置,网格回退出厂基线档(编辑器内仍显示真实空列表)。 */
+    private fun isFixedResolution(value: String): Boolean {
+        val resolution = ResolutionValidator.parseResolution(value) ?: return false
+        return resolution.width > 0 && resolution.height > 0
+    }
+
+    /** 使用整数 FPS 表示设备刷新率，59.94Hz 与 60 FPS 合并。 */
+    fun frameRateValues(
+        baseValues: List<String>,
+        maxRefreshRate: Float,
+        retainedValues: List<String> = emptyList()
+    ): List<String> {
+        val displayRate = maxRefreshRate.takeIf { it.isFinite() && it > 0f }
+            ?.roundToInt()?.toString()
+        return (baseValues + retainedValues + listOfNotNull(displayRate))
+            .mapNotNull { it.toIntOrNull()?.takeIf { fps -> fps > 0 } }
+            .distinct()
+            .sorted()
+            .map(Int::toString)
+    }
+
+    /** 自动推荐码率以最终输出面积计算；不会改动运行中的 ABR 策略。 */
+    fun recommendedBitrate(
+        resolution: String,
+        frameRate: String,
+        nativeSize: Pair<Int, Int>?
+    ): Int {
+        val resolved = if (resolution == PreferenceConfiguration.RES_NATIVE) {
+            nativeSize?.takeIf { it.first > 0 && it.second > 0 }
+                ?.let { "${it.first}x${it.second}" }
+                ?: PreferenceConfiguration.DEFAULT_RESOLUTION
+        } else {
+            resolution
+        }
+        return PreferenceConfiguration.getDefaultBitrate(resolved, frameRate)
+    }
+
+    /** 商店列表；清空视为未显式配置，候选列表回退出厂基线档（编辑器内仍显示真实空列表）。 */
     fun resolutionStoreValues(context: Context): List<String> =
         CustomResolutionsStore.load(context).map { it.toString() }
             .ifEmpty { CustomResolutionsStore.DEFAULT_RESOLUTIONS.map { it.toString() } }

@@ -176,7 +176,6 @@
     <string name="summary_enable_hdr">Stream HDR als het spel en de GPU van de PC dit ondersteund. HDR vereist een GTX 1000-reeks GPU of later.</string>
     <string name="title_details">Details</string>
     <string name="delete_pc_msg">Bent u zeker dat u deze PC wilt verwijderen\?</string>
-    <string name="resolution_prefix_native_fullscreen">Oorspronkelijk Volledig Scherm</string>
     <string name="help">Help</string>
     <string name="perf_overlay_streamdetails">Video stream: %1$s %2$.2f FPS</string>
     <string name="perf_overlay_incomingfps">Binnenkomende frame rate van het netwerk: %1$.2f FPS</string>

@@ -365,7 +365,6 @@
     <string name="pcview_menu_header_online">線上</string>
     <string name="perf_overlay_netlatency">平均網路延時：%1$d ms (抖動：%2$d ms)</string>
     <string name="perf_overlay_streamdetails">視訊串流：%1$s %2$.2f FPS</string>
-    <string name="resolution_prefix_native_fullscreen">原生全螢幕</string>
     <!-- Array strings -->
     <string name="audioconf_stereo">立體聲</string>
     <string name="audioconf_51surround">5.1 環場音效</string>
@@ -374,10 +373,6 @@
     <string name="videoformat_pyrowave">PyroWave（實驗性，不支援幀生成）</string>
     <string name="videoformat_hevcalways">優先使用 HEVC</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="resolution_360p">360P</string>
     <string name="resolution_720p">720P</string>
     <string name="resolution_480p">480P</string>
@@ -410,8 +405,6 @@
     <string name="mouse_axis_correction_270">旋轉 270 度</string>
     <string name="title_checkbox_enable_audiofx">使用系統音訊效果</string>
     <string name="summary_checkbox_enable_audiofx">允許等化器等系統效果處理 Moonlight 本機解碼的音訊；直通音訊會略過這些效果，此選項也可能增加延遲。</string>
-    <string name="resolution_prefix_native_landscape">(橫向)</string>
-    <string name="resolution_prefix_native_portrait">(直向)</string>
     <string name="title_checkbox_reduce_refresh_rate">允許使用較低的螢幕更新率</string>
     <string name="summary_checkbox_reduce_refresh_rate">僅用於「平衡」模式。配合串流的較低螢幕更新率可以省電，但可能增加視訊延遲。</string>
     <string name="frame_conversion_error">主機電腦回報了一個嚴重的視訊編碼錯誤。
@@ -612,7 +605,6 @@
     <string name="suffix_seekbar_mic_balance_target" formatted="false">%</string>
     <string name="title_checkbox_mic_voice_enhancement">人聲增強</string>
     <string name="summary_checkbox_mic_voice_enhancement">減少低頻雜訊並提升語音清晰度，可用於固定增益和音量平衡模式。</string>
-    <string name="summary_custom_resolutions">新增或刪除「串流解析度」清單中的自訂解析度。</string>
     <string name="category_advanced_features">效能與相容性</string>
     <string name="category_framegen_settings">影格生成</string>
     <string name="category_enhanced_touch_settings">直接觸控調校</string>
@@ -1089,4 +1081,8 @@
     <string name="summary_fec_fixed">用戶端指定比例優先於相容主機的 FEC 設定，下次連線生效。</string>
     <string name="numeric_parameter_range">請輸入 %1$s–%2$s %3$s 內的有效數值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 協商失敗，已改用 %1$s。</string>
+    <string name="display_native_resolution_description">跟隨目標顯示器 · %1$s</string>
+    <string name="display_choice_unavailable">此裝置暫不支援</string>
+    <string name="display_custom_resolution_action">管理自訂解析度…</string>
+    <string name="display_custom_resolution_short">自訂</string>
 </resources>

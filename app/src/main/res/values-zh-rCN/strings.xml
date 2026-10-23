@@ -209,7 +209,6 @@
     <string name="title_resolution_list">串流分辨率</string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度，低分辨率提升在低端设备和较慢网络中的串流体验。</string>
     <string name="title_custom_resolutions">自定义分辨率</string>
-    <string name="summary_custom_resolutions">添加或删除“串流分辨率”列表中的自定义分辨率。</string>
     <string name="width_hint">2560</string>
     <string name="height_hint">1440</string>
     <string name="resolution_already_exists">该分辨率已存在</string>
@@ -655,7 +654,6 @@
     <string name="nettest_text_blocked">您设备当前的网络连接拦截了Moonlight。连接到该网络时可能无法通过互联网串流。</string>
     <string name="perf_overlay_netlatency">平均网络延迟： %1$d ms (抖动： %2$d ms)</string>
     <string name="perf_overlay_streamdetails">视频流： %1$s %2$.2f FPS</string>
-    <string name="resolution_prefix_native_fullscreen">原生全屏</string>
     <!-- Array strings -->
     <string name="audioconf_stereo">立体声</string>
     <string name="audioconf_51surround">5.1环绕声</string>
@@ -735,8 +733,6 @@
     <string name="summary_checkbox_enable_esc_menu">双击所选按键打开串流返回菜单；单击仍会发送到主机。</string>
     <string name="title_list_esc_menu_key">串流菜单快捷键</string>
     <string name="summary_list_esc_menu_key">选择要双击打开串流返回菜单的按键。</string>
-    <string name="resolution_prefix_native_landscape">（横向）</string>
-    <string name="resolution_prefix_native_portrait">（纵向）</string>
     <string name="title_checkbox_enable_audiofx">使用系统音频效果</string>
     <string name="summary_checkbox_enable_audiofx">允许均衡器等系统效果处理 Moonlight 本机解码的音频；直通音频会绕过这些效果，此选项也可能增加延迟。</string>
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
@@ -1182,7 +1178,6 @@
     <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>
     <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
 
-    <string name="game_menu_change_resolution">更改分辨率</string>
     <string name="game_menu_display_settings">显示设置</string>
     <string name="display_spec_resolution">分辨率</string>
     <string name="display_spec_fps">帧率</string>
@@ -2318,4 +2313,8 @@
     <string name="numeric_parameter_range">请输入 %1$s–%2$s %3$s 内的有效数值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>
     <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string name="display_native_resolution_description">跟随目标显示器 · %1$s</string>
+    <string name="display_choice_unavailable">此设备暂不支持</string>
+    <string name="display_custom_resolution_action">管理自定义分辨率…</string>
+    <string name="display_custom_resolution_short">自定义</string>
 </resources>

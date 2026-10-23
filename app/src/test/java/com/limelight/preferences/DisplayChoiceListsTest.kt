@@ -1,52 +1,58 @@
 package com.limelight.preferences
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisplayChoiceListsTest {
     private val store = listOf("1280x720", "1920x1080", "2560x1440", "3840x2160")
+    private val frameRates = listOf("30", "60", "90", "120", "144", "165")
 
     @Test
-    fun nativeReplacesSameSizeStoreRowSoFollowingThePanelStaysReachable() {
-        val values = DisplayChoiceLists.resolutionValues(store, 1920 to 1080, "1920x1080", false)
-        assertEquals(listOf("1280x720", "2560x1440", "3840x2160", "Native"), values)
-        assertEquals(
-            "Native",
-            DisplayChoiceLists.normalizeSelection("1920x1080", 1920 to 1080)
-        )
+    fun fixedSizeAndFollowingTheDisplayRemainDistinctSelections() {
+        val values = DisplayChoiceLists.resolutionValues(store, "1920x1080", false)
+        assertEquals(store + "Native", values)
+        assertTrue("1920x1080" in values)
+        assertTrue("Native" in values)
     }
 
     @Test
-    fun normalizeSelectionLeavesOtherValuesUntouched() {
-        assertEquals("2560x1440", DisplayChoiceLists.normalizeSelection("2560x1440", 1920 to 1080))
-        assertEquals("1280x720", DisplayChoiceLists.normalizeSelection("1280x720", null))
-        assertEquals("Native", DisplayChoiceLists.normalizeSelection("Native", 1920 to 1080))
+    fun currentAndDraftCustomValuesStayReachableWithoutChangingStore() {
+        val values = DisplayChoiceLists.resolutionValues(
+            store,
+            "2340x1080",
+            false,
+            listOf("3440x1440", "1920x1080")
+        )
+        assertEquals(store + listOf("2340x1080", "3440x1440", "Native"), values)
+        assertEquals(listOf("1280x720", "1920x1080", "2560x1440", "3840x2160"), store)
+    }
+
+    @Test
+    fun malformedValuesAreExcludedAndNativeAppearsOnlyOnceAtTheEnd() {
+        val values = DisplayChoiceLists.resolutionValues(
+            store + listOf("Native", "1920x1080", "wide", "0x1080"),
+            "Native",
+            false,
+            listOf("-1x720")
+        )
+        assertEquals(store + "Native", values)
     }
 
     @Test
     fun lowPresetsAppearWhenToggledOn() {
-        val values = DisplayChoiceLists.resolutionValues(store, 1920 to 1080, "1920x1080", true)
-        assertEquals(
-            listOf("640x360", "854x480", "1280x720", "2560x1440", "3840x2160", "Native"),
-            values
-        )
+        val values = DisplayChoiceLists.resolutionValues(store, "1920x1080", true)
+        assertEquals(listOf("640x360", "854x480") + store + "Native", values)
     }
 
     @Test
-    fun lowPresetsAppearWhenCurrentSelectionUsesOne() {
-        val values = DisplayChoiceLists.resolutionValues(store, 2560 to 1440, "640x360", false)
+    fun lowPresetsAppearWhenCurrentSelectionOrDraftUsesOne() {
+        val expected = listOf("640x360", "854x480") + store + "Native"
+        assertEquals(expected, DisplayChoiceLists.resolutionValues(store, "640x360", false))
         assertEquals(
-            listOf("640x360", "854x480", "1280x720", "1920x1080", "3840x2160", "Native"),
-            values
-        )
-    }
-
-    @Test
-    fun nativeStaysWhenNoEntryMatchesThePanelSize() {
-        val values = DisplayChoiceLists.resolutionValues(store, 2340 to 1080, "1920x1080", false)
-        assertEquals(
-            listOf("1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"),
-            values
+            expected,
+            DisplayChoiceLists.resolutionValues(store, "1920x1080", false, listOf("854x480"))
         )
     }
 
@@ -54,13 +60,53 @@ class DisplayChoiceListsTest {
     fun duplicateLowPresetInStoreIsNotAppendedTwice() {
         val values = DisplayChoiceLists.resolutionValues(
             listOf("640x360") + store,
-            null,
             "1920x1080",
             false
         )
+        assertEquals(listOf("640x360") + store + "Native", values)
+    }
+
+    @Test
+    fun deviceRefreshRateAdds75Or240FpsAndKeepsOldAndDraftValues() {
         assertEquals(
-            listOf("640x360", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"),
-            values
+            listOf("30", "60", "75", "90", "120", "144", "165", "240"),
+            DisplayChoiceLists.frameRateValues(frameRates, 75f, listOf("240", "75"))
         )
+        assertEquals(
+            frameRates + "240",
+            DisplayChoiceLists.frameRateValues(frameRates, 239.76f)
+        )
+    }
+
+    @Test
+    fun fractional60HzDoesNotCreateADuplicateAndInvalidFpsIsIgnored() {
+        assertEquals(
+            frameRates,
+            DisplayChoiceLists.frameRateValues(frameRates, 59.94f, listOf("60", "0", "-1", "fast"))
+        )
+        assertEquals(frameRates, DisplayChoiceLists.frameRateValues(frameRates, Float.NaN))
+    }
+
+    @Test
+    fun nativeRecommendationUsesTheActualDisplaySizeAndFinalFrameRate() {
+        assertEquals(
+            PreferenceConfiguration.getDefaultBitrate("3840x2160", "120"),
+            DisplayChoiceLists.recommendedBitrate("Native", "120", 3840 to 2160)
+        )
+        assertEquals(
+            PreferenceConfiguration.getDefaultBitrate("1920x1080", "60"),
+            DisplayChoiceLists.recommendedBitrate("1920x1080", "60", 3840 to 2160)
+        )
+    }
+
+    @Test
+    fun presetCapabilityLimitDoesNotBlockValidCustomDimensions() {
+        val limits = DisplayChoiceLimits(1920, 60f)
+        assertFalse(limits.supportsResolution("3840x2160"))
+        assertTrue(limits.supportsResolution("3440x1440"))
+        assertTrue(limits.supportsResolution("1080x2340"))
+        assertFalse(limits.supportsResolution("0x1080"))
+        assertTrue(limits.supportsFrameRate("240", true))
+        assertFalse(limits.supportsFrameRate("240", false))
     }
 }

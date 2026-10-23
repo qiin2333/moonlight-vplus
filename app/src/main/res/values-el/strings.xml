@@ -79,7 +79,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Επέκταση βίντεο σε πλήρη οθόνη</string>
     <string name="resolution_prefix_native">Εγγενής</string>
-    <string name="resolution_prefix_native_fullscreen">Εγγενής πλήρης οθόνη</string>
     <string name="category_audio_settings">Ρυθμίσεις ήχου</string>
     <string name="title_audio_config_list">Ρύθμιση παραμέτρων ήχου surround</string>
     <string name="suffix_seekbar_deadzone">%</string>

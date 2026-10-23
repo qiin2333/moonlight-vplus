@@ -117,7 +117,7 @@ object CustomResolutionsDialog {
         var cancelled = false
         var confirmedByUser = false
         var current = initial
-        val controllerFocusRequest = mutableIntStateOf(if (requestInitialFocus) 1 else 0)
+        val controllerFocusRequest = mutableIntStateOf(0)
         val touchNavigationActive = mutableStateOf(!requestInitialFocus)
         val axisNavigation = MenuAxisNavigationState()
         fun discardChanges() {
@@ -134,7 +134,6 @@ object CustomResolutionsDialog {
                     initial = initial,
                     pixelsText = pixelsText,
                     nativePresets = nativeResolutionPresets(context, targetDisplay),
-                    requestInitialFocus = requestInitialFocus,
                     controllerFocusRequest = controllerFocusRequest.intValue,
                     touchNavigationActive = touchNavigationActive.value,
                     onTouchNavigation = { touchNavigationActive.value = true },
@@ -217,6 +216,11 @@ object CustomResolutionsDialog {
         }
         dialog.show()
         applyDialogWidth(dialog, context)
+        composeView.post {
+            if (dialog.isShowing && requestInitialFocus && !touchNavigationActive.value) {
+                controllerFocusRequest.intValue++
+            }
+        }
         return dialog
     }
 
@@ -321,7 +325,6 @@ private fun CustomResolutionsDialogContent(
     initial: List<Resolution>,
     pixelsText: (Int) -> String,
     nativePresets: List<Resolution>,
-    requestInitialFocus: Boolean,
     controllerFocusRequest: Int,
     touchNavigationActive: Boolean,
     onTouchNavigation: () -> Unit,
@@ -343,6 +346,8 @@ private fun CustomResolutionsDialogContent(
     val widthFocus = remember { FocusRequester() }
     val heightFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
+    var addFocusPlaced by remember { mutableStateOf(false) }
+    var handledControllerFocusRequest by remember { mutableIntStateOf(0) }
 
     fun keyOf(r: Resolution) = "${r.width}x${r.height}"
     val rowFocus = remember(resolutions) {
@@ -380,16 +385,15 @@ private fun CustomResolutionsDialogContent(
         }
     }
 
-    // 触摸打开时不抢焦点，避免一打开就弹出输入法
+    // Wait for the shown window and Add's layout, then handle each controller request once.
+    // Touch opens leave focus alone so the keyboard does not appear automatically.
     val hostView = LocalView.current
     val inputModeManager = LocalInputModeManager.current
-    LaunchedEffect(requestInitialFocus, controllerFocusRequest) {
-        if (!requestInitialFocus && controllerFocusRequest == 0) return@LaunchedEffect
+    LaunchedEffect(controllerFocusRequest, addFocusPlaced) {
+        if (!addFocusPlaced || controllerFocusRequest <= handledControllerFocusRequest) return@LaunchedEffect
         inputModeManager.requestInputMode(InputMode.Keyboard)
-        repeat(10) {
-            if (runCatching { addFocus.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
-            kotlinx.coroutines.delay(16)
-        }
+        addFocus.requestFocus()
+        handledControllerFocusRequest = controllerFocusRequest
     }
 
     fun commit(list: List<Resolution>) {
@@ -503,7 +507,8 @@ private fun CustomResolutionsDialogContent(
                     downFromHeight = firstPresetFocus ?: firstRowFocus ?: addFocus,
                     leftTarget = leftTarget,
                     onAdd = ::addResolution,
-                    onHeightDone = ::addResolution
+                    onHeightDone = ::addResolution,
+                    onAddPlaced = { addFocusPlaced = true }
                 )
             }
 

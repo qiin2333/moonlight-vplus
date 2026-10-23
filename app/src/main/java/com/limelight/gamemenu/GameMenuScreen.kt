@@ -1007,10 +1007,14 @@ private fun DisplayTileGrid(
     plusContentDescription: String? = null,
     onPlus: (() -> Unit)? = null
 ) {
-    val initialFocusIndex = choices.indexOfFirst { it.enabled }
+    val initialFocusIndex = choices.indexOfFirst { it.enabled && it.selected }
+        .takeIf { it >= 0 } ?: choices.indexOfFirst { it.enabled }
     val tileShape = RoundedCornerShape(6.dp)
     val normalBorder = colorResource(R.color.game_menu_list_item_border)
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
         val cells = choices.map { TileCell.Choice(it) } +
             (if (onPlus != null) listOf(TileCell.Plus) else emptyList())
         cells.chunked(columns).forEachIndexed { rowIndex, row ->
@@ -1072,7 +1076,7 @@ private fun DisplayChoiceTile(
             .height(40.dp)
             .clip(shape)
             .background(
-                if (choice.selected) accent.copy(alpha = 0.06f)
+                if (choice.selected) accent.copy(alpha = 0.12f)
                 else colorResource(R.color.game_menu_list_item_normal),
                 shape
             )
@@ -1081,7 +1085,13 @@ private fun DisplayChoiceTile(
                 if (choice.selected) accent else normalBorderColor,
                 shape
             )
-            .clickable(enabled = choice.enabled, role = Role.Button) { onClick() }
+            .gamepadFocusOutline(shape)
+            .selectable(
+                selected = choice.selected,
+                enabled = choice.enabled,
+                role = Role.RadioButton,
+                onClick = onClick
+            )
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -1171,15 +1181,18 @@ private fun DisplayPlusTile(
                     )
                 )
             }
+            .gamepadFocusOutline(shape)
             .clickable(role = Role.Button) { onClick?.invoke() }
             .semantics { this.contentDescription = contentDescription }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "＋",
+            text = "＋ ${stringResource(R.string.display_custom_resolution_short)}",
             color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 16.sp
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

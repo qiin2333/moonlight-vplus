@@ -14,6 +14,10 @@ internal data class DisplayChoiceLimits(
 ) {
     fun supportsResolution(value: String): Boolean {
         val resolution = ResolutionValidator.parseResolution(value) ?: return true
+        if (resolution.width <= 0 || resolution.height <= 0) return false
+        // Display modes and decoder width ranges are only a preset heuristic. A valid custom
+        // size can still work (including rotated or wide modes), so let the user try it.
+        if (value !in PreferenceConfiguration.RESOLUTIONS) return true
         return maxResolutionWidth == 0 ||
             max(resolution.width, resolution.height) <= maxResolutionWidth ||
             resolution.width == 1280 && resolution.height == 720

@@ -200,7 +200,6 @@
     <string name="resolution_prefix_native">Innebygd</string>
     <string name="title_native_res_dialog">Advarsel om innebygd oppløsning</string>
     <string name="title_checkbox_flip_face_buttons">Veksle diamantknapper</string>
-    <string name="resolution_prefix_native_fullscreen">Systemspesifikk fullskjerm</string>
     <string name="perf_overlay_netlatency">Gjennomsnittlig nettverksforsinkelse: %1$d ms (variasjon: %2$d ms)</string>
     <string name="perf_overlay_streamdetails">Videostrøm: %1$s %2$.2f BPS</string>
     <string name="title_config_sync_backup_password">Passord for sikkerhetskopikryptering</string>
