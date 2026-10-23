@@ -28,16 +28,42 @@
 
     </FrameLayout>
 
-    <!-- 标题紧贴应用网格，整个内容组保持在页面中央。 -->
+    <!-- 应用网格本身保持在页面中央，标题和提示紧贴其上沿。 -->
+    <FrameLayout
+        android:id="@+id/appCatalogFrame"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <FrameLayout
+            android:id="@+id/appFragmentContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <View
+            android:id="@+id/selectionIndicator"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/selection_indicator"
+            android:visibility="invisible"
+            android:elevation="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false" />
+    </FrameLayout>
+
+    <!-- 标题区域（电脑名 + 应用名 + 恢复箭头），与列表保持固定间距。 -->
     <LinearLayout
         android:id="@+id/appContentColumn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
+        android:layout_above="@id/appCatalogFrame"
+        android:layout_marginStart="@dimen/appview_content_margin"
+        android:layout_marginEnd="@dimen/appview_content_margin"
+        android:layout_marginBottom="4dp"
         android:orientation="vertical"
-        android:gravity="end"
-        android:paddingStart="@dimen/appview_content_margin"
-        android:paddingEnd="@dimen/appview_content_margin">
+        android:gravity="end">
 
         <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
         <androidx.appcompat.widget.AppCompatTextView
@@ -80,29 +106,6 @@
             android:importantForAccessibility="yes"
             android:visibility="gone" />
 
-        <!-- RecyclerView 与选中框同层，标题与列表保持紧邻。 -->
-        <FrameLayout
-            android:id="@+id/appCatalogFrame"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipChildren="false"
-            android:clipToPadding="false">
-
-            <FrameLayout
-                android:id="@+id/appFragmentContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <View
-                android:id="@+id/selectionIndicator"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:background="@drawable/selection_indicator"
-                android:visibility="invisible"
-                android:elevation="8dp"
-                android:clipChildren="false"
-                android:clipToPadding="false" />
-        </FrameLayout>
     </LinearLayout>
 
     <!-- 底部信息固定在安全区域上方，不参与应用列表的垂直居中。 -->
