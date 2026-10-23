@@ -13,6 +13,10 @@ include $(CLEAR_VARS)
 LOCAL_MODULE    := moonlight-core
 
 LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
+                   moonlight-common-c/src/MatDepacketizer.c \
+                   moonlight-common-c/src/MatReceiver.c \
+                   moonlight-common-c/src/MatPlayback.c \
+                   moonlight-common-c/src/MatDumpFile.c \
                    moonlight-common-c/src/ByteBuffer.c \
                    moonlight-common-c/src/Connection.c \
                    moonlight-common-c/src/ConnectionTester.c \
@@ -53,6 +57,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/enet/win32.c \
                    simplejni.c \
                    callbacks.c \
+                   mat_carrier_bridge.c \
                    pyrowave_decoder_bridge.cpp \
                    pyrowave_capabilities.cpp \
                    minisdl.c \

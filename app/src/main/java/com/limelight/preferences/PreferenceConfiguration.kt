@@ -1397,12 +1397,13 @@ class PreferenceConfiguration {
             //   * 7.1+ -> clamp to 5.1 first: AC3/E-AC3 passthrough is capped at 5.1 in
             //             our pipeline and the PCM renderer currently supports up to 5.1.
             val audioCodec = prefs.getString(AUDIO_CODEC_PREF_STRING, DEFAULT_AUDIO_CODEC) ?: DEFAULT_AUDIO_CODEC
-            if (enableAudioPassthrough && audioCodec != "opus" && config.audioConfiguration.channelCount > 6) {
+            if (enableAudioPassthrough && audioCodec != "opus" && audioCodec != "mat_iec61937" && config.audioConfiguration.channelCount > 6) {
                 config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_51_SURROUND
             }
             config.audioCodec = when (audioCodec) {
                 "ac3" -> MoonBridge.AUDIO_CODEC_AC3
                 "eac3" -> MoonBridge.AUDIO_CODEC_EAC3
+                "mat_iec61937" -> MoonBridge.AUDIO_CODEC_MAT_IEC61937
                 "pcm" -> MoonBridge.AUDIO_CODEC_PCM_S16
                 "opus" -> MoonBridge.AUDIO_CODEC_OPUS
                 else -> when (config.audioConfiguration.channelCount) {
@@ -1412,6 +1413,7 @@ class PreferenceConfiguration {
                 }
             }
             val audioPassthroughBuffer = prefs.getString(AUDIO_PASSTHROUGH_BUFFER_PREF_STRING, DEFAULT_AUDIO_PASSTHROUGH_BUFFER) ?: DEFAULT_AUDIO_PASSTHROUGH_BUFFER
+            if (prefs.getBoolean("checkbox_mat_dump", false)) config.audioCodec = MoonBridge.AUDIO_CODEC_MAT_DUMP
             config.audioPassthroughBufferBytes = when (audioPassthroughBuffer) {
                 "low" -> 8 * 1024
                 "high" -> 32 * 1024

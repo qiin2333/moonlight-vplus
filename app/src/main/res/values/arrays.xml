@@ -99,6 +99,7 @@
         <item>@string/audio_codec_ac3</item>
         <item>@string/audio_codec_eac3</item>
         <item>@string/audio_codec_pcm</item>
+        <item>MAT IEC61937 — finite replay / HDMI (experimental)</item>
     </string-array>
     <string-array name="audio_codec_values" translatable="false">
         <item>auto</item>
@@ -106,6 +107,7 @@
         <item>ac3</item>
         <item>eac3</item>
         <item>pcm</item>
+        <item>mat_iec61937</item>
     </string-array>
 
     <!-- Audio passthrough buffer size preset -->

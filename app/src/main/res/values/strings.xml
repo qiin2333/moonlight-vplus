@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="title_mat_dump">MAT recording verification (experimental)</string>
+    <string name="summary_mat_dump">Dump only, no sound playback. Requires an explicitly configured Sunshine MAT replay source. Saves private files after complete reassembly and SHA256 verification.</string>
 
     <!-- Shortcut strings -->
     <string name="scut_deleted_pc">PC deleted</string>

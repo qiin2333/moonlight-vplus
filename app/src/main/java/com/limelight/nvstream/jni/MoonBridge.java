@@ -21,6 +21,8 @@ public class MoonBridge {
     public static final int AUDIO_CODEC_AC3  = 1;
     public static final int AUDIO_CODEC_EAC3 = 2;
     public static final int AUDIO_CODEC_PCM_S16 = 3;
+    public static final int AUDIO_CODEC_MAT_DUMP = 4; // Explicit dump-only RTSP profile, never AudioTrack.
+    public static final int AUDIO_CODEC_MAT_IEC61937 = 5; // Explicit finite replay, never inferred from dump support.
 
     public static final int VIDEO_FORMAT_H264 = 0x0001;
     public static final int VIDEO_FORMAT_H265 = 0x0100;
@@ -379,6 +381,10 @@ public class MoonBridge {
             audioRenderer.playEncodedAudio(encodedData, length);
         }
     }
+    public static com.limelight.binding.audio.MatCarrierConsumer bridgeArGetMatConsumer() {
+        return audioRenderer instanceof com.limelight.binding.audio.MatCarrierConsumer
+                ? (com.limelight.binding.audio.MatCarrierConsumer) audioRenderer : null;
+    }
 
     public static void bridgeClStageStarting(int stage) {
         if (connectionListener != null) {
@@ -568,7 +574,7 @@ public class MoonBridge {
                                               int videoCapabilities,
                                               int colorSpace, int colorRange, int hdrMode,
                                               boolean enableMic, boolean controlOnly,
-                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics, int fecPercentage);
+                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics, int fecPercentage, String matDumpPath);
 
     // Sunshine dynamic HDR negotiation result. Valid after the connection
     // callback reports the session is established (RTSP handshake complete).
