@@ -28,160 +28,138 @@
 
     </FrameLayout>
 
-    <!-- 标题、应用网格和底部信息共享一个可滚动的声明式内容列。 -->
-    <ScrollView
-        android:id="@+id/appContentScroll"
+    <!-- 标题紧贴应用网格，整个内容组保持在页面中央。 -->
+    <LinearLayout
+        android:id="@+id/appContentColumn"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/topPanelToggle"
-        android:layout_alignParentBottom="true"
-        android:layout_marginTop="4dp"
-        android:fillViewport="true"
-        android:clipChildren="true"
-        android:clipToPadding="false"
-        android:focusable="false"
-        android:scrollbars="none">
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:gravity="end"
+        android:paddingStart="@dimen/appview_content_margin"
+        android:paddingEnd="@dimen/appview_content_margin">
 
-        <LinearLayout
-            android:id="@+id/appContentColumn"
+        <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/appListText"
+            style="@style/AppListTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="4dp"
+            android:gravity="end"
+            android:paddingStart="8dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp"
+            android:preferKeepClear="true"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@drawable/appview_title_background" />
+
+        <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示。 -->
+        <TextView
+            android:id="@+id/appViewTargetReminder"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/control_highlight_color"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:lineSpacingExtra="1dp"
+            android:shadowColor="@color/appview_text_shadow"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:focusable="false"
+            android:clickable="false"
+            android:importantForAccessibility="yes"
+            android:visibility="gone" />
+
+        <!-- RecyclerView 与选中框同层，标题与列表保持紧邻。 -->
+        <FrameLayout
+            android:id="@+id/appCatalogFrame"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <FrameLayout
+                android:id="@+id/appFragmentContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <View
+                android:id="@+id/selectionIndicator"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/selection_indicator"
+                android:visibility="invisible"
+                android:elevation="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- 底部信息固定在安全区域上方，不参与应用列表的垂直居中。 -->
+    <LinearLayout
+        android:id="@+id/bottomInfoContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="@dimen/appview_content_margin"
+        android:layout_marginEnd="@dimen/appview_content_margin"
+        android:layout_marginBottom="@dimen/appview_bottom_margin"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <!-- 上一次设置信息 -->
+        <LinearLayout
+            android:id="@+id/lastSettingsInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="end"
-            android:paddingStart="@dimen/appview_content_margin"
-            android:paddingEnd="@dimen/appview_content_margin"
-            android:paddingBottom="@dimen/appview_bottom_margin"
-            tools:ignore="ScrollViewSize">
+            android:visibility="gone">
 
-            <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/appListText"
-                style="@style/AppListTitle"
+            <CheckBox
+                android:id="@+id/useLastSettingsCheckbox"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginTop="4dp"
-                android:gravity="end"
-                android:paddingStart="8dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="4dp"
-                android:preferKeepClear="true"
-                android:clickable="true"
+                android:layout_marginTop="5dp"
                 android:focusable="true"
-                android:background="@drawable/appview_title_background" />
+                android:text="@string/app_last_settings_use_checkbox"
+                android:textColor="@color/appview_text_secondary"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-light"
+                android:buttonTint="@color/appview_text_primary"
+                android:checked="false" />
 
-            <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示。 -->
             <TextView
-                android:id="@+id/appViewTargetReminder"
+                android:id="@+id/lastSettingsText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="end"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:textColor="@color/control_highlight_color"
                 android:textSize="13sp"
-                android:fontFamily="sans-serif-medium"
-                android:maxLines="2"
-                android:ellipsize="end"
-                android:lineSpacingExtra="1dp"
+                android:textColor="@color/appview_text_secondary"
                 android:shadowColor="@color/appview_text_shadow"
                 android:shadowDx="1"
                 android:shadowDy="1"
                 android:shadowRadius="2"
-                android:focusable="false"
-                android:clickable="false"
-                android:importantForAccessibility="yes"
-                android:visibility="gone" />
+                android:fontFamily="sans-serif-light"
+                android:background="@drawable/settings_info_background"
+                android:padding="@dimen/appview_edge_margin"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:lineSpacingExtra="2dp"
+                android:text="@string/app_last_settings_title" />
 
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <!-- RecyclerView 与选中框同层，滚动时始终保持坐标一致。 -->
-            <FrameLayout
-                android:id="@+id/appCatalogFrame"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:clipToPadding="false">
-
-                <FrameLayout
-                    android:id="@+id/appFragmentContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-
-                <View
-                    android:id="@+id/selectionIndicator"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:background="@drawable/selection_indicator"
-                    android:visibility="invisible"
-                    android:elevation="8dp"
-                    android:clipChildren="false"
-                    android:clipToPadding="false" />
-            </FrameLayout>
-
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <!-- 底部信息容器 -->
-            <LinearLayout
-                android:id="@+id/bottomInfoContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/appview_bottom_margin"
-                android:orientation="vertical"
-                android:gravity="end">
-
-                <!-- 上一次设置信息 -->
-                <LinearLayout
-                    android:id="@+id/lastSettingsInfo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="end"
-                    android:visibility="gone">
-
-                    <CheckBox
-                        android:id="@+id/useLastSettingsCheckbox"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
-                        android:focusable="true"
-                        android:text="@string/app_last_settings_use_checkbox"
-                        android:textColor="@color/appview_text_secondary"
-                        android:textSize="12sp"
-                        android:fontFamily="sans-serif-light"
-                        android:buttonTint="@color/appview_text_primary"
-                        android:checked="false" />
-
-                    <TextView
-                        android:id="@+id/lastSettingsText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:textColor="@color/appview_text_secondary"
-                        android:shadowColor="@color/appview_text_shadow"
-                        android:shadowDx="1"
-                        android:shadowDy="1"
-                        android:shadowRadius="2"
-                        android:fontFamily="sans-serif-light"
-                        android:background="@drawable/settings_info_background"
-                        android:padding="@dimen/appview_edge_margin"
-                        android:maxLines="3"
-                        android:ellipsize="end"
-                        android:lineSpacingExtra="2dp"
-                        android:text="@string/app_last_settings_title" />
-
-                </LinearLayout>
-
-            </LinearLayout>
         </LinearLayout>
-    </ScrollView>
+
+    </LinearLayout>
 
     <View
         android:id="@+id/topPanelScrim"
