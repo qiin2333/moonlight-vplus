@@ -3,11 +3,13 @@ package com.limelight.preferences
 import android.annotation.SuppressLint
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.ViewTreeObserver
 import androidx.preference.PreferenceGroupAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
@@ -16,6 +18,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class StreamSettingsExpandFocusTest {
@@ -28,6 +32,74 @@ class StreamSettingsExpandFocusTest {
 
     @get:Rule
     val activityRule = ActivityScenarioRule(StreamSettings::class.java)
+
+    @Test
+    @SuppressLint("RestrictedApi")
+    fun touchExpansionUpdatesLocallyAndShowsRevealedRowImmediately() {
+        lateinit var recyclerView: RecyclerView
+        lateinit var adapter: PreferenceGroupAdapter
+        var expandPosition = RecyclerView.NO_POSITION
+        activityRule.scenario.onActivity { activity ->
+            recyclerView = activity.findViewById(androidx.preference.R.id.recycler_view)
+            adapter = recyclerView.adapter as PreferenceGroupAdapter
+            expandPosition = findExpandPosition(recyclerView)
+            recyclerView.scrollToPosition(expandPosition)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        val frames = CountDownLatch(2)
+        val firstFrameAlphas = ArrayList<Float>(2)
+        var fullChanges = 0
+        var structuralChanges = 0
+        var clickHandled = false
+        var preDrawListener: ViewTreeObserver.OnPreDrawListener? = null
+        val observer = object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() { fullChanges++ }
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) { structuralChanges++ }
+            override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) { structuralChanges++ }
+            override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) { structuralChanges++ }
+        }
+        try {
+            activityRule.scenario.onActivity {
+                val oldIds = (0 until adapter.itemCount).map(adapter::getItemId).toSet()
+                adapter.registerAdapterDataObserver(observer)
+                preDrawListener = ViewTreeObserver.OnPreDrawListener {
+                    val preference = adapter.getItem(expandPosition)
+                    if (preference != null && preference.javaClass.name != ANDROIDX_EXPAND_BUTTON_CLASS) {
+                        val id = adapter.getItemId(expandPosition)
+                        val holder = recyclerView.findViewHolderForItemId(id)
+                        if (id !in oldIds && holder != null && firstFrameAlphas.size < 2) {
+                            firstFrameAlphas.add(holder.itemView.alpha)
+                            frames.countDown()
+                        }
+                    }
+                    if (frames.count > 0) recyclerView.postInvalidateOnAnimation()
+                    true
+                }
+                recyclerView.viewTreeObserver.addOnPreDrawListener(preDrawListener)
+                clickHandled = recyclerView.findViewHolderForAdapterPosition(expandPosition)
+                    ?.itemView?.performClick() == true
+                recyclerView.postInvalidateOnAnimation()
+            }
+            val sampled = frames.await(5, TimeUnit.SECONDS)
+            assertTrue("The expansion row did not handle the touch click", clickHandled)
+            assertTrue("Did not observe the revealed row's first two drawing frames", sampled)
+            assertEquals("Expansion invalidated the whole list; first frame alpha=$firstFrameAlphas", 0, fullChanges)
+            assertTrue("Expansion did not dispatch local structure updates", structuralChanges > 0)
+            firstFrameAlphas.forEachIndexed { frame, alpha ->
+                assertEquals("Revealed row faded in on drawing frame ${frame + 1}", 1f, alpha, 0.001f)
+            }
+        } finally {
+            activityRule.scenario.onActivity {
+                adapter.unregisterAdapterDataObserver(observer)
+                preDrawListener?.let { listener ->
+                    if (recyclerView.viewTreeObserver.isAlive) {
+                        recyclerView.viewTreeObserver.removeOnPreDrawListener(listener)
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     @SuppressLint("RestrictedApi")

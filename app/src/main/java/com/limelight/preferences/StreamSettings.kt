@@ -1521,6 +1521,8 @@ class StreamSettings : ThemedAppCompatActivity() {
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
             settingsChoiceViewDestroyed = false
             val view = super.onCreateView(inflater, container, savedInstanceState)
+            // Add/remove fades briefly hide the rows replacing the expansion footer.
+            listView?.itemAnimator = null
             // 确保列表背景透明
             view.setBackgroundColor(Color.TRANSPARENT)
 
@@ -3611,6 +3613,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             SettingsPreferenceGroupAdapter(preferenceScreen)
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            // Keep expansion and search updates local instead of rebinding the entire list.
+            preferenceManager.preferenceComparisonCallback = PreferenceManager.SimplePreferenceComparisonCallback()
             // 添加阴影主题
             AppTheme.applyStyle(requireActivity(), R.style.PreferenceThemeWithShadow)
 
