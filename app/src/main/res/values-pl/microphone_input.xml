@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Domyślne urządzenie systemowe</string>
+    <string name="mic_input_builtin">Wbudowany mikrofon</string>
+    <string name="mic_input_wired">Przewodowy zestaw słuchawkowy</string>
+    <string name="mic_input_bluetooth">Mikrofon Bluetooth</string>
+    <string name="mic_input_usb">Mikrofon USB</string>
+    <string name="mic_input_active">Nagrywanie z: %1$s</string>
+    <string name="mic_input_unavailable">Wybrane urządzenie jest niedostępne.</string>
+    <string name="mic_input_route_pending">Oczekiwanie na trasę wejścia audio</string>
+    <string name="mic_input_failed">Nie można wybrać tego mikrofonu. Spróbuj ponownie.</string>
+    <string name="mic_input_bluetooth_quality">Korzystanie z mikrofonu Bluetooth może obniżyć jakość odtwarzania.</string>
+    <string name="mic_input_system_silenced">Mikrofon wyciszony przez system</string>
+</resources>

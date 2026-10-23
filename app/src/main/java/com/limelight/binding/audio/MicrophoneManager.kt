@@ -27,10 +27,16 @@ class MicrophoneManager(
     private var micButton: ImageButton? = null
     private val buttonPreferences = MicrophoneButtonPreferences(context)
     private val initialStateStore = MicrophoneInitialStateStore(context)
+    internal val inputDevices = MicrophoneInputDeviceRepository(context)
     private var pendingInitialStart = false
-    private var lifecycleGeneration = 0L
+    @Volatile private var lifecycleGeneration = 0L
     private var permissionRequestGeneration: Long? = null
     private var permissionRequestStartsInitial = false
+    private val handler = Handler(Looper.getMainLooper())
+    private var switchingInput = false
+    private var activeBluetoothInput: MicrophoneInputDevice? = null
+    @Volatile private var inputRequestGeneration = 0L
+    private val bluetoothRoute = BluetoothMicrophoneRouteController(context)
 
     interface MicrophoneStateListener {
         fun onMicrophoneStateChanged(isActive: Boolean)
@@ -72,7 +78,7 @@ class MicrophoneManager(
         try {
             MicrophoneConfig.updateBitrateFromConfig(context)
             MicrophoneConfig.updateVolumeProcessingFromConfig(context)
-            microphoneStream = MicrophoneStream(activeConnection)
+            microphoneStream = createMicrophoneStream(activeConnection)
 
             if (!microphoneStream!!.start()) {
                 microphoneStream?.stop()
@@ -165,6 +171,7 @@ class MicrophoneManager(
     }
 
     fun pauseMicrophone() {
+        cancelInputSwitch()
         if (microphoneStream != null && microphoneStream!!.isRunning()) {
             microphoneStream!!.pause()
             showMessage(context.getString(R.string.mic_disabled))
@@ -188,13 +195,14 @@ class MicrophoneManager(
     }
 
     private fun restartMicrophoneStream(persistState: Boolean) {
+        cancelInputSwitch()
         LimeLog.warning("麦克风恢复失败，尝试重新初始化")
         microphoneStream!!.stop()
         MicrophoneConfig.updateBitrateFromConfig(context)
         MicrophoneConfig.updateVolumeProcessingFromConfig(context)
 
         val activeConnection = connection ?: return
-        microphoneStream = MicrophoneStream(activeConnection)
+        microphoneStream = createMicrophoneStream(activeConnection)
         if (microphoneStream!!.start()) {
             showMessage(context.getString(R.string.mic_enabled))
             notifyStateChange(true, persistState)
@@ -212,6 +220,129 @@ class MicrophoneManager(
     }
 
     fun isMicrophoneActive(): Boolean = microphoneStream != null && microphoneStream!!.isRunning()
+
+    internal fun selectInputDevice(key: String): Boolean {
+        if (switchingInput || microphoneStream?.isInputSwitchPending() == true) return false
+        val devices = inputDevices.choices()
+        val choice = devices.firstOrNull { it.key == key }
+        if (key != DEFAULT_MICROPHONE_INPUT && choice == null) return false
+        if (!isMicrophoneActive()) {
+            return selectMicrophoneInput(key, devices, false, { false }, inputDevices::saveSelection)
+        }
+        val stream = microphoneStream ?: return false
+        val generation = lifecycleGeneration
+        val captureGeneration = stream.currentCaptureGeneration()
+        val requestGeneration = ++inputRequestGeneration
+        val previousBluetooth = activeBluetoothInput
+        val isAlive = { generation == lifecycleGeneration && microphoneStream === stream &&
+            stream.currentCaptureGeneration() == captureGeneration }
+        val isCurrent = { isAlive() && inputRequestGeneration == requestGeneration }
+        val routeLost = {
+            handler.post {
+                if (isCurrent() && !switchingInput) {
+                    pauseMicrophone()
+                    showMessage(context.getString(R.string.mic_input_failed))
+                }
+            }
+            Unit
+        }
+        val change = if (choice?.communication == true || previousBluetooth != null) MicrophoneRouteChange(
+            prepare = { done ->
+                if (!isCurrent()) done(false)
+                else if (choice?.communication == true) bluetoothRoute.activate(choice, isAlive, routeLost, done)
+                else bluetoothRoute.release { released -> done(released && isCurrent()) }
+            },
+            rollback = { done ->
+                if (!isCurrent()) done(false)
+                else if (previousBluetooth != null) bluetoothRoute.activate(previousBluetooth, isAlive, routeLost, done)
+                else bluetoothRoute.release { released -> done(released && isCurrent()) }
+            },
+            expectedInputId = { if (choice?.communication == true) bluetoothRoute.input?.id else choice?.id },
+            isReady = { choice?.communication != true || bluetoothRoute.input != null },
+            restoreInput = previousBluetooth?.let {
+                { record -> bluetoothRoute.input?.let { input -> inputDevices.apply(record, input.key) } == true }
+            },
+            restoredInputId = { bluetoothRoute.input?.id }
+        ) else null
+        switchingInput = true
+        val queued = selectMicrophoneInput(key, devices, true,
+            requestRoute = { complete ->
+                stream.requestInput(choice?.id, { record ->
+                    if (choice?.communication == true) {
+                        bluetoothRoute.input?.let { input -> inputDevices.apply(record, input.key) } == true
+                    } else inputDevices.apply(record, key)
+                }, change) { success ->
+                    handler.post {
+                        val routeLost = success && choice?.communication == true && bluetoothRoute.input == null
+                        complete(success && !routeLost && stream.isRunning())
+                        if (routeLost && isCurrent()) pauseMicrophone()
+                    }
+                }
+            },
+            save = inputDevices::saveSelection,
+            canComplete = isCurrent,
+            onComplete = { success ->
+                switchingInput = false
+                activeBluetoothInput = if (success) choice?.takeIf { it.communication } else previousBluetooth
+                if (!success) showMessage(context.getString(R.string.mic_input_failed))
+                updateMicrophoneButtonState()
+                notifyStateChange(isMicrophoneActive(), persistState = false)
+            })
+        if (!queued) {
+            switchingInput = false
+            inputRequestGeneration--
+        }
+        return queued
+    }
+
+    internal fun isInputSwitchPending(): Boolean = switchingInput || microphoneStream?.isInputSwitchPending() == true
+
+    private fun cancelInputSwitch() {
+        lifecycleGeneration++
+        switchingInput = false
+        activeBluetoothInput = null
+        bluetoothRoute.release()
+    }
+
+    private fun createMicrophoneStream(activeConnection: NvConnection): MicrophoneStream {
+        lateinit var stream: MicrophoneStream
+        stream = MicrophoneStream(activeConnection, inputDevices::applySaved,
+            onInputFailure = { captureGeneration ->
+                val generation = lifecycleGeneration
+                handler.post {
+                    if (generation == lifecycleGeneration && microphoneStream === stream &&
+                        captureGeneration == stream.currentCaptureGeneration()) {
+                        showMessage(context.getString(R.string.mic_input_failed))
+                    }
+                }
+            },
+            onCaptureStopped = { captureGeneration ->
+                val generation = lifecycleGeneration
+                handler.post {
+                    if (generation == lifecycleGeneration && microphoneStream === stream &&
+                        captureGeneration == stream.currentCaptureGeneration() && !stream.isRunning()) {
+                        stream.pause()
+                        cancelInputSwitch()
+                        updateMicrophoneButtonState()
+                        notifyStateChange(false, persistState = false)
+                    }
+                }
+            },
+            onCaptureReady = { captureGeneration ->
+                val generation = lifecycleGeneration
+                handler.post {
+                    if (generation == lifecycleGeneration && microphoneStream === stream &&
+                        captureGeneration == stream.currentCaptureGeneration() && stream.isRunning() && !switchingInput) {
+                        inputDevices.selectedChoice()?.takeIf { it.communication }?.let { selectInputDevice(it.key) }
+                    }
+                }
+            })
+        return stream
+    }
+
+    internal fun routedInputId(): Int? = microphoneStream?.routedInputId()
+
+    internal fun isSystemSilenced(): Boolean = microphoneStream?.isSystemSilenced() == true
 
     fun isMicrophoneAvailable(): Boolean = microphoneStream != null && microphoneStream!!.isMicrophoneAvailable()
 
@@ -342,7 +473,7 @@ class MicrophoneManager(
     }
 
     fun stopMicrophoneStream() {
-        lifecycleGeneration++
+        cancelInputSwitch()
         pendingInitialStart = false
         microphoneStream?.stop()
         microphoneStream = null
@@ -378,6 +509,8 @@ class MicrophoneManager(
     fun setEnableMic(enable: Boolean) {
         this.enableMic = enable
 
+        if (!enable) stopMicrophoneStream()
+
         if (enable) {
             MicrophoneConfig.updateBitrateFromConfig(context)
             MicrophoneConfig.updateVolumeProcessingFromConfig(context)
@@ -391,6 +524,7 @@ class MicrophoneManager(
     fun getMicrophoneStream(): MicrophoneStream? = microphoneStream
 
     fun setDefaultStateOff() {
+        cancelInputSwitch()
         if (microphoneStream != null && microphoneStream!!.isRunning()) {
             microphoneStream!!.pause()
             LimeLog.info("麦克风已设置为默认关闭状态")

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Systeemstandaard</string>
+    <string name="mic_input_builtin">Ingebouwde microfoon</string>
+    <string name="mic_input_wired">Bedrade headset</string>
+    <string name="mic_input_bluetooth">Bluetooth-microfoon</string>
+    <string name="mic_input_usb">USB-microfoon</string>
+    <string name="mic_input_active">Opnemen via: %1$s</string>
+    <string name="mic_input_unavailable">Het geselecteerde apparaat is niet beschikbaar.</string>
+    <string name="mic_input_route_pending">Wachten op de audio-invoerroute</string>
+    <string name="mic_input_failed">Deze microfoon kan niet worden geselecteerd. Probeer het opnieuw.</string>
+    <string name="mic_input_bluetooth_quality">Het gebruik van de Bluetooth-microfoon kan de afspeelkwaliteit verminderen.</string>
+    <string name="mic_input_system_silenced">Microfoon gedempt door het systeem</string>
+</resources>

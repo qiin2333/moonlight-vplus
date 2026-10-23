@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Προεπιλογή συστήματος</string>
+    <string name="mic_input_builtin">Ενσωματωμένο μικρόφωνο</string>
+    <string name="mic_input_wired">Ενσύρματα ακουστικά</string>
+    <string name="mic_input_bluetooth">Μικρόφωνο Bluetooth</string>
+    <string name="mic_input_usb">Μικρόφωνο USB</string>
+    <string name="mic_input_active">Εγγραφή από: %1$s</string>
+    <string name="mic_input_unavailable">Η επιλεγμένη συσκευή δεν είναι διαθέσιμη.</string>
+    <string name="mic_input_route_pending">Αναμονή δρομολόγησης εισόδου ήχου</string>
+    <string name="mic_input_failed">Δεν είναι δυνατή η επιλογή αυτού του μικροφώνου. Δοκιμάστε ξανά.</string>
+    <string name="mic_input_bluetooth_quality">Η χρήση του μικροφώνου Bluetooth ενδέχεται να μειώσει την ποιότητα αναπαραγωγής.</string>
+    <string name="mic_input_system_silenced">Το μικρόφωνο έχει τεθεί σε σίγαση από το σύστημα</string>
+</resources>

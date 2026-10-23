@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">システムの既定</string>
+    <string name="mic_input_builtin">内蔵マイク</string>
+    <string name="mic_input_wired">有線ヘッドセット</string>
+    <string name="mic_input_bluetooth">Bluetoothマイク</string>
+    <string name="mic_input_usb">USBマイク</string>
+    <string name="mic_input_active">使用中：%1$s</string>
+    <string name="mic_input_unavailable">選択したデバイスは利用できません。</string>
+    <string name="mic_input_route_pending">音声入力のルーティングを待機中</string>
+    <string name="mic_input_failed">このマイクを選択できません。もう一度お試しください。</string>
+    <string name="mic_input_bluetooth_quality">Bluetoothマイクを使用すると、再生音質が低下する場合があります。</string>
+    <string name="mic_input_system_silenced">システムによりマイクがミュートされています</string>
+</resources>

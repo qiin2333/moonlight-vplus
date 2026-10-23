@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Systemstandard</string>
+    <string name="mic_input_builtin">Integriertes Mikrofon</string>
+    <string name="mic_input_wired">Kabelgebundenes Headset</string>
+    <string name="mic_input_bluetooth">Bluetooth-Mikrofon</string>
+    <string name="mic_input_usb">USB-Mikrofon</string>
+    <string name="mic_input_active">Aufnahme von: %1$s</string>
+    <string name="mic_input_unavailable">Das gewählte Gerät ist nicht verfügbar.</string>
+    <string name="mic_input_route_pending">Warten auf die Audioeingangsroute</string>
+    <string name="mic_input_failed">Dieses Mikrofon konnte nicht ausgewählt werden. Bitte erneut versuchen.</string>
+    <string name="mic_input_bluetooth_quality">Die Verwendung des Bluetooth-Mikrofons kann die Wiedergabequalität verringern.</string>
+    <string name="mic_input_system_silenced">Mikrofon vom System stummgeschaltet</string>
+</resources>

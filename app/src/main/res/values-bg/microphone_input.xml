@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Системен избор</string>
+    <string name="mic_input_builtin">Вграден микрофон</string>
+    <string name="mic_input_wired">Кабелни слушалки</string>
+    <string name="mic_input_bluetooth">Bluetooth микрофон</string>
+    <string name="mic_input_usb">USB микрофон</string>
+    <string name="mic_input_active">Запис от: %1$s</string>
+    <string name="mic_input_unavailable">Избраното устройство не е налично.</string>
+    <string name="mic_input_route_pending">Изчакване на аудио входа</string>
+    <string name="mic_input_failed">Микрофонът не може да бъде избран. Опитайте отново.</string>
+    <string name="mic_input_bluetooth_quality">Използването на Bluetooth микрофона може да намали качеството на възпроизвеждане.</string>
+    <string name="mic_input_system_silenced">Микрофонът е заглушен от системата</string>
+</resources>
