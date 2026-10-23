@@ -239,54 +239,12 @@ class KeyboardKeyPickerControllerTest {
 
     @Test
     fun numpadFitsNarrowAndShortPickerBounds() {
-        for ((width, height) in listOf(370 to 220, 280 to 220, 600 to 180)) {
-            val controller = installPicker(width, height) {}
-            activityRule.scenario.onActivity {
-                controller.showPage(KeyboardKeyPickerController.Page.NUM, requestContentFocus = false)
-            }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            activityRule.scenario.onActivity { activity ->
-                val picker = activity.findViewById<ViewGroup>(R.id.keyboard_drawing)
-                val numpad = picker.findViewById<ViewGroup>(R.id.keyboard_picker_num)
-                val codes = mutableSetOf<Int>()
-                collectKeyCodes(numpad, codes)
-                assertEquals(17, codes.size)
-                codes.forEach { code ->
-                    val key = numpad.findViewWithTag<TextView>("k$code")
-                    val visible = Rect()
-                    assertTrue("k$code visible in $width x $height", key.getLocalVisibleRect(visible))
-                    assertEquals("k$code width in $width x $height", key.width, visible.width())
-                    assertEquals("k$code height in $width x $height", key.height, visible.height())
-                    assertTrue(key.width > 0 && key.height > 0)
-                }
-            }
-        }
+        assertPageFitsBounds(KeyboardKeyPickerController.Page.NUM, R.id.keyboard_picker_num, 17)
     }
 
     @Test
     fun navigationPageFitsNarrowAndShortPickerBounds() {
-        for ((width, height) in listOf(370 to 220, 280 to 220, 600 to 180)) {
-            val controller = installPicker(width, height) {}
-            activityRule.scenario.onActivity {
-                controller.showPage(KeyboardKeyPickerController.Page.NAV, requestContentFocus = false)
-            }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            activityRule.scenario.onActivity { activity ->
-                val picker = activity.findViewById<ViewGroup>(R.id.keyboard_drawing)
-                val navigationPage = picker.findViewById<ViewGroup>(R.id.keyboard_picker_nav)
-                val codes = mutableSetOf<Int>()
-                collectKeyCodes(navigationPage, codes)
-                assertEquals(28, codes.size)
-                codes.forEach { code ->
-                    val key = navigationPage.findViewWithTag<TextView>("k$code")
-                    val visible = Rect()
-                    assertTrue("k$code visible in $width x $height", key.getLocalVisibleRect(visible))
-                    assertEquals("k$code width in $width x $height", key.width, visible.width())
-                    assertEquals("k$code height in $width x $height", key.height, visible.height())
-                    assertTrue(key.width > 0 && key.height > 0)
-                }
-            }
-        }
+        assertPageFitsBounds(KeyboardKeyPickerController.Page.NAV, R.id.keyboard_picker_nav, 28)
     }
 
     @Test
@@ -326,6 +284,36 @@ class KeyboardKeyPickerControllerTest {
                 assertNotEquals(0, translator.translate(keyCode, -1).toInt())
                 assertNotNull(KeyCodeMapper.getWindowsKeyCode(keyCode))
                 assertNotNull(KeyCodeMapper.getDisplayName(keyCode))
+            }
+        }
+    }
+
+    private fun assertPageFitsBounds(
+        page: KeyboardKeyPickerController.Page,
+        pageId: Int,
+        expectedKeyCount: Int
+    ) {
+        for ((width, height) in listOf(370 to 220, 280 to 220, 600 to 180)) {
+            val controller = installPicker(width, height) {}
+            activityRule.scenario.onActivity {
+                controller.showPage(page, requestContentFocus = false)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            activityRule.scenario.onActivity { activity ->
+                val picker = activity.findViewById<ViewGroup>(R.id.keyboard_drawing)
+                val keyboardPage = picker.findViewById<ViewGroup>(pageId)
+                val codes = mutableSetOf<Int>()
+                collectKeyCodes(keyboardPage, codes)
+                assertEquals("$page key count", expectedKeyCount, codes.size)
+                codes.forEach { code ->
+                    val key = keyboardPage.findViewWithTag<TextView>("k$code")
+                    val visible = Rect()
+                    val description = "$page k$code in $width x $height"
+                    assertTrue("$description visible", key.getLocalVisibleRect(visible))
+                    assertEquals("$description width", key.width, visible.width())
+                    assertEquals("$description height", key.height, visible.height())
+                    assertTrue("$description has positive size", key.width > 0 && key.height > 0)
+                }
             }
         }
     }

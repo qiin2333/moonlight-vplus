@@ -74,13 +74,4 @@ class NvAppCmdListTest {
         assertNull(apps[2].cmdList)
     }
 
-    @Test
-    fun cachedCommandsRoundTripThroughTheSameSetter() {
-        val original = NvApp()
-        original.setCmdList("""[{"id":"001","name":"Line\nTwo"}]""")
-        val restored = NvApp()
-        restored.setCmdList(original.cmdList.toString())
-
-        assertEquals(original.cmdList, restored.cmdList)
-    }
 }

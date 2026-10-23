@@ -3,6 +3,7 @@ package com.limelight.computers
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.http.PairStateTrust
+import okhttp3.tls.HeldCertificate
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -22,7 +23,7 @@ class PairStateTrustTest {
     @Test
     fun localServerCertificateIsEnoughToProtectColdStartState() {
         val current = ComputerDetails().apply {
-            serverCert = TestCertificates.serverCert
+            serverCert = serverCertificate
             pairState = null
         }
         val polled = notPairedPoll(trustedByCert = false)
@@ -30,19 +31,19 @@ class PairStateTrustTest {
         val sanitized = PairStateTrust.sanitizePollResult(current, polled)
 
         assertEquals(PairingManager.PairState.PAIRED, sanitized.pairState)
-        assertSame(TestCertificates.serverCert, sanitized.serverCert)
+        assertSame(serverCertificate, sanitized.serverCert)
     }
 
     @Test
     fun localServerCertificateProtectsAlreadyMutatedUpdate() {
         val details = notPairedPoll(trustedByCert = false).apply {
-            serverCert = TestCertificates.serverCert
+            serverCert = serverCertificate
         }
 
         val sanitized = PairStateTrust.sanitizePollResult(details, details)
 
         assertEquals(PairingManager.PairState.PAIRED, sanitized.pairState)
-        assertSame(TestCertificates.serverCert, sanitized.serverCert)
+        assertSame(serverCertificate, sanitized.serverCert)
     }
 
     @Test
@@ -115,7 +116,7 @@ class PairStateTrustTest {
         return ComputerDetails().apply {
             pairState = PairingManager.PairState.PAIRED
             if (hasServerCert) {
-                serverCert = TestCertificates.serverCert
+                serverCert = serverCertificate
             }
         }
     }
@@ -127,5 +128,9 @@ class PairStateTrustTest {
             serverInfoTrustedByCert = trustedByCert
             pairStateTrusted = trustedByCert
         }
+    }
+
+    private companion object {
+        val serverCertificate = HeldCertificate.Builder().commonName("test-server").build().certificate
     }
 }

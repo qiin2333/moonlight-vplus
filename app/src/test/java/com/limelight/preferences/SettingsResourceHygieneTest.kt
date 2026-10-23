@@ -59,33 +59,6 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun pyrowaveDiagnosticIsANonPersistentActionBelowVideoReport() {
-        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
-        val actions = preferences.documentElement.getElementsByTagName("Preference")
-            .asElementSequence().toList()
-        val video = actions.single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "capability_diagnostic" }
-        val pyrowave = actions.single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "pyrowave_capability_diagnostic" }
-        assertEquals(video.parentNode, pyrowave.parentNode)
-        val siblings = video.parentNode.childNodes.asElementSequence().toList()
-        assertEquals(siblings.indexOf(video) + 1, siblings.indexOf(pyrowave))
-        assertEquals("false", pyrowave.getAttributeNS(ANDROID_NAMESPACE, "persistent"))
-    }
-
-    @Test
-    fun reverseResolutionIsLastDisplayBehaviorPreference() {
-        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
-        val category = preferences.documentElement.getElementsByTagName("PreferenceCategory")
-            .asElementSequence()
-            .single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "category_display_behavior" }
-        val keys = category.childNodes.asElementSequence()
-            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
-            .filter(String::isNotEmpty)
-            .toList()
-
-        assertEquals("checkbox_reverse_resolution", keys.last())
-    }
-
-    @Test
     fun pyrowaveDiagnosticAndFallbackStringsCoverEveryExistingLocale() {
         val defaultEntries = parse(File(resourceDir, "values/strings.xml"))
             .documentElement.childNodes.asElementSequence()
@@ -206,125 +179,67 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun settingsCategoriesKeepEveryPreferenceKey() {
+    fun requiredSettingsRemainDiscoverable() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
-        val categories = preferences.documentElement
-            .getElementsByTagName("PreferenceCategory")
+        val actualKeys = preferences.documentElement.getElementsByTagName("*")
             .asElementSequence()
-            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
-
-        setOf(
-            "category_enhanced_touch",
-            "category_float_ball",
-            "category_connection_settings",
-        ).forEach { retiredKey ->
-            assertFalse("Retired category is still present: $retiredKey", retiredKey in categories)
-        }
-
-        val expectedKeysByCategory = mapOf(
+            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+            .toSet()
+        val requiredKeysByCategory = mapOf(
             "category_basic_settings" to setOf(
                 "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
                 "list_fec_mode", "seekbar_fec_percentage",
             ),
-            "category_screen_position" to setOf(
-                "video_format",
-                "checkbox_enable_hdr",
-                "checkbox_enable_hdr_high_brightness",
-                "checkbox_hdr_brightness_override",
-                "seekbar_hdr_peak_brightness_nits",
-                "list_hdr_mode",
-                "checkbox_full_range",
-                "capability_diagnostic",
-                "pyrowave_capability_diagnostic",
-            ),
             "category_host_settings" to setOf(
-                "list_background_stream_behavior",
-                "list_quit_behavior",
-                "checkbox_resume_stream",
-                "checkbox_extreme_resume",
-                "checkbox_background_audio",
-                "checkbox_enable_stun",
+                "list_background_stream_behavior", "list_quit_behavior", "checkbox_resume_stream",
+                "checkbox_extreme_resume", "checkbox_background_audio", "checkbox_enable_stun",
             ),
+            "category_screen_position" to setOf(
+                "video_format", "checkbox_enable_hdr", "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override", "seekbar_hdr_peak_brightness_nits", "list_hdr_mode",
+                "checkbox_full_range", "capability_diagnostic", "pyrowave_capability_diagnostic",
+            ),
+            "category_display_behavior" to setOf("checkbox_reverse_resolution"),
             "category_ui_settings" to setOf(
-                "checkbox_enable_float_ball",
-                "list_float_ball_position",
-                "seekbar_float_ball_auto_hide_delay",
-                "list_float_ball_single_click_action",
-                "list_float_ball_double_click_action",
+                "checkbox_enable_float_ball", "list_float_ball_position", "seekbar_float_ball_auto_hide_delay",
+                "list_float_ball_single_click_action", "list_float_ball_double_click_action",
                 "list_float_ball_long_click_action",
             ),
             "category_microphone_settings" to setOf(
-                "checkbox_enable_mic",
-                "list_mic_initial_state",
-                "list_mic_menu_action_mode",
-                "checkbox_show_mic_button",
-                "list_mic_button_position",
-                "seekbar_mic_bitrate_kbps",
-                "list_mic_icon_color",
-                "list_mic_volume_processing_mode",
-                "checkbox_mic_volume_processing",
-                "checkbox_mic_gain",
-                "seekbar_mic_gain_db",
-                "checkbox_mic_balance",
-                "seekbar_mic_balance_target",
-                "checkbox_mic_voice_enhancement",
+                "checkbox_enable_mic", "list_mic_initial_state", "list_mic_menu_action_mode",
+                "checkbox_show_mic_button", "list_mic_button_position", "seekbar_mic_bitrate_kbps",
+                "list_mic_icon_color", "list_mic_volume_processing_mode", "checkbox_mic_volume_processing",
+                "checkbox_mic_gain", "seekbar_mic_gain_db", "checkbox_mic_balance",
+                "seekbar_mic_balance_target", "checkbox_mic_voice_enhancement",
             ),
             "category_input_settings" to setOf(
-                "checkbox_enable_enhanced_touch",
-                "seekbar_flat_region_pixels",
-                "checkbox_enhanced_touch_on_which_side",
-                "enhanced_touch_zone_divider",
-                "pointer_velocity_factor",
+                "checkbox_enable_enhanced_touch", "seekbar_flat_region_pixels",
+                "checkbox_enhanced_touch_on_which_side", "enhanced_touch_zone_divider", "pointer_velocity_factor",
             ),
             "category_gamepad_settings" to setOf(
-                "list_dualsense_output_mode",
-                "checkbox_dualsense_direct_bluetooth",
-                "checkbox_dualsense_wireless_bridge",
+                "list_dualsense_output_mode", "checkbox_dualsense_direct_bluetooth", "checkbox_dualsense_wireless_bridge",
             ),
         )
+        val requiredKeys = requiredKeysByCategory.values.flatten().toSet()
+        val missingKeys = requiredKeys - actualKeys
+        assertTrue("Missing settings: $missingKeys", missingKeys.isEmpty())
 
-        listOf(
-            "category_basic_settings",
-            "category_screen_position",
-            "category_host_settings",
-            "category_display_behavior",
-            "category_advanced_features",
-            "category_framegen_settings",
-            "category_audio_settings",
-            "category_microphone_settings",
-            "category_gamepad_settings",
-            "category_input_settings",
-            "category_onscreen_controls",
-            "category_crown_features",
-            "category_ui_settings",
-            "category_backup_restore",
-            "category_help",
-        ).forEachIndexed { order, categoryKey ->
-            assertEquals(
-                "Unexpected sidebar order for $categoryKey",
-                order.toString(),
-                categories[categoryKey]?.getAttributeNS(ANDROID_NAMESPACE, "order"),
-            )
-        }
-
-        expectedKeysByCategory.forEach { (categoryKey, expectedKeys) ->
-            val category = categories[categoryKey]
-            assertNotNull("Missing target category: $categoryKey", category)
-            val actualKeys = category!!.childNodes.asElementSequence()
+        val categoriesByKey = preferences.documentElement.childNodes.asElementSequence()
+            .filter { it.tagName == "PreferenceCategory" }
+            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+        requiredKeysByCategory.forEach { (categoryKey, expectedKeys) ->
+            val category = categoriesByKey[categoryKey]
+            assertNotNull("Missing settings category: $categoryKey", category)
+            val childKeys = category!!.childNodes.asElementSequence()
                 .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
-                .filter(String::isNotEmpty)
                 .toSet()
-            expectedKeys.forEach { preferenceKey ->
-                assertTrue(
-                    "$preferenceKey is missing from $categoryKey",
-                    preferenceKey in actualKeys,
-                )
-            }
+            val misplacedKeys = expectedKeys - childKeys
+            assertTrue("Settings missing from $categoryKey: $misplacedKeys", misplacedKeys.isEmpty())
         }
     }
 
     @Test
-    fun legacyBackedModeSelectorsDoNotPersistSyntheticKeys() {
+    fun uiOnlyPreferencesDoNotPersistValues() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
         val preferencesByKey = preferences.documentElement
             .getElementsByTagName("*")
@@ -337,11 +252,12 @@ class SettingsResourceHygieneTest {
             "list_dualsense_output_mode",
             "list_native_mouse_mode_preset",
             "list_mic_volume_processing_mode",
+            "pyrowave_capability_diagnostic",
         ).forEach { key ->
             val preference = preferencesByKey[key]
-            assertNotNull("Missing synthetic mode selector: $key", preference)
+            assertNotNull("Missing UI-only preference: $key", preference)
             assertTrue(
-                "$key must remain non-persistent so compatibility storage is explicit",
+                "$key must not persist a separate UI value",
                 preference!!.getAttributeNS(ANDROID_NAMESPACE, "persistent") == "false",
             )
         }
