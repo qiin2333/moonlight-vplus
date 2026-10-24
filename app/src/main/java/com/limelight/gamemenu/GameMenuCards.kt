@@ -655,6 +655,7 @@ internal fun DisplayStatusCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             DisplaySpecCell(
@@ -665,7 +666,6 @@ internal fun DisplayStatusCard(
                 onClick = callbacks.onOpenResolutionSheet,
                 modifier = Modifier.weight(1f)
             )
-            DisplaySpecDivider()
             DisplaySpecCell(
                 label = stringResource(R.string.display_spec_fps),
                 value = state.fpsLabel,
@@ -674,7 +674,6 @@ internal fun DisplayStatusCard(
                 onClick = callbacks.onOpenFrameRateSheet,
                 modifier = Modifier.weight(1f)
             )
-            DisplaySpecDivider()
             DisplaySpecCell(
                 label = stringResource(R.string.display_spec_screen),
                 value = screenLabel,
@@ -853,16 +852,6 @@ private fun DisplaySpecCell(
             overflow = TextOverflow.Ellipsis
         )
     }
-}
-
-@Composable
-private fun DisplaySpecDivider() {
-    Box(
-        modifier = Modifier
-            .width(GameMenuDimens.surfaceStroke)
-            .height(28.dp)
-            .background(colorResource(R.color.game_menu_list_item_border).copy(alpha = 0.35f))
-    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
