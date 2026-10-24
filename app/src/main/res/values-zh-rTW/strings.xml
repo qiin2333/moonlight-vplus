@@ -1104,4 +1104,12 @@
     <string name="float_ball_summary_no_hide">始終顯示</string>
     <string name="float_ball_summary_custom_position">已拖動定位</string>
     <string name="float_ball_summary_search">%1$s\n包含：%2$s</string>
+    <!-- Previously hard-coded strings -->
+    <string name="pacing_label_precise_sync_enhanced">精確同步(增強)</string>
+    <string name="pacing_label_precise_sync">精確同步</string>
+    <string name="pacing_label_low_latency">低延遲</string>
+    <string name="pacing_label_balanced">均衡</string>
+    <string name="pacing_label_smooth">平滑</string>
+    <string name="stats_precise_sync">[精確同步: %1$d渲染/%2$d接收, 跳幀率: %3$.1f%%]</string>
+    <string name="mic_status_debug">權限: %1$b, 串流存在: %2$b, 可用: %3$b, 啟用: %4$b</string>
 </resources>
