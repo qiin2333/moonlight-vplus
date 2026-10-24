@@ -646,6 +646,7 @@ internal fun DisplayStatusCard(
         titleAccessory = {
             GameMenuInfoButton(
                 contentDescription = stringResource(R.string.display_settings_info),
+                symbol = "?",
                 onClick = callbacks.onDisplaySettingsInfo
             )
         },
