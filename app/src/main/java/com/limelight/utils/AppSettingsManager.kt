@@ -173,6 +173,9 @@ class AppSettingsManager(private val context: Context) {
         if (settings.showQuickKeyCard) {
             summary.append(" | ").append(context.getString(R.string.setting_QuickKey_card_enabled))
         }
+        if (settings.showWaveformHapticsCard) {
+            summary.append(" | ").append(context.getString(R.string.waveform_card_title))
+        }
 
         // Add time information
         summary.append(" (").append(timeStr).append(")")
@@ -249,6 +252,7 @@ class AppSettingsManager(private val context: Context) {
             put("showAudioHapticsCard", settings.showAudioHapticsCard)
             put("showGyroCard", settings.showGyroCard)
             put("showQuickKeyCard", settings.showQuickKeyCard)
+            put("showWaveformHapticsCard", settings.showWaveformHapticsCard)
             put("timestamp", System.currentTimeMillis())
         }
     }
@@ -269,6 +273,7 @@ class AppSettingsManager(private val context: Context) {
         settings.showAudioHapticsCard = false
         settings.showGyroCard = false
         settings.showQuickKeyCard = false
+        settings.showWaveformHapticsCard = false
 
         // Parse resolution string format "1920x1080"
         val resolutionStr = settingsJson.optString("resolution", "1920x1080")
@@ -316,6 +321,13 @@ class AppSettingsManager(private val context: Context) {
         settings.showAudioHapticsCard = settingsJson.optBoolean("showAudioHapticsCard", false)
         settings.showGyroCard = settingsJson.optBoolean("showGyroCard", true)
         settings.showQuickKeyCard = settingsJson.optBoolean("showQuickKeyCard", true)
+        settings.showWaveformHapticsCard = settingsJson.optBoolean(
+            "showWaveformHapticsCard",
+            PreferenceManager.getDefaultSharedPreferences(context).getBoolean(
+                PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+                true
+            )
+        )
 
         return settings
     }
@@ -397,6 +409,10 @@ class AppSettingsManager(private val context: Context) {
             prefConfig.showAudioHapticsCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, prefConfig.showAudioHapticsCard)
             prefConfig.showGyroCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, prefConfig.showGyroCard)
             prefConfig.showQuickKeyCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, prefConfig.showQuickKeyCard)
+            prefConfig.showWaveformHapticsCard = intent.getBooleanExtra(
+                INTENT_LAST_SETTINGS_SHOW_WAVEFORM_HAPTICS_CARD,
+                prefConfig.showWaveformHapticsCard
+            )
 
             prefConfig.videoFormat = parseVideoFormat(intent.getStringExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT))
 
@@ -453,6 +469,7 @@ class AppSettingsManager(private val context: Context) {
         private const val INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD = "LastSettingsShowAudioHapticsCard"
         private const val INTENT_LAST_SETTINGS_SHOW_GYRO_CARD = "LastSettingsShowGyroCard"
         private const val INTENT_LAST_SETTINGS_SHOW_QuickKeyCard = "LastSettingsshowQuickKeyCard"
+        private const val INTENT_LAST_SETTINGS_SHOW_WAVEFORM_HAPTICS_CARD = "LastSettingsShowWaveformHapticsCard"
 
         /**
          * Add last settings to Intent
@@ -489,6 +506,7 @@ class AppSettingsManager(private val context: Context) {
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, lastSettings.showAudioHapticsCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, lastSettings.showGyroCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, lastSettings.showQuickKeyCard)
+            intent.putExtra(INTENT_LAST_SETTINGS_SHOW_WAVEFORM_HAPTICS_CARD, lastSettings.showWaveformHapticsCard)
         }
     }
 }
