@@ -2313,4 +2313,16 @@
     <string name="summary_fec_fixed">客户端指定比例优先于兼容主机的 FEC 设置，下次连接生效。</string>
     <string name="numeric_parameter_range">请输入 %1$s–%2$s %3$s 内的有效数值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>
+
+    <!-- Previously hard-coded strings -->
+    <string name="external_display_detected">检测到外接显示器: %1$s (ID: %2$d)</string>
+    <string name="external_display_not_detected">未检测到外接显示器</string>
+    <string name="external_display_detect_failed">检测外接显示器失败: %1$s</string>
+    <string name="pacing_label_precise_sync_enhanced">精确同步(增强)</string>
+    <string name="pacing_label_precise_sync">精确同步</string>
+    <string name="pacing_label_low_latency">低延迟</string>
+    <string name="pacing_label_balanced">均衡</string>
+    <string name="pacing_label_smooth">平滑</string>
+    <string name="stats_precise_sync">[精确同步: %1$d渲染/%2$d接收, 跳帧率: %3$.1f%%]</string>
+    <string name="mic_status_debug">权限: %1$s, 流存在: %2$s, 可用: %3$s, 激活: %4$s</string>
 </resources>

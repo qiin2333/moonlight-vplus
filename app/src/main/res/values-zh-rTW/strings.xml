@@ -1078,4 +1078,16 @@
     <string name="summary_fec_fixed">用戶端指定比例優先於相容主機的 FEC 設定，下次連線生效。</string>
     <string name="numeric_parameter_range">請輸入 %1$s–%2$s %3$s 內的有效數值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 協商失敗，已改用 %1$s。</string>
+
+    <!-- Previously hard-coded strings -->
+    <string name="external_display_detected">檢測到外接顯示器: %1$s (ID: %2$d)</string>
+    <string name="external_display_not_detected">未檢測到外接顯示器</string>
+    <string name="external_display_detect_failed">檢測外接顯示器失敗: %1$s</string>
+    <string name="pacing_label_precise_sync_enhanced">精確同步(增強)</string>
+    <string name="pacing_label_precise_sync">精確同步</string>
+    <string name="pacing_label_low_latency">低延遲</string>
+    <string name="pacing_label_balanced">均衡</string>
+    <string name="pacing_label_smooth">平滑</string>
+    <string name="stats_precise_sync">[精確同步: %1$d渲染/%2$d接收, 跳幀率: %3$.1f%%]</string>
+    <string name="mic_status_debug">權限: %1$s, 串流存在: %2$s, 可用: %3$s, 啟用: %4$s</string>
 </resources>
