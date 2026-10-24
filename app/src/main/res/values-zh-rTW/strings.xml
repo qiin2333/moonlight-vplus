@@ -959,7 +959,7 @@
     <string name="background_source_api">自訂 API 網址</string>
     <string name="background_source_local">本機圖片</string>
     <string name="background_source_none">不顯示背景</string>
-    <string name="image_saved_successfully">圖片成功儲存到：Picture/vplus</string>
+    <string name="image_saved_successfully">圖片成功儲存到：Pictures/vplus</string>
     <string name="image_save_failed_with_error">圖片儲存失敗：%1$s</string>
     <string name="float_ball_action_toggle_visibility">切換懸浮球顯示或隱藏</string>
     <string name="float_ball_action_show_perf_overlay">顯示效能監控圖層</string>

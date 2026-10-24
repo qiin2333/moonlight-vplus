@@ -142,6 +142,9 @@ async function setDisplayScale(req, res) {
   let body;
   try {
     body = await readJsonBody(req);
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      throw new TypeError('Expected a JSON object');
+    }
   } catch (_) {
     return respond(res, 400, JSON.stringify({
       status_code: 400,

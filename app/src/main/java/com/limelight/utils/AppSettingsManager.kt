@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.view.KeyEvent
+import androidx.preference.PreferenceManager
 
 import com.limelight.R
 import com.limelight.computers.ComputerManagerService
@@ -265,7 +266,6 @@ class AppSettingsManager(private val context: Context) {
         settings.reverseResolution = false
         settings.rotableScreen = false
         settings.showBitrateCard = false
-        settings.showDisplaySettingsCard = false
         settings.showAudioHapticsCard = false
         settings.showGyroCard = false
         settings.showQuickKeyCard = false
@@ -306,6 +306,13 @@ class AppSettingsManager(private val context: Context) {
         settings.gyroToRightStick = !settings.gyroToMouse &&
             settingsJson.optBoolean("gyroToRightStick", false)
         settings.showBitrateCard = settingsJson.optBoolean("showBitrateCard", true)
+        settings.showDisplaySettingsCard = settingsJson.optBoolean(
+            "showDisplaySettingsCard",
+            PreferenceManager.getDefaultSharedPreferences(context).getBoolean(
+                PreferenceConfiguration.SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING,
+                true
+            )
+        )
         settings.showAudioHapticsCard = settingsJson.optBoolean("showAudioHapticsCard", false)
         settings.showGyroCard = settingsJson.optBoolean("showGyroCard", true)
         settings.showQuickKeyCard = settingsJson.optBoolean("showQuickKeyCard", true)
@@ -386,6 +393,7 @@ class AppSettingsManager(private val context: Context) {
             prefConfig.gyroToRightStick = !prefConfig.gyroToMouse &&
                 intent.getBooleanExtra(INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK, prefConfig.gyroToRightStick)
             prefConfig.showBitrateCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, prefConfig.showBitrateCard)
+            prefConfig.showDisplaySettingsCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_DISPLAY_SETTINGS_CARD, prefConfig.showDisplaySettingsCard)
             prefConfig.showAudioHapticsCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, prefConfig.showAudioHapticsCard)
             prefConfig.showGyroCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, prefConfig.showGyroCard)
             prefConfig.showQuickKeyCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, prefConfig.showQuickKeyCard)
@@ -441,6 +449,7 @@ class AppSettingsManager(private val context: Context) {
         private const val INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK = "LastSettingsGyroToRightStick"
         private const val INTENT_LAST_SETTINGS_GYRO_TO_MOUSE = "LastSettingsGyroToMouse"
         private const val INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD = "LastSettingsShowBitrateCard"
+        private const val INTENT_LAST_SETTINGS_SHOW_DISPLAY_SETTINGS_CARD = "LastSettingsShowDisplaySettingsCard"
         private const val INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD = "LastSettingsShowAudioHapticsCard"
         private const val INTENT_LAST_SETTINGS_SHOW_GYRO_CARD = "LastSettingsShowGyroCard"
         private const val INTENT_LAST_SETTINGS_SHOW_QuickKeyCard = "LastSettingsshowQuickKeyCard"
@@ -476,6 +485,7 @@ class AppSettingsManager(private val context: Context) {
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK, lastSettings.gyroToRightStick)
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_TO_MOUSE, lastSettings.gyroToMouse)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, lastSettings.showBitrateCard)
+            intent.putExtra(INTENT_LAST_SETTINGS_SHOW_DISPLAY_SETTINGS_CARD, lastSettings.showDisplaySettingsCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, lastSettings.showAudioHapticsCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, lastSettings.showGyroCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, lastSettings.showQuickKeyCard)

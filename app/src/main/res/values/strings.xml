@@ -1363,7 +1363,7 @@
     <string name="image_download_failed_with_error">Image download failed: %1$s</string>
     <string name="image_not_loaded_please_retry">Image not loaded, please try again later</string>
     <string name="image_invalid">Invalid image</string>
-    <string name="image_saved_successfully">Image successfully saved to system directory (Picture/setu)</string>
+    <string name="image_saved_successfully">Image successfully saved to system directory (Pictures/vplus)</string>
     <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>

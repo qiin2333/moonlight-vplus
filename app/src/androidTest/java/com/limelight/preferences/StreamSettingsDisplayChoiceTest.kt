@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.SystemClock
 import android.view.Display
 import android.view.InputDevice
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
@@ -15,9 +16,16 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroupAdapter
 import androidx.preference.PreferenceManager
@@ -290,6 +298,36 @@ class StreamSettingsDisplayChoiceTest {
     }
 
     @Test
+    fun physicalKeyboardKeepsCustomResolutionInputFocusedUntilControllerNavigation() {
+        launchSettings()
+        openResolutionSheetWithTouch()
+        var managerLabel = ""
+        requireNotNull(scenario).onActivity { activity ->
+            managerLabel = requireNotNull(fragment(activity).findPreference<DisplayChoicePreference>(
+                PreferenceConfiguration.RESOLUTION_PREF_STRING)?.actionLabel)
+        }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(managerLabel))
+        compose.onNodeWithText(managerLabel).performTouchInput { click() }
+        compose.onNodeWithText(editorAddLabel()).assertIsDisplayed()
+
+        val fields = compose.onAllNodes(hasSetTextAction()).assertCountEquals(2)
+        fields[0].performTouchInput { click() }
+        fields[0].assertIsFocused()
+        sendHardwareDigits("1920")
+        fields[0].assertIsFocused().assertTextEquals("1920")
+
+        // Touching the second field starts another touch-to-keyboard transition.
+        fields[1].performTouchInput { click() }
+        fields[1].assertIsFocused()
+        sendHardwareDigits("1080")
+        fields[1].assertIsFocused().assertTextEquals("1080")
+
+        // A real controller source must still acquire the editor's navigation anchor.
+        sendSourceKey(KeyEvent.KEYCODE_DPAD_DOWN, InputDevice.SOURCE_GAMEPAD)
+        compose.onNodeWithText(editorAddLabel()).assertIsFocused()
+    }
+
+    @Test
     @SuppressLint("RestrictedApi")
     fun resolutionChoicesAndCustomManagementRemainSearchable() {
         launchSettings()
@@ -465,6 +503,25 @@ class StreamSettingsDisplayChoiceTest {
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code)
         compose.waitForIdle()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+    }
+
+    private fun sendHardwareDigits(text: String) {
+        text.forEach { digit ->
+            sendSourceKey(KeyEvent.KEYCODE_0 + (digit - '0'), InputDevice.SOURCE_KEYBOARD)
+        }
+    }
+
+    private fun sendSourceKey(code: Int, source: Int) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val downTime = SystemClock.uptimeMillis()
+        for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
+            instrumentation.sendKeySync(KeyEvent(
+                downTime, SystemClock.uptimeMillis(), action, code, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, source
+            ))
+        }
+        compose.waitForIdle()
+        instrumentation.waitForIdleSync()
     }
 
     private fun fragment(activity: StreamSettings): StreamSettings.SettingsFragment =

@@ -678,7 +678,7 @@ class PreferenceConfiguration {
         private const val MOUSE_AXIS_CORRECTION_PREF_STRING = "list_mouse_axis_correction"
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
-        private const val SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING = "checkbox_show_display_settings_card"
+        internal const val SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING = "checkbox_show_display_settings_card"
         private const val SHOW_AUDIO_HAPTICS_CARD_PREF_STRING = "checkbox_show_audio_haptics_card"
         private const val SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card"
         @Suppress("ConstPropertyName")

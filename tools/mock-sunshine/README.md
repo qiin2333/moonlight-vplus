@@ -20,6 +20,15 @@ The mock also exposes a Windows-style display-scale API for in-stream UI checks:
 The default display advertises 100%, 125%, and 150%; a successful POST updates the
 current value for subsequent reads.
 
+Run the isolated display-scale route checks with Node.js 18 or later:
+
+```sh
+node --test tools/mock-sunshine/server.test.js
+```
+
+These checks use in-memory server and filesystem stubs, so no ports are opened
+and no `.generated` configuration or certificates are needed.
+
 ## Run
 
 From the repository root:

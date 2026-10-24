@@ -650,7 +650,7 @@
     <string name="image_download_failed_with_error">Falha no download da imagem: %1$s</string>
     <string name="image_not_loaded_please_retry">Imagem não carregada, tente novamente mais tarde</string>
     <string name="image_invalid">Imagem inválida</string>
-    <string name="image_saved_successfully">Imagem guardada com sucesso em: Picture/vplus</string>
+    <string name="image_saved_successfully">Imagem guardada com sucesso em: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Falha ao guardar a imagem: %1$s</string>
     <string name="config_save_failed">Falha ao salvar configuração</string>
     <string name="scene_config_applied">Configuração da cena %1$d aplicada: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>

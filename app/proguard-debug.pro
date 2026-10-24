@@ -27,6 +27,24 @@
 -keep class com.limelight.UsbPanelDevice { *; }
 -keep class com.limelight.UsbDeviceType** { *; }
 -keep class com.limelight.utils.AppActionSheet** { *; }
+-keep class com.limelight.ui.ControllerInputKt {
+    public static boolean isGamepadNavigationSource(android.view.KeyEvent);
+}
+# Per-app settings instrumentation verifies the JSON/Intent round trip after R8.
+-keep class com.limelight.utils.AppSettingsManager {
+    public <init>(android.content.Context);
+    public static final com.limelight.utils.AppSettingsManager$Companion Companion;
+    public void saveAppLastSettings(java.lang.String, com.limelight.nvstream.http.NvApp, com.limelight.preferences.PreferenceConfiguration);
+    public com.limelight.preferences.PreferenceConfiguration getAppLastSettings(java.lang.String, com.limelight.nvstream.http.NvApp);
+    public java.lang.String getSettingsSummary(java.lang.String, com.limelight.nvstream.http.NvApp);
+    public boolean applyLastSettingsFromIntent(android.content.Intent, com.limelight.preferences.PreferenceConfiguration);
+}
+-keep class com.limelight.utils.AppSettingsManager$Companion {
+    public void addLastSettingsToIntent(android.content.Intent, com.limelight.preferences.PreferenceConfiguration);
+}
+-keepclassmembers class com.limelight.nvstream.http.NvApp {
+    public <init>(java.lang.String, int, boolean);
+}
 -keepclassmembers class com.limelight.preferences.IconListPreference {
     public int[] getEntryIcons();
 }
@@ -85,6 +103,8 @@
     public *** *AbrMode(...);
     public *** *ScreenCombinationMode(...);
     public boolean getShowDisplaySettingsCard();
+    public void setShowDisplaySettingsCard(boolean);
+    public void setResolutionScale(int);
     public boolean getShowAudioHapticsCard();
     public int getPerfOverlayBgOpacity();
 }

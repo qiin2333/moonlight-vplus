@@ -1156,7 +1156,7 @@
     <string name="image_download_failed_with_error">Ошибка загрузки: %1$s</string>
     <string name="image_not_loaded_please_retry">Изображение не загружено. Повторите позже</string>
     <string name="image_invalid">Некорректное изображение</string>
-    <string name="image_saved_successfully">Изображение успешно сохранено в: Picture/vplus</string>
+    <string name="image_saved_successfully">Изображение успешно сохранено в: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Не удалось сохранить изображение: %1$s</string>
     <string name="config_save_failed">Не удалось сохранить настройки</string>
     <string name="scene_config_applied">Сценарий %1$d: %2$dx%3$d@%4$d FPS %5$.2f Мбит/с %6$s HDR %7$s</string>

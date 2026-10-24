@@ -1105,7 +1105,7 @@
     <string name="image_download_failed_with_error">图片下载失败: %1$s</string>
     <string name="image_not_loaded_please_retry">图片未加载，请稍后再试</string>
     <string name="image_invalid">图片无效</string>
-    <string name="image_saved_successfully">涩图成功保存到了系统目录(Picture/setu)</string>
+    <string name="image_saved_successfully">涩图成功保存到了系统目录(Pictures/vplus)</string>
     <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
