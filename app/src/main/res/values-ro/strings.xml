@@ -113,8 +113,6 @@
     <string name="summary_fps_list">Crește-o pentru a îmbunătăți fluiditatea imaginilor. Descrește-o pentru dispozitive neperformante sau conexiune slabă.</string>
     <string name="title_seekbar_bitrate">Rata de biți</string>
     <string name="summary_seekbar_bitrate">O rată de biți mai mare îmbunătățește calitatea imaginii, dar folosește mai multă lățime de bandă; o rată mai mică este mai potrivită pentru rețele lente sau instabile. Dacă transmisia sacadează, reduceți-o mai întâi și creșteți-o când rețeaua este stabilă, dar imaginea este neclară; pentru 1080p60 începeți cu aproximativ 10–20 Mbps.</string>
-    <string name="title_unlock_fps">Deblochează toate ratele de cadre posibile</string>
-    <string name="summary_unlock_fps">Fluxul video de rate mai mari poate reduce latența folosind dispozitive performante, dar poate introduce erori daca nu sunt suportate.</string>
     <string name="title_checkbox_stretch_video">Întindeți video pe ecranul complet</string>
     <string name="title_checkbox_disable_warnings">Dezactivează mesajele de avertizare</string>
     <string name="summary_checkbox_disable_warnings">Dezactivează mesajele de avertizare privind rețeaua în timpul conexiunii</string>
@@ -148,7 +146,6 @@
     <string name="dialog_title_reset_osc">Resetarea schemei de controale</string>
     <string name="dialog_text_reset_osc">Sigur dorești să ștergi schema salvată a controalelor de pe ecran?</string>
     <string name="toast_reset_osc_success">Controalele de pe ecran au fost resetate la setarile implicite</string>
-    <string name="title_osc_opacity">Modifică opacitatea controalelor de pe ecran</string>
     <string name="summary_osc_opacity">Ajustează gradul de transparență al controalelor de pe ecran</string>
     <string name="dialog_title_osc_opacity">Modifică opacitatea</string>
     <string name="suffix_osc_opacity">%</string>
@@ -226,7 +223,7 @@
     <string name="pyrowave_diag_copy">Copiază</string>
     <string name="pyrowave_diag_copy_success">Raport copiat în clipboard</string>
     <string name="pyrowave_diag_unavailable">Indisponibil</string>
-    <string name="image_saved_successfully">Imagine salvată cu succes în: Picture/vplus</string>
+    <string name="image_saved_successfully">Imagine salvată cu succes în: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Salvarea imaginii a eșuat: %1$s</string>
     <string name="tip_double_tap_mouse">Sfat: ține apăsat pe zona goală din partea de sus a listei de calculatoare pentru a salva imaginea de fundal curentă.</string>
     <string name="pyrowave_negotiation_fallback">Negocierea PyroWave a eșuat. Se trece la %1$s.</string>

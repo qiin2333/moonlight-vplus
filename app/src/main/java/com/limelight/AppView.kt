@@ -10,8 +10,10 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.os.Bundle
@@ -21,6 +23,9 @@ import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
+import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +35,7 @@ import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 
@@ -76,6 +82,7 @@ import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppBackgroundMode
 import com.limelight.utils.BackgroundImageManager
+import com.limelight.utils.BackgroundTitleColor
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.HostCacheKey
 import com.limelight.utils.Dialog
@@ -96,6 +103,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.content.edit
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -145,6 +153,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         private const val DISPLAY_CHECK_DELAY_MS = 800L
         private const val NOT_PAIRED_EXIT_CONFIRMATION_UPDATES = 2
         private const val SCREEN_COMBINATION_MODE_PREF_KEY = "list_screen_combination_mode"
+        private const val TITLE_HOST_SCALE = 0.86f
     }
 
     // ==================== 核心数据 ====================
@@ -298,7 +307,9 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        applyTitleTextResources()
         refreshTitle()
+        findViewById<View>(R.id.appListText).post { refreshTitleColor() }
 
         // If appGridAdapter is initialized, let it know about the configuration change.
         // If not, it will pick it up when it initializes.
@@ -455,7 +466,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             this,
             appBackgroundImageBlur!!,
             appBackgroundImageClear,
-            artworkBlurOnly = isPortrait
+            artworkBlurOnly = isPortrait,
+            onBackgroundApplied = { refreshTitleColor() }
         )
 
         // Initialize app settings manager and UI components
@@ -510,7 +522,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 selectionIndicator,
                 null, // RecyclerView will be set later
                 null, // Adapter will be set later
-                findViewById(android.R.id.content)
+                findViewById(R.id.appCatalogFrame)
         )
         selectionAnimator?.setPositionProvider { selectedPosition }
 
@@ -532,6 +544,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         computerName = intent.getStringExtra(NAME_EXTRA) ?: ""
 
         val label = findViewById<TextView>(R.id.appListText)
+        label.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> refreshTitleColor() }
+        applyTitleTextResources()
         title = computerName
         refreshTitle()
         // 点击标题恢复串流
@@ -602,6 +616,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             val params = v.layoutParams as android.widget.RelativeLayout.LayoutParams
             params.topMargin = statusBarHeight
             v.layoutParams = params
+            applyHeaderSafeArea(WindowInsetsCompat.toWindowInsetsCompat(insets, v))
             insets
         }
 
@@ -669,7 +684,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         val icon = mode?.let { screenCombinationModeIconRes(it) }?.let { getDrawable(it)?.mutate() }
         val prefix = if (icon != null) "\uFFFC\u00A0" else ""
         val separator = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            " - "
+            "  "
         } else {
             "\n"
         }
@@ -677,16 +692,41 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         val text = "$prefix$computerName$appTitle$arrow"
         val spannableString = SpannableString(text)
 
+        // Keep the host identity and its mode icon quieter than the selected app name.
+        // Applying the same metric span to both gives the replacement span the same
+        // scaled paint and therefore keeps its visible artwork on the host baseline.
+        if (computerName.isNotEmpty()) {
+            val hostStart = prefix.length
+            spannableString.setSpan(
+                    RelativeSizeSpan(TITLE_HOST_SCALE),
+                    hostStart,
+                    hostStart + computerName.length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+
         if (appTitle.isNotEmpty()) {
             val appNameStart = prefix.length + computerName.length + separator.length
             spannableString.setSpan(
-                    RelativeSizeSpan(0.85f),
+                    TypefaceSpan("sans-serif"),
                     appNameStart,
-                    text.length,
+                    appNameStart + appName.orEmpty().length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            spannableString.setSpan(
+                    StyleSpan(Typeface.BOLD),
+                    appNameStart,
+                    appNameStart + appName.orEmpty().length,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
         if (icon != null) {
+            spannableString.setSpan(
+                    RelativeSizeSpan(TITLE_HOST_SCALE),
+                    0,
+                    prefix.length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
             spannableString.setSpan(ScreenCombinationModeSpan(icon, computerName), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         label.text = spannableString
@@ -695,6 +735,64 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 ?: screenCombinationOptions.firstOrNull { it.value == value }?.label
         }
         label.contentDescription = listOfNotNull(modeLabel, text.removePrefix(prefix)).joinToString(", ")
+    }
+
+    private fun refreshTitleColor() {
+        if (isFinishing || isDestroyed) return
+        val label = findViewById<TextView>(R.id.appListText)
+        val color = BackgroundTitleColor.sample(
+            label,
+            listOfNotNull(appBackgroundImageBlur, appBackgroundImageClear),
+            ContextCompat.getColor(this, R.color.advance_setting_background)
+        )
+        label.setTextColor(color)
+        ViewCompat.setBackgroundTintList(label, ColorStateList.valueOf(color))
+    }
+
+    private fun applyHeaderSafeArea(insets: WindowInsetsCompat?) {
+        val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+        val displayCutout = insets?.getInsets(WindowInsetsCompat.Type.displayCutout())
+        val safeLeft = maxOf(systemBars?.left ?: 0, displayCutout?.left ?: 0)
+        val safeRight = maxOf(systemBars?.right ?: 0, displayCutout?.right ?: 0)
+        val header = findViewById<View>(R.id.appContentColumn)
+        val baseMargin = resources.getDimensionPixelSize(R.dimen.appview_content_margin)
+        val isRtl = header.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        val startMargin = baseMargin + if (isRtl) safeRight else safeLeft
+        val endMargin = baseMargin + if (isRtl) safeLeft else safeRight
+        val headerParams = header.layoutParams as RelativeLayout.LayoutParams
+        if (headerParams.marginStart != startMargin || headerParams.marginEnd != endMargin) {
+            headerParams.marginStart = startMargin
+            headerParams.marginEnd = endMargin
+            header.layoutParams = headerParams
+        }
+
+        val leadingSpace = findViewById<View>(R.id.appHeaderLeadingSpace)
+        val spaceParams = leadingSpace.layoutParams as LinearLayout.LayoutParams
+        val spaceWeight = resources.getInteger(R.integer.appview_header_spacer_weight).toFloat()
+        // Compensate for side insets so the weighted header still clears the centered panel handle.
+        val spaceWidth = resources.getDimensionPixelSize(R.dimen.appview_header_spacer_width) +
+                if (spaceWeight > 0f) safeLeft + safeRight else 0
+        if (spaceParams.width != spaceWidth || spaceParams.weight != spaceWeight) {
+            spaceParams.width = spaceWidth
+            spaceParams.weight = spaceWeight
+            leadingSpace.layoutParams = spaceParams
+        }
+    }
+
+    /** Apply header resources when configuration changes without recreating the activity. */
+    private fun applyTitleTextResources() {
+        applyHeaderSafeArea(ViewCompat.getRootWindowInsets(window.decorView))
+
+        val label = findViewById<TextView>(R.id.appListText)
+        label.setTextSize(
+            TypedValue.COMPLEX_UNIT_PX,
+            resources.getDimension(R.dimen.appview_title_text_size)
+        )
+        label.minimumHeight = resources.getDimensionPixelSize(R.dimen.appview_title_min_height)
+        label.maxLines = resources.getInteger(R.integer.appview_title_max_lines)
+        // The view stays anchored to the end; start-align ellipsized lines to keep the icon intact.
+        label.gravity = if (label.maxLines == 1) android.view.Gravity.START else android.view.Gravity.END
+        appViewTargetReminder.maxLines = resources.getInteger(R.integer.appview_target_reminder_max_lines)
     }
 
     private fun updateResumeTitleInteractivity(label: TextView) {
@@ -1334,28 +1432,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
      * @return item宽度（像素）
      */
     private fun getCurrentItemWidth(): Int {
-        // 获取当前显示模式
-        val isLargeMode = isLargeItemMode()
-
-        // 根据模式返回对应的宽度
-        return if (isLargeMode) {
-            // 大图标模式：180dp
-            (180 * resources.displayMetrics.density).toInt()
-        } else {
-            // 小图标模式：120dp
-            (120 * resources.displayMetrics.density).toInt()
-        }
-    }
-
-    /**
-     * 判断当前是否为大图标模式
-     *
-     * @return true为大图标模式，false为小图标模式
-     */
-    private fun isLargeItemMode(): Boolean {
-        // 根据PreferenceConfiguration判断显示模式
         val prefs = PreferenceConfiguration.readPreferences(this)
-        return !prefs.smallIconMode // smallIconMode为false表示大图标模式
+        return AppGridAdapter.getItemWidthForPreferences(this, prefs)
     }
 
     /**
@@ -1878,9 +1956,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         // 设置事件监听器
         setupRecyclerViewListeners(rv)
-
-        // 应用UI配置
-        UiHelper.applyStatusBarPadding(rv)
     }
 
     /**
@@ -2193,7 +2268,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             }
         }
 
-        UiHelper.applyStatusBarPadding(listView)
         listView.setOnItemLongClickListener { _, view, pos, _ ->
             val app = adapter.getItem(pos) as AppObject
             handleSelectionChange(pos, app)

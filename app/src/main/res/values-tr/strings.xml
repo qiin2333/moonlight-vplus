@@ -137,7 +137,6 @@
     <string name="title_resolution_list">Video çözünürlüğü</string>
     <string name="summary_fps_list">Daha akıcı bir video akışı için artırın. Düşük uçlu cihazlarda daha iyi performans için azaltın.</string>
     <string name="resolution_prefix_native">Yerel</string>
-    <string name="resolution_prefix_native_fullscreen">Yerel tam ekran</string>
     <string name="category_audio_settings">Ses Ayarları</string>
     <string name="title_audio_config_list">Çevresel ses yapılandırması</string>
     <string name="summary_seekbar_deadzone">Not: Bazı oyunlar Moonlight\'ın kullanmak üzere yapılandırıldığından daha büyük bir ölü bölge uygulayabilir.</string>
@@ -239,7 +238,7 @@
     <string name="pyrowave_diag_copy">Kopyala</string>
     <string name="pyrowave_diag_copy_success">Rapor panoya kopyalandı</string>
     <string name="pyrowave_diag_unavailable">Alınamıyor</string>
-    <string name="image_saved_successfully">Resim başarıyla kaydedildi: Picture/vplus</string>
+    <string name="image_saved_successfully">Resim başarıyla kaydedildi: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Resim kaydedilemedi: %1$s</string>
     <string name="tip_double_tap_mouse">İpucu: mevcut arka plan resmini kaydetmek için bilgisayar listesinin üst kısmındaki boş alana basılı tutun.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave anlaşması başarısız oldu. %1$s kullanılıyor.</string>

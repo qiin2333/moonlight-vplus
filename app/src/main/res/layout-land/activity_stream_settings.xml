@@ -178,14 +178,4 @@
 
     </FrameLayout>
 
-    <FrameLayout
-        android:id="@+id/screen_combination_mode_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/screen_combination_mode_picker_background"
-        android:clickable="true"
-        android:elevation="24dp"
-        android:focusable="true"
-        android:visibility="gone" />
-
 </FrameLayout>

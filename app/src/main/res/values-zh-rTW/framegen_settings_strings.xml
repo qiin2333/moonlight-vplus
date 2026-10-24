@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_framegen_directory_create_failed">無法建立插幀目錄</string>
+    <string name="error_framegen_dll_open_failed">無法開啟所選 DLL 檔案</string>
+    <string name="error_framegen_dll_empty">所選 DLL 檔案為空</string>
+</resources>

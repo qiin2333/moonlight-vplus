@@ -54,13 +54,9 @@ class AppGridAdapter(
     }
 
     fun updateLayoutWithPreferences(context: Context, prefs: PreferenceConfiguration) {
-        val dpi = context.resources.displayMetrics.densityDpi
-        val dp = if (prefs.smallIconMode) SMALL_WIDTH_DP else LARGE_WIDTH_DP
+        val itemWidth = getItemWidthForPreferences(context, prefs)
 
-        var scalingDivisor = ART_WIDTH_PX / (dp * (dpi / 160.0))
-        if (scalingDivisor < 1.0) {
-            scalingDivisor = 1.0
-        }
+        val scalingDivisor = (ART_WIDTH_PX.toDouble() / itemWidth).coerceAtLeast(1.0)
 
         if (loader != null) {
             cancelQueuedOperations()
@@ -154,8 +150,15 @@ class AppGridAdapter(
 
     companion object {
         private const val ART_WIDTH_PX = 300
-        private const val SMALL_WIDTH_DP = 120
-        private const val LARGE_WIDTH_DP = 180
+
+        fun getItemWidthForPreferences(context: Context, prefs: PreferenceConfiguration): Int {
+            val widthRes = if (prefs.smallIconMode) {
+                R.dimen.appview_small_card_width
+            } else {
+                R.dimen.appview_large_card_width
+            }
+            return context.resources.getDimensionPixelSize(widthRes)
+        }
 
         fun getLayoutIdForPreferences(prefs: PreferenceConfiguration): Int {
             return if (prefs.smallIconMode) R.layout.app_grid_item_small else R.layout.app_grid_item

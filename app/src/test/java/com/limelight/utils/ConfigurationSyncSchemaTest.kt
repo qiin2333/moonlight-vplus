@@ -38,6 +38,8 @@ class ConfigurationSyncSchemaTest {
             "checkbox_vibrate_osc",
             "checkbox_mouse_emulation",
             "checkbox_shizuku_keyboard_accessibility",
+            "checkbox_show_audio_haptics_card",
+            "checkbox_show_display_settings_card",
         ).forEach { key ->
             assertTrue("Expected portable key: $key", ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }

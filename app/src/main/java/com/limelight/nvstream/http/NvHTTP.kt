@@ -54,7 +54,22 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okhttp3.ResponseBody
+
+private fun JSONObject.optNullablePositiveInt(name: String): Int? {
+    if (isNull(name)) return null
+    return optInt(name).takeIf { it > 0 }
+}
+
+private fun JSONObject.optIntArray(name: String): List<Int> {
+    val array = optJSONArray(name) ?: return emptyList()
+    return buildList(array.length()) {
+        for (index in 0 until array.length()) {
+            array.optInt(index).takeIf { it > 0 }?.let(::add)
+        }
+    }.distinct().sorted()
+}
 
 class NvHTTP(
     address: ComputerDetails.AddressTuple,
@@ -128,8 +143,47 @@ class NvHTTP(
     class DisplayInfo(
         val index: Int,
         val name: String,
-        val guid: String
+        val guid: String,
+        /** Sunshine's native display name (the Windows GDI name). */
+        val displayName: String = name,
+        val friendlyName: String = name,
+        val isPrimary: Boolean = false,
+        val currentScalePercent: Int? = null,
+        val recommendedScalePercent: Int? = null,
+        val supportedScalePercents: List<Int> = emptyList(),
+        val scaleSetSupported: Boolean = false
     )
+
+    data class DisplayScaleInfo(
+        val displayName: String,
+        val deviceId: String,
+        val friendlyName: String,
+        val isPrimary: Boolean,
+        val currentScalePercent: Int?,
+        val recommendedScalePercent: Int?,
+        val supportedScalePercents: List<Int>,
+        val scaleSetSupported: Boolean
+    ) {
+        val isAvailable: Boolean
+            get() = scaleSetSupported && supportedScalePercents.isNotEmpty()
+    }
+
+    data class DisplayScaleResult(
+        val displayName: String,
+        val deviceId: String,
+        val previousScalePercent: Int?,
+        val currentScalePercent: Int?,
+        val supportedScalePercents: List<Int>,
+        val restartRequired: Boolean,
+        val effectiveImmediately: Boolean,
+        val statusMessage: String
+    )
+
+    class DisplayScaleException(
+        val statusCode: Int,
+        val errorCode: String?,
+        message: String
+    ) : IOException(message)
 
     enum class VddState {
         READY,
@@ -292,6 +346,16 @@ class NvHTTP(
             current.suppressed.forEach(pending::addLast)
         }
         return true
+    }
+
+    private fun executeRequest(client: OkHttpClient, request: Request): Response {
+        return try {
+            client.newCall(request).execute()
+        } catch (e: SSLHandshakeException) {
+            if (!shouldRetryTlsHandshake(e)) throw e
+            LimeLog.warning("${request.url} -> TLS handshake failed; rebuilding HTTP client and retrying once")
+            rebuildHttpClientsAfterTlsFailure(client).newCall(request).execute()
+        }
     }
 
     @Throws(IOException::class, InterruptedException::class)
@@ -461,16 +525,7 @@ class NvHTTP(
     private fun openHttpConnection(client: OkHttpClient, baseUrl: HttpUrl, path: String, query: String?, displayName: String? = null): ResponseBody {
         val completeUrl = getCompleteUrl(baseUrl, path, query, displayName)
         val request = Request.Builder().url(completeUrl).get().build()
-        val response = try {
-            client.newCall(request).execute()
-        } catch (e: SSLHandshakeException) {
-            if (!shouldRetryTlsHandshake(e)) {
-                throw e
-            }
-
-            LimeLog.warning("$completeUrl -> TLS handshake failed; rebuilding HTTP client and retrying once")
-            rebuildHttpClientsAfterTlsFailure(client).newCall(request).execute()
-        }
+        val response = executeRequest(client, request)
 
         val body = response.body
 
@@ -510,43 +565,6 @@ class NvHTTP(
                 e.printStackTrace()
             }
             throw e
-        }
-    }
-
-    @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnectionPost(client: OkHttpClient, baseUrl: HttpUrl, path: String, jsonData: String): String {
-        val completeUrl = getCompleteUrl(baseUrl, path, null)
-
-        val body = jsonData.toRequestBody(
-            "application/json; charset=utf-8".toMediaTypeOrNull()
-        )
-
-        val request = Request.Builder()
-            .url(completeUrl)
-            .post(body)
-            .addHeader("Content-Type", "application/json")
-            .build()
-
-        val response = client.newCall(request).execute()
-        val responseBody = response.body
-
-        if (response.isSuccessful) {
-            val respString = responseBody.string()
-            responseBody.close()
-
-            if (verbose) {
-                LimeLog.info("$completeUrl -> $respString")
-            }
-
-            return respString
-        }
-
-        responseBody.close()
-
-        if (response.code == 404) {
-            throw FileNotFoundException(completeUrl.toString())
-        } else {
-            throw HostHttpResponseException(response.code, response.message)
         }
     }
 
@@ -714,6 +732,103 @@ class NvHTTP(
         } catch (e: org.json.JSONException) {
             throw IOException("Failed to parse displays response: ${e.message}", e)
         }
+    }
+
+    @Throws(IOException::class, InterruptedException::class)
+    fun getDisplayScaleOptions(displayName: String?, deviceId: String?): DisplayScaleInfo {
+        return try {
+            val url = getCompleteUrl(getHttpsUrl(true), "display-scale-options", null)
+                .newBuilder()
+                .apply {
+                    displayName?.takeIf { it.isNotBlank() }?.let { addQueryParameter("display_name", it) }
+                    deviceId?.takeIf { it.isNotBlank() }?.let { addQueryParameter("device_id", it) }
+                }
+                .build()
+            val json = executeDisplayScaleJson(Request.Builder().url(url).get().build(), url)
+            parseDisplayScaleInfo(json)
+        } catch (e: org.json.JSONException) {
+            throw IOException("Failed to parse display scale response: ${e.message}", e)
+        }
+    }
+
+    @Throws(IOException::class, InterruptedException::class)
+    fun setDisplayScale(displayName: String?, deviceId: String?, scalePercent: Int): DisplayScaleResult {
+        require(scalePercent > 0) { "scalePercent must be positive" }
+        return try {
+            val url = getCompleteUrl(getHttpsUrl(true), "display-scale", null)
+            val payload = JSONObject().apply {
+                displayName?.takeIf { it.isNotBlank() }?.let { put("display_name", it) }
+                deviceId?.takeIf { it.isNotBlank() }?.let { put("device_id", it) }
+                put("scale_percent", scalePercent)
+            }
+            val json = executeDisplayScaleJson(
+                Request.Builder()
+                    .url(url)
+                    .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()))
+                    .addHeader("Content-Type", "application/json")
+                    .build(),
+                url
+            )
+            if (!json.optBoolean("success", false)) {
+                throw DisplayScaleException(
+                    json.optInt("status_code", 500),
+                    json.optString("error_code").takeIf { it.isNotBlank() },
+                    json.optString("status_message", "Failed to set display scale")
+                )
+            }
+            DisplayScaleResult(
+                displayName = json.optString("display_name", displayName.orEmpty()),
+                deviceId = json.optString("device_id", deviceId.orEmpty()),
+                previousScalePercent = json.optNullablePositiveInt("previous_scale_percent"),
+                currentScalePercent = json.optNullablePositiveInt("current_scale_percent"),
+                supportedScalePercents = json.optIntArray("supported_scale_percents"),
+                restartRequired = json.optBoolean("restart_required", false),
+                effectiveImmediately = json.optBoolean("effective_immediately", true),
+                statusMessage = json.optString("status_message", "OK")
+            )
+        } catch (e: org.json.JSONException) {
+            throw IOException("Failed to parse display scale response: ${e.message}", e)
+        }
+    }
+
+    private fun executeDisplayScaleJson(request: Request, url: HttpUrl): JSONObject {
+        val response = executeRequest(httpClientLongConnectTimeout, request)
+        response.use {
+            val body = it.body?.string().orEmpty()
+            val json = try {
+                JSONObject(body)
+            } catch (e: org.json.JSONException) {
+                if (!it.isSuccessful) {
+                    throw DisplayScaleException(it.code, null, it.message.ifEmpty { "HTTP ${it.code}" })
+                }
+                throw e
+            }
+            if (!it.isSuccessful) {
+                throw DisplayScaleException(
+                    it.code,
+                    json.optString("error_code").takeIf { it.isNotBlank() },
+                    json.optString("status_message", it.message.ifEmpty { "HTTP ${it.code}" })
+                )
+            }
+            if (verbose) LimeLog.info("$url -> $body")
+            return json
+        }
+    }
+
+    private fun parseDisplayScaleInfo(json: JSONObject): DisplayScaleInfo {
+        return DisplayScaleInfo(
+            displayName = json.optString("display_name", ""),
+            deviceId = json.optString("device_id", ""),
+            friendlyName = json.optString(
+                "friendly_name",
+                json.optString("display_name", "Display")
+            ),
+            isPrimary = json.optBoolean("is_primary", false),
+            currentScalePercent = json.optNullablePositiveInt("current_scale_percent"),
+            recommendedScalePercent = json.optNullablePositiveInt("recommended_scale_percent"),
+            supportedScalePercents = json.optIntArray("supported_scale_percents"),
+            scaleSetSupported = json.optBoolean("scale_set_supported", false)
+        )
     }
 
     @Throws(IOException::class, InterruptedException::class)
@@ -1277,11 +1392,21 @@ class NvHTTP(
                             displayObj.optString("display_name", "Display ${i + 1}")
                     }
 
+                    val displayName = displayObj.optString("display_name", "")
+                    val deviceId = displayObj.optString("device_id", "")
+
                     displays.add(
                         DisplayInfo(
                             i,
                             friendlyName,
-                            displayObj.optString("device_id", "")
+                            deviceId,
+                            displayName = displayName,
+                            friendlyName = friendlyName,
+                            isPrimary = displayObj.optBoolean("is_primary", false),
+                            currentScalePercent = displayObj.optNullablePositiveInt("current_scale_percent"),
+                            recommendedScalePercent = displayObj.optNullablePositiveInt("recommended_scale_percent"),
+                            supportedScalePercents = displayObj.optIntArray("supported_scale_percents"),
+                            scaleSetSupported = displayObj.optBoolean("scale_set_supported", false)
                         )
                     )
                 }

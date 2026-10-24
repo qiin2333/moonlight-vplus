@@ -50,7 +50,11 @@ class AppActionSheetControllerFocusTest {
             )
         }
 
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { dialog?.isShowing == true }
+        // show() returns before Android delivers window focus; Compose idleness alone
+        // does not wait for that platform event.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.runOnUiThread { dialog?.window?.decorView?.hasWindowFocus() == true }
+        }
         composeTestRule.onNodeWithText("First key").assertIsFocused()
         composeTestRule.onNodeWithText("First key").performKeyInput {
             pressKey(Key.DirectionDown)
@@ -62,5 +66,4 @@ class AppActionSheetControllerFocusTest {
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithText("✓").assertCountEquals(1)
     }
-
 }

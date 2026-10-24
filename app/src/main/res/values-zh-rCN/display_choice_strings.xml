@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="display_frame_rate_above_refresh_rate">高于屏幕刷新率：延迟可能降低，负载与功耗可能增加。</string>
+</resources>
