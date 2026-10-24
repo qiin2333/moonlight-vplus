@@ -71,6 +71,7 @@
 -keep class com.limelight.gamemenu.BitrateCardController$Companion {
     *** persistDisplayDraft*(...);
 }
+-keep class com.limelight.DisplayReconnectSettings** { *; }
 -keepclassmembers class com.limelight.preferences.DisplayPreferenceValues {
     public java.util.Map of(...);
 }

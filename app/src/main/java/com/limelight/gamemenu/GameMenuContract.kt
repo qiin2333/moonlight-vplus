@@ -114,6 +114,8 @@ internal data class GameMenuCallbacks(
     val onBitrateAdaptive: (Boolean) -> Unit,
     val onAbrMode: (String) -> Unit,
     val onBitrateHapticMode: () -> Unit,
+    val onDisplaySettingsInfo: () -> Unit = {},
+    val onAdaptiveBitrateInfo: () -> Unit = {},
     val onOpenResolutionSheet: () -> Unit = {},
     val onOpenFrameRateSheet: () -> Unit = {},
     val onOpenScreenModeSheet: () -> Unit = {},

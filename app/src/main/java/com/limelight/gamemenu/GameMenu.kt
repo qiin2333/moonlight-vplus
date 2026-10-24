@@ -54,8 +54,6 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
-import com.limelight.preferences.activeCustomDialogController
-import com.limelight.preferences.CustomResolutionsDialog
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
@@ -1054,24 +1052,13 @@ class GameMenu(
         game.controllerHandler.playDeviceTouchHaptic(motor, motor, durationMs)
     }
 
-    private fun refreshOpenDisplaySettings() {
-        bitrateCardController.refreshDisplayChoices()
-        composeUiState?.let { state ->
-            state.value = state.value.copy(
-                bitrate = bitrateCardController.snapshot()
-            )
-        }
-    }
-
     private fun showDisplayChoiceSheet(
         title: String,
         choices: List<DisplayChoice>,
-        onSelected: (DisplayChoice) -> Unit,
-        includeCustomResolution: Boolean = false
+        onSelected: (DisplayChoice) -> Unit
     ) {
         val availableChoices = choices.filter { it.enabled }
         if (availableChoices.isEmpty()) return
-        val customActionId = availableChoices.size
         val actions = availableChoices.mapIndexed { index, choice ->
             AppActionSheet.Action(
                 id = index,
@@ -1081,32 +1068,25 @@ class GameMenu(
                 enabled = choice.enabled,
                 emphasized = choice.emphasized
             )
-        }.let { base ->
-            if (includeCustomResolution) {
-                base + AppActionSheet.Action(
-                    id = customActionId,
-                    title = getString(R.string.display_custom_resolution_short),
-                    opensSubmenu = true
-                )
-            } else {
-                base
-            }
         }
         registerChildDialog(
             AppActionSheet.show(
                 context = game,
                 title = title,
+                supportingText = getString(R.string.display_settings_reconnect_hint),
                 actions = actions,
                 initialActionId = availableChoices.indexOfFirst { it.selected }.takeIf { it >= 0 },
                 singleChoice = true,
                 onAction = { action ->
-                    if (includeCustomResolution && action.id == customActionId) {
-                        showCustomDisplayEditor()
-                    } else {
-                        availableChoices.getOrNull(action.id)?.let(onSelected)
-                    }
+                    availableChoices.getOrNull(action.id)?.let(onSelected)
                 }
             )
+        )
+    }
+
+    private fun showInfoSheet(titleRes: Int, messageRes: Int) {
+        registerChildDialog(
+            showGameMenuInfoSheet(game, getString(titleRes), getString(messageRes))
         )
     }
 
@@ -1115,7 +1095,6 @@ class GameMenu(
         showDisplayChoiceSheet(
             title = getString(R.string.title_resolution_list),
             choices = state.resolutions,
-            includeCustomResolution = true,
             onSelected = {
                 bitrateCardController.stageResolution(it.value)
                 bitrateCardController.applyDisplayDraft()
@@ -1232,6 +1211,12 @@ class GameMenu(
             onBitrateAdaptive = bitrateCardController::setAdaptiveBitrate,
             onAbrMode = bitrateCardController::setAbrMode,
             onBitrateHapticMode = bitrateCardController::cycleHapticMode,
+            onDisplaySettingsInfo = {
+                showInfoSheet(R.string.game_menu_display_settings, R.string.display_settings_help)
+            },
+            onAdaptiveBitrateInfo = {
+                showInfoSheet(R.string.title_adaptive_bitrate, R.string.game_menu_adaptive_bitrate_tip)
+            },
             onOpenResolutionSheet = ::showResolutionSheet,
             onOpenFrameRateSheet = ::showFrameRateSheet,
             onOpenScreenModeSheet = ::showScreenModeSheet,
@@ -1685,22 +1670,10 @@ class GameMenu(
         }
     }
 
-    private fun showCustomDisplayEditor() {
-        lateinit var dialog: Dialog
-        val onClosed = {
-            finishChildDialog(dialog) {
-                refreshOpenDisplaySettings()
-            }
-        }
-        dialog = CustomResolutionsDialog.show(game, onClosed, controllerNavigationIsCurrent())
-        registerChildDialog(dialog, installDismissListener = false)
-    }
-
     private fun registerChildDialog(
         dialog: Dialog,
         onDismiss: () -> Unit = {},
-        onDismissKey: ((KeyEvent) -> Boolean)? = null,
-        installDismissListener: Boolean = true
+        onDismissKey: ((KeyEvent) -> Boolean)? = null
     ) {
         activeChildDialog?.takeIf { it !== dialog && it.isShowing }?.dismiss()
         prepareForInputOwnerChange()
@@ -1726,17 +1699,13 @@ class GameMenu(
                 event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0
             ) {
                 false
-            } else if (activeCustomDialogController?.dispatchAxes(event) == true) {
-                true
             } else {
                 val axisPairs = game.controllerHandler.getGameMenuNavigationAxisPairs(event)
                 axisPairs != null && dispatchControllerAxes(event.deviceId, axisPairs)
             }
         }
 
-        if (installDismissListener) {
-            dialog.setOnDismissListener { finishChildDialog(dialog, onDismiss) }
-        }
+        dialog.setOnDismissListener { finishChildDialog(dialog, onDismiss) }
     }
 
     private fun finishChildDialog(dialog: Dialog, onDismiss: () -> Unit) {

@@ -125,6 +125,31 @@ object AppActionSheet {
         singleChoice: Boolean = false,
         onAction: (Action) -> Unit,
         onDismiss: ((Action?) -> Unit)? = null
+    ): Dialog = show(
+        context = context,
+        title = title,
+        subtitle = subtitle,
+        activeStatus = activeStatus,
+        actions = actions,
+        initialActionId = initialActionId,
+        singleChoice = singleChoice,
+        supportingText = null,
+        onAction = onAction,
+        onDismiss = onDismiss
+    )
+
+    /** Supporting copy occupies its own line; subtitle remains the compact status badge. */
+    fun show(
+        context: Context,
+        title: CharSequence,
+        subtitle: CharSequence? = null,
+        activeStatus: Boolean = false,
+        actions: List<Action>,
+        initialActionId: Int? = null,
+        singleChoice: Boolean = false,
+        supportingText: CharSequence?,
+        onAction: (Action) -> Unit,
+        onDismiss: ((Action?) -> Unit)? = null
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
         var selectedAction: Action? = null
@@ -136,6 +161,7 @@ object AppActionSheet {
                     ActionSheetContent(
                         title = title.toString(),
                         subtitle = subtitle?.toString(),
+                        supportingText = supportingText?.toString(),
                         activeStatus = activeStatus,
                         actions = actions,
                         initialActionId = initialActionId,
@@ -355,6 +381,7 @@ object AppActionSheet {
     private fun ActionSheetContent(
         title: String,
         subtitle: String?,
+        supportingText: String?,
         activeStatus: Boolean,
         actions: List<Action>,
         initialActionId: Int?,
@@ -393,6 +420,17 @@ object AppActionSheet {
         }
         ActionSheetContainer {
             ActionSheetHeader(title, subtitle, activeStatus)
+            if (!supportingText.isNullOrBlank()) {
+                Text(
+                    text = supportingText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, bottom = 12.dp)
+                )
+            }
             val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.62f).dp
             LazyColumn(
                 modifier = Modifier

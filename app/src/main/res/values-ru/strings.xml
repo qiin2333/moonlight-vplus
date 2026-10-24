@@ -1278,6 +1278,10 @@
     <string name="settings_search_close">Закрыть поиск</string>
     <string name="settings_search_no_results">Настройки не найдены</string>
     <string name="game_menu_display_settings">Настройки экрана</string>
+    <string name="display_settings_info">О настройках экрана</string>
+    <string name="display_settings_help">При изменении разрешения, частоты кадров или режима экранов трансляция ненадолго прервётся и автоматически подключится снова. Выбор текущего значения не вызывает переподключение.\n\n⚠ отмечает частоту кадров выше частоты обновления экрана этого устройства.\n\nМасштаб экрана меняет размер текста и элементов интерфейса на компьютере. Изменение применяется после отпускания ползунка, без переподключения. Если компьютеру нужно время или перезапуск экрана, появится отдельное сообщение.</string>
+    <string name="display_settings_reconnect_hint">Выбор другого значения ненадолго прервёт и переподключит трансляцию.</string>
+    <string name="display_settings_reconnecting">Переподключение для применения настроек экрана…</string>
     <string name="display_spec_resolution">Разрешение</string>
     <string name="display_spec_fps">Частота</string>
     <string name="display_spec_screen">Экран</string>

@@ -1498,6 +1498,10 @@ Tap again to replace it.</string>
     <string name="settings_search_contains">Includes: %1$s</string>
     <string name="settings_search_match_separator">", "</string>
     <string name="game_menu_display_settings">Display settings</string>
+    <string name="display_settings_info">About display settings</string>
+    <string name="display_settings_help">Changing the resolution, frame rate or screen mode briefly disconnects and automatically reconnects the stream. Selecting the current value does not reconnect.\n\n⚠ marks frame rates above this device’s screen refresh rate.\n\nDisplay scaling changes the size of text and controls on the host. Release the slider to apply it without reconnecting. If the host needs more time or a display restart, a separate message will appear.</string>
+    <string name="display_settings_reconnect_hint">Selecting a different value briefly disconnects and reconnects the stream.</string>
+    <string name="display_settings_reconnecting">Reconnecting to apply display settings…</string>
     <string name="display_spec_resolution">Resolution</string>
     <string name="display_spec_fps">Frame rate</string>
     <string name="display_spec_screen">Screen</string>
@@ -2398,7 +2402,6 @@ Tap again to replace it.</string>
     <string name="display_native_resolution_description">Follow the target display · %1$s</string>
     <string name="display_choice_unavailable">Unavailable on this device</string>
     <string name="display_custom_resolution_action">Manage custom resolutions…</string>
-    <string name="display_custom_resolution_short">Custom</string>
     <string name="title_float_ball_settings">Floating ball</string>
     <string name="float_ball_appearance">Display</string>
     <string name="float_ball_gestures">Gestures</string>

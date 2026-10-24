@@ -607,6 +607,10 @@
     <string name="category_display_behavior">畫面顯示</string>
     <string name="category_screen_position_settings">視訊</string>
     <string name="game_menu_display_settings">顯示設定</string>
+    <string name="display_settings_info">顯示設定說明</string>
+    <string name="display_settings_help">更改解析度、影格速率或螢幕模式後，會短暫中斷並自動重新連線；選擇目前的值不會重新連線。\n\n⚠ 表示影格速率高於本機螢幕更新率。\n\n顯示縮放用於調整主機文字和介面的大小，放開滑桿後套用，無需重新連線。若主機需要稍後生效或重新啟動顯示，會另行提示。</string>
+    <string name="display_settings_reconnect_hint">選擇新值後將短暫中斷並自動重新連線。</string>
+    <string name="display_settings_reconnecting">正在重新連線以套用顯示設定…</string>
     <string name="display_spec_resolution">解析度</string>
     <string name="display_spec_fps">幀率</string>
     <string name="display_spec_screen">螢幕</string>
@@ -1095,7 +1099,6 @@
     <string name="display_native_resolution_description">跟隨目標顯示器 · %1$s</string>
     <string name="display_choice_unavailable">此裝置暫不支援</string>
     <string name="display_custom_resolution_action">管理自訂解析度…</string>
-    <string name="display_custom_resolution_short">自訂</string>
     <string name="title_float_ball_settings">懸浮球</string>
     <string name="float_ball_appearance">懸浮顯示</string>
     <string name="float_ball_gestures">手勢操作</string>

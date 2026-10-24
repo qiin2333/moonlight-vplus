@@ -322,6 +322,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var shouldResumeSession = false
     private var isExtremeResumeEnabled = false
     private var isChangingResolution = false
+    private var displaySettingsCommitted = false
     private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
@@ -367,6 +368,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbAutoShareSession = UsbAutoShareSession(savedInstanceState?.getStringArrayList("usb_auto_suppressed").orEmpty())
 
         isChangingResolution = false
+        displaySettingsCommitted = savedInstanceState?.getBoolean(STATE_DISPLAY_SETTINGS_COMMITTED, false) == true
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
@@ -391,6 +393,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             PreferenceConfiguration.isExternalDisplayEnabled(this)
         )
         prefConfig = PreferenceConfiguration.readPreferences(this, initialTargetDisplay)
+        val committedDisplaySettings = if (displaySettingsCommitted) DisplayReconnectSettings.capture(prefConfig) else null
         orientationManager = OrientationManager(
             this,
             prefConfig.width,
@@ -416,6 +419,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (customScreenMode != -1) {
             prefConfig.screenCombinationMode = customScreenMode
         }
+        // Launch overrides are still useful for other per-app settings. Display
+        // choices saved during this session must win when its Activity reconnects.
+        committedDisplaySettings?.applyTo(prefConfig)
         NativeTouchContext.INTIAL_ZONE_PIXELS = prefConfig.longPressflatRegionPixels.toFloat()
         NativeTouchContext.ENABLE_ENHANCED_TOUCH = prefConfig.enableEnhancedTouch
         NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT = if (prefConfig.enhancedTouchOnWhichSide) -1 else 1
@@ -1967,14 +1973,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun changeResolution() {
-        isChangingResolution = true
-        val view = activeStreamView
-        if (view == null) {
-            recreateAfterResolutionChange()
-            return
-        }
         runOnUiThread {
-            stageReconnectBackdrop(::recreateAfterResolutionChange)
+            if (isChangingResolution) return@runOnUiThread
+            isChangingResolution = true
+            displaySettingsCommitted = true
+            activeGameMenu?.dismiss()
+            activeGameMenu = null
+            if (activeStreamView == null) {
+                recreateAfterResolutionChange()
+            } else {
+                stageReconnectBackdrop(::recreateAfterResolutionChange)
+            }
         }
     }
 
@@ -2057,6 +2066,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putStringArrayList("usb_auto_suppressed", ArrayList(usbAutoShareSession.suppressedGroups))
+        outState.putBoolean(STATE_DISPLAY_SETTINGS_COMMITTED, displaySettingsCommitted)
         super.onSaveInstanceState(outState)
     }
 
@@ -3589,6 +3599,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     companion object {
+        private const val STATE_DISPLAY_SETTINGS_COMMITTED = "display_settings_committed"
         val REFERENCE_HORIZ_RES = 1280
         val REFERENCE_VERT_RES = 720
 

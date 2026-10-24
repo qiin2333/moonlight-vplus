@@ -388,9 +388,6 @@ internal class BitrateCardController(
         if (draft.frameRate == value || state.frameRates.none { it.value == value && it.enabled }) return
         draft = draft.copy(frameRate = value)
         emitState()
-        if (displayChoiceLimits().exceedsRefreshRate(value)) {
-            Toast.makeText(game, R.string.display_frame_rate_above_refresh_rate, Toast.LENGTH_LONG).show()
-        }
     }
 
     fun stageScreenMode(value: String) {
@@ -401,18 +398,21 @@ internal class BitrateCardController(
 
     fun applyDisplayDraft(): Boolean {
         if (!hasPendingDisplayChanges()) return false
-        displayChoiceLimits()
+        val limits = displayChoiceLimits()
+        val frameRateChanged = draft.frameRate != appliedDraft.frameRate
         val streamSizeChanged = draft.resolution != appliedDraft.resolution ||
-            draft.frameRate != appliedDraft.frameRate
+            frameRateChanged
         val autoAdjustBitrate = streamSizeChanged && PreferenceManager.getDefaultSharedPreferences(game)
             .getBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true)
         val next = persistDisplayDraft(game.prefConfig, draft, cachedNativeSize, autoAdjustBitrate) {
             it.writeDisplayPreferences(game, synchronous = true)
         }
         if (next == null) {
+            discardDisplayDraft()
             showBitrateToast(game.getString(R.string.config_save_failed))
             return false
         }
+        val warnAboutFrameRate = frameRateChanged && limits.exceedsRefreshRate(draft.frameRate)
         // Keep the existing object: other stream components retain references to prefConfig.
         game.prefConfig.apply {
             isNativeResolution = next.isNativeResolution
@@ -425,17 +425,17 @@ internal class BitrateCardController(
         }
         appliedDraft = currentDraft()
         draft = appliedDraft
+        if (warnAboutFrameRate) {
+            Toast.makeText(game, R.string.display_frame_rate_above_refresh_rate, Toast.LENGTH_LONG).show()
+        } else {
+            showBitrateToast(game.getString(R.string.display_settings_reconnecting))
+        }
         game.changeResolution()
         return true
     }
 
     fun discardDisplayDraft() {
         draft = appliedDraft
-        emitState()
-    }
-
-    fun refreshDisplayChoices() {
-        invalidateChoiceCaches()
         emitState()
     }
 

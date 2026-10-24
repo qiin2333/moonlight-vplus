@@ -82,11 +82,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.limelight.CustomKeyData
 import com.limelight.R
 import com.limelight.binding.audio.AudioVibrationService
@@ -645,6 +644,12 @@ internal fun DisplayStatusCard(
     val accent = appAccentColor()
     GameMenuCard(
         title = stringResource(R.string.game_menu_display_settings),
+        titleAccessory = {
+            GameMenuInfoButton(
+                contentDescription = stringResource(R.string.display_settings_info),
+                onClick = callbacks.onDisplaySettingsInfo
+            )
+        },
         onLongClick = onConfigure
     ) {
         Row(
@@ -941,7 +946,13 @@ internal fun BitrateCard(
                     maxLines = 1
                 )
                 Spacer(Modifier.width(GameMenuDimens.tight))
-                AdaptiveBitrateHelpButton(onLongClick = callbacks.onBitrateHapticMode)
+                GameMenuInfoButton(
+                    contentDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip),
+                    symbol = "?",
+                    targetSize = 16.dp,
+                    onClick = callbacks.onAdaptiveBitrateInfo,
+                    onLongClick = callbacks.onBitrateHapticMode
+                )
                 Spacer(Modifier.width(GameMenuDimens.compact))
                 InlineToggle(
                     checked = state.adaptiveBitrate,
@@ -1016,19 +1027,24 @@ internal fun BitrateSlider(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AdaptiveBitrateHelpButton(onLongClick: () -> Unit) {
-    var tipVisible by remember { mutableStateOf(false) }
+private fun GameMenuInfoButton(
+    contentDescription: String,
+    symbol: String = "i",
+    targetSize: Dp = 28.dp,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
+) {
     val accent = appAccentColor()
-    val helpDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip)
     Box(
         modifier = Modifier
-            .size(16.dp)
+            .size(targetSize)
             .clip(CircleShape)
             .focusProperties { canFocus = true }
             .gamepadFocusOutline(CircleShape)
-            .semantics { contentDescription = helpDescription }
+            .semantics { this.contentDescription = contentDescription }
             .combinedClickable(
-                onClick = { tipVisible = !tipVisible },
+                role = Role.Button,
+                onClick = onClick,
                 onLongClick = onLongClick
             ),
         contentAlignment = Alignment.Center
@@ -1040,33 +1056,11 @@ private fun AdaptiveBitrateHelpButton(onLongClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             VisuallyCenteredBadgeText(
-                text = "?",
+                text = symbol,
                 color = accent,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold
             )
-        }
-        if (tipVisible) {
-            Popup(
-                alignment = Alignment.TopStart,
-                onDismissRequest = { tipVisible = false },
-                properties = PopupProperties(focusable = true)
-            ) {
-                Surface(
-                    color = colorResource(R.color.game_menu_card_background),
-                    shape = AppShapes.overlay,
-                    border = BorderStroke(GameMenuDimens.surfaceStroke, accent.copy(alpha = 0.22f)),
-                    modifier = Modifier.widthIn(max = 260.dp)
-                ) {
-                    Text(
-                        text = helpDescription,
-                        color = colorResource(R.color.game_menu_text_primary),
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
-                        modifier = Modifier.padding(GameMenuDimens.outer)
-                    )
-                }
-            }
         }
     }
 }
