@@ -611,12 +611,16 @@
     <string name="display_spec_fps">幀率</string>
     <string name="display_spec_screen">螢幕</string>
     <string name="display_scale_title">顯示縮放</string>
+    <string name="display_scale_applying">正在套用 %1$d%%…</string>
+    <string name="display_scale_load_failed">無法讀取顯示縮放</string>
+    <string name="display_scale_refresh">重新讀取</string>
     <string name="display_scale_loading">正在讀取…</string>
+    <string name="display_scale_unknown">目前值未知</string>
     <string name="display_scale_unavailable">無法使用</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · 建議</string>
     <string name="display_scale_recommended">建議</string>
-    <string name="display_scale_content_description">顯示縮放，%1$d%%，按鈕</string>
+    <string name="display_scale_content_description">顯示縮放，%1$d%%</string>
     <string name="display_scale_applied">已設定顯示縮放為 %1$d%%</string>
     <string name="display_scale_applied_later">已接受顯示縮放，主機稍後套用</string>
     <string name="display_scale_restart_required">顯示縮放已變更，重新啟動主機顯示後生效</string>

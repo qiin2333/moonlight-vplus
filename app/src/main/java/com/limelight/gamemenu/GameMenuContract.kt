@@ -118,6 +118,7 @@ internal data class GameMenuCallbacks(
     val onOpenFrameRateSheet: () -> Unit = {},
     val onOpenScreenModeSheet: () -> Unit = {},
     val onSetDisplayScale: (Int) -> Unit = {},
+    val onRefreshDisplayScale: () -> Unit = {},
     val onAudioHapticsEnabled: (Boolean) -> Unit,
     val onAudioHapticsStrength: (Float) -> Boolean,
     val onAudioHapticsStrengthFinished: () -> Unit,

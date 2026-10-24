@@ -1502,12 +1502,16 @@ Tap again to replace it.</string>
     <string name="display_spec_fps">Frame rate</string>
     <string name="display_spec_screen">Screen</string>
     <string name="display_scale_title">Display scaling</string>
+    <string name="display_scale_applying">Applying %1$d%%…</string>
+    <string name="display_scale_load_failed">Unable to read display scaling</string>
+    <string name="display_scale_refresh">Reload</string>
     <string name="display_scale_loading">Loading…</string>
+    <string name="display_scale_unknown">Unknown</string>
     <string name="display_scale_unavailable">Unavailable</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · Recommended</string>
     <string name="display_scale_recommended">Recommended</string>
-    <string name="display_scale_content_description">Display scaling, %1$d%%, button</string>
+    <string name="display_scale_content_description">Display scaling, %1$d%%</string>
     <string name="display_scale_applied">Display scaling set to %1$d%%</string>
     <string name="display_scale_applied_later">Display scaling accepted; the host will apply it shortly</string>
     <string name="display_scale_restart_required">Display scaling changed; restart the host display to apply it</string>

@@ -8,6 +8,7 @@ import com.limelight.Game
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvHTTP
+import com.limelight.nvstream.http.HostHttpResponseException
 import com.limelight.preferences.DisplayChoiceLimits
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.PreferenceConfiguration
@@ -214,6 +215,66 @@ internal class BitrateCardController(
             }
             return next.takeIf(persist)
         }
+
+        /** Resolve an explicit stream target without ever substituting another display. */
+        internal fun resolveDisplayScale(
+            displays: List<NvHTTP.DisplayInfo>,
+            targetDeviceId: String?,
+            loadOptions: (String?, String?) -> NvHTTP.DisplayScaleInfo
+        ): NvHTTP.DisplayScaleInfo {
+            val explicitTarget = targetDeviceId?.takeIf { it.isNotBlank() }
+            val target = if (explicitTarget == null) {
+                displays.firstOrNull { it.isPrimary } ?: displays.firstOrNull()
+            } else {
+                displays.firstOrNull {
+                    displayIdentityMatches(explicitTarget, it.guid, it.displayName, it.friendlyName)
+                }
+            }
+            val catalogScale = target?.let {
+                NvHTTP.DisplayScaleInfo(
+                    displayName = it.displayName,
+                    deviceId = it.guid,
+                    friendlyName = it.friendlyName,
+                    isPrimary = it.isPrimary,
+                    currentScalePercent = it.currentScalePercent,
+                    recommendedScalePercent = it.recommendedScalePercent,
+                    supportedScalePercents = it.supportedScalePercents,
+                    scaleSetSupported = it.scaleSetSupported
+                )
+            }
+            if (catalogScale?.isAvailable == true) return catalogScale
+            val resolved = loadOptions(
+                target?.displayName?.takeIf { it.isNotBlank() },
+                target?.guid?.takeIf { it.isNotBlank() } ?: explicitTarget
+            )
+            val expectedIdentities = listOfNotNull(target?.guid, target?.displayName, explicitTarget)
+                .filter { it.isNotBlank() }
+            if (explicitTarget != null && expectedIdentities.none {
+                    displayIdentityMatches(it, resolved.deviceId, resolved.displayName, resolved.friendlyName)
+                }) {
+                throw NvHTTP.DisplayScaleException(404, "display_not_found", "Display unavailable")
+            }
+            return resolved
+        }
+
+        private fun displayIdentityMatches(target: String, vararg identities: String): Boolean =
+            identities.any { it.equals(target, ignoreCase = true) }
+
+        internal fun displayScaleErrorCode(error: Exception): String? {
+            val businessCode = when (error) {
+                is NvHTTP.DisplayScaleException -> error.errorCode
+                is HostHttpResponseException -> error.getSunshineErrorCode()
+                else -> null
+            }?.takeIf { it.isNotBlank() }
+            if (businessCode != null) return businessCode
+            val statusCode = when (error) {
+                is NvHTTP.DisplayScaleException -> error.statusCode
+                is HostHttpResponseException -> error.getErrorCode()
+                else -> null
+            }
+            // Missing optional endpoints on older hosts do not need a retry affordance.
+            return if (statusCode == 404 || statusCode == 501) null else "request_failed"
+        }
     }
 
     internal data class ResolutionSelection(
@@ -392,36 +453,7 @@ internal class BitrateCardController(
             try {
                 val http = conn.createNvHttp()
                 val catalog = http.getDisplays()
-                val target = if (targetDeviceId.isNullOrBlank()) {
-                    catalog.displays.firstOrNull { it.isPrimary } ?: catalog.displays.firstOrNull()
-                } else {
-                    catalog.displays.firstOrNull { display ->
-                        display.guid == targetDeviceId ||
-                            display.displayName == targetDeviceId ||
-                            display.friendlyName == targetDeviceId ||
-                            display.name == targetDeviceId
-                    } ?: catalog.displays.firstOrNull { it.isPrimary }
-                        ?: catalog.displays.firstOrNull()
-                }
-                var scale = target?.let { display ->
-                    NvHTTP.DisplayScaleInfo(
-                        displayName = display.displayName,
-                        deviceId = display.guid,
-                        friendlyName = display.friendlyName,
-                        isPrimary = display.isPrimary,
-                        currentScalePercent = display.currentScalePercent,
-                        recommendedScalePercent = display.recommendedScalePercent,
-                        supportedScalePercents = display.supportedScalePercents,
-                        scaleSetSupported = display.scaleSetSupported
-                    )
-                }
-                if (scale == null || !scale.isAvailable) {
-                    scale = http.getDisplayScaleOptions(
-                        target?.displayName?.takeIf { it.isNotBlank() },
-                        target?.guid?.takeIf { it.isNotBlank() }
-                    )
-                }
-                val resolved = scale
+                val resolved = resolveDisplayScale(catalog.displays, targetDeviceId, http::getDisplayScaleOptions)
                 game.runOnUiThread {
                     if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
                     displayScaleState = DisplayScaleState(
@@ -438,7 +470,7 @@ internal class BitrateCardController(
                 }
             } catch (e: Exception) {
                 if (e is InterruptedException) return@Thread
-                val errorCode = (e as? NvHTTP.DisplayScaleException)?.errorCode
+                val errorCode = displayScaleErrorCode(e)
                 game.runOnUiThread {
                     if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
                     displayScaleState = displayScaleState.copy(
@@ -454,7 +486,9 @@ internal class BitrateCardController(
 
     fun setDisplayScale(percent: Int) {
         val current = displayScaleState
-        if (!current.available || current.loading || percent !in current.supportedPercents) return
+        if (!current.available || current.loading || percent !in current.supportedPercents ||
+            percent == current.currentPercent
+        ) return
         val requestGeneration = ++displayScaleRequestGeneration
         displayScaleState = current.copy(loading = true, pendingPercent = percent, errorCode = null)
         emitState()
@@ -476,6 +510,7 @@ internal class BitrateCardController(
                 game.runOnUiThread {
                     if (requestGeneration != displayScaleRequestGeneration) return@runOnUiThread
                     displayScaleState = displayScaleState.copy(
+                        available = refreshed?.isAvailable ?: current.available,
                         friendlyName = refreshed?.friendlyName ?: displayScaleState.friendlyName,
                         displayName = refreshed?.displayName ?: result.displayName,
                         deviceId = refreshed?.deviceId ?: result.deviceId,
@@ -494,10 +529,6 @@ internal class BitrateCardController(
                         else -> game.getString(R.string.display_scale_applied, result.currentScalePercent ?: percent)
                     }
                     showBitrateToast(message)
-                    // The host may clamp the requested value or update its supported
-                    // list while applying it. Read the authoritative state back so the
-                    // card and the next action sheet never advertise a stale value.
-                    refreshDisplayScale()
                 }
             } catch (e: Exception) {
                 if (e is InterruptedException) return@Thread
@@ -506,7 +537,7 @@ internal class BitrateCardController(
                     displayScaleState = displayScaleState.copy(
                         loading = false,
                         pendingPercent = null,
-                        errorCode = (e as? NvHTTP.DisplayScaleException)?.errorCode
+                        errorCode = displayScaleErrorCode(e)
                     )
                     emitState()
                     showBitrateToast(game.getString(R.string.display_scale_apply_failed))
@@ -564,6 +595,7 @@ internal class BitrateCardController(
 
     fun stop() {
         dispose()
+        ++displayScaleRequestGeneration
         displayScaleThread?.interrupt()
         displayScaleThread = null
         onStateChanged = null

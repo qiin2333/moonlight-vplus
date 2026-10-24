@@ -1236,6 +1236,7 @@ class GameMenu(
             onOpenFrameRateSheet = ::showFrameRateSheet,
             onOpenScreenModeSheet = ::showScreenModeSheet,
             onSetDisplayScale = bitrateCardController::setDisplayScale,
+            onRefreshDisplayScale = bitrateCardController::refreshDisplayScale,
             onAudioHapticsEnabled = audioHapticsCardController::setEnabled,
             onAudioHapticsStrength = audioHapticsCardController::previewStrength,
             onAudioHapticsStrengthFinished = audioHapticsCardController::persistStrength,

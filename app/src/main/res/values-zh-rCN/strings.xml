@@ -1176,12 +1176,16 @@
     <string name="display_spec_fps">帧率</string>
     <string name="display_spec_screen">屏幕</string>
     <string name="display_scale_title">显示缩放</string>
+    <string name="display_scale_applying">正在应用 %1$d%%…</string>
+    <string name="display_scale_load_failed">无法读取显示缩放</string>
+    <string name="display_scale_refresh">重新读取</string>
     <string name="display_scale_loading">正在读取…</string>
+    <string name="display_scale_unknown">当前值未知</string>
     <string name="display_scale_unavailable">不可用</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · 推荐</string>
     <string name="display_scale_recommended">推荐</string>
-    <string name="display_scale_content_description">显示缩放，%1$d%%，按钮</string>
+    <string name="display_scale_content_description">显示缩放，%1$d%%</string>
     <string name="display_scale_applied">已设置显示缩放为 %1$d%%</string>
     <string name="display_scale_applied_later">已接受显示缩放，主机稍后应用</string>
     <string name="display_scale_restart_required">显示缩放已更改，重启主机显示后生效</string>
