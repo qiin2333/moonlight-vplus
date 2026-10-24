@@ -11,6 +11,7 @@ import android.util.SparseLongArray
 import android.view.Choreographer
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
+import com.limelight.R
 import com.limelight.preferences.PreferenceConfiguration
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.locks.LockSupport
@@ -189,11 +190,11 @@ internal class FramePacingController(
 
     /** 抖动图表标题用的 pacing 模式短标签。 */
     private fun framePacingLabel(): String = when {
-        isHostCadencePreciseSyncActive() -> "精确同步(增强)"
-        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC -> "精确同步"
-        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY -> "低延迟"
-        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED -> "均衡"
-        else -> "平滑"
+        isHostCadencePreciseSyncActive() -> activity.getString(R.string.pacing_label_precise_sync_enhanced)
+        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_PRECISE_SYNC -> activity.getString(R.string.pacing_label_precise_sync)
+        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_EXPERIMENTAL_LOW_LATENCY -> activity.getString(R.string.pacing_label_low_latency)
+        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED -> activity.getString(R.string.pacing_label_balanced)
+        else -> activity.getString(R.string.pacing_label_smooth)
     }
 
     // ==================== Choreographer mode ====================

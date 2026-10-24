@@ -1,5 +1,6 @@
 package com.limelight.preferences
 
+import com.limelight.R
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Build
@@ -44,7 +45,7 @@ class ExternalDisplayPreference : CheckBoxPreference {
                         val displays = displayManager.displays
                         for (display in displays) {
                             if (display.displayId != Display.DEFAULT_DISPLAY) {
-                                summary = "检测到外接显示器: ${display.name} (ID: ${display.displayId})"
+                                summary = context.getString(R.string.external_display_detected, display.name, display.displayId)
                                 isEnabled = true
                                 return
                             }
@@ -52,12 +53,12 @@ class ExternalDisplayPreference : CheckBoxPreference {
                     }
                 }
             } else {
-                summary = "未检测到外接显示器"
+                summary = context.getString(R.string.external_display_not_detected)
                 isEnabled = false
                 isChecked = false
             }
         } catch (e: Exception) {
-            summary = "检测外接显示器失败: $e"
+            summary = context.getString(R.string.external_display_detect_failed, e.toString())
             isEnabled = false
             isChecked = false
         }
