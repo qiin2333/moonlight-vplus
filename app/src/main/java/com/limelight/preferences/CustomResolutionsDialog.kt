@@ -61,7 +61,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
-import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.ui.isGamepadNavigationSource
@@ -109,7 +108,7 @@ object CustomResolutionsDialog {
     ): Dialog {
         val pixelsText = pixelsTextFactory(context)
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
-        // 取消(返回/点外部/取消按钮)与未经保存的 dismiss(如宿主 Fragment 销毁)都恢复进入时的快照
+        // 取消(返回/取消按钮)与未经保存的 dismiss(如宿主 Fragment 销毁)都恢复进入时的快照
         var cancelled = false
         var confirmedByUser = false
         var current = initial
@@ -165,23 +164,18 @@ object CustomResolutionsDialog {
                 dismissOnBack = false
             )
         }
-        fun dispatchAxisPairs(axisPairs: List<Pair<Float, Float>>): Boolean {
-            val transition = axisNavigation.update(axisPairs)
-            if (transition.changed && transition.pressedKeyCode != null &&
-                touchNavigationActive.value
-            ) {
-                touchNavigationActive.value = false
-                controllerFocusRequest.intValue++
-            }
-            return false
-        }
         val dialogController = object : CustomDialogController {
             override fun dispatchAxes(event: MotionEvent): Boolean {
                 if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0) return false
-                val axisPairs = (context as? Game)?.controllerHandler
-                    ?.getGameMenuNavigationAxisPairs(event)
-                    ?: defaultDialogAxisPairs(event)
-                return dispatchAxisPairs(axisPairs)
+                val axisPairs = defaultDialogAxisPairs(event)
+                val transition = axisNavigation.update(axisPairs)
+                if (transition.changed && transition.pressedKeyCode != null &&
+                    touchNavigationActive.value
+                ) {
+                    touchNavigationActive.value = false
+                    controllerFocusRequest.intValue++
+                }
+                return false
             }
         }
         activeCustomDialogController = dialogController
@@ -232,15 +226,7 @@ object CustomResolutionsDialog {
         )
     }
 
-    /**
-     * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
-     * 其他语言以 MP 为单位(传 像素数/1000000)。
-     *
-     * 单位判断必须在 Composable 之外完成:LocalConfiguration.locales 与资源解析
-     * 使用的配置可能不同步,而读 resources.configuration 又会触发 Compose lint。
-     * 这里模板与进位取自同一个 context 配置,天然一致。
-     */
-    internal fun nativeResolutionPresets(context: Context, targetDisplay: Display?): List<Resolution> {
+    private fun nativeResolutionPresets(context: Context, targetDisplay: Display?): List<Resolution> {
         val display = targetDisplay ?: targetDisplay(context) ?: return emptyList()
         val presets = linkedSetOf<Resolution>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -305,6 +291,14 @@ object CustomResolutionsDialog {
         event.getAxisValue(MotionEvent.AXIS_Z) to event.getAxisValue(MotionEvent.AXIS_RZ)
     )
 
+    /**
+     * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
+     * 其他语言以 MP 为单位(传 像素数/1000000)。
+     *
+     * 单位判断必须在 Composable 之外完成:LocalConfiguration.locales 与资源解析
+     * 使用的配置可能不同步,而读 resources.configuration 又会触发 Compose lint。
+     * 这里模板与进位取自同一个 context 配置,天然一致。
+     */
     private fun pixelsTextFactory(context: Context): (Int) -> String {
         val locale = ConfigurationCompat.getLocales(context.resources.configuration)[0]
         val useWan = locale?.language.equals("zh", ignoreCase = true)

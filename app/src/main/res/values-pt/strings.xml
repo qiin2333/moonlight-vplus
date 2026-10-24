@@ -95,7 +95,6 @@
     <string name="summary_only_l3r3">Esconde todos os botões virtuais exceto o L3 e R3</string>
     <string name="dialog_title_reset_osc">Resetar Layout</string>
     <string name="toast_reset_osc_success">Controles de ecrã redefinidos para o padrão</string>
-    <string name="title_osc_opacity">Mudar a opacidade dos controles de ecrã</string>
     <string name="dialog_title_osc_opacity">Mudar opacidade</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="category_ui_settings">Configurações de Interface</string>
@@ -397,8 +396,6 @@
     <string name="summary_perf_overlay_orientation">Escolha a orientação de exibição para estatísticas de desempenho</string>
     <string name="title_perf_overlay_position">Posição do overlay de desempenho</string>
     <string name="summary_perf_overlay_position">Escolha superior/inferior para orientação horizontal, ou quatro posições de canto para vertical</string>
-    <string name="title_reset_perf_overlay_position">Redefinir posição do overlay de desempenho</string>
-    <string name="summary_reset_perf_overlay_position">Redefinir overlay de desempenho para posição predefinida</string>
     <string name="title_perf_overlay_display_items">Itens de exibição do overlay de desempenho</string>
     <string name="summary_perf_overlay_display_items">Selecionar itens de informação para exibir no overlay de desempenho</string>
     <string name="title_checkbox_lock_screen_after_disconnect">Bloquear tela ao desconectar e sair do stream</string>

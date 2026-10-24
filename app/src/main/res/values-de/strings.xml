@@ -166,7 +166,6 @@
     <string name="dialog_title_reset_osc">Layout zurücksetzen</string>
     <string name="dialog_text_reset_osc">Bist du sicher, dass du das gespeicherte On-Screen-Controllertsten Layout löschen willst\?</string>
     <string name="toast_reset_osc_success">On-Screen-Controller wurde zurückgesetzt</string>
-    <string name="title_osc_opacity">Transparenz der On-Screen-Controllertasten ändern</string>
     <string name="summary_osc_opacity">On-Screen-Controllertasten auf dem Bildschirm mehr/weniger transparent machen</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="dialog_title_osc_opacity">Transparenz ändern</string>

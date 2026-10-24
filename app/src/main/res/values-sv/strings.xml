@@ -136,7 +136,6 @@
     <string name="dialog_title_reset_osc">Återställ formgivning</string>
     <string name="dialog_text_reset_osc">Är du säker på att du vill ta bort din sparade layout för skärmenheterna\?</string>
     <string name="toast_reset_osc_success">Kontroller på skärmen återställs till ursprungsinställningen</string>
-    <string name="title_osc_opacity">Jämka genomskinligheten av skärmkontrollerna</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">Sätt på bild-i-bild-observatörsläge</string>
     <string name="title_language_list">Språk</string>

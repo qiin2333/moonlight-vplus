@@ -54,6 +54,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okhttp3.ResponseBody
 
 private fun JSONObject.optNullablePositiveInt(name: String): Int? {
@@ -347,6 +348,16 @@ class NvHTTP(
         return true
     }
 
+    private fun executeRequest(client: OkHttpClient, request: Request): Response {
+        return try {
+            client.newCall(request).execute()
+        } catch (e: SSLHandshakeException) {
+            if (!shouldRetryTlsHandshake(e)) throw e
+            LimeLog.warning("${request.url} -> TLS handshake failed; rebuilding HTTP client and retrying once")
+            rebuildHttpClientsAfterTlsFailure(client).newCall(request).execute()
+        }
+    }
+
     @Throws(IOException::class, InterruptedException::class)
     fun getHttpsUrl(likelyOnline: Boolean): HttpUrl {
         if (httpsPort == 0) {
@@ -514,16 +525,7 @@ class NvHTTP(
     private fun openHttpConnection(client: OkHttpClient, baseUrl: HttpUrl, path: String, query: String?, displayName: String? = null): ResponseBody {
         val completeUrl = getCompleteUrl(baseUrl, path, query, displayName)
         val request = Request.Builder().url(completeUrl).get().build()
-        val response = try {
-            client.newCall(request).execute()
-        } catch (e: SSLHandshakeException) {
-            if (!shouldRetryTlsHandshake(e)) {
-                throw e
-            }
-
-            LimeLog.warning("$completeUrl -> TLS handshake failed; rebuilding HTTP client and retrying once")
-            rebuildHttpClientsAfterTlsFailure(client).newCall(request).execute()
-        }
+        val response = executeRequest(client, request)
 
         val body = response.body
 
@@ -563,43 +565,6 @@ class NvHTTP(
                 e.printStackTrace()
             }
             throw e
-        }
-    }
-
-    @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnectionPost(client: OkHttpClient, baseUrl: HttpUrl, path: String, jsonData: String): String {
-        val completeUrl = getCompleteUrl(baseUrl, path, null)
-
-        val body = jsonData.toRequestBody(
-            "application/json; charset=utf-8".toMediaTypeOrNull()
-        )
-
-        val request = Request.Builder()
-            .url(completeUrl)
-            .post(body)
-            .addHeader("Content-Type", "application/json")
-            .build()
-
-        val response = client.newCall(request).execute()
-        val responseBody = response.body
-
-        if (response.isSuccessful) {
-            val respString = responseBody.string()
-            responseBody.close()
-
-            if (verbose) {
-                LimeLog.info("$completeUrl -> $respString")
-            }
-
-            return respString
-        }
-
-        responseBody.close()
-
-        if (response.code == 404) {
-            throw FileNotFoundException(completeUrl.toString())
-        } else {
-            throw HostHttpResponseException(response.code, response.message)
         }
     }
 
@@ -827,13 +792,7 @@ class NvHTTP(
     }
 
     private fun executeDisplayScaleJson(request: Request, url: HttpUrl): JSONObject {
-        val response = try {
-            httpClientLongConnectTimeout.newCall(request).execute()
-        } catch (e: SSLHandshakeException) {
-            if (!shouldRetryTlsHandshake(e)) throw e
-            LimeLog.warning("$url -> TLS handshake failed; rebuilding HTTP client and retrying once")
-            rebuildHttpClientsAfterTlsFailure(httpClientLongConnectTimeout).newCall(request).execute()
-        }
+        val response = executeRequest(httpClientLongConnectTimeout, request)
         response.use {
             val body = it.body?.string().orEmpty()
             val json = try {

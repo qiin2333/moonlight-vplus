@@ -164,7 +164,6 @@
     <string name="summary_checkbox_vibrate_osc">Getarkan perangkat Anda untuk meniru gemuruh untuk kontrol di layar</string>
     <string name="summary_only_l3r3">Sembunyikan semua tombol virtual kecuali L3 dan R3</string>
     <string name="summary_reset_osc">Menyetel ulang semua kontrol di layar ke ukuran dan posisi default</string>
-    <string name="title_osc_opacity">Ubah opasitas kontrol di layar</string>
     <string name="summary_osc_opacity">Jadikan kontrol di layar lebih/kurang transparan</string>
     <string name="dialog_title_osc_opacity">Ubah opasitas</string>
     <string name="suffix_osc_opacity">%</string>

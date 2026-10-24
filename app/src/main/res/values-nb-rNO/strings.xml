@@ -170,7 +170,6 @@
     <string name="summary_checkbox_small_icon_mode">Mindre bilder for omslagskunst i programrutenettet lar deg se flere programmer på skjermen</string>
     <string name="title_checkbox_small_icon_mode">Bruk liten omslagskunst</string>
     <string name="summary_osc_opacity">Gjør innstillingskontroller som vises på skjermen mer/mindre gjennomsiktige</string>
-    <string name="title_osc_opacity">Endre dekkevne for innstillingskontroller som vises på skjermen</string>
     <string name="toast_reset_osc_success">Innstillingskontroller som vises på skjermen tilbakestilt til forvalg</string>
     <string name="dialog_text_reset_osc">Er du sikker på at du vil slette oppsettet ditt for innstillingskontroller som vises på skjermen\?</string>
     <string name="summary_reset_osc">Tilbakestiller alle innstillingskontroller som vises på skjermen til forvalgt størrelse og posisjon</string>

@@ -230,8 +230,6 @@
     <string name="resolution_prefix_native">Родное</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="custom_list_save">Сохранить</string>
-    <string name="game_menu_apply_reconnect_hint">Применится после переподключения стрима</string>
-    <string name="game_menu_apply_display">Применить</string>
     <string name="title_custom_resolutions">Свои разрешения</string>
     <string name="width_hint">напр. 1920</string>
     <string name="height_hint">напр. 1080</string>
@@ -510,7 +508,6 @@
     <string name="dialog_title_reset_osc">Сброс раскладки</string>
     <string name="dialog_text_reset_osc">Удалить сохранённую раскладку экранного геймпада?</string>
     <string name="toast_reset_osc_success">Экранный геймпад сброшен</string>
-    <string name="title_osc_opacity">Непрозрачность кнопок</string>
     <string name="summary_osc_opacity">Изменить прозрачность экранного геймпада</string>
     <string name="dialog_title_osc_opacity">Непрозрачность кнопок</string>
     <string name="suffix_osc_opacity">%</string>
@@ -678,8 +675,6 @@
     <string name="perf_overlay_clock_format_12_seconds">12-часовой формат, включая секунды</string>
     <string name="title_perf_overlay_position">Положение статистики</string>
     <string name="summary_perf_overlay_position">Строка сверху/снизу или столбец в углу экрана.</string>
-    <string name="title_reset_perf_overlay_position">Сбросить позицию статистики</string>
-    <string name="summary_reset_perf_overlay_position">Вернуть выбранную стандартную позицию</string>
     <string name="title_perf_overlay_display_items">Показатели статистики</string>
     <string name="summary_perf_overlay_display_items">Выберите показатели видео, декодера, сети, ПК и устройства.</string>
     <string name="title_perf_overlay_bg_opacity">Непрозрачность фона статистики</string>
@@ -1294,7 +1289,6 @@
     <string name="display_scale_unavailable">Недоступно</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · Рекомендуется</string>
-    <string name="display_scale_recommended">Рекомендуется</string>
     <string name="display_scale_content_description">Масштаб экрана, %1$d%%</string>
     <string name="display_scale_applied">Масштаб экрана: %1$d%%</string>
     <string name="display_scale_applied_later">Масштаб принят; хост применит его позже</string>
@@ -1677,7 +1671,6 @@
     <string name="toast_image_save_failed">Не удалось сохранить изображение. Повторите попытку.</string>
     <string name="toast_image_pick_cancelled">Выбор изображения отменён</string>
     <string name="toast_background_image_reset">Стандартный фон восстановлен</string>
-    <string name="toast_perf_overlay_position_reset">Позиция статистики сброшена</string>
     <string name="bitrate_haptic_mode_all">Отклик: каждый шаг</string>
     <string name="bitrate_haptic_mode_key_nodes">Отклик: ключевые точки</string>
     <string name="bitrate_haptic_mode_none">Отклик: выкл.</string>

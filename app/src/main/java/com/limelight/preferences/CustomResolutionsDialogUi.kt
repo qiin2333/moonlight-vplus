@@ -240,7 +240,7 @@ internal fun Composer(
     leftTarget: FocusRequester?,
     onAdd: () -> Unit,
     onHeightDone: () -> Unit,
-    onAddPlaced: () -> Unit = {}
+    onAddPlaced: () -> Unit
 ) {
     val accent = appAccentColor()
     val accentSoft = appAccentSoftColor()
@@ -308,9 +308,9 @@ internal fun Composer(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                val readout: @Composable () -> Unit = when {
-                    error != null -> {
-                        {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    when {
+                        error != null -> {
                             Text(
                                 text = error.text(),
                                 color = danger,
@@ -320,9 +320,7 @@ internal fun Composer(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    width != null && height != null && width > 0 && height > 0 -> {
-                        {
+                        width != null && height != null && width > 0 && height > 0 -> {
                             val pixels = pixelsText(width * height)
                             Text(
                                 text = "≈ ${ratioText(width, height)}",
@@ -336,9 +334,7 @@ internal fun Composer(
                                 fontSize = 12.sp
                             )
                         }
-                    }
-                    else -> {
-                        {
+                        else -> {
                             Text(
                                 text = stringResource(R.string.custom_resolution_readout_hint),
                                 color = secondary,
@@ -347,7 +343,6 @@ internal fun Composer(
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) { readout() }
             }
             AddButton(
                 onAdd = onAdd,
@@ -493,8 +488,8 @@ private fun AddButton(
     onAdd: () -> Unit,
     focus: FocusRequester,
     upTarget: FocusRequester,
-    leftTarget: FocusRequester? = null,
-    downTarget: FocusRequester? = null,
+    leftTarget: FocusRequester,
+    downTarget: FocusRequester,
     onPlaced: () -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -515,8 +510,8 @@ private fun AddButton(
             .onGloballyPositioned { onPlaced() }
             .focusProperties {
                 up = upTarget
-                if (leftTarget != null) left = leftTarget
-                if (downTarget != null) down = downTarget
+                left = leftTarget
+                down = downTarget
             }
             .clip(CircleShape)
             .background(gradient)
@@ -642,10 +637,10 @@ internal fun PresetRow(
 
 /** 等比小图:按真实宽高比画一个圆角矩形,16:9 是普通横条、3440×1440 一眼是带鱼屏。 */
 @Composable
-private fun RatioGlyph(width: Int, height: Int, modifier: Modifier = Modifier) {
+private fun RatioGlyph(width: Int, height: Int) {
     val (glyphWidth, glyphHeight) = ratioGlyphSize(width, height)
     val accent = appAccentColor()
-    Box(modifier = modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
                 .size(width = glyphWidth.dp, height = glyphHeight.dp)

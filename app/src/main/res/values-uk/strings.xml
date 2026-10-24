@@ -164,7 +164,6 @@
     <string name="summary_fps_list">Збільшіть для плавнішого відео потоку. Зменшіть для кращої продуктивності на повільних пристроях.</string>
     <string name="scut_invalid_uuid">Зазначений пристрій недійсний</string>
     <string name="scut_invalid_app_id">Зазначений застосунок недійсний</string>
-    <string name="title_osc_opacity">Змінити прозорість екранних елементів керування</string>
     <string name="summary_osc_opacity">Зробити екранні елементи керування більш/менш прозорими</string>
     <string name="dialog_title_osc_opacity">Зміна прозорості</string>
     <string name="suffix_osc_opacity">%</string>

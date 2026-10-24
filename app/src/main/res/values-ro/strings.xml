@@ -146,7 +146,6 @@
     <string name="dialog_title_reset_osc">Resetarea schemei de controale</string>
     <string name="dialog_text_reset_osc">Sigur dorești să ștergi schema salvată a controalelor de pe ecran?</string>
     <string name="toast_reset_osc_success">Controalele de pe ecran au fost resetate la setarile implicite</string>
-    <string name="title_osc_opacity">Modifică opacitatea controalelor de pe ecran</string>
     <string name="summary_osc_opacity">Ajustează gradul de transparență al controalelor de pe ecran</string>
     <string name="dialog_title_osc_opacity">Modifică opacitatea</string>
     <string name="suffix_osc_opacity">%</string>

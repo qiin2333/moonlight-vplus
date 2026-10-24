@@ -31,7 +31,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.Log
 import android.view.Display
-import android.view.DisplayCutout
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.LayoutInflater
@@ -197,9 +196,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC = 6
         private const val REQUEST_CODE_OPEN_CONFIG_SYNC_DIRECTORY = 7
 
-        // HACK for Android 9
-        var displayCutoutP: DisplayCutout? = null
-
         /**
          * 获取分类对应的 Phosphor 矢量图标资源 ID（与鸿蒙项目一致）。
          */
@@ -216,7 +212,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 "category_crown_features" -> R.drawable.phc_crown
                 "category_host_settings" -> R.drawable.phc_host
                 "category_ui_settings" -> R.drawable.phc_lightbulb
-                "category_advanced_settings" -> R.drawable.phc_settings    // legacy
                 "category_advanced_features" -> R.drawable.phc_lightning   // 性能与流畅度
                 "category_framegen_settings" -> R.drawable.phc_video_camera
                 "category_help" -> R.drawable.phc_info
@@ -829,17 +824,6 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-
-        // We have to use this hack on Android 9 because we don't have Display.getCutout()
-        // which was added in Android 10.
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
-            // Insets can be null when the activity is recreated on screen rotation
-            // https://stackoverflow.com/questions/61241255/windowinsets-getdisplaycutout-is-null-everywhere-except-within-onattachedtowindo
-            val insets = window.decorView.rootWindowInsets
-            if (insets != null) {
-                displayCutoutP = insets.displayCutout
-            }
-        }
 
         // 设置抽屉模式
         updateDrawerMode()
@@ -2909,7 +2893,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                     return@post
                 }
                 val adapter = recycler.adapter as? PreferenceGroupAdapter ?: return@post
-                val requestedPosition = (0 until adapter.itemCount).firstOrNull { adapter.getItem(it)?.key == key }
+                val requestedPosition = adapter.getPreferenceAdapterPosition(key).takeIf { it >= 0 }
                 val position = requestedPosition?.takeIf {
                     adapter.getItem(it)?.let { item -> item.isEnabled && item.isSelectable } == true
                 } ?: (0 until adapter.itemCount).firstOrNull {
@@ -2947,13 +2931,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 val idx = categoryList.indexOfFirst { it === target }
                 if (idx >= 0) return categoryPositions[idx]
             }
-            val adapter = recyclerView.adapter
-            if (adapter is PreferenceGroupAdapter) {
-                for (i in 0 until adapter.itemCount) {
-                    if (adapter.getItem(i) === target) return i
-                }
-            }
-            return -1
+            return (recyclerView.adapter as? PreferenceGroupAdapter)
+                ?.getPreferenceAdapterPosition(target) ?: -1
         }
 
         @SuppressLint("RestrictedApi")

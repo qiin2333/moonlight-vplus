@@ -171,8 +171,6 @@
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
     <string name="custom_list_save">保存</string>
-    <string name="game_menu_apply_reconnect_hint">应用后自动断开重连，数秒内生效</string>
-    <string name="game_menu_apply_display">应用</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
     <!-- Add computer manually activity -->
     <string name="title_add_pc"> new\nDianLao () </string>
@@ -586,8 +584,6 @@
     <string name="perf_overlay_clock_format_12_seconds">12 小时制，显示时分秒</string>
     <string name="title_perf_overlay_position">性能统计位置</string>
     <string name="summary_perf_overlay_position">横向布局可放在顶部或底部，纵向布局可放在四角。</string>
-    <string name="title_reset_perf_overlay_position">重置性能图层位置</string>
-    <string name="summary_reset_perf_overlay_position">重置性能图层到预设位置。</string>
     <string name="title_perf_overlay_display_items">性能统计指标</string>
     <string name="summary_perf_overlay_display_items">选择要显示的串流、解码器、网络、主机和设备指标。</string>
     <string name="title_perf_overlay_bg_opacity">性能统计背景不透明度</string>
@@ -599,7 +595,6 @@
     <string name="title_checkbox_swap_quit_and_disconnect">让“退出”仅断开连接</string>
     <string name="summary_checkbox_swap_quit_and_disconnect">“退出”操作只断开 Moonlight，不再要求主机停止正在串流的游戏或应用。</string>
     <string name="mic_stats_continuity">音频连续性: %1$.1f%% (捕获:%2$d 编码:%3$d 发送:%4$d 丢弃:%5$d)</string>
-    <string name="title_osc_opacity">屏幕控制按钮不透明度</string>
     <string name="dialog_title_osc_opacity">屏幕控制按钮不透明度</string>
     <string name="summary_osc_opacity">调整屏幕控制按钮的不透明程度；数值越大，按钮越清晰。</string>
     <string name="nettest_text_failure">您设备的当前网络似乎正在阻止Moonlight。连接到该网络时，可能无法通过互联网串流。
@@ -1188,7 +1183,6 @@
     <string name="display_scale_unavailable">不可用</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · 推荐</string>
-    <string name="display_scale_recommended">推荐</string>
     <string name="display_scale_content_description">显示缩放，%1$d%%</string>
     <string name="display_scale_applied">已设置显示缩放为 %1$d%%</string>
     <string name="display_scale_applied_later">已接受显示缩放，主机稍后应用</string>
@@ -1880,7 +1874,6 @@
     <string name="toast_image_save_failed">图片保存失败，请重试</string>
     <string name="toast_image_pick_cancelled">图片选择已取消</string>
     <string name="toast_background_image_reset">已恢复默认背景图片</string>
-    <string name="toast_perf_overlay_position_reset">性能统计位置已重置</string>
     <string name="bitrate_haptic_mode_all">震动：每档</string>
     <string name="bitrate_haptic_mode_key_nodes">震动：关键节点</string>
     <string name="bitrate_haptic_mode_none">震动：关闭</string>

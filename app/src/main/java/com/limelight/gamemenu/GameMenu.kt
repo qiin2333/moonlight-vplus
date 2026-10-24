@@ -187,7 +187,6 @@ class GameMenu(
     private var lastActionOpenedSubmenu = false
     // 菜单历史栈，用于二级/多级菜单的回退
     private val menuStack: ArrayDeque<MenuPage> = ArrayDeque()
-    private var lastControllerNavigationAt = 0L
     private val handler = Handler(Looper.getMainLooper())
     private data class HeldControllerDirection(
         val targetDialog: Dialog,
@@ -1065,7 +1064,6 @@ class GameMenu(
                 title = choice.label,
                 description = choice.subLabel,
                 checked = choice.selected,
-                enabled = choice.enabled,
                 emphasized = choice.emphasized
             )
         }
@@ -1164,10 +1162,8 @@ class GameMenu(
         hardwareFocusRequestState = hardwareFocusRequest
         parentFocusRestoreRequestState = parentFocusRestoreRequest
         bitrateCardController.start { bitrate ->
-            composeUiState?.let {
-                it.value = it.value.copy(
-                    bitrate = bitrate
-                )
+            composeUiState?.let { state ->
+                state.value = state.value.copy(bitrate = bitrate)
             }
         }
         audioHapticsCardController.start { audioHaptics ->
@@ -1644,7 +1640,6 @@ class GameMenu(
         if (!event.isGamepadNavigationSource() &&
             event.source and InputDevice.SOURCE_KEYBOARD == 0
         ) return
-        lastControllerNavigationAt = SystemClock.uptimeMillis()
         rememberControllerNavigationForNavigation()
     }
 

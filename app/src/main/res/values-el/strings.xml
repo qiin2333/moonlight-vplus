@@ -97,7 +97,6 @@
     <string name="summary_only_l3r3">Απόκρυψη όλων των εικονικών κουμπιών εκτός των L3 και R3</string>
     <string name="dialog_title_reset_osc">Επαναφορά διάταξης</string>
     <string name="toast_reset_osc_success">Επαναφορά των στοιχείων ελέγχου στην οθόνη στις προεπιλογές</string>
-    <string name="title_osc_opacity">Αλλαγή της αδιαφάνειας των στοιχείων ελέγχου στην οθόνη</string>
     <string name="summary_osc_opacity">Κάντε τα στοιχεία ελέγχου στην οθόνη περισσότερο/λιγότερο διαφανή</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="category_ui_settings">Ρυθμίσεις διεπαφής χρήστη</string>

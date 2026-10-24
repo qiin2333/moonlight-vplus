@@ -208,7 +208,6 @@
     <string name="summary_reset_osc">Redefine todos os controles na tela para seu tamanho e posição padrão</string>
     <string name="dialog_title_reset_osc">Resetar Layout</string>
     <string name="toast_reset_osc_success">Controles de tela redefinidos para o padrão</string>
-    <string name="title_osc_opacity">Mudar a opacidade dos controles de tela</string>
     <string name="summary_osc_opacity">Deixe os controles de tela mais/menos transparentes</string>
     <string name="title_reset_osc">Limpar o layout salvo dos controles de tela</string>
     <string name="title_video_format">Mudar configurações do HEVC</string>

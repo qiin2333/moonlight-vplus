@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
@@ -408,13 +409,7 @@ object AppActionSheet {
             // Wait for both the focused window and target layout before acquiring focus once.
             if (shouldRequestFocus && windowFocused && focusRequestToken > 0 && !initialFocusRequested && focusIndex != null) {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                snapshotFlow { listState.layoutInfo.totalItemsCount > 0 }.first { it }
-                if (listState.layoutInfo.visibleItemsInfo.none { it.index == focusIndex }) {
-                    listState.scrollToItem(focusIndex)
-                }
-                snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == focusIndex } }
-                    .first { it }
-                focusRequesters[focusIndex].requestFocus()
+                focusListAction(listState, focusIndex, focusRequesters[focusIndex])
                 initialFocusRequested = true
             }
         }
@@ -491,13 +486,7 @@ object AppActionSheet {
                 if (focusIndex == null) {
                     cancelFocusRequester.requestFocus()
                 } else {
-                    snapshotFlow { listState.layoutInfo.totalItemsCount > 0 }.first { it }
-                    if (listState.layoutInfo.visibleItemsInfo.none { it.index == focusIndex }) {
-                        listState.scrollToItem(focusIndex)
-                    }
-                    snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == focusIndex } }
-                        .first { it }
-                    focusRequesters[focusIndex].requestFocus()
+                    focusListAction(listState, focusIndex, focusRequesters[focusIndex])
                 }
                 initialFocusRequested = true
             }
@@ -552,6 +541,20 @@ object AppActionSheet {
                 )
             }
         }
+    }
+
+    private suspend fun focusListAction(
+        listState: LazyListState,
+        index: Int,
+        focusRequester: FocusRequester
+    ) {
+        snapshotFlow { listState.layoutInfo.totalItemsCount > 0 }.first { it }
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            listState.scrollToItem(index)
+        }
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == index } }
+            .first { it }
+        focusRequester.requestFocus()
     }
 
     @Composable

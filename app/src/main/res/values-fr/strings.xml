@@ -162,7 +162,6 @@
     <string name="dialog_title_reset_osc">Réinitialiser la disposition</string>
     <string name="dialog_text_reset_osc">Êtes-vous sûr de vouloir supprimer votre disposition de commandes à l\'écran ?</string>
     <string name="toast_reset_osc_success">Les contrôles à l\'écran ont été réinitialisés</string>
-    <string name="title_osc_opacity">Modifier l\'opacité des contrôles à l\'écran</string>
     <string name="summary_osc_opacity">Permet de rendre les contrôles à l\'écran plus ou moins transparents</string>
     <string name="dialog_title_osc_opacity">Modifier l\'opacité</string>
     <string name="suffix_osc_opacity">%</string>

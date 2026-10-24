@@ -20,7 +20,7 @@ object CustomResolutionsStore {
         val preferences = prefs(context)
         val stored = preferences.getStringSet(PREFS_KEY, null)
         if (preferences.getInt(MIGRATION_VERSION_KEY, 0) < CURRENT_MIGRATION_VERSION) {
-            val merged = (defaultResolutions() + stored.orEmpty().mapNotNull(ResolutionValidator::parseResolution))
+            val merged = (DEFAULT_RESOLUTIONS + stored.orEmpty().mapNotNull(ResolutionValidator::parseResolution))
                 .distinct()
                 .sortedWith(resolutionOrder)
             preferences.edit()
@@ -30,7 +30,7 @@ object CustomResolutionsStore {
             return merged
         }
         return stored?.mapNotNull(ResolutionValidator::parseResolution)?.sortedWith(resolutionOrder)
-            ?: defaultResolutions()
+            ?: DEFAULT_RESOLUTIONS
     }
 
     /** 出厂基线档位;老版本 ListPreference 中它们本就常驻,列表清空时网格按此回退。 */
@@ -40,8 +40,6 @@ object CustomResolutionsStore {
         Resolution(2560, 1440),
         Resolution(3840, 2160)
     )
-
-    private fun defaultResolutions(): List<Resolution> = DEFAULT_RESOLUTIONS
 
     fun save(context: Context, resolutions: List<Resolution>) {
         prefs(context).edit()

@@ -161,7 +161,6 @@
     <string name="summary_checkbox_touchscreen_trackpad">Pokud je povoleno, dotykový displej funguje jako trackpad. Pokud je zakázáno, dotykový displej ovládá kurzor myši přímo.</string>
     <string name="title_reset_osc">Vymazat uložené rozložení ovladače na obrazovce</string>
     <string name="summary_reset_osc">Resetuje všechna nastavení ovladače na obrazovce na jejich výchozí velikost a pozici</string>
-    <string name="title_osc_opacity">Změnit průhlednost ovladače na obrazovce</string>
     <string name="category_advanced_settings">Pokročilá nastavení</string>
     <string name="title_checkbox_reduce_refresh_rate">Povolit snížení obnovovací frekvence</string>
     <string name="summary_checkbox_reduce_refresh_rate">Menší obnovovací frekvence displeje může šetřit energii výměnou za zvýšení zpoždění videa</string>

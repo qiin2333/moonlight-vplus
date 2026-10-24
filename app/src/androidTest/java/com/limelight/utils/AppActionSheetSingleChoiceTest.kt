@@ -65,6 +65,7 @@ class AppActionSheetSingleChoiceTest {
     @Test
     fun longListShowsAndFocusesSavedChoiceAndControllerActivationRunsOnce() {
         showChoices((0..40).map { AppActionSheet.Action(it, "Choice $it", checked = it == 37) }, 37)
+        awaitFocusedChoice("Choice 37")
 
         composeTestRule.onNodeWithText("Choice 37")
             .assertIsDisplayed()
@@ -91,12 +92,7 @@ class AppActionSheetSingleChoiceTest {
             AppActionSheet.Action(2, "Next", checked = false)
         ), 1)
 
-        // Cold API 28 windows can be RESUMED before their posted initial-focus request runs.
-        composeTestRule.waitUntil(5_000) {
-            composeTestRule.onAllNodesWithText("Next")
-                .fetchSemanticsNodes(atLeastOneRootRequired = false)
-                .any { it.config[SemanticsProperties.Focused] }
-        }
+        awaitFocusedChoice("Next")
         composeTestRule.onNodeWithText("Unavailable").assertIsDisplayed().assertIsSelected().performClick()
         assertEquals(emptyList<Int>(), invokedIds)
         composeTestRule.onNodeWithText("Next").assertIsFocused().performKeyInput { pressKey(Key.DirectionUp) }
@@ -109,6 +105,7 @@ class AppActionSheetSingleChoiceTest {
     @Test
     fun keyboardConfirmationRunsOnce() {
         showChoices(listOf(AppActionSheet.Action(1, "Current", checked = true)), 1)
+        awaitFocusedChoice("Current")
 
         composeTestRule.onNodeWithText("Current").assertIsFocused().performKeyInput { pressKey(Key.Enter) }
         composeTestRule.waitForIdle()
@@ -123,6 +120,7 @@ class AppActionSheetSingleChoiceTest {
             AppActionSheet.Action(0, "Plain choice", checked = false),
             AppActionSheet.Action(1, "Icon choice", checked = true, iconRes = android.R.drawable.ic_menu_view)
         ), 1)
+        awaitFocusedChoice("Icon choice")
 
         composeTestRule.onNodeWithText("Icon choice").assertIsFocused().assertIsSelected()
         val plainLeft = composeTestRule.onNodeWithText("Plain choice", useUnmergedTree = true)
@@ -138,5 +136,14 @@ class AppActionSheetSingleChoiceTest {
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(0), invokedIds)
+    }
+
+    /** Window focus can arrive after Compose first becomes idle, especially on older Android. */
+    private fun awaitFocusedChoice(label: String) {
+        composeTestRule.waitUntil(5_000) {
+            composeTestRule.onAllNodesWithText(label)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                .any { it.config[SemanticsProperties.Focused] }
+        }
     }
 }

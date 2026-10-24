@@ -168,7 +168,6 @@
     <string name="title_reset_osc">Opgeslagen on-screen layout wissen</string>
     <string name="dialog_title_reset_osc">Reset Layout</string>
     <string name="toast_reset_osc_success">On-screen controle-elementen naar fabrieksinstellingen zetten</string>
-    <string name="title_osc_opacity">Transparantie van on-screen besturingselementen aanpassen</string>
     <string name="title_checkbox_enable_pip">Scherm-in-Scherm toeschouwermodus inschakelen</string>
     <string name="title_disable_frame_drop">Frames nooit overslaan</string>
     <string name="summary_disable_frame_drop">Kan micro-stotteren op sommige toestellen verminderen, maar kan vertraging verhogen</string>

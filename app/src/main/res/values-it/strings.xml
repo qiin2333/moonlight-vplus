@@ -177,7 +177,6 @@
     <string name="title_fps_list">Frame rate video</string>
     <string name="summary_checkbox_touchscreen_trackpad">Se abilitato, lo schermo touch si comporta come un trackpad. Se disabilitato, lo schermo touch controlla direttamente il cursore del mouse.</string>
     <string name="title_checkbox_mouse_nav_buttons">Abilita i bottoni avanti e indietro del mouse</string>
-    <string name="title_osc_opacity">Cambia l\'opavità dei controlli a schermo</string>
     <string name="pacing_balanced">Bilanciato (ritardo e fluidità)</string>
     <string name="pacing_latency">Bassa latenza (risposta più rapida)</string>
     <string name="pacing_precise_sync">Ritmo fotogrammi preciso (consigliato)</string>

@@ -192,7 +192,6 @@
     <string name="summary_checkbox_enable_pip">PIP모드를 사용하는 중에 화면은 볼 수 있지만 제어는 할 수 없습니다</string>
     <string name="dialog_title_osc_opacity">투명도 조절</string>
     <string name="summary_osc_opacity">가상컨트롤러의 투명도를 조절할 수 있습니다</string>
-    <string name="title_osc_opacity">가상컨트롤러의 투명도 설정</string>
     <string name="toast_reset_osc_success">가상 컨트롤러 배치가 초기화되었습니다</string>
     <string name="dialog_text_reset_osc">저장된 가상 컨트롤러 배치를 초기화 하시겠습니까\?</string>
     <string name="dialog_title_reset_osc">가상 컨트롤러 배치 초기화</string>

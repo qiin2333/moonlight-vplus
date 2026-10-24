@@ -23,7 +23,6 @@
     <string name="suffix_osc_opacity">%</string>
     <string name="dialog_title_osc_opacity">Thay đổi độ trong suốt</string>
     <string name="summary_osc_opacity">Làm cho điều khiển trên màn hình (ít) trong suốt hơn</string>
-    <string name="title_osc_opacity">Thay đổi độ trong suốt của điều khiển trên màn hình</string>
     <string name="toast_reset_osc_success">Đã đặt lại điều khiển trên màn hình về mặc định</string>
     <string name="dialog_text_reset_osc">Bạn có chắc bạn muốn xoá bố cục điều khiển trên màn hình đã lưu của bạn không\?</string>
     <string name="dialog_title_reset_osc">Đặt lại bố cục</string>

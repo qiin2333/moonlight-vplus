@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.os.Build
-import android.util.TypedValue
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -23,6 +22,7 @@ import androidx.preference.TwoStatePreference
 import androidx.recyclerview.widget.RecyclerView
 import com.limelight.R
 import com.limelight.utils.AppTheme
+import com.limelight.utils.UiHelper
 import java.util.IdentityHashMap
 
 /** Card rows for a visible subtree, without replacing any preference or its behavior. */
@@ -104,7 +104,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
         (holder.findViewById(R.id.settings_detail_row_chevron) as? ImageView)?.apply {
             visibility = if (preference.isSelectable && preference !is TwoStatePreference &&
                 preference.widgetLayoutResource == 0) View.VISIBLE else View.GONE
-            imageTintList = ColorStateList.valueOf(accent(palette, R.attr.appAccent))
+            imageTintList = ColorStateList.valueOf(UiHelper.accentColor(palette))
         }
         (holder.findViewById(android.R.id.title) as? TextView)?.apply {
             setTextColor(ContextCompat.getColorStateList(palette, R.color.settings_preference_title_text))
@@ -166,7 +166,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
     }
 
     private fun tintSwitch(switch: SwitchCompat, context: Context) {
-        val active = accent(context, R.attr.appAccent)
+        val active = UiHelper.accentColor(context)
         val inactive = ContextCompat.getColor(context, R.color.ui_shell_text_secondary)
         val states = arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf(android.R.attr.state_checked), intArrayOf())
         switch.thumbTintList = ColorStateList(states, intArrayOf(ColorUtils.setAlphaComponent(inactive, 97), active, inactive))
@@ -184,19 +184,14 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
             cornerRadii = radii
             setColor(color)
             if (focused) setStroke((2 * context.resources.displayMetrics.density).toInt().coerceAtLeast(1),
-                accent(context, R.attr.appAccentFocus))
+                UiHelper.accentFocusColor(context))
         }
         val surface = ContextCompat.getColor(context, R.color.ui_shell_surface_elevated)
         return StateListDrawable().apply {
             addState(intArrayOf(-android.R.attr.state_enabled), shape(surface))
-            addState(intArrayOf(android.R.attr.state_focused), shape(accent(context, R.attr.appAccentSoft), true))
+            addState(intArrayOf(android.R.attr.state_focused), shape(UiHelper.accentSoftColor(context), true))
             addState(intArrayOf(android.R.attr.state_pressed), shape(ContextCompat.getColor(context, R.color.ui_shell_surface_pressed)))
             addState(intArrayOf(), shape(surface))
         }
-    }
-
-    private fun accent(context: Context, attribute: Int): Int = TypedValue().let { value ->
-        context.theme.resolveAttribute(attribute, value, true)
-        if (value.resourceId != 0) ContextCompat.getColor(context, value.resourceId) else value.data
     }
 }

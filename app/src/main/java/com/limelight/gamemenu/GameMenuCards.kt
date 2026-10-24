@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
@@ -530,7 +529,7 @@ private fun SensitivityPresetSection(
 }
 
 @Composable
-internal fun SensitivityPresetButton(
+private fun SensitivityPresetButton(
     name: String,
     selected: Boolean,
     onClick: () -> Unit,
@@ -837,14 +836,14 @@ private fun DisplaySpecCell(
     value: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     accent: Color,
-    onClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .clip(AppShapes.small)
             .gamepadFocusOutline(AppShapes.small)
-            .clickable(role = Role.Button, onClick = onClick ?: {})
+            .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = "$label, $value" }
             .heightIn(min = 48.dp)
             .padding(vertical = 4.dp),
@@ -881,7 +880,7 @@ private fun DisplaySpecDivider() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun BitrateCard(
+private fun BitrateCard(
     state: BitrateCardState,
     callbacks: GameMenuCallbacks,
     onSliderGesture: (Boolean) -> Unit,
@@ -990,7 +989,7 @@ internal fun BitrateCard(
 }
 
 @Composable
-internal fun BitrateSlider(
+private fun BitrateSlider(
     state: BitrateCardState,
     callbacks: GameMenuCallbacks,
     onSliderGesture: (Boolean) -> Unit,

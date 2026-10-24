@@ -321,7 +321,6 @@
     <string name="summary_perf_overlay_bg_opacity">調整效能文字後方背景的不透明程度。</string>
     <string name="title_enable_post_stream_toast">串流後顯示延時資訊</string>
     <string name="summary_enable_post_stream_toast">串流結束後顯示延時資訊</string>
-    <string name="title_osc_opacity">螢幕控制按鈕不透明度</string>
     <string name="dialog_title_osc_opacity">螢幕控制按鈕不透明度</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="summary_osc_opacity">調整螢幕控制按鈕的不透明程度；數值越大，按鈕越清晰。</string>
@@ -623,7 +622,6 @@
     <string name="display_scale_unavailable">無法使用</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · 建議</string>
-    <string name="display_scale_recommended">建議</string>
     <string name="display_scale_content_description">顯示縮放，%1$d%%</string>
     <string name="display_scale_applied">已設定顯示縮放為 %1$d%%</string>
     <string name="display_scale_applied_later">已接受顯示縮放，主機稍後套用</string>
@@ -814,8 +812,6 @@
     <!-- Complete coverage for every label referenced by the settings screen. -->
     <string name="category_backup_restore">設定備份</string>
     <string name="custom_list_save">儲存</string>
-    <string name="game_menu_apply_reconnect_hint">套用後自動斷線重連，數秒內生效</string>
-    <string name="game_menu_apply_display">套用</string>
     <string name="title_custom_resolutions">自訂解析度</string>
     <string name="custom_resolution_add_short">新增</string>
     <string name="custom_resolution_info_contentdesc">使用提示</string>

@@ -84,7 +84,6 @@
     <string name="summary_only_l3r3">Ukryj wszystkie przyciski wirtualne z wyjątkiem L3 i R3</string>
     <string name="title_reset_osc">Wyczyść zapisany układ elementów sterujących na ekranie</string>
     <string name="toast_reset_osc_success">Przywrócenie domyślnych ustawień elementów sterujących na ekranie</string>
-    <string name="title_osc_opacity">Zmiana krycia elementów sterujących na ekranie</string>
     <string name="summary_osc_opacity">Zwiększanie/zmniejszanie przezroczystości elementów sterujących na ekranie</string>
     <string name="dialog_title_osc_opacity">Zmiana krycia</string>
     <string name="suffix_osc_opacity">%</string>

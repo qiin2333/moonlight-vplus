@@ -9,7 +9,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * 设置页与游戏内显示页共用的候选列表来源。
+ * 设置页与游戏内显示卡片共用的候选列表来源。
  * 两处 UI 各自拼列表会逐渐漂移(重复的 Native 行、孤儿化的旧值都源于此),这里集中实现一次。
  */
 internal object DisplayChoiceLists {

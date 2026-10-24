@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.limelight.DisplayReconnectSettings
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.nvstream.NvConnection
@@ -13,7 +14,6 @@ import com.limelight.preferences.DisplayChoiceLimits
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.compactResolutionLabel
-import com.limelight.ui.screenCombinationModeIconRes
 import com.limelight.preferences.prettyResolution
 import com.limelight.preferences.ResolutionValidator
 import java.util.Locale
@@ -24,10 +24,8 @@ internal data class DisplayChoice(
     val label: String,
     val selected: Boolean,
     val enabled: Boolean = true,
-    /** 第二行小注(如 "1280×720"/"FPS"),空则瓦片单行居中。 */
+    /** 选择面板中可选的补充说明，如实际分辨率或 FPS 单位。 */
     val subLabel: String? = null,
-    /** 瓦片顶部图标(屏幕组合等模式类选项),空则用文字两行布局。 */
-    val iconRes: Int? = null,
     val emphasized: Boolean = false
 )
 
@@ -36,11 +34,7 @@ internal data class DisplaySettingsDraft(
     val frameRate: String,
     val screenMode: String
 ) {
-    fun changedFrom(current: DisplaySettingsDraft): Boolean {
-        return resolution != current.resolution ||
-            frameRate != current.frameRate ||
-            screenMode != current.screenMode
-    }
+    fun changedFrom(current: DisplaySettingsDraft): Boolean = this != current
 }
 
 internal data class DisplayScaleState(
@@ -54,14 +48,9 @@ internal data class DisplayScaleState(
     val supportedPercents: List<Int> = emptyList(),
     val errorCode: String? = null,
     val pendingPercent: Int? = null
-) {
-    val summaryLabel: String
-        get() = currentPercent?.let { "$it%" } ?: "—"
-}
+)
 
 internal data class BitrateCardState(
-    val appliedDisplay: DisplaySettingsDraft = DisplaySettingsDraft("", "", ""),
-    val displayDraft: DisplaySettingsDraft = DisplaySettingsDraft("", "", ""),
     val progress: Float,
     val currentBitrateKbps: Int,
     val maxProgress: Int,
@@ -84,7 +73,7 @@ internal data class BitrateCardState(
 internal class BitrateCardController(
     private val game: Game,
     private val conn: NvConnection,
-    private val supportsExtendedBitrate: Boolean = false
+    supportsExtendedBitrate: Boolean = false
 ) {
     enum class HapticMode {
         ALL,
@@ -313,10 +302,6 @@ internal class BitrateCardController(
 
     fun snapshot(): BitrateCardState = state
 
-    fun displayDraft(): DisplaySettingsDraft = draft
-
-    fun hasPendingDisplayChanges(): Boolean = draft.changedFrom(appliedDraft)
-
     fun start(onStateChanged: (BitrateCardState) -> Unit) {
         dispose()
         invalidateChoiceCaches()
@@ -397,7 +382,7 @@ internal class BitrateCardController(
     }
 
     fun applyDisplayDraft(): Boolean {
-        if (!hasPendingDisplayChanges()) return false
+        if (!draft.changedFrom(appliedDraft)) return false
         val limits = displayChoiceLimits()
         val frameRateChanged = draft.frameRate != appliedDraft.frameRate
         val streamSizeChanged = draft.resolution != appliedDraft.resolution ||
@@ -414,15 +399,7 @@ internal class BitrateCardController(
         }
         val warnAboutFrameRate = frameRateChanged && limits.exceedsRefreshRate(draft.frameRate)
         // Keep the existing object: other stream components retain references to prefConfig.
-        game.prefConfig.apply {
-            isNativeResolution = next.isNativeResolution
-            isCustomResolution = next.isCustomResolution
-            width = next.width
-            height = next.height
-            fps = next.fps
-            bitrate = next.bitrate
-            screenCombinationMode = next.screenCombinationMode
-        }
+        DisplayReconnectSettings.capture(next).applyTo(game.prefConfig)
         appliedDraft = currentDraft()
         draft = appliedDraft
         if (warnAboutFrameRate) {
@@ -434,7 +411,7 @@ internal class BitrateCardController(
         return true
     }
 
-    fun discardDisplayDraft() {
+    private fun discardDisplayDraft() {
         draft = appliedDraft
         emitState()
     }
@@ -584,7 +561,7 @@ internal class BitrateCardController(
         Toast.makeText(game, mode.label(game), Toast.LENGTH_SHORT).show()
     }
 
-    fun dispose() {
+    private fun dispose() {
         val listener = abrListener
         if (listener != null && game.adaptiveBitrateService?.bitrateListener === listener) {
             game.adaptiveBitrateService?.bitrateListener = null
@@ -609,8 +586,6 @@ internal class BitrateCardController(
         val frameRates = frameRateChoices(frameRate)
         val screenModes = screenModeChoices(screenMode)
         return BitrateCardState(
-            appliedDisplay = DisplaySettingsDraft(resolution, frameRate, screenMode),
-            displayDraft = draft,
             progress = bitrateToProgress(kbps, maxProgress).toFloat(),
             currentBitrateKbps = kbps,
             maxProgress = maxProgress,
@@ -666,9 +641,13 @@ internal class BitrateCardController(
             }
     }
 
-    private fun resourceChoices(names: Int, values: Int, selected: String): List<DisplayChoice> {
-        val labels = DisplayChoiceLists.labelLookup(game.resources, names, values)
-        return game.resources.getStringArray(values).map { value ->
+    private fun screenModeChoices(selected: String): List<DisplayChoice> {
+        val labels = DisplayChoiceLists.labelLookup(
+            game.resources,
+            R.array.screen_combination_mode_names,
+            R.array.screen_combination_mode_values
+        )
+        return game.resources.getStringArray(R.array.screen_combination_mode_values).map { value ->
             DisplayChoice(
                 value = value,
                 label = labels[value] ?: value,
@@ -679,8 +658,6 @@ internal class BitrateCardController(
 
     private fun emitState() {
         state = state.copy(
-            appliedDisplay = appliedDraft,
-            displayDraft = draft,
             resolutions = resolutionChoices(draft.resolution),
             frameRates = frameRateChoices(draft.frameRate),
             screenModes = screenModeChoices(draft.screenMode),
@@ -719,18 +696,6 @@ internal class BitrateCardController(
             cachedNativeSize = DisplayChoiceLists.nativeSize(game, display)
         }
         return cachedLimits!!
-    }
-
-    private fun screenModeChoices(selected: String): List<DisplayChoice> {
-        return resourceChoices(
-            R.array.screen_combination_mode_names,
-            R.array.screen_combination_mode_values,
-            selected
-        ).map { choice ->
-            choice.copy(
-                iconRes = screenCombinationModeIconRes(choice.value.toIntOrNull() ?: -1)
-            )
-        }
     }
 
     private fun showBitrateToast(message: String) {

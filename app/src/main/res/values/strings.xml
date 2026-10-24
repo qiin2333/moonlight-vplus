@@ -222,8 +222,6 @@
     <string name="game_menu_bitrate_adjustment_failed">Couldn\'t adjust bitrate</string>
     <string name="game_menu_ok">OK</string>
     <string name="custom_list_save">Save</string>
-    <string name="game_menu_apply_reconnect_hint">Applies after the stream reconnects</string>
-    <string name="game_menu_apply_display">Apply</string>
     <string name="game_menu_bitrate_range">Bitrate Range:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
 
@@ -580,7 +578,6 @@
     <string name="dialog_title_reset_osc">Reset Layout</string>
     <string name="dialog_text_reset_osc">Are you sure you want to delete your saved on-screen controls layout?</string>
     <string name="toast_reset_osc_success">On-screen controls reset to default</string>
-    <string name="title_osc_opacity">On-screen control opacity</string>
     <string name="summary_osc_opacity">Make the on-screen controls more/less transparent</string>
     <string name="dialog_title_osc_opacity">On-screen control opacity</string>
     <string name="suffix_osc_opacity">%</string>
@@ -760,8 +757,6 @@
     <string name="perf_overlay_clock_format_12_seconds">12-hour format, including seconds</string>
     <string name="title_perf_overlay_position">Performance stats position</string>
     <string name="summary_perf_overlay_position">Place a horizontal layout at the top or bottom, or a vertical layout in a corner.</string>
-    <string name="title_reset_perf_overlay_position">Reset Performance Overlay Position</string>
-    <string name="summary_reset_perf_overlay_position">Reset performance overlay to preset position</string>
     <string name="title_perf_overlay_display_items">Performance stats metrics</string>
     <string name="summary_perf_overlay_display_items">Choose which stream, decoder, network, host, and device metrics to show.</string>
     <string name="title_perf_overlay_bg_opacity">Performance stats background opacity</string>
@@ -1514,7 +1509,6 @@ Tap again to replace it.</string>
     <string name="display_scale_unavailable">Unavailable</string>
     <string name="display_scale_value">%1$d%%</string>
     <string name="display_scale_value_recommended">%1$d%% · Recommended</string>
-    <string name="display_scale_recommended">Recommended</string>
     <string name="display_scale_content_description">Display scaling, %1$d%%</string>
     <string name="display_scale_applied">Display scaling set to %1$d%%</string>
     <string name="display_scale_applied_later">Display scaling accepted; the host will apply it shortly</string>
@@ -1953,7 +1947,6 @@ Tap again to replace it.</string>
     <string name="toast_image_save_failed">Could not save image. Try again.</string>
     <string name="toast_image_pick_cancelled">Image selection cancelled</string>
     <string name="toast_background_image_reset">Default background restored</string>
-    <string name="toast_perf_overlay_position_reset">Performance stats position reset</string>
     <string name="bitrate_haptic_mode_all">Haptics: every step</string>
     <string name="bitrate_haptic_mode_key_nodes">Haptics: milestones</string>
     <string name="bitrate_haptic_mode_none">Haptics: off</string>

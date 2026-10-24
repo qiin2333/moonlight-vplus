@@ -26,7 +26,6 @@
     <string name="suffix_osc_opacity">%</string>
     <string name="dialog_title_osc_opacity">Opacitás módosítása</string>
     <string name="summary_osc_opacity">Tegye többé-kevésbé átláthatóvá a képernyőn megjelenő vezérlőket</string>
-    <string name="title_osc_opacity">A képernyőn megjelenő vezérlők átlátszatlanságának módosítása</string>
     <string name="toast_reset_osc_success">A képernyőn megjelenő vezérlők visszaállnak az alapértelmezettre</string>
     <string name="dialog_text_reset_osc">Biztosan törli a képernyőn tárolt vezérlők mentett elrendezését\?</string>
     <string name="dialog_title_reset_osc">Reset Layout</string>

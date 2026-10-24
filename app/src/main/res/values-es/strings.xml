@@ -228,7 +228,6 @@
     <string name="dialog_title_reset_osc">Reiniciar a Plantilla Predeterminada</string>
     <string name="dialog_text_reset_osc">¿Estás seguro de que quieres eliminar tus configuraciones guardadas para las plantillas de los controles en pantalla\?</string>
     <string name="toast_reset_osc_success">Establecer Controles en Pantalla en modo Predeterminado</string>
-    <string name="title_osc_opacity">Cambiar la transparencia de los controles en pantalla</string>
     <string name="summary_osc_opacity">Hacer los controles en pantalla más/menos transparentes</string>
     <string name="dialog_title_osc_opacity">Cambiar opacidad</string>
     <string name="summary_checkbox_enable_pip">Permite que la transmisión sea vista (pero no controlable) mientras se usa la multitarea</string>
@@ -441,7 +440,6 @@
     <string name="summary_perf_overlay_orientation">Elegir la orientación de visualización para estadísticas de rendimiento</string>
     <string name="summary_perf_overlay_position">Elegir arriba/abajo para orientación horizontal, o cuatro posiciones de esquina para orientación vertical</string>
     <string name="summary_pointer_velocity_factor" formatted="false">Establecer factor de velocidad del puntero para zona de toque mejorada. Establecer 100% para deshabilitar</string>
-    <string name="summary_reset_perf_overlay_position">Reiniciar superposición de rendimiento a posición preestablecida</string>
     <string name="summary_screen_offset_x">Desplazamiento horizontal de la pantalla</string>
     <string name="summary_screen_offset_y">Desplazamiento vertical de la pantalla</string>
     <string name="summary_screen_position">Elegir la posición de la pantalla cuando se usa resolución no pantalla completa</string>
@@ -490,7 +488,6 @@
     <string name="title_perf_overlay_orientation">Orientación de Superposición de Rendimiento</string>
     <string name="title_perf_overlay_position">Posición de Superposición de Rendimiento</string>
     <string name="title_pointer_velocity_factor">Factor de velocidad del puntero</string>
-    <string name="title_reset_perf_overlay_position">Reiniciar Posición de Superposición de Rendimiento</string>
     <string name="title_screen_offset_x">Desplazamiento Horizontal</string>
     <string name="title_screen_offset_y">Desplazamiento Vertical</string>
     <string name="title_screen_position">Posición de Pantalla</string>
