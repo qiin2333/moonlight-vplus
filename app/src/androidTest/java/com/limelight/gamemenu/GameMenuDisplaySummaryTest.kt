@@ -57,14 +57,29 @@ class GameMenuDisplaySummaryTest {
             .assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals("Resolution row opens resolution actions", 1, resolutionCount.get())
+            assertEquals("Resolution row does not open frame-rate actions", 0, frameRateCount.get())
+            assertEquals("Resolution row does not open screen-mode actions", 0, screenModeCount.get())
+        }
         composeTestRule.onNodeWithContentDescription("$frameRateLabel, 60 FPS")
             .assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals("Frame-rate row keeps resolution count unchanged", 1, resolutionCount.get())
+            assertEquals("Frame-rate row opens frame-rate actions", 1, frameRateCount.get())
+            assertEquals("Frame-rate row does not open screen-mode actions", 0, screenModeCount.get())
+        }
         composeTestRule.onNodeWithContentDescription("$screenModeLabel, Single display")
             .assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals("Screen-mode row keeps resolution count unchanged", 1, resolutionCount.get())
+            assertEquals("Screen-mode row keeps frame-rate count unchanged", 1, frameRateCount.get())
+            assertEquals("Screen-mode row opens screen-mode actions", 1, screenModeCount.get())
+        }
         composeTestRule.runOnIdle {
             assertEquals("Resolution is an independent action", 1, resolutionCount.get())
             assertEquals("Frame rate is an independent action", 1, frameRateCount.get())
