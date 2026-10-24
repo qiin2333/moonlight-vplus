@@ -83,6 +83,52 @@ class AppSettingsManagerDisplayCardTest {
         }
     }
 
+    @Test
+    fun waveformCardVisibilitySurvivesSaveLoadAndLastSettingsIntent() {
+        for (visible in listOf(false, true)) {
+            manager.saveAppLastSettings(
+                COMPUTER_UUID,
+                app,
+                settings(visible = true, waveformVisible = visible)
+            )
+            setGlobalWaveformCardVisibility(!visible)
+
+            val loaded = manager.getAppLastSettings(COMPUTER_UUID, app)
+            assertNotNull(loaded)
+            assertEquals(visible, loaded!!.showWaveformHapticsCard)
+            assertEquals(
+                visible,
+                manager.getSettingsSummary(COMPUTER_UUID, app)
+                    .contains(context.getString(R.string.waveform_card_title))
+            )
+
+            val intent = Intent()
+            AppSettingsManager.addLastSettingsToIntent(intent, loaded)
+            val session = settings(visible = false, waveformVisible = !visible)
+            assertTrue(manager.applyLastSettingsFromIntent(intent, session))
+            assertEquals(visible, session.showWaveformHapticsCard)
+        }
+    }
+
+    @Test
+    fun legacyJsonWithoutWaveformCardUsesCurrentGlobalVisibility() {
+        manager.saveAppLastSettings(
+            COMPUTER_UUID,
+            app,
+            settings(visible = true, waveformVisible = true)
+        )
+        val record = JSONObject(lastSettingsPreferences.getString(RECORD_KEY, null)!!)
+        record.remove("showWaveformHapticsCard")
+        assertTrue(lastSettingsPreferences.edit().putString(RECORD_KEY, record.toString()).commit())
+
+        for (visible in listOf(false, true)) {
+            setGlobalWaveformCardVisibility(visible)
+            val loaded = manager.getAppLastSettings(COMPUTER_UUID, app)
+            assertNotNull(loaded)
+            assertEquals(visible, loaded!!.showWaveformHapticsCard)
+        }
+    }
+
     private fun assertSavedDisplayCardRoundTrip(visible: Boolean) {
         manager.saveAppLastSettings(COMPUTER_UUID, app, settings(visible))
         setGlobalDisplayCardVisibility(!visible)
@@ -115,13 +161,21 @@ class AppSettingsManagerDisplayCardTest {
         ).commit())
     }
 
-    private fun settings(visible: Boolean) = PreferenceConfiguration().apply {
+    private fun setGlobalWaveformCardVisibility(visible: Boolean) {
+        assertTrue(globalPreferences.edit().putBoolean(
+            PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+            visible
+        ).commit())
+    }
+
+    private fun settings(visible: Boolean, waveformVisible: Boolean = true) = PreferenceConfiguration().apply {
         width = 1920
         height = 1080
         fps = 60
         bitrate = 20_000
         resolutionScale = 100
         showDisplaySettingsCard = visible
+        showWaveformHapticsCard = waveformVisible
     }
 
     private companion object {

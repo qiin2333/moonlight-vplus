@@ -133,7 +133,7 @@ internal fun GameMenuCards(
         if (state.visibleCards.shortcuts && state.customKeys.isNotEmpty()) {
             ShortcutCard(state.customKeys, callbacks.onCustomKey, callbacks.onEditCards)
         }
-        if (state.waveformHaptics.routes.isNotEmpty()) {
+        if (state.visibleCards.waveformHaptics && state.waveformHaptics.routes.isNotEmpty()) {
             WaveformHapticsCard(state.waveformHaptics, callbacks)
         }
     }
@@ -1593,7 +1593,10 @@ private fun WaveformHapticsCard(
     state: WaveformHapticsCardState,
     callbacks: GameMenuCallbacks
 ) {
-    GameMenuCard(title = stringResource(R.string.waveform_card_title)) {
+    GameMenuCard(
+        title = stringResource(R.string.waveform_card_title),
+        onLongClick = callbacks.onEditCards
+    ) {
         state.routes.forEach { route ->
             Text(
                 text = route.label + "\n" + route.status,
