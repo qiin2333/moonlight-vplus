@@ -24,17 +24,29 @@ class GameMenuDisplaySummaryTest {
 
     @Test
     fun displaySummaryRowsOpenIndependentChoiceActions() {
-        val selectionCount = AtomicInteger(0)
+        val resolutionCount = AtomicInteger(0)
+        val frameRateCount = AtomicInteger(0)
+        val screenModeCount = AtomicInteger(0)
         val resolutionLabel = InstrumentationRegistry.getInstrumentation().targetContext
             .getString(R.string.display_spec_resolution)
+        val frameRateLabel = InstrumentationRegistry.getInstrumentation().targetContext
+            .getString(R.string.display_spec_fps)
+        val screenModeLabel = InstrumentationRegistry.getInstrumentation().targetContext
+            .getString(R.string.display_spec_screen)
 
         composeTestRule.setContent {
             DisplayStatusCard(
                 state = displayState("1920x1080"),
                 callbacks = displayCallbacks(
                     onOpenResolutionSheet = {
-                        selectionCount.incrementAndGet()
-                    }
+                        resolutionCount.incrementAndGet()
+                    },
+                    onOpenFrameRateSheet = {
+                        frameRateCount.incrementAndGet()
+                    },
+                    onOpenScreenModeSheet = {
+                        screenModeCount.incrementAndGet()
+                    },
                 ),
                 onConfigure = {},
                 onSliderGesture = {}
@@ -46,7 +58,32 @@ class GameMenuDisplaySummaryTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .performClick()
         composeTestRule.runOnIdle {
-            assertEquals("Resolution summary is an independent action", 1, selectionCount.get())
+            assertEquals("Resolution row opens resolution actions", 1, resolutionCount.get())
+            assertEquals("Resolution row does not open frame-rate actions", 0, frameRateCount.get())
+            assertEquals("Resolution row does not open screen-mode actions", 0, screenModeCount.get())
+        }
+        composeTestRule.onNodeWithContentDescription("$frameRateLabel, 60 FPS")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals("Frame-rate row keeps resolution count unchanged", 1, resolutionCount.get())
+            assertEquals("Frame-rate row opens frame-rate actions", 1, frameRateCount.get())
+            assertEquals("Frame-rate row does not open screen-mode actions", 0, screenModeCount.get())
+        }
+        composeTestRule.onNodeWithContentDescription("$screenModeLabel, Single display")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals("Screen-mode row keeps resolution count unchanged", 1, resolutionCount.get())
+            assertEquals("Screen-mode row keeps frame-rate count unchanged", 1, frameRateCount.get())
+            assertEquals("Screen-mode row opens screen-mode actions", 1, screenModeCount.get())
+        }
+        composeTestRule.runOnIdle {
+            assertEquals("Resolution is an independent action", 1, resolutionCount.get())
+            assertEquals("Frame rate is an independent action", 1, frameRateCount.get())
+            assertEquals("Screen mode is an independent action", 1, screenModeCount.get())
         }
     }
 
@@ -72,7 +109,9 @@ class GameMenuDisplaySummaryTest {
     }
 
     private fun displayCallbacks(
-        onOpenResolutionSheet: () -> Unit
+        onOpenResolutionSheet: () -> Unit,
+        onOpenFrameRateSheet: () -> Unit = {},
+        onOpenScreenModeSheet: () -> Unit = {},
     ) = GameMenuCallbacks(
         onDismiss = {},
         onUsbDevices = {},
@@ -98,6 +137,8 @@ class GameMenuDisplaySummaryTest {
         onAbrMode = {},
         onBitrateHapticMode = {},
         onOpenResolutionSheet = onOpenResolutionSheet,
+        onOpenFrameRateSheet = onOpenFrameRateSheet,
+        onOpenScreenModeSheet = onOpenScreenModeSheet,
         onAudioHapticsEnabled = {},
         onAudioHapticsStrength = { false },
         onAudioHapticsStrengthFinished = {},

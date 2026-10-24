@@ -621,8 +621,8 @@ private fun SensitivityPresetActionButton(
 }
 
 /**
- * 显示设置状态卡:三列 HUD 读数(分辨率/帧率/屏幕组合),下方按需提供主机显示缩放快捷入口。
- * 三项直接打开公共选择面板，主机支持时在卡片内调整显示缩放。
+ * 显示设置状态卡:紧凑分组入口(分辨率/帧率/屏幕组合),下方按需提供主机显示缩放快捷入口。
+ * 三项分别打开公共选择面板，主机支持时在卡片内调整显示缩放。
  */
 @Composable
 internal fun DisplayStatusCard(
@@ -646,6 +646,7 @@ internal fun DisplayStatusCard(
         titleAccessory = {
             GameMenuInfoButton(
                 contentDescription = stringResource(R.string.display_settings_info),
+                symbol = "?",
                 onClick = callbacks.onDisplaySettingsInfo
             )
         },
@@ -654,7 +655,8 @@ internal fun DisplayStatusCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             DisplaySpecCell(
@@ -665,7 +667,6 @@ internal fun DisplayStatusCard(
                 onClick = callbacks.onOpenResolutionSheet,
                 modifier = Modifier.weight(1f)
             )
-            DisplaySpecDivider()
             DisplaySpecCell(
                 label = stringResource(R.string.display_spec_fps),
                 value = state.fpsLabel,
@@ -674,7 +675,6 @@ internal fun DisplayStatusCard(
                 onClick = callbacks.onOpenFrameRateSheet,
                 modifier = Modifier.weight(1f)
             )
-            DisplaySpecDivider()
             DisplaySpecCell(
                 label = stringResource(R.string.display_spec_screen),
                 value = screenLabel,
@@ -717,7 +717,7 @@ internal fun DisplayStatusCard(
                     .fillMaxWidth()
                     .clip(AppShapes.small)
                     .gamepadFocusOutline(AppShapes.small)
-                    .padding(horizontal = GameMenuDimens.section, vertical = 6.dp),
+                    .padding(horizontal = GameMenuDimens.section, vertical = 3.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Row(
@@ -741,30 +741,16 @@ internal fun DisplayStatusCard(
                     Text(
                         text = stringResource(R.string.display_scale_title),
                         color = colorResource(R.color.game_menu_text_primary),
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = GameMenuDimens.section)
                     )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.section),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = scale.friendlyName,
-                        color = colorResource(R.color.game_menu_text_secondary),
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
                     Text(
                         text = scaleSummary,
                         color = colorResource(R.color.game_menu_text_secondary),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -842,40 +828,31 @@ private fun DisplaySpecCell(
     Column(
         modifier = modifier
             .clip(AppShapes.small)
+            .background(appAccentSoftColor().copy(alpha = 0.12f))
             .gamepadFocusOutline(AppShapes.small)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = "$label, $value" }
-            .heightIn(min = 48.dp)
-            .padding(vertical = 4.dp),
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 3.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)
     ) {
         Text(
             text = label,
             color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 9.sp,
+            fontSize = 8.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
             text = value,
             color = accent,
-            fontSize = fontSize,
+            fontSize = if (fontSize.value > 12f) 12.sp else fontSize,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
-}
-
-@Composable
-private fun DisplaySpecDivider() {
-    Box(
-        modifier = Modifier
-            .width(GameMenuDimens.surfaceStroke)
-            .height(28.dp)
-            .background(colorResource(R.color.game_menu_list_item_border).copy(alpha = 0.35f))
-    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
