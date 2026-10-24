@@ -616,6 +616,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             val params = v.layoutParams as android.widget.RelativeLayout.LayoutParams
             params.topMargin = statusBarHeight
             v.layoutParams = params
+            applyHeaderSafeArea(WindowInsetsCompat.toWindowInsetsCompat(insets, v))
             insets
         }
 
@@ -748,14 +749,50 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         ViewCompat.setBackgroundTintList(label, ColorStateList.valueOf(color))
     }
 
-    /** Apply the size and line count selected by Android resource qualifiers. */
+    private fun applyHeaderSafeArea(insets: WindowInsetsCompat?) {
+        val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+        val displayCutout = insets?.getInsets(WindowInsetsCompat.Type.displayCutout())
+        val safeLeft = maxOf(systemBars?.left ?: 0, displayCutout?.left ?: 0)
+        val safeRight = maxOf(systemBars?.right ?: 0, displayCutout?.right ?: 0)
+        val header = findViewById<View>(R.id.appContentColumn)
+        val baseMargin = resources.getDimensionPixelSize(R.dimen.appview_content_margin)
+        val isRtl = header.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        val startMargin = baseMargin + if (isRtl) safeRight else safeLeft
+        val endMargin = baseMargin + if (isRtl) safeLeft else safeRight
+        val headerParams = header.layoutParams as RelativeLayout.LayoutParams
+        if (headerParams.marginStart != startMargin || headerParams.marginEnd != endMargin) {
+            headerParams.marginStart = startMargin
+            headerParams.marginEnd = endMargin
+            header.layoutParams = headerParams
+        }
+
+        val leadingSpace = findViewById<View>(R.id.appHeaderLeadingSpace)
+        val spaceParams = leadingSpace.layoutParams as LinearLayout.LayoutParams
+        val spaceWeight = resources.getInteger(R.integer.appview_header_spacer_weight).toFloat()
+        // Compensate for side insets so the weighted header still clears the centered panel handle.
+        val spaceWidth = resources.getDimensionPixelSize(R.dimen.appview_header_spacer_width) +
+                if (spaceWeight > 0f) safeLeft + safeRight else 0
+        if (spaceParams.width != spaceWidth || spaceParams.weight != spaceWeight) {
+            spaceParams.width = spaceWidth
+            spaceParams.weight = spaceWeight
+            leadingSpace.layoutParams = spaceParams
+        }
+    }
+
+    /** Apply header resources when configuration changes without recreating the activity. */
     private fun applyTitleTextResources() {
+        applyHeaderSafeArea(ViewCompat.getRootWindowInsets(window.decorView))
+
         val label = findViewById<TextView>(R.id.appListText)
         label.setTextSize(
             TypedValue.COMPLEX_UNIT_PX,
             resources.getDimension(R.dimen.appview_title_text_size)
         )
+        label.minimumHeight = resources.getDimensionPixelSize(R.dimen.appview_title_min_height)
         label.maxLines = resources.getInteger(R.integer.appview_title_max_lines)
+        // The view stays anchored to the end; start-align ellipsized lines to keep the icon intact.
+        label.gravity = if (label.maxLines == 1) android.view.Gravity.START else android.view.Gravity.END
+        appViewTargetReminder.maxLines = resources.getInteger(R.integer.appview_target_reminder_max_lines)
     }
 
     private fun updateResumeTitleInteractivity(label: TextView) {
@@ -1395,28 +1432,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
      * @return item宽度（像素）
      */
     private fun getCurrentItemWidth(): Int {
-        // 获取当前显示模式
-        val isLargeMode = isLargeItemMode()
-
-        // 根据模式返回对应的宽度
-        return if (isLargeMode) {
-            // 大图标模式：180dp
-            (180 * resources.displayMetrics.density).toInt()
-        } else {
-            // 小图标模式：120dp
-            (120 * resources.displayMetrics.density).toInt()
-        }
-    }
-
-    /**
-     * 判断当前是否为大图标模式
-     *
-     * @return true为大图标模式，false为小图标模式
-     */
-    private fun isLargeItemMode(): Boolean {
-        // 根据PreferenceConfiguration判断显示模式
         val prefs = PreferenceConfiguration.readPreferences(this)
-        return !prefs.smallIconMode // smallIconMode为false表示大图标模式
+        return AppGridAdapter.getItemWidthForPreferences(this, prefs)
     }
 
     /**
@@ -1939,9 +1956,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         // 设置事件监听器
         setupRecyclerViewListeners(rv)
-
-        // 应用UI配置
-        UiHelper.applyStatusBarPadding(rv)
     }
 
     /**
@@ -2254,7 +2268,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             }
         }
 
-        UiHelper.applyStatusBarPadding(listView)
         listView.setOnItemLongClickListener { _, view, pos, _ ->
             val app = adapter.getItem(pos) as AppObject
             handleSelectionChange(pos, app)

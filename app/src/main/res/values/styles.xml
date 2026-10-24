@@ -493,7 +493,7 @@
     <style name="AppListTitle">
         <item name="android:fontFamily">sans-serif-light</item>
         <item name="android:textSize">@dimen/appview_title_text_size</item>
-        <item name="android:minHeight">48dp</item>
+        <item name="android:minHeight">@dimen/appview_title_min_height</item>
         <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/appview_text_primary</item>
         <item name="android:maxLines">@integer/appview_title_max_lines</item>

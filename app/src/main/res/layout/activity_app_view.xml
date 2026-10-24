@@ -62,49 +62,67 @@
         android:layout_marginStart="@dimen/appview_content_margin"
         android:layout_marginEnd="@dimen/appview_content_margin"
         android:layout_marginBottom="4dp"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:baselineAligned="false"
         android:gravity="end">
 
-        <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/appListText"
-            style="@style/AppListTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginTop="4dp"
-            android:gravity="end"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:preferKeepClear="true"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="@drawable/appview_title_background" />
+        <!-- 短横屏为中间的顶部手柄预留区域；竖屏和高横屏由资源恢复完整宽度。 -->
+        <Space
+            android:id="@+id/appHeaderLeadingSpace"
+            android:layout_width="@dimen/appview_header_spacer_width"
+            android:layout_height="0dp"
+            android:layout_weight="@integer/appview_header_spacer_weight"
+            android:importantForAccessibility="no" />
 
-        <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示。 -->
-        <TextView
-            android:id="@+id/appViewTargetReminder"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="end"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:textColor="@color/control_highlight_color"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="2"
-            android:ellipsize="end"
-            android:lineSpacingExtra="1dp"
-            android:shadowColor="@color/appview_text_shadow"
-            android:shadowDx="1"
-            android:shadowDy="1"
-            android:shadowRadius="2"
-            android:focusable="false"
-            android:clickable="false"
-            android:importantForAccessibility="yes"
-            android:visibility="gone" />
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/appListText"
+                style="@style/AppListTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="4dp"
+                android:gravity="end"
+                android:paddingStart="8dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="4dp"
+                android:preferKeepClear="true"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/appview_title_background" />
+
+            <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示。 -->
+            <TextView
+                android:id="@+id/appViewTargetReminder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textColor="@color/control_highlight_color"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="@integer/appview_target_reminder_max_lines"
+                android:ellipsize="end"
+                android:lineSpacingExtra="1dp"
+                android:shadowColor="@color/appview_text_shadow"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:focusable="false"
+                android:clickable="false"
+                android:importantForAccessibility="yes"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
