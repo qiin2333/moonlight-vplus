@@ -376,7 +376,6 @@ class ControllerHandler(
     internal val mainThreadHandler: Handler
     private val backgroundHandlerThread: HandlerThread
     internal val backgroundThreadHandler: Handler
-    private val motionHandlerThread: HandlerThread
     internal val motionSender: ControllerMotionSender
     private val stateSender = ControllerStateSender { controller, mask, buttons, lt, rt, lx, ly, rx, ry ->
         conn.sendControllerInputChecked(controller, mask, buttons, lt, rt, lx, ly, rx, ry)
@@ -436,25 +435,13 @@ class ControllerHandler(
         backgroundHandlerThread.start()
         backgroundThreadHandler = Handler(backgroundHandlerThread.looper)
 
-        motionHandlerThread = HandlerThread("ControllerMotion")
-        motionHandlerThread.start()
-        val motionHandler = Handler(motionHandlerThread.looper)
-        motionSender = ControllerMotionSender(
-            schedule = { task, delayMs -> motionHandler.postDelayed(task, delayMs); Unit },
-            cancel = { task -> motionHandler.removeCallbacks(task) },
-            send = { controller, type, x, y, z ->
-                val gyroStop = type == MoonBridge.LI_MOTION_TYPE_GYRO && x == 0f && y == 0f && z == 0f
-                val localGyro = type == MoonBridge.LI_MOTION_TYPE_GYRO &&
-                    (gyroManager.isMouseMode || gyroManager.isRightStickMode) &&
-                    gyroManager.isGyroHoldActiveFor(controller)
-                if (!stopped && isControllerSlotEnabled(controller) &&
-                    (gyroStop || (!isControllerLocallyCaptured(controller) && !localGyro))) {
-                    conn.sendControllerMotionEvent(controller.toByte(), type, x, y, z)
-                } else {
-                    0
-                }
-            }
-        )
+        motionSender = ControllerMotionSender(conn) { controller, type, gyroStop ->
+            val localGyro = type == MoonBridge.LI_MOTION_TYPE_GYRO &&
+                (gyroManager.isMouseMode || gyroManager.isRightStickMode) &&
+                gyroManager.isGyroHoldActiveFor(controller)
+            !stopped && isControllerSlotEnabled(controller) &&
+                (gyroStop || (!isControllerLocallyCaptured(controller) && !localGyro))
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             prefConfig.dualSenseDirectBluetooth &&
@@ -974,7 +961,6 @@ class ControllerHandler(
         // Stop new device contexts from being created or used
         stopped = true
         motionSender.close()
-        motionHandlerThread.quitSafely()
 
         // Unregister our input device callbacks
         inputManager.unregisterInputDeviceListener(this)
@@ -4044,11 +4030,8 @@ class ControllerHandler(
 
         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
         val requestedReportRateHz = reportRateHz.toInt().coerceIn(0, 200).toShort()
-        // USB and Bluetooth drivers bypass SensorManager. Record host demand before
-        // looking for an InputDevice sensor, and never replace it with assistant demand.
-        if (isHostRequest) {
-            motionSender.setReportRate(controllerNumber, motionType, requestedReportRateHz.toInt())
-        }
+        // common-c records host forwarding demand before dispatching this callback.
+        // This method controls acquisition, including independent local assistance demand.
         val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
             gyroManager.handleControllerGyroReportRate(
                 controllerNumber,

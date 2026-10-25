@@ -803,8 +803,6 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean,
                              sourceActive: () -> Boolean = { true }): SensorEventListener {
         return object : SensorEventListener {
-            private val lastValues = FloatArray(3)
-
             override fun onSensorChanged(sensorEvent: SensorEvent) {
                 if (!sourceActive() || !handler.isControllerSlotEnabled(controllerNumber)) return
                 if (handler.isControllerLocallyCaptured(controllerNumber)) return
@@ -819,20 +817,6 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                         controllerNumber,
                         sensorEvent.timestamp
                     )
-                }
-
-                // Android will invoke our callback any time we get a new reading,
-                // even if the values are the same as last time. Don't report a
-                // duplicate set of values to save bandwidth.
-                if (sensorEvent.values[0] == lastValues[0] &&
-                    sensorEvent.values[1] == lastValues[1] &&
-                    sensorEvent.values[2] == lastValues[2]
-                ) {
-                    return
-                } else {
-                    lastValues[0] = sensorEvent.values[0]
-                    lastValues[1] = sensorEvent.values[1]
-                    lastValues[2] = sensorEvent.values[2]
                 }
 
                 var x = 0
