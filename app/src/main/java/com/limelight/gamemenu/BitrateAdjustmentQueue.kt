@@ -37,7 +37,7 @@ internal class BitrateAdjustmentQueue {
 
     fun complete(
         request: Request,
-        confirmedBitrateKbps: Int,
+        confirmedBitrateKbps: Int?,
         userTracking: Boolean
     ): Completion? {
         if (activeRequest !== request) return null

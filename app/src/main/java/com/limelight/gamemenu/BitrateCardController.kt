@@ -769,7 +769,9 @@ internal class BitrateCardController(
             bitrateRequests.discard()
             return
         }
-        val completion = bitrateRequests.complete(request, confirmedBitrateKbps, userTracking) ?: return
+        val completion = bitrateRequests.complete(
+            request, confirmedBitrateKbps.takeIf { errorMessage == null }, userTracking
+        ) ?: return
         if (errorMessage == null) {
             game.prefConfig.bitrate = confirmedBitrateKbps
             game.prefConfig.writeDisplayPreferences(game)

@@ -9,19 +9,19 @@ import org.junit.Test
 class BitrateAdjustmentQueueTest {
     @Test
     fun rapidTargetsAreCoalescedEvenWhenTheActiveRequestFails() {
-        for (confirmed in listOf(20_000, 30_000)) {
+        for ((confirmed, target) in listOf(30_000 to 50_000, null to 50_000, null to 20_000)) {
             val queue = BitrateAdjustmentQueue()
             val first = queue.submit(30_000)!!
             assertNull(queue.submit(40_000))
-            assertNull(queue.submit(50_000))
-            assertEquals(50_000, queue.latestTargetKbps)
+            assertNull(queue.submit(target))
+            assertEquals(target, queue.latestTargetKbps)
 
             val intermediate = queue.complete(first, confirmed, userTracking = false)!!
-            assertEquals(50_000, intermediate.nextRequest!!.bitrateKbps)
+            assertEquals(target, intermediate.nextRequest!!.bitrateKbps)
             assertFalse(intermediate.settleSelection)
             assertFalse(intermediate.reportResult)
 
-            val final = queue.complete(intermediate.nextRequest, confirmed, userTracking = false)!!
+            val final = queue.complete(intermediate.nextRequest, target, userTracking = false)!!
             assertNull(final.nextRequest)
             assertTrue(final.settleSelection)
             assertTrue(final.reportResult)
