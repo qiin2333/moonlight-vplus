@@ -80,9 +80,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -889,23 +886,33 @@ internal fun BitrateCard(
     GameMenuCard(
         title = stringResource(R.string.game_menu_tab_bitrate),
         trailing = {
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold)) {
-                        append(BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Reserve status space so starting/completing a request does not move the value.
+                Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+                    if (state.bitrateUpdating) {
+                        val description = stringResource(R.string.toast_adjusting_bitrate)
+                        CircularProgressIndicator(
+                            color = accent,
+                            strokeWidth = 1.5.dp,
+                            modifier = Modifier
+                                .size(12.dp)
+                                .testTag("bitrateUpdating")
+                                .semantics { contentDescription = description }
+                        )
                     }
-                    if (state.selectedBitrateKbps != state.currentBitrateKbps) {
-                        withStyle(SpanStyle(color = secondary, fontSize = 9.sp)) {
-                            append(" (${BitrateCardController.formatBitrateMbps(state.currentBitrateKbps)})")
-                        }
-                    }
-                },
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 180.dp).testTag("bitrateReadout")
-            )
+                }
+                Spacer(Modifier.width(GameMenuDimens.tight))
+                Text(
+                    text = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps),
+                    color = accent,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 160.dp).testTag("bitrateReadout")
+                )
+            }
         },
         onLongClick = onConfigure
     ) {

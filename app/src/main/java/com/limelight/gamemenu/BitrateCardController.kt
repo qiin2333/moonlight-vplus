@@ -52,7 +52,6 @@ internal data class DisplayScaleState(
 
 internal data class BitrateCardState(
     val progress: Float,
-    val currentBitrateKbps: Int,
     val maxProgress: Int,
     val maxBitrateKbps: Int,
     val adaptiveBitrate: Boolean,
@@ -64,7 +63,8 @@ internal data class BitrateCardState(
     val screenModes: List<DisplayChoice>,
     val hapticMode: BitrateCardController.HapticMode,
     val displayScale: DisplayScaleState = DisplayScaleState(),
-    val screenModeLabel: String = screenModes.firstOrNull { it.selected }?.label ?: "—"
+    val screenModeLabel: String = screenModes.firstOrNull { it.selected }?.label ?: "—",
+    val bitrateUpdating: Boolean = false
 ) {
     val selectedBitrateKbps: Int
         get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
@@ -313,11 +313,7 @@ internal class BitrateCardController(
         this.onStateChanged = onStateChanged
         appliedDraft = currentDraft()
         draft = appliedDraft
-        state = createState(conn.currentBitrate).let { current ->
-            bitrateRequests.latestTargetKbps?.let { target ->
-                current.copy(progress = bitrateToProgress(target, maxProgress).toFloat())
-            } ?: current
-        }
+        state = createState(conn.currentBitrate)
         emitState()
         bindAbrListener()
         refreshDisplayScale()
@@ -334,8 +330,7 @@ internal class BitrateCardController(
                     !userTracking && !bitrateRequests.isBusy
                 ) {
                     state = state.copy(
-                        progress = bitrateToProgress(kbps, maxProgress).toFloat(),
-                        currentBitrateKbps = kbps
+                        progress = bitrateToProgress(kbps, maxProgress).toFloat()
                     )
                     emitState()
                 }
@@ -567,8 +562,9 @@ internal class BitrateCardController(
 
     fun applySelectedBitrate() {
         userTracking = false
-        bitrateRequests.submit(state.selectedBitrateKbps)
-            ?.let { adjustBitrate(it) }
+        val request = bitrateRequests.submit(state.selectedBitrateKbps)
+        emitState()
+        request?.let { adjustBitrate(it) }
     }
 
     fun cycleHapticMode() {
@@ -611,8 +607,10 @@ internal class BitrateCardController(
         val frameRates = frameRateChoices(frameRate)
         val screenModes = screenModeChoices(screenMode)
         return BitrateCardState(
-            progress = bitrateToProgress(kbps, maxProgress).toFloat(),
-            currentBitrateKbps = kbps,
+            progress = bitrateToProgress(
+                bitrateRequests.latestTargetKbps ?: kbps,
+                maxProgress
+            ).toFloat(),
             maxProgress = maxProgress,
             maxBitrateKbps = maxBitrateKbps,
             adaptiveBitrate = game.prefConfig.enableAdaptiveBitrate,
@@ -624,7 +622,8 @@ internal class BitrateCardController(
             screenModes = screenModes,
             screenModeLabel = screenModeLabel(screenMode),
             hapticMode = getHapticMode(game),
-            displayScale = displayScaleState
+            displayScale = displayScaleState,
+            bitrateUpdating = bitrateRequests.isBusy
         )
     }
 
@@ -686,7 +685,8 @@ internal class BitrateCardController(
             frameRates = frameRateChoices(draft.frameRate),
             screenModes = screenModeChoices(draft.screenMode),
             screenModeLabel = screenModeLabel(draft.screenMode),
-            displayScale = displayScaleState
+            displayScale = displayScaleState,
+            bitrateUpdating = bitrateRequests.isBusy
         )
         onStateChanged?.invoke(state)
     }
@@ -773,8 +773,7 @@ internal class BitrateCardController(
                 bitrateToProgress(confirmedBitrateKbps, maxProgress).toFloat()
             } else {
                 state.progress
-            },
-            currentBitrateKbps = confirmedBitrateKbps
+            }
         )
         emitState()
         completion.nextRequest?.let { adjustBitrate(it, showProgress = false) }

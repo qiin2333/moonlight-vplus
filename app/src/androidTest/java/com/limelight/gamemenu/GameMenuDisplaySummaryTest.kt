@@ -27,7 +27,9 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -146,31 +148,41 @@ class GameMenuDisplaySummaryTest {
         val modeLayoutAction = composeTestRule.onNodeWithText(modeLabel, useUnmergedTree = true)
             .assertIsDisplayed().fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
         assertTrue(modeLayoutAction.action?.invoke(modeLayouts) == true)
-        val modeLayout = modeLayouts.single()
-        // Intrinsic measurement may retain a wider paragraph constraint. Check
-        // the actual line bounds so a fully visible label is not a false failure.
-        assertFalse("The mode is not ellipsized", modeLayout.isLineEllipsized(0))
-        assertTrue("The complete mode fits horizontally",
-            modeLayout.getLineRight(0) <= modeLayout.size.width + 0.5f)
-        assertTrue("The complete mode fits vertically",
-            modeLayout.getLineBottom(0) <= modeLayout.size.height + 0.5f)
+        assertVisibleLine("ABR mode", modeLayouts.single())
+        val modeBounds = composeTestRule.onNodeWithText(modeLabel).getUnclippedBoundsInRoot()
+        val cardBounds = composeTestRule.onNodeWithTag("bitrateCardBounds", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        assertTrue("The mode action, including its arrow, stays inside the card",
+            modeBounds.left >= cardBounds.left && modeBounds.right <= cardBounds.right &&
+                modeBounds.top >= cardBounds.top && modeBounds.bottom <= cardBounds.bottom)
 
         for (progress in listOf(0f, 9f, 24f, 34f, 49f, 59f)) {
             composeTestRule.runOnIdle { state = state.copy(progress = progress) }
             assertEquals("Preview must not resize or move the card", card, bounds("bitrateCardBounds"))
             assertEquals("Preview must not move the slider", slider, bounds("bitrateSlider"))
             assertVerticalPositionUnchanged(readout, bounds("bitrateReadout"))
+            composeTestRule.onNodeWithTag("bitrateReadout", useUnmergedTree = true)
+                .assertTextEquals(BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps))
             val layouts = mutableListOf<TextLayoutResult>()
             val action = composeTestRule.onNodeWithTag("bitrateReadout", useUnmergedTree = true)
                 .fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
             assertTrue(action.action?.invoke(layouts) == true)
-            assertFalse("The target and current values fit on one line", layouts.single().hasVisualOverflow)
+            assertVisibleLine("Bitrate", layouts.single())
         }
-        saveScreenshot("bitrate-300dp-font130-pending")
-        composeTestRule.runOnIdle { state = state.copy(currentBitrateKbps = state.selectedBitrateKbps) }
+        val selectedReadout = bounds("bitrateReadout")
+        composeTestRule.runOnIdle { state = state.copy(bitrateUpdating = true) }
+        composeTestRule.onNodeWithTag("bitrateUpdating").assertIsDisplayed()
         assertEquals(card, bounds("bitrateCardBounds"))
         assertEquals(slider, bounds("bitrateSlider"))
-        assertVerticalPositionUnchanged(readout, bounds("bitrateReadout"))
+        assertEquals("Submitting must not move the value", selectedReadout, bounds("bitrateReadout"))
+        saveScreenshot("bitrate-300dp-font130-pending")
+        composeTestRule.runOnIdle {
+            state = state.copy(bitrateUpdating = false)
+        }
+        composeTestRule.onNodeWithTag("bitrateUpdating").assertDoesNotExist()
+        assertEquals(card, bounds("bitrateCardBounds"))
+        assertEquals(slider, bounds("bitrateSlider"))
+        assertEquals("Confirming must not move the value", selectedReadout, bounds("bitrateReadout"))
         saveScreenshot("bitrate-300dp-font130-applied")
     }
 
@@ -291,6 +303,17 @@ class GameMenuDisplaySummaryTest {
         assertEquals("Readout bottom remains stable", expected.bottom, actual.bottom, 0.5f)
     }
 
+    private fun assertVisibleLine(label: String, layout: TextLayoutResult) {
+        // Intrinsic measurement may retain a wider paragraph constraint. Check
+        // the actual line bounds instead of that intermediate width.
+        assertEquals("$label uses one line", 1, layout.lineCount)
+        assertFalse("$label is not ellipsized", layout.isLineEllipsized(0))
+        assertTrue("$label fits horizontally: ${layout.getLineRight(0)} > ${layout.size.width}",
+            layout.getLineRight(0) <= layout.size.width + 0.5f)
+        assertTrue("$label fits vertically: ${layout.getLineBottom(0)} > ${layout.size.height}",
+            layout.getLineBottom(0) <= layout.size.height + 0.5f)
+    }
+
     private fun saveScreenshot(name: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val directory = File(requireNotNull(context.getExternalFilesDir(null)), "ux-review")
@@ -304,7 +327,6 @@ class GameMenuDisplaySummaryTest {
     private fun displayState(selected: String): BitrateCardState {
         return BitrateCardState(
             progress = 24f,
-            currentBitrateKbps = 20_000,
             maxProgress = BitrateCardController.MAX_PROGRESS,
             maxBitrateKbps = 200_000,
             adaptiveBitrate = false,
