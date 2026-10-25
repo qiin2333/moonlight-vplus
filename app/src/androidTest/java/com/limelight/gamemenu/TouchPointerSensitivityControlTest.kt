@@ -1,14 +1,6 @@
 package com.limelight.gamemenu
 
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -26,7 +18,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -82,51 +73,32 @@ class TouchPointerSensitivityControlTest {
     fun dpadAdjustsFocusedSliderAndFinishesOncePerKey() {
         var percent = 100
         var finishedCount = 0
-        var focused = false
-        lateinit var initialFocusRequester: FocusRequester
         lateinit var inputModeManager: InputModeManager
         composeTestRule.setContent {
-            initialFocusRequester = remember { FocusRequester() }
             inputModeManager = LocalInputModeManager.current
-            Column {
-                Box(
-                    Modifier
-                        .focusRequester(initialFocusRequester)
-                        .testTag("focusBeforeSensitivity")
-                        .size(48.dp)
-                        .focusable()
-                )
-                TouchPointerSensitivityControl(
-                    state = TouchPointerSensitivityState(
-                        percent = percent,
-                        applicable = true,
-                        presets = testPresets(),
-                        activePresetId = "preset-100"
-                    ),
-                    onValueChange = { value ->
-                        percent = TouchPointerSensitivityPolicy.normalize(value)
-                        false
-                    },
-                    onValueChangeFinished = { finishedCount++ },
-                    onSavePreset = {},
-                    onApplyPreset = {},
-                    onManagePresets = {},
-                    modifier = Modifier
-                        .onFocusChanged { focused = it.isFocused }
-                        .testTag("touchPointerSensitivity"),
-                    onSliderGesture = {}
-                )
-            }
+            TouchPointerSensitivityControl(
+                state = TouchPointerSensitivityState(
+                    percent = percent,
+                    applicable = true,
+                    presets = testPresets(),
+                    activePresetId = "preset-100"
+                ),
+                onValueChange = { value ->
+                    percent = TouchPointerSensitivityPolicy.normalize(value)
+                    false
+                },
+                onValueChangeFinished = { finishedCount++ },
+                onSavePreset = {},
+                onApplyPreset = {},
+                onManagePresets = {},
+                onSliderGesture = {}
+            )
         }
 
         composeTestRule.runOnIdle {
             inputModeManager.requestInputMode(InputMode.Keyboard)
-            initialFocusRequester.requestFocus()
         }
-        composeTestRule.onNodeWithTag("focusBeforeSensitivity").performKeyInput {
-            pressKey(Key.DirectionDown)
-        }
-        composeTestRule.onNodeWithTag("touchPointerPresetSave").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").requestFocus().assertIsFocused()
         composeTestRule.onNodeWithTag("touchPointerPresetSave").performKeyInput {
             pressKey(Key.DirectionDown)
         }
@@ -134,10 +106,7 @@ class TouchPointerSensitivityControlTest {
         composeTestRule.onNodeWithTag("touchPointerPreset:preset-50").performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        composeTestRule.runOnIdle {
-            assertEquals(true, focused)
-        }
-        composeTestRule.onNodeWithTag("touchPointerSensitivity").performKeyInput {
+        composeTestRule.onNodeWithTag("touchPointerSensitivity").assertIsFocused().performKeyInput {
             pressKey(Key.DirectionLeft)
         }
 

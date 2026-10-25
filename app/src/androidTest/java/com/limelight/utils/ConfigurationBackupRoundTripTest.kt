@@ -6,7 +6,9 @@ import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.Resolution
 import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.preferences.TouchpadInputValues
 import com.limelight.preferences.TouchPointerPresetPreferences
@@ -29,18 +31,22 @@ class ConfigurationBackupRoundTripTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private lateinit var preferences: SharedPreferences
     private lateinit var valueStatePreferences: SharedPreferences
+    private lateinit var customPreferences: SharedPreferences
     private var originalPreferences: Map<String, *>? = null
     private var originalValueState: Map<String, *>? = null
+    private var originalCustomPreferences: Map<String, *>? = null
     private var originalTouchpadStores = emptyMap<String, Map<String, *>>()
 
     @Before
     fun savePreferencesAndDisableBackups() {
         preferences = PreferenceManager.getDefaultSharedPreferences(context)
         valueStatePreferences = context.getSharedPreferences(VALUE_STATE_PREFERENCES, Context.MODE_PRIVATE)
+        customPreferences = context.getSharedPreferences("custom_resolutions", Context.MODE_PRIVATE)
         // Export stamps per-value state and may create the device ID in default preferences.
         // Preserve complete files, including all synchronization metadata and string sets.
         originalPreferences = snapshotSettingsPreferences(preferences)
         originalValueState = snapshotSettingsPreferences(valueStatePreferences)
+        originalCustomPreferences = snapshotSettingsPreferences(customPreferences)
         originalTouchpadStores = listOf(TouchpadInputPreferences.FILE_NAME,
             TouchpadInputPreferences.PRESETS_FILE_NAME, TouchPointerPresetPreferences.FILE_NAME)
             .associateWith { snapshotSettingsPreferences(context.getSharedPreferences(it, Context.MODE_PRIVATE)) }
@@ -63,6 +69,7 @@ class ConfigurationBackupRoundTripTest {
                 assertTrue("Failed to restore synchronization value state", valueStatePreferences.all == saved)
             }
         } finally {
+            originalCustomPreferences?.let { saved -> restoreSettingsPreferences(customPreferences, saved) }
             // Restore enabled flags last, after the original settings and metadata are together again.
             originalPreferences?.let { saved ->
                 restoreSettingsPreferences(preferences, saved)
@@ -70,6 +77,56 @@ class ConfigurationBackupRoundTripTest {
             }
             instrumentation.waitForIdleSync()
         }
+    }
+
+    @Test
+    fun firstBackupAndExplicitlyEmptyResolutionListBothSurviveRestore() {
+        assertTrue(preferences.edit().remove(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING).commit())
+        val defaults = listOf(Resolution(1280, 720), Resolution(1920, 1080),
+            Resolution(2560, 1440), Resolution(3840, 2160))
+        val manager = ConfigurationSyncManager(context)
+        for (expected in listOf(defaults, emptyList())) {
+            assertTrue(customPreferences.edit().clear().commit())
+            if (expected.isEmpty()) {
+                // Older saved empty lists may have no migration metadata.
+                assertTrue(customPreferences.edit().putStringSet("custom_resolutions", emptySet()).commit())
+            }
+            val backup = JSONObject(manager.exportSyncPackage())
+            val section = backup.getJSONObject("sections").getJSONObject("customResolutions")
+            backup.put("sections", JSONObject().put("customResolutions", section))
+            CustomResolutionsStore.save(context, listOf(Resolution(2340, 1080)))
+            manager.importSyncPackage(backup.toString())
+            assertEquals(expected, CustomResolutionsStore.load(context))
+        }
+    }
+
+    @Test
+    fun legacyLowPresetsMigrateOnceAndOldBackupsStillImportAfterMigration() {
+        assertTrue(customPreferences.edit().clear().putStringSet("custom_resolutions", setOf("2340x1080"))
+            .putInt("migration_version", 1).commit())
+        assertTrue(preferences.edit().putBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, true).commit())
+        val migrated = listOf("640x360", "854x480", "2340x1080")
+        assertEquals(migrated, CustomResolutionsStore.load(context).map(Resolution::toString))
+        assertFalse(preferences.contains(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING))
+        CustomResolutionsStore.save(context, emptyList())
+        assertTrue(CustomResolutionsStore.load(context).isEmpty())
+
+        val manager = ConfigurationSyncManager(context)
+        val backup = JSONObject(manager.exportSyncPackage())
+        backup.put("sections", JSONObject("""
+            {
+              "defaultPreferences": {"values": {
+                "checkbox_show_low_resolution_presets": {"type": "boolean", "value": true}
+              }},
+              "customResolutions": {"values": {
+                "custom_resolutions": {"type": "stringSet", "value": ["2340x1080"]},
+                "migration_version": {"type": "int", "value": 1}
+              }}
+            }
+        """))
+        manager.importSyncPackage(backup.toString())
+        assertEquals(migrated, CustomResolutionsStore.load(context).map(Resolution::toString))
+        assertFalse(preferences.contains(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING))
     }
 
     @Test
@@ -152,6 +209,7 @@ class ConfigurationBackupRoundTripTest {
             .putInt(PreferenceConfiguration.BITRATE_PREF_STRING, 37_000)
             .putBoolean(DISPLAY_CARD_KEY, false)
             .putBoolean(AUDIO_HAPTICS_CARD_KEY, false)
+            .putBoolean(WAVEFORM_HAPTICS_CARD_KEY, false)
             .putInt(OVERLAY_OPACITY_KEY, 37)
             .commit())
         val backup = exportOnlyDefaultValues(setOf(
@@ -160,6 +218,7 @@ class ConfigurationBackupRoundTripTest {
             PreferenceConfiguration.BITRATE_PREF_STRING,
             DISPLAY_CARD_KEY,
             AUDIO_HAPTICS_CARD_KEY,
+            WAVEFORM_HAPTICS_CARD_KEY,
             OVERLAY_OPACITY_KEY,
         ))
 
@@ -169,18 +228,20 @@ class ConfigurationBackupRoundTripTest {
             .putInt(PreferenceConfiguration.BITRATE_PREF_STRING, 9_000)
             .putBoolean(DISPLAY_CARD_KEY, true)
             .putBoolean(AUDIO_HAPTICS_CARD_KEY, true)
+            .putBoolean(WAVEFORM_HAPTICS_CARD_KEY, true)
             .putInt(OVERLAY_OPACITY_KEY, 80)
             .commit())
 
         val imported = ConfigurationSyncManager(context).importSyncPackage(backup, null)
-        assertEquals(6, imported.defaultPreferencesImported)
-        assertEquals(6, imported.totalImported)
+        assertEquals(7, imported.defaultPreferencesImported)
+        assertEquals(7, imported.totalImported)
         assertEquals(0, imported.crownProfilesFailed + imported.pairingItemsFailed)
         assertEquals("3440x1440", preferences.all[PreferenceConfiguration.RESOLUTION_PREF_STRING])
         assertEquals("75", preferences.all[PreferenceConfiguration.FPS_PREF_STRING])
         assertEquals(37_000, preferences.all[PreferenceConfiguration.BITRATE_PREF_STRING])
         assertEquals(false, preferences.all[DISPLAY_CARD_KEY])
         assertEquals(false, preferences.all[AUDIO_HAPTICS_CARD_KEY])
+        assertEquals(false, preferences.all[WAVEFORM_HAPTICS_CARD_KEY])
         assertEquals(37, preferences.all[OVERLAY_OPACITY_KEY])
 
         val configuration = PreferenceConfiguration.readPreferences(context, null)
@@ -192,6 +253,7 @@ class ConfigurationBackupRoundTripTest {
         assertFalse(configuration.isNativeResolution)
         assertFalse(configuration.showDisplaySettingsCard)
         assertFalse(configuration.showAudioHapticsCard)
+        assertFalse(configuration.showWaveformHapticsCard)
         // This setting now lives inside the performance overlay detail page.
         assertEquals(37, configuration.perfOverlayBgOpacity)
     }
@@ -262,6 +324,7 @@ class ConfigurationBackupRoundTripTest {
         const val REVERSE_RESOLUTION_KEY = "checkbox_reverse_resolution"
         const val DISPLAY_CARD_KEY = "checkbox_show_display_settings_card"
         const val AUDIO_HAPTICS_CARD_KEY = "checkbox_show_audio_haptics_card"
+        const val WAVEFORM_HAPTICS_CARD_KEY = "checkbox_show_waveform_haptics_card"
         const val OVERLAY_OPACITY_KEY = "seekbar_perf_overlay_bg_opacity"
     }
 }

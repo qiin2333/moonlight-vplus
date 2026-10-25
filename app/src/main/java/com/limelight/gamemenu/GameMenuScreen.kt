@@ -246,7 +246,7 @@ internal fun GameMenuScreen(
         onDispose { guideDismissController.clear() }
     }
 
-    GameMenuTheme(palette) {
+    GameMenuTheme {
         SequenceShowcase(state = showcaseState) {
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 0,
@@ -531,10 +531,8 @@ private fun gameMenuPalette() = GameMenuPalette(
 )
 
 @Composable
-private fun GameMenuTheme(
-    palette: GameMenuPalette,
-    content: @Composable () -> Unit
-) {
+internal fun GameMenuTheme(content: @Composable () -> Unit) {
+    val palette = gameMenuPalette()
     val baseColorScheme = if (palette.darkTheme) darkColorScheme() else lightColorScheme()
     MaterialTheme(
         colorScheme = baseColorScheme.copy(
