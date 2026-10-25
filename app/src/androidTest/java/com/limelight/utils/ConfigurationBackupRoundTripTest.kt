@@ -7,6 +7,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.TouchpadInputPreferences
+import com.limelight.preferences.TouchpadInputValues
+import com.limelight.preferences.TouchPointerPresetPreferences
 import com.limelight.preferences.restoreSettingsPreferences
 import com.limelight.preferences.snapshotSettingsPreferences
 import org.json.JSONObject
@@ -27,6 +30,7 @@ class ConfigurationBackupRoundTripTest {
     private lateinit var valueStatePreferences: SharedPreferences
     private var originalPreferences: Map<String, *>? = null
     private var originalValueState: Map<String, *>? = null
+    private var originalTouchpadStores = emptyMap<String, Map<String, *>>()
 
     @Before
     fun savePreferencesAndDisableBackups() {
@@ -36,6 +40,8 @@ class ConfigurationBackupRoundTripTest {
         // Preserve complete files, including all synchronization metadata and string sets.
         originalPreferences = snapshotSettingsPreferences(preferences)
         originalValueState = snapshotSettingsPreferences(valueStatePreferences)
+        originalTouchpadStores = listOf(TouchpadInputPreferences.FILE_NAME, TouchpadInputPreferences.PRESETS_FILE_NAME)
+            .associateWith { snapshotSettingsPreferences(context.getSharedPreferences(it, Context.MODE_PRIVATE)) }
         disableBackups()
         assertTrue(preferences.edit()
             .putBoolean(REVERSE_RESOLUTION_KEY, false)
@@ -47,6 +53,9 @@ class ConfigurationBackupRoundTripTest {
     fun restoreEveryTouchedPreference() {
         if (!::preferences.isInitialized || originalPreferences == null) return
         try {
+            originalTouchpadStores.forEach { (name, saved) ->
+                restoreSettingsPreferences(context.getSharedPreferences(name, Context.MODE_PRIVATE), saved)
+            }
             originalValueState?.let { saved ->
                 restoreSettingsPreferences(valueStatePreferences, saved)
                 assertTrue("Failed to restore synchronization value state", valueStatePreferences.all == saved)
@@ -59,6 +68,35 @@ class ConfigurationBackupRoundTripTest {
             }
             instrumentation.waitForIdleSync()
         }
+    }
+
+    @Test
+    fun touchpadValuesPresetsAndDeletesRoundTripWithoutRestoringActiveSelection() {
+        val manager = ConfigurationSyncManager(context)
+        val presetPrefs = context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE)
+        TouchpadInputPreferences.save(context, TouchpadInputValues(250, 175, 60))
+        val presetJson = """{"version":1,"presets":[{"id":"00000000-0000-0000-0000-000000000025","name":"Preset1","values":{"touch_sense":"250"},"updatedAt":1}]}"""
+        assertTrue(presetPrefs.edit().putString(TouchPointerPresetPreferences.JSON_KEY, presetJson)
+            .putStringSet(TouchPointerPresetPreferences.DELETED_IDS_KEY, setOf("deleted-id"))
+            .putString(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY, "local-only").commit())
+        val exported = JSONObject(manager.exportSyncPackage())
+        val sections = exported.getJSONObject("sections")
+        assertFalse(sections.getJSONObject("touchpadPresets").getJSONObject("values")
+            .has(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY))
+        exported.put("sections", JSONObject()
+            .put("touchpadInput", sections.getJSONObject("touchpadInput"))
+            .put("touchpadPresets", sections.getJSONObject("touchpadPresets")))
+        TouchpadInputPreferences.save(context, TouchpadInputValues())
+        assertTrue(presetPrefs.edit().clear().commit())
+        manager.importSyncPackage(exported.toString())
+        assertEquals(TouchpadInputValues(250, 175, 60), TouchpadInputPreferences.read(context))
+        assertEquals(presetJson, presetPrefs.getString(TouchPointerPresetPreferences.JSON_KEY, null))
+        assertEquals(setOf("deleted-id"), presetPrefs.getStringSet(TouchPointerPresetPreferences.DELETED_IDS_KEY, null))
+        assertFalse(presetPrefs.contains(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY))
+        exported.put("sections", JSONObject())
+        manager.importSyncPackage(exported.toString())
+        assertEquals(TouchpadInputValues(250, 175, 60), TouchpadInputPreferences.read(context))
+        assertEquals(presetJson, presetPrefs.getString(TouchPointerPresetPreferences.JSON_KEY, null))
     }
 
     @Test

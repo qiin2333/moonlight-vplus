@@ -6,7 +6,6 @@ import android.view.MotionEvent
 import android.view.View
 
 import com.limelight.Game
-import com.limelight.binding.input.touch.RelativeTouchContext
 
 class TouchController(
     private val game: Game,
@@ -38,9 +37,7 @@ class TouchController(
     }
 
     fun adjustTouchSense(sense: Int) {
-        for (touchContext in game.relativeTouchContextMap) {
-            (touchContext as RelativeTouchContext).adjustMsense(sense * 0.01)
-        }
+        game.updateTouchpadSensitivity(sense)
     }
 
     fun setTouchMode(enableRelativeTouch: Boolean) {
