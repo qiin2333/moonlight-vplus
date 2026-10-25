@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_menu_touchpad_sensitivity">Styrplattans känslighet</string>
+    <string name="game_menu_touchpad_scroll_speed">Rullningshastighet med två fingrar</string>
+</resources>

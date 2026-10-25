@@ -189,12 +189,9 @@
     <string name="title_enable_hdr">HDR활성화 (실험용)</string>
     <string name="summary_disable_frame_drop">일부 장치에서 미세한 끊김 현상을 줄일 수 있지만 지연 시간이 늘어날 수 있습니다.</string>
     <string name="title_disable_frame_drop">프레임드랍 최적화</string>
-    <string name="summary_unlock_fps">90 또는 120FPS로 스트리밍하면 지연 시간이 줄어들 수 있지만 이를 지원할 수 없는 장치에서는 지연 또는 불안정 할 수 있습니다</string>
-    <string name="title_unlock_fps">모든 프레임 속도 잠금 해제</string>
     <string name="summary_checkbox_enable_pip">PIP모드를 사용하는 중에 화면은 볼 수 있지만 제어는 할 수 없습니다</string>
     <string name="dialog_title_osc_opacity">투명도 조절</string>
     <string name="summary_osc_opacity">가상컨트롤러의 투명도를 조절할 수 있습니다</string>
-    <string name="title_osc_opacity">가상컨트롤러의 투명도 설정</string>
     <string name="toast_reset_osc_success">가상 컨트롤러 배치가 초기화되었습니다</string>
     <string name="dialog_text_reset_osc">저장된 가상 컨트롤러 배치를 초기화 하시겠습니까\?</string>
     <string name="dialog_title_reset_osc">가상 컨트롤러 배치 초기화</string>
@@ -214,7 +211,6 @@
     <string name="title_checkbox_mouse_emulation">컨트롤러를 마우스처럼 사용하기</string>
     <string name="perf_overlay_streamdetails">비디오 스트림 : %1$s %2$.2f FPS</string>
     <string name="unable_to_pin_shortcut">현재 런처에서는 바로가기 생성이 불가능합니다.</string>
-    <string name="resolution_prefix_native_fullscreen">네이티브 (전체화면)</string>
     <!-- Array strings -->
     <string name="videoformat_auto">자동 (권장)</string>
     <string name="videoformat_hevcalways">HEVC 선호</string>
@@ -223,11 +219,8 @@
     <string name="resolution_360p">360p</string>
     <string name="resolution_720p">720p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_480p">480p</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">스트레오</string>
     <string name="title_setup_guide">시작 가이드</string>
     <string name="summary_setup_guide">스트리밍을 위해 게임 PC를 설정하는 방법 보기</string>
@@ -245,14 +238,11 @@
     <string name="summary_checkbox_enable_audiofx">스트리밍중 오디오 효과가 작동하도록 하지만 오디오 지연시간이 증가할 수 있습니다.</string>
     <string name="title_checkbox_absolute_mouse_mode">원격 데스크톱 마우스 모드</string>
     <string name="summary_checkbox_absolute_mouse_mode">이 옵션을 활성화하면 마우스가 보다 자연스럽게 동작할 수 있지만 많은 게임과 호환되지 않습니다(특히 FPS에서).</string>
-    <string name="fps_60">60 FPS</string>
     <string name="audioconf_51surround">5.1 서라운드 사운드</string>
     <string name="audioconf_71surround">7.1 서라운드 사운드</string>
     <string name="title_frame_pacing">비디오 프레임 처리방식</string>
     <string name="pacing_smoothness">부드러움 우선(지연 시간 증가)</string>
     <string name="category_help">도움말</string>
-    <string name="resolution_prefix_native_landscape">(가로)</string>
-    <string name="resolution_prefix_native_portrait">(세로)</string>
     <string name="title_checkbox_reduce_refresh_rate">주사율 감소 허용</string>
     <string name="summary_checkbox_reduce_refresh_rate">화면 주사율을 낮춰서 영상 지연 시간이 증가하고 전력을 절약할 수 있습니다.</string>
     <string name="frame_conversion_error">호스트 PC에서 치명적인 비디오 인코딩 오류를 보고했습니다.
@@ -267,7 +257,6 @@
     <string name="pair_pairing_help">호스트 PC에서 Sunshine을 실행 중인 경우 Sunshine 웹 UI로 이동하여 PIN을 입력합니다.</string>
     <string name="perf_overlay_hostprocessinglatency">호스트 처리 대기 시간 최소/최대/평균: %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">네이티브 FPS 주의사항</string>
     <string name="category_gamepad_settings">컨트롤러 설정</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">항상 터치패드로 마우스 제어</string>
     <string name="videoformat_av1always">AV1 선호 (실험용)</string>
@@ -353,7 +342,7 @@
     <string name="pyrowave_diag_copy">복사</string>
     <string name="pyrowave_diag_copy_success">보고서를 클립보드에 복사했습니다</string>
     <string name="pyrowave_diag_unavailable">확인 불가</string>
-    <string name="image_saved_successfully">이미지를 저장했습니다: Picture/vplus</string>
+    <string name="image_saved_successfully">이미지를 저장했습니다: Pictures/vplus</string>
     <string name="image_save_failed_with_error">이미지 저장 실패: %1$s</string>
     <string name="tip_double_tap_mouse">팁: PC 목록 상단의 빈 공간을 길게 누르면 현재 배경 이미지를 저장할 수 있습니다.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 협상에 실패했습니다. %1$s(으)로 전환합니다.</string>

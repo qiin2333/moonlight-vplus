@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="display_frame_rate_above_refresh_rate">Выше частоты экрана: возможны снижение задержки и рост нагрузки.</string>
+</resources>

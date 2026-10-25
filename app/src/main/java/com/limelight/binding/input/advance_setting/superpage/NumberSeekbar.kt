@@ -118,6 +118,14 @@ class NumberSeekbar : LinearLayout {
         numberSeekbarTitle.text = title
     }
 
+    fun setControlsEnabled(enabled: Boolean) {
+        listOf(numberSeekbarSeekbar, numberSeekbarMinus, numberSeekbarAdd).forEach {
+            it.isEnabled = enabled
+            it.isFocusable = enabled
+        }
+        alpha = if (enabled) 1f else 0.5f
+    }
+
     fun setProgressMax(max: Int) {
         numberSeekbarSeekbar.max = max
     }

@@ -7,7 +7,6 @@
     <string name="pacing_experimental_low_latency">Latência ultrabaixa (experimental)</string>
     <string name="summary_enable_hdr">Transmita HDR quando o jogo e a GPU do PC suportarem. O HDR requer uma GPU da série GTX 1000 ou posterior.</string>
     <string name="summary_enable_post_stream_toast">Exibe uma mensagem com informações de latência após o término da transmissão</string>
-    <string name="summary_unlock_fps">Transmitir a 90 ou 120 FPS pode reduzir a latência em dispositivos de última geração, mas pode causar atraso ou instabilidade em dispositivos que não suportam</string>
     <string name="summary_checkbox_vibrate_osc">Vibra seu dispositivo para emular rumble nos controles de tela</string>
     <string name="pcview_menu_header_offline">Indisponível</string>
     <string name="pcview_menu_header_unknown">Atualizando</string>
@@ -53,15 +52,11 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
     <string name="videoformat_hevcalways">Prefira HEVC</string>
     <string name="videoformat_auto">Automático (recomendado)</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround</string>
     <string name="audioconf_71surround">7.1 Surround</string>
-    <string name="fps_90">90 FPS</string>
     <string name="scut_deleted_pc">PC deletado</string>
     <string name="scut_not_paired">PC não pareado</string>
     <string name="help_loading_title">Ver Ajuda</string>
@@ -173,7 +168,6 @@
     <string name="summary_seekbar_bitrate">Uma taxa de bits mais alta melhora a qualidade da imagem, mas usa mais largura de banda; uma taxa mais baixa é melhor para redes lentas ou instáveis. Se a transmissão travar, reduza-a primeiro e aumente-a quando a rede estiver estável, mas a imagem continuar pouco nítida; para 1080p60, comece com cerca de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Esticar vídeo para tela cheia</string>
     <string name="resolution_prefix_native">Nativa</string>
-    <string name="resolution_prefix_native_fullscreen">Nativa Tela Cheia</string>
     <string name="category_audio_settings">Configurações de Áudio</string>
     <string name="title_audio_config_list">Configurações de som Surround</string>
     <string name="summary_audio_config_list">Habilita o som Surround 5.1 ou 7.1 para sistemas de home theater</string>
@@ -198,7 +192,6 @@
     <string name="summary_checkbox_flip_face_buttons">Inverte os botões A/B e X/Y dos gamepads e controles de tela</string>
     <string name="category_on_screen_controls_settings">Configurações de Controles de Tela</string>
     <string name="title_checkbox_flip_face_buttons">Inverter botões</string>
-    <string name="title_unlock_fps">Liberar todas as taxas de quadros possíveis</string>
     <string name="category_advanced_settings">Configurações Avançadas</string>
     <string name="title_checkbox_host_audio">Reproduzir áudio no PC</string>
     <string name="summary_checkbox_host_audio">Reproduz o áudio do computador e deste dispositivo</string>
@@ -215,7 +208,6 @@
     <string name="summary_reset_osc">Redefine todos os controles na tela para seu tamanho e posição padrão</string>
     <string name="dialog_title_reset_osc">Resetar Layout</string>
     <string name="toast_reset_osc_success">Controles de tela redefinidos para o padrão</string>
-    <string name="title_osc_opacity">Mudar a opacidade dos controles de tela</string>
     <string name="summary_osc_opacity">Deixe os controles de tela mais/menos transparentes</string>
     <string name="title_reset_osc">Limpar o layout salvo dos controles de tela</string>
     <string name="title_video_format">Mudar configurações do HEVC</string>
@@ -236,10 +228,8 @@
     <string name="pacing_balanced_alt">Limitar FPS de saída (até a taxa de atualização)</string>
     <string name="summary_seekbar_deadzone">Nota: Alguns jogos podem impor uma zona morta maior do que o Moonlight está configurado para usar.</string>
     <string name="title_checkbox_absolute_mouse_mode">Modo de mouse para área de trabalho remota</string>
-    <string name="resolution_prefix_native_landscape">(Paisagem)</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir redução de taxa de atualização</string>
     <string name="summary_checkbox_reduce_refresh_rate">Taxas menores de atualização do display podem salvar energia ao custo de latência de video adicional</string>
-    <string name="resolution_prefix_native_portrait">(Retrato)</string>
     <string name="title_checkbox_enable_audiofx">Habilitar sistema de suporte à equalização</string>
     <string name="summary_checkbox_enable_audiofx">Permitir que efeitos de audio funcionem durante o streaming, pode acrescentar latência de audio</string>
     <string name="title_full_range">Forçar vídeo de gama completa de cores (Experimental)</string>
@@ -318,7 +308,7 @@
     <string name="pyrowave_diag_copy">Copiar</string>
     <string name="pyrowave_diag_copy_success">Relatório copiado para a área de transferência</string>
     <string name="pyrowave_diag_unavailable">Indisponível</string>
-    <string name="image_saved_successfully">Imagem salva com sucesso em: Picture/vplus</string>
+    <string name="image_saved_successfully">Imagem salva com sucesso em: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Falha ao salvar imagem: %1$s</string>
     <string name="tip_double_tap_mouse">Dica: mantenha pressionada a área vazia no topo da lista de computadores para salvar a imagem de fundo atual.</string>
     <string name="pyrowave_negotiation_fallback">A negociação do PyroWave falhou. Alternando para %1$s.</string>

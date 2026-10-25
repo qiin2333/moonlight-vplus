@@ -118,6 +118,12 @@ class UsbDriverService : Service(), UsbDriverListener {
         listener?.reportControllerMotion(controllerId, motionType, x, y, z)
     }
 
+    override fun reportControllerMotionFrame(
+        controllerId: Int, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float
+    ) {
+        listener?.reportControllerMotionFrame(controllerId, gx, gy, gz, ax, ay, az)
+    }
+
     override fun reportControllerBattery(
         controllerId: Int,
         batteryState: Byte,

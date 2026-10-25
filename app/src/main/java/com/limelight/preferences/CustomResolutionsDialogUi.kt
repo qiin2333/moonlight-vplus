@@ -5,12 +5,14 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,7 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -28,21 +30,23 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -56,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.ui.isMenuConfirmKey
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.appAccentSoftColor
 import com.limelight.utils.appAccentColor
@@ -66,7 +71,10 @@ internal val PRESETS = listOf(
     Preset(3840, 2160, R.string.custom_resolution_tag_4k),
     Preset(3440, 1440, R.string.custom_resolution_tag_ultrawide),
     Preset(2560, 1440, R.string.custom_resolution_tag_2k),
-    Preset(1920, 1080, R.string.custom_resolution_tag_1080p)
+    Preset(1920, 1080, R.string.custom_resolution_tag_1080p),
+    Preset(1280, 720, R.string.custom_resolution_tag_720p),
+    Preset(854, 480, R.string.custom_resolution_tag_480p),
+    Preset(640, 360, R.string.custom_resolution_tag_360p)
 )
 
 @Composable
@@ -97,7 +105,7 @@ internal fun ResolutionInputError.text(): String = stringResource(
 private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
     onPreviewKeyEvent { event ->
         val nativeEvent = event.nativeKeyEvent
-        if (nativeEvent.keyCode != KeyEvent.KEYCODE_BUTTON_A) {
+        if (!isMenuConfirmKey(nativeEvent.keyCode)) {
             false
         } else {
             if (nativeEvent.action == KeyEvent.ACTION_UP) onConfirm()
@@ -105,18 +113,12 @@ private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
         }
     }
 
-/** 焦点指示仅在手柄/键盘导航（非触摸模式）下显示，避免触摸打开时出现焦点框。 */
+/** 焦点指示跟随当前输入模式：触控不显示，手柄或键盘切回后立即显示。 */
 @Composable
 private fun focusIndicationVisible(focused: Boolean): Boolean {
     val view = LocalView.current
-    var touchMode by remember(view) { mutableStateOf(view.isInTouchMode) }
-    DisposableEffect(view) {
-        val observer = view.viewTreeObserver
-        val listener = android.view.ViewTreeObserver.OnTouchModeChangeListener { touchMode = it }
-        observer.addOnTouchModeChangeListener(listener)
-        onDispose { observer.removeOnTouchModeChangeListener(listener) }
-    }
-    return focused && !touchMode
+    val inputMode = LocalInputModeManager.current.inputMode
+    return focused && (inputMode == InputMode.Keyboard || !view.isInTouchMode)
 }
 
 /**
@@ -134,7 +136,10 @@ private fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifie
     }
 
 @Composable
-internal fun DialogHeader(infoExpanded: Boolean, onToggleInfo: () -> Unit) {
+internal fun DialogHeader(
+    infoExpanded: Boolean,
+    onToggleInfo: () -> Unit
+) {
     val accent = appAccentColor()
     val accentSoft = appAccentSoftColor()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -180,8 +185,7 @@ private fun InfoToggleButton(expanded: Boolean, onToggle: () -> Unit) {
             .clip(CircleShape)
             .then(focusHighlight(showFocus || expanded, CircleShape))
             .handleGamepadConfirm(onToggle)
-            .clickable(onClick = onToggle)
-            .focusable(interactionSource = interaction),
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onToggle),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -235,7 +239,8 @@ internal fun Composer(
     downFromHeight: FocusRequester,
     leftTarget: FocusRequester?,
     onAdd: () -> Unit,
-    onHeightDone: () -> Unit
+    onHeightDone: () -> Unit,
+    onAddPlaced: () -> Unit
 ) {
     val accent = appAccentColor()
     val accentSoft = appAccentSoftColor()
@@ -262,7 +267,7 @@ internal fun Composer(
                 onImeAction = { heightFocus.requestFocus() },
                 focus = widthFocus,
                 downTarget = heightFocus,
-                upTarget = widthFocus,
+                rightTarget = heightFocus,
                 leftTarget = leftTarget,
                 modifier = Modifier.weight(1f)
             )
@@ -287,7 +292,8 @@ internal fun Composer(
                 focus = heightFocus,
                 downTarget = downFromHeight,
                 upTarget = widthFocus,
-                leftTarget = leftTarget,
+                rightTarget = addFocus,
+                leftTarget = widthFocus,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -302,9 +308,9 @@ internal fun Composer(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                val readout: @Composable () -> Unit = when {
-                    error != null -> {
-                        {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    when {
+                        error != null -> {
                             Text(
                                 text = error.text(),
                                 color = danger,
@@ -314,9 +320,7 @@ internal fun Composer(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    width != null && height != null && width > 0 && height > 0 -> {
-                        {
+                        width != null && height != null && width > 0 && height > 0 -> {
                             val pixels = pixelsText(width * height)
                             Text(
                                 text = "≈ ${ratioText(width, height)}",
@@ -330,9 +334,7 @@ internal fun Composer(
                                 fontSize = 12.sp
                             )
                         }
-                    }
-                    else -> {
-                        {
+                        else -> {
                             Text(
                                 text = stringResource(R.string.custom_resolution_readout_hint),
                                 color = secondary,
@@ -341,9 +343,15 @@ internal fun Composer(
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) { readout() }
             }
-            AddButton(onAdd = onAdd, focus = addFocus, upTarget = heightFocus)
+            AddButton(
+                onAdd = onAdd,
+                focus = addFocus,
+                upTarget = heightFocus,
+                leftTarget = heightFocus,
+                downTarget = downFromHeight,
+                onPlaced = onAddPlaced
+            )
         }
     }
 }
@@ -359,12 +367,16 @@ private fun NumberField(
     onImeAction: () -> Unit,
     focus: FocusRequester,
     downTarget: FocusRequester,
-    upTarget: FocusRequester,
+    upTarget: FocusRequester? = null,
+    rightTarget: FocusRequester? = null,
     leftTarget: FocusRequester?,
     modifier: Modifier = Modifier
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val focusManager = LocalFocusManager.current
+    val hostView = LocalView.current
+    val inputModeManager = LocalInputModeManager.current
     val outline = colorResource(R.color.app_dialog_outline)
     val accent = appAccentColor()
     val danger = colorResource(R.color.app_action_sheet_danger)
@@ -402,10 +414,48 @@ private fun NumberField(
             interactionSource = interaction,
             modifier = Modifier
                 .focusRequester(focus)
+                .onPreviewKeyEvent { event ->
+                    val nativeEvent = event.nativeKeyEvent
+                    if (nativeEvent.keyCode == KeyEvent.KEYCODE_TAB) {
+                        if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                            val backward = nativeEvent.isShiftPressed
+                            val target = if (backward) leftTarget ?: upTarget else rightTarget ?: downTarget
+                            hostView.isFocusableInTouchMode = false
+                            inputModeManager.requestInputMode(InputMode.Keyboard)
+                            target?.requestFocus() ?: focusManager.moveFocus(
+                                if (backward) FocusDirection.Previous else FocusDirection.Next
+                            )
+                        }
+                        return@onPreviewKeyEvent true
+                    }
+                    val direction = when (nativeEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
+                        KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
+                        KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
+                        else -> null
+                    }
+                    val target = when (direction) {
+                        FocusDirection.Up -> upTarget
+                        FocusDirection.Down -> downTarget
+                        FocusDirection.Left -> leftTarget
+                        FocusDirection.Right -> rightTarget
+                        else -> null
+                    }
+                    if (direction == null) {
+                        false
+                    } else {
+                        if (nativeEvent.action == KeyEvent.ACTION_DOWN) {
+                            target?.requestFocus() ?: focusManager.moveFocus(direction)
+                        }
+                        true
+                    }
+                }
                 .focusProperties {
                     down = downTarget
-                    up = upTarget
-                    left = leftTarget ?: FocusRequester.Default
+                    if (upTarget != null) up = upTarget
+                    if (leftTarget != null) left = leftTarget
+                    if (rightTarget != null) right = rightTarget
                 },
             decorationBox = { innerTextField ->
                 Box(
@@ -434,7 +484,14 @@ private fun NumberField(
 }
 
 @Composable
-private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusRequester) {
+private fun AddButton(
+    onAdd: () -> Unit,
+    focus: FocusRequester,
+    upTarget: FocusRequester,
+    leftTarget: FocusRequester,
+    downTarget: FocusRequester,
+    onPlaced: () -> Unit
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
@@ -450,7 +507,12 @@ private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusR
     Row(
         modifier = Modifier
             .focusRequester(focus)
-            .focusProperties { up = upTarget }
+            .onGloballyPositioned { onPlaced() }
+            .focusProperties {
+                up = upTarget
+                left = leftTarget
+                down = downTarget
+            }
             .clip(CircleShape)
             .background(gradient)
             .then(
@@ -461,8 +523,7 @@ private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusR
                 }
             )
             .handleGamepadConfirm(onAdd)
-            .clickable(onClick = onAdd)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onAdd)
             .padding(start = 12.dp, end = 15.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -483,16 +544,14 @@ private fun AddButton(onAdd: () -> Unit, focus: FocusRequester, upTarget: FocusR
 }
 
 @Composable
-internal fun PresetRow(onPreset: (Preset) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        PRESETS.forEach { preset ->
-            PresetChip(preset = preset, onClick = { onPreset(preset) })
-        }
-    }
-}
-
-@Composable
-private fun PresetChip(preset: Preset, onClick: () -> Unit) {
+private fun TextPresetChip(
+    label: String,
+    focus: FocusRequester,
+    previous: FocusRequester?,
+    next: FocusRequester?,
+    upTarget: FocusRequester,
+    onClick: () -> Unit
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val showFocus = focusIndicationVisible(focused)
@@ -500,6 +559,25 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
     val accent = appAccentColor()
     Box(
         modifier = Modifier
+            .focusRequester(focus)
+            .focusProperties {
+                up = upTarget
+                if (previous != null) left = previous
+                if (next != null) right = next
+            }
+            .onPreviewKeyEvent { event ->
+                val nativeEvent = event.nativeKeyEvent
+                if (nativeEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                val target = when (nativeEvent.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> previous
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> next
+                    KeyEvent.KEYCODE_DPAD_UP -> upTarget
+                    KeyEvent.KEYCODE_TAB -> if (nativeEvent.isShiftPressed) previous ?: upTarget else next
+                    else -> null
+                } ?: return@onPreviewKeyEvent false
+                target.requestFocus()
+                true
+            }
             .clip(CircleShape)
             .then(
                 focusHighlight(
@@ -509,13 +587,12 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
                 )
             )
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 11.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = stringResource(preset.labelRes),
+            text = label,
             color = if (showFocus) accent else colorResource(R.color.app_dialog_text_secondary),
             fontSize = 11.5.sp,
             fontWeight = FontWeight.SemiBold
@@ -523,12 +600,47 @@ private fun PresetChip(preset: Preset, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun PresetRow(
+    nativePresets: List<Resolution>,
+    focusFor: (Int) -> FocusRequester,
+    upTarget: FocusRequester,
+    onPreset: (Preset) -> Unit
+) {
+    val nativeLabel = stringResource(R.string.resolution_prefix_native)
+    val presets = nativePresets.map { resolution ->
+        Preset(resolution.width, resolution.height, R.string.resolution_prefix_native)
+    } + PRESETS
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        val visiblePresets = presets.distinctBy { it.width to it.height }
+        visiblePresets.forEachIndexed { index, preset ->
+            val label = if (preset.labelRes == R.string.resolution_prefix_native) {
+                "$nativeLabel ${preset.width}×${preset.height}"
+            } else {
+                stringResource(preset.labelRes)
+            }
+            TextPresetChip(
+                label = label,
+                focus = focusFor(index),
+                previous = visiblePresets.getOrNull(index - 1)?.let { focusFor(index - 1) },
+                next = visiblePresets.getOrNull(index + 1)?.let { focusFor(index + 1) },
+                upTarget = upTarget,
+                onClick = { onPreset(preset) }
+            )
+        }
+    }
+}
+
 /** 等比小图:按真实宽高比画一个圆角矩形,16:9 是普通横条、3440×1440 一眼是带鱼屏。 */
 @Composable
-private fun RatioGlyph(width: Int, height: Int, modifier: Modifier = Modifier) {
+private fun RatioGlyph(width: Int, height: Int) {
     val (glyphWidth, glyphHeight) = ratioGlyphSize(width, height)
     val accent = appAccentColor()
-    Box(modifier = modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
                 .size(width = glyphWidth.dp, height = glyphHeight.dp)
@@ -554,16 +666,18 @@ internal fun ResolutionList(
         return
     }
     LazyColumn(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().heightIn(max = 10_000.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        items(resolutions, key = { "${it.width}x${it.height}" }) { resolution ->
+        itemsIndexed(resolutions, key = { _, resolution -> "${resolution.width}x${resolution.height}" }) { index, resolution ->
             ResolutionRow(
                 resolution = resolution,
                 isJustAdded = justAdded == resolution,
                 compact = compact,
                 pixelsText = pixelsText,
                 focusRequester = focusFor(resolution),
+                upNeighbor = resolutions.getOrNull(index - 1)?.let(focusFor),
+                downNeighbor = resolutions.getOrNull(index + 1)?.let(focusFor),
                 rightNeighbor = rightNeighbor,
                 onDelete = onDelete
             )
@@ -578,6 +692,8 @@ private fun ResolutionRow(
     compact: Boolean,
     pixelsText: (Int) -> String,
     focusRequester: FocusRequester,
+    upNeighbor: FocusRequester?,
+    downNeighbor: FocusRequester?,
     rightNeighbor: FocusRequester?,
     onDelete: (Resolution) -> Unit
 ) {
@@ -601,13 +717,15 @@ private fun ResolutionRow(
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(focusRequester)
-            .focusProperties { right = deleteFocus }
+            .focusProperties {
+                if (upNeighbor != null) up = upNeighbor
+                if (downNeighbor != null) down = downNeighbor
+                right = deleteFocus
+            }
             .clip(rowShape)
             .background(bg)
             .border(if (showFocus || isJustAdded) 1.5.dp else 1.dp, borderColor, rowShape)
-            .handleGamepadConfirm { deleteFocus.requestFocus() }
-            .clickable { deleteFocus.requestFocus() }
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { deleteFocus.requestFocus() }
             .padding(
                 start = if (compact) 9.dp else 11.dp,
                 end = if (compact) 5.dp else 7.dp,
@@ -679,8 +797,7 @@ private fun DeleteButton(
             .clip(CircleShape)
             .then(focusHighlight(showFocus, CircleShape))
             .handleGamepadConfirm { onDelete(resolution) }
-            .clickable { onDelete(resolution) }
-            .focusable(interactionSource = interaction),
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { onDelete(resolution) },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -748,12 +865,12 @@ internal fun FooterRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         FooterButton(
-            label = stringResource(R.string.game_menu_cancel),
+            label = stringResource(R.string.game_menu_cancel).trim(),
             onClick = onCancel
         )
         Spacer(Modifier.width(4.dp))
         FooterButton(
-            label = stringResource(R.string.game_menu_ok),
+            label = stringResource(R.string.custom_list_save),
             onClick = onConfirm
         )
     }
@@ -773,8 +890,7 @@ private fun FooterButton(
             .clip(AppShapes.small)
             .then(focusHighlight(showFocus, AppShapes.small))
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 13.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {

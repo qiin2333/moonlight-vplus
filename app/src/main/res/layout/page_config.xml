@@ -155,15 +155,37 @@
                         android:trackTint="@color/crown_switch_track" />
                 </LinearLayout>
 
+                <Switch
+                    android:id="@+id/apply_touchpad_sensitivity_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/game_menu_touchpad_sensitivity"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp"
+                    android:thumbTint="@color/crown_switch_thumb"
+                    android:trackTint="@color/crown_switch_track" />
+
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/mouse_sense_number_seekbar"
                     android:layout_width="match_parent"
                     android:layout_height="62dp"
                     android:layout_marginTop="4dp"
-                    app:max="500"
+                    app:max="1000"
                     app:min="1"
                     app:progress="100"
                     app:text="@string/apptext_pg_config_835d4" />
+
+                <Switch
+                    android:id="@+id/apply_mouse_wheel_speed_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/apptext_pg_config_3f729"
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="13sp"
+                    android:thumbTint="@color/crown_switch_thumb"
+                    android:trackTint="@color/crown_switch_track" />
 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/mouse_wheel_speed_number_seekbar"

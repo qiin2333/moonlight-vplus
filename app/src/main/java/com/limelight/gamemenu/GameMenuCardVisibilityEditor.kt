@@ -9,9 +9,10 @@ import com.limelight.utils.AppActionSheet
 /** Shared card-visibility editor used by both Settings and the in-stream menu. */
 internal object GameMenuCardVisibilityEditor {
     private const val BITRATE = 0
-    private const val AUDIO_HAPTICS = 1
-    private const val GYRO = 2
-    private const val SHORTCUTS = 3
+    private const val DISPLAY_SETTINGS = 1
+    private const val AUDIO_HAPTICS = 2
+    private const val GYRO = 3
+    private const val SHORTCUTS = 4
 
     fun show(
         context: Context,
@@ -42,6 +43,7 @@ internal object GameMenuCardVisibilityEditor {
             minimumSelectionCount = 1,
             onConfirm = { selectedIds ->
                 config.showBitrateCard = BITRATE in selectedIds
+                config.showDisplaySettingsCard = DISPLAY_SETTINGS in selectedIds
                 config.showAudioHapticsCard = AUDIO_HAPTICS in selectedIds
                 config.showGyroCard = GYRO in selectedIds
                 config.showQuickKeyCard = SHORTCUTS in selectedIds
@@ -59,6 +61,7 @@ internal object GameMenuCardVisibilityEditor {
 
     private fun labels(context: Context): List<String> = listOf(
         context.getString(R.string.game_menu_tab_bitrate),
+        context.getString(R.string.game_menu_display_settings),
         context.getString(R.string.game_menu_tab_audio_haptics),
         context.getString(R.string.game_menu_tab_gyro),
         context.getString(R.string.game_menu_tab_shortcuts)
@@ -66,6 +69,7 @@ internal object GameMenuCardVisibilityEditor {
 
     private fun selectedIds(config: PreferenceConfiguration): Set<Int> = setOfNotNull(
         BITRATE.takeIf { config.showBitrateCard },
+        DISPLAY_SETTINGS.takeIf { config.showDisplaySettingsCard },
         AUDIO_HAPTICS.takeIf { config.showAudioHapticsCard },
         GYRO.takeIf { config.showGyroCard },
         SHORTCUTS.takeIf { config.showQuickKeyCard }

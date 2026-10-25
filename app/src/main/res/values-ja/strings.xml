@@ -102,7 +102,6 @@
     <string name="summary_video_format">どれを選べばよいか分からない場合は、自動を選択してください。ほとんどの最新の端末では HEVC がおすすめで、画質・帯域幅・HDR のバランスに優れています。両端が対応していれば AV1 は同じ画質で帯域幅を節約できますが、一部の端末ではデコード遅延が大きくなることがあります。H.264 は互換性に優れますが、より多くの帯域幅が必要で HDR には対応しません。</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="dialog_title_osc_opacity">透過率</string>
-    <string name="title_osc_opacity">透過率</string>
     <string name="summary_osc_opacity">オンスクリーンコントローラの透過率を調整します</string>
     <string name="title_only_l3r3">L3 と R3 のみ表示します</string>
     <string name="summary_only_l3r3">L3 と R3 以外のボタンを表示しない</string>
@@ -218,7 +217,7 @@
     <string name="pyrowave_diag_copy">コピー</string>
     <string name="pyrowave_diag_copy_success">レポートをクリップボードにコピーしました</string>
     <string name="pyrowave_diag_unavailable">取得できません</string>
-    <string name="image_saved_successfully">画像を保存しました：Picture/vplus</string>
+    <string name="image_saved_successfully">画像を保存しました：Pictures/vplus</string>
     <string name="image_save_failed_with_error">画像の保存に失敗しました：%1$s</string>
     <string name="tip_double_tap_mouse">ヒント：PC 一覧の上部にある空白部分を長押しすると、現在の背景画像を保存できます。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave のネゴシエーションに失敗しました。%1$s に切り替えます。</string>

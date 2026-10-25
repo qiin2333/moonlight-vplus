@@ -166,6 +166,7 @@ class PreferenceConfiguration {
     var controllerMouseSpeedPercent = 100
     var controllerMouseDpadArrows = false
     var mouseNavButtons = false
+    // Retained for older scene configurations and backups; frame-rate selection is unrestricted.
     var unlockFps = false
     var gameRumbleMode = GameRumbleMode.CONTROLLER
     var deviceRumbleStrength = 0
@@ -227,6 +228,7 @@ class PreferenceConfiguration {
     var gyroInvertYAxis = false
     // Card visibility
     var showBitrateCard = false
+    var showDisplaySettingsCard = true
     var showAudioHapticsCard = false
     var showGyroCard = false
     var showQuickKeyCard = false
@@ -332,6 +334,7 @@ class PreferenceConfiguration {
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                 .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
+                .putBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, showDisplaySettingsCard)
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
                 .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                 .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
@@ -406,6 +409,41 @@ class PreferenceConfiguration {
             if (synchronous) {
                 editor.commit()
             } else {
+                editor.apply()
+                true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * Persist the display settings owned by the in-game bitrate card.
+     * These keys match the settings page, and unrelated preferences stay untouched.
+     */
+    fun writeDisplayPreferences(context: Context, synchronous: Boolean = false): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context) ?: return false
+        return try {
+            val editor = prefs.edit()
+            DisplayPreferenceValues.of(
+                nativeResolution = isNativeResolution,
+                width = width,
+                height = height,
+                reverseResolution = reverseResolution,
+                fps = fps,
+                bitrate = bitrate,
+                adaptiveBitrate = enableAdaptiveBitrate,
+                abrMode = abrMode,
+                screenCombinationMode = screenCombinationMode
+            ).forEach { (key, value) ->
+                when (value) {
+                    is String -> editor.putString(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Boolean -> editor.putBoolean(key, value)
+                }
+            }
+            if (synchronous) editor.commit() else {
                 editor.apply()
                 true
             }
@@ -556,6 +594,7 @@ class PreferenceConfiguration {
         copy.audioVibrationMode = this.audioVibrationMode
         copy.audioVibrationScene = this.audioVibrationScene
         copy.showBitrateCard = this.showBitrateCard
+        copy.showDisplaySettingsCard = this.showDisplaySettingsCard
         copy.showAudioHapticsCard = this.showAudioHapticsCard
         copy.showGyroCard = this.showGyroCard
         copy.showQuickKeyCard = this.showQuickKeyCard
@@ -576,8 +615,8 @@ class PreferenceConfiguration {
         private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
 
         private const val BITRATE_PREF_OLD_STRING = "seekbar_bitrate"
-        private const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
-        private const val ABR_MODE_PREF_STRING = "list_abr_mode"
+        const val ADAPTIVE_BITRATE_PREF_STRING = "checkbox_adaptive_bitrate"
+        const val ABR_MODE_PREF_STRING = "list_abr_mode"
         private const val STRETCH_PREF_STRING = "checkbox_stretch_video"
         private const val SOPS_PREF_STRING = "checkbox_enable_sops"
         private const val DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings"
@@ -632,13 +671,14 @@ class PreferenceConfiguration {
         internal const val ENABLE_STUN_PREF_STRING = "checkbox_enable_stun"
         private const val LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING = "checkbox_lock_screen_after_disconnect"
         private const val SWAP_QUIT_AND_DISCONNECT_PERF_STRING = "checkbox_swap_quit_and_disconnect"
-        private const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
+        const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
         const val FRAME_PACING_PREF_STRING = "frame_pacing"
         const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
         private const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
         private const val MOUSE_AXIS_CORRECTION_PREF_STRING = "list_mouse_axis_correction"
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
+        internal const val SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING = "checkbox_show_display_settings_card"
         private const val SHOW_AUDIO_HAPTICS_CARD_PREF_STRING = "checkbox_show_audio_haptics_card"
         private const val SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card"
         @Suppress("ConstPropertyName")
@@ -739,6 +779,14 @@ class PreferenceConfiguration {
         const val FPS_PREF_STRING = "list_fps"
         const val BITRATE_PREF_STRING = "seekbar_bitrate_kbps"
         const val AUTO_ADJUST_BITRATE_PREF_STRING = "auto_adjust_bitrate"
+        val DISPLAY_PREFERENCE_KEYS = setOf(
+            RESOLUTION_PREF_STRING,
+            FPS_PREF_STRING,
+            BITRATE_PREF_STRING,
+            ADAPTIVE_BITRATE_PREF_STRING,
+            ABR_MODE_PREF_STRING,
+            SCREEN_COMBINATION_MODE_PREF_STRING
+        )
         const val HOST_SCALE_PREF_STRING = "seekbar_resolutions_scale"
         const val LONG_PRESS_FLAT_REGION_PIXELS_PREF_STRING = "seekbar_flat_region_pixels"
         const val SYNC_TOUCH_EVENT_WITH_DISPLAY_PREF_STRING = "checkbox_sync_touch_event_with_display"
@@ -996,16 +1044,34 @@ class PreferenceConfiguration {
             return isSquarishScreen(width, height)
         }
 
-        private fun convertFromLegacyResolutionString(resString: String): String {
-            return when {
-                resString.equals("360p", ignoreCase = true) -> RES_360P
-                resString.equals("480p", ignoreCase = true) -> RES_480P
-                resString.equals("720p", ignoreCase = true) -> RES_720P
-                resString.equals("1080p", ignoreCase = true) -> RES_1080P
-                resString.equals("1440p", ignoreCase = true) -> RES_1440P
-                resString.equals("4K", ignoreCase = true) -> RES_4K
-                else -> RES_1080P // Should be unreachable
+        private const val DISPLAY_SELECTION_MIGRATION_KEY = "display_selection_migration_version"
+        private const val DISPLAY_SELECTION_MIGRATION_VERSION = 2
+
+        /** 旧备份可能重新带回历史表示；只在发现旧值或迁移版本落后时写入。 */
+        internal fun migrateDisplaySelections(prefs: SharedPreferences) {
+            val migrationVersion = prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0)
+            val resolution = prefs.getString(RESOLUTION_PREF_STRING, null)
+            val canonicalResolution = when {
+                resolution == null -> null
+                resolution.equals("360p", true) -> RES_360P
+                resolution.equals("480p", true) -> RES_480P
+                resolution.equals("720p", true) -> RES_720P
+                resolution.equals("1080p", true) -> RES_1080P
+                resolution.equals("1440p", true) -> RES_1440P
+                resolution.equals("4K", true) -> RES_4K
+                else -> null
             }
+            val frameRate = prefs.all[FPS_PREF_STRING]
+            if (migrationVersion >= DISPLAY_SELECTION_MIGRATION_VERSION &&
+                canonicalResolution == null && frameRate !is Int) return
+
+            val editor = prefs.edit()
+            canonicalResolution?.let { editor.putString(RESOLUTION_PREF_STRING, it) }
+            if (frameRate is Int) editor.putString(FPS_PREF_STRING, frameRate.toString())
+            if (migrationVersion < DISPLAY_SELECTION_MIGRATION_VERSION) {
+                editor.putInt(DISPLAY_SELECTION_MIGRATION_KEY, DISPLAY_SELECTION_MIGRATION_VERSION)
+            }
+            editor.apply()
         }
 
         private fun getWidthFromResolutionString(resString: String): Int {
@@ -1024,17 +1090,6 @@ class PreferenceConfiguration {
                 // 如果解析失败，返回默认高度
                 DEFAULT_RESOLUTION.split("x")[1].toInt()
             }
-        }
-
-        private fun getResolutionString(width: Int, height: Int): String {
-            // 使用数组简化分辨率获取
-            for (res in RESOLUTIONS) {
-                val dimensions = res.split("x")
-                if (height == dimensions[1].toInt()) {
-                    return res
-                }
-            }
-            return RES_1080P // 默认返回1080P
         }
 
         fun getDefaultBitrate(resString: String, fpsString: String): Int {
@@ -1292,6 +1347,7 @@ class PreferenceConfiguration {
                 prefs.edit().remove(LEGACY_VIBRATE_FALLBACK_PREF_STRING).apply()
             }
 
+            migrateDisplaySelections(prefs)
             val resStr = prefs.getString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION) ?: DEFAULT_RESOLUTION
             config.isNativeResolution = resStr == RES_NATIVE
             config.isCustomResolution =
@@ -1605,6 +1661,7 @@ class PreferenceConfiguration {
 
             // Cards visibility (defaults to true)
             config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true)
+            config.showDisplaySettingsCard = prefs.getBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, true)
             config.showAudioHapticsCard = prefs.getBoolean(
                 SHOW_AUDIO_HAPTICS_CARD_PREF_STRING,
                 config.enableAudioVibration

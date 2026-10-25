@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.AppCompatImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="24dp"
+    android:layout_height="24dp"
+    app:srcCompat="@drawable/ic_chevron_right"
+    app:tint="@color/ui_shell_text_secondary"
+    android:focusable="false"
+    android:importantForAccessibility="no" />

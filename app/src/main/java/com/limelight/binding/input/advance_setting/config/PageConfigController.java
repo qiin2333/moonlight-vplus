@@ -20,7 +20,6 @@ import android.widget.Toast;
 import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
-import com.limelight.binding.input.advance_setting.element.ElementController;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
@@ -39,6 +38,8 @@ public class PageConfigController {
     public static final String COLUMN_BOOLEAN_BUTTON_VIBRATOR = "button_vibrator";
     public static final String COLUMN_LONG_CONFIG_ID = "config_id";
     private static final String COLUMN_INT_MOUSE_WHEEL_SPEED = "mouse_wheel_speed";
+    public static final String COLUMN_APPLY_TOUCHPAD_SENSITIVITY = "apply_touchpad_sensitivity";
+    public static final String COLUMN_APPLY_MOUSE_WHEEL_SPEED = "apply_mouse_wheel_speed";
     public static final String COLUMN_BOOLEAN_ENHANCED_TOUCH = "enhanced_touch";
     public static final String COLUMN_STRING_QUICK_ACTION_IDS = "quick_action_ids";
 
@@ -253,8 +254,9 @@ public class PageConfigController {
 
         loadMouseEnable();
         loadMouseMode();
-        loadMouseSense();
-        loadMouseWheelSpeed();
+        boolean applyInputSettings = ((Game) context).shouldApplyCrownInputProfile(currentConfigId);
+        loadMouseSense(applyInputSettings);
+        loadMouseWheelSpeed(applyInputSettings);
         loadGameVibrator();
         loadButtonVibrator();
         loadEnhancedTouch();
@@ -323,57 +325,76 @@ public class PageConfigController {
         });
     }
 
-    private void loadMouseSense(){
-        NumberSeekbar mouseSenseSeekBar = pageConfig.findViewById(R.id.mouse_sense_number_seekbar);
-        int mouseSense = ((Long) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_INT_TOUCH_SENSE, 100L)).intValue();
-        mouseSenseSeekBar.setValueWithNoCallBack(mouseSense);
-        controllerManager.getTouchController().adjustTouchSense(mouseSense);
-        mouseSenseSeekBar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+    private void loadMouseSense(boolean applyInputSettings) {
+        bindProfileParameter(R.id.mouse_sense_number_seekbar, R.id.apply_touchpad_sensitivity_switch,
+                COLUMN_INT_TOUCH_SENSE, COLUMN_APPLY_TOUCHPAD_SENSITIVITY, 100, 1000,
+                applyInputSettings, value -> controllerManager.getTouchController().adjustTouchSense(value));
+    }
+
+    private void loadMouseWheelSpeed(boolean applyInputSettings) {
+        bindProfileParameter(R.id.mouse_wheel_speed_number_seekbar, R.id.apply_mouse_wheel_speed_switch,
+                COLUMN_INT_MOUSE_WHEEL_SPEED, COLUMN_APPLY_MOUSE_WHEEL_SPEED, 20, 100,
+                applyInputSettings, value -> ((Game) context).updateCrownWheelSpeed(value));
+    }
+
+    private interface ParameterApplier {
+        void apply(int value);
+    }
+
+    private void bindProfileParameter(int sliderId, int switchId, String valueColumn, String flagColumn,
+                                      int defaultValue, int maximum, boolean applyInputSettings,
+                                      ParameterApplier applier) {
+        NumberSeekbar slider = pageConfig.findViewById(sliderId);
+        int value = Math.max(1, Math.min(maximum, ((Long) controllerManager.getSuperConfigDatabaseHelper()
+                .queryConfigAttribute(currentConfigId, valueColumn, (long) defaultValue)).intValue()));
+        slider.setValueWithNoCallBack(value);
+        bindApplySwitch(switchId, flagColumn, slider);
+        if (applyInputSettings && shouldApply(flagColumn)) applier.apply(value);
+        slider.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
+            private boolean trackingTouch;
+
+            private void saveAndApply(int progress) {
+                int bounded = Math.max(1, Math.min(maximum, progress));
+                ContentValues values = new ContentValues();
+                values.put(valueColumn, bounded);
+                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, values);
+                if (shouldApply(flagColumn)) applier.apply(bounded);
+            }
+
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser && !trackingTouch) saveAndApply(progress);
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
+                trackingTouch = true;
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_TOUCH_SENSE,seekBar.getProgress());
-                //保存到数据库中
-                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId,contentValues);
-                //做实际的设置
-                controllerManager.getTouchController().adjustTouchSense(seekBar.getProgress());
+                trackingTouch = false;
+                saveAndApply(seekBar.getProgress());
             }
         });
     }
 
-    private void loadMouseWheelSpeed() {
-        NumberSeekbar mouseWheelSpeedSeekBar = pageConfig.findViewById(R.id.mouse_wheel_speed_number_seekbar);
-        int mouseWheelSpeed = ((Long) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_INT_MOUSE_WHEEL_SPEED, 20L)).intValue();
-        mouseWheelSpeedSeekBar.setValueWithNoCallBack(mouseWheelSpeed);
-        // 数值越小，滚动越快，所以用 120 - mouseWheelSpeed 来转换
-        ElementController.setMouseScrollRepeatInterval(120 - mouseWheelSpeed);
-        mouseWheelSpeedSeekBar.setOnNumberSeekbarChangeListener(new NumberSeekbar.OnNumberSeekbarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            }
+    private boolean shouldApply(String column) {
+        Object value = controllerManager.getSuperConfigDatabaseHelper()
+                .queryConfigAttribute(currentConfigId, column, 0L);
+        return Long.valueOf(1L).equals(value);
+    }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(COLUMN_INT_MOUSE_WHEEL_SPEED, seekBar.getProgress());
-                //保存到数据库中
-                controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
-                //做实际的设置
-                // 数值越小，滚动越快，所以用 120 - seekBar.getProgress() 来转换
-                ElementController.setMouseScrollRepeatInterval(120 - seekBar.getProgress());
-            }
+    private void bindApplySwitch(int viewId, String column, NumberSeekbar seekbar) {
+        Switch toggle = pageConfig.findViewById(viewId);
+        toggle.setOnCheckedChangeListener(null);
+        toggle.setChecked(shouldApply(column));
+        seekbar.setControlsEnabled(toggle.isChecked());
+        toggle.setOnCheckedChangeListener((button, checked) -> {
+            ContentValues values = new ContentValues();
+            values.put(column, checked ? 1 : 0);
+            controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, values);
+            seekbar.setControlsEnabled(checked);
         });
     }
 

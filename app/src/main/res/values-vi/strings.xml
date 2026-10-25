@@ -10,8 +10,6 @@
     <string name="title_disable_frame_drop">Không bao giờ giảm khung hình</string>
     <string name="summary_checkbox_disable_warnings">Tắt các thông báo cảnh báo kết nối trên màn hình trong khi stream</string>
     <string name="title_checkbox_disable_warnings">Tắt các thông báo cảnh báo</string>
-    <string name="summary_unlock_fps">Việc stream tại 90 hoặc 120 FPS có thể sẽ giảm độ trễ trên các thiết bị tầm cao nhưng có thể sẽ gây ra lag hoặc mất ổn định trên các thiết bị không thể hỗ trợ việc đó</string>
-    <string name="title_unlock_fps">Mở khoá tất cả tốc độ khung hình có thể có</string>
     <string name="category_advanced_settings">Cài đặt nâng cao</string>
     <string name="summary_checkbox_host_audio">Phát âm thanh từ máy tính và thiết bị này</string>
     <string name="title_checkbox_host_audio">Phát âm thanh trên PC</string>
@@ -25,7 +23,6 @@
     <string name="suffix_osc_opacity">%</string>
     <string name="dialog_title_osc_opacity">Thay đổi độ trong suốt</string>
     <string name="summary_osc_opacity">Làm cho điều khiển trên màn hình (ít) trong suốt hơn</string>
-    <string name="title_osc_opacity">Thay đổi độ trong suốt của điều khiển trên màn hình</string>
     <string name="toast_reset_osc_success">Đã đặt lại điều khiển trên màn hình về mặc định</string>
     <string name="dialog_text_reset_osc">Bạn có chắc bạn muốn xoá bố cục điều khiển trên màn hình đã lưu của bạn không\?</string>
     <string name="dialog_title_reset_osc">Đặt lại bố cục</string>
@@ -202,7 +199,6 @@
     <string name="scut_deleted_pc">PC đã bị xoá</string>
     <string name="perf_overlay_netlatency">Độ trễ mạng trung bình: %1$d ms (sai số: %2$d ms)</string>
     <string name="perf_overlay_streamdetails">Tốc độ khung hình: %1$s %2$.2f FPS</string>
-    <string name="resolution_prefix_native_fullscreen">Toàn màn hình theo hệ thống</string>
     <string name="title_frame_pacing">Nhịp độ khung hình video</string>
     <string name="summary_frame_pacing">Chọn cách điều chỉnh nhịp khung hình video. Nhịp khung hình chính xác có thể dùng dấu thời gian video (PTS) và được khuyến nghị cho hầu hết thiết bị.</string>
     <string name="pacing_latency">Độ trễ thấp (phản hồi nhanh hơn)</string>
@@ -212,26 +208,20 @@
     <string name="pacing_balanced">Cân bằng (độ trễ và độ mượt)</string>
     <string name="pacing_smoothness">Ưu tiên độ mượt (độ trễ cao hơn)</string>
     <string name="resolution_480p">480p</string>
-    <string name="fps_120">120 FPS</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_720p">720p</string>
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">Âm thanh vòm 5.1</string>
     <string name="audioconf_71surround">Âm thanh vòm 7.1</string>
     <string name="videoformat_hevcalways">Luôn sử dụng HEVC (có thể gây crash)</string>
-    <string name="resolution_prefix_native_landscape">(Ngang)</string>
     <string name="frame_conversion_error">PC chủ đã gặp lỗi mã hoá video nghiêm trọng.
 \n
 \nHãy thử tắt chế độ HDR, đổi độ phân giải stream, hoặc đổi độ phân giải màn hình PC chủ.</string>
     <string name="title_checkbox_enable_audiofx">Hỗ trợ bộ cân bằng của hệ thống</string>
     <string name="summary_checkbox_enable_audiofx">Cho phép hiệu ứng âm thanh hoạt động khi stream, nhưng có thể tăng độ trễ âm thanh</string>
-    <string name="resolution_prefix_native_portrait">(Dọc)</string>
     <string name="title_config_sync_backup_password">Mật khẩu mã hóa bản sao lưu</string>
     <string name="category_help">Trợ giúp</string>
     <string name="title_document_handbook">Tài liệu</string>
@@ -284,7 +274,7 @@
     <string name="pyrowave_diag_copy">Sao chép</string>
     <string name="pyrowave_diag_copy_success">Đã sao chép báo cáo vào bộ nhớ tạm</string>
     <string name="pyrowave_diag_unavailable">Không lấy được</string>
-    <string name="image_saved_successfully">Đã lưu ảnh vào: Picture/vplus</string>
+    <string name="image_saved_successfully">Đã lưu ảnh vào: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Không thể lưu ảnh: %1$s</string>
     <string name="tip_double_tap_mouse">Mẹo: nhấn và giữ vùng trống phía trên danh sách máy tính để lưu ảnh nền hiện tại.</string>
     <string name="pyrowave_negotiation_fallback">Thương lượng PyroWave thất bại. Chuyển sang %1$s.</string>

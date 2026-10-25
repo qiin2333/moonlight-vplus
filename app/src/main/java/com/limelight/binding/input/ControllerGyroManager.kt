@@ -793,8 +793,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         for (c in handler.driverControllerContexts.values) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
-        for (i in 0 until handler.inputDeviceContexts.size()) {
-            val c = handler.inputDeviceContexts.valueAt(i)
+        for (c in handler.inputDeviceContextSnapshot) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
         return handler.defaultContext.controllerNumber == controllerNumber &&
@@ -870,6 +869,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                     val gz = sensorEvent.values[z] * zFactor * 57.2957795f
 
                     if (isMouseMode && isGyroHoldActiveFor(controllerNumber)) {
+                        handler.motionSender.pauseGyro(controllerNumber)
                         // 使用已经过屏幕旋转修正的轴值（rad/s）
                         // 横屏下：gz(yaw) → mouseX，gx(pitch) → mouseY
                         val mouseX = sensorEvent.values[z] * zFactor
@@ -879,22 +879,17 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                     }
 
                     if (isRightStickMode && isGyroHoldActiveFor(controllerNumber)) {
+                        handler.motionSender.pauseGyro(controllerNumber)
                         // Map device/controller gyro to right stick
                         applyGyroToRightStick(controllerNumber, gz, gx)
                         return
                     }
 
-                    if (controllerNumber.toInt() != 0 ||
-                        controllerGyroDemand.hostReportRateHz.toInt() != 0
-                    ) {
-                        handler.conn.sendControllerMotionEvent(
-                            controllerNumber.toByte(), motionType, gx, gy, gz
-                        )
-                    }
+                    handler.motionSender.submit(controllerNumber, motionType, gx, gy, gz)
                 } else {
                     // Pass m/s^2 directly without conversion
-                    handler.conn.sendControllerMotionEvent(
-                        controllerNumber.toByte(), motionType,
+                    handler.motionSender.submit(
+                        controllerNumber, motionType,
                         sensorEvent.values[x] * xFactor.toFloat(),
                         sensorEvent.values[y] * yFactor.toFloat(),
                         sensorEvent.values[z] * zFactor.toFloat()

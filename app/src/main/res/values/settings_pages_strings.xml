@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_page_frame_generation_title">Frame generation tuning</string>
+    <string name="settings_page_frame_generation_summary">Adjust render scale, the fallback threshold, and frame presentation order.</string>
+    <string name="settings_page_hdr_title">HDR settings</string>
+    <string name="settings_page_hdr_summary">Choose an HDR format and adjust screen brightness.</string>
+    <string name="settings_page_picture_layout_title">Picture layout</string>
+    <string name="settings_page_picture_layout_summary">Adjust stretching, picture position, and offsets, or swap stream width and height.</string>
+    <string name="settings_page_performance_overlay_title">Performance monitoring</string>
+    <string name="settings_page_performance_overlay_summary">Choose on-screen metrics, layout, appearance, and the latency message shown after streaming.</string>
+    <string name="settings_page_audio_passthrough_title">Audio passthrough</string>
+    <string name="settings_page_audio_passthrough_summary">Configure audio codecs, output buffering, and AC3 compatibility.</string>
+    <string name="settings_page_audio_vibration_title">Vibration from audio</string>
+    <string name="settings_page_audio_vibration_summary">Turn game audio into vibration with adjustable output and strength.</string>
+    <string name="settings_page_gamepad_title">Controller settings</string>
+    <string name="settings_page_gamepad_summary">Configure controls, player assignment, vibration, motion input, and device support.</string>
+    <string name="settings_page_input_title">Input settings</string>
+    <string name="settings_page_input_summary">Configure touch gestures, mice, touchpads, keyboards, and shortcuts.</string>
+    <string name="settings_section_gamepad_drivers">Device support</string>
+    <string name="settings_section_gamepad_feedback">Vibration</string>
+    <string name="settings_section_input_touch">Touch</string>
+    <string name="settings_section_input_mouse">Mouse</string>
+    <string name="settings_section_input_keyboard">Keyboard</string>
+    <string name="settings_section_gamepad_controls">Controls</string>
+    <string name="settings_section_gamepad_players">Players</string>
+    <string name="settings_section_gamepad_motion">Motion controls</string>
+</resources>

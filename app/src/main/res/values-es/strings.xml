@@ -139,7 +139,6 @@
 \nSi estas intentado transmitir mediante Internet, instala en tu pc la Moonlight Internet Hosting Tool y ejecuta el Internet Streaming Tester incluido para comprobar la conexión de tu PC a internet.</string>
     <string name="nettest_text_blocked">La conexión de red actual de tu dispositivo esta bloqueando Moonlight. La Transmisión mediante Internet puede no funcionar mientras estés conectado a esta red.</string>
     <string name="pair_already_in_progress">Emparejamiento ya en progreso</string>
-    <string name="resolution_prefix_native_fullscreen">Pantalla Completa Nativa</string>
     <string name="title_audio_config_list">Configuración de Sonido Envolvente</string>
     <string name="title_decoding_reset">Reiniciar Opciones de Video</string>
     <string name="no_video_received_error">No se recibe video desde el equipo anfitrión.</string>
@@ -167,7 +166,6 @@
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">Activar modo Pantalla-en-Pantalla para modo espectador</string>
     <string name="resolution_720p">720p</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_71surround">7.1 Sonido Envolvente</string>
     <string name="title_troubleshooting">Guía de Solución de Errores</string>
     <string name="resolution_1080p">1080p</string>
@@ -206,8 +204,6 @@
     <string name="summary_checkbox_usb_bind_all">Usar el controlador de USB de Moonlight para todos los mandos soportados, incluso si el control de Xbox se encuentra presente</string>
     <string name="summary_checkbox_mouse_emulation">Presionar por un periodo largo el botón de inicio hará cambiar el mando a modo de ratón</string>
     <string name="title_checkbox_mouse_nav_buttons">Activar los botones atrás y adelante del ratón</string>
-    <string name="title_unlock_fps">Desbloquear todas las opciones de tasa de cuadros disponibles</string>
-    <string name="summary_unlock_fps">Transmitir a 90 o 120 FPS puede reducir latencia en dispositivos de gama alta pero puede causar retrasos en dispositivos que no lo soporten</string>
     <string name="summary_enable_post_stream_toast">Mostrar un mensaje sobre la información de latencia cuando la transmisión termine</string>
     <string name="help">Ayuda</string>
     <string name="delete_pc_msg">¿Estás seguro de eliminar este PC\?</string>
@@ -232,7 +228,6 @@
     <string name="dialog_title_reset_osc">Reiniciar a Plantilla Predeterminada</string>
     <string name="dialog_text_reset_osc">¿Estás seguro de que quieres eliminar tus configuraciones guardadas para las plantillas de los controles en pantalla\?</string>
     <string name="toast_reset_osc_success">Establecer Controles en Pantalla en modo Predeterminado</string>
-    <string name="title_osc_opacity">Cambiar la transparencia de los controles en pantalla</string>
     <string name="summary_osc_opacity">Hacer los controles en pantalla más/menos transparentes</string>
     <string name="dialog_title_osc_opacity">Cambiar opacidad</string>
     <string name="summary_checkbox_enable_pip">Permite que la transmisión sea vista (pero no controlable) mientras se usa la multitarea</string>
@@ -246,15 +241,10 @@
     <string name="summary_setup_guide">Mostrar instrucciones para como configurar tu PC para juegos para la transmisión</string>
     <string name="summary_privacy_policy">Mostrar la política de privacidad de Moonlight</string>
     <string name="resolution_480p">480p</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
     <string name="title_frame_pacing">Ritmo de cuadros por segundo en video</string>
-    <string name="resolution_prefix_native_portrait">(Retrato)</string>
     <string name="frame_conversion_error">El PC anfitrión ha reportado un error fatal en el codificador de video.
 \n
 \nIntenta deshabilitar el modo HDR, cambiar la resolución de la transmisión, o cambiar la resolución de pantalla del PC anfitrión.</string>
-    <string name="resolution_prefix_native_landscape">(Panorama)</string>
     <string name="summary_checkbox_reduce_refresh_rate">Tasa de refresco menores pueden ahorrar energía a cambio de una mayor latencia de video</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir reducción de la tasa de refresco</string>
     <string name="title_full_range">Forzar video de rango completo (Experimental)</string>
@@ -262,7 +252,6 @@
     <string name="pair_pairing_help">Si el hostal del ordenador ejecuta Sunshine, navegue a la interfaz de usuario web de Sunshine para ingresar el PIN.</string>
     <string name="pcview_menu_eol">Fin de servicio de NVIDIA GameStream</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Advertencia sobre FPS nativos</string>
     <string name="category_gamepad_settings">Ajustes del Gamepad</string>
     <string name="title_checkbox_gamepad_motion_sensors">Permitir el uso de los sensores de movimiento del gamepad</string>
     <string name="videoformat_av1always">Preferir AV1 (Experimental)</string>
@@ -322,17 +311,13 @@
     <string name="dialog_title_pointer_velocity_factor">Establecer factor de velocidad del puntero para la zona de toque mejorada. Establecer 100% para deshabilitar</string>
     <string name="dialog_title_select_keys_to_delete">Seleccionar el botón a eliminar</string>
     <string name="dialog_virtual_keyboard_hint">Haz clic en las teclas para crear una combinación</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
     <string name="game_menu_add_custom_key">Agregar botón personalizado</string>
     <string name="game_menu_adjust_bitrate">Ajustar Tasa de Bits</string>
     <string name="game_menu_bitrate_adjustment_failed">Error al ajustar tasa de bits</string>
     <string name="game_menu_bitrate_adjustment_success">Tasa de bits ajustada exitosamente a %d Mbps</string>
-    <string name="game_menu_bitrate_current">Actual: %d Mbps</string>
     <string name="game_menu_bitrate_custom">Tasa de Bits Personalizada</string>
     <string name="game_menu_bitrate_range">Rango de Tasa de Bits:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
-    <string name="game_menu_bitrate_tip">Arrastra el deslizador para ajustar la tasa de bits en tiempo real. Valores más altos significan mejor calidad pero requieren mejor red.</string>
     <string name="game_menu_cancel">Cancelar</string>
     <string name="game_menu_configure_crown_function">Configurar Función Crown</string>
     <string name="game_menu_configure_settings">Cambiar de configuración</string>
@@ -444,7 +429,6 @@
     <string name="summary_checkbox_rotable_screen">Sincroniza automáticamente el diseño de la transmisión cuando el dispositivo cambia entre orientación vertical y horizontal.</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
     <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
-    <string name="summary_custom_resolutions">Crear tus propias resoluciones personalizadas</string>
     <string name="summary_enable_analytics">Ayudar a mejorar la aplicación compartiendo estadísticas de uso anónimas</string>
     <string name="summary_enable_perf_overlay">Mostrar información de rendimiento de transmisión en tiempo real mientras transmites</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">Define dónde dividir zonas de toque nativo y toque mejorado, menos del 50% significa dividir desde un punto a la izquierda, más del 50% significa derecha</string>
@@ -456,7 +440,6 @@
     <string name="summary_perf_overlay_orientation">Elegir la orientación de visualización para estadísticas de rendimiento</string>
     <string name="summary_perf_overlay_position">Elegir arriba/abajo para orientación horizontal, o cuatro posiciones de esquina para orientación vertical</string>
     <string name="summary_pointer_velocity_factor" formatted="false">Establecer factor de velocidad del puntero para zona de toque mejorada. Establecer 100% para deshabilitar</string>
-    <string name="summary_reset_perf_overlay_position">Reiniciar superposición de rendimiento a posición preestablecida</string>
     <string name="summary_screen_offset_x">Desplazamiento horizontal de la pantalla</string>
     <string name="summary_screen_offset_y">Desplazamiento vertical de la pantalla</string>
     <string name="summary_screen_position">Elegir la posición de la pantalla cuando se usa resolución no pantalla completa</string>
@@ -498,16 +481,13 @@
     <string name="title_enable_analytics">Habilitar Análisis</string>
     <string name="title_enable_perf_overlay">Mostrar estadísticas de rendimiento mientras transmites</string>
     <string name="title_enhanced_touch_zone_divider">Divisor de zona de toque mejorada</string>
-    <string name="title_export_super_config">Exportar Configuración</string>
     <string name="title_fixed_x_velocity">Establecer velocidad X (horizontal) fija</string>
     <string name="title_import_super_config">Importar Configuración</string>
-    <string name="title_merge_super_config">Fusionar Configuración</string>
     <string name="title_moonlight_vplus_pc_download">Descarga de Moonlight V+ PC</string>
     <string name="title_perf_overlay_display_items">Elementos de Visualización de Superposición de Rendimiento</string>
     <string name="title_perf_overlay_orientation">Orientación de Superposición de Rendimiento</string>
     <string name="title_perf_overlay_position">Posición de Superposición de Rendimiento</string>
     <string name="title_pointer_velocity_factor">Factor de velocidad del puntero</string>
-    <string name="title_reset_perf_overlay_position">Reiniciar Posición de Superposición de Rendimiento</string>
     <string name="title_screen_offset_x">Desplazamiento Horizontal</string>
     <string name="title_screen_offset_y">Desplazamiento Vertical</string>
     <string name="title_screen_position">Posición de Pantalla</string>
@@ -602,7 +582,7 @@
     <string name="pyrowave_diag_copy">Copiar</string>
     <string name="pyrowave_diag_copy_success">Informe copiado al portapapeles</string>
     <string name="pyrowave_diag_unavailable">No disponible</string>
-    <string name="image_saved_successfully">Imagen guardada correctamente en: Picture/vplus</string>
+    <string name="image_saved_successfully">Imagen guardada correctamente en: Pictures/vplus</string>
     <string name="image_save_failed_with_error">No se pudo guardar la imagen: %1$s</string>
     <string name="pyrowave_negotiation_fallback">La negociación de PyroWave ha fallado. Se cambia a %1$s.</string>
     <string name="title_list_mouse_axis_correction">Corrección de la dirección del ratón</string>

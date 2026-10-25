@@ -146,7 +146,6 @@
     <string name="pcview_menu_details">Переглянути деталі</string>
     <string name="poor_connection_msg">Слабке з\'єднання з пристроєм</string>
     <string name="title_details">Деталі</string>
-    <string name="title_unlock_fps">Розблокувати всі можливі частоти кадрів</string>
     <string name="applist_details_id">ID застосунку:</string>
     <string name="summary_checkbox_vibrate_osc">Вібрація пристрою для емуляції вібровіддачі при екранному управлінні</string>
     <string name="summary_checkbox_mouse_nav_buttons">Вмикання цієї опції може привести до неправильної роботи правої клавіші миші на деяких пристроях</string>
@@ -157,7 +156,6 @@
     <string name="title_checkbox_mouse_nav_buttons">Увімкнути ґудзики «вперед» та «назад» для миші</string>
     <string name="slow_connection_msg">Повільне підключення
 \nЗменшіть швидкість потоку</string>
-    <string name="summary_unlock_fps">Трансляція зі швидкістю 90 або 120 кадрів на секунду може зменшити затримку на швидких пристроях але, може викликати затримки або збої на слабших</string>
     <string name="perf_overlay_decoder">Розцифрувач: %1$s</string>
     <string name="perf_overlay_incomingfps">Вхідна частота кадрів з мережі: %1$.2f FPS</string>
     <string name="perf_overlay_renderingfps">Частота кадрів при відтворенні: %1$.2f FPS</string>
@@ -166,7 +164,6 @@
     <string name="summary_fps_list">Збільшіть для плавнішого відео потоку. Зменшіть для кращої продуктивності на повільних пристроях.</string>
     <string name="scut_invalid_uuid">Зазначений пристрій недійсний</string>
     <string name="scut_invalid_app_id">Зазначений застосунок недійсний</string>
-    <string name="title_osc_opacity">Змінити прозорість екранних елементів керування</string>
     <string name="summary_osc_opacity">Зробити екранні елементи керування більш/менш прозорими</string>
     <string name="dialog_title_osc_opacity">Зміна прозорості</string>
     <string name="suffix_osc_opacity">%</string>
@@ -178,7 +175,6 @@
     <string name="nettest_text_success">Схоже що ваша мережа не блокує Moonlight. Якщо у вас й надалі проблеми з підключенням, перевірте налаштування брандмауера.
 \n
 \nЯкщо ви намагаєтеся транслювати через Інтернет, встановіть на своєму пристрої Moonlight Internet Hosting Tool, та запустіть випробування мережі щоб перевірити ваше з\'єднання до Інтернету.</string>
-    <string name="resolution_prefix_native_fullscreen">Рідний повноекранний</string>
     <string name="resolution_prefix_native">Рідна</string>
     <string name="suffix_seekbar_bitrate_mbps">Мб/с</string>
     <string name="text_native_res_dialog">Власна роздільна здатність і/або FPS можуть не підтримуватися потоковим сервером. Ймовірно, вам доведеться вручну налаштувати відповідний спеціальний режим відображення для головного ПК.
@@ -227,10 +223,6 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 кадрів/сек</string>
-    <string name="fps_60">60 кадрів/сек</string>
-    <string name="fps_90">90 кадрів/сек</string>
-    <string name="fps_120">120 кадрів/сек</string>
     <string name="audioconf_stereo">Стерео</string>
     <string name="audioconf_51surround">5.1 Об\'ємний Звук</string>
     <string name="audioconf_71surround">7.1 Об\'ємний Звук</string>
@@ -244,8 +236,6 @@
     <string name="title_setup_guide">Гайд по налаштуванню</string>
     <string name="summary_setup_guide">Переглянути інструкцію, як налаштувати ігровий ПК для стрімінгу</string>
     <string name="pacing_balanced_alt">Обмежити вихідний FPS (до частоти оновлення екрана)</string>
-    <string name="resolution_prefix_native_landscape">(Горизонтальний)</string>
-    <string name="resolution_prefix_native_portrait">(Портретний)</string>
     <string name="title_checkbox_enable_audiofx">Увімкнення підтримки системного еквалайзера</string>
     <string name="summary_checkbox_absolute_mouse_mode">Це може зробити прискорення миші більш природним під час використання віддаленого робочого столу, але воно несумісне з багатьма іграми.</string>
     <string name="title_checkbox_reduce_refresh_rate">Дозволити зниження частоти оновлення</string>
@@ -264,7 +254,6 @@
     <string name="videoformat_av1always">Використовувати AV1 (експериментальний)</string>
     <string name="videoformat_h264always">Використовувати H.264</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Попередження рідного FPS</string>
     <string name="category_gamepad_settings">Налаштування геймпада</string>
     <string name="title_analog_scrolling">Використовувати аналоговий стік для прокручування</string>
     <string name="summary_analog_scrolling">Виберіть аналоговий стік для прокручування під час режиму емуляції миші</string>
@@ -347,7 +336,7 @@
     <string name="pyrowave_diag_copy">Копіювати</string>
     <string name="pyrowave_diag_copy_success">Звіт скопійовано до буфера обміну</string>
     <string name="pyrowave_diag_unavailable">Не вдалося отримати</string>
-    <string name="image_saved_successfully">Зображення успішно збережено в: Picture/vplus</string>
+    <string name="image_saved_successfully">Зображення успішно збережено в: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Не вдалося зберегти зображення: %1$s</string>
     <string name="tip_double_tap_mouse">Порада: натисніть і утримуйте порожню область угорі списку комп\'ютерів, щоб зберегти поточне фонове зображення.</string>
     <string name="pyrowave_negotiation_fallback">Не вдалося узгодити PyroWave. Перехід на %1$s.</string>

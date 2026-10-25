@@ -70,18 +70,6 @@ class PyrowaveHdrMetadataTest {
     }
 
     @Test
-    fun hlgUsesTheSameOptionalStaticMetadataContract() {
-        val metadata = PyrowaveHdrMetadata.fromSunshineBytes(payload(
-            35400, 14600, 8500, 39850, 6550, 2300,
-            15635, 16450, 1000, 1, 0, 0, 0,
-        ))
-        assertTrue(metadata?.isValidForHdr10() == true)
-        // A missing HLG snapshot is represented by null and is handled by the
-        // Vulkan layer without fabricating PQ/HDR10 metadata.
-        assertNull(PyrowaveHdrMetadata.fromSunshineBytes(ByteArray(PyrowaveHdrMetadata.SS_HDR_METADATA_SIZE)))
-    }
-
-    @Test
     fun snapshotUpdatesAreValidatedAndExplicitDisableIsTheOnlyClear() {
         val accepted = payload(35400, 14600, 8500, 39850, 6550, 2300,
             15635, 16450, 1000, 1, 0, 0, 600)

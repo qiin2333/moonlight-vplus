@@ -9,7 +9,6 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.KeyEvent
-import android.widget.CheckedTextView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -84,14 +83,6 @@ object AppDialogStyler {
     fun tintChoiceText(textView: TextView, context: Context) {
         textView.setTextColor(ContextCompat.getColor(context, R.color.app_dialog_text_primary))
         textView.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-    }
-
-    fun bindChoiceRow(row: View, textView: TextView, context: Context, checked: Boolean) {
-        row.isActivated = checked
-        if (textView is CheckedTextView) {
-            textView.isChecked = checked
-        }
-        tintChoiceText(textView, context)
     }
 
     fun clearTextShadows(view: View?) {

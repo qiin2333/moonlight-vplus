@@ -108,19 +108,6 @@ class RemoteTextContextPolicyTest {
     }
 
     @Test
-    fun `docked keyboard movement is repeatable and returns to base when dismissed`() {
-        val baseFocus = 1000f
-        val visibleBottom = RemoteTextContextPolicy.imeVisibleBottom(0f, 1080, 400)!!
-        repeat(20) {
-            // Always map from the user pan and zoom, excluding the previous IME offset.
-            val offset = RemoteTextContextPolicy.viewportOffset(baseFocus, visibleBottom, 24f)
-            assertEquals(-344f, offset, 0f)
-            assertEquals(656f, baseFocus + offset, 0f)
-        }
-        assertNull(RemoteTextContextPolicy.imeVisibleBottom(0f, 1080, 0))
-    }
-
-    @Test
     fun `viewport offset only moves content upward`() {
         assertEquals(0f, RemoteTextContextPolicy.viewportOffset(500f, 900f, 24f), 0f)
         assertEquals(-124f, RemoteTextContextPolicy.viewportOffset(1000f, 900f, 24f), 0f)

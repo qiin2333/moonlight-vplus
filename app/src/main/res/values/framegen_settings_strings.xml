@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_framegen_directory_create_failed">Unable to create the frame generation folder</string>
+    <string name="error_framegen_dll_open_failed">Unable to open the selected DLL file</string>
+    <string name="error_framegen_dll_empty">The selected DLL file is empty</string>
+</resources>

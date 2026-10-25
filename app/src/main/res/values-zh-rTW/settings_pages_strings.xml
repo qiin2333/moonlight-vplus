@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_page_frame_generation_title">插幀調整</string>
+    <string name="settings_page_frame_generation_summary">調整插幀渲染比例、回退門檻與影格呈現順序。</string>
+    <string name="settings_page_hdr_title">HDR 設定</string>
+    <string name="settings_page_hdr_summary">選擇 HDR 格式，調整螢幕亮度與手動校準。</string>
+    <string name="settings_page_picture_layout_title">畫面適配</string>
+    <string name="settings_page_picture_layout_summary">調整畫面延展、位置、偏移及寬高交換。</string>
+    <string name="settings_page_performance_overlay_title">效能監控</string>
+    <string name="settings_page_performance_overlay_summary">選擇效能指標、版面、顯示樣式及串流結束提示。</string>
+    <string name="settings_page_audio_passthrough_title">音訊直通</string>
+    <string name="settings_page_audio_passthrough_summary">設定音訊編解碼器、輸出緩衝與 AC3 相容方式。</string>
+    <string name="settings_page_audio_vibration_title">聲音轉震動</string>
+    <string name="settings_page_audio_vibration_summary">選擇震動輸出與情境，調整音訊模擬震動強度。</string>
+    <string name="settings_page_gamepad_title">手把設定</string>
+    <string name="settings_page_gamepad_summary">設定手把操作、玩家分配、震動、體感與裝置支援。</string>
+    <string name="settings_page_input_title">輸入設定</string>
+    <string name="settings_page_input_summary">設定觸控手勢、滑鼠、觸控板、鍵盤與快捷鍵。</string>
+    <string name="settings_section_gamepad_drivers">裝置支援</string>
+    <string name="settings_section_gamepad_feedback">震動</string>
+    <string name="settings_section_input_touch">觸控</string>
+    <string name="settings_section_input_mouse">滑鼠</string>
+    <string name="settings_section_input_keyboard">鍵盤</string>
+    <string name="settings_section_gamepad_controls">手把操作</string>
+    <string name="settings_section_gamepad_players">玩家</string>
+    <string name="settings_section_gamepad_motion">體感</string>
+</resources>

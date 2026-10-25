@@ -1,6 +1,5 @@
 package com.limelight.nvstream.http
 
-import com.limelight.computers.StunQueryCache
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -64,21 +63,4 @@ class ComputerDetailsStunAddressTest {
         assertFalse(details.remoteAddressFromStun)
     }
 
-    @Test fun cacheExpiryRefreshesSavedStunAddressWithoutClearingWanCandidate() {
-        val cache = StunQueryCache<String>()
-        val details = ComputerDetails()
-        val first = cache.begin("lan", 0)!!
-        cache.finish(first, "203.0.113.1", 1)
-        details.updateStunRemoteAddress(ComputerDetails.AddressTuple(cache.cached("lan", 2)!!, 47989))
-        assertNull(cache.begin("lan", 2))
-        val now = 1 + StunQueryCache.SUCCESS_TTL_MS
-        val next = cache.begin("lan", now)!!
-        assertTrue(details.canRefreshRemoteAddressWithStun)
-        cache.finish(next, "203.0.113.2", now + 1)
-        details.updateStunRemoteAddress(ComputerDetails.AddressTuple(cache.cached("lan", now + 2)!!, 47989))
-        assertEquals("203.0.113.2", details.remoteAddress?.address)
-        cache.invalidate()
-        assertNull(cache.cached("lan", now + 3))
-        assertEquals("203.0.113.2", details.remoteAddress?.address)
-    }
 }

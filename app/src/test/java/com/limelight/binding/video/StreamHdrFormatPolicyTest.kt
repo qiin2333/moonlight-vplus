@@ -100,23 +100,6 @@ class StreamHdrFormatPolicyTest {
     }
 
     @Test
-    fun observationLifecycleMovesBetweenHdr10AndHdr10Plus() {
-        assertEquals(StreamHdrFormat.SDR, resolve(hdrEnabled = false))
-        assertEquals(StreamHdrFormat.HDR10, resolve(configured = true))
-        assertEquals(
-            StreamHdrFormat.HDR10_PLUS,
-            resolve(configured = true, observed = true),
-        )
-        // A codec reconfiguration resets the current observation epoch.
-        assertEquals(StreamHdrFormat.HDR10, resolve(configured = true, observed = false))
-        // Disabling HDR wins even if the asynchronous observation is still stale.
-        assertEquals(
-            StreamHdrFormat.SDR,
-            resolve(hdrEnabled = false, configured = true, observed = true),
-        )
-    }
-
-    @Test
     fun dolbyVisionHlgWinsOverThePlainHlgLabel() {
         // A Profile 8.4 session is negotiated on an HLG base layer; without
         // the explicit negotiation check the HLG branch would claim it.

@@ -47,7 +47,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Rozciągnięcie wideo do pełnego ekranu</string>
     <string name="resolution_prefix_native">Natywna</string>
-    <string name="title_native_fps_dialog">Ostrzeżenie o natywnym FPS</string>
     <string name="title_checkbox_enable_audiofx">Włącz obsługę korektora systemowego</string>
     <string name="category_gamepad_settings">Ustawienia gamepada</string>
     <string name="title_checkbox_multi_controller">Automatyczne wykrywanie obecności gamepada</string>
@@ -85,7 +84,6 @@
     <string name="summary_only_l3r3">Ukryj wszystkie przyciski wirtualne z wyjątkiem L3 i R3</string>
     <string name="title_reset_osc">Wyczyść zapisany układ elementów sterujących na ekranie</string>
     <string name="toast_reset_osc_success">Przywrócenie domyślnych ustawień elementów sterujących na ekranie</string>
-    <string name="title_osc_opacity">Zmiana krycia elementów sterujących na ekranie</string>
     <string name="summary_osc_opacity">Zwiększanie/zmniejszanie przezroczystości elementów sterujących na ekranie</string>
     <string name="dialog_title_osc_opacity">Zmiana krycia</string>
     <string name="suffix_osc_opacity">%</string>
@@ -101,10 +99,8 @@
     <string name="title_checkbox_host_audio">Odtwarzanie dźwięku na komputerze</string>
     <string name="summary_checkbox_host_audio">Odtwarzanie dźwięku z komputera i tego urządzenia</string>
     <string name="category_advanced_settings">Ustawienia zaawansowane</string>
-    <string name="title_unlock_fps">Odblokuj wszystkie możliwe liczby klatek na sekundę</string>
     <string name="title_checkbox_reduce_refresh_rate">Zezwalaj na zmniejszenie częstotliwości odświeżania</string>
     <string name="summary_checkbox_reduce_refresh_rate">Niższe częstotliwości odświeżania wyświetlacza mogą oszczędzać energię kosztem dodatkowych opóźnień wideo</string>
-    <string name="summary_unlock_fps">Przesyłanie strumieniowe w 90 lub 120 klatkach na sekundę może zmniejszyć opóźnienia na urządzeniach wysokiej klasy, ale może powodować opóźnienia lub niestabilność na urządzeniach, które nie są w stanie tego obsłużyć</string>
     <string name="title_checkbox_disable_warnings">Wyłączanie komunikatów ostrzegawczych</string>
     <string name="summary_checkbox_disable_warnings">Wyłączanie wyświetlanych na ekranie komunikatów ostrzegawczych o połączeniu podczas przesyłania strumieniowego</string>
     <string name="title_disable_frame_drop">Nigdy nie porzucaj klatek</string>
@@ -124,10 +120,6 @@
     <string name="resolution_720p">720p</string>
     <string name="toast_controller_type_changed">Typ gamepada może zostać zmieniony z powodu emulacji czujnika ruchu</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="videoformat_h264always">Preferowany H.264</string>
     <string name="pacing_balanced_alt">Ogranicz wyjściowe FPS (do częstotliwości odświeżania)</string>
     <string name="pacing_smoothness">Płynność przede wszystkim (większe opóźnienie)</string>
@@ -214,9 +206,6 @@
     <string name="perf_overlay_netdrops">Ramki porzucone przez połączenie sieciowe: %1$.2f%%</string>
     <string name="perf_overlay_dectime">Średni czas dekodowania: %1$.2f ms</string>
     <string name="addpc_success">Dodano komputer z powodzeniem</string>
-    <string name="resolution_prefix_native_landscape">(Panoramiczny)</string>
-    <string name="resolution_prefix_native_fullscreen">Natywny pełny ekran</string>
-    <string name="resolution_prefix_native_portrait">(Portretowy)</string>
     <string name="resolution_1080p">1080p</string>
     <string name="help_loading_msg">Ładowanie strony pomocy…</string>
     <string name="pcview_menu_header_online">Online</string>
@@ -336,7 +325,7 @@
     <string name="pyrowave_diag_copy">Kopiuj</string>
     <string name="pyrowave_diag_copy_success">Raport skopiowano do schowka</string>
     <string name="pyrowave_diag_unavailable">Nie można ustalić</string>
-    <string name="image_saved_successfully">Obraz zapisano w: Picture/vplus</string>
+    <string name="image_saved_successfully">Obraz zapisano w: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Nie udało się zapisać obrazu: %1$s</string>
     <string name="tip_double_tap_mouse">Wskazówka: przytrzymaj pusty obszar u góry listy komputerów, aby zapisać bieżący obraz tła.</string>
     <string name="pyrowave_negotiation_fallback">Negocjacja PyroWave nie powiodła się. Przełączanie na %1$s.</string>

@@ -76,8 +76,6 @@
 \n
 \nPor fim, o seu aparelho ou PC host pode não suportar transmissões na resolução nativa. Se não funcionar no seu aparelho, está sem sorte, infelizmente.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="resolution_prefix_native_landscape">(Paisagem)</string>
-    <string name="resolution_prefix_native_portrait">(Retrato)</string>
     <string name="title_audio_config_list">Configurações de som Surround</string>
     <string name="title_checkbox_enable_audiofx">Ativar sistema de suporte à equalização</string>
     <string name="title_checkbox_multi_controller">Detecção automática de gamepad</string>
@@ -97,7 +95,6 @@
     <string name="summary_only_l3r3">Esconde todos os botões virtuais exceto o L3 e R3</string>
     <string name="dialog_title_reset_osc">Resetar Layout</string>
     <string name="toast_reset_osc_success">Controles de ecrã redefinidos para o padrão</string>
-    <string name="title_osc_opacity">Mudar a opacidade dos controles de ecrã</string>
     <string name="dialog_title_osc_opacity">Mudar opacidade</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="category_ui_settings">Configurações de Interface</string>
@@ -106,8 +103,6 @@
     <string name="summary_checkbox_small_icon_mode">Diminui o tamanho dos ícones permitindo que mais apps sejam visíveis no ecrã</string>
     <string name="summary_checkbox_host_audio">Reproduz o áudio do computador e deste aparelho</string>
     <string name="category_advanced_settings">Configurações Avançadas</string>
-    <string name="title_unlock_fps">Liberar todas as taxas de quadros possíveis</string>
-    <string name="summary_unlock_fps">Transmitir a 90 ou 120 FPS pode reduzir a latência em aparelhos de última geração, mas pode causar atraso ou instabilidade em aparelhos que não suportam</string>
     <string name="title_checkbox_reduce_refresh_rate">Permitir redução de taxa de atualização</string>
     <string name="summary_checkbox_reduce_refresh_rate">Taxas menores de atualização do display podem gravar energia ao custo de latência de video adicional</string>
     <string name="summary_checkbox_disable_warnings">Desativa as mensagens de aviso de conexão no ecrã durante a transmissão</string>
@@ -121,9 +116,6 @@
     <string name="summary_troubleshooting">Veja dicas para diagnosticar e corrigir problemas comuns de streaming</string>
     <string name="resolution_360p">360p</string>
     <string name="resolution_1080p">1080p</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround</string>
     <string name="videoformat_auto">Automático (recomendado)</string>
@@ -184,7 +176,6 @@
     <string name="summary_seekbar_bitrate">Uma taxa de bits mais alta melhora a qualidade da imagem, mas usa mais largura de banda; uma taxa mais baixa é melhor para redes lentas ou instáveis. Se a transmissão travar, reduza-a primeiro e aumente-a quando a rede estiver estável, mas a imagem continuar pouco nítida; para 1080p60, comece com cerca de 10–20 Mbps.</string>
     <string name="title_checkbox_stretch_video">Esticar vídeo ao ecrã cheio</string>
     <string name="resolution_prefix_native">Nativa</string>
-    <string name="resolution_prefix_native_fullscreen">Ecrã Cheio Nativo</string>
     <string name="category_audio_settings">Configurações de Áudio</string>
     <string name="summary_audio_config_list">Ativa o som Surround 5.1 ou 7.1 para sistemas de home theater</string>
     <string name="category_input_settings">Configurações de Controles</string>
@@ -235,7 +226,6 @@
     <string name="summary_setup_guide">Veja instruções sobre como configurar o seu PC para streaming</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
     <string name="pacing_latency">Baixa latência (resposta mais rápida)</string>
     <string name="title_checkbox_mouse_nav_buttons">Ativar os botões de voltar e avançar do rato</string>
     <string name="summary_checkbox_mouse_nav_buttons">Ativar esta opção pode bugar o clique com o botão direito em alguns aparelhos com bugs</string>
@@ -288,26 +278,20 @@
     <string name="game_menu_send_keys_alt_home">Enviar ALT + HOME (Alternar RTSS)</string>
     <string name="game_menu_adjust_bitrate">Ajustar taxa de bits</string>
     <string name="game_menu_bitrate_custom">Taxa de bits personalizada</string>
-    <string name="game_menu_bitrate_current">Atual: %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_success">Taxa de bits ajustada com sucesso para %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">Falha ao ajustar taxa de bits</string>
     <string name="game_menu_ok">OK</string>
     <string name="game_menu_bitrate_range">Intervalo de taxa de bits:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
-    <string name="game_menu_bitrate_tip">Arraste o controle deslizante para ajustar a taxa de bits em tempo real. Valores mais altos significam melhor qualidade, mas exigem melhor rede.</string>
     
     <!-- Resolution settings -->
     <string name="title_seekbar_scale">Escala de resolução do host</string>
     <string name="summary_seekbar_scale">A resolução solicitada ao host é equivalente à resolução base do cliente × fator de escala. Isso alterará a precisão do material de renderização do jogo no host (streaming de super resolução).</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Aviso de FPS nativo</string>
     <string name="title_custom_resolutions">Resoluções personalizadas</string>
-    <string name="summary_custom_resolutions">Crie suas próprias resoluções personalizadas</string>
     <string name="width_hint">ex: 1920</string>
     <string name="height_hint">ex: 1080</string>
     <string name="resolution_already_exists">Esta resolução já existe</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
     
     <!-- Audio settings -->
     <string name="title_checkbox_enable_spatializer">Ativar áudio espacial (Android 13+)</string>
@@ -412,8 +396,6 @@
     <string name="summary_perf_overlay_orientation">Escolha a orientação de exibição para estatísticas de desempenho</string>
     <string name="title_perf_overlay_position">Posição do overlay de desempenho</string>
     <string name="summary_perf_overlay_position">Escolha superior/inferior para orientação horizontal, ou quatro posições de canto para vertical</string>
-    <string name="title_reset_perf_overlay_position">Redefinir posição do overlay de desempenho</string>
-    <string name="summary_reset_perf_overlay_position">Redefinir overlay de desempenho para posição predefinida</string>
     <string name="title_perf_overlay_display_items">Itens de exibição do overlay de desempenho</string>
     <string name="summary_perf_overlay_display_items">Selecionar itens de informação para exibir no overlay de desempenho</string>
     <string name="title_checkbox_lock_screen_after_disconnect">Bloquear tela ao desconectar e sair do stream</string>
@@ -462,11 +444,9 @@
     <string name="category_crown_features">Área de recursos Crown</string>
     <string name="title_crown_super_features">Super recursos Crown</string>
     <string name="summary_crown_super_features">Uma solução de botões virtuais na tela. Alterne os botões na tela, as ações rápidas, o modo de toque e as configurações de vibração como perfis nomeados.</string>
-    <string name="title_export_super_config">Exportar configuração</string>
     <string name="summary_export_super_config">Exportar arquivo de configuração de botões personalizados e configurações de streaming</string>
     <string name="title_import_super_config">Importar configuração</string>
     <string name="summary_import_super_config">Importar arquivo de configuração de botões personalizados e configurações de streaming</string>
-    <string name="title_merge_super_config">Mesclar configuração</string>
     <string name="summary_merge_super_config">Mesclar novos botões de configuração na configuração existente</string>
     <string name="crown_toggle_button">Crown</string>
     <string name="crown_mode_normal">Modo normal</string>
@@ -670,7 +650,7 @@
     <string name="image_download_failed_with_error">Falha no download da imagem: %1$s</string>
     <string name="image_not_loaded_please_retry">Imagem não carregada, tente novamente mais tarde</string>
     <string name="image_invalid">Imagem inválida</string>
-    <string name="image_saved_successfully">Imagem guardada com sucesso em: Picture/vplus</string>
+    <string name="image_saved_successfully">Imagem guardada com sucesso em: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Falha ao guardar a imagem: %1$s</string>
     <string name="config_save_failed">Falha ao salvar configuração</string>
     <string name="scene_config_applied">Configuração da cena %1$d aplicada: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>

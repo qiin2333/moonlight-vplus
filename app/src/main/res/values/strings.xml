@@ -218,13 +218,12 @@
     <string name="game_menu_send_keys_alt_home">Alt+Home (Toggle RTSS)</string>
     <string name="game_menu_adjust_bitrate">Adjust Bitrate</string>
     <string name="game_menu_bitrate_custom">Custom Bitrate</string>
-    <string name="game_menu_bitrate_current">Current: %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_success">Bitrate set to %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">Couldn\'t adjust bitrate</string>
     <string name="game_menu_ok">OK</string>
+    <string name="custom_list_save">Save</string>
     <string name="game_menu_bitrate_range">Bitrate Range:</string>
     <string name="game_menu_bitrate_range_value">0.5 - 200 Mbps</string>
-    <string name="game_menu_bitrate_tip">Drag the slider to adjust bitrate in real time. Higher values improve image quality but require a faster, more stable connection.</string>
 
     <!-- Add computer manually activity -->
     <string name="title_add_pc">Add PC Manually</string>
@@ -258,7 +257,7 @@
 
     <!-- Preferences -->
     <string name="category_basic_settings">Stream quality</string>
-    <string name="category_advanced_features">Performance</string>
+    <string name="category_advanced_features">Streaming performance</string>
     <string name="title_resolution_list">Stream resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
@@ -266,12 +265,13 @@
     <string name="title_fps_list">Stream frame rate</string>
     <string name="summary_fps_list">Increase for a smoother video stream. Decrease for better performance on lower end devices.</string>
     <string name="title_seekbar_bitrate">Stream bitrate</string>
-    <string name="summary_seekbar_bitrate">Higher bitrate improves picture quality and uses more bandwidth.</string>
+    <string name="summary_seekbar_bitrate">Higher bitrate improves image quality but uses more bandwidth; lower bitrate is better for slower or unstable networks. Lower it first if streaming stutters, and raise it when the image is too soft and the network is stable; for 1080p60, start around 10–20 Mbps.</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
-    <string name="title_adaptive_bitrate">Automatically adjust bitrate (ABR)</string>
-    <string name="summary_adaptive_bitrate">Adjust video bitrate to network conditions. Can be used independently of FEC.</string>
-    <string name="title_abr_mode">Bitrate adjustment preference</string>
-    <string name="summary_abr_mode">Choose the balance between picture quality and responsiveness.</string>
+    <string name="title_adaptive_bitrate">Adaptive bitrate</string>
+    <string name="summary_adaptive_bitrate">Auto-adjust bitrate based on packet loss and latency. Falls back to a local controller when the host doesn\'t support server-side ABR.</string>
+    <string name="game_menu_adaptive_bitrate_tip">Auto-adjust bitrate based on packet loss and latency, preferring Sunshine server-side control. Adaptive bitrate starts from the baseline bitrate and adjusts around it. The selected ABR mode controls the minimum and maximum range.</string>
+    <string name="title_abr_mode">Adaptive bitrate mode</string>
+    <string name="summary_abr_mode">Quality prefers higher bitrate; Low-latency drops faster on packet loss.</string>
     <string name="abr_mode_quality">Quality</string>
     <string name="abr_mode_balanced">Balanced</string>
     <string name="abr_mode_low_latency">Low latency</string>
@@ -280,13 +280,8 @@
     <string name="title_checkbox_stretch_video">Stretch video to full-screen</string>
     <string name="summary_checkbox_stretch_video">Fill the display by changing the stream image\'s aspect ratio. This can distort the picture.</string>
     <string name="resolution_prefix_native">Native</string>
-    <string name="resolution_prefix_native_fullscreen">Native Full-Screen</string>
-    <string name="resolution_prefix_native_landscape">(Landscape)</string>
-    <string name="resolution_prefix_native_portrait">(Portrait)</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Native FPS Warning</string>
     <string name="title_custom_resolutions">Custom resolutions</string>
-    <string name="summary_custom_resolutions">Add or remove resolutions offered by the stream resolution list</string>
     <string name="width_hint">e.g. 1920</string>
     <string name="height_hint">e.g. 1080</string>
     <string name="resolution_already_exists">This resolution already exists</string>
@@ -310,6 +305,9 @@
     <string name="custom_resolution_tag_4k">4K</string>
     <string name="custom_resolution_tag_2k">2K</string>
     <string name="custom_resolution_tag_1080p">1080p</string>
+    <string name="custom_resolution_tag_720p">720p</string>
+    <string name="custom_resolution_tag_480p">480p</string>
+    <string name="custom_resolution_tag_360p">360p</string>
     <string name="custom_resolution_tag_ultrawide">Ultrawide</string>
     <string name="custom_resolution_tag_portrait">Portrait</string>
     <string name="custom_resolution_delete_contentdesc">Delete %1$d×%2$d</string>
@@ -342,7 +340,7 @@
     <string name="summary_list_mic_icon_color">Choose the color scheme for the microphone button icon</string>
     <string name="title_checkbox_show_mic_button">Show floating microphone button when streaming starts</string>
     <string name="summary_checkbox_show_mic_button">Show the microphone button when streaming. You can drag it and its position will be remembered.</string>
-    <string name="title_list_mic_button_position">Quick button position</string>
+    <string name="title_list_mic_button_position">Microphone button position</string>
     <string name="summary_list_mic_button_position">Place the microphone button at a screen edge. A dragged position overrides this preset until you choose a preset again.</string>
     <string name="mic_button_position_top_left">Top left</string>
     <string name="mic_button_position_top_center">Top center</string>
@@ -367,7 +365,7 @@
     <string name="title_checkbox_mic_voice_enhancement">Voice enhancement</string>
     <string name="summary_checkbox_mic_voice_enhancement">Reduce low-frequency noise and improve speech clarity. Available in both fixed gain and volume balance modes.</string>
     <string name="title_checkbox_reduce_refresh_rate">Allow a lower display refresh rate</string>
-    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced mode. Matching the stream with a lower display refresh rate can save power but may add video latency.</string>
+    <string name="summary_checkbox_reduce_refresh_rate">Only applies to Balanced frame pacing. A lower matching refresh rate can save power but may add video latency.</string>
 
     <string name="category_gamepad_settings">Gamepad</string>
     <string name="title_combine_joycons">Combine Joy-Con controllers</string>
@@ -376,7 +374,7 @@
     <string name="joycon_capability_missing">Not exposed by Android</string>
     <string name="joycon_capability_unchecked">Not checked</string>
     <string name="summary_combine_joycons">Use a first-generation left and right Joy-Con as one player, held vertically. Automatically pairs only when one unpaired controller of each side is connected. Applies to the next stream.</string>
-    <string name="title_checkbox_multi_controller">Separate controllers and players</string>
+    <string name="title_checkbox_multi_controller">Assign controllers to separate players</string>
     <string name="summary_checkbox_multi_controller">Expose each connected controller as a separate controller on the host. Turn off to combine them as one.</string>
     <string name="title_list_game_rumble_mode">Host game rumble output</string>
     <string name="summary_list_game_rumble_mode">Choose where rumble events sent by the game are delivered. This is separate from audio-simulated vibration.</string>
@@ -402,7 +400,7 @@
     <!-- Legacy translations retained for backup-era resource compatibility; no preference uses them. -->
     <string name="title_checkbox_mouse_emulation">Gamepad mouse mode (legacy)</string>
     <string name="summary_checkbox_mouse_emulation">This retired setting is preserved only for older translations and backups.</string>
-    <string name="title_checkbox_enable_start_key_menu">Start hold action wheel</string>
+    <string name="title_checkbox_enable_start_key_menu">Hold Start for the action wheel</string>
     <string name="summary_checkbox_enable_start_key_menu">Hold Start, then choose the stream menu, gamepad mouse mode, keyboard, or performance stats. Turn off to disable this shortcut.</string>
     <string name="title_controller_diagnostic">Controller shortcut test</string>
     <string name="summary_controller_diagnostic">Learn and test controller shortcuts</string>
@@ -512,7 +510,7 @@
     <string name="title_checkbox_touch_keyboard_auto_invoke">Auto-invoke the PC touch keyboard</string>
     <string name="summary_checkbox_touch_keyboard_auto_invoke">When enabled, the streamed PC shows its touch keyboard when a text field gains focus (Sunshine hosts with the virtual touchscreen).</string>
     <string name="title_checkbox_remote_ime_auto_show">Auto-open the local keyboard for remote text fields</string>
-    <string name="summary_checkbox_remote_ime_auto_show">When the streamed PC focuses a text field, open the local keyboard automatically (Android 11 and later). Strokes on the video stay remote input.</string>
+    <string name="summary_checkbox_remote_ime_auto_show">When the streamed PC focuses a text field, open the local keyboard automatically (Android 11 and later). Touch gestures on the video continue to control the remote PC.</string>
 
     <string name="title_checkbox_sync_touch_event_with_display">Align touch delivery with display refresh</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Batch touch updates to the local display refresh cadence. This may improve consistency but can add input delay.</string>
@@ -566,7 +564,7 @@
     <string name="dialog_title_fixed_x_velocity">Set fixed X (horizontal) velocity in pixels. Set 0 to disable fixed x velocity.</string>
     <string name="suffix_fixed_x_velocity">pixels</string>
 
-    <string name="category_on_screen_controls_settings">On-screen virtual gamepad buttons</string>
+    <string name="category_on_screen_controls_settings">On-screen gamepad</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_checkbox_vibrate_osc">Enable vibration</string>
@@ -580,27 +578,24 @@
     <string name="dialog_title_reset_osc">Reset Layout</string>
     <string name="dialog_text_reset_osc">Are you sure you want to delete your saved on-screen controls layout?</string>
     <string name="toast_reset_osc_success">On-screen controls reset to default</string>
-    <string name="title_osc_opacity">Change opacity of on-screen controls</string>
     <string name="summary_osc_opacity">Make the on-screen controls more/less transparent</string>
     <string name="dialog_title_osc_opacity">On-screen control opacity</string>
     <string name="suffix_osc_opacity">%</string>
-
-    <string name="category_float_ball_settings">Float Ball Settings</string>
-    <string name="title_checkbox_enable_float_ball">Enable Float Ball</string>
-    <string name="summary_checkbox_enable_float_ball">Show an interactive floating ball for quick actions</string>
-    <string name="title_list_float_ball_position">Quick float ball position</string>
-    <string name="summary_list_float_ball_position">Place the float ball at a screen edge. Dragging overrides this preset until you choose a preset again.</string>
-    <string name="title_seekbar_float_ball_auto_hide_delay">Auto-hide Delay</string>
+    <string name="title_checkbox_enable_float_ball">Enable floating ball</string>
+    <string name="summary_checkbox_enable_float_ball">Show a floating ball for quick actions.</string>
+    <string name="title_list_float_ball_position">Floating ball position</string>
+    <string name="summary_list_float_ball_position">Place the floating ball at a screen edge. Dragging overrides this preset until you choose a preset again.</string>
+    <string name="title_seekbar_float_ball_auto_hide_delay">Auto-hide delay</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">Time before the float ball automatically hides to the screen edge</string>
     <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
 
     <!-- Float Ball Gesture Actions -->
-    <string name="title_float_ball_single_click_action">Single Click Action</string>
-    <string name="summary_float_ball_single_click_action">Action performed when float ball is tapped once</string>
-    <string name="title_float_ball_double_click_action">Double Click Action</string>
-    <string name="summary_float_ball_double_click_action">Action performed when float ball is double-tapped</string>
-    <string name="title_float_ball_long_click_action">Long Press Action</string>
-    <string name="summary_float_ball_long_click_action">Action performed when float ball is long-pressed</string>
+    <string name="title_float_ball_single_click_action">Tap action</string>
+    <string name="summary_float_ball_single_click_action">Action performed when the floating ball is tapped once.</string>
+    <string name="title_float_ball_double_click_action">Double-tap action</string>
+    <string name="summary_float_ball_double_click_action">Action performed when the floating ball is tapped twice.</string>
+    <string name="title_float_ball_long_click_action">Long-press action</string>
+    <string name="summary_float_ball_long_click_action">Action performed when the floating ball is held down.</string>
     <string name="title_float_ball_swipe_up_action">Swipe Up Action</string>
     <string name="summary_float_ball_swipe_up_action">Action performed when swiping float ball upward</string>
     <string name="title_float_ball_swipe_down_action">Swipe Down Action</string>
@@ -620,8 +615,8 @@
     <string name="float_ball_action_lock_screen">Lock Screen</string>
 
     <string name="category_ui_settings">Interface</string>
-    <string name="category_backup_restore">Backup &amp; sync</string>
-    <string name="category_display_behavior">Display &amp; layout</string>
+    <string name="category_backup_restore">Settings backup</string>
+    <string name="category_display_behavior">Display</string>
     <string name="title_checkbox_enable_pip">Picture-in-Picture (view only)</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>
     <string name="title_checkbox_enable_background_audio">Background Audio Mode</string>
@@ -686,7 +681,7 @@
     <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
     <string name="category_host_settings">Host</string>
-    <string name="title_checkbox_enable_sops">Optimize game settings</string>
+    <string name="title_checkbox_enable_sops">Automatically optimize game settings</string>
     <string name="summary_checkbox_enable_sops">Allow compatible host software to adjust supported games for the requested stream resolution and quality. Changes are made on the host.</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
@@ -713,16 +708,14 @@
     <string name="screen_combination_mode_selected">Selected</string>
 
     <string name="category_advanced_settings">Advanced Settings</string>
-    <string name="title_unlock_fps">Show high frame-rate options</string>
-    <string name="summary_unlock_fps">Streaming at 90 or 120 FPS may reduce latency on high-end devices but can cause lag or instability on devices that can\'t support it</string>
     <string name="title_checkbox_disable_warnings">Hide stream warning notifications</string>
     <string name="summary_checkbox_disable_warnings">Hide connection-quality warning overlays during a stream</string>
     <string name="title_disable_frame_drop">Never drop frames</string>
     <string name="summary_disable_frame_drop">May reduce micro-stuttering on some devices, but can increase latency</string>
     <string name="title_video_format">Video codec</string>
-    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR; PyroWave uses the experimental Vulkan path on compatible Sunshine hosts and follows the selected color range. It does not support frame generation.</string>
+    <string name="summary_video_format">Not sure what to choose? Use Auto. HEVC is recommended for most modern devices and usually balances image quality, bandwidth, and HDR; AV1 can save bandwidth when both ends support it, but may have higher decoding latency on some devices; H.264 has the best compatibility, but needs more bandwidth and does not support HDR.</string>
     <string name="title_enable_hdr">Enable HDR (Experimental)</string>
-    <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
+    <string name="summary_enable_hdr">Enable HDR streaming when supported by the game, host encoder, and this device. The HDR switch in the stream menu controls Windows HDR.</string>
     <string name="title_enable_hdr_high_brightness">Maximum display brightness for HDR</string>
     <string name="summary_enable_hdr_high_brightness">Set this device\'s display to maximum brightness during HDR streams. This can increase power use and heat.</string>
     <string name="title_hdr_brightness_override">Manual HDR brightness calibration</string>
@@ -750,7 +743,7 @@
     <string name="summary_enable_jitter_monitor">Overlay a real-time present-interval jitter chart (judder%, jitter, histogram) while streaming. No performance impact when disabled.</string>
     <string name="jitter_monitor_empty_title">Waiting for frame data</string>
     <string name="jitter_monitor_empty_message">The chart will appear after playback samples arrive</string>
-    <string name="title_enable_host_cadence_precise_sync">Host frame pacing enhancement</string>
+    <string name="title_enable_host_cadence_precise_sync">Extra smoothness for Precise Sync</string>
     <string name="summary_enable_host_cadence_precise_sync">Helps reduce tiny repeated stutters on stable networks, especially at 90/120 FPS. May add about 1-3 ms of latency.</string>
     <string name="title_perf_overlay_orientation">Performance stats layout</string>
     <string name="summary_perf_overlay_orientation">Choose a horizontal row or vertical column.</string>
@@ -764,8 +757,6 @@
     <string name="perf_overlay_clock_format_12_seconds">12-hour format, including seconds</string>
     <string name="title_perf_overlay_position">Performance stats position</string>
     <string name="summary_perf_overlay_position">Place a horizontal layout at the top or bottom, or a vertical layout in a corner.</string>
-    <string name="title_reset_perf_overlay_position">Reset Performance Overlay Position</string>
-    <string name="summary_reset_perf_overlay_position">Reset performance overlay to preset position</string>
     <string name="title_perf_overlay_display_items">Performance stats metrics</string>
     <string name="summary_perf_overlay_display_items">Choose which stream, decoder, network, host, and device metrics to show.</string>
     <string name="title_perf_overlay_bg_opacity">Performance stats background opacity</string>
@@ -869,12 +860,6 @@
     <string name="title_show_low_resolution_presets">Show low-bandwidth resolutions</string>
     <string name="summary_show_low_resolution_presets">Add 360p and 480p compatibility options for very slow networks and lower-end devices.</string>
 
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
-    <string name="fps_144">144 FPS</string>
-    <string name="fps_165">165 FPS</string>
 
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 Surround Sound</string>
@@ -888,13 +873,13 @@
     <string name="videoformat_h264always">Prefer H.264</string>
 
     <string name="title_frame_pacing">Stream frame pacing</string>
-    <string name="summary_frame_pacing">Choose how video frames are paced. Precise frame pacing can use video timestamps (PTS) and is recommended for most devices.</string>
-    <string name="pacing_latency">Low latency (faster response)</string>
-    <string name="pacing_balanced">Balanced (latency and smoothness)</string>
-    <string name="pacing_balanced_alt">Limit output FPS (up to display refresh rate)</string>
-    <string name="pacing_smoothness">Smoothness first (higher latency)</string>
-    <string name="pacing_experimental_low_latency">Ultra-low latency (experimental)</string>
-    <string name="pacing_precise_sync">Precise frame pacing (recommended)</string>
+    <string name="summary_frame_pacing">Specify how to balance video latency and smoothness</string>
+    <string name="pacing_latency">Prefer lowest latency</string>
+    <string name="pacing_balanced">Balanced</string>
+    <string name="pacing_balanced_alt">Balanced with FPS limit</string>
+    <string name="pacing_smoothness">Prefer smoothest video (may significantly increase latency)</string>
+    <string name="pacing_experimental_low_latency">Experimental ultra-low latency</string>
+    <string name="pacing_precise_sync">Precise Sync (Recommended)</string>
 
     <string name="title_analog_scrolling">Use an analog stick to scroll</string>
     <string name="summary_analog_scrolling">Select an analog stick to scroll when in mouse emulation mode</string>
@@ -908,7 +893,7 @@
     <string name="mic_permission_required">Microphone permission required</string>
     
     <!-- Screen position settings -->
-    <string name="category_screen_position_settings">Encoding &amp; HDR</string>
+    <string name="category_screen_position_settings">Video</string>
     <string name="title_screen_position">Stream image position</string>
     <string name="summary_screen_position">Anchor an unscaled stream image when it does not fill the display.</string>
     <string name="title_screen_offset_x">Horizontal image offset</string>
@@ -920,19 +905,15 @@
     <string name="category_crown_features">Crown</string>
     <string name="title_crown_super_features">Enable Crown profiles</string>
     <string name="summary_crown_super_features">A virtual on-screen button solution. Switch on-screen buttons, quick actions, touch mode, and vibration feedback settings together as named profiles.</string>
-    <string name="title_export_super_config">Export Configuration</string>
     <string name="summary_export_super_config">Export custom button and streaming settings configuration file</string>
     <string name="title_import_super_config">Import Configuration</string>
     <string name="summary_import_super_config">Import custom button and streaming settings configuration file</string>
-    <string name="title_merge_super_config">Merge Configuration</string>
     <string name="summary_merge_super_config">Merge new configuration buttons into existing configuration</string>
     <string name="title_crown_config_management">Manage Crown profiles</string>
     <string name="summary_crown_config_management">Create, select, import, export, or merge on-screen control and touch profiles.</string>
     <string name="crown_config_action_import">Import Configuration</string>
     <string name="crown_config_action_export">Export Configuration</string>
     <string name="crown_config_action_import_legacy">Import Legacy .mdat</string>
-    <string name="crown_config_action_export_legacy">Export Legacy .mdat</string>
-    <string name="crown_config_action_merge">Merge Configuration</string>
     <string name="crown_config_no_profiles">No Crown profiles available</string>
     <string name="title_crown_store_view">Crown</string>
     <string name="crown_store_tab_store">Crown Market</string>
@@ -985,7 +966,6 @@
     <string name="message_crown_store_layout_mismatch">Fit: this Crown was tuned for %1$s. Your screen is %2$s, so buttons may need a tiny nudge after import.</string>
     <string name="action_crown_store_continue_import">Import Anyway</string>
     <string name="crown_store_updated_at">Last updated: %1$s</string>
-    <string name="crown_store_action_browse">Visit Crown Store</string>
     <string name="crown_store_action_publish">Submit to Crown Store</string>
     <string name="crown_store_source_label">Crown Store: %1$s</string>
     <string name="title_crown_store_publish_metadata">Introduce this profile</string>
@@ -1015,7 +995,6 @@
     <string name="action_open_pull_request">Open pull request</string>
     <string name="crown_share_action_import">Import Share Package</string>
     <string name="crown_share_action_import_url">Import from Link</string>
-    <string name="crown_share_action_export">Export Share Package</string>
     <string name="crown_share_install_as_new">Install as New</string>
     <string name="crown_share_merge_into_existing">Merge into Existing</string>
     <string name="crown_share_unknown_value">Unknown</string>
@@ -1137,9 +1116,9 @@
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Swap stream width and height</string>
-    <string name="summary_checkbox_reverse_resolution">Enable only when the image orientation or width and height are incorrect; it may conflict with Follow device rotation.</string>
+    <string name="summary_checkbox_reverse_resolution">Request the selected resolution with its width and height exchanged. Use only for portrait or unusual display layouts.</string>
     <string name="title_checkbox_rotable_screen">Follow device rotation</string>
-    <string name="summary_checkbox_rotable_screen">Automatically synchronize the stream layout when the device switches between portrait and landscape orientation.</string>
+    <string name="summary_checkbox_rotable_screen">Rotate the stream layout when this device\'s orientation changes.</string>
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
@@ -1150,7 +1129,7 @@
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>
-    <string name="tip_double_tap_mouse">💡 Tip: Long press the blank area at the top of the computer list to save the current background image.</string>
+    <string name="tip_double_tap_mouse">💡 Tip: Long press the top blank area on the host list page to download the current wallpaper~</string>
     <string name="tip_long_press_controller">💡 Tip: Long press an app to choose virtual display streaming, super convenient!</string>
     <string name="tip_volume_keys">💡 Tip: Using 5GHz WiFi provides a better experience, lightning fast speeds~</string>
     <string name="tip_wallpaper_change">💡 Tip: The wallpaper API option can set the API for random wallpaper sources, or a single image address</string>
@@ -1224,7 +1203,7 @@
     <string name="toast_touch_mode_native_mouse_on">Native mouse pointer enabled</string>
 
     <!-- 本地鼠标模式预设 -->
-    <string name="title_list_native_mouse_mode_preset">Control method preset</string>
+    <string name="title_list_native_mouse_mode_preset">Pointer control mode</string>
     <string name="summary_list_native_mouse_mode_preset">Choose between a split touch/pointer layout, direct pointer positioning, relative touchpad movement, or captured external-mouse input.</string>
     <string name="native_mouse_mode_preset_enhanced">Split direct touch (touch + pointer zones)</string>
     <string name="native_mouse_mode_preset_classic">Direct pointer positioning</string>
@@ -1384,7 +1363,7 @@
     <string name="image_download_failed_with_error">Image download failed: %1$s</string>
     <string name="image_not_loaded_please_retry">Image not loaded, please try again later</string>
     <string name="image_invalid">Invalid image</string>
-    <string name="image_saved_successfully">Image successfully saved to: Picture/vplus</string>
+    <string name="image_saved_successfully">Image successfully saved to system directory (Pictures/vplus)</string>
     <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
@@ -1468,7 +1447,7 @@
     <string name="summary_framegen_enabled">Generate extra frames on the phone for smoother streaming. For 120 Hz output, set stream FPS to 60; values above half of the target refresh rate will not improve frame generation.</string>
     <string name="summary_framegen_enabled_locked">Unlock developer features first to enable frame generation.</string>
     <string name="summary_framegen_enabled_needs_dll">Import the frame generation engine file first, then enable this for your next stream.</string>
-    <string name="title_framegen_adaptive_enabled">Weak-network frame fill</string>
+    <string name="title_framegen_adaptive_enabled">Compensate for dropped frames</string>
     <string name="summary_framegen_adaptive_enabled">During packet loss or unstable frame delivery, use frame generation to stay near the current target FPS. This does not require setting stream FPS to 60.</string>
     <string name="title_framegen_quality_preset">Frame generation quality</string>
     <string name="summary_framegen_quality_preset">Scale frame generation resolution from the stream size.</string>
@@ -1495,10 +1474,10 @@ Tap again to replace it.</string>
     <string name="title_framegen_internal_width">Custom render scale</string>
     <string name="summary_framegen_internal_width">Advanced tuning for the internal frame generation scale. Lower values improve stability; higher values improve detail.</string>
     <string name="suffix_framegen_scale">x</string>
-    <string name="title_framegen_slow_threshold_ms">Smoothness protection</string>
-    <string name="summary_framegen_slow_threshold_ms">Custom mode only. Moonlight V+ falls back to direct rendering when frame generation gets too slow. Default: 18 ms.</string>
-    <string name="title_framegen_present_real_first">Motion cadence fallback</string>
-    <string name="summary_framegen_present_real_first">Custom troubleshooting option. Leave off unless motion looks uneven.</string>
+    <string name="title_framegen_slow_threshold_ms">Fallback threshold</string>
+    <string name="summary_framegen_slow_threshold_ms">Fall back to direct rendering when frame generation remains slower than this threshold. Lower values trigger fallback sooner. Custom mode only; default: 18 ms.</string>
+    <string name="title_framegen_present_real_first">Present real frames first</string>
+    <string name="summary_framegen_present_real_first">Present the real frame before the generated frame. Try this only if motion looks uneven; off by default.</string>
     <string name="unpaired_devices_shown">Unpaired devices shown</string>
     <string name="unpaired_devices_hidden">Unpaired devices hidden</string>
     <string name="new_unpaired_device_shown">New unpaired device detected, showing unpaired devices</string>
@@ -1512,12 +1491,29 @@ Tap again to replace it.</string>
     <string name="settings_search_no_results">No matching settings</string>
     <string name="settings_search_open_category">View in category</string>
     <string name="settings_search_contains">Includes: %1$s</string>
-    <string name="settings_search_match_separator">, </string>
-    <string name="game_menu_change_resolution">Resolution</string>
-    <string name="game_menu_resolution_current">%1$s (Current)</string>
-    <string name="game_menu_resolution_custom">%1$s (Custom)</string>
-    <string name="game_menu_resolution_custom_current">%1$s (Custom, Current)</string>
-    <string name="game_menu_resolution_restarting">Resolution set to %1$s. Restarting the stream...</string>
+    <string name="settings_search_match_separator">", "</string>
+    <string name="game_menu_display_settings">Display settings</string>
+    <string name="display_settings_info">About display settings</string>
+    <string name="display_settings_help">Changing the resolution, frame rate or screen mode briefly disconnects and automatically reconnects the stream. Selecting the current value does not reconnect.\n\n⚠ marks frame rates above this device’s screen refresh rate.\n\nDisplay scaling changes the size of text and controls on the host. Release the slider to apply it without reconnecting. If the host needs more time or a display restart, a separate message will appear.</string>
+    <string name="display_settings_reconnect_hint">Selecting a different value briefly disconnects and reconnects the stream.</string>
+    <string name="display_settings_reconnecting">Reconnecting to apply display settings…</string>
+    <string name="display_spec_resolution">Resolution</string>
+    <string name="display_spec_fps">Frame rate</string>
+    <string name="display_spec_screen">Screen</string>
+    <string name="display_scale_title">Display scaling</string>
+    <string name="display_scale_applying">Applying %1$d%%…</string>
+    <string name="display_scale_load_failed">Unable to read display scaling</string>
+    <string name="display_scale_refresh">Reload</string>
+    <string name="display_scale_loading">Loading…</string>
+    <string name="display_scale_unknown">Unknown</string>
+    <string name="display_scale_unavailable">Unavailable</string>
+    <string name="display_scale_value">%1$d%%</string>
+    <string name="display_scale_value_recommended">%1$d%% · Recommended</string>
+    <string name="display_scale_content_description">Display scaling, %1$d%%</string>
+    <string name="display_scale_applied">Display scaling set to %1$d%%</string>
+    <string name="display_scale_applied_later">Display scaling accepted; the host will apply it shortly</string>
+    <string name="display_scale_restart_required">Display scaling changed; restart the host display to apply it</string>
+    <string name="display_scale_apply_failed">Couldn’t change display scaling</string>
     <string name="notification_content_streaming">Streaming in progress: %1$s (%2$s)</string>
 
     <!-- Audio Vibration Settings -->
@@ -1881,8 +1877,6 @@ Tap again to replace it.</string>
     <string name="toast_touch_enabled">Touch enabled</string>
     <string name="toast_touch_disabled">Touch disabled</string>
     <string name="toast_cannot_access_controller">Cannot access controller</string>
-    <string name="toast_vibration_test_sent">Local vibration test sent</string>
-    <string name="toast_vibration_test_failed">Vibration test failed: %s</string>
     <string name="toast_adjusting_bitrate">Adjusting bitrate…</string>
     <string name="dialog_button_ok">OK</string>
     <string name="dialog_button_close">Close</string>
@@ -1953,16 +1947,9 @@ Tap again to replace it.</string>
     <string name="toast_image_save_failed">Could not save image. Try again.</string>
     <string name="toast_image_pick_cancelled">Image selection cancelled</string>
     <string name="toast_background_image_reset">Default background restored</string>
-    <string name="toast_perf_overlay_position_reset">Performance stats position reset</string>
     <string name="bitrate_haptic_mode_all">Haptics: every step</string>
     <string name="bitrate_haptic_mode_key_nodes">Haptics: milestones</string>
     <string name="bitrate_haptic_mode_none">Haptics: off</string>
-    <string name="toast_legacy_config_export_success">Configuration exported</string>
-    <string name="toast_legacy_config_export_failed">Configuration export failed</string>
-    <string name="toast_legacy_config_import_success">Configuration imported</string>
-    <string name="toast_legacy_config_merge_success">Configuration merged</string>
-    <string name="toast_legacy_config_read_failed">Could not read configuration file</string>
-    <string name="toast_legacy_config_version_mismatch">Configuration version mismatch</string>
     <string name="empty_value">None</string>
     <string name="touch_mode_classic_mouse">Classic Mouse</string>
     <string name="touch_mode_trackpad">Trackpad</string>
@@ -2315,7 +2302,7 @@ Tap again to replace it.</string>
     <string name="dualsense_output_mode_wireless_bridge">External USB Bluetooth bridge</string>
     <string name="dualsense_output_mode_both">Both output paths</string>
     <string name="title_seekbar_bitrate_baseline">Baseline bitrate</string>
-    <string name="summary_seekbar_bitrate_baseline">ABR starts at this value and adjusts within the range for your selected preference.</string>
+    <string name="summary_seekbar_bitrate_baseline">Adaptive bitrate starts here and adjusts around this value. The selected ABR mode controls the minimum and maximum range.</string>
     <string name="summary_checkbox_enable_audiofx_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses system audio effects.</string>
     <string name="summary_checkbox_enable_spatializer_passthrough">Unavailable while audio passthrough is enabled because passthrough bypasses Android spatial audio.</string>
     <string name="title_decoder_input_buffer_mode">Decoder input buffer</string>
@@ -2351,8 +2338,6 @@ Tap again to replace it.</string>
     <string name="waveform_test_cancel">Stop haptic test</string>
     <string name="title_host_gamepad_selection">Host virtual controller</string>
     <string name="summary_host_gamepad_selection">Choose the controller type requested from Sunshine for all players. Automatic requests DS5 for recognized waveform controllers or the screen touchpad. Reconnect after changing.</string>
-    <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
-    <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
     <string name="title_pyrowave_capability_diagnostic">PyroWave capability detection</string>
     <string name="summary_pyrowave_capability_diagnostic">Inspect Vulkan capabilities and prerequisites for the current PyroWave decoder.</string>
     <string name="pyrowave_diag_subtitle" translatable="false">Vulkan · GPU · PyroWave</string>
@@ -2405,4 +2390,18 @@ Tap again to replace it.</string>
     <string name="summary_fec_fixed">Your fixed percentage takes priority on a compatible host. Applied on the next connection.</string>
     <string name="numeric_parameter_range">Enter a valid value from %1$s to %2$s %3$s.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave negotiation failed. Falling back to %1$s.</string>
+    <string-array name="host_gamepad_selection_names"><item>Automatic</item><item>Follow host settings</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
+    <string name="display_native_resolution_description">Follow the target display · %1$s</string>
+    <string name="display_choice_unavailable">Unavailable on this device</string>
+    <string name="display_custom_resolution_action">Manage custom resolutions…</string>
+    <string name="title_float_ball_settings">Floating ball</string>
+    <string name="float_ball_appearance">Display</string>
+    <string name="float_ball_gestures">Gestures</string>
+    <string name="float_ball_settings_disabled_summary">Enable the floating ball to adjust its position and actions.</string>
+    <string name="float_ball_summary_enabled">Enabled · %1$s · %2$s</string>
+    <string name="float_ball_summary_delay">Hide after %1$s s</string>
+    <string name="float_ball_summary_no_hide">Always visible</string>
+    <string name="float_ball_summary_custom_position">Dragged position</string>
+    <string name="float_ball_summary_search">%1$s\nIncludes: %2$s</string>
 </resources>

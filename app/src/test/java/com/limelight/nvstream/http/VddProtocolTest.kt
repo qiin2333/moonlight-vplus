@@ -39,6 +39,45 @@ class VddProtocolTest {
     }
 
     @Test
+    fun parsesDisplayScaleCapabilitiesAndKeepsNullCurrentValue() {
+        val catalog = NvHTTP.parseDisplayCatalog(
+            """
+            {
+              "status_code": 200,
+              "displays": [{
+                "friendly_name": "Main display",
+                "display_name": "\\\\.\\DISPLAY1",
+                "device_id": "device-1",
+                "is_primary": true,
+                "current_scale_percent": null,
+                "recommended_scale_percent": 150,
+                "supported_scale_percents": [100, 125, 150, 0, -1],
+                "scale_set_supported": true
+              }]
+            }
+            """.trimIndent()
+        )
+
+        val display = catalog.displays.single()
+        assertTrue(display.isPrimary)
+        assertNull(display.currentScalePercent)
+        assertEquals(150, display.recommendedScalePercent)
+        assertEquals(listOf(100, 125, 150), display.supportedScalePercents)
+        assertTrue(display.scaleSetSupported)
+    }
+
+    @Test
+    fun missingDisplayScaleFieldsRemainUnavailableForLegacyHosts() {
+        val display = NvHTTP.parseDisplayCatalog(
+            """{"status_code":200,"displays":[{"friendly_name":"Legacy","device_id":"legacy"}]}"""
+        ).displays.single()
+
+        assertFalse(display.scaleSetSupported)
+        assertTrue(display.supportedScalePercents.isEmpty())
+        assertNull(display.currentScalePercent)
+    }
+
+    @Test
     fun missingVddMetadataKeepsLegacyVddCompatibility() {
         val catalog = NvHTTP.parseDisplayCatalog(
             """{"status_code":200,"displays":[]}"""

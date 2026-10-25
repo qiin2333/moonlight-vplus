@@ -110,6 +110,9 @@ open class NvConnection(
     fun createNvHttp(): NvHTTP =
         NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
 
+    /** Host display device id selected when the stream was started, if any. */
+    fun displayName(): String? = context.displayName
+
     /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
     fun applyBitrateLocally(bitrateKbps: Int) {
         context.streamConfig.bitrate = bitrateKbps

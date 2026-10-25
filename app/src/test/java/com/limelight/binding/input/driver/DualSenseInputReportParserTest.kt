@@ -39,12 +39,12 @@ class DualSenseInputReportParserTest {
             ByteBuffer.wrap(populatedUsbReport()).order(ByteOrder.LITTLE_ENDIAN)
         )!!
 
-        assertEquals(0x10, state.leftStickX)
-        assertEquals(0x20, state.leftStickY)
-        assertEquals(0x30, state.rightStickX)
-        assertEquals(0x40, state.rightStickY)
-        assertEquals(0x50, state.leftTrigger)
-        assertEquals(0x60, state.rightTrigger)
+        assertEquals(0x80, state.leftStickX)
+        assertEquals(0xFF, state.leftStickY)
+        assertEquals(0xA1, state.rightStickX)
+        assertEquals(0xC0, state.rightStickY)
+        assertEquals(0x81, state.leftTrigger)
+        assertEquals(0xFE, state.rightTrigger)
 
         val expectedButtons = ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG or
             ControllerPacket.A_FLAG or ControllerPacket.LB_FLAG or ControllerPacket.BACK_FLAG or
@@ -52,10 +52,13 @@ class DualSenseInputReportParserTest {
             ControllerPacket.TOUCHPAD_FLAG or ControllerPacket.MISC_FLAG
         assertEquals(expectedButtons, state.buttonFlags)
 
-        assertEquals(1000 * (2000f / 32768f), state.gyro.x, 0.0001f)
-        assertEquals(-2000 * (2000f / 32768f), state.gyro.y, 0.0001f)
-        assertEquals(3000 * (2000f / 32768f), state.gyro.z, 0.0001f)
-        assertEquals(4096 * (4f / 32768f) * 9.81f, state.acceleration.x, 0.0001f)
+        assertEquals(61.035156f, state.gyro.x, 0.0001f)
+        assertEquals(-122.07031f, state.gyro.y, 0.0001f)
+        assertEquals(183.10547f, state.gyro.z, 0.0001f)
+        assertEquals(4.905f, state.acceleration.x, 0.0001f)
+
+        assertEquals(-4.905f, state.acceleration.y, 0.0001f)
+        assertEquals(2.4525f, state.acceleration.z, 0.0001f)
 
         assertTrue(state.touches[0].active)
         assertEquals(1, state.touches[0].trackingId)
@@ -69,24 +72,77 @@ class DualSenseInputReportParserTest {
     }
 
     @Test
-    fun reportsZeroCapacityForChargingErrorStates() {
-        val report = populatedUsbReport()
-        report[53] = 0xA6.toByte()
+    fun decodesEveryDpadDirectionAndTreatsReservedValuesAsNeutral() {
+        val expected = listOf(
+            ControllerPacket.UP_FLAG,
+            ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG,
+            ControllerPacket.RIGHT_FLAG,
+            ControllerPacket.DOWN_FLAG or ControllerPacket.RIGHT_FLAG,
+            ControllerPacket.DOWN_FLAG,
+            ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG,
+            ControllerPacket.LEFT_FLAG,
+            ControllerPacket.UP_FLAG or ControllerPacket.LEFT_FLAG,
+            0, 0, 0, 0, 0, 0, 0, 0
+        )
+        expected.forEachIndexed { direction, flags ->
+            val report = ByteArray(64).apply { this[0] = 1; this[8] = direction.toByte() }
+            assertEquals("dpad=$direction", flags,
+                DualSenseInputReportParser.parseUsbReport(ByteBuffer.wrap(report))!!.buttonFlags)
+        }
+    }
 
+    @Test
+    fun decodesIndividualButtonsWithoutLeakingUnusedBits() {
+        val cases = listOf(
+            Triple(8, 0x10, ControllerPacket.X_FLAG), Triple(8, 0x20, ControllerPacket.A_FLAG),
+            Triple(8, 0x40, ControllerPacket.B_FLAG), Triple(8, 0x80, ControllerPacket.Y_FLAG),
+            Triple(9, 0x01, ControllerPacket.LB_FLAG), Triple(9, 0x02, ControllerPacket.RB_FLAG),
+            Triple(9, 0x10, ControllerPacket.BACK_FLAG), Triple(9, 0x20, ControllerPacket.PLAY_FLAG),
+            Triple(9, 0x40, ControllerPacket.LS_CLK_FLAG), Triple(9, 0x80, ControllerPacket.RS_CLK_FLAG),
+            Triple(10, 0x01, ControllerPacket.SPECIAL_BUTTON_FLAG),
+            Triple(10, 0x02, ControllerPacket.TOUCHPAD_FLAG), Triple(10, 0x04, ControllerPacket.MISC_FLAG),
+            Triple(9, 0x0C, 0), Triple(10, 0xF8, 0)
+        )
+        cases.forEach { (offset, bits, expected) ->
+            val report = ByteArray(64).apply {
+                this[0] = 1
+                this[8] = 8 // Neutral D-pad, including when a face button is pressed.
+                this[offset] = (this[offset].toInt() or bits).toByte()
+            }
+            assertEquals("byte=$offset bits=$bits", expected,
+                DualSenseInputReportParser.parseUsbReport(ByteBuffer.wrap(report))!!.buttonFlags)
+        }
+        val combined = ByteArray(64).apply {
+            this[0] = 1; this[8] = 0xF8.toByte(); this[9] = 0xFF.toByte(); this[10] = 0xFF.toByte()
+        }
+        val allButtons = cases.map { it.third }.fold(0) { flags, button -> flags or button }
+        assertEquals(allButtons,
+            DualSenseInputReportParser.parseUsbReport(ByteBuffer.wrap(combined))!!.buttonFlags)
+    }
+
+    @Test
+    fun decodesSignedLittleEndianMotionAtSensorRangeBoundaries() {
+        val report = populatedUsbReport().apply {
+            putShort(16, -32768); putShort(18, 32767); putShort(20, 0)
+            putShort(22, 32767); putShort(24, 0); putShort(26, -32768)
+        }
         val state = DualSenseInputReportParser.parseUsbReport(ByteBuffer.wrap(report))!!
-
-        assertEquals(DualSenseBatteryStatus.NOT_CHARGING, state.battery.status)
-        assertEquals(0, state.battery.percentage)
+        assertEquals(-2000f, state.gyro.x, 0.0001f)
+        assertEquals(1999.939f, state.gyro.y, 0.0001f)
+        assertEquals(0f, state.gyro.z, 0f)
+        assertEquals(39.238804f, state.acceleration.x, 0.0001f)
+        assertEquals(0f, state.acceleration.y, 0f)
+        assertEquals(-39.24f, state.acceleration.z, 0.0001f)
     }
 
     private fun populatedUsbReport(): ByteArray = ByteArray(64).apply {
         this[0] = 0x01
-        this[1] = 0x10
-        this[2] = 0x20
-        this[3] = 0x30
-        this[4] = 0x40
-        this[5] = 0x50
-        this[6] = 0x60
+        this[1] = 0x80.toByte()
+        this[2] = 0xFF.toByte()
+        this[3] = 0xA1.toByte()
+        this[4] = 0xC0.toByte()
+        this[5] = 0x81.toByte()
+        this[6] = 0xFE.toByte()
 
         this[8] = 0x21 // D-pad up-right + cross/A
         this[9] = 0x31 // L1 + create/back + options/start

@@ -12,6 +12,7 @@
         android:id="@+id/category_item_root"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minHeight="48dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:baselineAligned="false"
@@ -52,10 +53,9 @@
             android:layout_marginRight="6dp"
             android:textSize="13sp"
             android:textColor="#BBBBBB"
-            android:singleLine="true"
+            android:maxLines="2"
             android:ellipsize="end"
             android:includeFontPadding="false"
-            android:letterSpacing="0.02"
             android:fontFamily="sans-serif-medium" />
 
         <!-- 右箭头指示器 -->

@@ -50,7 +50,6 @@
     <string name="title_video_format">Endre HEVC-innstillinger</string>
     <string name="title_disable_frame_drop">Aldri forkast bilderammer</string>
     <string name="title_checkbox_disable_warnings">Skru av advarselsmeldinger</string>
-    <string name="title_unlock_fps">Lås opp alle mulige bilderammetakter</string>
     <string name="category_advanced_settings">Avanserte innstillinger</string>
     <string name="title_checkbox_host_audio">Spill lyd på PC</string>
     <string name="title_checkbox_enable_sops">Optimaliser spillinnstillinger</string>
@@ -166,13 +165,11 @@
     <string name="summary_video_format">Usikker på hva du bør velge? Bruk Automatisk. HEVC anbefales for de fleste moderne enheter og gir vanligvis en god balanse mellom bildekvalitet, båndbredde og HDR. AV1 kan spare båndbredde når begge sider støtter det, men kan gi høyere dekodingsforsinkelse på enkelte enheter. H.264 har best kompatibilitet, men krever mer båndbredde og støtter ikke HDR.</string>
     <string name="summary_disable_frame_drop">Kan redusere mikro-hakking på noen enheter, men kan øke latens</string>
     <string name="summary_checkbox_disable_warnings">Skru av visning av tilkoblingsadvarsler på skjermen under strømming</string>
-    <string name="summary_unlock_fps">Strømming i 90 eller 120 BPS kan redusere latens på flaggskipsenheter, men kan forårsake forsinkelser eller ustabilitet på enheter som ikke klarer det.</string>
     <string name="summary_checkbox_host_audio">Spill lyd fra datamaskinen og denne enheten</string>
     <string name="summary_checkbox_enable_sops">Tillat GFE å endre spill-innstillinger for optimal strømming</string>
     <string name="summary_checkbox_small_icon_mode">Mindre bilder for omslagskunst i programrutenettet lar deg se flere programmer på skjermen</string>
     <string name="title_checkbox_small_icon_mode">Bruk liten omslagskunst</string>
     <string name="summary_osc_opacity">Gjør innstillingskontroller som vises på skjermen mer/mindre gjennomsiktige</string>
-    <string name="title_osc_opacity">Endre dekkevne for innstillingskontroller som vises på skjermen</string>
     <string name="toast_reset_osc_success">Innstillingskontroller som vises på skjermen tilbakestilt til forvalg</string>
     <string name="dialog_text_reset_osc">Er du sikker på at du vil slette oppsettet ditt for innstillingskontroller som vises på skjermen\?</string>
     <string name="summary_reset_osc">Tilbakestiller alle innstillingskontroller som vises på skjermen til forvalgt størrelse og posisjon</string>
@@ -200,7 +197,6 @@
     <string name="resolution_prefix_native">Innebygd</string>
     <string name="title_native_res_dialog">Advarsel om innebygd oppløsning</string>
     <string name="title_checkbox_flip_face_buttons">Veksle diamantknapper</string>
-    <string name="resolution_prefix_native_fullscreen">Systemspesifikk fullskjerm</string>
     <string name="perf_overlay_netlatency">Gjennomsnittlig nettverksforsinkelse: %1$d ms (variasjon: %2$d ms)</string>
     <string name="perf_overlay_streamdetails">Videostrøm: %1$s %2$.2f BPS</string>
     <string name="title_config_sync_backup_password">Passord for sikkerhetskopikryptering</string>
@@ -255,7 +251,7 @@
     <string name="pyrowave_diag_copy">Kopier</string>
     <string name="pyrowave_diag_copy_success">Rapporten er kopiert til utklippstavlen</string>
     <string name="pyrowave_diag_unavailable">Kan ikke hentes</string>
-    <string name="image_saved_successfully">Bildet er lagret i: Picture/vplus</string>
+    <string name="image_saved_successfully">Bildet er lagret i: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Kunne ikke lagre bildet: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: Trykk og hold på det tomme området øverst i datamaskinlisten for å lagre det gjeldende bakgrunnsbildet.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave-forhandlingen mislyktes. Bytter til %1$s.</string>

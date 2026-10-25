@@ -5,7 +5,6 @@
     <string name="conn_error_msg">Spouštění se nezdařilo</string>
     <string name="conn_client_latency_hw">zpoždění hardwarového dekodéru:</string>
     <string name="conn_terminated_title">Spojení ukončeno</string>
-    <string name="resolution_prefix_native_fullscreen">Nativní celá obrazovka</string>
     <string name="summary_checkbox_enable_audiofx">Umožňuje fungování zvukových efektů během streamování, ale může zvýšit zpoždění zvuku</string>
     <string name="early_termination_error">Na hostitelském PC se něco pokazilo při spouštění streamu.
 \n
@@ -89,7 +88,6 @@
     <string name="summary_checkbox_disable_warnings">Zakáže varování o pomalém připojení během streamování</string>
     <string name="title_disable_frame_drop">Nezahazovat snímky</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
     <string name="title_troubleshooting">Průvodce řešením problémů</string>
     <string name="summary_troubleshooting">Zobrazit tipy pro diagnózu a opravu běžných problémů se streamováním</string>
     <string name="resolution_720p">720p</string>
@@ -99,16 +97,11 @@
     <string name="audioconf_71surround">7.1 prostorový zvuk</string>
     <string name="pacing_balanced">Vyvážené (zpoždění a plynulost)</string>
     <string name="pacing_smoothness">Plynulost na prvním místě (vyšší zpoždění)</string>
-    <string name="resolution_prefix_native_landscape">(na šířku)</string>
-    <string name="resolution_prefix_native_portrait">(na výšku)</string>
     <string name="category_audio_settings">Nastavení zvuku</string>
     <string name="title_checkbox_enable_audiofx">Povolit podporu systémového ekvalizéru</string>
     <string name="category_input_settings">Nastavení vstupu</string>
     <string name="summary_setup_guide">Zobrazit instrukce k nastavení vašeho herního PC pro streamování</string>
     <string name="dialog_title_osc_opacity">Změnit průhlednost</string>
-    <string name="fps_60">60 FPS</string>
-    <string name="fps_90">90 FPS</string>
-    <string name="fps_120">120 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 prostorový zvuk</string>
     <string name="help_loading_msg">Načítání stránky s nápovědou…</string>
@@ -168,9 +161,7 @@
     <string name="summary_checkbox_touchscreen_trackpad">Pokud je povoleno, dotykový displej funguje jako trackpad. Pokud je zakázáno, dotykový displej ovládá kurzor myši přímo.</string>
     <string name="title_reset_osc">Vymazat uložené rozložení ovladače na obrazovce</string>
     <string name="summary_reset_osc">Resetuje všechna nastavení ovladače na obrazovce na jejich výchozí velikost a pozici</string>
-    <string name="title_osc_opacity">Změnit průhlednost ovladače na obrazovce</string>
     <string name="category_advanced_settings">Pokročilá nastavení</string>
-    <string name="title_unlock_fps">Odemknout všechny možné snímkové frekvence</string>
     <string name="title_checkbox_reduce_refresh_rate">Povolit snížení obnovovací frekvence</string>
     <string name="summary_checkbox_reduce_refresh_rate">Menší obnovovací frekvence displeje může šetřit energii výměnou za zvýšení zpoždění videa</string>
     <string name="title_checkbox_mouse_nav_buttons">Povolit tlačítka myši zpět a vpřed</string>
@@ -183,7 +174,6 @@
     <string name="summary_checkbox_enable_sops">Povolit GFE měnit herní nastavení pro optimální streamování</string>
     <string name="title_checkbox_host_audio">Přehrávat zvuk na PC</string>
     <string name="summary_checkbox_host_audio">Přehraje zvuk z počítače a tohoto zařízení</string>
-    <string name="summary_unlock_fps">Streamování v 90 nebo 120 FPS může snížit zpoždění na dražších zařízeních, ale může způsobit zasekávání nebo nestabilitu na zařízeních, které je nepodporují</string>
     <string name="title_enable_post_stream_toast">Zobrazit informace o zpoždění po streamování</string>
     <string name="summary_enable_post_stream_toast">Zobrazit informace o zpoždění po skončení streamování</string>
     <string name="title_privacy_policy">Zásady ochrany osobních údajů</string>
@@ -311,7 +301,7 @@
     <string name="pyrowave_diag_copy">Kopírovat</string>
     <string name="pyrowave_diag_copy_success">Zpráva byla zkopírována do schránky</string>
     <string name="pyrowave_diag_unavailable">Nelze zjistit</string>
-    <string name="image_saved_successfully">Obrázek byl úspěšně uložen do: Picture/vplus</string>
+    <string name="image_saved_successfully">Obrázek byl úspěšně uložen do: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Uložení obrázku se nezdařilo: %1$s</string>
     <string name="tip_double_tap_mouse">Tip: dlouhým stisknutím prázdné oblasti v horní části seznamu počítačů uložíte aktuální obrázek pozadí.</string>
     <string name="pyrowave_negotiation_fallback">Vyjednání PyroWave selhalo. Přepíná se na %1$s.</string>

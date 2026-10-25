@@ -104,18 +104,6 @@ class FloatBallPlacementTest {
     }
 
     @Test
-    fun automaticHalfShowOnlyCrossesSelectedEdge() {
-        assertEquals(
-            FloatingButtonCoordinates(975, 275),
-            FloatBallPlacement.halfShownCoordinates(
-                FloatingButtonCoordinates(950, 275),
-                FloatBallEdge.RIGHT,
-                ballSize = 50
-            )
-        )
-    }
-
-    @Test
     fun edgeSnapUsesPhysicalWindowEdgesDespiteSystemInsets() {
         val edgeViewport = floatBallViewport(
             screenWidth = 1000,

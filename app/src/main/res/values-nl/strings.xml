@@ -168,7 +168,6 @@
     <string name="title_reset_osc">Opgeslagen on-screen layout wissen</string>
     <string name="dialog_title_reset_osc">Reset Layout</string>
     <string name="toast_reset_osc_success">On-screen controle-elementen naar fabrieksinstellingen zetten</string>
-    <string name="title_osc_opacity">Transparantie van on-screen besturingselementen aanpassen</string>
     <string name="title_checkbox_enable_pip">Scherm-in-Scherm toeschouwermodus inschakelen</string>
     <string name="title_disable_frame_drop">Frames nooit overslaan</string>
     <string name="summary_disable_frame_drop">Kan micro-stotteren op sommige toestellen verminderen, maar kan vertraging verhogen</string>
@@ -176,7 +175,6 @@
     <string name="summary_enable_hdr">Stream HDR als het spel en de GPU van de PC dit ondersteund. HDR vereist een GTX 1000-reeks GPU of later.</string>
     <string name="title_details">Details</string>
     <string name="delete_pc_msg">Bent u zeker dat u deze PC wilt verwijderen\?</string>
-    <string name="resolution_prefix_native_fullscreen">Oorspronkelijk Volledig Scherm</string>
     <string name="help">Help</string>
     <string name="perf_overlay_streamdetails">Video stream: %1$s %2$.2f FPS</string>
     <string name="perf_overlay_incomingfps">Binnenkomende frame rate van het netwerk: %1$.2f FPS</string>
@@ -205,8 +203,6 @@
     <string name="title_checkbox_usb_bind_all">Standaard Xbox gamepad-ondersteuning overschrijven</string>
     <string name="summary_reset_osc">Herstelt alle on-screen besturingselementen naar hun originele grootte en positie</string>
     <string name="dialog_title_osc_opacity">Transparantie wijzigen</string>
-    <string name="title_unlock_fps">Alle mogelijke frame rates ontgrendelen</string>
-    <string name="summary_unlock_fps">Streamen op 90 of 120 FPS kan vertraging op high-end apparaten verminderen, maar het kan lag of instabiliteit veroorzaken op toestellen die het niet ondersteunen</string>
     <string name="summary_checkbox_enable_pip">Laat toe de stream te bekijken (maar niet bedienen) bij het multitasken</string>
     <string name="title_checkbox_flip_face_buttons">Face-knoppen omdraaien</string>
     <string name="title_enable_post_stream_toast">Vertragingsbericht tonen na het streamen</string>
@@ -271,7 +267,7 @@
     <string name="pyrowave_diag_copy">Kopiëren</string>
     <string name="pyrowave_diag_copy_success">Rapport naar het klembord gekopieerd</string>
     <string name="pyrowave_diag_unavailable">Niet beschikbaar</string>
-    <string name="image_saved_successfully">Afbeelding opgeslagen in: Picture/vplus</string>
+    <string name="image_saved_successfully">Afbeelding opgeslagen in: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Afbeelding opslaan mislukt: %1$s</string>
     <string name="tip_double_tap_mouse">Tip: houd het lege gebied bovenaan de computerlijst ingedrukt om de huidige achtergrondafbeelding op te slaan.</string>
     <string name="pyrowave_negotiation_fallback">De PyroWave-onderhandeling is mislukt. Er wordt overgeschakeld naar %1$s.</string>

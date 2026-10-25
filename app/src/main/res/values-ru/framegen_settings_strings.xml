@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_framegen_directory_create_failed">Не удалось создать папку для генерации кадров</string>
+    <string name="error_framegen_dll_open_failed">Не удалось открыть выбранный DLL-файл</string>
+    <string name="error_framegen_dll_empty">Выбранный DLL-файл пуст</string>
+</resources>

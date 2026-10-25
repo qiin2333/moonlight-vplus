@@ -111,8 +111,6 @@
     <string name="dialog_title_reset_osc">Atur Ulang Tata Letak</string>
     <string name="dialog_text_reset_osc">Yakin ingin menghapus tata letak kontrol di layar yang tersimpan\?</string>
     <string name="toast_reset_osc_success">Kontrol di layar diatur ulang ke default</string>
-    <string name="resolution_prefix_native_landscape">(Lanskap)</string>
-    <string name="resolution_prefix_native_portrait">(Potret)</string>
     <string name="summary_checkbox_enable_audiofx">Mengizinkan efek audio berfungsi saat streaming, tetapi dapat meningkatkan latensi audio</string>
     <string name="category_input_settings">Pengaturan Masukan</string>
     <string name="title_checkbox_touchscreen_trackpad">Gunakan layar sentuh sebagai trackpad</string>
@@ -148,7 +146,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Regangkan video ke layar penuh</string>
     <string name="resolution_prefix_native">Asli</string>
-    <string name="resolution_prefix_native_fullscreen">Layar Penuh Asli</string>
     <string name="category_audio_settings">Pengaturan Audio</string>
     <string name="title_audio_config_list">Konfigurasi suara surround</string>
     <string name="title_checkbox_enable_audiofx">Aktifkan dukungan equalizer sistem</string>
@@ -167,7 +164,6 @@
     <string name="summary_checkbox_vibrate_osc">Getarkan perangkat Anda untuk meniru gemuruh untuk kontrol di layar</string>
     <string name="summary_only_l3r3">Sembunyikan semua tombol virtual kecuali L3 dan R3</string>
     <string name="summary_reset_osc">Menyetel ulang semua kontrol di layar ke ukuran dan posisi default</string>
-    <string name="title_osc_opacity">Ubah opasitas kontrol di layar</string>
     <string name="summary_osc_opacity">Jadikan kontrol di layar lebih/kurang transparan</string>
     <string name="dialog_title_osc_opacity">Ubah opasitas</string>
     <string name="suffix_osc_opacity">%</string>
@@ -177,8 +173,6 @@
     <string name="title_checkbox_small_icon_mode">Gunakan seni kotak kecil</string>
     <string name="summary_checkbox_host_audio">Putar audio dari komputer dan perangkat ini</string>
     <string name="category_advanced_settings">Pengaturan lanjutan</string>
-    <string name="title_unlock_fps">Buka kunci semua frekuensi gambar yang memungkinkan</string>
-    <string name="summary_unlock_fps">Streaming pada 90 atau 120 FPS dapat mengurangi latensi pada perangkat kelas atas, tetapi dapat menyebabkan kelambatan atau ketidakstabilan pada perangkat yang tidak dapat mendukungnya</string>
     <string name="title_checkbox_reduce_refresh_rate">Izinkan pengurangan kecepatan penyegaran</string>
     <string name="summary_checkbox_reduce_refresh_rate">Kecepatan refresh tampilan yang lebih rendah dapat menghemat daya dengan mengorbankan beberapa latensi video tambahan</string>
     <string name="applist_refresh_error_title">Kesalahan</string>
@@ -262,7 +256,7 @@
     <string name="pyrowave_diag_copy">Salin</string>
     <string name="pyrowave_diag_copy_success">Laporan disalin ke papan klip</string>
     <string name="pyrowave_diag_unavailable">Tidak dapat diperoleh</string>
-    <string name="image_saved_successfully">Gambar berhasil disimpan ke: Picture/vplus</string>
+    <string name="image_saved_successfully">Gambar berhasil disimpan ke: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Gagal menyimpan gambar: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tekan lama area kosong di bagian atas daftar komputer untuk menyimpan gambar latar saat ini.</string>
     <string name="pyrowave_negotiation_fallback">Negosiasi PyroWave gagal. Beralih ke %1$s.</string>

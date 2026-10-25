@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_menu_touchpad_sensitivity">Độ nhạy bàn di chuột</string>
+    <string name="game_menu_touchpad_scroll_speed">Tốc độ cuộn bằng hai ngón tay</string>
+</resources>

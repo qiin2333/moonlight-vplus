@@ -121,7 +121,7 @@ private fun MenuOptionRow(
         onClick()
     }
     val initialFocusModifier = initialFocusRequester?.let {
-        Modifier.focusRequester(it)
+        Modifier.focusRequester(it).then(modifier)
     } ?: Modifier
     val rowInteraction = when {
         inlineControl is GameMenu.InlineControl.Toggle &&
@@ -224,7 +224,7 @@ private fun MenuOptionRow(
                     text = it,
                     color = colorResource(R.color.game_menu_text_secondary),
                     fontSize = 11.sp,
-                    maxLines = 1,
+                    maxLines = if (option.selected || !option.showChevron) 3 else 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }

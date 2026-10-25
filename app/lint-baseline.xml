@@ -1282,17 +1282,6 @@
         errorLine1="            android:drawableTint=&quot;@color/appview_text_primary&quot;"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="119"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `drawableTint` is only used in API level 23 and higher (current min is 22)"
-        errorLine1="            android:drawableTint=&quot;@color/appview_text_primary&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="119"
             column="13"/>
@@ -1304,30 +1293,8 @@
         errorLine1="        android:preferKeepClear=&quot;true&quot;"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="314"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `preferKeepClear` is only used in API level 33 and higher (current min is 22)"
-        errorLine1="        android:preferKeepClear=&quot;true&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="314"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `autoSizeTextType` is only used in API level 26 and higher (current min is 22)"
-        errorLine1="        android:autoSizeTextType=&quot;uniform&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="316"
             column="9"/>
     </issue>
 
@@ -1348,30 +1315,8 @@
         errorLine1="        android:autoSizeMinTextSize=&quot;14sp&quot;"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="317"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `autoSizeMinTextSize` is only used in API level 26 and higher (current min is 22)"
-        errorLine1="        android:autoSizeMinTextSize=&quot;14sp&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="317"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `autoSizeMaxTextSize` is only used in API level 26 and higher (current min is 22)"
-        errorLine1="        android:autoSizeMaxTextSize=&quot;28sp&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="318"
             column="9"/>
     </issue>
 
@@ -1392,17 +1337,6 @@
         errorLine1="        android:autoSizeStepGranularity=&quot;1sp&quot;"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="319"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `autoSizeStepGranularity` is only used in API level 26 and higher (current min is 22)"
-        errorLine1="        android:autoSizeStepGranularity=&quot;1sp&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="319"
             column="9"/>
@@ -1414,30 +1348,8 @@
         errorLine1="        android:breakStrategy=&quot;balanced&quot;"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="330"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `breakStrategy` is only used in API level 23 and higher (current min is 22)"
-        errorLine1="        android:breakStrategy=&quot;balanced&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="330"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `hyphenationFrequency` is only used in API level 23 and higher (current min is 22)"
-        errorLine1="        android:hyphenationFrequency=&quot;normal&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="331"
             column="9"/>
     </issue>
 
@@ -3390,24 +3302,6 @@
 
     <issue
         id="PrivateResource"
-        message="Overriding `@drawable/icon_background` which is marked as private in androidx.core:core-splashscreen:1.0.1. If deliberate, use tools:override=&quot;true&quot;, otherwise pick a different name.">
-        <location
-            file="src/main/res/drawable/icon_background.xml"/>
-    </issue>
-
-    <issue
-        id="PrivateResource"
-        message="The resource `@drawable/icon_background` is marked as private in androidx.core:core-splashscreen:1.0.1"
-        errorLine1="        android:background=&quot;@drawable/icon_background&quot;>"
-        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/icon_list_item.xml"
-            line="19"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="PrivateResource"
         message="Overriding `@layout/preference_category_material` which is marked as private in androidx.preference:preference:1.2.1. If deliberate, use tools:override=&quot;true&quot;, otherwise pick a different name.">
         <location
             file="src/main/res/layout/preference_category_material.xml"/>
@@ -4530,30 +4424,8 @@
         errorLine1="            android:drawableStart=&quot;@drawable/phc_settings&quot;"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="117"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseCompatTextViewDrawableXml"
-        message="Use `app:drawableStartCompat` instead of `android:drawableStart`"
-        errorLine1="            android:drawableStart=&quot;@drawable/phc_settings&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="117"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseCompatTextViewDrawableXml"
-        message="Use `app:drawableTint` instead of `android:drawableTint`"
-        errorLine1="            android:drawableTint=&quot;@color/appview_text_primary&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="119"
             column="13"/>
     </issue>
 
@@ -6234,17 +6106,6 @@
         errorLine1="    android:background=&quot;@color/advance_setting_background&quot;"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="5"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="Overdraw"
-        message="Possible overdraw: Root element paints background `@color/advance_setting_background` with a theme that also paints a background (inferred theme is `@style/AppTheme`)"
-        errorLine1="    android:background=&quot;@color/advance_setting_background&quot;"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="5"
             column="5"/>
@@ -7672,17 +7533,6 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.title_osc_opacity` appears to be unused"
-        errorLine1="    &lt;string name=&quot;title_osc_opacity&quot;>Change opacity of on-screen controls&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="394"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.title_float_ball_swipe_up_action` appears to be unused"
         errorLine1="    &lt;string name=&quot;title_float_ball_swipe_up_action&quot;>Swipe Up Action&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -7931,28 +7781,6 @@
         <location
             file="src/main/res/values/strings.xml"
             line="530"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.title_reset_perf_overlay_position` appears to be unused"
-        errorLine1="    &lt;string name=&quot;title_reset_perf_overlay_position&quot;>Reset Performance Overlay Position&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="558"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.summary_reset_perf_overlay_position` appears to be unused"
-        errorLine1="    &lt;string name=&quot;summary_reset_perf_overlay_position&quot;>Reset performance overlay to preset position&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="559"
             column="13"/>
     </issue>
 
@@ -8714,17 +8542,6 @@
             file="build.gradle"
             line="198"
             column="13"/>
-    </issue>
-
-    <issue
-        id="UselessParent"
-        message="This `LinearLayout` layout or its `LinearLayout` parent is possibly unnecessary"
-        errorLine1="        &lt;LinearLayout"
-        errorLine2="         ~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="349"
-            column="10"/>
     </issue>
 
     <issue
@@ -10382,17 +10199,6 @@
 
     <issue
         id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {"
-        errorLine2="                                                    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/AboutDialogPreference.kt"
-            line="102"
-            column="53"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
         errorLine1="                prefs.edit().putBoolean(PREF_FIRST_STREAM_DONE, true).apply()"
         errorLine2="                ~~~~~~~~~~~~">
@@ -11163,17 +10969,6 @@
 
     <issue
         id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/CustomResolutionsPreference.kt"
-            line="197"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
         message="Use the KTX extension function `Int.toDrawable` instead?"
         errorLine1="        list.divider = ColorDrawable(ContextCompat.getColor(context, R.color.app_dialog_outline))"
         errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -11669,17 +11464,6 @@
 
     <issue
         id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().clear().apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/limelight/preferences/ResetPerfOverlayPositionPreference.kt"
-            line="28"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
         message="Use the KTX function `createBitmap` instead?"
         errorLine1="            val output = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)"
         errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -11860,30 +11644,8 @@
         errorLine1="        &lt;ImageView"
         errorLine2="         ~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="16"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="        &lt;ImageView"
-        errorLine2="         ~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="16"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="        &lt;ImageView"
-        errorLine2="         ~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="23"
             column="10"/>
     </issue>
 
@@ -12226,17 +11988,6 @@
             file="src/main/res/layout/game_menu_super_list_item.xml"
             line="32"
             column="6"/>
-    </issue>
-
-    <issue
-        id="ContentDescription"
-        message="Missing `contentDescription` attribute on image"
-        errorLine1="        &lt;ImageView"
-        errorLine2="         ~~~~~~~~~">
-        <location
-            file="src/main/res/layout/icon_list_item.xml"
-            line="21"
-            column="10"/>
     </issue>
 
     <issue
@@ -12622,17 +12373,6 @@
             file="src/main/res/layout/activity_add_computer_manually.xml"
             line="201"
             column="21"/>
-    </issue>
-
-    <issue
-        id="HardcodedText"
-        message="Hardcoded string &quot;\u2699 \u25BE&quot;, should use `@string` resource"
-        errorLine1="        android:text=&quot;\u2699 \u25BE&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="71"
-            column="9"/>
     </issue>
 
     <issue
@@ -19142,17 +18882,6 @@
         errorLine1="                android:paddingStart=&quot;4dp&quot;"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="151"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="RtlSymmetry"
-        message="When you define `paddingStart` you should probably also define `paddingEnd` for right-to-left symmetry"
-        errorLine1="                android:paddingStart=&quot;4dp&quot;"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="151"
             column="17"/>
@@ -19164,30 +18893,8 @@
         errorLine1="                    android:paddingEnd=&quot;@dimen/appview_edge_margin&quot; />"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="172"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="RtlSymmetry"
-        message="When you define `paddingEnd` you should probably also define `paddingStart` for right-to-left symmetry"
-        errorLine1="                    android:paddingEnd=&quot;@dimen/appview_edge_margin&quot; />"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~">
-        <location
             file="src/main/res/layout/activity_app_view.xml"
             line="172"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="RtlSymmetry"
-        message="When you define `paddingEnd` you should probably also define `paddingStart` for right-to-left symmetry"
-        errorLine1="                    android:paddingEnd=&quot;@dimen/appview_edge_margin&quot; />"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout-land/activity_app_view.xml"
-            line="184"
             column="21"/>
     </issue>
 

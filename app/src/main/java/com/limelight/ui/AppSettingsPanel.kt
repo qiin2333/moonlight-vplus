@@ -695,7 +695,7 @@ internal fun screenCombinationModeIconRes(mode: Int): Int? = when (mode) {
 }
 
 @Composable
-private fun ScreenCombinationSegmentedControl(
+internal fun ScreenCombinationSegmentedControl(
     options: List<AppScreenCombinationOption>,
     selectedMode: Int,
     isDarkTheme: Boolean,

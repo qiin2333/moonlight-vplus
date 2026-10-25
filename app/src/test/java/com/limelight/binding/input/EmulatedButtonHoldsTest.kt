@@ -6,18 +6,19 @@ import org.junit.Test
 
 class EmulatedButtonHoldsTest {
     @Test
-    fun releasingOneControllerKeepsTheOtherControllersArrowHeld() {
-        val holds = EmulatedButtonHolds()
-        val first = Any()
-        val second = Any()
-        val up = ControllerPacket.UP_FLAG
+    fun releasingOneControllerKeepsOtherControllersArrowOrMouseButtonHeld() {
+        for (button in listOf(ControllerPacket.UP_FLAG, ControllerPacket.A_FLAG)) {
+            val holds = EmulatedButtonHolds()
+            val first = Any()
+            val second = Any()
 
-        assertEquals(up, holds.update(first, up))
-        assertEquals(0, holds.update(second, up))
-        assertEquals(0, holds.update(first, 0))
-        assertEquals(up, holds.heldMask)
-        assertEquals(up, holds.update(second, 0))
-        assertEquals(0, holds.heldMask)
+            assertEquals(button, holds.update(first, button))
+            assertEquals(0, holds.update(second, button))
+            assertEquals(0, holds.update(first, 0))
+            assertEquals(button, holds.heldMask)
+            assertEquals(button, holds.update(second, 0))
+            assertEquals(0, holds.heldMask)
+        }
     }
 
     @Test
@@ -30,19 +31,5 @@ class EmulatedButtonHoldsTest {
         assertEquals(up or right, holds.update(context, up or right))
         assertEquals(up, holds.update(context, right))
         assertEquals(right, holds.heldMask)
-    }
-
-    @Test
-    fun releasingOneControllerKeepsTheOtherControllersMouseButtonHeld() {
-        val holds = EmulatedButtonHolds()
-        val first = Any()
-        val second = Any()
-        val leftButton = ControllerPacket.A_FLAG
-
-        assertEquals(leftButton, holds.update(first, leftButton))
-        assertEquals(0, holds.update(second, leftButton))
-        assertEquals(0, holds.update(first, 0))
-        assertEquals(leftButton, holds.heldMask)
-        assertEquals(leftButton, holds.update(second, 0))
     }
 }
