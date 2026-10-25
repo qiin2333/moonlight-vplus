@@ -205,8 +205,8 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendControllerMotionFrame(JNIEnv *env
 
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_stopControllerMotionEvent(JNIEnv *env, jclass clazz,
-        jbyte controller, jboolean onlyFromFrame) {
-    return LiStopControllerMotionEvent(controller, onlyFromFrame);
+        jbyte controller) {
+    return LiStopControllerMotionEvent(controller);
 }
 
 JNIEXPORT jint JNICALL

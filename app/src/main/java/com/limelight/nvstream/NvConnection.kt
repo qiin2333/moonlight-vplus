@@ -706,8 +706,8 @@ open class NvConnection(
         if (!isMonkey) MoonBridge.sendControllerMotionFrame(controller, gx, gy, gz, ax, ay, az)
         else MoonBridge.LI_ERR_UNSUPPORTED
 
-    fun stopControllerMotionEvent(controller: Byte, onlyFromFrame: Boolean): Int =
-        if (!isMonkey) MoonBridge.stopControllerMotionEvent(controller, onlyFromFrame)
+    fun stopControllerMotionEvent(controller: Byte): Int =
+        if (!isMonkey) MoonBridge.stopControllerMotionEvent(controller)
         else MoonBridge.LI_ERR_UNSUPPORTED
 
     fun sendControllerBatteryEvent(controllerNumber: Byte, batteryState: Byte, batteryPercentage: Byte): Int =
