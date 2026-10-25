@@ -16,48 +16,32 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NvHttpBitrateTimeoutTest {
-    @Test(timeout = 10_000)
-    fun stalledBitrateResponseTimesOutAndNextAdjustmentSucceeds() {
-        withHost(timeoutMs = 200) { host ->
-            val http = host.client()
-            host.warmUp(http)
-            host.https.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.Stall).build())
+    @Test(timeout = 15_000)
+    fun stalledOrSlowResponseIsBoundedAndNextAdjustmentSucceeds() {
+        for (response in listOf(
+            MockResponse.Builder().onResponseStart(SocketEffect.Stall).build(),
+            // Bytes arrive within the read timeout; only the total deadline can stop this body.
+            MockResponse.Builder().body(BITRATE_BODY)
+                .throttleBody(1, 50, TimeUnit.MILLISECONDS).build()
+        )) {
+            withHost { host ->
+                val http = host.client()
+                host.warmUp(http)
+                host.https.enqueue(response)
 
-            assertBoundedFailure { http.setBitrate(8_000) }
+                assertBoundedFailure { http.setBitrate(8_000) }
 
-            host.assertBitrateRequest(8_000)
-            host.https.enqueue(bitrateResponse())
-            assertTrue(http.setBitrate(12_000))
-            host.assertBitrateRequest(12_000)
-        }
-    }
-
-    @Test(timeout = 10_000)
-    fun continuouslyArrivingBodyCannotKeepAdjustmentAliveAndNextRequestSucceeds() {
-        withHost(timeoutMs = 250) { host ->
-            val http = host.client()
-            host.warmUp(http)
-            host.https.enqueue(
-                MockResponse.Builder()
-                    .body(BITRATE_BODY)
-                    // Each byte arrives well within the read timeout, but the
-                    // whole response exceeds the manual-adjustment deadline.
-                    .throttleBody(1, 50, TimeUnit.MILLISECONDS)
-                    .build()
-            )
-
-            assertBoundedFailure { http.setBitrate(8_000) }
-
-            host.assertBitrateRequest(8_000)
-            host.https.enqueue(bitrateResponse())
-            assertTrue(http.setBitrate(12_000))
-            host.assertBitrateRequest(12_000)
+                host.assertBitrateRequest(8_000)
+                host.https.enqueue(bitrateResponse())
+                assertTrue(http.setBitrate(12_000))
+                host.assertBitrateRequest(12_000)
+            }
         }
     }
 
     @Test(timeout = 10_000)
     fun unknownHttpsPortDiscoverySharesAdjustmentDeadline() {
-        withHost(timeoutMs = 200) { host ->
+        withHost { host ->
             val http = host.client(httpsPort = 0)
             host.http.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.Stall).build())
 
@@ -85,7 +69,7 @@ class NvHttpBitrateTimeoutTest {
         assertTrue("The adjustment took ${elapsedMs}ms", elapsedMs < 1_500)
     }
 
-    private fun withHost(timeoutMs: Int, test: (Host) -> Unit) {
+    private fun withHost(test: (Host) -> Unit) {
         MockWebServer().use { http ->
             MockWebServer().use { https ->
                 val serverIdentity = certificate("host")
@@ -95,7 +79,7 @@ class NvHttpBitrateTimeoutTest {
                 https.useHttps(certificates.sslSocketFactory())
                 http.start()
                 https.start()
-                test(Host(http, https, serverIdentity, timeoutMs))
+                test(Host(http, https, serverIdentity))
             }
         }
     }
@@ -103,8 +87,7 @@ class NvHttpBitrateTimeoutTest {
     private class Host(
         val http: MockWebServer,
         val https: MockWebServer,
-        private val identity: HeldCertificate,
-        private val timeoutMs: Int
+        private val identity: HeldCertificate
     ) {
         fun client(httpsPort: Int = https.port): NvHTTP = NvHTTP(
             ComputerDetails.AddressTuple(http.hostName, http.port),
@@ -117,7 +100,7 @@ class NvHttpBitrateTimeoutTest {
                 connectTimeoutMs = 1_000,
                 readTimeoutMs = 5_000,
                 shortConnectTimeoutMs = 1_000,
-                bitrateCallTimeoutMs = timeoutMs
+                bitrateCallTimeoutMs = 250
             )
         )
 

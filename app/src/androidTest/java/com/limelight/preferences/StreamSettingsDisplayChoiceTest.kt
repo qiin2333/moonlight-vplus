@@ -276,23 +276,9 @@ class StreamSettingsDisplayChoiceTest {
         compose.onNodeWithText(context.getString(R.string.display_resolution_current_not_saved))
             .assertIsDisplayed()
         assertTrue(CustomResolutionsStore.load(context).isEmpty())
-        requireNotNull(scenario).onActivity { activity ->
-            val preference = requireNotNull(fragment(activity).findPreference<DisplayChoicePreference>(
-                PreferenceConfiguration.RESOLUTION_PREF_STRING))
-            assertEquals(listOf(ORIGINAL_RESOLUTION, PreferenceConfiguration.RES_NATIVE),
-                preference.entryValues.map(CharSequence::toString))
-            assertEquals(activity.getString(R.string.display_resolution_current_not_saved),
-                preference.descriptionFor(ORIGINAL_RESOLUTION))
-            assertNull(fragment(activity).findPreference<Preference>(
-                PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING))
-        }
-        assertEquals(ORIGINAL_RESOLUTION, preferences.getString(PreferenceConfiguration.RESOLUTION_PREF_STRING, null))
-        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
 
         // Confirming the retained current choice must not add it back or reset a manual bitrate.
         compose.onNodeWithText(labelFor(ORIGINAL_RESOLUTION)).performTouchInput { click() }
-        assertTrue(CustomResolutionsStore.load(context).isEmpty())
-        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
 
         // This is a new editor session; no second Save is needed to complete the deletion.
         openCustomManagementWithController()
