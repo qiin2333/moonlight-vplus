@@ -1279,7 +1279,7 @@
     <string name="display_spec_fps">Частота</string>
     <string name="display_spec_screen">Экран</string>
     <string name="display_scale_title">Масштаб экрана</string>
-    <string name="display_scale_recommended">Рекоменд.</string>
+    <string name="display_scale_recommended">Реком.</string>
     <string name="display_scale_applying">Применяется %1$d%%…</string>
     <string name="display_scale_load_failed">Не удалось получить масштаб экрана</string>
     <string name="display_scale_refresh">Обновить</string>

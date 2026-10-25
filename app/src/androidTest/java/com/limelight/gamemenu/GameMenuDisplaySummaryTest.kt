@@ -31,6 +31,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
@@ -137,6 +138,14 @@ class GameMenuDisplaySummaryTest {
         val card = bounds("bitrateCardBounds")
         val readout = bounds("bitrateReadout")
         val slider = bounds("bitrateSlider")
+        val resources = InstrumentationRegistry.getInstrumentation().targetContext.resources
+        val modeIndex = resources.getStringArray(R.array.abr_mode_values).indexOf("balanced")
+        val modeLabel = resources.getStringArray(R.array.abr_mode_names)[modeIndex]
+        val modeLayouts = mutableListOf<TextLayoutResult>()
+        val modeLayoutAction = composeTestRule.onNodeWithText(modeLabel, useUnmergedTree = true)
+            .assertIsDisplayed().fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
+        assertTrue(modeLayoutAction.action?.invoke(modeLayouts) == true)
+        assertFalse("The mode remains readable with long translations", modeLayouts.single().hasVisualOverflow)
         saveScreenshot("bitrate-300dp-font130-current")
 
         for (progress in listOf(0f, 9f, 24f, 34f, 49f, 59f)) {

@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -872,7 +874,7 @@ private fun DisplaySpecCell(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun BitrateCard(
     state: BitrateCardState,
@@ -906,37 +908,46 @@ internal fun BitrateCard(
         },
         onLongClick = onConfigure
     ) {
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = GameMenuDimens.compact, bottom = GameMenuDimens.section),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight),
+            verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
         ) {
-            Text(
-                text = stringResource(R.string.title_adaptive_bitrate),
-                color = secondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
-            )
-            Spacer(Modifier.width(GameMenuDimens.tight))
-            GameMenuInfoButton(
-                contentDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip),
-                symbol = "?",
-                targetSize = 16.dp,
-                onClick = callbacks.onAdaptiveBitrateInfo,
-                onLongClick = callbacks.onBitrateHapticMode
-            )
-            Spacer(Modifier.width(GameMenuDimens.compact))
-            InlineToggle(
-                checked = state.adaptiveBitrate,
-                contentDescription = stringResource(R.string.title_adaptive_bitrate),
-                onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) },
-                modifier = Modifier.focusRequester(adaptiveFocusRequester)
-            )
-            if (state.adaptiveBitrate) {
+            Row(
+                modifier = Modifier.align(Alignment.CenterVertically),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.title_adaptive_bitrate),
+                    color = secondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
                 Spacer(Modifier.width(GameMenuDimens.tight))
-                AbrModeMenu(state.abrMode, callbacks.onAbrMode)
+                GameMenuInfoButton(
+                    contentDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip),
+                    symbol = "?",
+                    targetSize = 16.dp,
+                    onClick = callbacks.onAdaptiveBitrateInfo,
+                    onLongClick = callbacks.onBitrateHapticMode
+                )
+                Spacer(Modifier.width(GameMenuDimens.compact))
+                InlineToggle(
+                    checked = state.adaptiveBitrate,
+                    contentDescription = stringResource(R.string.title_adaptive_bitrate),
+                    onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) },
+                    modifier = Modifier.focusRequester(adaptiveFocusRequester)
+                )
+            }
+            if (state.adaptiveBitrate) {
+                Box(Modifier.align(Alignment.CenterVertically)) {
+                    AbrModeMenu(state.abrMode, callbacks.onAbrMode)
+                }
             }
         }
         BitrateSlider(
