@@ -1,6 +1,5 @@
 package com.limelight.preferences
 
-import com.limelight.R
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.util.AttributeSet
@@ -8,6 +7,7 @@ import android.util.Log
 import android.view.Display
 import androidx.preference.CheckBoxPreference
 import androidx.preference.PreferenceManager
+import com.limelight.R
 
 /**
  * 外接显示器状态偏好设置
