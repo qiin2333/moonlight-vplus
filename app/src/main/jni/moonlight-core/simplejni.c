@@ -198,6 +198,24 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendControllerMotionEvent(JNIEnv *env
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendControllerMotionFrame(JNIEnv *env, jclass clazz,
+        jbyte controller, jfloat gx, jfloat gy, jfloat gz, jfloat ax, jfloat ay, jfloat az) {
+    return LiSendControllerMotionFrame(controller, gx, gy, gz, ax, ay, az);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_stopControllerMotionEvent(JNIEnv *env, jclass clazz,
+        jbyte controller) {
+    return LiStopControllerMotionEvent(controller);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_resetControllerMotionEvents(JNIEnv *env, jclass clazz,
+        jbyte controller, jboolean clearDemand) {
+    return LiResetControllerMotionEvents(controller, clearDemand);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendControllerBatteryEvent(JNIEnv *env, jclass clazz,
                                                                       jbyte controllerNumber,
                                                                       jbyte batteryState,
