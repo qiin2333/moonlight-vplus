@@ -23,9 +23,11 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
@@ -130,6 +132,15 @@ class GameMenuDisplaySummaryTest {
         val card = bounds("bitrateCardBounds")
         val readout = bounds("bitrateReadout")
         val slider = bounds("bitrateSlider")
+        val resources = InstrumentationRegistry.getInstrumentation().targetContext.resources
+        val modeIndex = resources.getStringArray(R.array.abr_mode_values).indexOf("balanced")
+        val mode = composeTestRule.onNodeWithText(resources.getStringArray(R.array.abr_mode_names)[modeIndex])
+            .getUnclippedBoundsInRoot()
+        val cardBounds = composeTestRule.onNodeWithTag("bitrateCardBounds", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        assertTrue("ABR mode and arrow fit inside the card",
+            mode.left >= cardBounds.left && mode.right <= cardBounds.right &&
+                mode.top >= cardBounds.top && mode.bottom <= cardBounds.bottom)
         for (progress in listOf(0f, 59f)) {
             composeTestRule.runOnIdle { state = state.copy(progress = progress) }
             assertEquals("Preview must not resize or move the card", card, bounds("bitrateCardBounds"))
