@@ -23,6 +23,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
@@ -35,6 +36,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.R
+import com.limelight.utils.ConfigurationSyncManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -75,15 +77,19 @@ class StreamSettingsDisplayChoiceTest {
             .putInt(PreferenceConfiguration.BITRATE_PREF_STRING, ORIGINAL_BITRATE)
             .putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING, true)
             .putBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, false)
+            .putBoolean(ConfigurationSyncManager.PREF_AUTO_SNAPSHOT_ENABLED, false)
+            .putBoolean(ConfigurationSyncManager.PREF_EXTERNAL_SNAPSHOT_ENABLED, false)
+            .putBoolean(ConfigurationSyncManager.PREF_BACKGROUND_SYNC_ENABLED, false)
             .commit()
-        CustomResolutionsStore.save(context, CustomResolutionsStore.DEFAULT_RESOLUTIONS)
+        CustomResolutionsStore.save(context, DEFAULT_RESOLUTIONS)
     }
 
     @After
     fun restoreSettings() {
         scenario?.close()
-        restoreSettingsPreferences(preferences, originalPreferences)
         restoreSettingsPreferences(customPreferences, originalCustomPreferences)
+        // Re-enable any original backup flags only after the original list is together again.
+        restoreSettingsPreferences(preferences, originalPreferences)
     }
 
     private fun launchSettings(autoAdjust: Boolean = true) {
@@ -253,6 +259,65 @@ class StreamSettingsDisplayChoiceTest {
         assertEquals(originalResolutions, CustomResolutionsStore.load(context))
         assertEquals(ORIGINAL_RESOLUTION, preferences.getString(PreferenceConfiguration.RESOLUTION_PREF_STRING, null))
         assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
+    }
+
+    @Test
+    fun removingTheCurrentResolutionSavesOnceAndReopeningDoesNotRestoreIt() {
+        val current = requireNotNull(ResolutionValidator.parseResolution(ORIGINAL_RESOLUTION))
+        CustomResolutionsStore.save(context, listOf(current))
+        launchSettings()
+        val managerLabel = openCustomManagementWithController()
+        val deleteLabel = context.getString(R.string.custom_resolution_delete_contentdesc,
+            current.width, current.height)
+        compose.onNodeWithContentDescription(deleteLabel).performTouchInput { click() }
+        compose.onNodeWithText(context.getString(R.string.custom_list_save)).performTouchInput { click() }
+
+        compose.onNodeWithText(managerLabel).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.display_resolution_current_not_saved))
+            .assertIsDisplayed()
+        assertTrue(CustomResolutionsStore.load(context).isEmpty())
+        requireNotNull(scenario).onActivity { activity ->
+            val preference = requireNotNull(fragment(activity).findPreference<DisplayChoicePreference>(
+                PreferenceConfiguration.RESOLUTION_PREF_STRING))
+            assertEquals(listOf(ORIGINAL_RESOLUTION, PreferenceConfiguration.RES_NATIVE),
+                preference.entryValues.map(CharSequence::toString))
+            assertEquals(activity.getString(R.string.display_resolution_current_not_saved),
+                preference.descriptionFor(ORIGINAL_RESOLUTION))
+            assertNull(fragment(activity).findPreference<Preference>(
+                PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING))
+        }
+        assertEquals(ORIGINAL_RESOLUTION, preferences.getString(PreferenceConfiguration.RESOLUTION_PREF_STRING, null))
+        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
+
+        // Confirming the retained current choice must not add it back or reset a manual bitrate.
+        compose.onNodeWithText(labelFor(ORIGINAL_RESOLUTION)).performTouchInput { click() }
+        assertTrue(CustomResolutionsStore.load(context).isEmpty())
+        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
+
+        // This is a new editor session; no second Save is needed to complete the deletion.
+        openCustomManagementWithController()
+        compose.onNodeWithText(context.getString(R.string.custom_resolution_empty_title)).assertIsDisplayed()
+        sendKey(KeyEvent.KEYCODE_BUTTON_B)
+        assertTrue(CustomResolutionsStore.load(context).isEmpty())
+        assertEquals(ORIGINAL_RESOLUTION, preferences.getString(PreferenceConfiguration.RESOLUTION_PREF_STRING, null))
+        assertEquals(ORIGINAL_BITRATE, preferences.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, -1))
+    }
+
+    @Test
+    fun choosingASavedPresetRetiresThePreviousUnsavedCurrentChoice() {
+        CustomResolutionsStore.save(context, listOf(requireNotNull(
+            ResolutionValidator.parseResolution(NEW_RESOLUTION))))
+        launchSettings()
+        select720pWithController()
+
+        requireNotNull(scenario).onActivity { activity ->
+            val preference = requireNotNull(fragment(activity).findPreference<DisplayChoicePreference>(
+                PreferenceConfiguration.RESOLUTION_PREF_STRING))
+            assertEquals(listOf(NEW_RESOLUTION, PreferenceConfiguration.RES_NATIVE),
+                preference.entryValues.map(CharSequence::toString))
+            assertNull(preference.descriptionFor(ORIGINAL_RESOLUTION))
+        }
+        assertEquals(listOf(NEW_RESOLUTION), CustomResolutionsStore.load(context).map(Resolution::toString))
     }
 
     @Test
@@ -528,6 +593,10 @@ class StreamSettingsDisplayChoiceTest {
         activity.supportFragmentManager.fragments.filterIsInstance<StreamSettings.SettingsFragment>().single()
 
     private companion object {
+        private val DEFAULT_RESOLUTIONS = listOf(
+            Resolution(1280, 720), Resolution(1920, 1080),
+            Resolution(2560, 1440), Resolution(3840, 2160)
+        )
         private const val ORIGINAL_RESOLUTION = "1920x1080"
         private const val NEW_RESOLUTION = "1280x720"
         private const val FRAME_RATE = "60"

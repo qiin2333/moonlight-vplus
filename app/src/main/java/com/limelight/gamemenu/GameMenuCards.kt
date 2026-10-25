@@ -17,7 +17,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -29,6 +28,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,13 +77,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import com.limelight.CustomKeyData
 import com.limelight.R
@@ -226,6 +225,7 @@ private fun CompactGameMenuSlider(
     onValueChangeFinished: () -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     enabled: Boolean = true,
+    steps: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val colors = SliderDefaults.colors()
@@ -235,6 +235,7 @@ private fun CompactGameMenuSlider(
         onValueChange = onValueChange,
         onValueChangeFinished = onValueChangeFinished,
         valueRange = valueRange,
+        steps = steps,
         enabled = enabled,
         colors = colors,
         interactionSource = interactionSource,
@@ -631,7 +632,7 @@ internal fun DisplayStatusCard(
     onConfigure: () -> Unit,
     onSliderGesture: (Boolean) -> Unit
 ) {
-    val screenLabel = state.screenModes.firstOrNull { it.selected }?.label ?: "—"
+    val screenLabel = state.screenModeLabel
     val resolutionValue = compactResolutionLabel(state.resolutionLabel)
     val specValues = listOf(resolutionValue, state.fpsLabel, screenLabel)
     // 三列字号取一致,由最长值决定,避免某列挤缩其余列宽松
@@ -721,77 +722,93 @@ internal fun DisplayStatusCard(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+                    horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.compact),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (scale.loading) {
-                        CircularProgressIndicator(
-                            color = accent,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.phc_perf_monitor),
-                            contentDescription = null,
-                            tint = accent.copy(alpha = if (scale.available) 1f else 0.45f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
                     Text(
                         text = stringResource(R.string.display_scale_title),
                         color = colorResource(R.color.game_menu_text_primary),
                         fontSize = 11.sp,
+                        lineHeight = 14.sp,
                         fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 80.dp)
+                    )
+                    CompactGameMenuSlider(
+                        value = sliderIndex,
+                        onValueChange = {
+                            if (!scale.loading) { sliderIndex = it; editing = true }
+                        },
+                        onValueChangeFinished = {
+                            if (!scale.loading) {
+                                supported.getOrNull(sliderIndex.roundToInt())?.let(callbacks.onSetDisplayScale)
+                            }
+                            editing = false
+                        },
+                        valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
+                        steps = (supported.size - 2).coerceAtLeast(0),
+                        // Keep hardware focus while applying; ignore edits until the reply arrives.
+                        enabled = scale.available && supported.size > 1,
                         modifier = Modifier
                             .weight(1f)
-                            .padding(horizontal = GameMenuDimens.section)
-                    )
-                    Text(
-                        text = scaleSummary,
-                        color = colorResource(R.color.game_menu_text_secondary),
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Slider(
-                    value = sliderIndex,
-                    onValueChange = {
-                        if (!scale.loading) { sliderIndex = it; editing = true }
-                    },
-                    onValueChangeFinished = {
-                        if (!scale.loading) {
-                            supported.getOrNull(sliderIndex.roundToInt())?.let(callbacks.onSetDisplayScale)
-                        }
-                        editing = false
-                    },
-                    valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
-                    steps = (supported.size - 2).coerceAtLeast(0),
-                    // Keep hardware focus while applying; ignore edits until the reply arrives.
-                    enabled = scale.available && supported.size > 1,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(GameMenuSliderSpec.height)
-                        .gamepadFocusOutline(GameMenuControlShape)
-                        .semantics {
-                            contentDescription = scaleDescription
-                            stateDescription = scaleSummary
-                        }
-                        .handleSliderDpad(
-                            value = sliderIndex,
-                            enabled = !scale.loading,
-                            step = 1f,
-                            valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
-                            onValueChange = { sliderIndex = it; editing = true },
-                            onValueChangeFinished = {
-                                supported.getOrNull(sliderIndex.roundToInt())
-                                    ?.let(callbacks.onSetDisplayScale)
-                                editing = false
+                            .height(GameMenuSliderSpec.height)
+                            .testTag("displayScaleSlider")
+                            .gamepadFocusOutline(GameMenuControlShape)
+                            .semantics {
+                                contentDescription = scaleDescription
+                                stateDescription = scaleSummary
                             }
+                            .handleSliderDpad(
+                                value = sliderIndex,
+                                enabled = scale.available && supported.size > 1 && !scale.loading,
+                                step = 1f,
+                                valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
+                                onValueChange = { sliderIndex = it; editing = true },
+                                onValueChangeFinished = {
+                                    supported.getOrNull(sliderIndex.roundToInt())
+                                        ?.let(callbacks.onSetDisplayScale)
+                                    editing = false
+                                }
+                            )
+                            .lockParentScrollDuringGesture(onSliderGesture)
+                    )
+                    Column(
+                        modifier = Modifier.width(54.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (scale.loading) {
+                                CircularProgressIndicator(
+                                    color = accent,
+                                    strokeWidth = 1.5.dp,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                            Text(
+                                text = selectedPercent?.let { stringResource(R.string.display_scale_value, it) } ?: "—",
+                                color = accent,
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                maxLines = 1
+                            )
+                        }
+                        Text(
+                            text = if (!scale.loading && selectedPercent != null && selectedPercent == scale.recommendedPercent) {
+                                stringResource(R.string.display_scale_recommended)
+                            } else "",
+                            color = colorResource(R.color.game_menu_text_secondary),
+                            fontSize = 9.sp,
+                            lineHeight = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        .lockParentScrollDuringGesture(onSliderGesture)
-                )
+                    }
+                }
                 if (scale.errorCode != null && !scale.loading) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -857,95 +874,76 @@ private fun DisplaySpecCell(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BitrateCard(
+internal fun BitrateCard(
     state: BitrateCardState,
     callbacks: GameMenuCallbacks,
     onSliderGesture: (Boolean) -> Unit,
     onConfigure: () -> Unit
 ) {
     val adaptiveFocusRequester = remember { FocusRequester() }
+    val accent = appAccentColor()
+    val secondary = colorResource(R.color.game_menu_text_secondary)
     GameMenuCard(
         title = stringResource(R.string.game_menu_tab_bitrate),
+        trailing = {
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold)) {
+                        append(BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps))
+                    }
+                    if (state.selectedBitrateKbps != state.currentBitrateKbps) {
+                        withStyle(SpanStyle(color = secondary, fontSize = 9.sp)) {
+                            append(" (${BitrateCardController.formatBitrateMbps(state.currentBitrateKbps)})")
+                        }
+                    }
+                },
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 180.dp).testTag("bitrateReadout")
+            )
+        },
         onLongClick = onConfigure
     ) {
-        BoxWithConstraints(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = GameMenuDimens.section)
-                .zIndex(1f)
+                .padding(start = GameMenuDimens.compact, bottom = GameMenuDimens.section),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            var controlsWidth by remember { mutableStateOf(IntSize.Zero) }
-            val density = LocalDensity.current
-            val bitrateLabel = BitrateCardController.formatBitrateMbps(state.selectedBitrateKbps)
-            val controlsDp = with(density) { controlsWidth.width.toDp() }
-            val labelWidth = 72.dp
-            val centered = controlsDp + GameMenuDimens.compact + labelWidth <= maxWidth / 2
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = if (centered) {
-                    Modifier.align(Alignment.Center)
-                } else {
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = GameMenuDimens.compact)
-                }
-            ) {
-                Text(
-                    text = bitrateLabel,
-                    color = appAccentColor(),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                // 未拖动时两者相等,只留一行,避免上下叠两个相同的数字
-                if (state.selectedBitrateKbps != state.currentBitrateKbps) {
-                    Text(
-                        text = BitrateCardController.formatBitrateMbps(state.currentBitrateKbps),
-                        color = colorResource(R.color.game_menu_text_secondary),
-                        fontSize = 9.sp,
-                        maxLines = 1
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = GameMenuDimens.compact)
-                    .onSizeChanged { controlsWidth = it },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.title_adaptive_bitrate),
-                    color = colorResource(R.color.game_menu_text_secondary),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1
-                )
+            Text(
+                text = stringResource(R.string.title_adaptive_bitrate),
+                color = secondary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
+            Spacer(Modifier.width(GameMenuDimens.tight))
+            GameMenuInfoButton(
+                contentDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip),
+                symbol = "?",
+                targetSize = 16.dp,
+                onClick = callbacks.onAdaptiveBitrateInfo,
+                onLongClick = callbacks.onBitrateHapticMode
+            )
+            Spacer(Modifier.width(GameMenuDimens.compact))
+            InlineToggle(
+                checked = state.adaptiveBitrate,
+                contentDescription = stringResource(R.string.title_adaptive_bitrate),
+                onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) },
+                modifier = Modifier.focusRequester(adaptiveFocusRequester)
+            )
+            if (state.adaptiveBitrate) {
                 Spacer(Modifier.width(GameMenuDimens.tight))
-                GameMenuInfoButton(
-                    contentDescription = stringResource(R.string.game_menu_adaptive_bitrate_tip),
-                    symbol = "?",
-                    targetSize = 16.dp,
-                    onClick = callbacks.onAdaptiveBitrateInfo,
-                    onLongClick = callbacks.onBitrateHapticMode
-                )
-                Spacer(Modifier.width(GameMenuDimens.compact))
-                InlineToggle(
-                    checked = state.adaptiveBitrate,
-                    contentDescription = stringResource(R.string.title_adaptive_bitrate),
-                    onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) },
-                    modifier = Modifier.focusRequester(adaptiveFocusRequester)
-                )
-                if (state.adaptiveBitrate) {
-                    Spacer(Modifier.width(GameMenuDimens.tight))
-                    AbrModeMenu(state.abrMode, callbacks.onAbrMode)
-                }
+                AbrModeMenu(state.abrMode, callbacks.onAbrMode)
             }
         }
         BitrateSlider(
             state = state,
             callbacks = callbacks,
-            onSliderGesture = onSliderGesture
+            onSliderGesture = onSliderGesture,
+            modifier = Modifier.testTag("bitrateSlider")
         )
         Row {
             Text(

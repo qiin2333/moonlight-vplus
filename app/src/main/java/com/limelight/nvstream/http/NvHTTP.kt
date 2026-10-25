@@ -104,12 +104,14 @@ class NvHTTP(
     data class TimeoutConfig(
         val connectTimeoutMs: Int,
         val readTimeoutMs: Int,
-        val shortConnectTimeoutMs: Int
+        val shortConnectTimeoutMs: Int,
+        val bitrateCallTimeoutMs: Int = 15_000
     ) {
         init {
             require(connectTimeoutMs > 0) { "connectTimeoutMs must be positive" }
             require(readTimeoutMs >= 0) { "readTimeoutMs must be non-negative" }
             require(shortConnectTimeoutMs > 0) { "shortConnectTimeoutMs must be positive" }
+            require(bitrateCallTimeoutMs > 0) { "bitrateCallTimeoutMs must be positive" }
         }
 
         companion object {
@@ -348,23 +350,31 @@ class NvHTTP(
         return true
     }
 
-    private fun executeRequest(client: OkHttpClient, request: Request): Response {
+    private fun executeRequest(
+        client: OkHttpClient,
+        request: Request,
+        deadline: HttpRequestDeadline? = null
+    ): Response {
         return try {
-            client.newCall(request).execute()
+            val call = client.newCall(request)
+            deadline?.execute(call) ?: call.execute()
         } catch (e: SSLHandshakeException) {
             if (!shouldRetryTlsHandshake(e)) throw e
             LimeLog.warning("${request.url} -> TLS handshake failed; rebuilding HTTP client and retrying once")
-            rebuildHttpClientsAfterTlsFailure(client).newCall(request).execute()
+            val call = rebuildHttpClientsAfterTlsFailure(client).newCall(request)
+            deadline?.execute(call) ?: call.execute()
         }
     }
 
     @Throws(IOException::class, InterruptedException::class)
-    fun getHttpsUrl(likelyOnline: Boolean): HttpUrl {
+    fun getHttpsUrl(likelyOnline: Boolean): HttpUrl = getHttpsUrl(likelyOnline, null)
+
+    private fun getHttpsUrl(likelyOnline: Boolean, deadline: HttpRequestDeadline?): HttpUrl {
         if (httpsPort == 0) {
             httpsPort = getHttpsPort(
                 openHttpConnectionToString(
                     if (likelyOnline) httpClientLongConnectTimeout else httpClientShortConnectTimeout,
-                    baseUrlHttp, "serverinfo"
+                    baseUrlHttp, "serverinfo", query = null, deadline = deadline
                 )
             )
         }
@@ -522,10 +532,17 @@ class NvHTTP(
     }
 
     @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnection(client: OkHttpClient, baseUrl: HttpUrl, path: String, query: String?, displayName: String? = null): ResponseBody {
+    private fun openHttpConnection(
+        client: OkHttpClient,
+        baseUrl: HttpUrl,
+        path: String,
+        query: String?,
+        displayName: String? = null,
+        deadline: HttpRequestDeadline? = null
+    ): ResponseBody {
         val completeUrl = getCompleteUrl(baseUrl, path, query, displayName)
         val request = Request.Builder().url(completeUrl).get().build()
-        val response = executeRequest(client, request)
+        val response = executeRequest(client, request, deadline)
 
         val body = response.body
 
@@ -548,9 +565,16 @@ class NvHTTP(
     }
 
     @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnectionToString(client: OkHttpClient, baseUrl: HttpUrl, path: String, query: String?, displayName: String? = null): String {
+    private fun openHttpConnectionToString(
+        client: OkHttpClient,
+        baseUrl: HttpUrl,
+        path: String,
+        query: String?,
+        displayName: String? = null,
+        deadline: HttpRequestDeadline? = null
+    ): String {
         try {
-            val resp = openHttpConnection(client, baseUrl, path, query, displayName)
+            val resp = openHttpConnection(client, baseUrl, path, query, displayName, deadline)
             val respString = resp.string()
             resp.close()
 
@@ -975,10 +999,13 @@ class NvHTTP(
     @SuppressLint("DefaultLocale")
     @Throws(IOException::class, XmlPullParserException::class, InterruptedException::class)
     fun setBitrate(bitrateKbps: Int): Boolean {
+        val deadline = HttpRequestDeadline(timeoutConfig.bitrateCallTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
         val query = String.format("bitrate=%d", bitrateKbps)
         val xmlStr = openHttpConnectionToString(
-            httpClientLongConnectNoReadTimeout,
-            getHttpsUrl(true), "bitrate", query
+            // A stalled host must release the serial manual-adjustment queue.
+            httpClientLongConnectTimeout,
+            getHttpsUrl(true, deadline), "bitrate", query,
+            deadline = deadline
         )
         return getXmlString(xmlStr, "bitrate", true) != "0"
     }

@@ -21,6 +21,7 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.DirectConfigTransfer
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.preferences.BackgroundSource
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
 import com.limelight.nvstream.http.ComputerDetails
@@ -175,6 +176,8 @@ class ConfigurationSyncManager(private val context: Context) {
 
     @Throws(JSONException::class)
     fun exportSyncPackage(): String {
+        // Materialize implicit defaults so restoring a fresh-install backup replaces a later list too.
+        CustomResolutionsStore.load(context)
         val sections = JSONObject()
             .put(
                 SECTION_DEFAULT_PREFERENCES,
@@ -444,6 +447,7 @@ class ConfigurationSyncManager(private val context: Context) {
                 PreferenceManager.getDefaultSharedPreferences(context)
             )
         }
+        CustomResolutionsStore.migrateLegacyLowResolutionPresets(context)
         if (defaultPreferencesImported > 0 || oscSettingsButtonImported > 0 || oscLayoutProfilesImported > 0) {
             context.sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH))
         }

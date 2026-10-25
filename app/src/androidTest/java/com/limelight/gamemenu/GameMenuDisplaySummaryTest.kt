@@ -1,23 +1,60 @@
 package com.limelight.gamemenu
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.R
+import com.limelight.preferences.DisplayChoiceLists
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalTestApi::class)
 class GameMenuDisplaySummaryTest {
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -87,6 +124,167 @@ class GameMenuDisplaySummaryTest {
         }
     }
 
+    @Test
+    fun rapidBitratePreviewsDoNotMoveTheBottomAnchoredCardAtCompactWidthAndLargeText() {
+        var state by mutableStateOf(displayState("1920x1080").copy(adaptiveBitrate = true))
+        composeTestRule.setContent {
+            CompactMenuFixture {
+                Box(Modifier.testTag("bitrateCardBounds")) {
+                    BitrateCard(state, displayCallbacks(), onSliderGesture = {}, onConfigure = {})
+                }
+            }
+        }
+        val card = bounds("bitrateCardBounds")
+        val readout = bounds("bitrateReadout")
+        val slider = bounds("bitrateSlider")
+        saveScreenshot("bitrate-300dp-font130-current")
+
+        for (progress in listOf(0f, 9f, 24f, 34f, 49f, 59f)) {
+            composeTestRule.runOnIdle { state = state.copy(progress = progress) }
+            assertEquals("Preview must not resize or move the card", card, bounds("bitrateCardBounds"))
+            assertEquals("Preview must not move the slider", slider, bounds("bitrateSlider"))
+            assertVerticalPositionUnchanged(readout, bounds("bitrateReadout"))
+            val layouts = mutableListOf<TextLayoutResult>()
+            val action = composeTestRule.onNodeWithTag("bitrateReadout", useUnmergedTree = true)
+                .fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
+            assertTrue(action.action?.invoke(layouts) == true)
+            assertFalse("The target and current values fit on one line", layouts.single().hasVisualOverflow)
+        }
+        saveScreenshot("bitrate-300dp-font130-pending")
+        composeTestRule.runOnIdle { state = state.copy(currentBitrateKbps = state.selectedBitrateKbps) }
+        assertEquals(card, bounds("bitrateCardBounds"))
+        assertEquals(slider, bounds("bitrateSlider"))
+        assertVerticalPositionUnchanged(readout, bounds("bitrateReadout"))
+        saveScreenshot("bitrate-300dp-font130-applied")
+    }
+
+    @Test
+    fun displayScaleUsesHostStopsAndCommitsOnlyOnReleaseWhileIgnoringInputDuringApply() {
+        val submitted = mutableListOf<Int>()
+        var state by mutableStateOf(displayState("1920x1080").copy(
+            displayScale = DisplayScaleState(
+                available = true,
+                currentPercent = 125,
+                recommendedPercent = 125,
+                supportedPercents = listOf(100, 125, 175, 200)
+            )
+        ))
+        val callbacks = displayCallbacks(onSetDisplayScale = { percent ->
+            submitted += percent
+            state = state.copy(displayScale = state.displayScale.copy(
+                loading = true,
+                pendingPercent = percent
+            ))
+        })
+        composeTestRule.setContent {
+            CompactMenuFixture {
+                DisplayStatusCard(state, callbacks, onConfigure = {}, onSliderGesture = {})
+            }
+        }
+        val slider = composeTestRule.onNodeWithTag("displayScaleSlider")
+        slider.assert(SemanticsMatcher.expectValue(
+            SemanticsProperties.ProgressBarRangeInfo,
+            ProgressBarRangeInfo(1f, 0f..3f, steps = 2)
+        ))
+        saveScreenshot("display-scale-300dp-font130")
+        slider.requestFocus()
+        slider.performKeyInput { keyDown(Key.DirectionRight) }
+        composeTestRule.runOnIdle { assertTrue("Key-down only previews", submitted.isEmpty()) }
+        slider.assert(SemanticsMatcher.expectValue(
+            SemanticsProperties.ProgressBarRangeInfo,
+            ProgressBarRangeInfo(2f, 0f..3f, steps = 2)
+        ))
+        slider.performKeyInput { keyUp(Key.DirectionRight) }
+        composeTestRule.runOnIdle { assertEquals(listOf(175), submitted) }
+
+        slider.performKeyInput { pressKey(Key.DirectionRight) }
+        slider.performTouchInput { swipeRight() }
+        composeTestRule.runOnIdle {
+            assertEquals("Applying ignores both controller and touch edits", listOf(175), submitted)
+        }
+        saveScreenshot("display-scale-300dp-font130-applying")
+
+        composeTestRule.runOnIdle {
+            state = state.copy(displayScale = state.displayScale.copy(
+                loading = false,
+                pendingPercent = null,
+                currentPercent = 175
+            ))
+        }
+        slider.performTouchInput {
+            down(center)
+            moveTo(centerRight)
+        }
+        composeTestRule.runOnIdle { assertEquals("Dragging only previews", listOf(175), submitted) }
+        slider.performTouchInput { up() }
+        composeTestRule.runOnIdle { assertEquals(listOf(175, 200), submitted) }
+    }
+
+    @Test
+    fun startupScreenPolicyStillAppearsInSummaryWhenOnlyTopologyActionsAreAvailable() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val labels = DisplayChoiceLists.labelLookup(
+            context.resources, R.array.screen_combination_mode_names, R.array.screen_combination_mode_values
+        )
+        val label = requireNotNull(labels["-1"])
+        val modes = inStreamScreenModeChoices(mapOf("2" to "Single", "4" to "Extended", "3" to "Exclusive"), "-1")
+        val opened = AtomicInteger(0)
+        composeTestRule.setContent {
+            CompactMenuFixture {
+                DisplayStatusCard(
+                    state = displayState("1920x1080").copy(screenModes = modes, screenModeLabel = label),
+                    callbacks = displayCallbacks(onOpenScreenModeSheet = { opened.incrementAndGet() }),
+                    onConfigure = {},
+                    onSliderGesture = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("${context.getString(R.string.display_spec_screen)}, $label")
+            .assertIsDisplayed()
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(1, opened.get())
+            assertEquals(listOf("2", "4", "3"), modes.map { it.value })
+        }
+        saveScreenshot("display-startup-policy-summary")
+    }
+
+    @Composable
+    private fun CompactMenuFixture(content: @Composable () -> Unit) {
+        val density = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.3f)) {
+            GameMenuTheme {
+                Box(Modifier.fillMaxSize().background(Color(0xff25292d))) {
+                    GameMenuDialogShell(widthFraction = 1f, horizontalInset = 16.dp, onDismissRequest = {}) {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Box(Modifier.width(300.dp).testTag("compactMenuFixture")) { content() }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun bounds(tag: String): Rect = composeTestRule
+        .onNodeWithTag(tag, useUnmergedTree = true)
+        .assertIsDisplayed()
+        .fetchSemanticsNode().boundsInRoot
+
+    private fun assertVerticalPositionUnchanged(expected: Rect, actual: Rect) {
+        assertEquals("Readout top remains stable", expected.top, actual.top, 0.5f)
+        assertEquals("Readout bottom remains stable", expected.bottom, actual.bottom, 0.5f)
+    }
+
+    private fun saveScreenshot(name: String) {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val directory = File(requireNotNull(context.getExternalFilesDir(null)), "ux-review")
+        assertTrue(directory.isDirectory || directory.mkdirs())
+        File(directory, "$name.png").outputStream().use { output ->
+            assertTrue(composeTestRule.onNodeWithTag("compactMenuFixture").captureToImage().asAndroidBitmap()
+                .compress(Bitmap.CompressFormat.PNG, 100, output))
+        }
+    }
+
     private fun displayState(selected: String): BitrateCardState {
         return BitrateCardState(
             progress = 24f,
@@ -109,9 +307,10 @@ class GameMenuDisplaySummaryTest {
     }
 
     private fun displayCallbacks(
-        onOpenResolutionSheet: () -> Unit,
+        onOpenResolutionSheet: () -> Unit = {},
         onOpenFrameRateSheet: () -> Unit = {},
         onOpenScreenModeSheet: () -> Unit = {},
+        onSetDisplayScale: (Int) -> Unit = {},
     ) = GameMenuCallbacks(
         onDismiss = {},
         onUsbDevices = {},
@@ -139,6 +338,7 @@ class GameMenuDisplaySummaryTest {
         onOpenResolutionSheet = onOpenResolutionSheet,
         onOpenFrameRateSheet = onOpenFrameRateSheet,
         onOpenScreenModeSheet = onOpenScreenModeSheet,
+        onSetDisplayScale = onSetDisplayScale,
         onAudioHapticsEnabled = {},
         onAudioHapticsStrength = { false },
         onAudioHapticsStrengthFinished = {},

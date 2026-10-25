@@ -25,17 +25,21 @@ class ConfigurationBackupRoundTripTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private lateinit var preferences: SharedPreferences
     private lateinit var valueStatePreferences: SharedPreferences
+    private lateinit var customPreferences: SharedPreferences
     private var originalPreferences: Map<String, *>? = null
     private var originalValueState: Map<String, *>? = null
+    private var originalCustomPreferences: Map<String, *>? = null
 
     @Before
     fun savePreferencesAndDisableBackups() {
         preferences = PreferenceManager.getDefaultSharedPreferences(context)
         valueStatePreferences = context.getSharedPreferences(VALUE_STATE_PREFERENCES, Context.MODE_PRIVATE)
+        customPreferences = context.getSharedPreferences("custom_resolutions", Context.MODE_PRIVATE)
         // Export stamps per-value state and may create the device ID in default preferences.
         // Preserve complete files, including all synchronization metadata and string sets.
         originalPreferences = snapshotSettingsPreferences(preferences)
         originalValueState = snapshotSettingsPreferences(valueStatePreferences)
+        originalCustomPreferences = snapshotSettingsPreferences(customPreferences)
         disableBackups()
         assertTrue(preferences.edit()
             .putBoolean(REVERSE_RESOLUTION_KEY, false)
@@ -52,6 +56,7 @@ class ConfigurationBackupRoundTripTest {
                 assertTrue("Failed to restore synchronization value state", valueStatePreferences.all == saved)
             }
         } finally {
+            originalCustomPreferences?.let { saved -> restoreSettingsPreferences(customPreferences, saved) }
             // Restore enabled flags last, after the original settings and metadata are together again.
             originalPreferences?.let { saved ->
                 restoreSettingsPreferences(preferences, saved)

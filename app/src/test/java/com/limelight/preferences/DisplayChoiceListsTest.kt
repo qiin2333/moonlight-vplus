@@ -11,7 +11,7 @@ class DisplayChoiceListsTest {
 
     @Test
     fun fixedSizeAndFollowingTheDisplayRemainDistinctSelections() {
-        val values = DisplayChoiceLists.resolutionValues(store, "1920x1080", false)
+        val values = DisplayChoiceLists.resolutionValues(store, "1920x1080")
         assertEquals(store + "Native", values)
         assertTrue("1920x1080" in values)
         assertTrue("Native" in values)
@@ -22,7 +22,6 @@ class DisplayChoiceListsTest {
         val values = DisplayChoiceLists.resolutionValues(
             store,
             "2340x1080",
-            false,
             listOf("3440x1440", "1920x1080")
         )
         assertEquals(
@@ -36,7 +35,7 @@ class DisplayChoiceListsTest {
     fun restoredResolutionIsSortedBetweenSurroundingPresets() {
         assertEquals(
             listOf("1280x720", "1600x900", "1920x1080", "2560x1440", "3840x2160", "Native"),
-            DisplayChoiceLists.resolutionValues(store, "1600x900", false)
+            DisplayChoiceLists.resolutionValues(store, "1600x900")
         )
     }
 
@@ -45,25 +44,18 @@ class DisplayChoiceListsTest {
         val values = DisplayChoiceLists.resolutionValues(
             store + listOf("Native", "1920x1080", "wide", "0x1080"),
             "Native",
-            false,
             listOf("-1x720")
         )
         assertEquals(store + "Native", values)
     }
 
     @Test
-    fun lowPresetsAppearWhenToggledOn() {
-        val values = DisplayChoiceLists.resolutionValues(store, "1920x1080", true)
-        assertEquals(listOf("640x360", "854x480") + store + "Native", values)
-    }
-
-    @Test
-    fun lowPresetsAppearWhenCurrentSelectionOrDraftUsesOne() {
-        val expected = listOf("640x360", "854x480") + store + "Native"
-        assertEquals(expected, DisplayChoiceLists.resolutionValues(store, "640x360", false))
+    fun currentAndDraftLowResolutionValuesDoNotInjectOtherPresets() {
+        assertEquals(listOf("640x360") + store + "Native",
+            DisplayChoiceLists.resolutionValues(store, "640x360"))
         assertEquals(
-            expected,
-            DisplayChoiceLists.resolutionValues(store, "1920x1080", false, listOf("854x480"))
+            listOf("854x480") + store + "Native",
+            DisplayChoiceLists.resolutionValues(store, "1920x1080", listOf("854x480"))
         )
     }
 
@@ -71,10 +63,16 @@ class DisplayChoiceListsTest {
     fun duplicateLowPresetInStoreIsNotAppendedTwice() {
         val values = DisplayChoiceLists.resolutionValues(
             listOf("640x360") + store,
-            "1920x1080",
-            false
+            "1920x1080"
         )
         assertEquals(listOf("640x360") + store + "Native", values)
+    }
+
+    @Test
+    fun explicitlyEmptyListOnlyKeepsTheCurrentChoiceAndNative() {
+        assertEquals(listOf("2340x1080", "Native"),
+            DisplayChoiceLists.resolutionValues(emptyList(), "2340x1080"))
+        assertEquals(listOf("Native"), DisplayChoiceLists.resolutionValues(emptyList(), "Native"))
     }
 
     @Test
