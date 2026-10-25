@@ -264,6 +264,7 @@ class GameMenu(
     private val waveformHapticsCardController = WaveformHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
     private val touchPointerSensitivityController = TouchPointerSensitivityController(game)
+    private val touchpadSensitivityController = TouchpadSensitivityController(game)
     private val renderingProfile = GameMenuRenderingProfile.from(game)
     private val systemHapticsEnabled = Settings.System.getInt(
         game.contentResolver,
@@ -629,6 +630,7 @@ class GameMenu(
      * 显示触控模式菜单
      */
     private fun showTouchModeMenu() {
+        touchpadSensitivityController.refresh()
         // While the DS5 touchpad captures screen touches, the trackpad-specific
         // options below are inert, so treat trackpad mode as inactive.
         val isTouchscreenTrackpad = game.prefConfig.touchscreenTrackpad &&
@@ -856,6 +858,7 @@ class GameMenu(
                     runnable = Runnable {
                         game.setScreenDs5TouchpadEnabled(true)
                         touchPointerSensitivityController.refreshApplicability()
+                        touchpadSensitivityController.refresh()
                     },
                     subtitle = getString(R.string.game_menu_touch_mode_ds5_summary)
                 )
@@ -899,6 +902,7 @@ class GameMenu(
             )
         }
         touchPointerSensitivityController.refreshApplicability()
+        touchpadSensitivityController.refresh()
     }
 
     /**
@@ -1151,6 +1155,7 @@ class GameMenu(
                 waveformHaptics = waveformHapticsCardController.snapshot(),
                 gyro = gyroCardController.snapshot(),
                 touchPointerSensitivity = touchPointerSensitivityController.snapshot(),
+                touchpadSensitivity = touchpadSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
                 usbForwardingEnabled = true, // Keep setup and unavailable reasons discoverable.
                 pageLayout = pageLayout
@@ -1179,6 +1184,9 @@ class GameMenu(
             composeUiState?.let {
                 it.value = it.value.copy(touchPointerSensitivity = sensitivity)
             }
+        }
+        touchpadSensitivityController.start { sensitivity ->
+            composeUiState?.let { it.value = it.value.copy(touchpadSensitivity = sensitivity) }
         }
 
         val callbacks = GameMenuCallbacks(
@@ -1249,7 +1257,17 @@ class GameMenu(
                     ).show()
                 }
             },
-            onManageTouchPointerSensitivityPresets = ::showTouchPointerSensitivityPresetManager,
+            onManageTouchPointerSensitivityPresets = { showTouchPointerSensitivityPresetManager() },
+            onTouchpadSensitivity = touchpadSensitivityController::preview,
+            onTouchpadSensitivityFinished = touchpadSensitivityController::persist,
+            onSaveTouchpadPreset = { showTouchpadPresetEditor() },
+            onManageTouchpadPresets = { showTouchPointerSensitivityPresetManager(touchpad = true) },
+            onApplyTouchpadPreset = { id ->
+                if (touchpadSensitivityController.applyPreset(id)) {
+                    Toast.makeText(game, game.getString(R.string.toast_preset_applied,
+                        touchpadSensitivityController.preset(id)?.name.orEmpty()), Toast.LENGTH_SHORT).show()
+                }
+            },
             onCustomKey = { sendKeys(it.keys) }
         )
 
@@ -1358,6 +1376,7 @@ class GameMenu(
             waveformHapticsCardController.dispose()
             gyroCardController.dispose()
             touchPointerSensitivityController.dispose()
+            touchpadSensitivityController.dispose()
             menuStack.clear()
             onDismiss(this)
         }
@@ -1515,8 +1534,9 @@ class GameMenu(
         game.prefConfig.writePreferences(game)
     }
 
-    private fun showTouchPointerSensitivityPresetManager() {
-        val presets = touchPointerSensitivityController.snapshot().presets
+    private fun showTouchPointerSensitivityPresetManager(touchpad: Boolean = false) {
+        val presets = if (touchpad) touchpadSensitivityController.snapshot().pointer.presets
+            else touchPointerSensitivityController.snapshot().presets
         if (presets.isEmpty()) return
 
         registerChildDialog(
@@ -1531,7 +1551,8 @@ class GameMenu(
                         trailingText = game.getString(
                             R.string.game_menu_touch_pointer_preset_field_count,
                             preset.values.keys.count { key ->
-                                TouchPointerPresetField.entries.any { it.storageKey == key }
+                                if (touchpad) TouchpadPresetField.entries.any { it.key == key }
+                                else TouchPointerPresetField.entries.any { it.storageKey == key }
                             }
                         )
                     )
@@ -1543,10 +1564,11 @@ class GameMenu(
                 onAction = { action ->
                     game.window.decorView.post {
                         if (action.id == DELETE_PRESETS_ACTION_ID) {
-                            showTouchPointerPresetDeleteDialog()
+                            showTouchPointerPresetDeleteDialog(touchpad)
                         } else {
                             presets.getOrNull(action.id)?.let { preset ->
-                                showTouchPointerPresetEditor(preset.id)
+                                if (touchpad) showTouchpadPresetEditor(preset.id)
+                                else showTouchPointerPresetEditor(preset.id)
                             }
                         }
                     }
@@ -1590,8 +1612,9 @@ class GameMenu(
         )
     }
 
-    private fun showTouchPointerPresetDeleteDialog() {
-        val presets = touchPointerSensitivityController.snapshot().presets
+    private fun showTouchPointerPresetDeleteDialog(touchpad: Boolean = false) {
+        val presets = if (touchpad) touchpadSensitivityController.snapshot().pointer.presets
+            else touchPointerSensitivityController.snapshot().presets
         if (presets.isEmpty()) return
         registerChildDialog(
             AppActionSheet.showMultiSelect(
@@ -1608,7 +1631,8 @@ class GameMenu(
                     val ids = selected.mapNotNullTo(linkedSetOf()) { index ->
                         presets.getOrNull(index)?.id
                     }
-                    val removed = touchPointerSensitivityController.removePresets(ids)
+                    val removed = if (touchpad) touchpadSensitivityController.removePresets(ids)
+                        else touchPointerSensitivityController.removePresets(ids)
                     if (removed > 0) {
                         Toast.makeText(
                             game,
@@ -1634,6 +1658,31 @@ class GameMenu(
                 R.string.game_menu_touch_pointer_zone_position
         }
     )
+
+    private fun showTouchpadPresetEditor(presetId: String? = null) {
+        val preset = presetId?.let(touchpadSensitivityController::preset)
+        val inputState = TouchPointerPresetEditor.InputState()
+        registerChildDialog(
+            TouchPointerPresetEditor.show(
+                context = game,
+                title = getString(if (preset == null) R.string.game_menu_touch_pointer_create_preset
+                    else R.string.game_menu_touch_pointer_edit_preset),
+                initialName = preset?.name ?: touchpadSensitivityController.defaultName(),
+                fields = TouchpadPresetField.entries.map { field ->
+                    TouchPointerPresetEditor.FieldOption(
+                        field, getString(field.label),
+                        touchpadSensitivityController.fieldValue(field, preset),
+                        preset == null || field.key in preset.values,
+                        TouchPointerPresetEditor.NumericSpec(1, field.max, 10,
+                            R.string.game_menu_touch_pointer_speed_value)
+                    )
+                },
+                inputState = inputState,
+                onSave = { name, values -> touchpadSensitivityController.savePreset(preset?.id, name, values) }
+            ),
+            onDismissKey = inputState::handleDismissKey
+        )
+    }
 
     private fun rememberControllerNavigation(event: KeyEvent) {
         // 游戏菜单里键盘也触发导航态;对话框内键盘是文本输入,由调用方只用 isGamepadNavigationSource

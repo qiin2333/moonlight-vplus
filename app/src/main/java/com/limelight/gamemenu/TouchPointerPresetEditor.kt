@@ -71,35 +71,36 @@ internal object TouchPointerPresetEditor {
         }
     }
 
-    data class FieldOption(
-        val field: TouchPointerPresetField,
+    data class FieldOption<F>(
+        val field: F,
         val label: String,
         val value: String,
-        val checked: Boolean
+        val checked: Boolean,
+        val numericSpec: NumericSpec? = null
     )
 
-    private data class NumericSpec(
+    data class NumericSpec(
         val min: Int,
         val max: Int,
         val keyStep: Int,
         val valueStringRes: Int
     )
 
-    private data class FieldControl(
-        val option: FieldOption,
+    private data class FieldControl<F>(
+        val option: FieldOption<F>,
         val includeCheckBox: CheckBox,
         val valueViews: List<View>,
         val container: View,
         val readValue: () -> String
     )
 
-    fun show(
+    fun <F> show(
         context: Context,
         title: String,
         initialName: String,
-        fields: List<FieldOption>,
+        fields: List<FieldOption<F>>,
         inputState: InputState = InputState(),
-        onSave: (String, Map<TouchPointerPresetField, String>) -> TouchPointerPresetSaveResult
+        onSave: (String, Map<F, String>) -> TouchPointerPresetSaveResult
     ): Dialog {
         val builder = AlertDialog.Builder(context, R.style.AppDialogStyle)
         val dialogContext = builder.context
@@ -189,7 +190,7 @@ internal object TouchPointerPresetEditor {
                 ))
             }
 
-            numericSpec(option.field)?.let { spec ->
+            (option.numericSpec ?: numericSpec(option.field))?.let { spec ->
                 val initialValue = option.value.toIntOrNull()?.coerceIn(spec.min, spec.max)
                     ?: spec.min
                 val valueText = TextView(dialogContext).apply {
@@ -329,7 +330,7 @@ internal object TouchPointerPresetEditor {
                     )
                     return@setOnClickListener
                 }
-                val selectedValues = linkedMapOf<TouchPointerPresetField, String>()
+                val selectedValues = linkedMapOf<F, String>()
                 fieldControls.filter { it.includeCheckBox.isChecked }.forEach { control ->
                     selectedValues[control.option.field] = control.readValue()
                 }
@@ -383,7 +384,7 @@ internal object TouchPointerPresetEditor {
         return dialog
     }
 
-    private fun numericSpec(field: TouchPointerPresetField): NumericSpec? = when (field) {
+    private fun numericSpec(field: Any?): NumericSpec? = when (field) {
         TouchPointerPresetField.POINTER_SPEED -> NumericSpec(
             min = TouchPointerSensitivityPolicy.MIN_PERCENT,
             max = TouchPointerSensitivityPolicy.MAX_PERCENT,
@@ -402,12 +403,12 @@ internal object TouchPointerPresetEditor {
             keyStep = 1,
             valueStringRes = R.string.game_menu_touch_pointer_speed_value
         )
-        TouchPointerPresetField.POINTER_ZONE_SIDE -> null
+        else -> null
     }
 
-    private fun configureFocusGraph(
+    private fun <F> configureFocusGraph(
         nameInput: EditText,
-        fieldControls: List<FieldControl>
+        fieldControls: List<FieldControl<F>>
     ) {
         val firstCheckBox = fieldControls.firstOrNull()?.includeCheckBox ?: return
         nameInput.nextFocusDownId = firstCheckBox.id

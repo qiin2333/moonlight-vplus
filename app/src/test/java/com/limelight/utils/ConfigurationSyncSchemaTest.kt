@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
+import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.ui.FloatBallPreferences
 import org.junit.Assert.assertEquals
@@ -13,6 +14,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ConfigurationSyncSchemaTest {
+    @Test
+    fun touchpadStoresAreObservedButActivePresetIsLocal() {
+        val stores = ConfigurationSyncManager.portableSharedPreferenceNames()
+        assertTrue(TouchpadInputPreferences.FILE_NAME in stores)
+        assertTrue(TouchpadInputPreferences.PRESETS_FILE_NAME in stores)
+        TouchpadInputPreferences.PORTABLE_KEYS.forEach { key ->
+            assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey(TouchpadInputPreferences.FILE_NAME, key))
+            assertFalse(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
+        }
+        assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey(
+            TouchpadInputPreferences.PRESETS_FILE_NAME, TouchPointerPresetPreferences.JSON_KEY))
+        assertFalse(ConfigurationSyncManager.isPortableSharedPreferenceKey(
+            TouchpadInputPreferences.PRESETS_FILE_NAME, TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY))
+    }
+
     @Test
     fun consolidatedSettingsKeepNewAndLegacyBackupKeysPortable() {
         listOf(

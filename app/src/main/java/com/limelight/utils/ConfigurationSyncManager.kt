@@ -23,6 +23,7 @@ import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.preferences.BackgroundSource
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
+import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.nvstream.http.ComputerDetails
 import org.json.JSONArray
 import org.json.JSONException
@@ -274,6 +275,16 @@ class ConfigurationSyncManager(private val context: Context) {
                     encodeTouchPointerPresetPreferences()
                 )
             )
+            .put(SECTION_TOUCHPAD_INPUT, JSONObject().put(KEY_VALUES, encodePreferences(
+                SECTION_TOUCHPAD_INPUT,
+                context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
+                TouchpadInputPreferences.PORTABLE_KEYS
+            )))
+            .put(SECTION_TOUCHPAD_PRESETS, JSONObject().put(KEY_VALUES, encodePreferences(
+                SECTION_TOUCHPAD_PRESETS,
+                context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE),
+                TOUCH_POINTER_PRESET_PREF_KEYS
+            )))
             .put(SECTION_CROWN_PROFILES, exportCrownProfiles())
             .put(SECTION_PAIRING, exportPairingState())
 
@@ -323,6 +334,12 @@ class ConfigurationSyncManager(private val context: Context) {
                     PORTABLE_DEFAULT_PREF_KEYS
                 ) + countValues(
                     valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
+                    TOUCH_POINTER_PRESET_PREF_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_INPUT)),
+                    TouchpadInputPreferences.PORTABLE_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS)),
                     TOUCH_POINTER_PRESET_PREF_KEYS
                 ) + countValues(
                     valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
@@ -378,7 +395,20 @@ class ConfigurationSyncManager(private val context: Context) {
                     Context.MODE_PRIVATE
                 ),
                 valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
-                TOUCH_POINTER_PRESET_PREF_KEYS
+                TOUCH_POINTER_PRESET_PREF_KEYS,
+                acceptedTypes = ::presetPreferenceTypes
+            ) + applyPreferences(
+                SECTION_TOUCHPAD_INPUT,
+                context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
+                valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_INPUT)),
+                TouchpadInputPreferences.PORTABLE_KEYS,
+                acceptedTypes = { setOf(TYPE_INT, TYPE_DELETED) }
+            ) + applyPreferences(
+                SECTION_TOUCHPAD_PRESETS,
+                context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE),
+                valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS)),
+                TOUCH_POINTER_PRESET_PREF_KEYS,
+                acceptedTypes = ::presetPreferenceTypes
             )
         val appLastSettingsImported = applyPreferences(
             SECTION_APP_LAST_SETTINGS,
@@ -1355,6 +1385,12 @@ class ConfigurationSyncManager(private val context: Context) {
         return applied
     }
 
+    private fun presetPreferenceTypes(key: String): Set<String> = when (key) {
+        TouchPointerPresetPreferences.JSON_KEY -> setOf(TYPE_STRING, TYPE_DELETED)
+        TouchPointerPresetPreferences.DELETED_IDS_KEY -> setOf(TYPE_STRING_SET, TYPE_DELETED)
+        else -> emptySet()
+    }
+
     private fun putTypedValue(
         editor: SharedPreferences.Editor,
         key: String,
@@ -2267,6 +2303,23 @@ class ConfigurationSyncManager(private val context: Context) {
                     )
                 )
                 .put(
+                    SECTION_TOUCHPAD_INPUT,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_TOUCHPAD_INPUT),
+                        localSections.optJSONObject(SECTION_TOUCHPAD_INPUT),
+                        TouchpadInputPreferences.PORTABLE_KEYS,
+                        metadata.deviceId
+                    )
+                )
+                .put(
+                    SECTION_TOUCHPAD_PRESETS,
+                    mergedTouchPointerPresetSectionCore(
+                        externalSections.optJSONObject(SECTION_TOUCHPAD_PRESETS),
+                        localSections.optJSONObject(SECTION_TOUCHPAD_PRESETS),
+                        metadata.deviceId
+                    )
+                )
+                .put(
                     SECTION_CROWN_PROFILES,
                     mergeCrownProfilesCore(
                         externalSections.optJSONArray(SECTION_CROWN_PROFILES),
@@ -2389,6 +2442,15 @@ class ConfigurationSyncManager(private val context: Context) {
                 .put(
                     SECTION_CROWN_PROFILES,
                     mergeCrownProfilesCore(sections.optJSONArray(SECTION_CROWN_PROFILES), null, "hash")
+                )
+                .put(
+                    SECTION_TOUCHPAD_INPUT,
+                    mergedPreferenceSectionCore(sections.optJSONObject(SECTION_TOUCHPAD_INPUT), null,
+                        TouchpadInputPreferences.PORTABLE_KEYS, "hash")
+                )
+                .put(
+                    SECTION_TOUCHPAD_PRESETS,
+                    mergedTouchPointerPresetSectionCore(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS), null, "hash")
                 )
                 .put(
                     SECTION_PAIRING,
@@ -3100,6 +3162,8 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val SECTION_OSC_SETTINGS_BUTTON = "oscSettingsButton"
         private const val SECTION_OSC_LAYOUT_PROFILES = "oscLayoutProfiles"
         private const val SECTION_TOUCH_POINTER_PRESETS = "touchPointerPresets"
+        private const val SECTION_TOUCHPAD_INPUT = "touchpadInput"
+        private const val SECTION_TOUCHPAD_PRESETS = "touchpadPresets"
 
         private const val TYPE_BOOLEAN = "boolean"
         private const val TYPE_DELETED = "deleted"
@@ -3204,6 +3268,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 SCENE_CONFIGS_PREFS -> true
                 APP_VIEW_PREFS -> key in APP_VIEW_PREF_KEYS
                 TouchPointerPresetPreferences.FILE_NAME -> key in TOUCH_POINTER_PRESET_PREF_KEYS
+                TouchpadInputPreferences.PRESETS_FILE_NAME -> key in TOUCH_POINTER_PRESET_PREF_KEYS
+                TouchpadInputPreferences.FILE_NAME -> key in TouchpadInputPreferences.PORTABLE_KEYS
                 OscSettingsButtonStore.PREFERENCES_NAME -> key in OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
                 VirtualControllerConfigurationLoader.OSC_PREFERENCE -> true
                 else -> false
@@ -3373,6 +3439,8 @@ class ConfigurationSyncManager(private val context: Context) {
             HIDDEN_APPS_PREFS,
             SCENE_CONFIGS_PREFS,
             TouchPointerPresetPreferences.FILE_NAME,
+            TouchpadInputPreferences.FILE_NAME,
+            TouchpadInputPreferences.PRESETS_FILE_NAME,
             OscSettingsButtonStore.PREFERENCES_NAME,
             VirtualControllerConfigurationLoader.OSC_PREFERENCE
         )
