@@ -53,13 +53,16 @@ class AppSettingsManagerDisplayCardTest {
         manager.saveAppLastSettings(COMPUTER_UUID, app, settings(visible = true))
         val record = JSONObject(lastSettingsPreferences.getString(RECORD_KEY, null)!!)
         record.remove("showDisplaySettingsCard")
+        record.remove("showWaveformHapticsCard")
         assertTrue(lastSettingsPreferences.edit().putString(RECORD_KEY, record.toString()).commit())
 
         for (visible in listOf(false, true)) {
             setGlobalDisplayCardVisibility(visible)
+            setGlobalWaveformCardVisibility(!visible)
             val loaded = manager.getAppLastSettings(COMPUTER_UUID, app)
             assertNotNull(loaded)
             assertEquals(visible, loaded!!.showDisplaySettingsCard)
+            assertEquals(!visible, loaded.showWaveformHapticsCard)
             assertSummaryVisibility(visible)
 
             val intent = Intent()
@@ -94,8 +97,7 @@ class AppSettingsManagerDisplayCardTest {
             setGlobalWaveformCardVisibility(!visible)
 
             val loaded = manager.getAppLastSettings(COMPUTER_UUID, app)
-            assertNotNull(loaded)
-            assertEquals(visible, loaded!!.showWaveformHapticsCard)
+            assertEquals(visible, loaded?.showWaveformHapticsCard)
             assertEquals(
                 visible,
                 manager.getSettingsSummary(COMPUTER_UUID, app)
@@ -107,25 +109,6 @@ class AppSettingsManagerDisplayCardTest {
             val session = settings(visible = false, waveformVisible = !visible)
             assertTrue(manager.applyLastSettingsFromIntent(intent, session))
             assertEquals(visible, session.showWaveformHapticsCard)
-        }
-    }
-
-    @Test
-    fun legacyJsonWithoutWaveformCardUsesCurrentGlobalVisibility() {
-        manager.saveAppLastSettings(
-            COMPUTER_UUID,
-            app,
-            settings(visible = true, waveformVisible = true)
-        )
-        val record = JSONObject(lastSettingsPreferences.getString(RECORD_KEY, null)!!)
-        record.remove("showWaveformHapticsCard")
-        assertTrue(lastSettingsPreferences.edit().putString(RECORD_KEY, record.toString()).commit())
-
-        for (visible in listOf(false, true)) {
-            setGlobalWaveformCardVisibility(visible)
-            val loaded = manager.getAppLastSettings(COMPUTER_UUID, app)
-            assertNotNull(loaded)
-            assertEquals(visible, loaded!!.showWaveformHapticsCard)
         }
     }
 

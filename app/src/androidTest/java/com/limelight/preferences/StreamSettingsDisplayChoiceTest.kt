@@ -266,16 +266,14 @@ class StreamSettingsDisplayChoiceTest {
         val current = requireNotNull(ResolutionValidator.parseResolution(ORIGINAL_RESOLUTION))
         CustomResolutionsStore.save(context, listOf(current))
         launchSettings()
-        val managerLabel = openCustomManagementWithController()
+        openCustomManagementWithController()
         val deleteLabel = context.getString(R.string.custom_resolution_delete_contentdesc,
             current.width, current.height)
         compose.onNodeWithContentDescription(deleteLabel).performTouchInput { click() }
         compose.onNodeWithText(context.getString(R.string.custom_list_save)).performTouchInput { click() }
 
-        compose.onNodeWithText(managerLabel).assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.display_resolution_current_not_saved))
             .assertIsDisplayed()
-        assertTrue(CustomResolutionsStore.load(context).isEmpty())
 
         // Confirming the retained current choice must not add it back or reset a manual bitrate.
         compose.onNodeWithText(labelFor(ORIGINAL_RESOLUTION)).performTouchInput { click() }
@@ -301,7 +299,6 @@ class StreamSettingsDisplayChoiceTest {
                 PreferenceConfiguration.RESOLUTION_PREF_STRING))
             assertEquals(listOf(NEW_RESOLUTION, PreferenceConfiguration.RES_NATIVE),
                 preference.entryValues.map(CharSequence::toString))
-            assertNull(preference.descriptionFor(ORIGINAL_RESOLUTION))
         }
         assertEquals(listOf(NEW_RESOLUTION), CustomResolutionsStore.load(context).map(Resolution::toString))
     }

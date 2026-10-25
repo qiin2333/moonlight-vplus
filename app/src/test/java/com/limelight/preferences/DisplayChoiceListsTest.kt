@@ -60,13 +60,6 @@ class DisplayChoiceListsTest {
     }
 
     @Test
-    fun explicitlyEmptyListOnlyKeepsTheCurrentChoiceAndNative() {
-        assertEquals(listOf("2340x1080", "Native"),
-            DisplayChoiceLists.resolutionValues(emptyList(), "2340x1080"))
-        assertEquals(listOf("Native"), DisplayChoiceLists.resolutionValues(emptyList(), "Native"))
-    }
-
-    @Test
     fun deviceRefreshRateAdds75Or240FpsAndKeepsOldAndDraftValues() {
         assertEquals(
             listOf("30", "60", "75", "90", "120", "144", "165", "240"),

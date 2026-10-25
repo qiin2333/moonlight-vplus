@@ -1,7 +1,6 @@
 package com.limelight.gamemenu
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -74,7 +73,6 @@ class TouchPointerSensitivityControlTest {
     fun dpadAdjustsFocusedSliderAndFinishesOncePerKey() {
         var percent = 100
         var finishedCount = 0
-        var focused = false
         lateinit var inputModeManager: InputModeManager
         composeTestRule.setContent {
             inputModeManager = LocalInputModeManager.current
@@ -93,9 +91,6 @@ class TouchPointerSensitivityControlTest {
                 onSavePreset = {},
                 onApplyPreset = {},
                 onManagePresets = {},
-                modifier = Modifier
-                    .onFocusChanged { focused = it.isFocused }
-                    .testTag("touchPointerSensitivity"),
                 onSliderGesture = {}
             )
         }
@@ -111,10 +106,7 @@ class TouchPointerSensitivityControlTest {
         composeTestRule.onNodeWithTag("touchPointerPreset:preset-50").performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        composeTestRule.runOnIdle {
-            assertEquals(true, focused)
-        }
-        composeTestRule.onNodeWithTag("touchPointerSensitivity").performKeyInput {
+        composeTestRule.onNodeWithTag("touchPointerSensitivity").assertIsFocused().performKeyInput {
             pressKey(Key.DirectionLeft)
         }
 

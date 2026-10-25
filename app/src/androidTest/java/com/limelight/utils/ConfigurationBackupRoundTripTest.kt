@@ -6,7 +6,9 @@ import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.Resolution
 import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.preferences.TouchpadInputValues
 import com.limelight.preferences.TouchPointerPresetPreferences
@@ -75,6 +77,56 @@ class ConfigurationBackupRoundTripTest {
             }
             instrumentation.waitForIdleSync()
         }
+    }
+
+    @Test
+    fun firstBackupAndExplicitlyEmptyResolutionListBothSurviveRestore() {
+        assertTrue(preferences.edit().remove(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING).commit())
+        val defaults = listOf(Resolution(1280, 720), Resolution(1920, 1080),
+            Resolution(2560, 1440), Resolution(3840, 2160))
+        val manager = ConfigurationSyncManager(context)
+        for (expected in listOf(defaults, emptyList())) {
+            assertTrue(customPreferences.edit().clear().commit())
+            if (expected.isEmpty()) {
+                // Older saved empty lists may have no migration metadata.
+                assertTrue(customPreferences.edit().putStringSet("custom_resolutions", emptySet()).commit())
+            }
+            val backup = JSONObject(manager.exportSyncPackage())
+            val section = backup.getJSONObject("sections").getJSONObject("customResolutions")
+            backup.put("sections", JSONObject().put("customResolutions", section))
+            CustomResolutionsStore.save(context, listOf(Resolution(2340, 1080)))
+            manager.importSyncPackage(backup.toString())
+            assertEquals(expected, CustomResolutionsStore.load(context))
+        }
+    }
+
+    @Test
+    fun legacyLowPresetsMigrateOnceAndOldBackupsStillImportAfterMigration() {
+        assertTrue(customPreferences.edit().clear().putStringSet("custom_resolutions", setOf("2340x1080"))
+            .putInt("migration_version", 1).commit())
+        assertTrue(preferences.edit().putBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, true).commit())
+        val migrated = listOf("640x360", "854x480", "2340x1080")
+        assertEquals(migrated, CustomResolutionsStore.load(context).map(Resolution::toString))
+        assertFalse(preferences.contains(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING))
+        CustomResolutionsStore.save(context, emptyList())
+        assertTrue(CustomResolutionsStore.load(context).isEmpty())
+
+        val manager = ConfigurationSyncManager(context)
+        val backup = JSONObject(manager.exportSyncPackage())
+        backup.put("sections", JSONObject("""
+            {
+              "defaultPreferences": {"values": {
+                "checkbox_show_low_resolution_presets": {"type": "boolean", "value": true}
+              }},
+              "customResolutions": {"values": {
+                "custom_resolutions": {"type": "stringSet", "value": ["2340x1080"]},
+                "migration_version": {"type": "int", "value": 1}
+              }}
+            }
+        """))
+        manager.importSyncPackage(backup.toString())
+        assertEquals(migrated, CustomResolutionsStore.load(context).map(Resolution::toString))
+        assertFalse(preferences.contains(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING))
     }
 
     @Test

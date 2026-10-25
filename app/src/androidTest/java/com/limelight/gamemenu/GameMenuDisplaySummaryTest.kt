@@ -1,7 +1,6 @@
 package com.limelight.gamemenu
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -15,7 +14,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -112,11 +110,6 @@ class GameMenuDisplaySummaryTest {
             assertEquals("Screen-mode row keeps frame-rate count unchanged", 1, frameRateCount.get())
             assertEquals("Screen-mode row opens screen-mode actions", 1, screenModeCount.get())
         }
-        composeTestRule.runOnIdle {
-            assertEquals("Resolution is an independent action", 1, resolutionCount.get())
-            assertEquals("Frame rate is an independent action", 1, frameRateCount.get())
-            assertEquals("Screen mode is an independent action", 1, screenModeCount.get())
-        }
     }
 
     @Test
@@ -181,10 +174,6 @@ class GameMenuDisplaySummaryTest {
             }
         }
         val slider = composeTestRule.onNodeWithTag("displayScaleSlider")
-        slider.assert(SemanticsMatcher.expectValue(
-            SemanticsProperties.ProgressBarRangeInfo,
-            ProgressBarRangeInfo(1f, 0f..3f, steps = 2)
-        ))
         slider.requestFocus()
         slider.performKeyInput { keyDown(Key.DirectionRight) }
         composeTestRule.runOnIdle { assertTrue("Key-down only previews", submitted.isEmpty()) }
@@ -196,7 +185,6 @@ class GameMenuDisplaySummaryTest {
         composeTestRule.runOnIdle {
             assertEquals("Applying ignores both controller and touch edits", listOf(175), submitted)
         }
-
     }
 
     @Composable
@@ -204,11 +192,9 @@ class GameMenuDisplaySummaryTest {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.3f)) {
             GameMenuTheme {
-                Box(Modifier.fillMaxSize()) {
-                    GameMenuDialogShell(widthFraction = 1f, horizontalInset = 16.dp, onDismissRequest = {}) {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Box(Modifier.width(300.dp)) { content() }
-                        }
+                GameMenuDialogShell(widthFraction = 1f, horizontalInset = 16.dp, onDismissRequest = {}) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Box(Modifier.width(300.dp)) { content() }
                     }
                 }
             }

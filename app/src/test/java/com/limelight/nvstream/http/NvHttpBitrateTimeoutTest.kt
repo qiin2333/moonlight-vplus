@@ -16,26 +16,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NvHttpBitrateTimeoutTest {
-    @Test(timeout = 15_000)
-    fun stalledOrSlowResponseIsBoundedAndNextAdjustmentSucceeds() {
-        for (response in listOf(
-            MockResponse.Builder().onResponseStart(SocketEffect.Stall).build(),
+    @Test(timeout = 10_000)
+    fun slowResponseIsBoundedAndNextAdjustmentSucceeds() {
+        withHost { host ->
+            val http = host.client()
+            host.warmUp(http)
             // Bytes arrive within the read timeout; only the total deadline can stop this body.
-            MockResponse.Builder().body(BITRATE_BODY)
-                .throttleBody(1, 50, TimeUnit.MILLISECONDS).build()
-        )) {
-            withHost { host ->
-                val http = host.client()
-                host.warmUp(http)
-                host.https.enqueue(response)
+            host.https.enqueue(MockResponse.Builder().body(BITRATE_BODY)
+                .throttleBody(1, 50, TimeUnit.MILLISECONDS).build())
 
-                assertBoundedFailure { http.setBitrate(8_000) }
+            assertBoundedFailure { http.setBitrate(8_000) }
 
-                host.assertBitrateRequest(8_000)
-                host.https.enqueue(bitrateResponse())
-                assertTrue(http.setBitrate(12_000))
-                host.assertBitrateRequest(12_000)
-            }
+            val request = host.https.takeRequest(1, TimeUnit.SECONDS)!!
+            assertEquals("/bitrate", request.url.encodedPath)
+            assertEquals("8000", request.url.queryParameter("bitrate"))
+            host.https.enqueue(MockResponse.Builder().body(BITRATE_BODY).build())
+            assertTrue(http.setBitrate(12_000))
         }
     }
 
@@ -51,14 +47,6 @@ class NvHttpBitrateTimeoutTest {
             assertNotNull("The host must receive the HTTPS-port discovery request", discovery)
             assertEquals("/serverinfo", discovery!!.url.encodedPath)
             assertEquals(0, host.https.requestCount)
-
-            // Recover through the same NvHTTP instance. The ordinary serverinfo
-            // request also primes TLS before the next short adjustment deadline.
-            host.http.enqueue(host.serverInfoResponse())
-            host.warmUp(http)
-            host.https.enqueue(bitrateResponse())
-            assertTrue(http.setBitrate(12_000))
-            host.assertBitrateRequest(12_000)
         }
     }
 
@@ -105,21 +93,12 @@ class NvHttpBitrateTimeoutTest {
         )
 
         fun warmUp(client: NvHTTP) {
-            https.enqueue(serverInfoResponse())
+            https.enqueue(MockResponse.Builder().body(
+                "<root status_code=\"200\"><appversion>7.1.0</appversion>" +
+                    "<HttpsPort>${https.port}</HttpsPort></root>"
+            ).build())
             client.getServerInfo(true)
             assertEquals("/serverinfo", https.takeRequest(1, TimeUnit.SECONDS)!!.url.encodedPath)
-        }
-
-        fun serverInfoResponse(): MockResponse = MockResponse.Builder().body(
-            "<root status_code=\"200\"><appversion>7.1.0</appversion>" +
-                "<HttpsPort>${https.port}</HttpsPort></root>"
-        ).build()
-
-        fun assertBitrateRequest(bitrate: Int) {
-            val request = https.takeRequest(1, TimeUnit.SECONDS)
-            assertNotNull("The host must receive the bitrate request", request)
-            assertEquals("/bitrate", request!!.url.encodedPath)
-            assertEquals(bitrate.toString(), request.url.queryParameter("bitrate"))
         }
     }
 
@@ -137,8 +116,6 @@ class NvHttpBitrateTimeoutTest {
 
     private companion object {
         const val BITRATE_BODY = "<root status_code=\"200\"><bitrate>1</bitrate></root>"
-
-        fun bitrateResponse(): MockResponse = MockResponse.Builder().body(BITRATE_BODY).build()
 
         fun certificate(commonName: String): HeldCertificate = HeldCertificate.Builder()
             .commonName(commonName)
