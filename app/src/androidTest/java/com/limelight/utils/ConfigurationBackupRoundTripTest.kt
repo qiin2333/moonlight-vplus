@@ -10,6 +10,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.preferences.TouchpadInputValues
 import com.limelight.preferences.TouchPointerPresetPreferences
+import com.limelight.gamemenu.TouchPointerSensitivityPresetStore
 import com.limelight.preferences.restoreSettingsPreferences
 import com.limelight.preferences.snapshotSettingsPreferences
 import org.json.JSONObject
@@ -40,7 +41,8 @@ class ConfigurationBackupRoundTripTest {
         // Preserve complete files, including all synchronization metadata and string sets.
         originalPreferences = snapshotSettingsPreferences(preferences)
         originalValueState = snapshotSettingsPreferences(valueStatePreferences)
-        originalTouchpadStores = listOf(TouchpadInputPreferences.FILE_NAME, TouchpadInputPreferences.PRESETS_FILE_NAME)
+        originalTouchpadStores = listOf(TouchpadInputPreferences.FILE_NAME,
+            TouchpadInputPreferences.PRESETS_FILE_NAME, TouchPointerPresetPreferences.FILE_NAME)
             .associateWith { snapshotSettingsPreferences(context.getSharedPreferences(it, Context.MODE_PRIVATE)) }
         disableBackups()
         assertTrue(preferences.edit()
@@ -67,6 +69,49 @@ class ConfigurationBackupRoundTripTest {
                 assertTrue("Failed to restore default preferences", preferences.all == saved)
             }
             instrumentation.waitForIdleSync()
+        }
+    }
+
+    @Test
+    fun presetImportsRejectWrongTypesButAcceptValidReplacementsAndDeletion() {
+        val manager = ConfigurationSyncManager(context)
+        val jsonKey = TouchPointerPresetPreferences.JSON_KEY
+        val deletedKey = TouchPointerPresetPreferences.DELETED_IDS_KEY
+        val presetJson = """{"version":1,"presets":[{"id":"00000000-0000-0000-0000-000000000025","name":"Preset1","values":{"touch_sense":"250"},"updatedAt":1}]}"""
+        for ((section, file) in listOf(
+            "touchpadPresets" to TouchpadInputPreferences.PRESETS_FILE_NAME,
+            "touchPointerPresets" to TouchPointerPresetPreferences.FILE_NAME
+        )) {
+            val prefs = context.getSharedPreferences(file, Context.MODE_PRIVATE)
+            assertTrue(prefs.edit().putString(jsonKey, presetJson)
+                .putStringSet(deletedKey, setOf("original-deleted-id")).commit())
+            val exported = JSONObject(manager.exportSyncPackage())
+            fun backup(values: JSONObject): String = JSONObject(exported.toString())
+                .put("sections", JSONObject().put(section, JSONObject().put("values", values)))
+                .toString()
+            fun encoded(type: String, value: Any) = JSONObject().put("type", type).put("value", value)
+
+            val rejected = manager.importSyncPackage(backup(JSONObject()
+                .put(jsonKey, encoded("int", 7))
+                .put(deletedKey, encoded("string", "not-a-set"))))
+            assertEquals(0, rejected.defaultPreferencesImported)
+            assertEquals(presetJson, prefs.getString(jsonKey, null))
+            assertEquals(setOf("original-deleted-id"), prefs.getStringSet(deletedKey, null))
+            assertEquals(1, TouchPointerSensitivityPresetStore(context, file).load { "Fallback$it" }.size)
+
+            val replaced = manager.importSyncPackage(backup(JSONObject()
+                .put(jsonKey, encoded("string", "{\"version\":1,\"presets\":[]}"))
+                .put(deletedKey, encoded("stringSet", org.json.JSONArray().put("replacement-id")))))
+            assertEquals(2, replaced.defaultPreferencesImported)
+            assertTrue(TouchPointerSensitivityPresetStore(context, file).load { "Fallback$it" }.isEmpty())
+            assertEquals(setOf("replacement-id"), prefs.getStringSet(deletedKey, null))
+
+            val removed = manager.importSyncPackage(backup(JSONObject()
+                .put(jsonKey, encoded("deleted", JSONObject.NULL))
+                .put(deletedKey, encoded("deleted", JSONObject.NULL))))
+            assertEquals(2, removed.defaultPreferencesImported)
+            assertFalse(prefs.contains(jsonKey))
+            assertFalse(prefs.contains(deletedKey))
         }
     }
 

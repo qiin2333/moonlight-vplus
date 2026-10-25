@@ -395,7 +395,8 @@ class ConfigurationSyncManager(private val context: Context) {
                     Context.MODE_PRIVATE
                 ),
                 valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
-                TOUCH_POINTER_PRESET_PREF_KEYS
+                TOUCH_POINTER_PRESET_PREF_KEYS,
+                acceptedTypes = ::presetPreferenceTypes
             ) + applyPreferences(
                 SECTION_TOUCHPAD_INPUT,
                 context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
@@ -406,7 +407,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 SECTION_TOUCHPAD_PRESETS,
                 context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE),
                 valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS)),
-                TOUCH_POINTER_PRESET_PREF_KEYS
+                TOUCH_POINTER_PRESET_PREF_KEYS,
+                acceptedTypes = ::presetPreferenceTypes
             )
         val appLastSettingsImported = applyPreferences(
             SECTION_APP_LAST_SETTINGS,
@@ -1381,6 +1383,12 @@ class ConfigurationSyncManager(private val context: Context) {
         }
         editor.apply()
         return applied
+    }
+
+    private fun presetPreferenceTypes(key: String): Set<String> = when (key) {
+        TouchPointerPresetPreferences.JSON_KEY -> setOf(TYPE_STRING, TYPE_DELETED)
+        TouchPointerPresetPreferences.DELETED_IDS_KEY -> setOf(TYPE_STRING_SET, TYPE_DELETED)
+        else -> emptySet()
     }
 
     private fun putTypedValue(
