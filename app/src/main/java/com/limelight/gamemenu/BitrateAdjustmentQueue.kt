@@ -27,12 +27,13 @@ internal class BitrateAdjustmentQueue {
     }
 
     // All methods run on the UI thread; the network callback must return there first.
-    fun submit(bitrateKbps: Int, confirmedBitrateKbps: Int): Request? {
+    fun submit(bitrateKbps: Int): Request? {
         if (activeRequest != null) {
             pendingBitrateKbps = bitrateKbps
             return null
         }
-        return if (bitrateKbps == confirmedBitrateKbps) null else start(bitrateKbps)
+        // An explicit apply may restore a value changed by ABR while the user was dragging.
+        return start(bitrateKbps)
     }
 
     fun complete(

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -945,7 +946,7 @@ internal fun BitrateCard(
                 )
             }
             if (state.adaptiveBitrate) {
-                Box(Modifier.align(Alignment.CenterVertically)) {
+                Box(Modifier.width(IntrinsicSize.Max).align(Alignment.CenterVertically)) {
                     AbrModeMenu(state.abrMode, callbacks.onAbrMode)
                 }
             }
@@ -1075,8 +1076,10 @@ private fun AbrModeMenu(
                 text = selectedLabel,
                 color = accent,
                 fontSize = 11.sp,
+                lineHeight = 14.sp,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.width(GameMenuDimens.tight))
             Icon(

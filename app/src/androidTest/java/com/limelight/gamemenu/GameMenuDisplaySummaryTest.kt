@@ -138,6 +138,7 @@ class GameMenuDisplaySummaryTest {
         val card = bounds("bitrateCardBounds")
         val readout = bounds("bitrateReadout")
         val slider = bounds("bitrateSlider")
+        saveScreenshot("bitrate-300dp-font130-current")
         val resources = InstrumentationRegistry.getInstrumentation().targetContext.resources
         val modeIndex = resources.getStringArray(R.array.abr_mode_values).indexOf("balanced")
         val modeLabel = resources.getStringArray(R.array.abr_mode_names)[modeIndex]
@@ -145,8 +146,14 @@ class GameMenuDisplaySummaryTest {
         val modeLayoutAction = composeTestRule.onNodeWithText(modeLabel, useUnmergedTree = true)
             .assertIsDisplayed().fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
         assertTrue(modeLayoutAction.action?.invoke(modeLayouts) == true)
-        assertFalse("The mode remains readable with long translations", modeLayouts.single().hasVisualOverflow)
-        saveScreenshot("bitrate-300dp-font130-current")
+        val modeLayout = modeLayouts.single()
+        // Intrinsic measurement may retain a wider paragraph constraint. Check
+        // the actual line bounds so a fully visible label is not a false failure.
+        assertFalse("The mode is not ellipsized", modeLayout.isLineEllipsized(0))
+        assertTrue("The complete mode fits horizontally",
+            modeLayout.getLineRight(0) <= modeLayout.size.width + 0.5f)
+        assertTrue("The complete mode fits vertically",
+            modeLayout.getLineBottom(0) <= modeLayout.size.height + 0.5f)
 
         for (progress in listOf(0f, 9f, 24f, 34f, 49f, 59f)) {
             composeTestRule.runOnIdle { state = state.copy(progress = progress) }

@@ -567,7 +567,7 @@ internal class BitrateCardController(
 
     fun applySelectedBitrate() {
         userTracking = false
-        bitrateRequests.submit(state.selectedBitrateKbps, state.currentBitrateKbps)
+        bitrateRequests.submit(state.selectedBitrateKbps)
             ?.let { adjustBitrate(it) }
     }
 
