@@ -259,6 +259,16 @@ private fun CompactGameMenuSlider(
     )
 }
 
+internal data class SensitivityParameter(
+    val label: Int,
+    val percent: Int,
+    val min: Int,
+    val max: Int,
+    val onChange: (Float) -> Boolean,
+    val onFinished: () -> Unit,
+    val tag: String
+)
+
 @Composable
 internal fun TouchPointerSensitivityControl(
     state: TouchPointerSensitivityState,
@@ -272,15 +282,21 @@ internal fun TouchPointerSensitivityControl(
     rightExitRequester: FocusRequester = FocusRequester.Default,
     upExitRequester: FocusRequester = FocusRequester.Default,
     downExitRequester: FocusRequester = FocusRequester.Default,
+    parameters: List<SensitivityParameter>? = null,
     modifier: Modifier = Modifier,
     onSliderGesture: (Boolean) -> Unit
 ) {
     if (!state.applicable) return
 
-    val hapticFeedback = LocalGameMenuHapticFeedback.current
     val ownedInitialFocusRequester = remember { FocusRequester() }
     val saveRequester = initialFocusRequester ?: ownedInitialFocusRequester
-    val sliderRequester = remember { FocusRequester() }
+    val sliders = parameters ?: listOf(SensitivityParameter(
+        R.string.game_menu_touch_pointer_speed, state.percent,
+        TouchPointerSensitivityPolicy.MIN_PERCENT, TouchPointerSensitivityPolicy.MAX_PERCENT,
+        onValueChange, onValueChangeFinished, "touchPointerSensitivity"
+    ))
+    val sliderRequesters = remember(sliders.size) { List(sliders.size) { FocusRequester() } }
+    val sliderRequester = sliderRequesters.first()
     val manageRequester = remember { FocusRequester() }
     val presetIds = state.presets.map(TouchPointerSensitivityPreset::id)
     val presetRequesters = remember(presetIds) {
@@ -315,88 +331,106 @@ internal fun TouchPointerSensitivityControl(
             rightExitRequester = rightExitRequester,
             onApplyPreset = onApplyPreset
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.game_menu_touch_pointer_speed),
-                color = colorResource(R.color.game_menu_text_primary),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = stringResource(
-                    R.string.game_menu_touch_pointer_speed_value,
-                    state.percent
-                ),
-                color = appAccentColor(),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
+        sliders.forEachIndexed { index, parameter ->
+            SensitivityParameterControl(
+                parameter = parameter,
+                showSummary = parameters == null,
+                modifier = modifier
+                    .focusRequester(sliderRequesters[index])
+                    .focusProperties {
+                        canFocus = true
+                        up = sliderRequesters.getOrNull(index - 1)
+                            ?: presetRequesters.lastOrNull() ?: saveRequester
+                        down = sliderRequesters.getOrNull(index + 1) ?: downExitRequester
+                    },
+                onSliderGesture = onSliderGesture
             )
         }
+    }
+}
+
+@Composable
+private fun SensitivityParameterControl(
+    parameter: SensitivityParameter,
+    showSummary: Boolean,
+    modifier: Modifier,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            text = stringResource(R.string.game_menu_touch_pointer_speed_summary),
-            color = colorResource(R.color.game_menu_text_secondary),
-            fontSize = 10.sp,
-            lineHeight = 14.sp
+            text = stringResource(parameter.label),
+            color = colorResource(R.color.game_menu_text_primary),
+            modifier = Modifier.weight(1f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
         )
-        Box(
-            modifier = modifier
-                .focusRequester(sliderRequester)
-                .focusProperties {
-                    canFocus = true
-                    up = presetRequesters.lastOrNull() ?: saveRequester
-                    down = downExitRequester
-                }
-                .fillMaxWidth()
-                .height(GameMenuSliderSpec.height)
-                .gamepadFocusOutline(GameMenuControlShape)
-                .handleSliderDpad(
-                    value = state.percent.toFloat(),
-                    step = TouchPointerSensitivityPolicy.DPAD_STEP_PERCENT.toFloat(),
-                    valueRange = TouchPointerSensitivityPolicy.MIN_PERCENT.toFloat()..
-                            TouchPointerSensitivityPolicy.MAX_PERCENT.toFloat(),
-                    onValueChange = { value ->
-                        if (onValueChange(value)) {
-                            hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        }
-                    },
-                    onValueChangeFinished = onValueChangeFinished
-                )
-                .focusable()
-                .lockParentScrollDuringGesture(onSliderGesture)
-        ) {
-            CompactGameMenuSlider(
-                value = state.percent.toFloat(),
+        Spacer(Modifier.width(GameMenuDimens.compact))
+        Text(
+            text = stringResource(
+                R.string.game_menu_touch_pointer_speed_value,
+                parameter.percent
+            ),
+            color = appAccentColor(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+    if (showSummary) Text(
+        text = stringResource(R.string.game_menu_touch_pointer_speed_summary),
+        color = colorResource(R.color.game_menu_text_secondary),
+        fontSize = 10.sp,
+        lineHeight = 14.sp
+    )
+    Box(
+        modifier = modifier.testTag(parameter.tag)
+            .fillMaxWidth()
+            .height(GameMenuSliderSpec.height)
+            .gamepadFocusOutline(GameMenuControlShape)
+            .handleSliderDpad(
+                value = parameter.percent.toFloat(),
+                step = TouchPointerSensitivityPolicy.DPAD_STEP_PERCENT.toFloat(),
+                valueRange = parameter.min.toFloat()..parameter.max.toFloat(),
                 onValueChange = { value ->
-                    if (onValueChange(value)) {
+                    if (parameter.onChange(value)) {
                         hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     }
                 },
-                onValueChangeFinished = onValueChangeFinished,
-                valueRange = TouchPointerSensitivityPolicy.MIN_PERCENT.toFloat()..
-                        TouchPointerSensitivityPolicy.MAX_PERCENT.toFloat(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(GameMenuSliderSpec.height)
-                    .focusProperties { canFocus = false }
+                onValueChangeFinished = parameter.onFinished
             )
-        }
-        Row {
-            Text(
-                text = "${TouchPointerSensitivityPolicy.MIN_PERCENT}%",
-                color = colorResource(R.color.game_menu_text_secondary),
-                fontSize = 9.sp
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = "${TouchPointerSensitivityPolicy.MAX_PERCENT}%",
-                color = colorResource(R.color.game_menu_text_secondary),
-                fontSize = 9.sp
-            )
-        }
+            .focusable()
+            .lockParentScrollDuringGesture(onSliderGesture)
+    ) {
+        CompactGameMenuSlider(
+            value = parameter.percent.toFloat(),
+            onValueChange = { value ->
+                if (parameter.onChange(value)) {
+                    hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+            },
+            onValueChangeFinished = parameter.onFinished,
+            valueRange = parameter.min.toFloat()..parameter.max.toFloat(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(GameMenuSliderSpec.height)
+                .focusProperties { canFocus = false }
+        )
+    }
+    Row {
+        Text(
+            text = "${parameter.min}%",
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 9.sp
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = "${parameter.max}%",
+            color = colorResource(R.color.game_menu_text_secondary),
+            fontSize = 9.sp
+        )
     }
 }
 

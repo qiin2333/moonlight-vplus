@@ -2305,6 +2305,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     val relativeTouchContextMap: Array<TouchContext?>
         get() = touchInputHandler.relativeTouchContextMap
 
+    internal val touchpadInputSettings by lazy {
+        com.limelight.binding.input.touch.TouchpadInputSettings(this)
+    }
+
+    fun updateTouchpadSensitivity(percent: Int) {
+        touchpadInputSettings.setSensitivity(percent)
+    }
+
+    fun updateCrownWheelSpeed(speed: Int) {
+        touchpadInputSettings.setWheelSpeed(speed)
+    }
+
+    fun shouldApplyCrownInputProfile(profileId: Long): Boolean =
+        touchpadInputSettings.enterCrownProfile(profileId)
+
     fun setTouchMode(enableRelativeTouch: Boolean) {
         touchInputHandler.setTouchMode(enableRelativeTouch)
     }

@@ -32,6 +32,7 @@ internal data class GameMenuComposeUiState(
     val gyro: GyroCardState,
     val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
+    val touchpadSensitivity: TouchpadSensitivityState = TouchpadSensitivityState(),
     val quickEditMode: Boolean = false,
     val usbForwardingEnabled: Boolean = false,
     val isSubmenu: Boolean = false,
@@ -141,5 +142,10 @@ internal data class GameMenuCallbacks(
     val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
     val onManageTouchPointerSensitivityPresets: () -> Unit,
     val onCustomKey: (CustomKeyData) -> Unit,
+    val onTouchpadSensitivity: (TouchpadPresetField, Float) -> Boolean = { _, _ -> false },
+    val onTouchpadSensitivityFinished: () -> Unit = {},
+    val onSaveTouchpadPreset: () -> Unit = {},
+    val onApplyTouchpadPreset: (String) -> Unit = {},
+    val onManageTouchpadPresets: () -> Unit = {},
     val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> }
 )

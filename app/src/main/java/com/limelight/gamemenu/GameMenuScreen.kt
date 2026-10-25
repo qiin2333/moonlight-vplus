@@ -665,13 +665,9 @@ private fun GameMenuContent(
                     optionFocusModifier = initialFocusModifier
                 )
                 if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
-                    TouchPointerSensitivityControl(
-                        state = state.touchPointerSensitivity,
-                        onValueChange = callbacks.onTouchPointerSensitivity,
-                        onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
-                        onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
-                        onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
-                        onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                    TouchModeSensitivityControl(
+                        state = state,
+                        callbacks = callbacks,
                         modifier = Modifier.testTag("touchPointerSensitivity"),
                         onSliderGesture = { sliderGestureActive = it }
                     )
@@ -757,7 +753,7 @@ private fun TouchModeTable(
     val compatibleActions = options.filter {
         it.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION
     }
-    val showSensitivity = state.touchPointerSensitivity.applicable
+    val showSensitivity = state.touchPointerSensitivity.applicable || state.touchpadSensitivity.pointer.applicable
     val secondaryCount = compatibleActions.size + if (showSensitivity) 1 else 0
     val primaryFocusRequesters = remember(primaryModes.size, initialFocusRequester) {
         List(primaryModes.size) { index ->
@@ -826,13 +822,9 @@ private fun TouchModeTable(
                     secondaryCount,
                     globalIndex
                 )
-                TouchPointerSensitivityControl(
-                    state = state.touchPointerSensitivity,
-                    onValueChange = callbacks.onTouchPointerSensitivity,
-                    onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
-                    onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
-                    onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
-                    onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                TouchModeSensitivityControl(
+                    state = state,
+                    callbacks = callbacks,
                     initialFocusRequester = focusRequesters[globalIndex],
                     leftExitRequester = targets.left?.let(focusRequesters::get)
                         ?: FocusRequester.Cancel,
@@ -883,6 +875,46 @@ private fun TouchModeTable(
             }
         }
     }
+}
+
+@Composable
+private fun TouchModeSensitivityControl(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    initialFocusRequester: FocusRequester? = null,
+    leftExitRequester: FocusRequester = FocusRequester.Default,
+    rightExitRequester: FocusRequester = FocusRequester.Default,
+    upExitRequester: FocusRequester = FocusRequester.Default,
+    downExitRequester: FocusRequester = FocusRequester.Default,
+    modifier: Modifier = Modifier,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    val touchpad = state.touchpadSensitivity.pointer.applicable
+    val parameters = if (touchpad) TouchpadPresetField.entries.map { field ->
+        SensitivityParameter(
+            field.label,
+            if (field == TouchpadPresetField.SENSITIVITY) state.touchpadSensitivity.pointer.percent
+                else state.touchpadSensitivity.scrollPercent,
+            1, field.max, { callbacks.onTouchpadSensitivity(field, it) },
+            callbacks.onTouchpadSensitivityFinished, "touchpad:${field.key}"
+        )
+    } else null
+    TouchPointerSensitivityControl(
+        state = if (touchpad) state.touchpadSensitivity.pointer else state.touchPointerSensitivity,
+        onValueChange = callbacks.onTouchPointerSensitivity,
+        onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
+        onSavePreset = if (touchpad) callbacks.onSaveTouchpadPreset else callbacks.onSaveTouchPointerSensitivityPreset,
+        onApplyPreset = if (touchpad) callbacks.onApplyTouchpadPreset else callbacks.onApplyTouchPointerSensitivityPreset,
+        onManagePresets = if (touchpad) callbacks.onManageTouchpadPresets else callbacks.onManageTouchPointerSensitivityPresets,
+        initialFocusRequester = initialFocusRequester,
+        leftExitRequester = leftExitRequester,
+        rightExitRequester = rightExitRequester,
+        upExitRequester = upExitRequester,
+        downExitRequester = downExitRequester,
+        parameters = parameters,
+        modifier = modifier,
+        onSliderGesture = onSliderGesture
+    )
 }
 
 @Composable

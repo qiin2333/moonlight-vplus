@@ -32,12 +32,51 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.limelight.R
 
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class)
 class TouchPointerSensitivityControlTest {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun touchpadParametersHaveSeparateSlidersAndVerticalNavigation() {
+        var sensitivity = 100
+        var scroll = 100
+        var finished = 0
+        lateinit var inputModeManager: InputModeManager
+        composeTestRule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            TouchPointerSensitivityControl(
+                state = TouchPointerSensitivityState(100, true, emptyList(), null),
+                onValueChange = { error("Direct-touch callback must not run") },
+                onValueChangeFinished = {},
+                onSavePreset = {}, onApplyPreset = {}, onManagePresets = {},
+                parameters = listOf(
+                    SensitivityParameter(R.string.game_menu_touchpad_sensitivity, 100, 1, 1000,
+                        { sensitivity = it.toInt(); false }, { finished++ }, "touchpadSpeed"),
+                    SensitivityParameter(R.string.game_menu_touchpad_scroll_speed, 100, 1, 500,
+                        { scroll = it.toInt(); false }, { finished++ }, "touchpadScroll")
+                ),
+                onSliderGesture = {}
+            )
+        }
+        composeTestRule.runOnIdle { inputModeManager.requestInputMode(InputMode.Keyboard) }
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").requestFocus()
+        composeTestRule.onNodeWithTag("touchPointerPresetSave").performKeyInput { pressKey(Key.DirectionDown) }
+        composeTestRule.onNodeWithTag("touchpadSpeed").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchpadSpeed").performKeyInput { pressKey(Key.DirectionDown) }
+        composeTestRule.onNodeWithTag("touchpadScroll").assertIsFocused()
+        composeTestRule.onNodeWithTag("touchpadScroll").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeTestRule.runOnIdle {
+            assertEquals(100, sensitivity)
+            assertEquals(90, scroll)
+            assertEquals(1, finished)
+        }
+        composeTestRule.onNodeWithTag("touchpadScroll").performKeyInput { pressKey(Key.DirectionUp) }
+        composeTestRule.onNodeWithTag("touchpadSpeed").assertIsFocused()
+    }
 
     @Test
     fun dpadAdjustsFocusedSliderAndFinishesOncePerKey() {
