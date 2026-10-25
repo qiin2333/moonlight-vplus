@@ -674,8 +674,17 @@ internal class BitrateCardController(
         R.array.screen_combination_mode_values
     )
 
-    private fun screenModeChoices(selected: String): List<DisplayChoice> =
-        inStreamScreenModeChoices(screenModeLabels(), selected)
+    private fun screenModeChoices(selected: String): List<DisplayChoice> {
+        val labels = screenModeLabels()
+        // In-stream actions change topology; startup policies stay in the full settings page.
+        return listOf("2", "4", "3").map { value ->
+            DisplayChoice(
+                value = value,
+                label = labels[value] ?: value,
+                selected = value == selected
+            )
+        }
+    }
 
     private fun screenModeLabel(selected: String): String = screenModeLabels()[selected] ?: selected
 
