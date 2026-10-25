@@ -2,7 +2,7 @@ package com.limelight.gamemenu
 
 /** Serializes host changes while keeping only the latest target selected during a request. */
 internal class BitrateAdjustmentQueue {
-    data class Request(val id: Long, val bitrateKbps: Int)
+    class Request(val bitrateKbps: Int)
 
     data class Completion(
         val nextRequest: Request?,
@@ -10,7 +10,6 @@ internal class BitrateAdjustmentQueue {
         val reportResult: Boolean
     )
 
-    private var nextId = 0L
     private var activeRequest: Request? = null
     private var pendingBitrateKbps: Int? = null
 
@@ -41,7 +40,7 @@ internal class BitrateAdjustmentQueue {
         confirmedBitrateKbps: Int,
         userTracking: Boolean
     ): Completion? {
-        if (activeRequest != request) return null
+        if (activeRequest !== request) return null
         activeRequest = null
         val pending = pendingBitrateKbps
         pendingBitrateKbps = null
@@ -55,5 +54,5 @@ internal class BitrateAdjustmentQueue {
     }
 
     private fun start(bitrateKbps: Int): Request =
-        Request(++nextId, bitrateKbps).also { activeRequest = it }
+        Request(bitrateKbps).also { activeRequest = it }
 }

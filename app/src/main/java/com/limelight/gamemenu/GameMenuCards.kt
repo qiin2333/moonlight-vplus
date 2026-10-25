@@ -696,6 +696,18 @@ internal fun DisplayStatusCard(
                 mutableStateOf(stateIndex.toFloat())
             }
             var editing by remember(supported, statePercent, scale.loading) { mutableStateOf(false) }
+            val previewScale = { value: Float ->
+                if (!scale.loading) {
+                    sliderIndex = value
+                    editing = true
+                }
+            }
+            val applyScale = {
+                if (!scale.loading) {
+                    supported.getOrNull(sliderIndex.roundToInt())?.let(callbacks.onSetDisplayScale)
+                }
+                editing = false
+            }
             val selectedPercent = if (editing) supported.getOrNull(sliderIndex.roundToInt()) else statePercent
             val scaleSummary = when {
                 scale.loading && scale.pendingPercent != null ->
@@ -738,15 +750,8 @@ internal fun DisplayStatusCard(
                     )
                     CompactGameMenuSlider(
                         value = sliderIndex,
-                        onValueChange = {
-                            if (!scale.loading) { sliderIndex = it; editing = true }
-                        },
-                        onValueChangeFinished = {
-                            if (!scale.loading) {
-                                supported.getOrNull(sliderIndex.roundToInt())?.let(callbacks.onSetDisplayScale)
-                            }
-                            editing = false
-                        },
+                        onValueChange = previewScale,
+                        onValueChangeFinished = applyScale,
                         valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
                         steps = (supported.size - 2).coerceAtLeast(0),
                         // Keep hardware focus while applying; ignore edits until the reply arrives.
@@ -765,12 +770,8 @@ internal fun DisplayStatusCard(
                                 enabled = scale.available && supported.size > 1 && !scale.loading,
                                 step = 1f,
                                 valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
-                                onValueChange = { sliderIndex = it; editing = true },
-                                onValueChangeFinished = {
-                                    supported.getOrNull(sliderIndex.roundToInt())
-                                        ?.let(callbacks.onSetDisplayScale)
-                                    editing = false
-                                }
+                                onValueChange = previewScale,
+                                onValueChangeFinished = applyScale
                             )
                             .lockParentScrollDuringGesture(onSliderGesture)
                     )
@@ -880,7 +881,6 @@ internal fun BitrateCard(
     onSliderGesture: (Boolean) -> Unit,
     onConfigure: () -> Unit
 ) {
-    val adaptiveFocusRequester = remember { FocusRequester() }
     val accent = appAccentColor()
     val secondary = colorResource(R.color.game_menu_text_secondary)
     GameMenuCard(
@@ -948,8 +948,7 @@ internal fun BitrateCard(
                 InlineToggle(
                     checked = state.adaptiveBitrate,
                     contentDescription = stringResource(R.string.title_adaptive_bitrate),
-                    onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) },
-                    modifier = Modifier.focusRequester(adaptiveFocusRequester)
+                    onToggle = { callbacks.onBitrateAdaptive(!state.adaptiveBitrate) }
                 )
             }
             if (state.adaptiveBitrate) {
@@ -969,13 +968,13 @@ internal fun BitrateCard(
                 text = BitrateCardController.formatBitrateMbps(
                     BitrateCardController.progressToBitrateKbps(0, state.maxProgress)
                 ),
-                color = colorResource(R.color.game_menu_text_secondary),
+                color = secondary,
                 fontSize = 9.sp
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = BitrateCardController.formatBitrateMbps(state.maxBitrateKbps),
-                color = colorResource(R.color.game_menu_text_secondary),
+                color = secondary,
                 fontSize = 9.sp
             )
         }

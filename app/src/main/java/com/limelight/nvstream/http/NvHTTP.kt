@@ -374,7 +374,7 @@ class NvHTTP(
             httpsPort = getHttpsPort(
                 openHttpConnectionToString(
                     if (likelyOnline) httpClientLongConnectTimeout else httpClientShortConnectTimeout,
-                    baseUrlHttp, "serverinfo", query = null, deadline = deadline
+                    baseUrlHttp, "serverinfo", deadline = deadline
                 )
             )
         }
@@ -527,16 +527,11 @@ class NvHTTP(
     }
 
     @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnection(client: OkHttpClient, baseUrl: HttpUrl, path: String): ResponseBody {
-        return openHttpConnection(client, baseUrl, path, null)
-    }
-
-    @Throws(IOException::class, InterruptedException::class)
     private fun openHttpConnection(
         client: OkHttpClient,
         baseUrl: HttpUrl,
         path: String,
-        query: String?,
+        query: String? = null,
         displayName: String? = null,
         deadline: HttpRequestDeadline? = null
     ): ResponseBody {
@@ -560,23 +555,16 @@ class NvHTTP(
     }
 
     @Throws(IOException::class, InterruptedException::class)
-    private fun openHttpConnectionToString(client: OkHttpClient, baseUrl: HttpUrl, path: String): String {
-        return openHttpConnectionToString(client, baseUrl, path, null)
-    }
-
-    @Throws(IOException::class, InterruptedException::class)
     private fun openHttpConnectionToString(
         client: OkHttpClient,
         baseUrl: HttpUrl,
         path: String,
-        query: String?,
+        query: String? = null,
         displayName: String? = null,
         deadline: HttpRequestDeadline? = null
     ): String {
         try {
-            val resp = openHttpConnection(client, baseUrl, path, query, displayName, deadline)
-            val respString = resp.string()
-            resp.close()
+            val respString = openHttpConnection(client, baseUrl, path, query, displayName, deadline).use { it.string() }
 
             if (verbose && path != "serverinfo") {
                 LimeLog.info("${getCompleteUrl(baseUrl, path, query, displayName)} -> $respString")

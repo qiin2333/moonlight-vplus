@@ -26,9 +26,9 @@ object CustomResolutionsStore {
         val includeLegacyLowPresets = global.getBoolean(
             PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, false
         )
-        val baseline = if (stored == null) DEFAULT_RESOLUTIONS else emptyList()
+        val baseResolutions = stored?.mapNotNull(ResolutionValidator::parseResolution) ?: DEFAULT_RESOLUTIONS
         val lowPresets = if (includeLegacyLowPresets) LOW_RESOLUTIONS else emptyList()
-        val resolutions = (baseline + stored.orEmpty().mapNotNull(ResolutionValidator::parseResolution) + lowPresets)
+        val resolutions = (baseResolutions + lowPresets)
             .distinct()
             .sortedWith(resolutionOrder)
         if (stored == null || version < CURRENT_MIGRATION_VERSION || includeLegacyLowPresets) {

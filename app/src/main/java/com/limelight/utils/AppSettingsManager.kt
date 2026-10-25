@@ -269,11 +269,6 @@ class AppSettingsManager(private val context: Context) {
         settings.enablePerfOverlay = false
         settings.reverseResolution = false
         settings.rotableScreen = false
-        settings.showBitrateCard = false
-        settings.showAudioHapticsCard = false
-        settings.showGyroCard = false
-        settings.showQuickKeyCard = false
-        settings.showWaveformHapticsCard = false
 
         // Parse resolution string format "1920x1080"
         val resolutionStr = settingsJson.optString("resolution", "1920x1080")
@@ -311,9 +306,10 @@ class AppSettingsManager(private val context: Context) {
         settings.gyroToRightStick = !settings.gyroToMouse &&
             settingsJson.optBoolean("gyroToRightStick", false)
         settings.showBitrateCard = settingsJson.optBoolean("showBitrateCard", true)
+        val globalPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         settings.showDisplaySettingsCard = settingsJson.optBoolean(
             "showDisplaySettingsCard",
-            PreferenceManager.getDefaultSharedPreferences(context).getBoolean(
+            globalPreferences.getBoolean(
                 PreferenceConfiguration.SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING,
                 true
             )
@@ -323,7 +319,7 @@ class AppSettingsManager(private val context: Context) {
         settings.showQuickKeyCard = settingsJson.optBoolean("showQuickKeyCard", true)
         settings.showWaveformHapticsCard = settingsJson.optBoolean(
             "showWaveformHapticsCard",
-            PreferenceManager.getDefaultSharedPreferences(context).getBoolean(
+            globalPreferences.getBoolean(
                 PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
                 true
             )

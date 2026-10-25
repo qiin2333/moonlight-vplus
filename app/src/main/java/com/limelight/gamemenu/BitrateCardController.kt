@@ -314,7 +314,6 @@ internal class BitrateCardController(
         appliedDraft = currentDraft()
         draft = appliedDraft
         state = createState(conn.currentBitrate)
-        emitState()
         bindAbrListener()
         refreshDisplayScale()
         return generation
@@ -552,10 +551,9 @@ internal class BitrateCardController(
         userTracking = true
         state = state.copy(progress = bounded)
         emitState()
-        val keyNodes = SEGMENT_BOUNDARIES + maxProgress
         return changed && when (state.hapticMode) {
             HapticMode.ALL -> true
-            HapticMode.KEY_NODES -> currentStep in keyNodes
+            HapticMode.KEY_NODES -> currentStep in SEGMENT_BOUNDARIES || currentStep == maxProgress
             HapticMode.NONE -> false
         }
     }

@@ -37,8 +37,7 @@ internal object DisplayChoiceLists {
         currentResolution: String,
         retainedValues: List<String> = emptyList()
     ): List<String> {
-        val retained = listOf(currentResolution) + retainedValues
-        val values = (storeValues + retained)
+        val values = (storeValues + currentResolution + retainedValues)
             .filter(::isFixedResolution)
             .distinct()
             .sortedWith(compareBy(resolutionOrder) { ResolutionValidator.parseResolution(it)!! })
