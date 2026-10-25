@@ -3508,7 +3508,6 @@ class ControllerHandler(
         ((ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and USB_MENU_DIRECTION_MASK) != 0
 
     private fun sendNeutralControllerState(context: GenericControllerContext) {
-        motionSender.reset(context.controllerNumber)
         motionSender.stopGyro(context.controllerNumber)
         context.performanceOverlayShortcutState.reset()
         if (context.gyroHoldActive) {
@@ -3747,12 +3746,12 @@ class ControllerHandler(
             motionSender.submitFrame(context.controllerNumber, gx, gy, gz, ax, ay, az)
         } else {
             if (gyro) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
-            else motionSender.pauseGyro(context.controllerNumber, onlyPaired = true)
+            else motionSender.pauseGyro(context.controllerNumber, onlyFromFrame = true)
             if (accel) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
         }
     }
 
-    /** Local gyro consumers run on every source sample, before host forwarding is limited. */
+    /** Local gyro consumers run on every source sample, before host forwarding. */
     private fun routeDriverMotion(
         context: DriverControllerContext, motionType: Byte, x: Float, y: Float, z: Float
     ): Boolean {

@@ -536,7 +536,6 @@ class InputDeviceContext internal constructor(
     }
 
     fun disableSensors() {
-        handler.motionSender.reset(controllerNumber)
         // Stop any pending enablement
         handler.backgroundThreadHandler.removeCallbacks(enableSensorRunnable)
 
