@@ -30,6 +30,8 @@ internal class ControllerMotionSender(
             canForward(controller, MoonBridge.LI_MOTION_TYPE_ACCEL, false)) {
             if (connection.sendControllerMotionFrame(controller.toByte(), gx, gy, gz, ax, ay, az) == 0) {
                 frameGyroSlots = frameGyroSlots or (1 shl controller.toInt())
+            } else if (gx == 0f && gy == 0f && gz == 0f) {
+                pauseGyro(controller, onlyFromFrame = true)
             }
         } else {
             submit(controller, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
