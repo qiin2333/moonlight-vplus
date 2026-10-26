@@ -72,11 +72,6 @@
             android:summary="@string/summary_seekbar_scale"
             android:text="%"
             android:title="@string/title_seekbar_scale" />
-        <CheckBoxPreference
-            android:key="checkbox_show_low_resolution_presets"
-            android:title="@string/title_show_low_resolution_presets"
-            android:summary="@string/summary_show_low_resolution_presets"
-            android:defaultValue="false" />
     </PreferenceCategory>
     <PreferenceCategory
         android:key="category_screen_position"

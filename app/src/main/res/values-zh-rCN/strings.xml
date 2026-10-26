@@ -205,13 +205,13 @@
     <string name="category_advanced_features">串流性能</string>
     <string name="title_resolution_list">串流分辨率</string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度，低分辨率提升在低端设备和较慢网络中的串流体验。</string>
-    <string name="title_custom_resolutions">自定义分辨率</string>
+    <string name="title_custom_resolutions">分辨率列表</string>
     <string name="width_hint">2560</string>
     <string name="height_hint">1440</string>
     <string name="resolution_already_exists">该分辨率已存在</string>
     <string name="custom_resolution_add_short">添加</string>
     <string name="custom_resolution_info_contentdesc">使用提示</string>
-    <string name="custom_resolution_info_tooltip">非必要请勿使用此功能，仅限于需要避让的特殊场景。</string>
+    <string name="custom_resolution_info_tooltip">添加预设或自定义尺寸。从列表移除当前使用的分辨率，不会更改当前设置。</string>
     <string name="custom_resolution_field_width">宽</string>
     <string name="custom_resolution_field_height">高</string>
     <string name="custom_resolution_readout_hint">输入后自动显示画面比例</string>
@@ -223,7 +223,7 @@
     <string name="custom_resolution_error_range_height">高度需在 240–4320 之间</string>
     <string name="custom_resolution_error_even_width">宽度必须为偶数</string>
     <string name="custom_resolution_error_even_height">高度必须为偶数</string>
-    <string name="custom_resolution_empty_title">还没有自定义分辨率</string>
+    <string name="custom_resolution_empty_title">分辨率列表为空</string>
     <string name="custom_resolution_empty_hint">在上方输入宽和高，或点一个预设快速填入</string>
     <string name="custom_resolution_tag_ultrawide">带鱼屏</string>
     <string name="custom_resolution_tag_720p">720p</string>
@@ -245,8 +245,6 @@
     <string name="abr_mode_low_latency">低延迟</string>
     <string name="title_seekbar_scale">主机渲染分辨率比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例缩放所选串流分辨率后再向主机请求。高于 100% 可增加源画面细节但会提高主机 GPU 负载；低于 100% 可减轻负载。主机必须支持缩放后的分辨率。</string>
-    <string name="title_show_low_resolution_presets">显示低带宽分辨率</string>
-    <string name="summary_show_low_resolution_presets">在分辨率列表中添加 360p 和 480p，供极慢网络或低性能设备兼容使用。</string>
     <string name="title_checkbox_stretch_video">将画面拉伸至全屏</string>
     <string name="summary_checkbox_stretch_video">改变串流画面宽高比以铺满屏幕，可能造成画面变形。</string>
     <string name="title_checkbox_disable_warnings">隐藏串流警告通知弹窗</string>
@@ -1175,6 +1173,7 @@
     <string name="display_spec_fps">帧率</string>
     <string name="display_spec_screen">屏幕</string>
     <string name="display_scale_title">显示缩放</string>
+    <string name="display_scale_recommended">推荐</string>
     <string name="display_scale_applying">正在应用 %1$d%%…</string>
     <string name="display_scale_load_failed">无法读取显示缩放</string>
     <string name="display_scale_refresh">重新读取</string>
@@ -2309,7 +2308,7 @@
     <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
     <string name="display_native_resolution_description">跟随目标显示器 · %1$s</string>
     <string name="display_choice_unavailable">此设备暂不支持</string>
-    <string name="display_custom_resolution_action">管理自定义分辨率…</string>
+    <string name="display_custom_resolution_action">管理分辨率…</string>
     <string name="title_float_ball_settings">悬浮球</string>
     <string name="float_ball_appearance">悬浮显示</string>
     <string name="float_ball_gestures">手势操作</string>
@@ -2325,6 +2324,7 @@
     <string name="toast_crown_config_import_success">已导入 Crown 配置</string>
     <string name="toast_crown_config_merge_success">已合并 Crown 配置</string>
     <string name="toast_crown_config_version_unsupported">不支持此 Crown 配置版本</string>
+    <string name="display_resolution_current_not_saved">当前使用 · 未保存在列表</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">精确同步(增强)</string>
     <string name="pacing_label_precise_sync">精确同步</string>

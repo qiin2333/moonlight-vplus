@@ -289,34 +289,13 @@ object UiHelper {
         return getBatteryLevelFromIntent(batteryStatus) != null
     }
 
+    // BatteryManager.getIntProperty is a synchronous binder call into the health HAL
+    // and can block for seconds on some devices (ANR while holding the main thread).
+    // Always read from the sticky ACTION_BATTERY_CHANGED broadcast instead — it is the
+    // same source hasDisplayableBattery() gates on.
     fun getBatteryLevel(context: Context): Int {
-        val propertyLevel = getBatteryCapacityProperty(context)
-        if (propertyLevel != null && propertyLevel > 0) {
-            return propertyLevel
-        }
-
-        getBatteryStatusIntent(context)?.let { batteryStatus ->
-            getBatteryLevelFromIntent(batteryStatus)?.let { return it }
-        }
-
-        return propertyLevel ?: 0
-    }
-
-    private fun getBatteryCapacityProperty(context: Context): Int? {
-        return try {
-            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-            val level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-
-            if (level !in 0..100) {
-                LimeLog.warning("Invalid battery level: $level")
-                null
-            } else {
-                level
-            }
-        } catch (e: Exception) {
-            LimeLog.warning("Error getting battery level: ${e.message}")
-            null
-        }
+        val batteryStatus = getBatteryStatusIntent(context) ?: return 0
+        return getBatteryLevelFromIntent(batteryStatus) ?: 0
     }
 
     private fun getBatteryStatusIntent(context: Context): Intent? {

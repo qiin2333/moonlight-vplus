@@ -232,6 +232,8 @@ class PreferenceConfiguration {
     var showAudioHapticsCard = false
     var showGyroCard = false
     var showQuickKeyCard = false
+    // Waveform routes are capability-driven, but the status/test card can still be hidden.
+    var showWaveformHapticsCard = true
 
     // 麦克风设置
     var enableMic = false
@@ -338,6 +340,7 @@ class PreferenceConfiguration {
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
                 .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                 .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
+                .putBoolean(SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING, showWaveformHapticsCard)
                 .putBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, enableAudioVibration)
                 .putInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, audioVibrationStrength)
                 .putString(AUDIO_VIBRATION_MODE_PREF_STRING, audioVibrationMode)
@@ -598,6 +601,7 @@ class PreferenceConfiguration {
         copy.showAudioHapticsCard = this.showAudioHapticsCard
         copy.showGyroCard = this.showGyroCard
         copy.showQuickKeyCard = this.showQuickKeyCard
+        copy.showWaveformHapticsCard = this.showWaveformHapticsCard
         return copy
     }
 
@@ -683,6 +687,7 @@ class PreferenceConfiguration {
         private const val SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card"
         @Suppress("ConstPropertyName")
         private const val SHOW_QuickKeyCard = "checkbox_show_QuickKeyCard"
+        internal const val SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING = "checkbox_show_waveform_haptics_card"
 
         private const val ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side"
         private const val ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING = "enhanced_touch_zone_divider"
@@ -800,6 +805,7 @@ class PreferenceConfiguration {
         const val AUDIO_PASSTHROUGH_BUFFER_PREF_STRING = "list_audio_passthrough_buffer"
         const val DEFAULT_AUDIO_PASSTHROUGH_BUFFER = "normal"
         const val UNLOCK_FPS_STRING = "checkbox_unlock_fps"
+        // Retired UI switch, retained only for migrating older installs and backups.
         const val SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING = "checkbox_show_low_resolution_presets"
         const val CROWN_CONFIG_MANAGEMENT_STRING = "crown_config_management"
 
@@ -999,13 +1005,6 @@ class PreferenceConfiguration {
         val RESOLUTIONS = arrayOf(
             "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
         )
-
-        fun isLowResolutionPreset(resolution: String?): Boolean {
-            return when (resolution) {
-                RES_360P, RES_480P, "360x640", "480x854" -> true
-                else -> false
-            }
-        }
 
         // ---- Public static methods ----
 
@@ -1670,6 +1669,11 @@ class PreferenceConfiguration {
             // 横屏时快捷卡片默认不开启
             val defaultQuickKeyCard = config.width <= config.height
             config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, defaultQuickKeyCard)
+            // Preserve the historical capability-driven behavior for existing installs.
+            config.showWaveformHapticsCard = prefs.getBoolean(
+                SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+                true
+            )
 
             // 读取麦克风设置
             config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC)

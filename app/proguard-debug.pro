@@ -80,6 +80,12 @@
 -keep class com.limelight.gamemenu.BitrateCardState { <init>(...); public static final int $stable; }
 -keep class com.limelight.gamemenu.DisplayChoice { <init>(...); public static final int $stable; }
 -keep class com.limelight.gamemenu.DisplaySettingsDraft { <init>(...); public static final int $stable; }
+-keepclassmembers class com.limelight.gamemenu.SensitivityParameter {
+    public static final int $stable;
+}
+-keepclassmembers class com.limelight.preferences.TouchpadInputValues {
+    public <init>(...);
+}
 -keep class com.limelight.gamemenu.AudioHapticsCardState { <init>(...); public static final int $stable; }
 -keep class com.limelight.gamemenu.WaveformHapticsCardState { <init>(...); public static final int $stable; }
 -keep class com.limelight.gamemenu.GyroCardState { <init>(...); public static final int $stable; }

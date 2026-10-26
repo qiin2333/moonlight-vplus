@@ -625,6 +625,9 @@ public class MoonBridge {
     public static native int sendControllerTouchEvent(byte controllerNumber, byte eventType, int pointerId, float x, float y, float pressure);
 
     public static native int sendControllerMotionEvent(byte controllerNumber, byte motionType, float x, float y, float z);
+    public static native int sendControllerMotionFrame(byte controllerNumber, float gx, float gy, float gz, float ax, float ay, float az);
+    public static native int stopControllerMotionEvent(byte controllerNumber);
+    public static native int resetControllerMotionEvents(byte controllerNumber, boolean clearDemand);
 
     public static native int sendControllerBatteryEvent(byte controllerNumber, byte batteryState, byte batteryPercentage);
 

@@ -230,13 +230,13 @@
     <string name="resolution_prefix_native">Родное</string>
     <string name="fps_suffix_fps">FPS</string>
     <string name="custom_list_save">Сохранить</string>
-    <string name="title_custom_resolutions">Свои разрешения</string>
+    <string name="title_custom_resolutions">Список разрешений</string>
     <string name="width_hint">напр. 1920</string>
     <string name="height_hint">напр. 1080</string>
     <string name="resolution_already_exists">Такое разрешение уже есть</string>
     <string name="custom_resolution_add_short">Добав.</string>
     <string name="custom_resolution_info_contentdesc">Примечание</string>
-    <string name="custom_resolution_info_tooltip">Используйте только при необходимости: для особых случаев, когда стандартный список разрешений не подходит.</string>
+    <string name="custom_resolution_info_tooltip">Добавляйте готовые или свои размеры. Удаление текущего разрешения из списка не изменяет действующие настройки.</string>
     <string name="custom_resolution_field_width">Ширина</string>
     <string name="custom_resolution_field_height">Высота</string>
     <string name="custom_resolution_readout_hint">Пропорции появятся при вводе</string>
@@ -247,7 +247,7 @@
     <string name="custom_resolution_error_range_height">Высота: от 240 до 4320</string>
     <string name="custom_resolution_error_even_width">Ширина должна быть чётной</string>
     <string name="custom_resolution_error_even_height">Высота должна быть чётной</string>
-    <string name="custom_resolution_empty_title">Своих разрешений пока нет</string>
+    <string name="custom_resolution_empty_title">Список разрешений пуст</string>
     <string name="custom_resolution_empty_hint">Введите размеры выше или выберите шаблон</string>
     <string name="custom_resolution_tag_8k">8K</string>
     <string name="custom_resolution_tag_4k">4K</string>
@@ -742,8 +742,6 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="title_show_low_resolution_presets">Показывать низкие разрешения</string>
-    <string name="summary_show_low_resolution_presets">Добавить 360p и 480p для очень медленной сети и слабых устройств.</string>
     <string name="audioconf_stereo">Стерео</string>
     <string name="audioconf_51surround">Объёмный звук 5.1</string>
     <string name="audioconf_71surround">Объёмный звук 7.1</string>
@@ -1281,6 +1279,7 @@
     <string name="display_spec_fps">Частота</string>
     <string name="display_spec_screen">Экран</string>
     <string name="display_scale_title">Масштаб экрана</string>
+    <string name="display_scale_recommended">Реком.</string>
     <string name="display_scale_applying">Применяется %1$d%%…</string>
     <string name="display_scale_load_failed">Не удалось получить масштаб экрана</string>
     <string name="display_scale_refresh">Обновить</string>
@@ -2106,7 +2105,7 @@
     <string name="diag_hdr_brightness_estimated">Включены приблизительные оценки: соотношение HDR/SDR × 300 nits; неизвестная яркость всего экрана — 20% от пика, неизвестный уровень чёрного — 0.001 nits</string>
     <string name="diag_hdr_brightness_host_fallback">Яркость не передаётся; ПК выбирает резервное значение</string>
     <string name="display_choice_unavailable">Недоступно на этом устройстве</string>
-    <string name="display_custom_resolution_action">Управление своими разрешениями…</string>
+    <string name="display_custom_resolution_action">Управление разрешениями…</string>
     <string name="display_native_resolution_description">По целевому экрану · %1$s</string>
     <string name="fec_mode_automatic">Автоматически</string>
     <string name="fec_mode_fixed">Фиксированный процент</string>
@@ -2155,4 +2154,5 @@
     <string name="title_shizuku_keyboard_accessibility">Включать спецвозможности клавиатуры через Shizuku</string>
     <string name="title_shizuku_keyboard_authorization">Доступ через Shizuku</string>
     <string name="videoformat_pyrowave">PyroWave (экспериментально, без генерации кадров)</string>
+    <string name="display_resolution_current_not_saved">Используется сейчас · Не сохранено в списке</string>
 </resources>

@@ -255,11 +255,7 @@ class GameMenu(
         scheduleRetry = { action -> handler.postDelayed(action, GAME_FOCUS_RETRY_DELAY_MS) }
     )
     private val actionExecutor = StreamActionExecutor(game, { conn }, handler)
-    private val bitrateCardController = BitrateCardController(
-        game,
-        conn,
-        supportsExtendedBitrate = game.isPyrowaveSessionActive()
-    )
+    private val bitrateCardController = game.getBitrateCardController(conn)
     private val audioHapticsCardController = AudioHapticsCardController(game)
     private val waveformHapticsCardController = WaveformHapticsCardController(game)
     private val gyroCardController = GyroCardController(game)
@@ -1166,7 +1162,7 @@ class GameMenu(
         composeUiState = state
         hardwareFocusRequestState = hardwareFocusRequest
         parentFocusRestoreRequestState = parentFocusRestoreRequest
-        bitrateCardController.start { bitrate ->
+        val bitrateMenuGeneration = bitrateCardController.start { bitrate ->
             composeUiState?.let { state ->
                 state.value = state.value.copy(bitrate = bitrate)
             }
@@ -1371,7 +1367,7 @@ class GameMenu(
             }
             this.composeUiState = null
             guideDismissController.clear()
-            bitrateCardController.stop()
+            bitrateCardController.stop(bitrateMenuGeneration)
             audioHapticsCardController.dispose()
             waveformHapticsCardController.dispose()
             gyroCardController.dispose()
@@ -1461,7 +1457,8 @@ class GameMenu(
             display = game.prefConfig.showDisplaySettingsCard,
             audioHaptics = game.prefConfig.showAudioHapticsCard,
             gyro = game.prefConfig.showGyroCard,
-            shortcuts = game.prefConfig.showQuickKeyCard
+            shortcuts = game.prefConfig.showQuickKeyCard,
+            waveformHaptics = game.prefConfig.showWaveformHapticsCard
         )
     }
 

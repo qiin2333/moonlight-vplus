@@ -40,6 +40,7 @@ import com.limelight.framegen.FramegenPerformanceEnricher
 import com.limelight.framegen.FramegenRuntimeConfig
 import com.limelight.framegen.FramegenRuntimePlanner
 import com.limelight.gamemenu.GameMenu
+import com.limelight.gamemenu.BitrateCardController
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
@@ -247,6 +248,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForwarding?.let(action)
     }
     private var activeGameMenu: GameMenu? = null
+    private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
     private var startHoldWheelView: ComposeView? = null
@@ -3266,6 +3268,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onUsbPermissionPromptCompleted() {
         suppressPipRefCount--
         updatePipAutoEnter()
+    }
+
+    internal fun getBitrateCardController(connection: NvConnection): BitrateCardController {
+        bitrateCardControllerCache?.let { (cachedConnection, controller) ->
+            if (cachedConnection === connection) return controller
+            controller.stop()
+        }
+        return BitrateCardController(
+            this,
+            connection,
+            supportsExtendedBitrate = isPyrowaveSessionActive()
+        ).also { bitrateCardControllerCache = connection to it }
     }
 
     override fun showGameMenu(device: GameInputDevice?): Boolean {

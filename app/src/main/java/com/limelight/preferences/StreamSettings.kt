@@ -114,8 +114,10 @@ import com.limelight.utils.UpdateManager
 import com.limelight.utils.background.PipwImages
 import com.limelight.utils.background.PipwImageStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
@@ -1223,11 +1225,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             )
             val saved = savedSelection(pref, PreferenceConfiguration.DEFAULT_RESOLUTION)
             val displayNative = DisplayChoiceLists.nativeSize(requireActivity(), getTargetDisplay())
+            val storedValues = DisplayChoiceLists.resolutionStoreValues(requireActivity())
             val choiceValues = DisplayChoiceLists.resolutionValues(
-                DisplayChoiceLists.resolutionStoreValues(requireActivity()),
-                saved,
-                PreferenceManager.getDefaultSharedPreferences(requireActivity())
-                    .getBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, false)
+                storedValues,
+                saved
             )
             val choiceLabels = choiceValues.map { value ->
                 when {
@@ -1239,6 +1240,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 if (value == PreferenceConfiguration.RES_NATIVE) {
                     val size = displayNative?.let { "${it.first}×${it.second}" } ?: "—"
                     getString(R.string.display_native_resolution_description, size)
+                } else if (value == saved && value !in storedValues) {
+                    getString(R.string.display_resolution_current_not_saved)
                 } else if (value in labels) {
                     value.replace("x", "×")
                 } else {
@@ -1352,7 +1355,15 @@ class StreamSettings : ThemedAppCompatActivity() {
                                 openCustomResolutionsEditor(displayPref, hasHardwareInput())
                             } else {
                                 values.getOrNull(action.id)?.let { value ->
-                                    if (displayPref != null) displayPref.selectValue(value)
+                                    if (displayPref != null) {
+                                        if (displayPref.selectValue(value) &&
+                                            pref.key == PreferenceConfiguration.RESOLUTION_PREF_STRING) {
+                                            // Retire an unsaved current value as soon as another size is selected.
+                                            replaceSavedResolutionEntries()
+                                            visibilityController.refreshSearch()
+                                            refreshSearchPresentation()
+                                        }
+                                    }
                                     // Some position preferences reset a dragged position even when the value is unchanged.
                                     else if (pref.callChangeListener(value)) pref.value = value
                                 }
@@ -1529,6 +1540,16 @@ class StreamSettings : ThemedAppCompatActivity() {
                     view.paddingRight, view.paddingBottom)
             UiHelper.applyStatusBarPadding(view)
             return view
+        }
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            // MediaCodecList 枚举走 mediaserver binder IPC,放到 IO 线程探测;
+            // 绑定视图生命周期,设置页视图销毁时协程自动取消。
+            viewLifecycleOwner.lifecycleScope.launch {
+                val hasMtk = withContext(Dispatchers.IO) { MediaCodecHelper.hasMediaTekDecoder() }
+                updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), hasMtk)
+            }
         }
 
         @Deprecated("Deprecated in Java")
@@ -3022,8 +3043,10 @@ class StreamSettings : ThemedAppCompatActivity() {
                     updateBackgroundPreferenceVisibility(newValue as? String)
                     true
                 }
-            findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible =
-                MediaCodecHelper.hasMediaTekDecoder()
+            // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
+            // (Crashlytics 596baf51):先隐藏,探测放到 onViewCreated 里做,结果经
+            // updateRuntimeVisibility 显示,避免与搜索过滤的可见性状态相互覆盖。
+            updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), false)
 
             // hide on-screen controls category on non touch screen devices
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
@@ -3293,18 +3316,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                         }
 
                         // Allow the original preference change to take place
-                        true
-                    }
-            // 持久化在监听返回后才落盘，故下一帧重建候选。
-            findPreference<Preference>(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING)!!.onPreferenceChangeListener =
-                    Preference.OnPreferenceChangeListener { _, _ ->
-                        listView?.post {
-                            if (isAdded && !settingsChoiceViewDestroyed) {
-                                replaceSavedResolutionEntries()
-                                visibilityController.refreshSearch()
-                                refreshSearchPresentation()
-                            }
-                        }
                         true
                     }
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =

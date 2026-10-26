@@ -281,13 +281,13 @@
     <string name="summary_checkbox_stretch_video">Fill the display by changing the stream image\'s aspect ratio. This can distort the picture.</string>
     <string name="resolution_prefix_native">Native</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_custom_resolutions">Custom resolutions</string>
+    <string name="title_custom_resolutions">Resolution list</string>
     <string name="width_hint">e.g. 1920</string>
     <string name="height_hint">e.g. 1080</string>
     <string name="resolution_already_exists">This resolution already exists</string>
     <string name="custom_resolution_add_short">Add</string>
     <string name="custom_resolution_info_contentdesc">Usage note</string>
-    <string name="custom_resolution_info_tooltip">Do not use this feature unless necessary — it is only meant for special cases that require avoiding the standard resolution list.</string>
+    <string name="custom_resolution_info_tooltip">Add presets or custom sizes. Removing the resolution in use from this list keeps the current settings unchanged.</string>
     <string name="custom_resolution_field_width">Width</string>
     <string name="custom_resolution_field_height">Height</string>
     <string name="custom_resolution_readout_hint">Aspect ratio appears as you type</string>
@@ -299,7 +299,7 @@
     <string name="custom_resolution_error_range_height">Height must be between 240 and 4320</string>
     <string name="custom_resolution_error_even_width">Width must be an even number</string>
     <string name="custom_resolution_error_even_height">Height must be an even number</string>
-    <string name="custom_resolution_empty_title">No custom resolutions yet</string>
+    <string name="custom_resolution_empty_title">The resolution list is empty</string>
     <string name="custom_resolution_empty_hint">Enter width and height above, or tap a preset</string>
     <string name="custom_resolution_tag_8k">8K</string>
     <string name="custom_resolution_tag_4k">4K</string>
@@ -857,8 +857,6 @@
     <string name="resolution_1080p">1080p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="title_show_low_resolution_presets">Show low-bandwidth resolutions</string>
-    <string name="summary_show_low_resolution_presets">Add 360p and 480p compatibility options for very slow networks and lower-end devices.</string>
 
 
     <string name="audioconf_stereo">Stereo</string>
@@ -1501,6 +1499,7 @@ Tap again to replace it.</string>
     <string name="display_spec_fps">Frame rate</string>
     <string name="display_spec_screen">Screen</string>
     <string name="display_scale_title">Display scaling</string>
+    <string name="display_scale_recommended">Recommended</string>
     <string name="display_scale_applying">Applying %1$d%%…</string>
     <string name="display_scale_load_failed">Unable to read display scaling</string>
     <string name="display_scale_refresh">Reload</string>
@@ -2394,7 +2393,7 @@ Tap again to replace it.</string>
     <string-array name="host_gamepad_selection_values"><item>automatic</item><item>host</item><item>x360</item><item>ds4</item><item>ds5</item></string-array>
     <string name="display_native_resolution_description">Follow the target display · %1$s</string>
     <string name="display_choice_unavailable">Unavailable on this device</string>
-    <string name="display_custom_resolution_action">Manage custom resolutions…</string>
+    <string name="display_custom_resolution_action">Manage resolutions…</string>
     <string name="title_float_ball_settings">Floating ball</string>
     <string name="float_ball_appearance">Display</string>
     <string name="float_ball_gestures">Gestures</string>
@@ -2404,6 +2403,7 @@ Tap again to replace it.</string>
     <string name="float_ball_summary_no_hide">Always visible</string>
     <string name="float_ball_summary_custom_position">Dragged position</string>
     <string name="float_ball_summary_search">%1$s\nIncludes: %2$s</string>
+    <string name="display_resolution_current_not_saved">Currently in use · Not saved in list</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">Precise sync (enhanced)</string>
     <string name="pacing_label_precise_sync">Precise sync</string>
