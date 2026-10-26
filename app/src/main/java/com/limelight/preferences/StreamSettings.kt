@@ -114,8 +114,10 @@ import com.limelight.utils.UpdateManager
 import com.limelight.utils.background.PipwImages
 import com.limelight.utils.background.PipwImageStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
@@ -1538,6 +1540,16 @@ class StreamSettings : ThemedAppCompatActivity() {
                     view.paddingRight, view.paddingBottom)
             UiHelper.applyStatusBarPadding(view)
             return view
+        }
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            // MediaCodecList 枚举走 mediaserver binder IPC,放到 IO 线程探测;
+            // 绑定视图生命周期,设置页视图销毁时协程自动取消。
+            viewLifecycleOwner.lifecycleScope.launch {
+                val hasMtk = withContext(Dispatchers.IO) { MediaCodecHelper.hasMediaTekDecoder() }
+                updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), hasMtk)
+            }
         }
 
         @Deprecated("Deprecated in Java")
@@ -3031,8 +3043,10 @@ class StreamSettings : ThemedAppCompatActivity() {
                     updateBackgroundPreferenceVisibility(newValue as? String)
                     true
                 }
-            findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible =
-                MediaCodecHelper.hasMediaTekDecoder()
+            // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
+            // (Crashlytics 596baf51):先隐藏,探测放到 onViewCreated 里做,结果经
+            // updateRuntimeVisibility 显示,避免与搜索过滤的可见性状态相互覆盖。
+            updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), false)
 
             // hide on-screen controls category on non touch screen devices
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
