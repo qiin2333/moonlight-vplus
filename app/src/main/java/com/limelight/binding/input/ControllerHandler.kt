@@ -3919,7 +3919,7 @@ class ControllerHandler(
             val route = systemWaveformRoutes.getOrPut(id) {
                 val metadata = HapticRouteSnapshot(id, HapticDeviceIdentity(
                     "android-bt:${context.id}", context.name ?: "DualSense", context.vendorId, context.productId,
-                    HapticTransport.BLUETOOTH), DualSenseBluetoothHapticProfile.capability(HapticAvailability.INITIALIZING))
+                    HapticTransport.BLUETOOTH), output.waveformCapability(HapticAvailability.INITIALIZING))
                 waveformCapabilities[id] = metadata
                 val sink = output.createHapticsSink {
                     mainThreadHandler.post { updateWaveformAvailability(id, HapticAvailability.FAILED) }

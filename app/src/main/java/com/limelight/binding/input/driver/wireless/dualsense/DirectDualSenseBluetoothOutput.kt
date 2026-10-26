@@ -2,7 +2,12 @@ package com.limelight.binding.input.driver.wireless.dualsense
 
 import android.view.InputDevice
 import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
+import com.limelight.binding.input.haptics.ControllerHapticsCapability
 import com.limelight.binding.input.haptics.DualSenseBluetoothHapticsSink
+import com.limelight.binding.input.haptics.HapticAvailability
+import com.limelight.binding.input.haptics.HapticEvidence
+import com.limelight.binding.input.haptics.HapticOutput
+import com.limelight.binding.input.haptics.WaveformFormat
 import java.io.Closeable
 
 /** Per-InputDevice DualSense output state backed by Android's system Bluetooth connection. */
@@ -28,6 +33,10 @@ internal class DirectDualSenseBluetoothOutput(
 
     val isWaveformReady: Boolean get() = transport.isReady(bluetoothAddress) &&
         (bluetoothAddress != null || connectedGamepads().count { supports(it) } == 1)
+
+    fun waveformCapability(state: HapticAvailability) = ControllerHapticsCapability(
+        "dualsense-bluetooth-pcm", HapticOutput.WAVEFORM_STREAM, state,
+        HapticEvidence.EXPERIMENTAL_PROTOCOL, WaveformFormat(3000))
 
     fun createHapticsSink(onFailure: () -> Unit) = DualSenseBluetoothHapticsSink(
         ready = { isWaveformReady }, write = writer::writeHaptics,

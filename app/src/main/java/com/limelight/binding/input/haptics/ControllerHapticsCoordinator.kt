@@ -33,13 +33,8 @@ internal class ControllerHapticsCoordinator(
     private val deviceMixer = ControllerHapticsMixer()
     private val ds5HapticsBindings = ConcurrentHashMap<Int, NativeHapticsBinding>()
     private val ds5ControlStates = mutableMapOf<Short, Ds5HapticsState>()
-    private class PcmDiagnostics {
-        var packets = 0L
-        var nonzero = false
-        var peak = 0
-        var nextLog = 0L
-    }
-    private val pcmDiagnostics = mutableMapOf<Short, PcmDiagnostics>()
+    // Absent: no PCM yet; false: only silence observed; true: nonzero content already logged.
+    private val pcmSeenNonzero = mutableMapOf<Short, Boolean>()
     private val ds5LifecycleLock = Any()
     private val outputLifecycle = ControllerOutputLifecycle()
     private var ds5LifecycleGeneration = 0L
@@ -459,23 +454,15 @@ internal class ControllerHapticsCoordinator(
             val delivery = pcmRouter.submit(frame, binding?.sink,
                 handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE) ?: return
             val direct = delivery.direct
-            val diagnostic = pcmDiagnostics.getOrPut(frame.controllerNumber) { PcmDiagnostics() }
-            diagnostic.packets++
-            for (i in frame.pcm.indices step 2) {
-                val sample = ((frame.pcm[i].toInt() and 255) or
-                    (frame.pcm[i + 1].toInt() shl 8)).toShort().toInt()
-                diagnostic.peak = maxOf(diagnostic.peak, kotlin.math.abs(sample))
-            }
-            val firstNonzero = !diagnostic.nonzero && diagnostic.peak > 0
-            diagnostic.nonzero = diagnostic.nonzero || firstNonzero
-            val logNow = System.nanoTime()
-            if (diagnostic.packets == 1L || firstNonzero || logNow >= diagnostic.nextLog) {
-                LimeLog.info("Authored PCM: player=${frame.controllerNumber} packets=${diagnostic.packets} " +
-                    "peak=${diagnostic.peak}/32768 direct=$direct " +
-                    "sink=${binding?.sink?.javaClass?.simpleName ?: "none"} " +
-                    "control=${ds5ControlStates.containsKey(frame.controllerNumber)}")
-                diagnostic.peak = 0
-                diagnostic.nextLog = logNow + 5_000_000_000L
+            val seenNonzero = pcmSeenNonzero[frame.controllerNumber]
+            if (seenNonzero != true) {
+                val nonzero = frame.pcm.any { it != 0.toByte() }
+                if (seenNonzero == null || nonzero) {
+                    LimeLog.info("Authored PCM: player=${frame.controllerNumber} nonzero=$nonzero " +
+                        "direct=$direct sink=${binding?.sink?.javaClass?.simpleName ?: "none"} " +
+                        "control=${ds5ControlStates.containsKey(frame.controllerNumber)}")
+                }
+                pcmSeenNonzero[frame.controllerNumber] = nonzero
             }
             if (binding != null && delivery.failedSink) {
                 val entry = ds5HapticsBindings.entries.firstOrNull { it.value === binding }
@@ -675,7 +662,7 @@ internal class ControllerHapticsCoordinator(
             outputLifecycle.retire(controllerNumber)
             pcmRouter.reset(controllerNumber)
             ds5ControlStates.remove(controllerNumber)
-            pcmDiagnostics.remove(controllerNumber)
+            pcmSeenNonzero.remove(controllerNumber)
             synchronized(pendingPcm) { pendingPcm.remove(controllerNumber) }
         }
         runOnOutputThread {
@@ -701,7 +688,7 @@ internal class ControllerHapticsCoordinator(
         val bindings = synchronized(ds5LifecycleLock) {
             ds5RequestedGenerations.clear()
             ds5ControlStates.clear()
-            pcmDiagnostics.clear()
+            pcmSeenNonzero.clear()
             ds5LifecycleGeneration++
             ds5HapticsBindings.values.toList().also { ds5HapticsBindings.clear() }
         }

@@ -1,6 +1,7 @@
 package com.limelight.binding.input.driver.wireless.dualsense
 
 import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
+import com.limelight.binding.input.driver.applyToHidReport
 import com.limelight.nvstream.Ds5HapticsState
 import java.io.Closeable
 import java.util.concurrent.ExecutorService
@@ -203,7 +204,7 @@ internal class DualSenseBluetoothOutputWriter(
 
     private fun encodeOutput(snapshot: DualSenseBluetoothOutputSnapshot, sequence: Int): ByteArray =
         DualSenseBluetoothOutputEncoder.encode(snapshot, sequence).also { report ->
-            synchronized(stateLock) { hostControl?.applyTo(report, 3) }
+            synchronized(stateLock) { hostControl?.applyToHidReport(report, 3) }
             writeOutputCrc(report)
         }
 
@@ -227,7 +228,7 @@ internal class DualSenseBluetoothOutputWriter(
         if (snapshot != null) {
             val setup = DualSenseBluetoothOutputEncoder.encode(snapshot, nextSequence())
             setup[42] = 1
-            synchronized(stateLock) { hostControl?.applyTo(setup, 3) }
+            synchronized(stateLock) { hostControl?.applyToHidReport(setup, 3) }
             writeOutputCrc(setup)
             if (!sendPhysical(setup)) return@synchronized false
         }

@@ -11,7 +11,7 @@ internal class DualSenseUsbHapticsOutput {
 
     fun applyTo(report: ByteArray) {
         if (report.size < 48 || report[0] != 2.toByte()) return
-        control?.let { it.applyTo(report, 1); return }
+        control?.let { it.applyToHidReport(report, 1); return }
         if (report[1].toInt() and 1 != 0) {
             right = report[3]
             left = report[4]
