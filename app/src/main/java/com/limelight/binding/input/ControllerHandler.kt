@@ -3907,7 +3907,7 @@ class ControllerHandler(
         if (stopped || !prefConfig.allowExperimentalHaptics || !prefConfig.dualSenseDirectBluetooth) return
         for (index in 0 until inputDeviceContexts.size()) {
             val context = inputDeviceContexts.valueAt(index)
-            if (!isContextUsable(context)) continue
+            if (!isContextUsable(context) || !context.hasJoystickAxes) continue
             val output = context.directDualSenseBluetoothOutput ?: continue
             val previous = directWaveformRouteIds[context.id]?.let(systemWaveformRoutes::get)
             if (previous?.player != null && previous.player != context.controllerNumber) {
@@ -3922,7 +3922,11 @@ class ControllerHandler(
                     HapticTransport.BLUETOOTH), output.waveformCapability(HapticAvailability.INITIALIZING))
                 waveformCapabilities[id] = metadata
                 val sink = output.createHapticsSink {
-                    mainThreadHandler.post { updateWaveformAvailability(id, HapticAvailability.FAILED) }
+                    mainThreadHandler.post {
+                        if (directWaveformRouteIds[context.id] == id) {
+                            releaseDirectBluetoothHaptics(context.id)
+                        }
+                    }
                 }
                 SystemWaveformRoute(metadata, sink, {}, inputId = context.id)
             }

@@ -108,11 +108,9 @@ JNIEXPORT jint JNICALL JNI_NAME(reapUsbIsochronousOutput)(JNIEnv* env, jclass cl
     for (int i = 0; i < output->count; i++) {
         if (completed != output->urb[i]) continue;
         output->pending[i] = 0;
-        int packet_status = (int32_t)completed->iso_frame_desc[0].status;
-        if (completed->status != 0) result = completed->status;
-        else if (packet_status != 0) result = packet_status;
-        else if (completed->iso_frame_desc[0].actual_length != (unsigned int)output->size) result = -EIO;
-        else result = i;
+        // Packet errors/short completions lose one audio frame, but retire the slot normally.
+        // URB-level cancellation/disconnect still tears down the transport.
+        result = completed->status != 0 ? completed->status : i;
         break;
     }
     pthread_mutex_unlock(&output->lock);

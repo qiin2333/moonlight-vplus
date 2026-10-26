@@ -56,8 +56,8 @@ internal class DualSenseBluetoothHapticsSink(
             val restart = flags and 5 != 0
             if (!restart && sequence?.let { frame.sequenceNumber - it <= 0 } == true) return
             val now = System.nanoTime()
-            if (restart || sequence?.let { frame.sequenceNumber != it + 1 } == true ||
-                lastInput != 0L && now - lastInput > IDLE_NS) {
+            // Missing unreliable PCM is a gap, not a new stream; retain queued audio and FIR history.
+            if (restart || lastInput != 0L && now - lastInput > IDLE_NS) {
                 queue.clear()
                 encoder.reset()
             }

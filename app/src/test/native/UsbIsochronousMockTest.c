@@ -127,10 +127,13 @@ static void test_errors_and_uncertain_retirement(void) {
     BUFFER buffer = {0};
     assert(CALL(submitUsbIsochronousOutput)(&env, NULL, handle, 0, &buffer) == 0);
     complete(0, 0, -EIO, 0);
-    assert(CALL(reapUsbIsochronousOutput)(&env, NULL, handle, 5) == -EIO);
+    assert(CALL(reapUsbIsochronousOutput)(&env, NULL, handle, 5) == 0);
     assert(CALL(submitUsbIsochronousOutput)(&env, NULL, handle, 0, &buffer) == 0);
     complete(0, 0, 0, 383);
-    assert(CALL(reapUsbIsochronousOutput)(&env, NULL, handle, 5) == -EIO);
+    assert(CALL(reapUsbIsochronousOutput)(&env, NULL, handle, 5) == 0);
+    assert(CALL(submitUsbIsochronousOutput)(&env, NULL, handle, 0, &buffer) == 0);
+    complete(0, -ENODEV, 0, 0);
+    assert(CALL(reapUsbIsochronousOutput)(&env, NULL, handle, 5) == -ENODEV);
     assert(CALL(submitUsbIsochronousOutput)(&env, NULL, handle, 0, &buffer) == 0);
     kernel.reap_error = EIO;
     assert(CALL(closeUsbIsochronousOutput)(&env, NULL, handle) == -EIO);
