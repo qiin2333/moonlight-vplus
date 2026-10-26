@@ -2330,6 +2330,7 @@ Tap again to replace it.</string>
     <string name="waveform_status_busy">Waveform channel is in use. Using ordinary vibration.</string>
     <string name="waveform_status_failed">Waveform output failed. Using ordinary vibration; reconnect to retry.</string>
     <string name="waveform_status_disconnected">Controller disconnected. Ordinary vibration remains available.</string>
+    <string name="waveform_status_reconnect">Reconnect the stream to request native haptics</string>
     <string name="waveform_experimental">Experimental</string>
     <string name="waveform_player">Player %1$d</string>
     <string name="waveform_test_channels">Test left / right haptics</string>

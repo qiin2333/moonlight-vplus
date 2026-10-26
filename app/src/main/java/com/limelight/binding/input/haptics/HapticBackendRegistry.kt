@@ -3,7 +3,7 @@ package com.limelight.binding.input.haptics
 enum class HapticOutput { WAVEFORM_STREAM }
 enum class HapticAvailability {
     NEEDS_VALIDATION, NEEDS_PERMISSION, NEEDS_ASSOCIATION, BUSY,
-    INITIALIZING, READY, FAILED, DISCONNECTED, UNSUPPORTED_PATH
+    INITIALIZING, READY, FAILED, DISCONNECTED, UNSUPPORTED_PATH, NEEDS_RECONNECT
 }
 enum class HapticEvidence { PLATFORM_API, VENDOR_SDK, EXPERIMENTAL_PROTOCOL, VALIDATED_PROTOCOL }
 data class WaveformFormat(val sampleRateHz: Int)

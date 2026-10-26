@@ -2,6 +2,12 @@ package com.limelight.binding.input.driver.wireless.dualsense
 
 import android.view.InputDevice
 import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
+import com.limelight.binding.input.haptics.ControllerHapticsCapability
+import com.limelight.binding.input.haptics.DualSenseBluetoothHapticsSink
+import com.limelight.binding.input.haptics.HapticAvailability
+import com.limelight.binding.input.haptics.HapticEvidence
+import com.limelight.binding.input.haptics.HapticOutput
+import com.limelight.binding.input.haptics.WaveformFormat
 import java.io.Closeable
 
 /** Per-InputDevice DualSense output state backed by Android's system Bluetooth connection. */
@@ -24,6 +30,18 @@ internal class DirectDualSenseBluetoothOutput(
         writer.initializeLightbar()
         writer.retryPending()
     }
+
+    val isWaveformReady: Boolean get() = transport.isReady(bluetoothAddress) &&
+        (bluetoothAddress != null || connectedGamepads().count { supports(it) } == 1)
+
+    fun waveformCapability(state: HapticAvailability) = ControllerHapticsCapability(
+        "dualsense-bluetooth-pcm", HapticOutput.WAVEFORM_STREAM, state,
+        HapticEvidence.EXPERIMENTAL_PROTOCOL, WaveformFormat(3000))
+
+    fun createHapticsSink(onFailure: () -> Unit) = DualSenseBluetoothHapticsSink(
+        ready = { isWaveformReady }, write = writer::writeHaptics,
+        pause = writer::pauseHaptics, onFailure = onFailure,
+        control = { writer.updateControl(it) }, release = writer::releaseHaptics)
 
     fun updateRumble(lowFrequency: Short, highFrequency: Short): Boolean {
         val ready = prepareTransport()
@@ -109,7 +127,18 @@ internal class DirectDualSenseBluetoothOutput(
 
         private fun extractBluetoothAddress(inputDevice: InputDevice): String? =
             BLUETOOTH_ADDRESS.find(runCatching { inputDevice.toString() }.getOrDefault(""))
-                ?.groupValues?.getOrNull(1)
+                ?.groupValues?.getOrNull(1) ?: Regex("(?i)bluetooth:([0-9a-f:]{17})")
+                    .find(inputDevice.descriptor)?.groupValues?.getOrNull(1)
+
+        fun connectedGamepads(): List<InputDevice> = InputDevice.getDeviceIds().asSequence().mapNotNull(InputDevice::getDevice)
+            .filter { it.sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK }
+            .toList()
+
+        /** Passive discovery must not bind the hidden HID service. Permission is checked by caller. */
+        fun hasWaveformCandidate(): Boolean {
+            val devices = connectedGamepads().filter(::supports)
+            return devices.any { extractBluetoothAddress(it) != null || devices.size == 1 }
+        }
 
         private const val SONY_VENDOR_ID = 0x054C
         private val DUALSENSE_PRODUCT_IDS = setOf(0x0CE6, 0x0DF2)

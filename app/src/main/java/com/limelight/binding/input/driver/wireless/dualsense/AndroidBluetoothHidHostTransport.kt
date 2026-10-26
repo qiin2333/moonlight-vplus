@@ -110,7 +110,7 @@ internal class AndroidBluetoothHidHostTransport(
     }
 
     fun send(preferredAddress: String?, report: ByteArray): Boolean {
-        if (report.size != DualSenseBluetoothOutputEncoder.REPORT_SIZE) return false
+        if (!DualSenseBluetoothHapticsReport.accepts(report)) return false
         if (!hasPermission()) return false
         synchronized(lock) {
             if (closed) return false

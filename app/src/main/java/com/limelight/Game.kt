@@ -2,9 +2,9 @@
 package com.limelight
 
 import com.limelight.ui.ThemedComponentActivity
-import com.limelight.binding.input.driver.UsbWaveformBackends
 
-import android.hardware.usb.UsbManager
+import com.limelight.binding.input.haptics.WaveformHapticsDevices
+import com.limelight.nvstream.Ds5HapticsState
 
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.audio.AndroidAudioRenderer
@@ -1219,9 +1219,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         negotiatedHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
         framegenInputHdrEnabled = negotiatedHdrEnabled
 
-        val waveformController = UsbWaveformBackends.hasEligibleController(
-            getSystemService(USB_SERVICE) as? UsbManager,
-            prefConfig.allowExperimentalHaptics)
+        val waveformController = WaveformHapticsDevices.hasEligibleController(
+            this, prefConfig.allowExperimentalHaptics, prefConfig.dualSenseDirectBluetooth)
+        val requestAuthoredPcm = prefConfig.hostGamepadSelection.requestsAuthoredPcm(waveformController,
+            prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE)
+        LimeLog.info("Authored haptics session: candidate=$waveformController " +
+            "host=${prefConfig.hostGamepadSelection} experimental=${prefConfig.allowExperimentalHaptics} " +
+            "systemBluetooth=${prefConfig.dualSenseDirectBluetooth} requested=$requestAuthoredPcm")
         val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
@@ -1244,9 +1248,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
             .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
-            .setAuthoredPcmHaptics(prefConfig.hostGamepadSelection.requestsAuthoredPcm(
-                waveformController,
-                prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE))
+            .setAuthoredPcmHaptics(requestAuthoredPcm)
             .setHostGamepad(hostGamepad)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
@@ -2839,6 +2841,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame) {
         controllerHandler.handleDs5HapticsPcm(frame)
+    }
+
+    override fun ds5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {
+        controllerHandler.handleDs5HapticsState(controllerNumber, state)
     }
 
     private fun prepareFramegenSurface(outputSurface: Surface, showEnabledToast: Boolean) {

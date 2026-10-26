@@ -2248,6 +2248,7 @@
     <string name="waveform_status_busy">波形通道被占用，当前保留普通振动。</string>
     <string name="waveform_status_failed">波形输出失败，已回退普通振动；重新连接可重试。</string>
     <string name="waveform_status_disconnected">手柄已断开，当前保留普通振动。</string>
+    <string name="waveform_status_reconnect">重新连接串流以请求原生触觉</string>
     <string name="waveform_experimental">实验性</string>
     <string name="waveform_player">玩家 %1$d</string>
     <string name="waveform_test_channels">测试左右触觉</string>
