@@ -77,7 +77,6 @@ internal class DualSenseUsbHapticsSink(
     private val slots = Array(IO_SLOTS) { IoSlot() }
     private val active = AtomicBoolean(false)
     private val requestsClosed = AtomicBoolean(false)
-    private val releaseStarted = AtomicBoolean(false)
     @Volatile override var releaseFailure: Throwable? = null
         private set
     private var startAttempted = false
@@ -261,7 +260,6 @@ internal class DualSenseUsbHapticsSink(
     }
 
     private fun releaseRequests() {
-        if (!releaseStarted.compareAndSet(false, true)) return
         runCatching {
             val result = transport.close()
             if (result != 0) {
