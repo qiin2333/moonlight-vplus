@@ -1,6 +1,7 @@
 package com.limelight.binding.input.driver.wireless.dualsense
 
 import com.limelight.binding.input.driver.DualSenseAdaptiveTriggerEffect
+import com.limelight.nvstream.Ds5HapticsState
 import java.io.Closeable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -182,6 +183,84 @@ internal class DualSenseBluetoothOutputWriter(
     private var closed = false
     private var lightbarSetupQueued = false
     private var sequence = 0
+    private var waveformActive = false
+    private var waveformCounter = 0
+    private var hostControl: Ds5HapticsState? = null
+
+    fun updateControl(control: Ds5HapticsState): Boolean = update {
+        hostControl = control
+        validFlag0 = validFlag0 or 3
+    }
+
+    fun releaseHaptics(): Boolean = synchronized(sendLock) {
+        val snapshot = synchronized(stateLock) {
+            hostControl = null
+            waveformActive = false
+            if (closed) null else state.snapshot().copy(validFlag0 = 3, validFlag1 = 0, validFlag2 = 0)
+        } ?: return@synchronized true
+        sendPhysical(DualSenseBluetoothOutputEncoder.encode(snapshot, nextSequence()))
+    }
+
+    private fun encodeOutput(snapshot: DualSenseBluetoothOutputSnapshot, sequence: Int): ByteArray =
+        DualSenseBluetoothOutputEncoder.encode(snapshot, sequence).also { report ->
+            synchronized(stateLock) { hostControl?.applyTo(report, 3) }
+            writeOutputCrc(report)
+        }
+
+    /** All physical writes, including native PCM and mode transitions, share sendLock. */
+    fun writeHaptics(samples: ByteArray): Boolean = synchronized(sendLock) {
+        val snapshot = synchronized(stateLock) {
+            if (closed) return@synchronized null
+            if (waveformActive) null else {
+                waveformActive = true
+                val current = outputSnapshot(state.snapshot())
+                current.copy(
+                    validFlag0 = current.validFlag0 and 3,
+                    validFlag1 = if (hostControl == null) 0x62 else 0,
+                    validFlag2 = 0
+                )
+            }
+        }
+        if (synchronized(stateLock) { closed }) return@synchronized false
+        // Clear power-save/mute/reduction and enable the controller's haptic low-pass filter.
+        // No lightbar, trigger or speaker fields are claimed by this setup report.
+        if (snapshot != null) {
+            val setup = DualSenseBluetoothOutputEncoder.encode(snapshot, nextSequence())
+            setup[42] = 1
+            synchronized(stateLock) { hostControl?.applyTo(setup, 3) }
+            writeOutputCrc(setup)
+            if (!sendPhysical(setup)) return@synchronized false
+        }
+        sendPhysical(DualSenseBluetoothHapticsReport.encode(samples, nextSequence(), waveformCounter++))
+    }
+
+    fun pauseHaptics(): Boolean = synchronized(sendLock) {
+        val snapshot = synchronized(stateLock) {
+            if (closed || !waveformActive) null else {
+                waveformActive = false
+                state.snapshot().copy(validFlag0 = DualSenseBluetoothOutputEncoder.VALID_COMPATIBLE_RUMBLE,
+                    validFlag1 = 0, validFlag2 = 0)
+            }
+        } ?: return@synchronized true
+        sendPhysical(encodeOutput(snapshot, nextSequence()))
+    }
+
+    private fun outputSnapshot(snapshot: DualSenseBluetoothOutputSnapshot): DualSenseBluetoothOutputSnapshot =
+        if (!waveformActive) snapshot else snapshot.copy(
+            // Compatibility policy for existing hosts: preserve actual HOST rumble, restore PCM
+            // when its motors are zero. This is not lossless forwarding of the host's HID mode.
+            validFlag0 = (snapshot.validFlag0 and 3.inv()) or
+                if (snapshot.motorLeft != 0 || snapshot.motorRight != 0) 3 else 0)
+
+    private fun sendPhysical(report: ByteArray): Boolean =
+        runCatching { sendReport(report) }.getOrDefault(false).also {
+            if (!it) notifySendFailure()
+        }
+
+    private fun writeOutputCrc(report: ByteArray) {
+        val crc = CRC32().apply { update(0xA2); update(report, 0, report.size - 4) }
+        for (i in 0..3) report[report.size - 4 + i] = (crc.value ushr (i * 8)).toByte()
+    }
 
     /** Queues the one-shot Bluetooth lightbar setup ahead of normal output. */
     fun initializeLightbar(): Boolean {
@@ -336,7 +415,8 @@ internal class DualSenseBluetoothOutputWriter(
             }
             val sent = synchronized(sendLock) {
                 runCatching {
-                    sendReport(DualSenseBluetoothOutputEncoder.encode(snapshot, nextSequence()))
+                    val current = synchronized(stateLock) { outputSnapshot(snapshot) }
+                    sendReport(encodeOutput(current, nextSequence()))
                 }.getOrDefault(false)
             }
             if (!sent) {

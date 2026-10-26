@@ -3,7 +3,7 @@ package com.limelight.binding.input.haptics
 enum class HapticOutput { WAVEFORM_STREAM }
 enum class HapticAvailability {
     NEEDS_VALIDATION, NEEDS_PERMISSION, NEEDS_ASSOCIATION, BUSY,
-    INITIALIZING, READY, FAILED, DISCONNECTED, UNSUPPORTED_PATH
+    INITIALIZING, READY, FAILED, DISCONNECTED, UNSUPPORTED_PATH, NEEDS_RECONNECT
 }
 enum class HapticEvidence { PLATFORM_API, VENDOR_SDK, EXPERIMENTAL_PROTOCOL, VALIDATED_PROTOCOL }
 data class WaveformFormat(val sampleRateHz: Int)
@@ -48,10 +48,21 @@ interface HapticProtocolProfile {
 
 /** Protocols register here; discovery, routing and UI do not know their brands. */
 class HapticBackendRegistry(private val profiles: List<HapticProtocolProfile> = listOf(
-    KishiUsbHapticProfile, DualSenseUsbHapticProfile
+    KishiUsbHapticProfile, DualSenseUsbHapticProfile, DualSenseBluetoothHapticProfile
 )) {
     init { require(profiles.map { it.id }.distinct().size == profiles.size) }
     fun discover(device: HapticDeviceIdentity): List<HapticCandidate> = profiles.mapNotNull { it.probe(device) }
+}
+
+object DualSenseBluetoothHapticProfile : HapticProtocolProfile {
+    override val id = "dualsense-bluetooth-pcm"
+    override fun matchesIdentity(device: HapticDeviceIdentity) = device.transport == HapticTransport.BLUETOOTH &&
+        device.vendorId == 0x054c && device.productId in setOf(0x0ce6, 0x0df2)
+    override fun probe(device: HapticDeviceIdentity): HapticCandidate? = if (!matchesIdentity(device)) null else
+        HapticCandidate(capability(HapticAvailability.NEEDS_VALIDATION),
+            HapticBackendOwnership.INPUT_DRIVER, 31, layoutMatches = true)
+    fun capability(state: HapticAvailability) = ControllerHapticsCapability(
+        id, HapticOutput.WAVEFORM_STREAM, state, HapticEvidence.EXPERIMENTAL_PROTOCOL, WaveformFormat(3000))
 }
 
 object KishiUsbHapticProfile : HapticProtocolProfile {

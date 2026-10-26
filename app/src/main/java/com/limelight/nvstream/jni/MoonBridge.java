@@ -7,6 +7,11 @@ import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
 
 public class MoonBridge {
+    public static native long createUsbIsochronousOutput(int fd, int endpoint, int slots, int packetSize);
+    public static native int submitUsbIsochronousOutput(long handle, int slot, java.nio.ByteBuffer buffer);
+    public static native int reapUsbIsochronousOutput(long handle, int timeoutMs);
+    public static native void cancelUsbIsochronousOutput(long handle);
+    public static native int closeUsbIsochronousOutput(long handle);
     /* See documentation in Limelight.h for information about these functions and constants */
 
     public static final AudioConfiguration AUDIO_CONFIGURATION_STEREO = new AudioConfiguration(2, 0x3);
@@ -452,6 +457,13 @@ public class MoonBridge {
     public static void bridgeClSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
         if (connectionListener != null) {
             connectionListener.setControllerLED(controllerNumber, r, g, b);
+        }
+    }
+
+    public static void bridgeClDs5HapticsState(short controllerNumber, byte[] state) {
+        if (connectionListener != null) {
+            connectionListener.ds5HapticsState(controllerNumber,
+                    new com.limelight.nvstream.Ds5HapticsState(state));
         }
     }
 

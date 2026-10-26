@@ -28,7 +28,11 @@ class HapticBackendRegistryTest {
 
     @Test fun connectionModeIsPartOfTheMatch() {
         assertTrue(registry.discover(kishi().copy(transport = HapticTransport.BLUETOOTH)).isEmpty())
-        assertTrue(registry.discover(dualSense().copy(transport = HapticTransport.BLUETOOTH)).isEmpty())
+        val bluetooth = registry.discover(dualSense().copy(transport = HapticTransport.BLUETOOTH)).single()
+        assertEquals(DualSenseBluetoothHapticProfile.id, bluetooth.capability.backendId)
+        assertEquals(HapticAvailability.NEEDS_VALIDATION, state(bluetooth))
+        assertEquals(HapticAvailability.UNSUPPORTED_PATH, state(bluetooth, experimental = true, api = 30))
+        assertEquals(HapticAvailability.INITIALIZING, state(bluetooth, experimental = true))
     }
 
     @Test fun interfaceNumberIsNotAnEnumerationIndex() {

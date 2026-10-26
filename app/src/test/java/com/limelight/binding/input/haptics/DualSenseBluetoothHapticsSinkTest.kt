@@ -1,0 +1,52 @@
+package com.limelight.binding.input.haptics
+
+import com.limelight.nvstream.Ds5HapticsPcmFrame
+import org.junit.Assert.*
+import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+class DualSenseBluetoothHapticsSinkTest {
+    private fun pulse(sequence: Int = 0) = Ds5HapticsPcmFrame(0, 1, sequence, 0, 48000, 240, 2, 16,
+        ByteArray(960).apply { repeat(240) { i -> this[i * 4 + 1] = 32 } })
+
+    @Test fun isolatedFiveMillisecondEffectPlaysAndStopIsATransportBarrier() {
+        val played = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        var writes = 0
+        val sink = DualSenseBluetoothHapticsSink({ true }, {
+            synchronized(played) { writes++ }
+            if (it.any { sample -> sample != 0.toByte() }) played.countDown()
+            true
+        }, { true })
+        assertTrue(sink.start())
+        sink.submit(pulse())
+        assertTrue("short pulse must not wait for four nonzero packets", played.await(1, TimeUnit.SECONDS))
+        sink.stopAndThen { stopped.countDown() }
+        assertTrue(stopped.await(1, TimeUnit.SECONDS))
+        val count = synchronized(played) { writes }
+        sink.submit(pulse(1))
+        assertFalse(sink.isOperational)
+        assertEquals(count, synchronized(played) { writes })
+    }
+
+    @Test fun transportFailureWithdrawsPcmAndNotifiesFallback() {
+        val failed = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val sink = DualSenseBluetoothHapticsSink({ true }, { false }, { true }, { failed.countDown() })
+        assertTrue(sink.start())
+        sink.submit(pulse())
+        assertTrue(failed.await(1, TimeUnit.SECONDS))
+        assertFalse(sink.isOperational)
+        sink.stopAndThen { stopped.countDown() }
+        assertTrue(stopped.await(1, TimeUnit.SECONDS))
+    }
+
+    @Test fun unavailableTransportNeverAnnouncesOperationalOutput() {
+        val stopped = CountDownLatch(1)
+        val sink = DualSenseBluetoothHapticsSink({ false }, { error("must not write") }, { true })
+        assertFalse(sink.start())
+        sink.stopAndThen { stopped.countDown() }
+        assertTrue(stopped.await(1, TimeUnit.SECONDS))
+    }
+}

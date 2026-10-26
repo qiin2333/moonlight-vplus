@@ -47,6 +47,7 @@ static jmethodID BridgeClSetAdaptiveTriggersMethod;
 static jmethodID BridgeClSetMotionEventStateMethod;
 static jmethodID BridgeClSetControllerLEDMethod;
 static jmethodID BridgeClDs5HapticsPcmMethod;
+static jmethodID BridgeClDs5HapticsStateMethod;
 static jmethodID BridgeClResolutionChangedMethod;
 static jmethodID BridgeClClipboardDataMethod;
 static jmethodID BridgeClCursorUpdateMethod;
@@ -128,6 +129,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClSetMotionEventStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetMotionEventState", "(SBS)V");
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
     BridgeClDs5HapticsPcmMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsPcm", "(SBIJIIBB[B)V");
+    BridgeClDs5HapticsStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsState", "(S[B)V");
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
     BridgeClClipboardDataMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClClipboardData", "([B)V");
     BridgeClCursorUpdateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClCursorUpdate", "(IIIIII[B)V");
@@ -557,6 +559,19 @@ void BridgeClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, u
     }
 }
 
+static void BridgeClDs5HapticsState(uint16_t controllerNumber, const uint8_t* state) {
+    JNIEnv* env = GetThreadEnv();
+    jbyteArray bytes = (*env)->NewByteArray(env, 8);
+    if (bytes == NULL) { (*env)->ExceptionClear(env); return; }
+    (*env)->SetByteArrayRegion(env, bytes, 0, 8, (const jbyte*)state);
+    if (!(*env)->ExceptionCheck(env)) {
+        (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClDs5HapticsStateMethod,
+                                   (jshort)controllerNumber, bytes);
+    }
+    (*env)->DeleteLocalRef(env, bytes);
+    if ((*env)->ExceptionCheck(env)) (*JVM)->DetachCurrentThread(JVM);
+}
+
 void BridgeClDs5HapticsPcm(const LI_DS5_HAPTICS_PCM_FRAME* frame) {
     JNIEnv* env = GetThreadEnv();
 
@@ -862,6 +877,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
 
     CONNECTION_LISTENER_CALLBACKS connectionCallbacks = BridgeConnListenerCallbacks;
     connectionCallbacks.ds5HapticsPcm = authoredPcmHaptics ? BridgeClDs5HapticsPcm : NULL;
+    LiSetDs5HapticsStateCallback(authoredPcmHaptics ? BridgeClDs5HapticsState : NULL);
 
     int ret = LiStartConnection(&serverInfo,
                                 &streamConfig,

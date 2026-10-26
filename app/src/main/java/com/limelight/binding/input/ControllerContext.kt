@@ -325,6 +325,7 @@ class InputDeviceContext internal constructor(
             }
         }
 
+        handler.releaseDirectBluetoothHaptics(id)
         directDualSenseBluetoothOutput?.close()
         directDualSenseBluetoothOutput = null
 

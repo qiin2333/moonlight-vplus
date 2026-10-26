@@ -1,6 +1,7 @@
 package com.limelight.binding.input.haptics
 
 import com.limelight.nvstream.Ds5HapticsPcmFrame
+import com.limelight.nvstream.Ds5HapticsState
 
 /** Local waveform output; the DS5 name on the input describes the wire format, not the motor. */
 interface WaveformHapticsSink {
@@ -11,6 +12,7 @@ interface WaveformHapticsSink {
     val releaseFailure: Throwable? get() = null
     fun start(): Boolean
     fun submit(frame: Ds5HapticsPcmFrame)
+    fun updateControl(state: Ds5HapticsState) {}
     fun stop()
     fun stopAndThen(onStopped: () -> Unit) {
         stop()
