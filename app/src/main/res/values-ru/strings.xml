@@ -446,6 +446,9 @@
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">Тачпад геймпада всегда управляет мышью ПК, даже при эмуляции геймпада с тачпадом.</string>
     <string name="title_checkbox_gamepad_motion_sensors">Датчики движения геймпада</string>
     <string name="summary_checkbox_gamepad_motion_sensors">Разрешить ПК запрашивать данные датчиков при эмуляции геймпада с их поддержкой. Отключение может немного снизить расход заряда и трафика, если игра не использует датчики.</string>
+    <string name="summary_checkbox_gamepad_motion_sensors_android12">Экспериментальная функция Android 12/12L, отключена по умолчанию. Отключение геймпада может вызвать сбой Android; включайте только для тестирования.</string>
+    <string name="title_gamepad_motion_sensors_android12_experimental">Включить датчики движения геймпада на Android 12/12L?</string>
+    <string name="message_gamepad_motion_sensors_android12_experimental">Android 12/12L может аварийно завершить работу при отключении геймпада, если эта функция включена. Трансляция может остановиться. Продолжайте только для тестирования этого режима совместимости.</string>
     <string name="title_checkbox_gamepad_motion_fallback">Датчики устройства для геймпада</string>
     <string name="summary_checkbox_gamepad_motion_fallback">Использовать датчики Android, если геймпад не передаёт движение. На ПК он может определяться как геймпад PlayStation.</string>
     <string name="category_input_settings">Ввод</string>
