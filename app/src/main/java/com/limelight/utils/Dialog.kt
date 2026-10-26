@@ -63,6 +63,7 @@ class Dialog private constructor(
             rundownDialogs.add(this)
             alert.show()
         }
+        notifyVisibilityChanged()
 
         AppDialogStyler.apply(alert, activity)
         AppDialogStyler.installDismissKeys(alert, ::dismissFromUser, dismissOnBack = true)
@@ -158,6 +159,7 @@ class Dialog private constructor(
             rundownDialogs.add(this)
             alert.show()
         }
+        notifyVisibilityChanged()
 
         alert.window?.let { window ->
             val layoutParams = window.attributes
@@ -188,6 +190,7 @@ class Dialog private constructor(
             rundownDialogs.remove(this)
         }
         safeDismiss(this)
+        notifyVisibilityChanged()
     }
 
     private fun formatDetailsMessage(message: String): String {
@@ -251,6 +254,19 @@ class Dialog private constructor(
 
     companion object {
         private val rundownDialogs = ArrayList<Dialog>()
+        private var visibilityListener: (() -> Unit)? = null
+
+        fun setVisibilityListener(listener: (() -> Unit)?) {
+            visibilityListener = listener
+        }
+
+        fun hasVisibleDialog(): Boolean {
+            return synchronized(rundownDialogs) { rundownDialogs.isNotEmpty() }
+        }
+
+        private fun notifyVisibilityChanged() {
+            visibilityListener?.invoke()
+        }
 
         fun closeDialogs() {
             val dialogs = synchronized(rundownDialogs) {
@@ -262,6 +278,7 @@ class Dialog private constructor(
             for (d in dialogs) {
                 safeDismiss(d)
             }
+            notifyVisibilityChanged()
         }
 
         private fun safeDismiss(d: Dialog) {
