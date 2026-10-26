@@ -712,6 +712,8 @@ class PreferenceConfiguration {
         private const val GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors"
         private const val GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING =
             "gamepad_motion_sensors_android12_opt_in_migrated"
+        internal const val GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING =
+            "gamepad_motion_sensors_android12_opt_in_confirmed"
         private const val GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback"
 
         // 陀螺仪偏好设置
@@ -1395,16 +1397,29 @@ class PreferenceConfiguration {
             }
 
             if (InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT) &&
-                !InputDeviceSensorPolicy.isStable(Build.VERSION.SDK_INT) &&
-                !prefs.getBoolean(GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING, false)
+                !InputDeviceSensorPolicy.isStable(Build.VERSION.SDK_INT)
             ) {
-                // Android 12/12L has a framework hotplug crash in InputDeviceSensorManager.
-                // Keep the opt-in visible, but default it off so upgrading cannot enable the risky path.
-                // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
-                prefs.edit()
-                    .putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false)
-                    .putBoolean(GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING, true)
-                    .apply()
+                val migrationComplete = prefs.getBoolean(
+                    GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING,
+                    false
+                )
+                val confirmedInApp = prefs.getBoolean(
+                    GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING,
+                    false
+                )
+                if (!migrationComplete ||
+                    (prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false) && !confirmedInApp)
+                ) {
+                    // Android 12/12L has a framework hotplug crash in InputDeviceSensorManager.
+                    // Keep the opt-in visible, but default it off until the user confirms it in-app.
+                    // The confirmation marker is device-local, so a restored portable preference
+                    // cannot enable the risky path by itself.
+                    // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
+                    prefs.edit()
+                        .putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false)
+                        .putBoolean(GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING, true)
+                        .apply()
+                }
             }
 
             // This must happen after the preferences migration to ensure the preferences are populated

@@ -3077,6 +3077,13 @@ class StreamSettings : ThemedAppCompatActivity() {
                                 .setMessage(R.string.message_gamepad_motion_sensors_android12_experimental)
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .setPositiveButton(android.R.string.ok) { _, _ ->
+                                    PreferenceManager.getDefaultSharedPreferences(requireContext())
+                                        .edit()
+                                        .putBoolean(
+                                            PreferenceConfiguration.GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING,
+                                            true
+                                        )
+                                        .apply()
                                     motionPref.isChecked = true
                                 }
                                 .showStyled()
