@@ -113,6 +113,111 @@ class DualSenseUsbHapticsPathTest {
         assertFalse(usb.events.contains("alt0"))
     }
 
+    @Test fun blockedControlDoesNotPreventCancellationOrLetStopOvertakeCallbacks() {
+        val usb = MockUsb()
+        val entered = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val sink = DualSenseUsbHapticsSink(usb, onControl = {
+            entered.countDown()
+            check(resume.await(3, TimeUnit.SECONDS))
+            usb.events.add("control-done")
+        })
+        assertTrue(sink.start())
+        val control = Thread { sink.updateControl(Ds5HapticsState(ByteArray(8))) }.apply { start() }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        val stopping = Thread { sink.stopAndThen { usb.events.add("stopped"); stopped.countDown() } }
+        try {
+            stopping.start()
+            assertTrue("a blocked HID callback must not hold the lifecycle lock",
+                usb.cancelSignal.await(200, TimeUnit.MILLISECONDS))
+            assertEquals(1L, stopped.count)
+        } finally {
+            resume.countDown()
+            control.join(2000)
+            stopping.join(2000)
+            assertTrue(stopped.await(2, TimeUnit.SECONDS))
+        }
+        assertTrue(usb.events.indexOf("control-done") < usb.events.indexOf("stopped"))
+    }
+
+    @Test fun stopDuringActivationCancelsBeforeTheActivationCallbackReturns() {
+        val usb = MockUsb()
+        val entered = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val activations = Collections.synchronizedList(mutableListOf<Boolean>())
+        val sink = DualSenseUsbHapticsSink(usb, onActiveChanged = { active ->
+            activations.add(active)
+            if (active) { entered.countDown(); check(resume.await(3, TimeUnit.SECONDS)) }
+        })
+        val starting = Thread { sink.start() }.apply { start() }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        val stopping = Thread { sink.stopAndThen { stopped.countDown() } }
+        try {
+            stopping.start()
+            assertTrue(usb.cancelSignal.await(200, TimeUnit.MILLISECONDS))
+            assertEquals(1L, stopped.count)
+        } finally {
+            resume.countDown()
+            starting.join(2000)
+            stopping.join(2000)
+            assertTrue(stopped.await(2, TimeUnit.SECONDS))
+        }
+        assertEquals(listOf(true, false), activations)
+    }
+
+    @Test fun repeatedStopCannotCompleteBeforeTheFinalOutputCallback() {
+        val usb = MockUsb()
+        val releasing = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+        val stopped = CountDownLatch(2)
+        val sink = DualSenseUsbHapticsSink(usb, onActiveChanged = { active ->
+            if (!active) { releasing.countDown(); check(resume.await(3, TimeUnit.SECONDS)) }
+        })
+        assertTrue(sink.start())
+        val first = Thread { sink.stopAndThen { stopped.countDown() } }.apply { start() }
+        assertTrue(releasing.await(1, TimeUnit.SECONDS))
+        val second = Thread { sink.stopAndThen { stopped.countDown() } }.apply { start() }
+        try {
+            second.join(100)
+            assertEquals("the final HID write still owns the connection", 2L, stopped.count)
+        } finally {
+            resume.countDown()
+            first.join(2000)
+            second.join(2000)
+            assertTrue(stopped.await(2, TimeUnit.SECONDS))
+        }
+        sink.updateControl(Ds5HapticsState(ByteArray(8)))
+        assertFalse(sink.isOperational)
+    }
+
+    @Test fun failedFinalHidClearStillCompletesTransportRetirement() {
+        val usb = MockUsb()
+        val stopped = CountDownLatch(1)
+        val sink = DualSenseUsbHapticsSink(usb, onActiveChanged = { active ->
+            if (!active) throw IllegalStateException("disconnected during final HID clear")
+        })
+        assertTrue(sink.start())
+        sink.stopAndThen { stopped.countDown() }
+        assertTrue(stopped.await(2, TimeUnit.SECONDS))
+        assertFalse(sink.isOperational)
+        assertEquals(listOf("cancel", "close", "alt0"), usb.events.takeLast(3))
+    }
+
+    @Test fun transportCleanupExceptionsAreReportedWithoutStrandingStopCallbacks() {
+        for (operation in listOf("cancel", "close", "alt0")) {
+            val usb = MockUsb(throwAt = operation)
+            val stopped = CountDownLatch(1)
+            val sink = DualSenseUsbHapticsSink(usb)
+            assertTrue(sink.start())
+            sink.stopAndThen { stopped.countDown() }
+            assertTrue("stop stranded after $operation", stopped.await(2, TimeUnit.SECONDS))
+            assertNotNull("cleanup failure must block a clean handoff", sink.releaseFailure)
+            assertFalse(sink.isOperational)
+        }
+    }
+
     private fun assertPacket(bytes: ByteArray, left: Int, right: Int) {
         assertEquals(384, bytes.size)
         val data = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -130,11 +235,13 @@ class DualSenseUsbHapticsPathTest {
         assertTrue("transport retirement must complete", stopped.await(2, TimeUnit.SECONDS))
     }
 
-    private class MockUsb(private val failSubmission: Int = -1, private val closeResult: Int = 0) : DualSenseUsbHapticsTransport {
+    private class MockUsb(private val failSubmission: Int = -1, private val closeResult: Int = 0,
+                          private val throwAt: String? = null) : DualSenseUsbHapticsTransport {
         val events = Collections.synchronizedList(mutableListOf<String>())
         val completions = LinkedBlockingQueue<Int>()
         val packets = LinkedBlockingQueue<ByteArray>()
         val closed = CountDownLatch(1)
+        val cancelSignal = CountDownLatch(1)
         @Volatile var submitted = 0
         @Volatile private var cancelled = false
 
@@ -155,9 +262,20 @@ class DualSenseUsbHapticsPathTest {
         }
 
         override fun reap(timeoutMs: Int): Int = completions.poll(timeoutMs.toLong(), TimeUnit.MILLISECONDS) ?: -110
-        override fun cancel() { cancelled = true; events.add("cancel"); completions.offer(-125) }
-        override fun close(): Int { events.add("close"); closed.countDown(); return closeResult }
-        override fun restoreInterface(): Boolean { events.add("alt0"); return true }
+        override fun cancel() {
+            cancelled = true; events.add("cancel"); cancelSignal.countDown(); completions.offer(-125)
+            if (throwAt == "cancel") error("disconnected during cancel")
+        }
+        override fun close(): Int {
+            events.add("close"); closed.countDown()
+            if (throwAt == "close") error("disconnected during close")
+            return closeResult
+        }
+        override fun restoreInterface(): Boolean {
+            events.add("alt0")
+            if (throwAt == "alt0") error("disconnected during alt0")
+            return true
+        }
 
         fun drainStartup() = repeat(4) {
             assertTrue(packets.poll(2, TimeUnit.SECONDS)!!.all { sample -> sample == 0.toByte() })

@@ -73,6 +73,7 @@ internal class DualSenseUsbHapticsSink(
 
     private val ringLock = Any()
     private val lifecycleLock = Any()
+    private val callbackLock = Any()
     private val slots = Array(IO_SLOTS) { IoSlot() }
     private val active = AtomicBoolean(false)
     private val requestsClosed = AtomicBoolean(false)
@@ -82,6 +83,7 @@ internal class DualSenseUsbHapticsSink(
     private var startAttempted = false
     private var stopStarted = false
     private var stopCompleted = false
+    private var stopFinishing = false
     private var stopWaiterStarted = false
     private val stopCallbacks = mutableListOf<() -> Unit>()
     private var sendThread: Thread? = null
@@ -90,46 +92,54 @@ internal class DualSenseUsbHapticsSink(
     private var hasSequence = false
 
     override val isOperational: Boolean get() = active.get()
-    override fun updateControl(state: Ds5HapticsState) = synchronized(lifecycleLock) {
-        if (!stopStarted && !stopCompleted) onControl(state)
+    override fun updateControl(state: Ds5HapticsState) = synchronized(callbackLock) {
+        val accepting = synchronized(lifecycleLock) { !stopStarted && !stopCompleted }
+        if (accepting) onControl(state)
     }
 
-    override fun start(): Boolean = synchronized(lifecycleLock) {
-        if (stopStarted || stopCompleted) return@synchronized false
-        if (startAttempted) return@synchronized active.get()
-        startAttempted = true
-        active.set(true)
+    override fun start(): Boolean {
+        val initialized = synchronized(lifecycleLock) {
+            if (stopStarted || stopCompleted) return@synchronized false
+            if (startAttempted) return@synchronized active.get()
+            startAttempted = true
+            active.set(true)
 
-        if (!transport.open(IO_SLOTS, PACKET_SIZE)) {
-            LimeLog.warning("Could not open DS5 USB isochronous output")
-            completeStop()
-            return@synchronized false
-        }
-        for ((index, slot) in slots.withIndex()) {
-            slot.buffer = ByteBuffer.allocateDirect(PACKET_SIZE).order(ByteOrder.LITTLE_ENDIAN)
-            fillSlot(slot)
-            val result = transport.submit(index, slot.buffer)
-            if (result != 0) {
-                LimeLog.warning("Initial ISO submit failed: $result")
-                completeStop()
+            if (!transport.open(IO_SLOTS, PACKET_SIZE)) {
+                LimeLog.warning("Could not open DS5 USB isochronous output")
                 return@synchronized false
             }
-        }
-
-        onActiveChanged(true)
-        sendThread = Thread({
-            LimeLog.info("DS5 USB ISO sender started")
-            try {
-                sendLoop()
-            } finally {
-                LimeLog.info("DS5 USB ISO sender stopped")
-                completeStop()
+            for ((index, slot) in slots.withIndex()) {
+                slot.buffer = ByteBuffer.allocateDirect(PACKET_SIZE).order(ByteOrder.LITTLE_ENDIAN)
+                fillSlot(slot)
+                val result = transport.submit(index, slot.buffer)
+                if (result != 0) {
+                    LimeLog.warning("Initial ISO submit failed: $result")
+                    return@synchronized false
+                }
             }
-        }, "ds5-haptics-iso").apply {
-            priority = Thread.MAX_PRIORITY - 1
-            start()
+
+            sendThread = Thread({
+                LimeLog.info("DS5 USB ISO sender started")
+                try {
+                    // Serialize HID callbacks, but never hold lifecycleLock across blocking USB I/O.
+                    synchronized(callbackLock) {
+                        if (synchronized(lifecycleLock) { !stopStarted && !stopCompleted }) {
+                            onActiveChanged(true)
+                        }
+                    }
+                    sendLoop()
+                } finally {
+                    LimeLog.info("DS5 USB ISO sender stopped")
+                    completeStop()
+                }
+            }, "ds5-haptics-iso").apply {
+                priority = Thread.MAX_PRIORITY - 1
+                start()
+            }
+            true
         }
-        true
+        if (!initialized) completeStop()
+        return initialized
     }
 
     /**
@@ -212,12 +222,19 @@ internal class DualSenseUsbHapticsSink(
     }
 
     private fun completeStop() {
-        active.set(false)
+        synchronized(lifecycleLock) {
+            if (stopCompleted || stopFinishing) return
+            stopFinishing = true
+            stopStarted = true
+            active.set(false)
+        }
         closeRequests()
         releaseRequests()
+        runCatching { synchronized(callbackLock) { onActiveChanged(false) } }.onFailure {
+            LimeLog.warning("Haptics output clear failed: ${it.message}")
+        }
         val callbacks = synchronized(lifecycleLock) {
-            if (stopCompleted) return
-            stopStarted = true
+            // Completion includes the final HID callback, not just retirement of ISO buffers.
             stopCompleted = true
             sendThread = null
             synchronized(ringLock) {
@@ -228,7 +245,6 @@ internal class DualSenseUsbHapticsSink(
             hasSequence = false
             stopCallbacks.toList().also { stopCallbacks.clear() }
         }
-        onActiveChanged(false)
         callbacks.forEach { callback ->
             runCatching(callback).onFailure {
                 LimeLog.warning("Haptics stop callback failed: ${it.message}")
@@ -238,20 +254,28 @@ internal class DualSenseUsbHapticsSink(
 
     private fun closeRequests() {
         if (!requestsClosed.compareAndSet(false, true)) return
-        transport.cancel()
+        runCatching { transport.cancel() }.onFailure {
+            releaseFailure = it
+            LimeLog.warning("ISO cancellation failed: ${it.message}")
+        }
     }
 
     private fun releaseRequests() {
         if (!releaseStarted.compareAndSet(false, true)) return
-        val result = transport.close()
-        if (result != 0) {
-            releaseFailure = IllegalStateException("ISO release failed: $result")
-            LimeLog.warning("ISO buffers retained after uncertain release: $result")
-            return
-        }
-        if (!transport.restoreInterface()) {
-            releaseFailure = IllegalStateException("Failed to restore DS5 audio interface alt 0")
-            LimeLog.warning(releaseFailure!!.message!!)
+        runCatching {
+            val result = transport.close()
+            if (result != 0) {
+                releaseFailure = IllegalStateException("ISO release failed: $result")
+                LimeLog.warning("ISO buffers retained after uncertain release: $result")
+                return@runCatching
+            }
+            if (!transport.restoreInterface()) {
+                releaseFailure = IllegalStateException("Failed to restore DS5 audio interface alt 0")
+                LimeLog.warning(releaseFailure!!.message!!)
+            }
+        }.onFailure {
+            releaseFailure = it
+            LimeLog.warning("ISO retirement failed: ${it.message}")
         }
     }
 

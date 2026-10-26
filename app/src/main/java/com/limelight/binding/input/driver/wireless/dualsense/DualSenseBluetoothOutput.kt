@@ -187,15 +187,18 @@ internal class DualSenseBluetoothOutputWriter(
     private var waveformActive = false
     private var waveformCounter = 0
     private var hostControl: Ds5HapticsState? = null
+    private var pendingControlSetup: Ds5HapticsState? = null
 
     fun updateControl(control: Ds5HapticsState): Boolean = update {
         hostControl = control
+        pendingControlSetup = control
         validFlag0 = validFlag0 or 3
     }
 
     fun releaseHaptics(): Boolean = synchronized(sendLock) {
         val snapshot = synchronized(stateLock) {
             hostControl = null
+            pendingControlSetup = null
             waveformActive = false
             if (closed) null else state.snapshot().copy(validFlag0 = 3, validFlag1 = 0, validFlag2 = 0)
         } ?: return@synchronized true
@@ -210,9 +213,12 @@ internal class DualSenseBluetoothOutputWriter(
 
     /** All physical writes, including native PCM and mode transitions, share sendLock. */
     fun writeHaptics(samples: ByteArray): Boolean = synchronized(sendLock) {
+        var setupControl: Ds5HapticsState? = null
         val snapshot = synchronized(stateLock) {
             if (closed) return@synchronized null
-            if (waveformActive) null else {
+            // The async status writer may be backlogged; accepted controls precede the next PCM.
+            if (waveformActive && pendingControlSetup == null) null else {
+                setupControl = pendingControlSetup
                 waveformActive = true
                 val current = outputSnapshot(state.snapshot())
                 current.copy(
@@ -231,6 +237,9 @@ internal class DualSenseBluetoothOutputWriter(
             synchronized(stateLock) { hostControl?.applyToHidReport(setup, 3) }
             writeOutputCrc(setup)
             if (!sendPhysical(setup)) return@synchronized false
+            synchronized(stateLock) {
+                if (pendingControlSetup === setupControl) pendingControlSetup = null
+            }
         }
         sendPhysical(DualSenseBluetoothHapticsReport.encode(samples, nextSequence(), waveformCounter++))
     }

@@ -9,6 +9,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
@@ -98,6 +99,31 @@ class DualSenseBluetoothHapticsPathTest {
             assertTrue(delivery.fallback.lowFrequency > 0)
         } finally { stop(sink); writer.close() }
         assertTrue(device.snapshot().none { it[0] == 0x32.toByte() })
+    }
+
+    @Test fun controlUpdatePrecedesNextPcmWhenTheAsyncWriterIsBacklogged() {
+        val device = MockBluetooth()
+        val executor = Executors.newSingleThreadExecutor()
+        val blocked = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+        executor.execute { blocked.countDown(); check(resume.await(3, TimeUnit.SECONDS)) }
+        assertTrue(blocked.await(1, TimeUnit.SECONDS))
+        val writer = DualSenseBluetoothOutputWriter(device::send, executor = executor)
+        try {
+            writer.updateControl(Ds5HapticsState(byteArrayOf(0, 0, 0x62, 0, 0, 0, 0, 1)))
+            assertTrue(writer.writeHaptics(ByteArray(64)))
+            writer.updateControl(Ds5HapticsState(byteArrayOf(2, 4, 0x62, 0, 0, 0, 0, 1)))
+            assertTrue(writer.writeHaptics(ByteArray(64)))
+            val reports = device.snapshot()
+            val mode = reports[reports.lastIndex - 1]
+            assertEquals("the accepted mode update must precede subsequent PCM", 0x31, mode[0].toInt())
+            assertEquals(2, mode[3].toInt() and 3)
+            assertEquals(4, mode[41].toInt() and 4)
+            assertEquals(0x32, reports.last()[0].toInt())
+        } finally {
+            resume.countDown()
+            writer.close()
+        }
     }
 
     private fun sink(writer: DualSenseBluetoothOutputWriter, failure: () -> Unit = {}) =
