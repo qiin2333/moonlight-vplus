@@ -114,8 +114,10 @@ import com.limelight.utils.UpdateManager
 import com.limelight.utils.background.PipwImages
 import com.limelight.utils.background.PipwImageStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import jp.wasabeef.glide.transformations.BlurTransformation
 import jp.wasabeef.glide.transformations.ColorFilterTransformation
@@ -3031,8 +3033,15 @@ class StreamSettings : ThemedAppCompatActivity() {
                     updateBackgroundPreferenceVisibility(newValue as? String)
                     true
                 }
-            findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible =
-                MediaCodecHelper.hasMediaTekDecoder()
+            // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
+            // (Crashlytics 596baf51):先隐藏,IO 线程探测完再按结果显示。
+            findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible = false
+            lifecycleScope.launch {
+                val hasMtk = withContext(Dispatchers.IO) { MediaCodecHelper.hasMediaTekDecoder() }
+                if (isAdded) {
+                    findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible = hasMtk
+                }
+            }
 
             // hide on-screen controls category on non touch screen devices
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {

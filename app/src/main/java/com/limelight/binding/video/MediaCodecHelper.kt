@@ -45,12 +45,23 @@ object MediaCodecHelper {
     internal fun isMediaTekCodecName(name: String): Boolean =
         mtkDecoderPrefixes.any { name.startsWith(it, ignoreCase = true) }
 
+    // Enumerating MediaCodecList is a blocking binder call to mediaserver that can
+    // stall for seconds on some devices; the codec list never changes within a
+    // process, so probe once and cache.
+    @Volatile
+    private var cachedHasMediaTekDecoder: Boolean? = null
+
     @JvmStatic
-    fun hasMediaTekDecoder(): Boolean = runCatching {
-        MediaCodecList(MediaCodecList.ALL_CODECS).codecInfos.any { codecInfo ->
-            !codecInfo.isEncoder && isMediaTekCodecName(codecInfo.name)
-        }
-    }.getOrDefault(false)
+    fun hasMediaTekDecoder(): Boolean {
+        cachedHasMediaTekDecoder?.let { return it }
+        val result = runCatching {
+            MediaCodecList(MediaCodecList.ALL_CODECS).codecInfos.any { codecInfo ->
+                !codecInfo.isEncoder && isMediaTekCodecName(codecInfo.name)
+            }
+        }.getOrDefault(false)
+        cachedHasMediaTekDecoder = result
+        return result
+    }
 
     // ==================== Known Vendor Low Latency Options ====================
     // Representative vendor low-latency keys for each SoC vendor.
