@@ -1593,8 +1593,9 @@ class ControllerHandler(
 
         // InputDevice sensors were added in Android 12, but Android 12 and 12L can crash on a
         // background SensorThread after InputDeviceSensorManager observes a removed device.
-        // Merely accessing dev.sensorManager creates that manager, so don't touch it before
-        // Android 13. Device-level sensor fallback uses the regular SensorManager and remains safe.
+        // Merely accessing dev.sensorManager creates that manager, so keep it disabled by default
+        // on Android 12/12L. Only the explicit compatibility opt-in may touch it there.
+        // Device-level sensor fallback uses the regular SensorManager and remains safe.
         // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             InputDeviceSensorPolicy.shouldUse(

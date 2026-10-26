@@ -501,6 +501,9 @@
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">Forces gamepad touchpad input to control the host mouse, even when emulating a gamepad with a touchpad.</string>
     <string name="title_checkbox_gamepad_motion_sensors">Allow use of gamepad motion sensors</string>
     <string name="summary_checkbox_gamepad_motion_sensors">Enables supported hosts to request motion sensor data when emulating a gamepad with motion sensors. Disabling may slightly reduce power and network usage if motion sensors are not being used in game.</string>
+    <string name="summary_checkbox_gamepad_motion_sensors_android12">Experimental on Android 12/12L. Off by default because disconnecting a controller may crash Android; enable only for testing.</string>
+    <string name="title_gamepad_motion_sensors_android12_experimental">Enable gamepad motion sensors on Android 12/12L?</string>
+    <string name="message_gamepad_motion_sensors_android12_experimental">Android 12/12L may crash while handling a controller disconnect when this is enabled. The stream may stop. Continue only if you are testing this compatibility path.</string>
     <string name="title_checkbox_gamepad_motion_fallback">Use device sensors for controller motion</string>
     <string name="summary_checkbox_gamepad_motion_fallback">Emulate controller motion with this Android device’s sensors when the controller cannot provide it. The host may identify the controller as a PlayStation controller.</string>
 

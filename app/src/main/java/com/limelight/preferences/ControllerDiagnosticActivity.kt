@@ -1402,7 +1402,10 @@ private object ControllerDiagnostics {
                     })
                     val rumble = runCatching { inputDevice.vibrator.hasVibrator() }.getOrNull()
                     val gyro = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                        InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
+                        InputDeviceSensorPolicy.shouldUse(
+                            Build.VERSION.SDK_INT,
+                            prefs.gamepadMotionSensors,
+                        )) {
                         runCatching {
                             inputDevice.sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
                         }.getOrNull()

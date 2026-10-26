@@ -3061,10 +3061,29 @@ class StreamSettings : ThemedAppCompatActivity() {
                 findPreference<Preference>("checkbox_absolute_mouse_mode")?.let { it.parent?.removePreference(it) }
             }
 
-            // InputDeviceSensorManager is unsafe on Android 12 and 12L. Keep the device-sensor
-            // fallback visible because it uses the regular SensorManager instead.
+            // Keep the controller-sensor option visible on Android 12/12L as an explicit
+            // compatibility opt-in. The preference migration defaults it off there.
             if (!InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT)) {
                 findPreference<Preference>("checkbox_gamepad_motion_sensors")?.let { it.parent?.removePreference(it) }
+            } else if (!InputDeviceSensorPolicy.isStable(Build.VERSION.SDK_INT)) {
+                findPreference<CheckBoxPreference>("checkbox_gamepad_motion_sensors")?.let { motionPref ->
+                    motionPref.summary = getString(R.string.summary_checkbox_gamepad_motion_sensors_android12)
+                    motionPref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                        if (newValue != true) {
+                            true
+                        } else {
+                            appDialogBuilder()
+                                .setTitle(R.string.title_gamepad_motion_sensors_android12_experimental)
+                                .setMessage(R.string.message_gamepad_motion_sensors_android12_experimental)
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .setPositiveButton(android.R.string.ok) { _, _ ->
+                                    motionPref.isChecked = true
+                                }
+                                .showStyled()
+                            false
+                        }
+                    }
+                }
             }
 
             // Hide gamepad motion sensor fallback option if the device has no gyro or accelerometer
