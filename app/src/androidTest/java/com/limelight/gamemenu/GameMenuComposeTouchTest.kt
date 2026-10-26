@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
@@ -76,7 +76,7 @@ class GameMenuComposeTouchTest {
 
         composeTestRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(0.5f)) {
-                Box(Modifier.size(viewportWidth, 360.dp).testTag("menuViewport")) {
+                Box(Modifier.requiredSize(viewportWidth, 360.dp).testTag("menuViewport")) {
                     GameMenuDialogShell(onDismissRequest = {}, maxMenuWidth = menuLimit) { wide ->
                         wideLayout = wide
                         Box(Modifier.fillMaxWidth().height(160.dp))
@@ -96,13 +96,16 @@ class GameMenuComposeTouchTest {
                 viewportWidth = width.dp
                 menuLimit = limit.dp
             }
-            val viewport = composeTestRule.onNodeWithTag("menuViewport").fetchSemanticsNode().boundsInRoot
-            val panel = composeTestRule.onNodeWithTag(GAME_MENU_PANEL_TAG).fetchSemanticsNode().boundsInRoot
+            val viewport = composeTestRule.onNodeWithTag("menuViewport").fetchSemanticsNode()
+            val panel = composeTestRule.onNodeWithTag(GAME_MENU_PANEL_TAG).fetchSemanticsNode()
+            val panelWidth = panel.size.width.toFloat()
             assertEquals("Layout at $width", expectWide, wideLayout)
-            assertEquals("Menu stays centered at $width", viewport.center.x, panel.center.x, 1f)
-            assertTrue("Menu fits its parent and limit", panel.width <= minOf(viewport.width, limit / 2f) + 1f)
+            assertEquals("Menu stays centered at $width",
+                viewport.positionInRoot.x + viewport.size.width / 2f,
+                panel.positionInRoot.x + panelWidth / 2f, 1f)
+            assertTrue("Menu fits its parent and limit", panelWidth <= minOf(viewport.size.width.toFloat(), limit / 2f) + 1f)
             if (width == 1920) {
-                assertEquals("Large screens use the width cap", limit / 2f, panel.width, 1f)
+                assertEquals("Large screens use the width cap", limit / 2f, panelWidth, 1f)
             }
         }
     }
