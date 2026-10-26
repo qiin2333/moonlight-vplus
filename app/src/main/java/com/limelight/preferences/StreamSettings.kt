@@ -1542,6 +1542,16 @@ class StreamSettings : ThemedAppCompatActivity() {
             return view
         }
 
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            // MediaCodecList 枚举走 mediaserver binder IPC,放到 IO 线程探测;
+            // 绑定视图生命周期,设置页视图销毁时协程自动取消。
+            viewLifecycleOwner.lifecycleScope.launch {
+                val hasMtk = withContext(Dispatchers.IO) { MediaCodecHelper.hasMediaTekDecoder() }
+                updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), hasMtk)
+            }
+        }
+
         @Deprecated("Deprecated in Java")
         override fun onActivityCreated(savedInstanceState: Bundle?) {
             @Suppress("DEPRECATION")
@@ -3034,15 +3044,9 @@ class StreamSettings : ThemedAppCompatActivity() {
                     true
                 }
             // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
-            // (Crashlytics 596baf51):先隐藏,IO 线程探测完再按结果显示。
-            // 走 updateRuntimeVisibility,避免与搜索过滤的可见性状态相互覆盖。
+            // (Crashlytics 596baf51):先隐藏,探测放到 onViewCreated 里做,结果经
+            // updateRuntimeVisibility 显示,避免与搜索过滤的可见性状态相互覆盖。
             updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), false)
-            lifecycleScope.launch {
-                val hasMtk = withContext(Dispatchers.IO) { MediaCodecHelper.hasMediaTekDecoder() }
-                if (isAdded) {
-                    updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), hasMtk)
-                }
-            }
 
             // hide on-screen controls category on non touch screen devices
             if (!requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
