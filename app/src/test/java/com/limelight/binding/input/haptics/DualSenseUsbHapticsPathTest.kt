@@ -30,8 +30,17 @@ class DualSenseUsbHapticsPathTest {
             assertEquals(ControllerRumbleState.ZERO, routed.fallback)
             repeat(10) { assertPacket(usb.completeOne(), -12345, 23456) }
             assertPacket(usb.completeOne(), 0, 0) // underrun is silence, never stale replay
+            usb.completions.add(-19) // ENODEV: withdraw direct output, then finish retirement.
+            assertTrue(usb.closed.await(2, TimeUnit.SECONDS))
+            val fallback = AuthoredPcmOutputRouter().submit(frame(1, 0, 240), sink, true)!!
+            assertFalse(fallback.direct)
+            assertTrue(fallback.failedSink)
+            assertTrue(fallback.fallback.lowFrequency > 0)
         } finally { stop(sink) }
         assertEquals(listOf("cancel", "close", "alt0"), usb.events.takeLast(3))
+        val count = usb.submitted
+        sink.submit(frame(2, 0, 480))
+        assertEquals(count, usb.submitted)
     }
 
     @Test fun finalFiveMillisecondFrameIsNotLostBelowPrebufferThreshold() {
@@ -84,26 +93,6 @@ class DualSenseUsbHapticsPathTest {
         assertEquals(1, usb.events.count { it == "close" })
     }
 
-    @Test fun disconnectWithdrawsRouteAndStopCallbackFollowsFinalTransportAccess() {
-        val usb = MockUsb()
-        val sink = DualSenseUsbHapticsSink(usb)
-        assertTrue(sink.start())
-        usb.drainStartup()
-        usb.completions.add(-19) // ENODEV
-        assertTrue(usb.closed.await(2, TimeUnit.SECONDS))
-        assertFalse(sink.isOperational)
-        val fallback = AuthoredPcmOutputRouter().submit(frame(0, 1, 240), sink, true)!!
-        assertFalse(fallback.direct)
-        assertTrue(fallback.failedSink)
-        val stopped = CountDownLatch(1)
-        sink.stopAndThen { usb.events.add("stopped"); stopped.countDown() }
-        assertTrue(stopped.await(2, TimeUnit.SECONDS))
-        val count = usb.submitted
-        sink.submit(frame(1, 1, 480))
-        assertEquals(count, usb.submitted)
-        assertEquals(listOf("cancel", "close", "alt0", "stopped"), usb.events.takeLast(4))
-    }
-
     @Test fun uncertainNativeReleaseIsRetainedAndCannotAdvertiseRestoredInterface() {
         val usb = MockUsb(closeResult = -5)
         val sink = DualSenseUsbHapticsSink(usb)
@@ -113,58 +102,42 @@ class DualSenseUsbHapticsPathTest {
         assertFalse(usb.events.contains("alt0"))
     }
 
-    @Test fun blockedControlDoesNotPreventCancellationOrLetStopOvertakeCallbacks() {
-        val usb = MockUsb()
-        val entered = CountDownLatch(1)
-        val resume = CountDownLatch(1)
-        val stopped = CountDownLatch(1)
-        val sink = DualSenseUsbHapticsSink(usb, onControl = {
-            entered.countDown()
-            check(resume.await(3, TimeUnit.SECONDS))
-            usb.events.add("control-done")
-        })
-        assertTrue(sink.start())
-        val control = Thread { sink.updateControl(Ds5HapticsState(ByteArray(8))) }.apply { start() }
-        assertTrue(entered.await(1, TimeUnit.SECONDS))
-        val stopping = Thread { sink.stopAndThen { usb.events.add("stopped"); stopped.countDown() } }
-        try {
-            stopping.start()
-            assertTrue("a blocked HID callback must not hold the lifecycle lock",
-                usb.cancelSignal.await(200, TimeUnit.MILLISECONDS))
-            assertEquals(1L, stopped.count)
-        } finally {
-            resume.countDown()
-            control.join(2000)
-            stopping.join(2000)
-            assertTrue(stopped.await(2, TimeUnit.SECONDS))
+    @Test fun blockedControlAndActivationAllowCancellationButDeferCompletion() {
+        for (duringActivation in listOf(false, true)) {
+            val usb = MockUsb()
+            val entered = CountDownLatch(1)
+            val resume = CountDownLatch(1)
+            val stopped = CountDownLatch(1)
+            val activations = Collections.synchronizedList(mutableListOf<Boolean>())
+            val block = {
+                entered.countDown()
+                check(resume.await(3, TimeUnit.SECONDS))
+                usb.events.add("callback-done")
+            }
+            val sink = DualSenseUsbHapticsSink(usb, onControl = { block() }, onActiveChanged = { active ->
+                activations.add(active)
+                if (active && duringActivation) block()
+            })
+            val updating = Thread {
+                assertTrue(sink.start())
+                if (!duringActivation) sink.updateControl(Ds5HapticsState(ByteArray(8)))
+            }.apply { start() }
+            assertTrue(entered.await(1, TimeUnit.SECONDS))
+            val stopping = Thread { sink.stopAndThen { usb.events.add("stopped"); stopped.countDown() } }
+            try {
+                stopping.start()
+                assertTrue("blocked HID callback must not hold lifecycleLock",
+                    usb.cancelSignal.await(200, TimeUnit.MILLISECONDS))
+                assertEquals(1L, stopped.count)
+            } finally {
+                resume.countDown()
+                updating.join(2000)
+                stopping.join(2000)
+                assertTrue(stopped.await(2, TimeUnit.SECONDS))
+            }
+            assertTrue(usb.events.indexOf("callback-done") < usb.events.indexOf("stopped"))
+            if (duringActivation) assertEquals(listOf(true, false), activations)
         }
-        assertTrue(usb.events.indexOf("control-done") < usb.events.indexOf("stopped"))
-    }
-
-    @Test fun stopDuringActivationCancelsBeforeTheActivationCallbackReturns() {
-        val usb = MockUsb()
-        val entered = CountDownLatch(1)
-        val resume = CountDownLatch(1)
-        val stopped = CountDownLatch(1)
-        val activations = Collections.synchronizedList(mutableListOf<Boolean>())
-        val sink = DualSenseUsbHapticsSink(usb, onActiveChanged = { active ->
-            activations.add(active)
-            if (active) { entered.countDown(); check(resume.await(3, TimeUnit.SECONDS)) }
-        })
-        val starting = Thread { sink.start() }.apply { start() }
-        assertTrue(entered.await(1, TimeUnit.SECONDS))
-        val stopping = Thread { sink.stopAndThen { stopped.countDown() } }
-        try {
-            stopping.start()
-            assertTrue(usb.cancelSignal.await(200, TimeUnit.MILLISECONDS))
-            assertEquals(1L, stopped.count)
-        } finally {
-            resume.countDown()
-            starting.join(2000)
-            stopping.join(2000)
-            assertTrue(stopped.await(2, TimeUnit.SECONDS))
-        }
-        assertEquals(listOf(true, false), activations)
     }
 
     @Test fun repeatedStopCannotCompleteBeforeTheFinalOutputCallback() {
@@ -192,28 +165,18 @@ class DualSenseUsbHapticsPathTest {
         assertFalse(sink.isOperational)
     }
 
-    @Test fun failedFinalHidClearStillCompletesTransportRetirement() {
-        val usb = MockUsb()
-        val stopped = CountDownLatch(1)
-        val sink = DualSenseUsbHapticsSink(usb, onActiveChanged = { active ->
-            if (!active) throw IllegalStateException("disconnected during final HID clear")
-        })
-        assertTrue(sink.start())
-        sink.stopAndThen { stopped.countDown() }
-        assertTrue(stopped.await(2, TimeUnit.SECONDS))
-        assertFalse(sink.isOperational)
-        assertEquals(listOf("cancel", "close", "alt0"), usb.events.takeLast(3))
-    }
-
     @Test fun transportCleanupExceptionsAreReportedWithoutStrandingStopCallbacks() {
-        for (operation in listOf("cancel", "close", "alt0")) {
+        for (operation in listOf("cancel", "close", "alt0", "hid-clear")) {
             val usb = MockUsb(throwAt = operation)
             val stopped = CountDownLatch(1)
-            val sink = DualSenseUsbHapticsSink(usb)
+            val sink = DualSenseUsbHapticsSink(usb, onActiveChanged = { active ->
+                if (!active && operation == "hid-clear") error("disconnected during final HID clear")
+            })
             assertTrue(sink.start())
             sink.stopAndThen { stopped.countDown() }
             assertTrue("stop stranded after $operation", stopped.await(2, TimeUnit.SECONDS))
-            assertNotNull("cleanup failure must block a clean handoff", sink.releaseFailure)
+            if (operation == "hid-clear") assertEquals(listOf("cancel", "close", "alt0"), usb.events.takeLast(3))
+            else assertNotNull("cleanup failure must block a clean handoff", sink.releaseFailure)
             assertFalse(sink.isOperational)
         }
     }
