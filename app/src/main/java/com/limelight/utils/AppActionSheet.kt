@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -93,14 +92,21 @@ import kotlin.math.roundToInt
 object AppActionSheet {
     private val horizontalInset = 10.dp
 
-    private fun windowWidth(resources: Resources): Int {
+    private fun windowWidth(context: Context): Int {
+        val resources = context.resources
         val metrics = resources.displayMetrics
         val maxWidth = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
             (AppOverlayWidths.compact + horizontalInset * 2).value,
             metrics
         ).roundToInt()
-        return minOf(metrics.widthPixels, maxWidth)
+        val availableWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            windowManager.currentWindowMetrics.bounds.width()
+        } else {
+            (resources.configuration.screenWidthDp * metrics.density).roundToInt()
+        }
+        return minOf(availableWidth, maxWidth)
     }
 
     data class Action(
@@ -319,7 +325,7 @@ object AppActionSheet {
             override fun onConfigurationChanged(newConfig: Configuration) {
                 super.onConfigurationChanged(newConfig)
                 dialog.window?.let { window ->
-                    window.attributes = window.attributes.apply { width = windowWidth(resources) }
+                    window.attributes = window.attributes.apply { width = windowWidth(context) }
                 }
             }
         }.apply {
@@ -349,7 +355,7 @@ object AppActionSheet {
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.attributes = window.attributes.apply {
                 width = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
-                else windowWidth(contentView.resources)
+                else windowWidth(contentView.context)
                 height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
                 else ViewGroup.LayoutParams.WRAP_CONTENT
                 gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
