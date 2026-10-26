@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_menu_touchpad_sensitivity">터치패드 감도</string>
+    <string name="game_menu_touchpad_scroll_speed">두 손가락 스크롤 속도</string>
+</resources>

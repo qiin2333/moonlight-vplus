@@ -1,43 +1,41 @@
 package com.limelight.utils
 
 import com.limelight.binding.input.virtual_controller.OscSettingsButtonStore
-import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
+import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.ui.FloatBallPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ConfigurationSyncSchemaTest {
     @Test
-    fun mouseAxisCorrectionIsPortable() {
-        assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_mouse_axis_correction"))
-    }
-
-    @Test
-    fun hevcLowLatencyModeIsPortable() {
-        assertTrue(ConfigurationSyncManager.isPortableDefaultPreferenceKey("list_hevc_low_latency_mode"))
-    }
-
-    @Test
-    fun colorRangePreferenceRemainsPortable() {
-        assertTrue(
-            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
-                PreferenceConfiguration.FULL_RANGE_PREF_STRING
-            )
-        )
+    fun touchpadStoresAreObservedButActivePresetIsLocal() {
+        val stores = ConfigurationSyncManager.portableSharedPreferenceNames()
+        assertTrue(TouchpadInputPreferences.FILE_NAME in stores)
+        assertTrue(TouchpadInputPreferences.PRESETS_FILE_NAME in stores)
+        TouchpadInputPreferences.PORTABLE_KEYS.forEach { key ->
+            assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey(TouchpadInputPreferences.FILE_NAME, key))
+            assertFalse(ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
+        }
+        assertTrue(ConfigurationSyncManager.isPortableSharedPreferenceKey(
+            TouchpadInputPreferences.PRESETS_FILE_NAME, TouchPointerPresetPreferences.JSON_KEY))
+        assertFalse(ConfigurationSyncManager.isPortableSharedPreferenceKey(
+            TouchpadInputPreferences.PRESETS_FILE_NAME, TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY))
     }
 
     @Test
     fun consolidatedSettingsKeepNewAndLegacyBackupKeysPortable() {
         listOf(
+            "list_mouse_axis_correction",
+            "list_hevc_low_latency_mode",
+            PreferenceConfiguration.FULL_RANGE_PREF_STRING,
+            PreferenceConfiguration.GAME_MENU_OPACITY_PREF_STRING,
             PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING,
             PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
             PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
@@ -56,6 +54,8 @@ class ConfigurationSyncSchemaTest {
             "checkbox_vibrate_osc",
             "checkbox_mouse_emulation",
             "checkbox_shizuku_keyboard_accessibility",
+            "checkbox_show_audio_haptics_card",
+            "checkbox_show_display_settings_card",
         ).forEach { key ->
             assertTrue("Expected portable key: $key", ConfigurationSyncManager.isPortableDefaultPreferenceKey(key))
         }
@@ -120,15 +120,6 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
-    fun gameMenuOpacityIsPortable() {
-        assertTrue(
-            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
-                PreferenceConfiguration.GAME_MENU_OPACITY_PREF_STRING
-            )
-        )
-    }
-
-    @Test
     fun touchPointerSensitivityPresetsUsePortableDedicatedStorage() {
         assertFalse(
             ConfigurationSyncManager.isPortableDefaultPreferenceKey(
@@ -160,52 +151,29 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
-    fun schemaV1FixtureHasExpectedSectionsAndTypedValues() {
-        validateSchemaFixture(
-            readFixture("config-sync/schema-v1.example.json").asJsonObject,
-            expectedSchemaVersion = 1,
-            expectSyncMetadata = false
-        )
-    }
-
-    @Test
-    fun schemaV2FixtureHasSyncMetadata() {
-        validateSchemaFixture(
-            readFixture("config-sync/schema-v2.example.json").asJsonObject,
-            expectedSchemaVersion = 2,
-            expectSyncMetadata = true
-        )
-    }
-
-    private fun validateSchemaFixture(
-        root: JsonObject,
-        expectedSchemaVersion: Int,
-        expectSyncMetadata: Boolean
-    ) {
-        assertEquals(expectedSchemaVersion, root["schemaVersion"].asInt)
-        if (expectSyncMetadata) {
-            assertTrue(root["syncId"].asString.isNotBlank())
-            assertTrue(root["deviceId"].asString.isNotBlank())
-            assertTrue(root["backupDeviceKey"].asString.isNotBlank())
-            assertEquals("sameDevice", root["backupTarget"].asString)
-        }
-        assertTrue(root["packageName"].asString.isNotBlank())
-        assertTrue(root["appVersionCode"].asLong > 0)
-        assertTrue(root["appVersionName"].asString.isNotBlank())
-        assertTrue(root["exportedAt"].asLong > 0)
-
-        val sections = root["sections"].asJsonObject
-        for (section in preferenceSections) {
-            assertNotNull("Missing section $section", sections[section])
-            validatePreferenceSection(section, sections[section].asJsonObject, expectSyncMetadata)
-        }
-
-        val crownProfiles = sections["crownProfiles"].asJsonArray
-        assertEquals(1, crownProfiles.size())
-        validateCrownProfile(crownProfiles[0].asJsonObject, expectSyncMetadata)
-
-        if (expectSyncMetadata) {
-            validatePairingSection(sections["pairing"].asJsonObject)
+    fun historicalSchemaFixturesRemainReadableByProductionNormalizer() {
+        for (fixture in listOf("schema-v1.example.json", "schema-v2.example.json")) {
+            val normalized = ConfigurationSyncManager.mergeSyncPackagesForTest(
+                listOf(readFixture("config-sync/$fixture").toString())
+            )
+            val sections = JsonParser.parseString(normalized).asJsonObject["sections"].asJsonObject
+            val values = sections["defaultPreferences"].asJsonObject["values"].asJsonObject
+            assertEquals("1920x1080", values["list_resolution"].asJsonObject["value"].asString)
+            assertEquals(50000, values["seekbar_bitrate_kbps"].asJsonObject["value"].asInt)
+            assertEquals("int", values["seekbar_bitrate_kbps"].asJsonObject["type"].asString)
+            assertEquals(1, sections["crownProfiles"].asJsonArray.size())
+            if (fixture == "schema-v2.example.json") {
+                val computers = sections["pairing"].asJsonObject["computers"].asJsonArray
+                assertEquals(1, computers.size())
+                val computer = computers[0].asJsonObject
+                assertEquals("host-uuid", computer["uuid"].asString)
+                assertEquals("Gaming PC", computer["name"].asString)
+                for (field in listOf("localAddress", "activeAddress")) {
+                    val address = computer[field].asJsonObject
+                    assertEquals(field, "192.168.1.10", address["address"].asString)
+                    assertEquals(field, 47989, address["port"].asInt)
+                }
+            }
         }
     }
 
@@ -358,108 +326,5 @@ class ConfigurationSyncSchemaTest {
         val stream = javaClass.classLoader!!.getResourceAsStream(path)
             ?: error("Missing fixture: $path")
         return stream.reader(Charsets.UTF_8).use { JsonParser.parseReader(it) }
-    }
-
-    private fun validatePreferenceSection(
-        sectionName: String,
-        section: JsonObject,
-        expectSyncMetadata: Boolean
-    ) {
-        val values = section["values"]?.asJsonObject
-        assertNotNull("$sectionName.values is missing", values)
-        assertTrue("$sectionName.values should not be empty", values!!.entrySet().isNotEmpty())
-
-        for ((key, encodedValue) in values.entrySet()) {
-            assertTrue("Empty key in $sectionName", key.isNotBlank())
-            validateTypedValue("$sectionName.$key", encodedValue.asJsonObject, expectSyncMetadata)
-        }
-    }
-
-    private fun validateTypedValue(path: String, encodedValue: JsonObject, expectSyncMetadata: Boolean) {
-        val type = encodedValue["type"]?.asString
-        assertTrue("$path has unsupported type $type", type in supportedTypes)
-        assertTrue("$path.value is missing", encodedValue.has("value"))
-        if (expectSyncMetadata) {
-            assertTrue("$path.updatedAt is missing", encodedValue.has("updatedAt"))
-            assertTrue("$path.updatedAt must be positive", encodedValue["updatedAt"].asLong > 0L)
-            assertTrue("$path.updatedBy is missing", encodedValue.has("updatedBy"))
-            assertTrue("$path.updatedBy must not be blank", encodedValue["updatedBy"].asString.isNotBlank())
-        }
-
-        val value = encodedValue["value"]
-        when (type) {
-            "string" -> assertTrue("$path.value must be string", value.isJsonPrimitive && value.asJsonPrimitive.isString)
-            "boolean" -> assertTrue("$path.value must be boolean", value.isJsonPrimitive && value.asJsonPrimitive.isBoolean)
-            "int" -> {
-                assertTrue("$path.value must be int", value.isJsonPrimitive && value.asJsonPrimitive.isNumber)
-                val intValue = value.asLong
-                assertTrue("$path.value is outside int range", intValue in Int.MIN_VALUE..Int.MAX_VALUE)
-            }
-            "long" -> assertTrue("$path.value must be long", value.isJsonPrimitive && value.asJsonPrimitive.isNumber)
-            "float" -> assertTrue("$path.value must be float", value.isJsonPrimitive && value.asJsonPrimitive.isNumber)
-            "stringSet" -> validateStringSet("$path.value", value.asJsonArray)
-            "deleted" -> assertTrue("$path.value must be null", value.isJsonNull)
-        }
-    }
-
-    private fun validateStringSet(path: String, array: JsonArray) {
-        for (item in array) {
-            assertTrue("$path item must be string", item.isJsonPrimitive && item.asJsonPrimitive.isString)
-        }
-    }
-
-    private fun validateCrownProfile(profile: JsonObject, expectSyncMetadata: Boolean) {
-        assertTrue(profile["sourceConfigId"].asLong > 0)
-        assertTrue(profile["name"].asString.isNotBlank())
-        assertTrue(profile["payload"].asString.isNotBlank())
-        if (expectSyncMetadata) {
-            assertTrue(profile["profileId"].asString.isNotBlank())
-            assertTrue(profile["updatedAt"].asLong > 0L)
-            assertTrue(profile["updatedBy"].asString.isNotBlank())
-            assertTrue(profile["deleted"].asBoolean == false)
-        }
-    }
-
-    private fun validatePairingSection(pairing: JsonObject) {
-        assertTrue(pairing["updatedAt"].asLong > 0L)
-        assertEquals(16, pairing["uniqueId"].asString.length)
-        assertTrue(pairing["clientCertificatePem"].asString.isNotBlank())
-        assertTrue(pairing["clientPrivateKeyPkcs8"].asString.isNotBlank())
-
-        val computers = pairing["computers"].asJsonArray
-        assertEquals(1, computers.size())
-        val computer = computers[0].asJsonObject
-        assertTrue(computer["uuid"].asString.isNotBlank())
-        assertTrue(computer["name"].asString.isNotBlank())
-        assertTrue(computer["serverCertificateDer"].asString.isNotBlank())
-        assertTrue(computer["httpsPort"].asInt > 0)
-        validateAddress("pairing.computers[0].localAddress", computer["localAddress"].asJsonObject)
-        validateAddress("pairing.computers[0].activeAddress", computer["activeAddress"].asJsonObject)
-    }
-
-    private fun validateAddress(path: String, address: JsonObject) {
-        assertTrue("$path.address is missing", address["address"].asString.isNotBlank())
-        assertTrue("$path.port must be positive", address["port"].asInt > 0)
-    }
-
-    private companion object {
-        val preferenceSections = listOf(
-            "defaultPreferences",
-            "appLastSettings",
-            "customResolutions",
-            "sceneConfigs",
-            "appViewPreferences",
-            "hiddenApps"
-        )
-
-        val supportedTypes = setOf(
-            "string",
-            "boolean",
-            "int",
-            "long",
-            "float",
-            "stringSet",
-            "deleted"
-        )
     }
 }

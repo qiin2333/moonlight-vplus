@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_external_display_detected">已偵測到外接顯示器：%1$s（ID：%2$d）</string>
+    <string name="summary_external_display_not_detected">未偵測到外接顯示器</string>
+    <string name="summary_external_display_detection_failed">無法偵測外接顯示器</string>
+</resources>

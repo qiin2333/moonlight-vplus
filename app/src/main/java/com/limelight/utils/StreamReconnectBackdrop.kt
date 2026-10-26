@@ -16,4 +16,10 @@ internal object StreamReconnectBackdrop {
         pending = null
         return bitmap
     }
+
+    /** 丢弃未消费的暂存画面(会话结束或重建被跳过时调用)。 */
+    fun clear() {
+        pending?.recycle()
+        pending = null
+    }
 }

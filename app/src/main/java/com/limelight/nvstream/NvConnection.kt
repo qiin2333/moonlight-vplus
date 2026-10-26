@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.Display
 
 import com.limelight.utils.NetHelper
 
@@ -48,6 +49,7 @@ open class NvConnection(
     config: StreamConfiguration,
     private val cryptoProvider: LimelightCryptoProvider,
     serverCert: X509Certificate?,
+    outputDisplay: Display,
     displayName: String? = null,
     forceResumeCurrentSession: Boolean = false
 ) {
@@ -76,21 +78,16 @@ open class NvConnection(
         context.riKey = generateRiAesKey()
         context.riKeyId = generateRiKeyId()
 
-        val brightnessRange = HdrCapabilityHelper.getBrightnessRangeAsInts(appContext).let {
-            if (config.hdrBrightnessOverride) {
-                HdrCapabilityHelper.applyBrightnessOverride(it, config.hdrPeakBrightnessNits)
-            } else {
-                it
-            }
-        }
-        context.minBrightness = brightnessRange[0]
-        context.maxBrightness = brightnessRange[1]
-        context.maxAverageBrightness = brightnessRange[2]
+        context.hdrBrightness = HdrCapabilityHelper.getBrightnessReport(
+            outputDisplay,
+            config.hdrPeakBrightnessNits.takeIf { config.hdrBrightnessOverride },
+        )
 
         if (config.hdrBrightnessOverride) {
+            val brightness = context.hdrBrightness
             LimeLog.info(
-                "HDR brightness override: min=${context.minBrightness}, " +
-                    "max=${context.maxBrightness}, avg=${context.maxAverageBrightness} nits"
+                "HDR brightness override: min=${brightness?.minNits}, " +
+                    "max=${brightness?.maxNits}, avg=${brightness?.maxFullFrameNits} nits"
             )
         }
     }
@@ -112,6 +109,9 @@ open class NvConnection(
      */
     fun createNvHttp(): NvHTTP =
         NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+
+    /** Host display device id selected when the stream was started, if any. */
+    fun displayName(): String? = context.displayName
 
     /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
     fun applyBitrateLocally(bitrateKbps: Int) {
@@ -701,6 +701,14 @@ open class NvConnection(
             MoonBridge.LI_ERR_UNSUPPORTED
         }
     }
+
+    fun sendControllerMotionFrame(controller: Byte, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): Int =
+        if (!isMonkey) MoonBridge.sendControllerMotionFrame(controller, gx, gy, gz, ax, ay, az)
+        else MoonBridge.LI_ERR_UNSUPPORTED
+
+    fun stopControllerMotionEvent(controller: Byte): Int =
+        if (!isMonkey) MoonBridge.stopControllerMotionEvent(controller)
+        else MoonBridge.LI_ERR_UNSUPPORTED
 
     fun sendControllerBatteryEvent(controllerNumber: Byte, batteryState: Byte, batteryPercentage: Byte): Int =
         MoonBridge.sendControllerBatteryEvent(controllerNumber, batteryState, batteryPercentage)

@@ -17,7 +17,6 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class VirtualControllerPresetsTest {
@@ -313,31 +312,5 @@ class VirtualControllerPresetsTest {
         }
         listOf(idle, right, up, released, invisible).forEach { it.recycle() }
         controller.cleanup()
-    }
-
-    @Test fun renderAllPresetsForVisualReview() = withPreferences {
-        for (style in listOf("xbox", "ds", "ns", "classic")) {
-            val (controller, frame) = create(style)
-            val bitmap = Bitmap.createBitmap(1280, 720, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            canvas.drawColor(Color.rgb(36, 46, 57))
-            frame.draw(canvas)
-            File(context.getExternalFilesDir(null), "osc-$style.png").outputStream().use {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-            }
-            if (style != "classic") {
-                val stick = controller.elements.first { it.elementId == 12 }
-                touch(stick, MotionEvent.ACTION_DOWN, stick.width.toFloat(), stick.height * .25f)
-                val button = controller.elements.first { it.elementId == 6 }
-                touch(button, MotionEvent.ACTION_DOWN)
-                canvas.drawColor(Color.rgb(36, 46, 57))
-                frame.draw(canvas)
-                File(context.getExternalFilesDir(null), "osc-$style-active.png").outputStream().use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-                }
-            }
-            bitmap.recycle()
-            controller.cleanup()
-        }
     }
 }

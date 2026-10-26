@@ -162,7 +162,6 @@
     <string name="dialog_title_reset_osc">Réinitialiser la disposition</string>
     <string name="dialog_text_reset_osc">Êtes-vous sûr de vouloir supprimer votre disposition de commandes à l\'écran ?</string>
     <string name="toast_reset_osc_success">Les contrôles à l\'écran ont été réinitialisés</string>
-    <string name="title_osc_opacity">Modifier l\'opacité des contrôles à l\'écran</string>
     <string name="summary_osc_opacity">Permet de rendre les contrôles à l\'écran plus ou moins transparents</string>
     <string name="dialog_title_osc_opacity">Modifier l\'opacité</string>
     <string name="suffix_osc_opacity">%</string>
@@ -177,8 +176,6 @@
     <string name="title_checkbox_host_audio">Jouer l\'audio sur le PC</string>
     <string name="summary_checkbox_host_audio">Lire l\'audio sur l\'ordinateur et sur cet appareil</string>
     <string name="category_advanced_settings">Réglages avancés</string>
-    <string name="title_unlock_fps">Débloquer toutes les fréquences d\'images possibles</string>
-    <string name="summary_unlock_fps">Le streaming à 90 ou 120 FPS peut réduire la latence sur les appareils haut de gamme, mais peut entraîner un décalage ou une instabilité sur les appareils qui ne le supporte pas</string>
     <string name="summary_checkbox_disable_warnings">Désactive les messages d\'avertissement sur la connexion pendant le stream</string>
     <string name="title_disable_frame_drop">Ne jamais perdre d\'images</string>
     <string name="summary_disable_frame_drop">Peut réduire les micro-saccades sur certains appareils, mais peut augmenter la latence</string>
@@ -210,14 +207,9 @@
 \n
 \nVérifiez qu\'aucune application utilisant un DRM n\'est ouverte sur votre PC hôte. Vous pouvez aussi essayer de redémarrer votre PC hôte.</string>
     <string name="no_frame_received_error">Votre connexion réseau ne fonctionne pas bien. Baissez votre débit ou utilisez une connexion plus rapide.</string>
-    <string name="resolution_prefix_native_fullscreen">Plein-écran natif</string>
     <string name="perf_overlay_netlatency">Latence réseau moyenne : %1$d ms (variance : %2$d ms)</string>
     <string name="perf_overlay_streamdetails">Stream vidéo : %1$s %2$.2f FPS</string>
     <!-- Array strings -->
-    <string name="fps_30">30 IPS</string>
-    <string name="fps_60">60 IPS</string>
-    <string name="fps_90">90 IPS</string>
-    <string name="fps_120">120 IPS</string>
     <string name="audioconf_stereo">Stéréo</string>
     <string name="audioconf_51surround">Son surround 5.1</string>
     <string name="audioconf_71surround">Son surround 7.1</string>
@@ -247,8 +239,6 @@
     <string name="title_checkbox_absolute_mouse_mode">Mode souris pour bureau à distance</string>
     <string name="summary_seekbar_deadzone">Remarque : Certains jeux peuvent imposer une zone morte plus grande que celle que Moonlight est configuré pour utiliser.</string>
     <string name="summary_checkbox_absolute_mouse_mode">Cela peut rendre l\'accélération de la souris plus naturelle pour l\'utilisation du bureau à distance, mais il est incompatible avec de nombreux jeux.</string>
-    <string name="resolution_prefix_native_landscape">(Paysage)</string>
-    <string name="resolution_prefix_native_portrait">(Portrait)</string>
     <string name="title_checkbox_reduce_refresh_rate">Autoriser la réduction du taux de rafraîchissement</string>
     <string name="summary_checkbox_reduce_refresh_rate">Des taux de rafraîchissement d\'affichage plus bas peuvent économiser de l\'énergie au détriment d\'une latence vidéo plus importante</string>
     <string name="summary_checkbox_enable_audiofx">Permet aux effets audio de fonctionner lors du streaming, mais peut augmenter la latence</string>
@@ -263,7 +253,6 @@
     <string name="category_gamepad_settings">Paramètres manette</string>
     <string name="perf_overlay_hostprocessinglatency">Latence de traitement de l\'hôte min/max/moyenne : %1$.1f/%2$.1f/%3$.1f ms</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Avertissement sur le FPS natif</string>
     <string name="title_checkbox_gamepad_motion_sensors">Autoriser l\'utilisation des capteurs de mouvement de la manette</string>
     <string name="videoformat_av1always">Préférer AV1 (expérimental)</string>
     <string name="videoformat_h264always">Préférer H.264</string>
@@ -349,7 +338,7 @@
     <string name="pyrowave_diag_copy">Copier</string>
     <string name="pyrowave_diag_copy_success">Rapport copié dans le presse-papiers</string>
     <string name="pyrowave_diag_unavailable">Indisponible</string>
-    <string name="image_saved_successfully">Image enregistrée dans : Picture/vplus</string>
+    <string name="image_saved_successfully">Image enregistrée dans : Pictures/vplus</string>
     <string name="image_save_failed_with_error">Échec de l\'enregistrement de l\'image : %1$s</string>
     <string name="tip_double_tap_mouse">Conseil : maintenez une pression sur la zone vide en haut de la liste des ordinateurs pour enregistrer l\'image de fond actuelle.</string>
     <string name="pyrowave_negotiation_fallback">La négociation PyroWave a échoué. Basculement vers %1$s.</string>

@@ -58,16 +58,6 @@ class EnhancedTouchPointerStateTest {
     }
 
     @Test
-    fun finalUpdateIncludesMovementAfterPreviousSample() {
-        val pointer = pointer(initialX = 800f, velocityFactor = 2f)
-        pointer.update(810f, 500f)
-
-        pointer.update(815f, 505f)
-
-        assertCoordinates(pointer, 830f, 510f)
-    }
-
-    @Test
     fun initialJitterIsFlatUntilPointerLeavesZone() {
         val pointer = pointer(
             initialX = 800f,

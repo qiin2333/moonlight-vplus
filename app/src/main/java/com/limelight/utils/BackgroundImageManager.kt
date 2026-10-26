@@ -24,7 +24,8 @@ class BackgroundImageManager(
     private val context: Context,
     private val blurImageView: ImageView,
     private val clearImageView: ImageView,
-    private val artworkBlurOnly: Boolean = false
+    private val artworkBlurOnly: Boolean = false,
+    private val onBackgroundApplied: () -> Unit = {}
 ) {
     private enum class BitmapStyle {
         Artwork,
@@ -144,7 +145,7 @@ class BackgroundImageManager(
                     clearImageView.setImageDrawable(null)
                     clearImageView.visibility = View.GONE
                     blurImageView.visibility = View.VISIBLE
-                    setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA)
+                    setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA, onApplied = ::notifyBackgroundApplied)
                 } else {
                     blurImageView.visibility = View.VISIBLE
                     clearImageView.visibility = View.VISIBLE
@@ -153,7 +154,8 @@ class BackgroundImageManager(
                         bitmap,
                         BLUR_IMAGE_ALPHA_PAIRED,
                         RENDER_EFFECT_RADIUS_PAIRED,
-                        BLUR_RADIUS_PAIRED
+                        BLUR_RADIUS_PAIRED,
+                        onApplied = ::notifyBackgroundApplied
                     )
                     clearImageView.tag = null
                     clearImageView.setImageBitmap(bitmap)
@@ -163,7 +165,7 @@ class BackgroundImageManager(
             BitmapStyle.Acrylic -> {
                 blurImageView.visibility = View.VISIBLE
                 clearImageView.visibility = View.VISIBLE
-                setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA)
+                setBlurredBitmap(blurImageView, bitmap, BLUR_IMAGE_ALPHA, onApplied = ::notifyBackgroundApplied)
                 clearImageView.tag = bitmap
                 setAcrylicBitmap(bitmap, CLEAR_IMAGE_ALPHA)
             }
@@ -172,6 +174,11 @@ class BackgroundImageManager(
 
     private fun clearAcrylicMode() {
         (clearImageView as? AcrylicImageView)?.clearAcrylicMode()
+    }
+
+    private fun notifyBackgroundApplied() {
+        // Wait until both background layers have been updated, including async StackBlur.
+        blurImageView.post { onBackgroundApplied() }
     }
 
     private fun setAcrylicBitmap(bitmap: Bitmap, alpha: Int) {
@@ -198,6 +205,7 @@ class BackgroundImageManager(
 
         if (artworkBlurOnly) {
             clearImageView.visibility = View.GONE
+            notifyBackgroundApplied()
             return
         }
 
@@ -207,6 +215,7 @@ class BackgroundImageManager(
         }
         clearImageView.setImageDrawable(ColorDrawable(color))
         clearImageView.imageAlpha = 255
+        notifyBackgroundApplied()
     }
 
     /**
@@ -230,6 +239,7 @@ class BackgroundImageManager(
                     currentBackground = null
                     currentSolidColor = null
                     currentBitmapStyle = null
+                    notifyBackgroundApplied()
                 }
 
                 override fun onAnimationRepeat(animation: Animation) {}
@@ -266,7 +276,8 @@ class BackgroundImageManager(
             bitmap: Bitmap,
             alpha: Int,
             renderEffectRadius: Float = RENDER_EFFECT_RADIUS,
-            stackBlurRadius: Int = BLUR_RADIUS
+            stackBlurRadius: Int = BLUR_RADIUS,
+            onApplied: (() -> Unit)? = null
         ) {
             if (bitmap.isRecycled) return
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -278,6 +289,7 @@ class BackgroundImageManager(
                     )
                 )
                 imageView.imageAlpha = alpha
+                onApplied?.invoke()
             } else {
                 imageView.tag = bitmap
                 blurExecutor.execute {
@@ -287,6 +299,7 @@ class BackgroundImageManager(
                         if (imageView.tag === bitmap) {
                             imageView.setImageBitmap(blurred)
                             imageView.imageAlpha = alpha
+                            onApplied?.invoke()
                         }
                     }
                 }

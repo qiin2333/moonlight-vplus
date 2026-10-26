@@ -166,6 +166,7 @@ class PreferenceConfiguration {
     var controllerMouseSpeedPercent = 100
     var controllerMouseDpadArrows = false
     var mouseNavButtons = false
+    // Retained for older scene configurations and backups; frame-rate selection is unrestricted.
     var unlockFps = false
     var gameRumbleMode = GameRumbleMode.CONTROLLER
     var deviceRumbleStrength = 0
@@ -227,9 +228,12 @@ class PreferenceConfiguration {
     var gyroInvertYAxis = false
     // Card visibility
     var showBitrateCard = false
+    var showDisplaySettingsCard = true
     var showAudioHapticsCard = false
     var showGyroCard = false
     var showQuickKeyCard = false
+    // Waveform routes are capability-driven, but the status/test card can still be hidden.
+    var showWaveformHapticsCard = true
 
     // 麦克风设置
     var enableMic = false
@@ -332,9 +336,11 @@ class PreferenceConfiguration {
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
                 .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
+                .putBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, showDisplaySettingsCard)
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
                 .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                 .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
+                .putBoolean(SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING, showWaveformHapticsCard)
                 .putBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, enableAudioVibration)
                 .putInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, audioVibrationStrength)
                 .putString(AUDIO_VIBRATION_MODE_PREF_STRING, audioVibrationMode)
@@ -591,9 +597,11 @@ class PreferenceConfiguration {
         copy.audioVibrationMode = this.audioVibrationMode
         copy.audioVibrationScene = this.audioVibrationScene
         copy.showBitrateCard = this.showBitrateCard
+        copy.showDisplaySettingsCard = this.showDisplaySettingsCard
         copy.showAudioHapticsCard = this.showAudioHapticsCard
         copy.showGyroCard = this.showGyroCard
         copy.showQuickKeyCard = this.showQuickKeyCard
+        copy.showWaveformHapticsCard = this.showWaveformHapticsCard
         return copy
     }
 
@@ -674,10 +682,12 @@ class PreferenceConfiguration {
         private const val MOUSE_AXIS_CORRECTION_PREF_STRING = "list_mouse_axis_correction"
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
+        internal const val SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING = "checkbox_show_display_settings_card"
         private const val SHOW_AUDIO_HAPTICS_CARD_PREF_STRING = "checkbox_show_audio_haptics_card"
         private const val SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card"
         @Suppress("ConstPropertyName")
         private const val SHOW_QuickKeyCard = "checkbox_show_QuickKeyCard"
+        internal const val SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING = "checkbox_show_waveform_haptics_card"
 
         private const val ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side"
         private const val ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING = "enhanced_touch_zone_divider"
@@ -795,6 +805,7 @@ class PreferenceConfiguration {
         const val AUDIO_PASSTHROUGH_BUFFER_PREF_STRING = "list_audio_passthrough_buffer"
         const val DEFAULT_AUDIO_PASSTHROUGH_BUFFER = "normal"
         const val UNLOCK_FPS_STRING = "checkbox_unlock_fps"
+        // Retired UI switch, retained only for migrating older installs and backups.
         const val SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING = "checkbox_show_low_resolution_presets"
         const val CROWN_CONFIG_MANAGEMENT_STRING = "crown_config_management"
 
@@ -995,24 +1006,6 @@ class PreferenceConfiguration {
             "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
         )
 
-        fun isLowResolutionPreset(resolution: String?): Boolean {
-            return when (resolution) {
-                RES_360P, RES_480P, "360x640", "480x854" -> true
-                else -> false
-            }
-        }
-
-        /** Hidden low presets stay hidden unless the setting or current value asks for them. */
-        fun includeLowResolutionPreset(
-            resolution: String,
-            currentResolution: String,
-            showLowResolutionPresets: Boolean
-        ): Boolean {
-            return showLowResolutionPresets ||
-                isLowResolutionPreset(currentResolution) ||
-                !isLowResolutionPreset(resolution)
-        }
-
         // ---- Public static methods ----
 
         /**
@@ -1051,51 +1044,33 @@ class PreferenceConfiguration {
         }
 
         private const val DISPLAY_SELECTION_MIGRATION_KEY = "display_selection_migration_version"
-        private const val DISPLAY_SELECTION_MIGRATION_VERSION = 1
+        private const val DISPLAY_SELECTION_MIGRATION_VERSION = 2
 
-        /** 只在迁移版本提升时改写一次旧分辨率或帧率，打开设置页不再重复改写。 */
-        private fun migrateDisplaySelections(context: Context, prefs: SharedPreferences) {
-            if (prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0) >= DISPLAY_SELECTION_MIGRATION_VERSION) return
-            val editor = prefs.edit()
+        /** 旧备份可能重新带回历史表示；只在发现旧值或迁移版本落后时写入。 */
+        internal fun migrateDisplaySelections(prefs: SharedPreferences) {
+            val migrationVersion = prefs.getInt(DISPLAY_SELECTION_MIGRATION_KEY, 0)
             val resolution = prefs.getString(RESOLUTION_PREF_STRING, null)
-            when {
-                resolution == null -> Unit
-                resolution.equals("360p", true) || resolution.equals("480p", true) ->
-                    editor.putString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
-                resolution.equals("720p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_720P)
-                resolution.equals("1080p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1080P)
-                resolution.equals("1440p", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_1440P)
-                resolution.equals("4K", true) -> editor.putString(RESOLUTION_PREF_STRING, RES_4K)
-                resolution == RES_NATIVE -> {
-                    val display = (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-                    val size = Point()
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                        display.getRealSize(size)
-                    } else {
-                        display.getSize(size)
-                    }
-                    editor.putString(
-                        RESOLUTION_PREF_STRING,
-                        "${max(size.x, size.y)}x${min(size.x, size.y)}"
-                    )
-                }
+            val canonicalResolution = when {
+                resolution == null -> null
+                resolution.equals("360p", true) -> RES_360P
+                resolution.equals("480p", true) -> RES_480P
+                resolution.equals("720p", true) -> RES_720P
+                resolution.equals("1080p", true) -> RES_1080P
+                resolution.equals("1440p", true) -> RES_1440P
+                resolution.equals("4K", true) -> RES_4K
+                else -> null
             }
-            when (val frameRate = prefs.all[FPS_PREF_STRING]) {
-                is Int -> editor.putString(FPS_PREF_STRING, frameRate.toString())
-            }
-            editor.putInt(DISPLAY_SELECTION_MIGRATION_KEY, DISPLAY_SELECTION_MIGRATION_VERSION).apply()
-        }
+            val frameRate = prefs.all[FPS_PREF_STRING]
+            if (migrationVersion >= DISPLAY_SELECTION_MIGRATION_VERSION &&
+                canonicalResolution == null && frameRate !is Int) return
 
-        private fun convertFromLegacyResolutionString(resString: String): String {
-            return when {
-                resString.equals("360p", ignoreCase = true) -> RES_360P
-                resString.equals("480p", ignoreCase = true) -> RES_480P
-                resString.equals("720p", ignoreCase = true) -> RES_720P
-                resString.equals("1080p", ignoreCase = true) -> RES_1080P
-                resString.equals("1440p", ignoreCase = true) -> RES_1440P
-                resString.equals("4K", ignoreCase = true) -> RES_4K
-                else -> RES_1080P // Should be unreachable
+            val editor = prefs.edit()
+            canonicalResolution?.let { editor.putString(RESOLUTION_PREF_STRING, it) }
+            if (frameRate is Int) editor.putString(FPS_PREF_STRING, frameRate.toString())
+            if (migrationVersion < DISPLAY_SELECTION_MIGRATION_VERSION) {
+                editor.putInt(DISPLAY_SELECTION_MIGRATION_KEY, DISPLAY_SELECTION_MIGRATION_VERSION)
             }
+            editor.apply()
         }
 
         private fun getWidthFromResolutionString(resString: String): Int {
@@ -1114,17 +1089,6 @@ class PreferenceConfiguration {
                 // 如果解析失败，返回默认高度
                 DEFAULT_RESOLUTION.split("x")[1].toInt()
             }
-        }
-
-        private fun getResolutionString(width: Int, height: Int): String {
-            // 使用数组简化分辨率获取
-            for (res in RESOLUTIONS) {
-                val dimensions = res.split("x")
-                if (height == dimensions[1].toInt()) {
-                    return res
-                }
-            }
-            return RES_1080P // 默认返回1080P
         }
 
         fun getDefaultBitrate(resString: String, fpsString: String): Int {
@@ -1382,7 +1346,7 @@ class PreferenceConfiguration {
                 prefs.edit().remove(LEGACY_VIBRATE_FALLBACK_PREF_STRING).apply()
             }
 
-            migrateDisplaySelections(context, prefs)
+            migrateDisplaySelections(prefs)
             val resStr = prefs.getString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION) ?: DEFAULT_RESOLUTION
             config.isNativeResolution = resStr == RES_NATIVE
             config.isCustomResolution =
@@ -1696,6 +1660,7 @@ class PreferenceConfiguration {
 
             // Cards visibility (defaults to true)
             config.showBitrateCard = prefs.getBoolean(SHOW_BITRATE_CARD_PREF_STRING, true)
+            config.showDisplaySettingsCard = prefs.getBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, true)
             config.showAudioHapticsCard = prefs.getBoolean(
                 SHOW_AUDIO_HAPTICS_CARD_PREF_STRING,
                 config.enableAudioVibration
@@ -1704,6 +1669,11 @@ class PreferenceConfiguration {
             // 横屏时快捷卡片默认不开启
             val defaultQuickKeyCard = config.width <= config.height
             config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, defaultQuickKeyCard)
+            // Preserve the historical capability-driven behavior for existing installs.
+            config.showWaveformHapticsCard = prefs.getBoolean(
+                SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+                true
+            )
 
             // 读取麦克风设置
             config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC)

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_menu_touchpad_sensitivity">Sensibilitatea touchpadului</string>
+    <string name="game_menu_touchpad_scroll_speed">Viteza de derulare cu două degete</string>
+</resources>

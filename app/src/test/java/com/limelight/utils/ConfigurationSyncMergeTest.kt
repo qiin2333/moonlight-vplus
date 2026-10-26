@@ -15,6 +15,41 @@ import org.junit.Test
 
 class ConfigurationSyncMergeTest {
     @Test
+    fun touchpadSectionsSurviveOlderBackupAndDoNotMixWithDirectTouch() {
+        val id = "00000000-0000-0000-0000-000000000025"
+        val configured = JsonParser.parseString(syncPackage("device-a")).asJsonObject.apply {
+            val sections = getAsJsonObject("sections")
+            sections.add("touchpadInput", preferenceSection(values(
+                "touch_sense" to typedValue("int", JsonPrimitive(250), 1000L, "device-a"))))
+            sections.add("touchpadPresets", preferenceSection(values(
+                TouchPointerPresetPreferences.JSON_KEY to typedValue("string",
+                    JsonPrimitive(touchPresetJson(id, "Touchpad", 1000L)), 1000L, "device-a"))))
+        }.toString()
+        val merged = ConfigurationSyncManager.mergeSyncPackagesForTest(listOf(configured, syncPackage("device-b")))
+        assertEquals(250, preferenceValues(merged, "touchpadInput")["touch_sense"].asJsonObject["value"].asInt)
+        assertEquals(setOf(id), presetIds(preferenceValues(merged, "touchpadPresets")))
+        assertFalse(preferenceValues(merged, "touchPointerPresets").has(TouchPointerPresetPreferences.JSON_KEY))
+    }
+
+    @Test
+    fun touchpadDeletionSurvivesMergeAndActiveSelectionStaysLocal() {
+        val id = "00000000-0000-0000-0000-000000000026"
+        fun packageWithPresetValues(presetValues: JsonObject) =
+            JsonParser.parseString(syncPackage("device-a")).asJsonObject.apply {
+                getAsJsonObject("sections").add("touchpadPresets", preferenceSection(presetValues))
+            }.toString()
+        val saved = packageWithPresetValues(values(
+            TouchPointerPresetPreferences.JSON_KEY to typedValue("string",
+                JsonPrimitive(touchPresetJson(id, "Deleted", 1000L)), 1000L, "device-a"),
+            TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY to typedValue("string", JsonPrimitive(id), 1000L, "device-a")))
+        val deleted = packageWithPresetValues(values(TouchPointerPresetPreferences.DELETED_IDS_KEY to
+            typedValue("stringSet", stringArray(id), 2000L, "device-a")))
+        val merged = preferenceValues(ConfigurationSyncManager.mergeSyncPackagesForTest(listOf(saved, deleted)), "touchpadPresets")
+        assertTrue(presetArray(merged).isEmpty)
+        assertFalse(merged.has(TouchPointerPresetPreferences.ACTIVE_PRESET_ID_KEY))
+    }
+
+    @Test
     fun mergePreservesMouseAxisCorrectionWhenAnotherPackageHasNoSetting() {
         for (correction in MouseAxisCorrection.entries) {
             val configured = syncPackage(
@@ -447,42 +482,6 @@ class ConfigurationSyncMergeTest {
         assertEquals("bbbbbbbbbbbbbbbb", pairing["uniqueId"].asString)
         assertEquals(1, computers.size())
         assertEquals("new-host", computers[0].asJsonObject["uuid"].asString)
-    }
-
-    @Test
-    fun customFrameRateCountsAreIncludedInPreviewAndImportTotals() {
-        val preview = ConfigurationSyncManager.PackagePreview(
-            schemaVersion = 2,
-            appVersionCode = 1L,
-            appVersionName = "test",
-            exportedAt = 1000L,
-            defaultPreferenceCount = 1,
-            appLastSettingsCount = 2,
-            customFrameRatesCount = 3,
-            customResolutionsCount = 4,
-            sceneConfigsCount = 5,
-            appViewPreferenceCount = 6,
-            hiddenAppsCount = 7,
-            crownProfilesCount = 8,
-            pairedComputersCount = 9,
-            hasPairingIdentity = true
-        )
-        val importResult = ConfigurationSyncManager.ImportResult(
-            defaultPreferencesImported = 1,
-            appLastSettingsImported = 2,
-            customFrameRatesImported = 3,
-            customResolutionsImported = 4,
-            sceneConfigsImported = 5,
-            appViewPreferencesImported = 6,
-            hiddenAppsImported = 7,
-            crownProfilesImported = 8,
-            crownProfilesFailed = 0,
-            pairingItemsImported = 9,
-            pairingItemsFailed = 0
-        )
-
-        assertEquals(46, preview.totalItems)
-        assertEquals(45, importResult.totalImported)
     }
 
     @Test

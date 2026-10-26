@@ -27,12 +27,12 @@ internal data class GameMenuComposeUiState(
     val quickActions: List<GameMenuQuickAction>,
     val visibleCards: GameMenuVisibleCards,
     val bitrate: BitrateCardState,
-    val displayDraft: DisplaySettingsDraft,
     val audioHaptics: AudioHapticsCardState,
     val waveformHaptics: WaveformHapticsCardState,
     val gyro: GyroCardState,
     val touchPointerSensitivity: TouchPointerSensitivityState,
     val customKeys: List<CustomKeyData>,
+    val touchpadSensitivity: TouchpadSensitivityState = TouchpadSensitivityState(),
     val quickEditMode: Boolean = false,
     val usbForwardingEnabled: Boolean = false,
     val isSubmenu: Boolean = false,
@@ -43,8 +43,7 @@ internal data class GameMenuComposeUiState(
 
 internal enum class GameMenuPageLayout {
     STANDARD,
-    TOUCH_MODE,
-    DISPLAY_SETTINGS
+    TOUCH_MODE
 }
 
 enum class GameMenuOptionPresentation {
@@ -86,9 +85,11 @@ internal class GameMenuGuideDismissController {
 
 internal data class GameMenuVisibleCards(
     val bitrate: Boolean,
+    val display: Boolean,
     val audioHaptics: Boolean,
     val gyro: Boolean,
-    val shortcuts: Boolean
+    val shortcuts: Boolean,
+    val waveformHaptics: Boolean
 )
 
 internal data class GameMenuCallbacks(
@@ -115,14 +116,13 @@ internal data class GameMenuCallbacks(
     val onBitrateAdaptive: (Boolean) -> Unit,
     val onAbrMode: (String) -> Unit,
     val onBitrateHapticMode: () -> Unit,
-    val onOpenDisplaySettings: () -> Unit = {},
-    val onSelectResolution: (String) -> Unit = {},
-    val onSelectFrameRate: (String) -> Unit = {},
-    val onSelectScreenMode: (String) -> Unit = {},
-    val onApplyDisplaySettings: () -> Unit = {},
-    val onCancelDisplaySettings: () -> Unit = {},
-    val onEditCustomResolutions: () -> Unit = {},
-    val onEditCustomFrameRates: () -> Unit = {},
+    val onDisplaySettingsInfo: () -> Unit = {},
+    val onAdaptiveBitrateInfo: () -> Unit = {},
+    val onOpenResolutionSheet: () -> Unit = {},
+    val onOpenFrameRateSheet: () -> Unit = {},
+    val onOpenScreenModeSheet: () -> Unit = {},
+    val onSetDisplayScale: (Int) -> Unit = {},
+    val onRefreshDisplayScale: () -> Unit = {},
     val onAudioHapticsEnabled: (Boolean) -> Unit,
     val onAudioHapticsStrength: (Float) -> Boolean,
     val onAudioHapticsStrengthFinished: () -> Unit,
@@ -142,5 +142,10 @@ internal data class GameMenuCallbacks(
     val onApplyTouchPointerSensitivityPreset: (String) -> Unit,
     val onManageTouchPointerSensitivityPresets: () -> Unit,
     val onCustomKey: (CustomKeyData) -> Unit,
+    val onTouchpadSensitivity: (TouchpadPresetField, Float) -> Boolean = { _, _ -> false },
+    val onTouchpadSensitivityFinished: () -> Unit = {},
+    val onSaveTouchpadPreset: () -> Unit = {},
+    val onApplyTouchpadPreset: (String) -> Unit = {},
+    val onManageTouchpadPresets: () -> Unit = {},
     val onWaveformTest: (Int, Boolean) -> Unit = { _, _ -> }
 )

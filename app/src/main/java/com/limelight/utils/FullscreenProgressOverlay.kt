@@ -175,6 +175,8 @@ class FullscreenProgressOverlay(
                     .withEndAction {
                         overlayView.visibility = View.GONE
                         overlayView.alpha = 1f
+                        appPosterBackgroundBlur.tag = null
+                        appPosterBackgroundClear.tag = null
                         appPosterBackgroundBlur.setImageDrawable(null)
                         appPosterBackgroundClear.setImageDrawable(null)
                         reconnectBackdrop = null

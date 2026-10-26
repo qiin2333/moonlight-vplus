@@ -19,7 +19,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
 import androidx.core.view.WindowCompat
-import androidx.core.view.doOnLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -48,12 +47,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -65,13 +61,12 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
-import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.MenuAxisNavigationState
+import com.limelight.ui.isGamepadNavigationSource
 import com.limelight.ui.theme.AppShapes
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * Compose implementation of the custom resolutions dialog.
@@ -90,14 +85,16 @@ object CustomResolutionsDialog {
     fun show(
         context: Context,
         onClosed: () -> Unit,
-        requestInitialFocus: Boolean = false
+        requestInitialFocus: Boolean = false,
+        targetDisplay: Display? = null
     ): Dialog {
         return show(
             context,
             CustomResolutionsStore.load(context),
             { CustomResolutionsStore.save(context, it) },
             onClosed,
-            requestInitialFocus = requestInitialFocus
+            requestInitialFocus = requestInitialFocus,
+            targetDisplay = targetDisplay
         )
     }
 
@@ -106,15 +103,16 @@ object CustomResolutionsDialog {
         initial: List<Resolution>,
         onCommit: (List<Resolution>) -> Unit,
         onClosed: () -> Unit,
-        frameRateMode: Boolean = false,
-        requestInitialFocus: Boolean = false
+        requestInitialFocus: Boolean = false,
+        targetDisplay: Display? = null
     ): Dialog {
         val pixelsText = pixelsTextFactory(context)
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
-        // 取消(返回/点外部/取消按钮)丢弃本次会话的全部改动,恢复进入时的快照
+        // 取消(返回/取消按钮)与未经保存的 dismiss(如宿主 Fragment 销毁)都恢复进入时的快照
         var cancelled = false
+        var confirmedByUser = false
         var current = initial
-        val controllerFocusRequest = mutableIntStateOf(if (requestInitialFocus) 1 else 0)
+        val controllerFocusRequest = mutableIntStateOf(0)
         val touchNavigationActive = mutableStateOf(!requestInitialFocus)
         val axisNavigation = MenuAxisNavigationState()
         fun discardChanges() {
@@ -130,19 +128,14 @@ object CustomResolutionsDialog {
                 CustomResolutionsDialogContent(
                     initial = initial,
                     pixelsText = pixelsText,
-                    frameRateMode = frameRateMode,
-                    nativePresets = if (frameRateMode) {
-                        nativeFrameRatePresets(context).map { Resolution(it, 0) }
-                    } else {
-                        nativeResolutionPresets(context)
-                    },
-                    requestInitialFocus = requestInitialFocus,
+                    nativePresets = nativeResolutionPresets(context, targetDisplay),
                     controllerFocusRequest = controllerFocusRequest.intValue,
                     touchNavigationActive = touchNavigationActive.value,
                     onTouchNavigation = { touchNavigationActive.value = true },
                     onCommit = { current = it },
                     onCancel = { discardChanges() },
                     onConfirm = {
+                        confirmedByUser = true
                         dialog.dismiss()
                     }
                 )
@@ -155,16 +148,10 @@ object CustomResolutionsDialog {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         )
-        dialog.setCanceledOnTouchOutside(true)
+        // 编辑器有输入成本:禁用"点外部取消",误触不再丢整场编辑;返回键/取消按钮仍是明确的放弃意图
+        dialog.setCanceledOnTouchOutside(false)
         fun handleDialogKey(keyCode: Int, event: KeyEvent): Boolean {
-            val controllerSource = event.source and (
-                InputDevice.SOURCE_GAMEPAD or
-                    InputDevice.SOURCE_JOYSTICK or
-                    InputDevice.SOURCE_CLASS_JOYSTICK or
-                    InputDevice.SOURCE_DPAD or
-                    InputDevice.SOURCE_KEYBOARD
-                ) != 0
-            if (controllerSource && event.action == KeyEvent.ACTION_DOWN &&
+            if (event.isGamepadNavigationSource() && event.action == KeyEvent.ACTION_DOWN &&
                 touchNavigationActive.value
             ) {
                 touchNavigationActive.value = false
@@ -177,23 +164,18 @@ object CustomResolutionsDialog {
                 dismissOnBack = false
             )
         }
-        fun dispatchAxisPairs(axisPairs: List<Pair<Float, Float>>): Boolean {
-            val transition = axisNavigation.update(axisPairs)
-            if (transition.changed && transition.pressedKeyCode != null &&
-                touchNavigationActive.value
-            ) {
-                touchNavigationActive.value = false
-                controllerFocusRequest.intValue++
-            }
-            return false
-        }
         val dialogController = object : CustomDialogController {
             override fun dispatchAxes(event: MotionEvent): Boolean {
                 if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0) return false
-                val axisPairs = (context as? Game)?.controllerHandler
-                    ?.getGameMenuNavigationAxisPairs(event)
-                    ?: defaultDialogAxisPairs(event)
-                return dispatchAxisPairs(axisPairs)
+                val axisPairs = defaultDialogAxisPairs(event)
+                val transition = axisNavigation.update(axisPairs)
+                if (transition.changed && transition.pressedKeyCode != null &&
+                    touchNavigationActive.value
+                ) {
+                    touchNavigationActive.value = false
+                    controllerFocusRequest.intValue++
+                }
+                return false
             }
         }
         activeCustomDialogController = dialogController
@@ -218,17 +200,17 @@ object CustomResolutionsDialog {
             if (activeCustomDialogController === dialogController) {
                 activeCustomDialogController = null
             }
-            if (cancelled) onCommit(initial)
+            if (cancelled || !confirmedByUser) onCommit(initial)
             else onCommit(current)
             onClosed()
         }
-        dialog.setOnShowListener {
-            composeView.doOnLayout {
-                if (dialog.isShowing) composeView.requestFocus()
-            }
-        }
         dialog.show()
         applyDialogWidth(dialog, context)
+        composeView.post {
+            if (dialog.isShowing && requestInitialFocus && !touchNavigationActive.value) {
+                controllerFocusRequest.intValue++
+            }
+        }
         return dialog
     }
 
@@ -244,16 +226,8 @@ object CustomResolutionsDialog {
         )
     }
 
-    /**
-     * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
-     * 其他语言以 MP 为单位(传 像素数/1000000)。
-     *
-     * 单位判断必须在 Composable 之外完成:LocalConfiguration.locales 与资源解析
-     * 使用的配置可能不同步,而读 resources.configuration 又会触发 Compose lint。
-     * 这里模板与进位取自同一个 context 配置,天然一致。
-     */
-    internal fun nativeResolutionPresets(context: Context): List<Resolution> {
-        val display = targetDisplay(context) ?: return emptyList()
+    private fun nativeResolutionPresets(context: Context, targetDisplay: Display?): List<Resolution> {
+        val display = targetDisplay ?: targetDisplay(context) ?: return emptyList()
         val presets = linkedSetOf<Resolution>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val cutout = displayCutout(display, context)
@@ -289,18 +263,6 @@ object CustomResolutionsDialog {
         return presets.toList()
     }
 
-    internal fun nativeFrameRatePresets(context: Context): List<Int> {
-        val display = targetDisplay(context) ?: return emptyList()
-        var maxRate = display.refreshRate
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            for (mode in display.supportedModes) {
-                if (mode.refreshRate > maxRate) maxRate = mode.refreshRate
-            }
-        }
-        val fps = maxRate.roundToInt()
-        return if (fps > 0) listOf(fps) else emptyList()
-    }
-
     private fun targetDisplay(context: Context): Display? {
         return (context as? com.limelight.Game)?.externalDisplayManager?.getTargetDisplay()
             ?: (context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
@@ -329,6 +291,14 @@ object CustomResolutionsDialog {
         event.getAxisValue(MotionEvent.AXIS_Z) to event.getAxisValue(MotionEvent.AXIS_RZ)
     )
 
+    /**
+     * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
+     * 其他语言以 MP 为单位(传 像素数/1000000)。
+     *
+     * 单位判断必须在 Composable 之外完成:LocalConfiguration.locales 与资源解析
+     * 使用的配置可能不同步,而读 resources.configuration 又会触发 Compose lint。
+     * 这里模板与进位取自同一个 context 配置,天然一致。
+     */
     private fun pixelsTextFactory(context: Context): (Int) -> String {
         val locale = ConfigurationCompat.getLocales(context.resources.configuration)[0]
         val useWan = locale?.language.equals("zh", ignoreCase = true)
@@ -344,9 +314,7 @@ object CustomResolutionsDialog {
 private fun CustomResolutionsDialogContent(
     initial: List<Resolution>,
     pixelsText: (Int) -> String,
-    frameRateMode: Boolean,
     nativePresets: List<Resolution>,
-    requestInitialFocus: Boolean,
     controllerFocusRequest: Int,
     touchNavigationActive: Boolean,
     onTouchNavigation: () -> Unit,
@@ -368,18 +336,17 @@ private fun CustomResolutionsDialogContent(
     val widthFocus = remember { FocusRequester() }
     val heightFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
+    var addFocusPlaced by remember { mutableStateOf(false) }
+    var handledControllerFocusRequest by remember { mutableIntStateOf(0) }
 
     fun keyOf(r: Resolution) = "${r.width}x${r.height}"
-    val visibleResolutions = resolutions
-    val rowFocus = remember(visibleResolutions) {
-        visibleResolutions.associate { keyOf(it) to FocusRequester() }
+    val rowFocus = remember(resolutions) {
+        resolutions.associate { keyOf(it) to FocusRequester() }
     }
-    val firstRowFocus = rowFocus[visibleResolutions.firstOrNull()?.let(::keyOf)]
-    val presetCount = if (frameRateMode) {
-        (nativePresets.map { it.width } + FRAME_RATE_PRESETS).distinct().size
-    } else {
-        (nativePresets.map { it.width to it.height } + PRESETS.map { it.width to it.height }).distinct().size
-    }
+    val firstRowFocus = rowFocus[resolutions.firstOrNull()?.let(::keyOf)]
+    val presetCount = (nativePresets.map { it.width to it.height } + PRESETS.map { it.width to it.height })
+        .distinct()
+        .size
     val presetFocus = remember(presetCount) { List(presetCount) { FocusRequester() } }
     val firstPresetFocus = presetFocus.firstOrNull()
 
@@ -408,16 +375,15 @@ private fun CustomResolutionsDialogContent(
         }
     }
 
-    // 触摸打开时不抢焦点，避免一打开就弹出输入法
+    // Wait for the shown window and Add's layout, then handle each controller request once.
+    // Touch opens leave focus alone so the keyboard does not appear automatically.
     val hostView = LocalView.current
     val inputModeManager = LocalInputModeManager.current
-    LaunchedEffect(requestInitialFocus, controllerFocusRequest) {
-        if (!requestInitialFocus && controllerFocusRequest == 0) return@LaunchedEffect
+    LaunchedEffect(controllerFocusRequest, addFocusPlaced) {
+        if (!addFocusPlaced || controllerFocusRequest <= handledControllerFocusRequest) return@LaunchedEffect
         inputModeManager.requestInputMode(InputMode.Keyboard)
-        repeat(10) {
-            if (runCatching { addFocus.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
-            kotlinx.coroutines.delay(16)
-        }
+        addFocus.requestFocus()
+        handledControllerFocusRequest = controllerFocusRequest
     }
 
     fun commit(list: List<Resolution>) {
@@ -436,24 +402,14 @@ private fun CustomResolutionsDialogContent(
     }
 
     fun addResolution() {
-        val resolution = if (frameRateMode) {
-            val fps = widthText.trim().toIntOrNull()
-            val error = validateFrameRateInput(fps, resolutions)
-            if (error != null) {
-                inputError = error
-                return
-            }
-            Resolution(fps!!, 0)
-        } else {
-            val width = widthText.trim().toIntOrNull()
-            val height = heightText.trim().toIntOrNull()
-            val error = validateResolutionInput(width, height, resolutions)
-            if (error != null) {
-                inputError = error
-                return
-            }
-            Resolution(width!!, height!!)
+        val width = widthText.trim().toIntOrNull()
+        val height = heightText.trim().toIntOrNull()
+        val error = validateResolutionInput(width, height, resolutions)
+        if (error != null) {
+            inputError = error
+            return
         }
+        val resolution = Resolution(width!!, height!!)
         commit((resolutions + resolution).sortedWith(resolutionOrder))
         justAdded = if (hostView.isInTouchMode) null else resolution
         widthText = ""
@@ -463,7 +419,6 @@ private fun CustomResolutionsDialogContent(
     }
 
     fun deleteResolution(resolution: Resolution) {
-        if (frameRateMode && resolution.width == 60) return
         val index = resolutions.indexOf(resolution)
         val remaining = resolutions - resolution
         commit(remaining)
@@ -510,7 +465,6 @@ private fun CustomResolutionsDialogContent(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             DialogHeader(
-                frameRateMode = frameRateMode,
                 infoExpanded = infoExpanded,
                 onToggleInfo = { infoExpanded = !infoExpanded }
             )
@@ -524,43 +478,28 @@ private fun CustomResolutionsDialogContent(
 
             val composer: @Composable () -> Unit = {
                 val leftTarget = if (twoPane) firstRowFocus else null
-                if (frameRateMode) {
-                    FrameRateComposer(
-                        fpsText = widthText,
-                        onFpsChange = {
-                            widthText = it.filter(Char::isDigit).take(3)
-                            inputError = null
-                        },
-                        error = inputError,
-                        fpsFocus = widthFocus,
-                        addFocus = addFocus,
-                        downTarget = firstPresetFocus ?: firstRowFocus ?: addFocus,
-                        leftTarget = leftTarget,
-                        onAdd = ::addResolution
-                    )
-                } else {
-                    Composer(
-                        widthText = widthText,
-                        onWidthChange = {
-                            widthText = it.filter(Char::isDigit).take(5)
-                            inputError = null
-                        },
-                        heightText = heightText,
-                        onHeightChange = {
-                            heightText = it.filter(Char::isDigit).take(5)
-                            inputError = null
-                        },
-                        error = inputError,
-                        pixelsText = pixelsText,
-                        widthFocus = widthFocus,
-                        heightFocus = heightFocus,
-                        addFocus = addFocus,
-                        downFromHeight = firstPresetFocus ?: firstRowFocus ?: addFocus,
-                        leftTarget = leftTarget,
-                        onAdd = ::addResolution,
-                        onHeightDone = ::addResolution
-                    )
-                }
+                Composer(
+                    widthText = widthText,
+                    onWidthChange = {
+                        widthText = it.filter(Char::isDigit).take(5)
+                        inputError = null
+                    },
+                    heightText = heightText,
+                    onHeightChange = {
+                        heightText = it.filter(Char::isDigit).take(5)
+                        inputError = null
+                    },
+                    error = inputError,
+                    pixelsText = pixelsText,
+                    widthFocus = widthFocus,
+                    heightFocus = heightFocus,
+                    addFocus = addFocus,
+                    downFromHeight = firstPresetFocus ?: firstRowFocus ?: addFocus,
+                    leftTarget = leftTarget,
+                    onAdd = ::addResolution,
+                    onHeightDone = ::addResolution,
+                    onAddPlaced = { addFocusPlaced = true }
+                )
             }
 
             if (twoPane) {
@@ -572,7 +511,7 @@ private fun CustomResolutionsDialogContent(
                 ) {
                     Box(modifier = Modifier.weight(0.85f).fillMaxHeight()) {
                         ResolutionList(
-                            resolutions = visibleResolutions,
+                            resolutions = resolutions,
                             justAdded = justAdded,
                             compact = true,
                             pixelsText = pixelsText,
@@ -589,46 +528,26 @@ private fun CustomResolutionsDialogContent(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         composer()
-                        if (frameRateMode) {
-                            FrameRatePresetRow(
-                                nativeFrameRates = nativePresets.map { it.width },
-                                focusFor = { presetFocus[it] },
-                                upTarget = addFocus
-                            ) { fps ->
-                                addPreset(Resolution(fps, 0))
-                            }
-                        } else {
-                            PresetRow(
-                                nativePresets = nativePresets,
-                                focusFor = { presetFocus[it] },
-                                upTarget = addFocus
-                            ) { preset ->
-                                addPreset(Resolution(preset.width, preset.height))
-                            }
+                        PresetRow(
+                            nativePresets = nativePresets,
+                            focusFor = { presetFocus[it] },
+                            upTarget = addFocus
+                        ) { preset ->
+                            addPreset(Resolution(preset.width, preset.height))
                         }
                     }
                 }
             } else {
                 composer()
-                if (frameRateMode) {
-                    FrameRatePresetRow(
-                        nativeFrameRates = nativePresets.map { it.width },
-                        focusFor = { presetFocus[it] },
-                        upTarget = addFocus
-                    ) { fps ->
-                        addPreset(Resolution(fps, 0))
-                    }
-                } else {
-                    PresetRow(
-                        nativePresets = nativePresets,
-                        focusFor = { presetFocus[it] },
-                        upTarget = addFocus
-                    ) { preset ->
-                        addPreset(Resolution(preset.width, preset.height))
-                    }
+                PresetRow(
+                    nativePresets = nativePresets,
+                    focusFor = { presetFocus[it] },
+                    upTarget = addFocus
+                ) { preset ->
+                    addPreset(Resolution(preset.width, preset.height))
                 }
                 ResolutionList(
-                    resolutions = visibleResolutions,
+                    resolutions = resolutions,
                     justAdded = justAdded,
                     compact = false,
                     pixelsText = pixelsText,

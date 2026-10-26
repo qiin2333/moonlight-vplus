@@ -107,9 +107,6 @@
     <string name="title_seekbar_bitrate">Videobitrate</string>
     <string name="suffix_seekbar_bitrate_mbps">Mbit/s</string>
     <string name="resolution_prefix_native">Ursprung</string>
-    <string name="resolution_prefix_native_fullscreen">Ursprungshelskärm</string>
-    <string name="resolution_prefix_native_landscape">(Landskap)</string>
-    <string name="resolution_prefix_native_portrait">(Porträtt)</string>
     <string name="category_audio_settings">Ljudinställningar</string>
     <string name="title_audio_config_list">Konfiguration av surroundljud</string>
     <string name="title_checkbox_enable_audiofx">Aktivera stöd för systemets equalizer</string>
@@ -139,7 +136,6 @@
     <string name="dialog_title_reset_osc">Återställ formgivning</string>
     <string name="dialog_text_reset_osc">Är du säker på att du vill ta bort din sparade layout för skärmenheterna\?</string>
     <string name="toast_reset_osc_success">Kontroller på skärmen återställs till ursprungsinställningen</string>
-    <string name="title_osc_opacity">Jämka genomskinligheten av skärmkontrollerna</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="title_checkbox_enable_pip">Sätt på bild-i-bild-observatörsläge</string>
     <string name="title_language_list">Språk</string>
@@ -152,7 +148,6 @@
     <string name="title_checkbox_host_audio">Spela upp ljud på datorn</string>
     <string name="summary_checkbox_host_audio">Spela upp ljud från datorn och den här enheten</string>
     <string name="category_advanced_settings">Utvecklade inställningar</string>
-    <string name="title_unlock_fps">Lås upp alla möjliga bildfrekvenser</string>
     <string name="title_checkbox_reduce_refresh_rate">Tillåt minskning av uppdateringsfrekvensen</string>
     <string name="title_checkbox_disable_warnings">Ta bort varningsmedelanden</string>
     <string name="summary_checkbox_disable_warnings">Ta bort varningsmeddelanden om inmatning på skärmen när du strömmar</string>
@@ -175,8 +170,6 @@
     <string name="resolution_720p">720p</string>
     <string name="resolution_1440p">1440p</string>
     <string name="resolution_4k">4K</string>
-    <string name="fps_30">30 FPS</string>
-    <string name="fps_90">90 FPS</string>
     <string name="audioconf_stereo">Stereo</string>
     <string name="audioconf_51surround">5.1 surroundljud</string>
     <string name="audioconf_71surround">7.1 surroundljud</string>
@@ -236,17 +229,13 @@
     <string name="summary_osc_opacity">Gör kontrollerna på skärmen mer/mindre genomskinliga</string>
     <string name="summary_checkbox_enable_pip">Gör det möjligt att se strömmen (men inte att styra den) medan du gör andra saker samtidigt</string>
     <string name="category_ui_settings">Inställningar för användargränssnittet</string>
-    <string name="summary_unlock_fps">Streaming med 90 eller 120 FPS kan minska latenstiden på avancerade enheter, men kan orsaka fördröjning eller instabilitet på enheter som inte har stöd för det</string>
     <string name="summary_checkbox_reduce_refresh_rate">Lägre uppdateringsfrekvenser på skärmen kan spara ström på bekostnad av ytterligare videolatens</string>
     <string name="summary_full_range">Detta kan leda till förlust av detalj i ljusa och mörka områden om enheten inte visar videoinnehåll med fullt omfång på rätt sätt.</string>
-    <string name="fps_120">120 FPS</string>
     <string name="title_enable_post_stream_toast">Visa meddelande om latenstid efter strömning</string>
     <string name="summary_setup_guide">Visa instruktioner om hur du utformar din speldator för strömning</string>
     <string name="resolution_1080p">1080p</string>
-    <string name="fps_60">60 FPS</string>
     <string name="summary_frame_pacing">Välj hur videobildrutorna ska tajmas. Exakt bildrutestyrning kan använda videons tidsstämplar (PTS) och rekommenderas för de flesta enheter.</string>
     <string name="fps_suffix_fps">FPS</string>
-    <string name="title_native_fps_dialog">Native FPS varning</string>
     <string name="category_gamepad_settings">Spelkontroller inställningar</string>
     <string name="title_checkbox_gamepad_motion_sensors">Tillåt användning av spelkontrollens rörelsesensorer</string>
     <string name="videoformat_auto">Automatisk (Rekommenderad)</string>
@@ -336,7 +325,7 @@
     <string name="pyrowave_diag_copy">Kopiera</string>
     <string name="pyrowave_diag_copy_success">Rapporten har kopierats till urklipp</string>
     <string name="pyrowave_diag_unavailable">Kan inte hämtas</string>
-    <string name="image_saved_successfully">Bilden har sparats i: Picture/vplus</string>
+    <string name="image_saved_successfully">Bilden har sparats i: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Det gick inte att spara bilden: %1$s</string>
     <string name="tip_double_tap_mouse">Tips: tryck och håll på det tomma området överst i datorlistan för att spara den aktuella bakgrundsbilden.</string>
     <string name="pyrowave_negotiation_fallback">PyroWave-förhandlingen misslyckades. Växlar till %1$s.</string>

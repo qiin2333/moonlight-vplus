@@ -8,6 +8,7 @@ import com.limelight.nvstream.HostGamepadSelection
 import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
+import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.input.InputManager
 import android.hardware.usb.UsbManager
@@ -54,6 +55,7 @@ import org.cgutman.shieldcontrollerextensions.SceManager
 
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class ControllerHandler(
     internal val activityContext: Activity,
@@ -359,6 +361,8 @@ class ControllerHandler(
     private val emulatedMouseButtonHolds = EmulatedButtonHolds()
 
     internal val inputDeviceContexts = SparseArray<InputDeviceContext>()
+    @Volatile internal var inputDeviceContextSnapshot: List<InputDeviceContext> = emptyList()
+        private set
     internal val driverControllerContexts = ConcurrentSkipListMap<Int, DriverControllerContext>()
     private val driverControllerContextsLifecycleLock = Any()
     // Serializes lights session transfer in migrateContext/close in destroy() (main thread)
@@ -373,10 +377,14 @@ class ControllerHandler(
     internal val mainThreadHandler: Handler
     private val backgroundHandlerThread: HandlerThread
     internal val backgroundThreadHandler: Handler
+    internal val motionSender: ControllerMotionSender
+    private val stateSender = ControllerStateSender { controller, mask, buttons, lt, rt, lx, ly, rx, ry ->
+        conn.sendControllerInputChecked(controller, mask, buttons, lt, rt, lx, ly, rx, ry)
+    }
     private var hasGameController = false
     @Volatile internal var stopped = false
 
-    private var currentControllers: Short = 0
+    private val currentControllers = AtomicInteger()
     private val initialControllerSlots = InitialControllerSlots()
     private val initialControllers: Short get() = initialControllerSlots.mask.toShort()
     private val usbHandoff = UsbControllerHandoff()
@@ -427,6 +435,14 @@ class ControllerHandler(
         backgroundHandlerThread = HandlerThread("ControllerHandler")
         backgroundHandlerThread.start()
         backgroundThreadHandler = Handler(backgroundHandlerThread.looper)
+
+        motionSender = ControllerMotionSender(conn) { controller, type, gyroStop ->
+            val localGyro = type == MoonBridge.LI_MOTION_TYPE_GYRO &&
+                (gyroManager.isMouseMode || gyroManager.isRightStickMode) &&
+                gyroManager.isGyroHoldActiveFor(controller)
+            !stopped && isControllerSlotEnabled(controller) &&
+                (gyroStop || (!isControllerLocallyCaptured(controller) && !localGyro))
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             prefConfig.dualSenseDirectBluetooth &&
@@ -597,7 +613,7 @@ class ControllerHandler(
                     if (context.inputDevice?.let(::isUsbForwarded) != true) continue
                     context.retired = true
                     if (context.assignedControllerNumber) affected.add(context.controllerNumber)
-                    inputDeviceContexts.removeAt(i)
+                    updateInputDeviceContext(inputDeviceContexts.keyAt(i), null)
                     retired.add(context)
                 }
             }
@@ -623,13 +639,13 @@ class ControllerHandler(
             }.forEach { (id, _) -> onSystemWaveformSinkGone(id) }
 
             synchronized(arrivalMetadataLock) {
-                val oldMask = currentControllers.toInt()
+                val oldMask = currentControllers.get()
                 affected.forEach { number ->
                     val remaining = localControllerContexts().filter {
                         isContextUsable(it) && it.assignedControllerNumber && it.controllerNumber == number
                     }
                     if (remaining.isEmpty()) {
-                        currentControllers = (currentControllers.toInt() and (1 shl number.toInt()).inv()).toShort()
+                        updateControllerSlot(number.toInt(), reserve = false)
                     } else if (oldMask and (1 shl number.toInt()) != 0) {
                         remaining.first().reservedControllerNumber = true
                     }
@@ -638,6 +654,8 @@ class ControllerHandler(
                 if (gamepad && !prefConfig.multiController) affected.add(0)
                 for (number in affected) {
                     val activeMask = getActiveControllerMask()
+                    stateSender.reset(number)
+                    motionSender.reset(number, clearDemand = !isControllerSlotEnabled(number))
                     val survivor = localControllerContexts().firstOrNull {
                         isContextUsable(it) && it.assignedControllerNumber && it.controllerNumber == number
                     }
@@ -726,6 +744,8 @@ class ControllerHandler(
     }
 
     private fun withdrawControllerSlotLocked(number: Short, activeMask: Short, wasReported: Boolean): Int {
+        motionSender.reset(number, clearDemand = true)
+        stateSender.reset(number)
         hapticsCoordinator.retireController(number)
         gyroManager.retireController(number)
         if (number.toInt() == 0) {
@@ -777,8 +797,14 @@ class ControllerHandler(
         }
     }
 
+    // Publish a stable structure for deferred motion checks; never enumerate SparseArray on that worker.
+    private fun updateInputDeviceContext(id: Int, context: InputDeviceContext?) = synchronized(inputDeviceContexts) {
+        if (context == null) inputDeviceContexts.remove(id) else inputDeviceContexts.put(id, context)
+        inputDeviceContextSnapshot = (0 until inputDeviceContexts.size()).map { inputDeviceContexts.valueAt(it) }
+    }
+
     private fun localControllerContexts(): List<GenericControllerContext> =
-        (0 until inputDeviceContexts.size()).map { inputDeviceContexts.valueAt(it) } + driverControllerContexts.values
+        inputDeviceContextSnapshot + driverControllerContexts.values
 
     private fun restoreUsbForwarding(lease: UsbForwardingLease, devicePresent: Boolean) {
         check(Looper.myLooper() == mainThreadHandler.looper)
@@ -797,7 +823,7 @@ class ControllerHandler(
                 if (!hasJoystickAxes(device) && !hasGamepadButtons(device)) continue
                 val context = inputDeviceContexts.get(id)?.takeIf(::isContextUsable)
                     ?: createInputDeviceContextForDevice(device)
-                synchronized(lightsSessionLock) { inputDeviceContexts.put(id, context) }
+                synchronized(lightsSessionLock) { updateInputDeviceContext(id, context) }
                 synchronized(arrivalMetadataLock) {
                     assignControllerNumberIfNeeded(context)
                     sendControllerInputPacketLocked(context)
@@ -840,7 +866,7 @@ class ControllerHandler(
 
         val context = createInputDeviceContextForDevice(device)
         if (hapticsCoordinator.hasRumbleCapability(context) || context.joyCon?.combineEnabled == true) {
-            inputDeviceContexts.put(deviceId, context)
+            updateInputDeviceContext(deviceId, context)
             hapticsCoordinator.onSinkChanged(context.controllerNumber)
         }
     }
@@ -865,7 +891,7 @@ class ControllerHandler(
             // will ever close.
             synchronized(lightsSessionLock) {
                 context.destroy()
-                inputDeviceContexts.remove(deviceId)
+                updateInputDeviceContext(deviceId, null)
             }
             joyConSupport.peer(context)?.takeIf { it.assignedControllerNumber }?.let {
                 refreshControllerArrival(it)
@@ -908,7 +934,7 @@ class ControllerHandler(
         val newContext = createInputDeviceContextForDevice(device)
         synchronized(lightsSessionLock) {
             newContext.migrateContext(existingContext)
-            inputDeviceContexts.put(deviceId, newContext)
+            updateInputDeviceContext(deviceId, newContext)
         }
         refreshSystemWaveformRoutes()
         if (wasController0GyroSource || contextWasController0GyroSource(newContext)) {
@@ -934,7 +960,10 @@ class ControllerHandler(
         hapticsCoordinator.stop()
 
         // Stop new device contexts from being created or used
-        stopped = true
+        withControllerInputLock {
+            stopped = true
+            motionSender.close()
+        }
 
         // Unregister our input device callbacks
         inputManager.unregisterInputDeviceListener(this)
@@ -1126,6 +1155,17 @@ class ControllerHandler(
 
     // ========== Controller Number Management ==========
 
+    // Claim/release one bit without losing concurrent lifecycle updates; motion reads never lock.
+    private fun updateControllerSlot(number: Int, reserve: Boolean): Boolean {
+        val bit = 1 shl number
+        while (true) {
+            val current = currentControllers.get()
+            if (reserve && (current and bit) != 0) return false
+            val updated = if (reserve) current or bit else current and bit.inv()
+            if (currentControllers.compareAndSet(current, updated)) return true
+        }
+    }
+
     private fun releaseControllerNumber(context: GenericControllerContext) {
         // A split controller owns one reservation. Keep the surviving half and its held
         // inputs alive, while excluding all state belonging to the disconnected half.
@@ -1145,9 +1185,10 @@ class ControllerHandler(
         // If we reserved a controller number, remove that reservation
         if (context.reservedControllerNumber) {
             LimeLog.info("Controller number " + context.controllerNumber + " is now available")
-            currentControllers = (currentControllers.toInt() and (1 shl context.controllerNumber.toInt()).inv()).toShort()
+            updateControllerSlot(context.controllerNumber.toInt(), reserve = false)
         }
 
+        val wasAssigned = context.assignedControllerNumber
         context.assignedControllerNumber = false
         context.reservedControllerNumber = false
 
@@ -1158,9 +1199,22 @@ class ControllerHandler(
         // An assigned controller whose arrival is still pending has never sent a
         // normal input packet. Sending a removal packet for it can create a legacy
         // Xbox controller on hosts that keep controller 0 active.
-        if (context.controllerArrival.isReported) {
+        if (wasAssigned || context.controllerArrival.isReported) {
             synchronized(arrivalMetadataLock) {
                 val activeMask = getActiveControllerMask()
+                motionSender.reset(context.controllerNumber,
+                    clearDemand = (activeMask.toInt() and (1 shl context.controllerNumber.toInt())) == 0)
+                // A failed arrival may still have forwarded motion using an existing slot's demand.
+                if (!context.controllerArrival.isReported) {
+                    localControllerContexts().firstOrNull {
+                        isContextUsable(it) && it.assignedControllerNumber && it.controllerArrival.isReported &&
+                            it.controllerNumber == context.controllerNumber
+                    }?.let { survivor ->
+                        sendControllerInputPacketLocked(survivor,
+                            forceNeutral = isControllerLocallyCaptured(survivor.controllerNumber))
+                    }
+                    return
+                }
                 conn.sendControllerInput(
                     context.controllerNumber, activeMask,
                     0,
@@ -1168,6 +1222,8 @@ class ControllerHandler(
                     0.toShort(), 0.toShort(),
                     0.toShort(), 0.toShort()
                 )
+
+                stateSender.reset(context.controllerNumber)
 
                 val controllerNumber = context.controllerNumber.toInt() and 0xFF
                 if ((activeMask.toInt() and (1 shl controllerNumber)) == 0) {
@@ -1235,9 +1291,7 @@ class ControllerHandler(
 
                 LimeLog.info("Reserving the next available controller number")
                 for (i in slotOrder(context)) {
-                    if ((currentControllers.toInt() and (1 shl i)) == 0) {
-                        // Found an unused controller value
-                        currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
+                    if (updateControllerSlot(i, reserve = true)) {
 
                         // Take this value out of the initial gamepad set
                         source(context)?.let { initialControllerSlots.consume(it, i) }
@@ -1271,7 +1325,7 @@ class ControllerHandler(
                     // Create a new context for the associated device if one doesn't exist
                     if (associatedDeviceContext == null) {
                         associatedDeviceContext = createInputDeviceContextForDevice(associatedDevice)
-                        inputDeviceContexts.put(associatedDevice.id, associatedDeviceContext)
+                        updateInputDeviceContext(associatedDevice.id, associatedDeviceContext)
                     }
 
                     // Assign a controller number for the associated device if one isn't assigned
@@ -1299,9 +1353,7 @@ class ControllerHandler(
 
                 LimeLog.info("Reserving the next available controller number")
                 for (i in slotOrder(context)) {
-                    if ((currentControllers.toInt() and (1 shl i)) == 0) {
-                        // Found an unused controller value
-                        currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
+                    if (updateControllerSlot(i, reserve = true)) {
 
                         // Take this value out of the initial gamepad set
                         source(context)?.let { initialControllerSlots.consume(it, i) }
@@ -1834,7 +1886,7 @@ class ControllerHandler(
 
         // Otherwise create a new context
         context = createInputDeviceContextForDevice(event.device)
-        inputDeviceContexts.put(event.deviceId, context)
+        updateInputDeviceContext(event.deviceId, context)
 
         return context
     }
@@ -1857,7 +1909,7 @@ class ControllerHandler(
         val local = localControllerContexts().filter { isContextUsable(it) && it.assignedControllerNumber }
             .fold(0) { mask, context -> mask or (1 shl context.controllerNumber.toInt()) }
         val screen = if (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad) 1 else 0
-        return usbHandoff.activeMask(prefConfig.multiController, currentControllers.toInt(), initialControllers.toInt(), local, screen)
+        return usbHandoff.activeMask(prefConfig.multiController, currentControllers.get(), initialControllers.toInt(), local, screen)
     }
 
     /**
@@ -1893,6 +1945,8 @@ class ControllerHandler(
                     ScreenDs5ControllerPolicy.withoutPrimaryController(activeMask),
                     0, 0, 0, 0, 0, 0, 0,
                 )
+                stateSender.reset(0)
+                motionSender.reset(0, clearDemand = true)
                 sentControllerArrivalMetadata[0] = null
             }
 
@@ -1983,6 +2037,8 @@ class ControllerHandler(
                 0, 0, 0, 0, 0, 0, 0,
             )
             if (removalResult != 0) return removalResult
+            stateSender.reset(controllerNumber.toShort())
+            motionSender.reset(controllerNumber.toShort(), clearDemand = true)
             sentControllerArrivalMetadata[controllerNumber] = null
         }
 
@@ -1993,6 +2049,7 @@ class ControllerHandler(
         if (result == 0) {
             sentControllerArrivalMetadata[controllerNumber] = metadata
             hapticsCoordinator.controllerArrived(controllerNumber.toShort())
+            stateSender.reset(controllerNumber.toShort())
         }
         return result
     }
@@ -2031,17 +2088,12 @@ class ControllerHandler(
         synchronized(arrivalMetadataLock) { action() }
     }
 
-    internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean {
-        for (i in 0 until inputDeviceContexts.size()) {
-            val context = inputDeviceContexts.valueAt(i)
-            if (context.controllerNumber == controllerNumber && context.isLocalInputCaptureActive()) {
-                return true
-            }
-        }
-        return driverControllerContexts.values.any {
+    internal fun isControllerLocallyCaptured(controllerNumber: Short): Boolean =
+        inputDeviceContextSnapshot.any {
+            it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
+        } || driverControllerContexts.values.any {
             it.controllerNumber == controllerNumber && it.isLocalInputCaptureActive()
         }
-    }
 
     private fun sendControllerInputPacketLocked(
         originalContext: GenericControllerContext,
@@ -2137,20 +2189,20 @@ class ControllerHandler(
                     (inputMap and ControllerPacket.LEFT_FLAG) != 0) conn.sendMouseHScroll((-1).toByte())
             }
 
-            conn.sendControllerInput(
+            stateSender.submit(
                 controllerNumber, getActiveControllerMask(),
                 0, 0.toByte(), 0.toByte(),
-                0.toShort(), 0.toShort(), 0.toShort(), 0.toShort()
+                0.toShort(), 0.toShort(), 0.toShort(), 0.toShort(), force = forceNeutral
             )
         } else {
             updateEmulatedMouseButtonsLocked(originalContext, 0)
             updateEmulatedDpadKeysLocked(originalContext, 0)
-            conn.sendControllerInput(
+            stateSender.submit(
                 controllerNumber, getActiveControllerMask(),
                 inputMap,
                 leftTrigger, rightTrigger,
                 leftStickX, leftStickY,
-                rightStickX, rightStickY
+                rightStickX, rightStickY, force = forceNeutral
             )
         }
     }
@@ -3445,6 +3497,7 @@ class ControllerHandler(
         ((ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and USB_MENU_DIRECTION_MASK) != 0
 
     private fun sendNeutralControllerState(context: GenericControllerContext) {
+        motionSender.stopGyro(context.controllerNumber)
         context.performanceOverlayShortcutState.reset()
         if (context.gyroHoldActive) {
             context.gyroHoldActive = false
@@ -3666,8 +3719,37 @@ class ControllerHandler(
 
     override fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float) {
         val context = driverControllerContexts[controllerId] ?: return
-        if (!isContextUsable(context)) return
-        if (context.shortcutState.isLocalInputCaptureActive()) return
+        withControllerInputLock {
+            if (routeDriverMotion(context, motionType, x, y, z)) {
+                motionSender.submit(context.controllerNumber, motionType, x, y, z)
+            }
+        }
+    }
+
+    override fun reportControllerMotionFrame(
+        controllerId: Int, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float
+    ) {
+        val context = driverControllerContexts[controllerId] ?: return
+        withControllerInputLock {
+            if (!isContextUsable(context)) return@withControllerInputLock
+            val gyro = routeDriverMotion(context, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
+            val accel = routeDriverMotion(context, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
+            if (gyro && accel) {
+                motionSender.submitFrame(context.controllerNumber, gx, gy, gz, ax, ay, az)
+            } else {
+                if (gyro) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
+                else motionSender.pauseGyro(context.controllerNumber, onlyFromFrame = true)
+                if (accel) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
+            }
+        }
+    }
+
+    /** Local gyro consumers run on every source sample, before host forwarding. */
+    private fun routeDriverMotion(
+        context: DriverControllerContext, motionType: Byte, x: Float, y: Float, z: Float
+    ): Boolean {
+        if (!isContextUsable(context)) return false
+        if (context.shortcutState.isLocalInputCaptureActive()) return false
 
         // 当启用"陀螺仪模拟右摇杆"或"陀螺仪模拟鼠标"时，拦截陀螺仪数据
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
@@ -3682,28 +3764,29 @@ class ControllerHandler(
                 System.nanoTime()
             )
             if (gyroManager.isUsingDeviceGyroFallback(context.controllerNumber)) {
-                return
+                return false
             }
 
             // Without this an Android gamepad owning controller 0 would be fought by a USB
             // driver reporting the same slot; host forwarding below still runs.
             if (gyroManager.isAssistantSourceFor(context.controllerNumber)) {
                 if (gyroManager.isMouseMode && context.gyroHoldActive) {
+                    motionSender.pauseGyro(context.controllerNumber)
                     // x=pitch(deg/s), y=roll, z=yaw → 横屏下 z→mouseX, x→mouseY，转回 rad/s
                     gyroManager.applyGyroToMouse(z / 57.2957795f, x / 57.2957795f, System.nanoTime())
-                    return
+                    return false
                 }
                 if (gyroManager.isRightStickMode && context.gyroHoldActive) {
+                    motionSender.pauseGyro(context.controllerNumber)
                     // x=pitch, y=roll, z=yaw — pass yaw as X and pitch as Y to match
                     // the same axis convention used in the device sensor listener (gz, gx)
                     gyroManager.applyGyroToRightStick(context, z, x)
-                    return
+                    return false
                 }
             }
         }
 
-        // 否则照常上报IMU数据到主机
-        conn.sendControllerMotionEvent(context.controllerNumber.toByte(), motionType, x, y, z)
+        return true
     }
 
     override fun reportControllerBattery(controllerId: Int, batteryState: Byte, batteryPercentage: Byte) {
@@ -3953,7 +4036,9 @@ class ControllerHandler(
         }
 
         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
-        val requestedReportRateHz = Math.min(200, reportRateHz.toInt()).toShort()
+        val requestedReportRateHz = reportRateHz.toInt().coerceIn(0, 200).toShort()
+        // common-c records host forwarding demand before dispatching this callback.
+        // This method controls acquisition, including independent local assistance demand.
         val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
             gyroManager.handleControllerGyroReportRate(
                 controllerNumber,
@@ -4024,12 +4109,10 @@ class ControllerHandler(
 
         val sm = target.sensorManager ?: return
         val sensor = sm.getDefaultSensor(sensorType) ?: return
-        val previousListener = when (motionType) {
-            MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener
-            else -> target.gyroListener
-        }
         val listener = gyroManager.createSensorListener(
-            controllerNumber, motionType, sm === deviceSensorManager, { isContextUsable(target) }
+            controllerNumber, motionType, sm === deviceSensorManager,
+            { current -> isContextUsable(target) &&
+                (if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) target.gyroListener else target.accelListener) === current }
         )
 
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && controllerNumber.toInt() == 0) {
@@ -4039,19 +4122,20 @@ class ControllerHandler(
         // Register before dropping anything, so a refused registration leaves the working
         // listener in place instead of killing motion input outright.
         if (sm.registerListener(listener, sensor, 1000000 / effectiveReportRateHz)) {
-            previousListener?.let { sm.unregisterListener(it) }
-            when (motionType) {
-                MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
-                MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
-            }
-            // Exactly one context may hold a listener per motion type, otherwise siblings
-            // keep unregistering each other's listener.
-            for (deviceContext in matchingContexts) {
-                if (deviceContext === target) {
-                    continue
+            val replaced = mutableListOf<Pair<InputDeviceContext, SensorEventListener>>()
+            withControllerInputLock {
+                // Publish one owner atomically, including siblings sharing this slot.
+                for (deviceContext in matchingContexts) {
+                    detachMotionListener(deviceContext, motionType)?.let { replaced.add(deviceContext to it) }
                 }
+                when (motionType) {
+                    MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
+                    MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
+                }
+            }
+            replaced.forEach { (context, old) -> context.sensorManager?.unregisterListener(old) }
+            for (deviceContext in matchingContexts) {
                 backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
-                unregisterMotionListener(deviceContext, motionType)
             }
         } else if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
             // A refused registration never delivers samples, so the phantom-gyro
@@ -4063,19 +4147,18 @@ class ControllerHandler(
         }
     }
 
-    private fun unregisterMotionListener(context: InputDeviceContext, motionType: Byte) {
-        val sm = context.sensorManager ?: return
-        when (motionType) {
-            MoonBridge.LI_MOTION_TYPE_ACCEL -> context.accelListener?.let {
-                sm.unregisterListener(it)
-                context.accelListener = null
-            }
-            MoonBridge.LI_MOTION_TYPE_GYRO -> context.gyroListener?.let {
-                sm.unregisterListener(it)
-                context.gyroListener = null
+    internal fun unregisterMotionListener(context: InputDeviceContext, motionType: Byte) {
+        detachMotionListener(context, motionType)?.let { context.sensorManager?.unregisterListener(it) }
+    }
+
+    private fun detachMotionListener(context: InputDeviceContext, motionType: Byte): SensorEventListener? =
+        synchronized(arrivalMetadataLock) {
+            when (motionType) {
+                MoonBridge.LI_MOTION_TYPE_ACCEL -> context.accelListener.also { context.accelListener = null }
+                MoonBridge.LI_MOTION_TYPE_GYRO -> context.gyroListener.also { context.gyroListener = null }
+                else -> null
             }
         }
-    }
 
     // ========== Delegation to Managers ==========
 

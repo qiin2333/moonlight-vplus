@@ -79,9 +79,12 @@ internal enum class TouchPointerPresetSaveResult {
     LIMIT_REACHED
 }
 
-internal class TouchPointerSensitivityPresetStore(context: Context) {
+internal class TouchPointerSensitivityPresetStore(
+    context: Context,
+    fileName: String = TouchPointerPresetPreferences.FILE_NAME
+) {
     private val preferences = context.getSharedPreferences(
-        TouchPointerPresetPreferences.FILE_NAME,
+        fileName,
         Context.MODE_PRIVATE
     )
     fun load(defaultName: (Int) -> String): List<TouchPointerSensitivityPreset> {

@@ -135,6 +135,29 @@ class DecoderInputBufferSizingTest {
     }
 
     @Test
+    fun oversizedAccessUnitGrowsBeyondTheInitialEstimate() {
+        val estimatedSize = DecoderInputBufferSizing.recommendedInputSize("video/avc", 1920, 1080)!!
+        assertNull(DecoderInputBufferSizing.expandedInputSize(estimatedSize.toLong(), estimatedSize, 0))
+        assertEquals(
+            estimatedSize * 2,
+            DecoderInputBufferSizing.expandedInputSize(estimatedSize.toLong() + 1, estimatedSize, 0),
+        )
+        assertEquals(8_000_000, DecoderInputBufferSizing.expandedInputSize(8_000_000, estimatedSize, 0))
+    }
+
+    @Test
+    fun ignoredGrowthRequestDoesNotCauseAnEndlessRecoveryLoop() {
+        assertNull(DecoderInputBufferSizing.expandedInputSize(1_500_000, 1_048_576, 2_097_152))
+        assertEquals(3_000_000, DecoderInputBufferSizing.expandedInputSize(3_000_000, 1_048_576, 2_097_152))
+    }
+
+    @Test
+    fun growthCannotOverflowTheMediaFormatIntegerSize() {
+        assertEquals(Int.MAX_VALUE, DecoderInputBufferSizing.expandedInputSize(1_600_000_000, 1_500_000_000, 0))
+        assertNull(DecoderInputBufferSizing.expandedInputSize(Int.MAX_VALUE.toLong() + 1, 1_048_576, 0))
+    }
+
+    @Test
     fun resolutionGrowthRequiresARecomputedConfiguration() {
         assertFalse(DecoderInputBufferSizing.requiresReconfiguration(1920, 1080, 1280, 720))
         assertFalse(DecoderInputBufferSizing.requiresReconfiguration(1920, 1080, 1920, 1080))

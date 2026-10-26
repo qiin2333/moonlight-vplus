@@ -1,12 +1,11 @@
 package com.limelight.preferences
 
-import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -31,11 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +45,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
@@ -63,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.ui.isMenuConfirmKey
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.appAccentSoftColor
 import com.limelight.utils.appAccentColor
@@ -79,23 +77,17 @@ internal val PRESETS = listOf(
     Preset(640, 360, R.string.custom_resolution_tag_360p)
 )
 
-internal val FRAME_RATE_PRESETS = listOf(30, 60, 120)
-
 @Composable
-internal fun ResolutionInputError.text(frameRateMode: Boolean = false): String = stringResource(
+internal fun ResolutionInputError.text(): String = stringResource(
     when (reason) {
         ResolutionInputReason.EMPTY ->
-            if (frameRateMode) {
-                R.string.custom_frame_rate_error_empty
-            } else if (field == ResolutionField.WIDTH) {
+            if (field == ResolutionField.WIDTH) {
                 R.string.custom_resolution_error_empty_width
             } else {
                 R.string.custom_resolution_error_empty_height
             }
         ResolutionInputReason.OUT_OF_RANGE ->
-            if (frameRateMode) {
-                R.string.custom_frame_rate_error_range
-            } else if (field == ResolutionField.WIDTH) {
+            if (field == ResolutionField.WIDTH) {
                 R.string.custom_resolution_error_range_width
             } else {
                 R.string.custom_resolution_error_range_height
@@ -113,11 +105,7 @@ internal fun ResolutionInputError.text(frameRateMode: Boolean = false): String =
 private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
     onPreviewKeyEvent { event ->
         val nativeEvent = event.nativeKeyEvent
-        if (nativeEvent.keyCode != KeyEvent.KEYCODE_BUTTON_A &&
-            nativeEvent.keyCode != KeyEvent.KEYCODE_DPAD_CENTER &&
-            nativeEvent.keyCode != KeyEvent.KEYCODE_ENTER &&
-            nativeEvent.keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER
-        ) {
+        if (!isMenuConfirmKey(nativeEvent.keyCode)) {
             false
         } else {
             if (nativeEvent.action == KeyEvent.ACTION_UP) onConfirm()
@@ -149,7 +137,6 @@ private fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifie
 
 @Composable
 internal fun DialogHeader(
-    frameRateMode: Boolean = false,
     infoExpanded: Boolean,
     onToggleInfo: () -> Unit
 ) {
@@ -171,9 +158,7 @@ internal fun DialogHeader(
             )
         }
         Text(
-            text = stringResource(
-                if (frameRateMode) R.string.title_custom_fps else R.string.title_custom_resolutions
-            ),
+            text = stringResource(R.string.title_custom_resolutions),
             modifier = Modifier.weight(1f),
             color = colorResource(R.color.app_dialog_text_primary),
             fontSize = 17.sp,
@@ -200,8 +185,7 @@ private fun InfoToggleButton(expanded: Boolean, onToggle: () -> Unit) {
             .clip(CircleShape)
             .then(focusHighlight(showFocus || expanded, CircleShape))
             .handleGamepadConfirm(onToggle)
-            .clickable(onClick = onToggle)
-            .focusable(interactionSource = interaction),
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onToggle),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -255,7 +239,8 @@ internal fun Composer(
     downFromHeight: FocusRequester,
     leftTarget: FocusRequester?,
     onAdd: () -> Unit,
-    onHeightDone: () -> Unit
+    onHeightDone: () -> Unit,
+    onAddPlaced: () -> Unit
 ) {
     val accent = appAccentColor()
     val accentSoft = appAccentSoftColor()
@@ -323,9 +308,9 @@ internal fun Composer(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                val readout: @Composable () -> Unit = when {
-                    error != null -> {
-                        {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    when {
+                        error != null -> {
                             Text(
                                 text = error.text(),
                                 color = danger,
@@ -335,9 +320,7 @@ internal fun Composer(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    width != null && height != null && width > 0 && height > 0 -> {
-                        {
+                        width != null && height != null && width > 0 && height > 0 -> {
                             val pixels = pixelsText(width * height)
                             Text(
                                 text = "≈ ${ratioText(width, height)}",
@@ -351,9 +334,7 @@ internal fun Composer(
                                 fontSize = 12.sp
                             )
                         }
-                    }
-                    else -> {
-                        {
+                        else -> {
                             Text(
                                 text = stringResource(R.string.custom_resolution_readout_hint),
                                 color = secondary,
@@ -362,14 +343,14 @@ internal fun Composer(
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) { readout() }
             }
             AddButton(
                 onAdd = onAdd,
                 focus = addFocus,
                 upTarget = heightFocus,
                 leftTarget = heightFocus,
-                downTarget = downFromHeight
+                downTarget = downFromHeight,
+                onPlaced = onAddPlaced
             )
         }
     }
@@ -507,8 +488,9 @@ private fun AddButton(
     onAdd: () -> Unit,
     focus: FocusRequester,
     upTarget: FocusRequester,
-    leftTarget: FocusRequester? = null,
-    downTarget: FocusRequester? = null
+    leftTarget: FocusRequester,
+    downTarget: FocusRequester,
+    onPlaced: () -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -525,10 +507,11 @@ private fun AddButton(
     Row(
         modifier = Modifier
             .focusRequester(focus)
+            .onGloballyPositioned { onPlaced() }
             .focusProperties {
                 up = upTarget
-                if (leftTarget != null) left = leftTarget
-                if (downTarget != null) down = downTarget
+                left = leftTarget
+                down = downTarget
             }
             .clip(CircleShape)
             .background(gradient)
@@ -540,8 +523,7 @@ private fun AddButton(
                 }
             )
             .handleGamepadConfirm(onAdd)
-            .clickable(onClick = onAdd)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onAdd)
             .padding(start = 12.dp, end = 15.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -558,83 +540,6 @@ private fun AddButton(
             fontSize = 13.5.sp,
             fontWeight = FontWeight.Bold
         )
-    }
-}
-
-@Composable
-internal fun FrameRateComposer(
-    fpsText: String,
-    onFpsChange: (String) -> Unit,
-    error: ResolutionInputError?,
-    fpsFocus: FocusRequester,
-    addFocus: FocusRequester,
-    downTarget: FocusRequester,
-    leftTarget: FocusRequester?,
-    onAdd: () -> Unit
-) {
-    val invalid = error != null
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            NumberField(
-                label = stringResource(R.string.title_fps_list),
-                value = fpsText,
-                onValueChange = onFpsChange,
-                placeholder = "60",
-                invalid = invalid,
-                imeAction = ImeAction.Done,
-                onImeAction = onAdd,
-                focus = fpsFocus,
-                downTarget = downTarget,
-                upTarget = fpsFocus,
-                rightTarget = addFocus,
-                leftTarget = leftTarget,
-                modifier = Modifier.weight(1f)
-            )
-            AddButton(
-                onAdd = onAdd,
-                focus = addFocus,
-                upTarget = fpsFocus,
-                leftTarget = fpsFocus,
-                downTarget = downTarget
-            )
-        }
-        if (error != null) {
-            Text(
-                text = error.text(frameRateMode = true),
-                color = colorResource(R.color.app_action_sheet_danger),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun FrameRatePresetRow(
-    nativeFrameRates: List<Int>,
-    focusFor: (Int) -> FocusRequester,
-    upTarget: FocusRequester,
-    onPreset: (Int) -> Unit
-) {
-    val values = (nativeFrameRates + FRAME_RATE_PRESETS).distinct().sorted()
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        values.forEachIndexed { index, fps ->
-            TextPresetChip(
-                label = fps.toString(),
-                focus = focusFor(index),
-                previous = values.getOrNull(index - 1)?.let { focusFor(index - 1) },
-                next = values.getOrNull(index + 1)?.let { focusFor(index + 1) },
-                upTarget = upTarget,
-                onClick = { onPreset(fps) }
-            )
-        }
     }
 }
 
@@ -682,8 +587,7 @@ private fun TextPresetChip(
                 )
             )
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 11.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -731,44 +635,12 @@ internal fun PresetRow(
     }
 }
 
-@Composable
-private fun PresetChip(preset: Preset, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val showFocus = focusIndicationVisible(focused)
-    val outline = colorResource(R.color.app_dialog_outline)
-    val accent = appAccentColor()
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .then(
-                focusHighlight(
-                    highlighted = showFocus,
-                    shape = CircleShape,
-                    fallback = Modifier.border(1.dp, outline, CircleShape)
-                )
-            )
-            .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
-            .padding(horizontal = 11.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = stringResource(preset.labelRes),
-            color = if (showFocus) accent else colorResource(R.color.app_dialog_text_secondary),
-            fontSize = 11.5.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
 /** 等比小图:按真实宽高比画一个圆角矩形,16:9 是普通横条、3440×1440 一眼是带鱼屏。 */
 @Composable
-private fun RatioGlyph(width: Int, height: Int, modifier: Modifier = Modifier) {
+private fun RatioGlyph(width: Int, height: Int) {
     val (glyphWidth, glyphHeight) = ratioGlyphSize(width, height)
     val accent = appAccentColor()
-    Box(modifier = modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.size(width = 38.dp, height = 28.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
                 .size(width = glyphWidth.dp, height = glyphHeight.dp)
@@ -840,8 +712,6 @@ private fun ResolutionRow(
     val bg by animateColorAsState(targetValue = targetBg, label = "rowBg")
     val targetBorder = if (showFocus || isJustAdded) accent else outline
     val borderColor by animateColorAsState(targetValue = targetBorder, label = "rowBorder")
-    val protectedFrameRate = resolution.height == 0 &&
-        resolution.width == CustomFrameRatesDialog.PROTECTED_FRAME_RATE
 
     Row(
         modifier = Modifier
@@ -855,8 +725,7 @@ private fun ResolutionRow(
             .clip(rowShape)
             .background(bg)
             .border(if (showFocus || isJustAdded) 1.5.dp else 1.dp, borderColor, rowShape)
-            .clickable(enabled = !protectedFrameRate) { deleteFocus.requestFocus() }
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { deleteFocus.requestFocus() }
             .padding(
                 start = if (compact) 9.dp else 11.dp,
                 end = if (compact) 5.dp else 7.dp,
@@ -866,18 +735,15 @@ private fun ResolutionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp)
     ) {
-        val frameRate = resolution.height == 0
-        if (!frameRate) {
-            RatioGlyph(width = resolution.width, height = resolution.height)
-        }
+        RatioGlyph(width = resolution.width, height = resolution.height)
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (frameRate) "${resolution.width} FPS" else "${resolution.width}×${resolution.height}",
+                text = "${resolution.width}×${resolution.height}",
                 color = colorResource(R.color.app_dialog_text_primary),
                 fontSize = if (compact) 13.5.sp else 15.5.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (!compact && !frameRate) {
+            if (!compact) {
                 val pixels = pixelsText(resolution.width * resolution.height)
                 Text(
                     text = "${ratioText(resolution.width, resolution.height)} · $pixels",
@@ -886,7 +752,7 @@ private fun ResolutionRow(
                 )
             }
         }
-        if (!frameRate) resolutionTag(resolution.width, resolution.height)?.let { tagRes ->
+        resolutionTag(resolution.width, resolution.height)?.let { tagRes ->
             Box(
                 modifier = Modifier
                     .clip(AppShapes.extraSmall)
@@ -901,17 +767,13 @@ private fun ResolutionRow(
                 )
             }
         }
-        if (!protectedFrameRate) {
-            DeleteButton(
-                resolution = resolution,
-                focus = deleteFocus,
-                compact = compact,
-                rightNeighbor = rightNeighbor,
-                onDelete = onDelete
-            )
-        } else {
-            Spacer(Modifier.size(if (compact) 30.dp else 34.dp))
-        }
+        DeleteButton(
+            resolution = resolution,
+            focus = deleteFocus,
+            compact = compact,
+            rightNeighbor = rightNeighbor,
+            onDelete = onDelete
+        )
     }
 }
 
@@ -935,8 +797,7 @@ private fun DeleteButton(
             .clip(CircleShape)
             .then(focusHighlight(showFocus, CircleShape))
             .handleGamepadConfirm { onDelete(resolution) }
-            .clickable { onDelete(resolution) }
-            .focusable(interactionSource = interaction),
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { onDelete(resolution) },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -1029,8 +890,7 @@ private fun FooterButton(
             .clip(AppShapes.small)
             .then(focusHighlight(showFocus, AppShapes.small))
             .handleGamepadConfirm(onClick)
-            .clickable(onClick = onClick)
-            .focusable(interactionSource = interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 13.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {

@@ -306,12 +306,8 @@ class InputDeviceContext internal constructor(
 
         handler.backgroundThreadHandler.removeCallbacks(enableSensorRunnable)
 
-        if (gyroListener != null) {
-            sensorManager?.unregisterListener(gyroListener)
-        }
-        if (accelListener != null) {
-            sensorManager?.unregisterListener(accelListener)
-        }
+        handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_GYRO)
+        handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_ACCEL)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             synchronized(handler.lightsSessionLock) {
@@ -541,15 +537,13 @@ class InputDeviceContext internal constructor(
 
         // Unregister all sensor listeners
         if (gyroListener != null) {
-            sensorManager?.unregisterListener(gyroListener)
-            gyroListener = null
+            handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_GYRO)
 
             // Send a gyro event to ensure the virtual controller is stationary
-            handler.conn.sendControllerMotionEvent(controllerNumber.toByte(), MoonBridge.LI_MOTION_TYPE_GYRO, 0f, 0f, 0f)
+            handler.motionSender.stopGyro(controllerNumber)
         }
         if (accelListener != null) {
-            sensorManager?.unregisterListener(accelListener)
-            accelListener = null
+            handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_ACCEL)
 
             // We leave the acceleration as-is to preserve the attitude of the controller
         }

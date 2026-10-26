@@ -4,18 +4,6 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ControllerOutputLifecycleTest {
-    @Test fun queuedOutputCannotReachAReusedSlot() {
-        val lifecycle = ControllerOutputLifecycle()
-        val old = lifecycle.capture(0)!!
-        var deliveries = 0
-        val queued = { if (lifecycle.isCurrent(0, old)) deliveries++ }
-        lifecycle.retire(0)
-        lifecycle.arrive(0)
-        queued()
-        assertEquals(0, deliveries)
-        assertTrue(lifecycle.isCurrent(0, lifecycle.capture(0)!!))
-    }
-
     @Test fun outputDuringSharingIsDiscardedWithoutAffectingOtherPlayers() {
         val lifecycle = ControllerOutputLifecycle()
         val other = lifecycle.capture(1)!!

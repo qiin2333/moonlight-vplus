@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_page_frame_generation_title">Настройка генерации кадров</string>
+    <string name="settings_page_frame_generation_summary">Масштаб отрисовки, порог возврата к прямой отрисовке и порядок показа кадров.</string>
+    <string name="settings_page_hdr_title">Настройки HDR</string>
+    <string name="settings_page_hdr_summary">Формат HDR, яркость экрана и ручная калибровка.</string>
+    <string name="settings_page_picture_layout_title">Размещение изображения</string>
+    <string name="settings_page_picture_layout_summary">Растяжение, положение и смещение изображения, обмен ширины и высоты.</string>
+    <string name="settings_page_performance_overlay_title">Мониторинг производительности</string>
+    <string name="settings_page_performance_overlay_summary">Показатели, расположение и оформление статистики, сообщение о задержке после трансляции.</string>
+    <string name="settings_page_audio_passthrough_title">Прямая передача звука</string>
+    <string name="settings_page_audio_passthrough_summary">Аудиокодеки, буфер вывода и совместимость AC3.</string>
+    <string name="settings_page_audio_vibration_title">Вибрация по звуку</string>
+    <string name="settings_page_audio_vibration_summary">Преобразование игрового звука в вибрацию: выход, тип содержимого и интенсивность.</string>
+    <string name="settings_page_gamepad_title">Настройки геймпада</string>
+    <string name="settings_page_gamepad_summary">Кнопки и стики, игроки, вибрация, датчики движения и поддержка устройств.</string>
+    <string name="settings_page_input_title">Настройки ввода</string>
+    <string name="settings_page_input_summary">Сенсорные жесты, мышь, тачпад, клавиатура и сочетания клавиш.</string>
+    <string name="settings_section_gamepad_drivers">Поддержка устройств</string>
+    <string name="settings_section_gamepad_feedback">Вибрация</string>
+    <string name="settings_section_input_touch">Касания</string>
+    <string name="settings_section_input_mouse">Мышь</string>
+    <string name="settings_section_input_keyboard">Клавиатура</string>
+    <string name="settings_section_gamepad_controls">Управление</string>
+    <string name="settings_section_gamepad_players">Игроки</string>
+    <string name="settings_section_gamepad_motion">Датчики движения</string>
+</resources>

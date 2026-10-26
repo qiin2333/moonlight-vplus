@@ -1,57 +1,27 @@
 package com.limelight.gamemenu
 
 import android.content.res.Configuration
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CuteFeatureGuideLayoutSpecTest {
     @Test
-    fun smallLandscapeUsesCompactScrollableLayout() {
-        val spec = cuteFeatureGuideLayoutSpec(
-            orientation = Configuration.ORIENTATION_LANDSCAPE,
-            safeHeightDp = 360f
-        )
-
-        assertTrue(spec.compact)
-        assertTrue(spec.maximumHeightFraction < 0.8f)
-        assertTrue(spec.topPaddingDp < 56)
-        assertTrue(spec.bodyLineHeightSp < 25)
-    }
-
-    @Test
-    fun shortPortraitUsesCompactLayout() {
-        val spec = cuteFeatureGuideLayoutSpec(
-            orientation = Configuration.ORIENTATION_PORTRAIT,
-            safeHeightDp = 520f
-        )
-
-        assertTrue(spec.compact)
-        assertTrue(spec.maximumHeightFraction < 0.7f)
-        assertTrue(spec.topPaddingDp <= 40)
-    }
-
-    @Test
-    fun regularPortraitUsesPortraitSpecificSpacing() {
-        val spec = cuteFeatureGuideLayoutSpec(
-            orientation = Configuration.ORIENTATION_PORTRAIT,
-            safeHeightDp = 800f
-        )
-
-        assertFalse(spec.compact)
-        assertTrue(spec.maximumHeightFraction < 0.8f)
-        assertTrue(spec.topPaddingDp < 56)
-        assertTrue(spec.bodyLineHeightSp < 25)
-    }
-
-    @Test
-    fun largeLandscapeKeepsRegularLayout() {
-        assertFalse(
-            cuteFeatureGuideLayoutSpec(
-                orientation = Configuration.ORIENTATION_LANDSCAPE,
-                safeHeightDp = 600f
-            ).compact
-        )
+    fun layoutCompactsOnlyShortWindowsInEachOrientation() {
+        for ((orientation, height, compact) in listOf(
+            Triple(Configuration.ORIENTATION_LANDSCAPE, 360f, true),
+            Triple(Configuration.ORIENTATION_PORTRAIT, 520f, true),
+            Triple(Configuration.ORIENTATION_PORTRAIT, 800f, false),
+            Triple(Configuration.ORIENTATION_LANDSCAPE, 600f, false)
+        )) {
+            val spec = cuteFeatureGuideLayoutSpec(orientation, height)
+            assertEquals("orientation=$orientation height=$height", compact, spec.compact)
+            if (compact) {
+                val expectedFraction = if (orientation == Configuration.ORIENTATION_PORTRAIT) 0.62f else 0.72f
+                assertEquals("orientation=$orientation height=$height", expectedFraction, spec.maximumHeightFraction, 0f)
+            }
+        }
     }
 
     @Test

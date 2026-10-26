@@ -7,32 +7,38 @@ import com.limelight.binding.video.MediaCodecHelper
 import kotlin.math.max
 import kotlin.math.min
 
-/** 设备对预设分辨率和帧率的支持范围。自定义列表本身不受这里影响。 */
+/** 预设分辨率的支持范围，以及帧率提示所需的设备信息。 */
 internal data class DisplayChoiceLimits(
     val maxResolutionWidth: Int,
     val maxRefreshRate: Float
 ) {
     fun supportsResolution(value: String): Boolean {
         val resolution = ResolutionValidator.parseResolution(value) ?: return true
+        if (resolution.width <= 0 || resolution.height <= 0) return false
+        // Display modes and decoder width ranges are only a preset heuristic. A valid custom
+        // size can still work (including rotated or wide modes), so let the user try it.
+        if (value !in PreferenceConfiguration.RESOLUTIONS) return true
         return maxResolutionWidth == 0 ||
             max(resolution.width, resolution.height) <= maxResolutionWidth ||
             resolution.width == 1280 && resolution.height == 720
     }
 
-    fun supportsFrameRate(value: String, unlockFps: Boolean): Boolean {
-        val fps = value.toIntOrNull() ?: return true
-        return unlockFps || fps <= 60 || fps.toFloat() <= maxRefreshRate + 3f
+    fun exceedsRefreshRate(value: String): Boolean {
+        val fps = value.toIntOrNull()?.takeIf { it > 0 } ?: return false
+        if (!maxRefreshRate.isFinite() || maxRefreshRate <= 0f) return false
+        return fps.toFloat() > maxRefreshRate + 3f
     }
 
     companion object {
         fun from(context: Context, display: Display): DisplayChoiceLimits {
+            val reportedRefreshRate = display.refreshRate.takeIf { it.isFinite() && it > 0f } ?: 0f
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                return DisplayChoiceLimits(0, 60f)
+                return DisplayChoiceLimits(0, reportedRefreshRate)
             }
             var maxWidth = 0
-            var maxFps = 60f
+            var maxFps = reportedRefreshRate
             for (mode in display.supportedModes) {
-                if (mode.refreshRate > maxFps) maxFps = mode.refreshRate
+                if (mode.refreshRate.isFinite() && mode.refreshRate > maxFps) maxFps = mode.refreshRate
                 val width = max(mode.physicalWidth, mode.physicalHeight)
                 val height = min(mode.physicalWidth, mode.physicalHeight)
                 if (width >= 3840 || height >= 2160) {

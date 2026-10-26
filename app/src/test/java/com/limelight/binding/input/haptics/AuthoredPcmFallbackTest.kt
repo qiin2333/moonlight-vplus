@@ -31,6 +31,8 @@ class AuthoredPcmFallbackTest {
     @Test fun endStopsAndInvalidFramesNeverEnterRouting() {
         val reducer = AuthoredPcmFallback()
         assertEquals(ControllerRumbleState.ZERO, reducer.accept(frame(flags = 2)))
+        assertEquals(ControllerRumbleState.ZERO, reducer.accept(
+            Ds5HapticsPcmFrame(0, 2, 2, 0, 48000, 0, 2, 16, byteArrayOf())))
         assertNull(reducer.accept(frame(player = 16)))
         assertNull(reducer.accept(frame(flags = 8)))
         assertNull(reducer.accept(Ds5HapticsPcmFrame(0, 0, 1, 0, 44100, 48, 2, 16, ByteArray(192))))

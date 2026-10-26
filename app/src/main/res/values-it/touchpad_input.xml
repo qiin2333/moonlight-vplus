@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_menu_touchpad_sensitivity">Sensibilità del touchpad</string>
+    <string name="game_menu_touchpad_scroll_speed">Velocità di scorrimento con due dita</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="appview_title_max_lines">3</integer>
+    <integer name="appview_target_reminder_max_lines">2</integer>
+    <integer name="appview_header_spacer_weight">0</integer>
+</resources>

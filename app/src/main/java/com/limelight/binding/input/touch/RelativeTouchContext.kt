@@ -30,6 +30,9 @@ class RelativeTouchContext(
     private var xFactor = 0.6
     private var yFactor = 0.6
     private var sense = 1.0
+    private var scrollSpeedPercent = 100
+    private var gestureScrollSpeedPercent = 100
+    private val scrollScaler = TouchpadScrollScaler()
     private var pointerCount = 0
     private var maxPointerCountInGesture = 0
 
@@ -214,6 +217,8 @@ class RelativeTouchContext(
         lastTouchY = eventY
 
         if (isNewFinger) {
+            scrollScaler.reset()
+            gestureScrollSpeedPercent = scrollSpeedPercent
             // 新手势开始时，取消可能存在的未确认延迟单击
             cancelPendingSingleTap()
             //  新手势开始，丢弃上一手势尚未发出的排队拖拽按下
@@ -269,6 +274,7 @@ class RelativeTouchContext(
 
     /** Completes the current gesture and delivers any queued click or drag sequence. */
     override fun touchUpEvent(eventX: Int, eventY: Int, eventTime: Long) {
+        scrollScaler.reset()
         if (cancelled) {
             return
         }
@@ -381,7 +387,7 @@ class RelativeTouchContext(
 
                 if (pointerCount == 2) {
                     if (confirmedScroll) {
-                        conn.sendMouseHighResScroll((deltaY * SCROLL_SPEED_FACTOR).toShort())
+                        scrollScaler.send(deltaY, gestureScrollSpeedPercent, conn::sendMouseHighResScroll)
                     }
                 } else if (confirmedMove || isDoubleClickDrag || confirmedDrag) {
                     if (isDoubleClickDrag || (confirmedDrag && buttonIndexIsLeft())) {
@@ -415,6 +421,7 @@ class RelativeTouchContext(
 
     /** Cancels the active gesture while allowing confirmed synthetic clicks to finish. */
     override fun cancelTouch() {
+        scrollScaler.reset()
         cancelled = true
 
         cancelDragTimer()
@@ -667,6 +674,7 @@ class RelativeTouchContext(
     override fun isCancelled(): Boolean = cancelled
 
     override fun setPointerCount(pointerCount: Int) {
+        if (this.pointerCount != pointerCount) scrollScaler.reset()
         this.pointerCount = pointerCount
 
         if (pointerCount > maxPointerCountInGesture) {
@@ -676,6 +684,10 @@ class RelativeTouchContext(
 
     fun adjustMsense(sense: Double) {
         this.sense = sense
+    }
+
+    fun adjustScrollSpeed(percent: Int) {
+        scrollSpeedPercent = percent.coerceIn(1, 500)
     }
 
     companion object {
@@ -690,6 +702,5 @@ class RelativeTouchContext(
         /** 定义双击时，两次点击位置的最大允许偏差 */
         private const val DOUBLE_TAP_MOVEMENT_THRESHOLD = 40
 
-        private const val SCROLL_SPEED_FACTOR = 5
     }
 }

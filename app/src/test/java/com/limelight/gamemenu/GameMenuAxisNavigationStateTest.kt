@@ -35,7 +35,7 @@ class GameMenuAxisNavigationStateTest {
     }
 
     @Test
-    fun supportsHatLeftStickAndRightStickInPriorityOrder() {
+    fun usesThirdAxisPairWhenEarlierPairsAreNeutral() {
         val state = MenuAxisNavigationState()
 
         val transition = state.update(listOf(0f to 0f, 0f to 0f, 0.8f to 0f))

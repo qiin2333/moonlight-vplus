@@ -25,7 +25,10 @@ class Dialog private constructor(
 
     private lateinit var alert: AlertDialog
     override fun run() {
-        if (activity.isFinishing) return
+        // Connection diagnostics can finish after Activity recreation. isFinishing stays
+        // false on the old, destroyed instance even after its window token is removed.
+        // Check here on the UI thread, after any queued dispatch and before creating a window.
+        if (activity.isFinishing || activity.isDestroyed) return
 
         if (isDetailsDialog) {
             createDetailsDialog()

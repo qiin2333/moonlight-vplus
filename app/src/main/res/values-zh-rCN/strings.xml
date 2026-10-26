@@ -167,14 +167,11 @@
     <string name="game_menu_send_keys_alt_home">发送 ALT + HOME (小飞机/RTSS 主机性能监控开关)</string>
     <string name="game_menu_adjust_bitrate">调整码率</string>
     <string name="game_menu_bitrate_custom">自定义码率</string>
-    <string name="game_menu_bitrate_current">当前: %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_success">码率调整成功至 %d Mbps</string>
     <string name="game_menu_bitrate_adjustment_failed">码率调整失败</string>
     <string name="game_menu_ok">确定</string>
     <string name="custom_list_save">保存</string>
-    <string name="game_menu_apply_display">应用</string>
     <string name="game_menu_bitrate_range">码率范围:</string>
-    <string name="game_menu_bitrate_tip">拖动滑动条实时调整码率, 需要更高的码率请到设置菜单操作。</string>
     <!-- Add computer manually activity -->
     <string name="title_add_pc"> new\nDianLao () </string>
     <string name="title_add_pc_choose">添加电脑</string>
@@ -205,17 +202,16 @@
     <string name="addpc_action_connecting">连接中...</string>
     <!-- Preferences -->
     <string name="category_basic_settings">串流质量</string>
-    <string name="category_advanced_features">性能与兼容性</string>
+    <string name="category_advanced_features">串流性能</string>
     <string name="title_resolution_list">串流分辨率</string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度，低分辨率提升在低端设备和较慢网络中的串流体验。</string>
-    <string name="title_custom_resolutions">自定义分辨率</string>
-    <string name="summary_custom_resolutions">添加或删除“串流分辨率”列表中的自定义分辨率。</string>
+    <string name="title_custom_resolutions">分辨率列表</string>
     <string name="width_hint">2560</string>
     <string name="height_hint">1440</string>
     <string name="resolution_already_exists">该分辨率已存在</string>
     <string name="custom_resolution_add_short">添加</string>
     <string name="custom_resolution_info_contentdesc">使用提示</string>
-    <string name="custom_resolution_info_tooltip">非必要请勿使用此功能，仅限于需要避让的特殊场景。</string>
+    <string name="custom_resolution_info_tooltip">添加预设或自定义尺寸。从列表移除当前使用的分辨率，不会更改当前设置。</string>
     <string name="custom_resolution_field_width">宽</string>
     <string name="custom_resolution_field_height">高</string>
     <string name="custom_resolution_readout_hint">输入后自动显示画面比例</string>
@@ -224,12 +220,10 @@
     <string name="custom_resolution_error_empty_width">请输入宽度</string>
     <string name="custom_resolution_error_empty_height">请输入高度</string>
     <string name="custom_resolution_error_range_width">宽度需在 320–7680 之间</string>
-    <string name="custom_frame_rate_error_empty">请输入帧率</string>
-    <string name="custom_frame_rate_error_range">帧率需在 1–500 之间</string>
     <string name="custom_resolution_error_range_height">高度需在 240–4320 之间</string>
     <string name="custom_resolution_error_even_width">宽度必须为偶数</string>
     <string name="custom_resolution_error_even_height">高度必须为偶数</string>
-    <string name="custom_resolution_empty_title">还没有自定义分辨率</string>
+    <string name="custom_resolution_empty_title">分辨率列表为空</string>
     <string name="custom_resolution_empty_hint">在上方输入宽和高，或点一个预设快速填入</string>
     <string name="custom_resolution_tag_ultrawide">带鱼屏</string>
     <string name="custom_resolution_tag_720p">720p</string>
@@ -239,7 +233,6 @@
     <string name="custom_resolution_delete_contentdesc">删除 %1$d×%2$d</string>
     <string name="title_fps_list">串流帧率</string>
     <string name="summary_fps_list">高帧数提升视频流流畅度，低帧数提升在低端设备中的串流体验。</string>
-    <string name="title_custom_fps">自定义帧率</string>
     <string name="title_seekbar_bitrate">串流码率</string>
     <string name="summary_seekbar_bitrate">高码率画质更清晰，但更占带宽；低码率适合较慢或不稳定的网络。画面卡顿时先降低码率，画质不够清晰且网络稳定时再提高；1080p60 可先从 10–20 Mbps 试起。</string>
     <string name="title_adaptive_bitrate">智能码率</string>
@@ -252,10 +245,6 @@
     <string name="abr_mode_low_latency">低延迟</string>
     <string name="title_seekbar_scale">主机渲染分辨率比例</string>
     <string name="summary_seekbar_scale" formatted="false">按比例缩放所选串流分辨率后再向主机请求。高于 100% 可增加源画面细节但会提高主机 GPU 负载；低于 100% 可减轻负载。主机必须支持缩放后的分辨率。</string>
-    <string name="title_unlock_fps">显示高帧率选项</string>
-    <string name="summary_unlock_fps">以90或120帧串流可能会减少在高端设备上的网络延迟，但会在不支持的设备上造成卡顿或崩溃。</string>
-    <string name="title_show_low_resolution_presets">显示低带宽分辨率</string>
-    <string name="summary_show_low_resolution_presets">在分辨率列表中添加 360p 和 480p，供极慢网络或低性能设备兼容使用。</string>
     <string name="title_checkbox_stretch_video">将画面拉伸至全屏</string>
     <string name="summary_checkbox_stretch_video">改变串流画面宽高比以铺满屏幕，可能造成画面变形。</string>
     <string name="title_checkbox_disable_warnings">隐藏串流警告通知弹窗</string>
@@ -280,13 +269,13 @@
     <string name="audio_passthrough_buffer_low">低（约 96 ms）</string>
     <string name="audio_passthrough_buffer_normal">普通（约 160 ms）</string>
     <string name="audio_passthrough_buffer_high">高（约 320 ms）</string>
-    <string name="category_input_settings">触控、鼠标与键盘</string>
+    <string name="category_input_settings">输入</string>
     <string name="title_checkbox_touchscreen_trackpad">将触控屏作为触控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。如果禁用，则启用多点触控模式。</string>
     <string name="title_checkbox_touch_keyboard_auto_invoke">自动弹出电脑触摸键盘</string>
     <string name="summary_checkbox_touch_keyboard_auto_invoke">启用后，串流的电脑在文本框获得焦点时会自动弹出其触摸键盘（需要带有虚拟触摸屏的 Sunshine 主机）。</string>
     <string name="title_checkbox_remote_ime_auto_show">远程文本框自动弹出本地键盘</string>
-    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 13 及以上）。画面上的笔划仍作为远程输入发送。</string>
+    <string name="summary_checkbox_remote_ime_auto_show">串流的电脑在文本框获得焦点时自动打开本地键盘（Android 11 及以上）。画面上的触控手势仍用于操作远程电脑。</string>
 
     <string name="title_seekbar_long_press_flat_region">长按防抖半径</string>
     <string name="summary_seekbar_long_press_flat_region">手指停留在此半径内时持续发送初始位置，以减少全屏长按抖动；设为 0 则关闭。</string>
@@ -319,7 +308,7 @@
     <string name="summary_dualsense_wireless_bridge">使用独立的外置 USB 蓝牙适配器，在串流时自动查找并连接一个 DualSense；该适配器不能同时交给 Android 系统蓝牙使用。</string>
     <string name="title_checkbox_usb_bind_all">覆盖 Android 原生手柄支持</string>
     <string name="summary_checkbox_usb_bind_all">强制 Moonlight 的 USB 驱动接管所有受支持的 Xbox 手柄。</string>
-    <string name="title_checkbox_enable_start_key_menu">长按 Start 操作轮盘</string>
+    <string name="title_checkbox_enable_start_key_menu">长按 Start 打开操作轮盘</string>
     <string name="summary_checkbox_enable_start_key_menu">长按 Start 后选择串流菜单、手柄鼠标模式、键盘或性能统计；关闭则停用这组快捷操作。</string>
     <string name="title_controller_diagnostic">手柄快捷键测试</string>
     <string name="summary_controller_diagnostic">学习并测试客户端手柄快捷键</string>
@@ -435,7 +424,7 @@
 
     <string name="title_checkbox_flip_face_buttons">交换 A/B 与 X/Y 按键</string>
     <string name="summary_checkbox_flip_face_buttons">同时交换实体手柄和屏幕控制上的这两组按键。</string>
-    <string name="category_on_screen_controls_settings">屏幕虚拟手柄按钮</string>
+    <string name="category_on_screen_controls_settings">屏幕虚拟手柄</string>
     <string name="title_checkbox_show_onscreen_controls">显示屏幕控制按钮</string>
     <string name="summary_checkbox_show_onscreen_controls">在触摸屏上显示一层虚拟手柄。</string>
     <string name="title_checkbox_vibrate_osc"> 启用震动 </string>
@@ -449,10 +438,9 @@
     <string name="dialog_title_reset_osc">重置虚拟手柄布局</string>
     <string name="dialog_text_reset_osc">确定要删除已保存的屏幕虚拟手柄按钮布局吗？</string>
     <string name="toast_reset_osc_success">屏幕虚拟手柄按钮布局已重置</string>
-    <string name="category_float_ball_settings">悬浮球设置</string>
     <string name="title_checkbox_enable_float_ball">启用悬浮球</string>
     <string name="summary_checkbox_enable_float_ball">显示一个可交互的悬浮球，用于快速操作。</string>
-    <string name="title_list_float_ball_position">快速设置悬浮球位置</string>
+    <string name="title_list_float_ball_position">悬浮球位置</string>
     <string name="summary_list_float_ball_position">将悬浮球放到屏幕边缘。拖动位置会覆盖预设，再次选择预设即可清除。</string>
     <string name="title_seekbar_float_ball_auto_hide_delay">自动隐藏延迟</string>
     <string name="summary_seekbar_float_ball_auto_hide_delay">悬浮球自动隐藏到屏幕边缘的时间。</string>
@@ -488,8 +476,8 @@
     <string name="summary_game_menu_opacity">调整串流返回菜单的透明度。低性能渲染模式会保持不透明。</string>
     <string name="game_menu_opacity_button">调整返回菜单透明度，当前 %1$d%%</string>
     <string name="game_menu_card_list_separator">、</string>
-    <string name="category_backup_restore">备份与同步</string>
-    <string name="category_display_behavior">显示与布局</string>
+    <string name="category_backup_restore">设置备份</string>
+    <string name="category_display_behavior">画面显示</string>
     <string name="title_language_list">语言</string>
     <string name="summary_language_list">选择 Moonlight 使用的界面语言。</string>
     <string name="title_checkbox_small_icon_mode">使用小封面</string>
@@ -534,7 +522,7 @@
     <string name="title_checkbox_resume_stream">自动恢复串流</string>
     <string name="summary_checkbox_resume_stream">当从后台切回Moonlight时，自动恢复串流会话。</string>
     <string name="category_host_settings">主机</string>
-    <string name="title_checkbox_enable_sops">自动优化主机设置</string>
+    <string name="title_checkbox_enable_sops">自动优化游戏设置</string>
     <string name="summary_checkbox_enable_sops">允许兼容的主机软件根据请求的串流分辨率和质量调整受支持游戏；更改发生在主机上。</string>
     <string name="title_checkbox_host_audio">同时在主机播放声音</string>
     <string name="summary_checkbox_host_audio">在主机和本设备上同时输出串流音频。</string>
@@ -547,8 +535,8 @@
     <string name="summary_disable_frame_drop"> 可能会减少在一些设备上的卡顿，但会增加延迟。 </string>
     <string name="title_video_format">视频编解码器</string>
     <string name="summary_video_format">不确定怎么选？请使用自动。大多数现代设备推荐 HEVC，通常能兼顾画质、带宽和 HDR；主机与设备都支持时，AV1 同等画质通常更省带宽，但部分设备解码延迟可能更高；H.264 兼容性最好，但需要更多带宽且不支持 HDR。</string>
-    <string name="title_enable_hdr">启用 HDR</string>
-    <string name="summary_enable_hdr">当游戏和显卡支持时以HDR模式串流，HDR需要显卡支持 HEVC/AV1 Main 10 编码。⚠注意：串流返回菜单中的HDR开关是切换windows的HDR。</string>
+    <string name="title_enable_hdr">启用 HDR（实验性）</string>
+    <string name="summary_enable_hdr">在游戏、主机编码器和本设备均支持时启用 HDR 串流。串流菜单中的 HDR 开关用于切换 Windows HDR。</string>
     <string name="title_enable_hdr_high_brightness">HDR 使用屏幕最高亮度</string>
     <string name="summary_enable_hdr_high_brightness">HDR 串流期间把本机屏幕设为最高亮度，这会增加耗电与发热。</string>
     <string name="title_hdr_brightness_override">手动 HDR 亮度校准</string>
@@ -594,8 +582,6 @@
     <string name="perf_overlay_clock_format_12_seconds">12 小时制，显示时分秒</string>
     <string name="title_perf_overlay_position">性能统计位置</string>
     <string name="summary_perf_overlay_position">横向布局可放在顶部或底部，纵向布局可放在四角。</string>
-    <string name="title_reset_perf_overlay_position">重置性能图层位置</string>
-    <string name="summary_reset_perf_overlay_position">重置性能图层到预设位置。</string>
     <string name="title_perf_overlay_display_items">性能统计指标</string>
     <string name="summary_perf_overlay_display_items">选择要显示的串流、解码器、网络、主机和设备指标。</string>
     <string name="title_perf_overlay_bg_opacity">性能统计背景不透明度</string>
@@ -607,9 +593,8 @@
     <string name="title_checkbox_swap_quit_and_disconnect">让“退出”仅断开连接</string>
     <string name="summary_checkbox_swap_quit_and_disconnect">“退出”操作只断开 Moonlight，不再要求主机停止正在串流的游戏或应用。</string>
     <string name="mic_stats_continuity">音频连续性: %1$.1f%% (捕获:%2$d 编码:%3$d 发送:%4$d 丢弃:%5$d)</string>
-    <string name="title_osc_opacity">更改屏幕按钮透明度</string>
-    <string name="dialog_title_osc_opacity">屏幕控制按钮透明度</string>
-    <string name="summary_osc_opacity">令屏幕按钮变得更透明/更不透明。</string>
+    <string name="dialog_title_osc_opacity">屏幕控制按钮不透明度</string>
+    <string name="summary_osc_opacity">调整屏幕控制按钮的不透明程度；数值越大，按钮越清晰。</string>
     <string name="nettest_text_failure">您设备的当前网络似乎正在阻止Moonlight。连接到该网络时，可能无法通过互联网串流。
 \n
 \n以下网络端口被阻止：
@@ -658,7 +643,6 @@
     <string name="nettest_text_blocked">您设备当前的网络连接拦截了Moonlight。连接到该网络时可能无法通过互联网串流。</string>
     <string name="perf_overlay_netlatency">平均网络延迟： %1$d ms (抖动： %2$d ms)</string>
     <string name="perf_overlay_streamdetails">视频流： %1$s %2$.2f FPS</string>
-    <string name="resolution_prefix_native_fullscreen">原生全屏</string>
     <!-- Array strings -->
     <string name="audioconf_stereo">立体声</string>
     <string name="audioconf_51surround">5.1环绕声</string>
@@ -738,8 +722,6 @@
     <string name="summary_checkbox_enable_esc_menu">双击所选按键打开串流返回菜单；单击仍会发送到主机。</string>
     <string name="title_list_esc_menu_key">串流菜单快捷键</string>
     <string name="summary_list_esc_menu_key">选择要双击打开串流返回菜单的按键。</string>
-    <string name="resolution_prefix_native_landscape">（横向）</string>
-    <string name="resolution_prefix_native_portrait">（纵向）</string>
     <string name="title_checkbox_enable_audiofx">使用系统音频效果</string>
     <string name="summary_checkbox_enable_audiofx">允许均衡器等系统效果处理 Moonlight 本机解码的音频；直通音频会绕过这些效果，此选项也可能增加延迟。</string>
     <string name="title_checkbox_enable_spatializer">启用空间音频 (Android 13+)</string>
@@ -753,13 +735,13 @@
     <string name="mic_initial_state_follow_last">跟随上次状态</string>
     <string name="title_list_mic_menu_action_mode">串流菜单中的麦克风操作</string>
     <string name="summary_list_mic_menu_action_mode">选择串流返回菜单中的麦克风按钮执行什么操作。</string>
-    <string name="title_seekbar_mic_bitrate">麦克风传输音质</string>
+    <string name="title_seekbar_mic_bitrate">麦克风码率</string>
     <string name="summary_seekbar_mic_bitrate">调整麦克风重定向的音频质量，更高的比特率提供更好的音频质量，但会使用更多带宽。</string>
     <string name="title_list_mic_icon_color">麦克风图标颜色</string>
     <string name="summary_list_mic_icon_color">选择麦克风按钮图标的颜色。</string>
     <string name="title_checkbox_show_mic_button">串流开始时显示麦克风悬浮按钮</string>
     <string name="summary_checkbox_show_mic_button">串流时显示麦克风按钮。可直接拖动，位置会自动记忆。</string>
-    <string name="title_list_mic_button_position">快速设置按钮位置</string>
+    <string name="title_list_mic_button_position">麦克风按钮位置</string>
     <string name="summary_list_mic_button_position">将麦克风按钮放到屏幕边缘。拖动位置会暂时覆盖预设，再次选择预设即可清除。</string>
     <string name="mic_button_position_top_left">左上</string>
     <string name="mic_button_position_top_center">中上</string>
@@ -793,7 +775,6 @@
     <string name="pair_pairing_help">如果你的主机运行的是 Sunshine，那请前往Sunshine的网页界面输入PIN码。</string>
     <string name="pcview_menu_eol">NVIDIA GameStream 终止服务</string>
     <string name="perf_overlay_hostprocessinglatency">主机处理延迟最小值/最大值/平均值: %1$.1f/%2$.1f/%3$.1f ms</string>
-    <string name="title_native_fps_dialog">原生 FPS 警告</string>
     <string name="category_gamepad_settings">手柄</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">始终使用触摸板控制鼠标</string>
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">强制使用手柄触摸板来控制主机鼠标，即使在使用触摸板模拟游戏板时也是如此。</string>
@@ -820,7 +801,7 @@
     <string name="mic_permission_required">需要麦克风权限</string>
 
     <!-- Screen position settings -->
-    <string name="category_screen_position_settings">编码与 HDR</string>
+    <string name="category_screen_position_settings">视频</string>
     <string name="title_screen_position">串流画面位置</string>
     <string name="summary_screen_position">串流画面未铺满屏幕且不拉伸时，选择它的对齐位置。</string>
     <string name="title_screen_offset_x">画面水平偏移</string>
@@ -832,17 +813,14 @@
     <string name="category_crown_features">王冠</string>
     <string name="title_crown_super_features">启用 Crown 配置</string>
     <string name="summary_crown_super_features">虚拟屏幕按键解决方案。把屏幕按键、快捷动作、触控模式和振动反馈设置作为命名配置整套切换。</string>
-    <string name="title_export_super_config">导出配置</string>
     <string name="summary_export_super_config">导出自定义按钮的和串流内设置的配置文件。</string>
     <string name="title_import_super_config">导入配置</string>
     <string name="summary_import_super_config">导入自定义按钮的和串流内设置的配置文件。</string>
-    <string name="title_merge_super_config">合并配置</string>
     <string name="summary_merge_super_config">将新的配置的按键合并到现有配置中。</string>
     <string name="title_crown_config_management">管理 Crown 配置</string>
     <string name="summary_crown_config_management">创建、选择、导入、导出或合并屏幕控制与触控配置。</string>
     <string name="crown_config_action_import">导入配置</string>
     <string name="crown_config_action_export">导出配置</string>
-    <string name="crown_config_action_merge">合并配置</string>
     <string name="crown_config_no_profiles">暂无可用的王冠配置档案</string>
 
     <!-- 王冠功能切换 -->
@@ -1125,7 +1103,7 @@
     <string name="image_download_failed_with_error">图片下载失败: %1$s</string>
     <string name="image_not_loaded_please_retry">图片未加载，请稍后再试</string>
     <string name="image_invalid">图片无效</string>
-    <string name="image_saved_successfully">涩图成功保存到了系统目录(Picture/setu)</string>
+    <string name="image_saved_successfully">涩图成功保存到了系统目录(Pictures/vplus)</string>
     <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
@@ -1186,13 +1164,29 @@
     <string name="new_unpaired_device_shown">检测到新的未配对设备，已自动显示未配对设备</string>
     <string name="host_resolution_changed">主机分辨率已变更为 %1$dx%2$d</string>
 
-    <string name="game_menu_change_resolution">更改分辨率</string>
     <string name="game_menu_display_settings">显示设置</string>
-    <string name="game_menu_display_summary">%1$s · %2$s</string>
-    <string name="game_menu_resolution_current">%1$s（当前）</string>
-    <string name="game_menu_resolution_custom">%1$s（自定义）</string>
-    <string name="game_menu_resolution_custom_current">%1$s（自定义、当前）</string>
-    <string name="game_menu_resolution_restarting">分辨率已设为 %1$s，正在重启串流…</string>
+    <string name="display_settings_info">显示设置说明</string>
+    <string name="display_settings_help">更改分辨率、帧率或屏幕模式后，会短暂断开并自动重连；选择当前值不会重连。\n\n⚠ 表示帧率高于本机屏幕刷新率。\n\n显示缩放用于调整主机文字和界面的大小，松开滑杆后应用，无需重连。若主机要求稍后生效或重启显示，会另行提示。</string>
+    <string name="display_settings_reconnect_hint">选择新值后将短暂断开并自动重连。</string>
+    <string name="display_settings_reconnecting">正在重新连接以应用显示设置…</string>
+    <string name="display_spec_resolution">分辨率</string>
+    <string name="display_spec_fps">帧率</string>
+    <string name="display_spec_screen">屏幕</string>
+    <string name="display_scale_title">显示缩放</string>
+    <string name="display_scale_recommended">推荐</string>
+    <string name="display_scale_applying">正在应用 %1$d%%…</string>
+    <string name="display_scale_load_failed">无法读取显示缩放</string>
+    <string name="display_scale_refresh">重新读取</string>
+    <string name="display_scale_loading">正在读取…</string>
+    <string name="display_scale_unknown">当前值未知</string>
+    <string name="display_scale_unavailable">不可用</string>
+    <string name="display_scale_value">%1$d%%</string>
+    <string name="display_scale_value_recommended">%1$d%% · 推荐</string>
+    <string name="display_scale_content_description">显示缩放，%1$d%%</string>
+    <string name="display_scale_applied">已设置显示缩放为 %1$d%%</string>
+    <string name="display_scale_applied_later">已接受显示缩放，主机稍后应用</string>
+    <string name="display_scale_restart_required">显示缩放已更改，重启主机显示后生效</string>
+    <string name="display_scale_apply_failed">无法更改显示缩放</string>
     <string name="notification_content_streaming">正在串流： %1$s (%2$s)</string>
 
     <!-- 音频振动设置 -->
@@ -1596,8 +1590,6 @@
     <string name="toast_touch_enabled">触控已开启</string>
     <string name="toast_touch_disabled">触控已关闭</string>
     <string name="toast_cannot_access_controller">无法访问控制器</string>
-    <string name="toast_vibration_test_sent">已发送本地震动测试</string>
-    <string name="toast_vibration_test_failed">震动测试失败: %s</string>
     <string name="toast_adjusting_bitrate">正在调整码率...</string>
     <string name="game_menu_tab_bitrate">码率调整 Bitrate</string>
     <string name="game_menu_tab_audio_haptics">音频振动 Audio Haptics</string>
@@ -1732,14 +1724,13 @@
     <string name="title_framegen_internal_width">自定义渲染比例</string>
     <string name="summary_framegen_internal_width">高级调校项。比例越低越稳定，比例越高越清晰。</string>
     <string name="suffix_framegen_scale">x</string>
-    <string name="title_framegen_slow_threshold_ms">流畅度保护</string>
-    <string name="summary_framegen_slow_threshold_ms">仅自定义模式显示。插帧变慢时会自动回退直通渲染，默认：18 ms。</string>
-    <string name="title_framegen_present_real_first">运动节奏修正</string>
-    <string name="summary_framegen_present_real_first">仅在画面节奏不稳时尝试，默认关闭。</string>
+    <string name="title_framegen_slow_threshold_ms">插帧回退阈值</string>
+    <string name="summary_framegen_slow_threshold_ms">插帧耗时持续超过阈值时回退为直接渲染。数值越小越容易回退。仅自定义模式可调，默认：18 ms。</string>
+    <string name="title_framegen_present_real_first">优先呈现真实帧</string>
+    <string name="summary_framegen_present_real_first">先呈现真实帧，再呈现生成帧。仅在画面节奏不稳时尝试，默认关闭。</string>
 
     <!-- 王冠配置分享与 Store -->
     <string name="crown_config_action_import_legacy">导入旧版 .mdat</string>
-    <string name="crown_config_action_export_legacy">导出旧版 .mdat</string>
     <string name="title_crown_store_view">王冠</string>
     <string name="crown_store_tab_store">超市王冠</string>
     <string name="crown_store_tab_mine">我的王冠</string>
@@ -1791,7 +1782,6 @@
     <string name="message_crown_store_layout_mismatch">适配：这套王冠来自 %1$s。当前屏幕是 %2$s，导入后可能要轻轻挪一下按钮。</string>
     <string name="action_crown_store_continue_import">继续导入</string>
     <string name="crown_store_updated_at">最近更新：%1$s</string>
-    <string name="crown_store_action_browse">逛逛王冠 Store</string>
     <string name="crown_store_action_publish">投稿到王冠 Store</string>
     <string name="crown_store_source_label">王冠 Store：%1$s</string>
     <string name="title_crown_store_publish_metadata">让大家认识这套配置</string>
@@ -1821,7 +1811,6 @@
     <string name="action_open_pull_request">打开 Pull Request</string>
     <string name="crown_share_action_import">导入分享包</string>
     <string name="crown_share_action_import_url">从链接导入</string>
-    <string name="crown_share_action_export">导出分享包</string>
     <string name="crown_share_install_as_new">作为新配置安装</string>
     <string name="crown_share_merge_into_existing">合并到已有配置</string>
     <string name="crown_share_unknown_value">未知</string>
@@ -1884,16 +1873,9 @@
     <string name="toast_image_save_failed">图片保存失败，请重试</string>
     <string name="toast_image_pick_cancelled">图片选择已取消</string>
     <string name="toast_background_image_reset">已恢复默认背景图片</string>
-    <string name="toast_perf_overlay_position_reset">性能统计位置已重置</string>
     <string name="bitrate_haptic_mode_all">震动：每档</string>
     <string name="bitrate_haptic_mode_key_nodes">震动：关键节点</string>
     <string name="bitrate_haptic_mode_none">震动：关闭</string>
-    <string name="toast_legacy_config_export_success">导出配置文件成功</string>
-    <string name="toast_legacy_config_export_failed">导出配置文件失败</string>
-    <string name="toast_legacy_config_import_success">导入配置文件成功</string>
-    <string name="toast_legacy_config_merge_success">合并配置文件成功</string>
-    <string name="toast_legacy_config_read_failed">读取配置文件失败</string>
-    <string name="toast_legacy_config_version_mismatch">配置文件版本不匹配</string>
     <string name="empty_value">空</string>
     <string name="touch_mode_classic_mouse">经典鼠标模式</string>
     <string name="touch_mode_trackpad">触控板模式</string>
@@ -1949,6 +1931,7 @@
     <string name="easytier_subnet_mismatch">网段不匹配</string>
     <string name="easytier_relayed">中转</string>
     <string name="easytier_manager_uninitialized">EasyTier Manager尚未初始化</string>
+    <string name="easytier_native_libraries_unavailable">当前安装包未包含适用于本应用运行架构的 EasyTier 本地库，无法使用 EasyTier。</string>
     <string name="easytier_starting">EasyTier服务正在启动…</string>
     <string name="easytier_vpn_permission_required">需要VPN权限才能启动服务。</string>
     <string name="easytier_status_refreshed">状态已刷新</string>
@@ -2049,6 +2032,10 @@
     <string name="diag_min_brightness">最小亮度</string>
     <string name="diag_avg_brightness">平均亮度</string>
     <string name="diag_edid_brightness_missing">驱动未报告 EDID 亮度</string>
+    <string name="diag_edid_brightness_incomplete">EDID 亮度不完整：已报峰值，黑位/全屏缺失</string>
+    <string name="diag_hdr_brightness_host_fallback">不发送亮度参数，由服务端选择回退值</string>
+    <string name="diag_hdr_brightness_estimated">含粗略估算：HDR/SDR 比值 × 300 尼特；未知全屏亮度取峰值 20%，未知黑位取 0.001 尼特</string>
+    <string name="diag_edid_ratio_conflict">EDID 峰值 %1$s 搭配 HDR/SDR 比值 %2$s×，隐含 SDR 白仅 %3$s，疑似驱动低报；若面板实际更高，请在设置中手动指定峰值</string>
     <string name="diag_hdr_panel_high">高阶 HDR 面板 ≥1000 nits</string>
     <string name="diag_hdr_panel_mid">中等 HDR 面板</string>
     <string name="diag_peak_low">峰值亮度偏低 &lt;400 nits</string>
@@ -2319,4 +2306,31 @@
     <string name="numeric_parameter_range">请输入 %1$s–%2$s %3$s 内的有效数值。</string>
     <string name="pyrowave_negotiation_fallback">PyroWave 协商失败，已回退至 %1$s。</string>
     <string-array name="host_gamepad_selection_names"><item>自动</item><item>遵循主机设置</item><item>Xbox 360</item><item>DualShock 4</item><item>DualSense</item></string-array>
+    <string name="display_native_resolution_description">跟随目标显示器 · %1$s</string>
+    <string name="display_choice_unavailable">此设备暂不支持</string>
+    <string name="display_custom_resolution_action">管理分辨率…</string>
+    <string name="title_float_ball_settings">悬浮球</string>
+    <string name="float_ball_appearance">悬浮显示</string>
+    <string name="float_ball_gestures">手势操作</string>
+    <string name="float_ball_settings_disabled_summary">开启悬浮球后可调整位置与操作。</string>
+    <string name="float_ball_summary_enabled">已启用 · %1$s · %2$s</string>
+    <string name="float_ball_summary_delay">%1$s 秒后隐藏</string>
+    <string name="float_ball_summary_no_hide">始终显示</string>
+    <string name="float_ball_summary_custom_position">已拖动定位</string>
+    <string name="float_ball_summary_search">%1$s\n包含：%2$s</string>
+    <string name="toast_crown_config_export_failed">无法导出 Crown 配置</string>
+    <string name="toast_crown_config_export_success">已导出 Crown 配置</string>
+    <string name="toast_crown_config_import_failed">无法读取 Crown 配置</string>
+    <string name="toast_crown_config_import_success">已导入 Crown 配置</string>
+    <string name="toast_crown_config_merge_success">已合并 Crown 配置</string>
+    <string name="toast_crown_config_version_unsupported">不支持此 Crown 配置版本</string>
+    <string name="display_resolution_current_not_saved">当前使用 · 未保存在列表</string>
+    <!-- Previously hard-coded strings -->
+    <string name="pacing_label_precise_sync_enhanced">精确同步(增强)</string>
+    <string name="pacing_label_precise_sync">精确同步</string>
+    <string name="pacing_label_low_latency">低延迟</string>
+    <string name="pacing_label_balanced">均衡</string>
+    <string name="pacing_label_smooth">平滑</string>
+    <string name="stats_precise_sync">[精确同步: %1$d渲染/%2$d接收, 跳帧率: %3$.1f%%]</string>
+    <string name="mic_status_debug">权限: %1$b, 流存在: %2$b, 可用: %3$b, 激活: %4$b</string>
 </resources>

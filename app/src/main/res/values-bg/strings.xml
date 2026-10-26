@@ -133,10 +133,8 @@
     <string name="title_audio_config_list">Конфигурация на съраунд звук</string>
     <string name="summary_audio_config_list">Активиране на 5.1 или 7.1 съраунд звук за системи за домашно кино</string>
     <string name="summary_seekbar_bitrate">По-високият битрейт подобрява качеството на изображението, но използва повече честотна лента; по-ниският е по-подходящ за бавни или нестабилни мрежи. Намалете го първо при насичане, а го увеличете, когато мрежата е стабилна, но изображението е неясно; за 1080p60 започнете с около 10–20 Mbps.</string>
-    <string name="resolution_prefix_native_portrait">(Портрет)</string>
     <string name="title_checkbox_enable_audiofx">Активиране на поддръжката на системния еквалайзер</string>
     <string name="title_checkbox_stretch_video">Разтегляне на видеото на цял екран</string>
-    <string name="resolution_prefix_native_landscape">(Пейзаж)</string>
     <string name="category_audio_settings">Аудио настройки</string>
     <string name="category_input_settings">Настройки за въвеждане</string>
     <string name="title_checkbox_touchscreen_trackpad">Използване на сензорния екран като тракпад</string>
@@ -210,7 +208,7 @@
     <string name="pyrowave_diag_copy">Копиране</string>
     <string name="pyrowave_diag_copy_success">Отчетът е копиран в клипборда</string>
     <string name="pyrowave_diag_unavailable">Недостъпно</string>
-    <string name="image_saved_successfully">Изображението е записано успешно в: Picture/vplus</string>
+    <string name="image_saved_successfully">Изображението е записано успешно в: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Неуспешно записване на изображението: %1$s</string>
     <string name="tip_double_tap_mouse">Съвет: натиснете и задръжте празната област в горната част на списъка с компютри, за да запазите текущото фоново изображение.</string>
     <string name="pyrowave_negotiation_fallback">Договарянето на PyroWave е неуспешно. Преминаване към %1$s.</string>
