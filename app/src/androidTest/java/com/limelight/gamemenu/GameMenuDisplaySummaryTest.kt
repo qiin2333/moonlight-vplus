@@ -192,7 +192,7 @@ class GameMenuDisplaySummaryTest {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.3f)) {
             GameMenuTheme {
-                GameMenuDialogShell(widthFraction = 1f, onDismissRequest = {}) {
+                GameMenuDialogShell(onDismissRequest = {}) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Box(Modifier.width(300.dp)) { content() }
                     }

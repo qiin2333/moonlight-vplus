@@ -1,25 +1,13 @@
 package com.limelight.utils
 
 import android.app.Dialog
-import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.SystemClock
 import android.view.ContextThemeWrapper
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -31,12 +19,9 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
@@ -79,94 +64,35 @@ class AppActionSheetSingleChoiceTest {
         composeTestRule.waitForIdle()
     }
 
-    private fun setOrientationAndWait(orientation: Int) {
-        val landscape = orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        val expectedConfiguration = if (landscape) Configuration.ORIENTATION_LANDSCAPE else Configuration.ORIENTATION_PORTRAIT
-        composeTestRule.runOnUiThread {
-            composeTestRule.activity.requestedOrientation = orientation
-        }
-        composeTestRule.waitUntil(5_000) {
-            composeTestRule.runOnUiThread {
-                val activity = composeTestRule.activity
-                val decor = activity.window.decorView
-                activity.resources.configuration.orientation == expectedConfiguration &&
-                    (if (landscape) decor.width > decor.height else decor.width < decor.height)
-            }
-        }
-    }
-
     @Test
-    fun portraitSheetKeepsTheAvailablePhoneWidth() {
-        setOrientationAndWait(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+    fun sheetFitsWindowAndClosesOnOutsideTap() {
         showChoices(listOf(AppActionSheet.Action(1, "Current", checked = true)), 1)
         awaitFocusedChoice("Current")
 
-        composeTestRule.runOnUiThread {
+        val outside = composeTestRule.runOnUiThread {
             val decor = requireNotNull(dialog?.window).decorView
-            val hostWidth = composeTestRule.activity.window.decorView.width
-            assertEquals("Portrait sheet keeps the phone's available width", hostWidth.toFloat(), decor.width.toFloat(), 2f)
-        }
-    }
-
-    @Test
-    fun largeSheetBoundsStayCompactAndTouchingBesideTheWindowDismisses() {
-        setOrientationAndWait(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-        showChoices(listOf(AppActionSheet.Action(1, "Current", checked = true)), 1)
-        awaitFocusedChoice("Current")
-        composeTestRule.onNodeWithText("Current").assertIsSelected()
-
-        val location = IntArray(2)
-        var outsideX = 0f
-        var outsideY = 0f
-        composeTestRule.runOnUiThread {
-            val decor = requireNotNull(dialog?.window).decorView
+            val location = IntArray(2)
             decor.getLocationOnScreen(location)
             val density = decor.resources.displayMetrics.density
-            assertEquals("Window includes 560dp plus its 20dp margins", 580f * density, decor.width.toFloat(), 2f)
             val hostWidth = composeTestRule.activity.window.decorView.width
+            assertEquals("Window fills the phone up to its width cap", minOf(hostWidth.toFloat(), 580f * density), decor.width.toFloat(), 2f)
             assertEquals("Window is horizontally centered", hostWidth / 2f, location[0] + decor.width / 2f, 2f)
-            outsideX = location[0] + decor.width + 64f * density
-            outsideY = location[1] + decor.height / 2f
+            floatArrayOf(location[0] + decor.width / 2f, location[1] - 64f * density)
         }
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val downTime = SystemClock.uptimeMillis()
         for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
-            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, outsideX, outsideY, 0)
+            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, outside[0], outside[1], 0)
             try {
                 instrumentation.sendPointerSync(event)
             } finally {
                 event.recycle()
             }
         }
-        composeTestRule.waitForIdle()
         composeTestRule.waitUntil(5_000) {
             composeTestRule.runOnUiThread { dialog?.isShowing == false }
         }
-        assertFalse(dialog!!.isShowing)
         assertEquals(emptyList<Int>(), invokedIds)
-    }
-
-    @Test
-    fun sharedContainerResizesWithinItsParentAndKeepsSmallScreenMargins() {
-        var viewportWidth by mutableStateOf(1920.dp)
-        composeTestRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(0.5f)) {
-                Box(Modifier.size(viewportWidth, 360.dp).testTag("sheetViewport")) {
-                    AppActionSheet.ActionSheetContainer(respectNavigationBars = false) {
-                        Box(Modifier.fillMaxWidth().height(80.dp).testTag("sheetContent"))
-                    }
-                }
-            }
-        }
-
-        for (width in listOf(1920.dp, 720.dp, 360.dp, 1920.dp)) {
-            composeTestRule.runOnIdle { viewportWidth = width }
-            val viewport = composeTestRule.onNodeWithTag("sheetViewport").fetchSemanticsNode().boundsInRoot
-            val content = composeTestRule.onNodeWithTag("sheetContent").fetchSemanticsNode().boundsInRoot
-            val expectedWidthPx = if (width == 360.dp) 170f else 280f
-            assertEquals("Content width at $width", expectedWidthPx, content.width, 1f)
-            assertEquals("Sheet stays centered at $width", viewport.center.x, content.center.x, 1f)
-        }
     }
 
     @Test

@@ -430,16 +430,16 @@ internal fun shouldRestoreGameMenuFocus(
 
 @Composable
 internal fun GameMenuDialogShell(
-    widthFraction: Float = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
-    } else {
-        GAME_MENU_PORTRAIT_WIDTH_FRACTION
-    },
     onDismissRequest: () -> Unit,
     onTouchInteraction: () -> Unit = {},
     maxMenuWidth: Dp = AppOverlayWidths.expanded,
     content: @Composable (wideLayout: Boolean) -> Unit
 ) {
+    val widthFraction = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
+    } else {
+        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+    }
     val backdropInteraction = remember { MutableInteractionSource() }
     val safeDrawingPadding = WindowInsets.safeDrawing.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current

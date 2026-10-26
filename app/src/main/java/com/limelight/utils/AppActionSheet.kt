@@ -64,11 +64,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
@@ -596,7 +594,6 @@ object AppActionSheet {
     internal fun ActionSheetContainer(
         respectNavigationBars: Boolean = true,
         shieldBackgroundTouches: Boolean = false,
-        onBoundsChanged: ((Rect) -> Unit)? = null,
         outerPadding: PaddingValues = PaddingValues(start = horizontalInset, end = horizontalInset, bottom = 10.dp),
         content: @Composable ColumnScope.() -> Unit
     ) {
@@ -617,9 +614,6 @@ object AppActionSheet {
                 .then(if (respectNavigationBars) Modifier.navigationBarsPadding() else Modifier)
                 .then(touchShield?.let {
                     Modifier.clickable(it, indication = null, onClick = {})
-                } ?: Modifier)
-                .then(onBoundsChanged?.let { callback ->
-                    Modifier.onGloballyPositioned { callback(it.boundsInRoot()) }
                 } ?: Modifier)
                 .padding(outerPadding),
             contentAlignment = Alignment.BottomCenter
