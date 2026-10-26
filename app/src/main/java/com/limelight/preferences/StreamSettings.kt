@@ -3035,11 +3035,12 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
             // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
             // (Crashlytics 596baf51):先隐藏,IO 线程探测完再按结果显示。
-            findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible = false
+            // 走 updateRuntimeVisibility,避免与搜索过滤的可见性状态相互覆盖。
+            updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), false)
             lifecycleScope.launch {
                 val hasMtk = withContext(Dispatchers.IO) { MediaCodecHelper.hasMediaTekDecoder() }
                 if (isAdded) {
-                    findPreference<Preference>("checkbox_force_mtk_max_operating_rate")?.isVisible = hasMtk
+                    updateRuntimeVisibility(findPreference("checkbox_force_mtk_max_operating_rate"), hasMtk)
                 }
             }
 
