@@ -2,8 +2,10 @@ package com.limelight.utils
 
 import android.app.Dialog
 import android.content.res.Configuration
+import android.os.SystemClock
 import android.view.ContextThemeWrapper
 import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
@@ -60,6 +62,37 @@ class AppActionSheetSingleChoiceTest {
             )
         }
         composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun sheetFitsWindowAndClosesOnOutsideTap() {
+        showChoices(listOf(AppActionSheet.Action(1, "Current", checked = true)), 1)
+        awaitFocusedChoice("Current")
+
+        val outside = composeTestRule.runOnUiThread {
+            val decor = requireNotNull(dialog?.window).decorView
+            val location = IntArray(2)
+            decor.getLocationOnScreen(location)
+            val density = decor.resources.displayMetrics.density
+            val hostWidth = composeTestRule.activity.window.decorView.width
+            assertEquals("Window fills the phone up to its width cap", minOf(hostWidth.toFloat(), 580f * density), decor.width.toFloat(), 2f)
+            assertEquals("Window is horizontally centered", hostWidth / 2f, location[0] + decor.width / 2f, 2f)
+            floatArrayOf(location[0] + decor.width / 2f, location[1] - 64f * density)
+        }
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val downTime = SystemClock.uptimeMillis()
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, outside[0], outside[1], 0)
+            try {
+                instrumentation.sendPointerSync(event)
+            } finally {
+                event.recycle()
+            }
+        }
+        composeTestRule.waitUntil(5_000) {
+            composeTestRule.runOnUiThread { dialog?.isShowing == false }
+        }
+        assertEquals(emptyList<Int>(), invokedIds)
     }
 
     @Test

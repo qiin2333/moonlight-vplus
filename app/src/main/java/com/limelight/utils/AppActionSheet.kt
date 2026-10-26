@@ -3,14 +3,17 @@ package com.limelight.utils
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +33,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -59,11 +63,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
@@ -83,9 +85,30 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
+import com.limelight.ui.theme.AppOverlayWidths
 import kotlinx.coroutines.flow.first
+import kotlin.math.roundToInt
 
 object AppActionSheet {
+    private val horizontalInset = 10.dp
+
+    private fun windowWidth(context: Context): Int {
+        val resources = context.resources
+        val metrics = resources.displayMetrics
+        val maxWidth = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            (AppOverlayWidths.compact + horizontalInset * 2).value,
+            metrics
+        ).roundToInt()
+        val availableWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            windowManager.currentWindowMetrics.bounds.width()
+        } else {
+            (resources.configuration.screenWidthDp * metrics.density).roundToInt()
+        }
+        return minOf(availableWidth, maxWidth)
+    }
+
     data class Action(
         val id: Int,
         val title: CharSequence,
@@ -296,7 +319,22 @@ object AppActionSheet {
     ) {
         val resolvedHostWindow = hostWindow ?: (contentView.context as? Activity)?.window
 
-        dialog.setContentView(contentView)
+        // Bound the window as well as the panel so taps beside it remain outside
+        // the dialog. Update its width when the host rotates or its window is resized.
+        val dialogContent = if (fullScreen) contentView else object : FrameLayout(contentView.context) {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                super.onConfigurationChanged(newConfig)
+                dialog.window?.let { window ->
+                    window.attributes = window.attributes.apply { width = windowWidth(context) }
+                }
+            }
+        }.apply {
+            addView(contentView, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        dialog.setContentView(dialogContent)
         dialog.setCanceledOnTouchOutside(true)
         dialog.setOnKeyListener { _, keyCode, event ->
             UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)
@@ -316,10 +354,11 @@ object AppActionSheet {
             }
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.attributes = window.attributes.apply {
-                width = ViewGroup.LayoutParams.MATCH_PARENT
+                width = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
+                else windowWidth(contentView.context)
                 height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
                 else ViewGroup.LayoutParams.WRAP_CONTENT
-                gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM
+                gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             }
         }
 
@@ -561,8 +600,7 @@ object AppActionSheet {
     internal fun ActionSheetContainer(
         respectNavigationBars: Boolean = true,
         shieldBackgroundTouches: Boolean = false,
-        onBoundsChanged: ((Rect) -> Unit)? = null,
-        outerPadding: PaddingValues = PaddingValues(start = 10.dp, end = 10.dp, bottom = 10.dp),
+        outerPadding: PaddingValues = PaddingValues(start = horizontalInset, end = horizontalInset, bottom = 10.dp),
         content: @Composable ColumnScope.() -> Unit
     ) {
         val shape = AppShapes.overlay
@@ -583,13 +621,12 @@ object AppActionSheet {
                 .then(touchShield?.let {
                     Modifier.clickable(it, indication = null, onClick = {})
                 } ?: Modifier)
-                .then(onBoundsChanged?.let { callback ->
-                    Modifier.onGloballyPositioned { callback(it.boundsInRoot()) }
-                } ?: Modifier)
-                .padding(outerPadding)
+                .padding(outerPadding),
+            contentAlignment = Alignment.BottomCenter
         ) {
             Column(
                 modifier = Modifier
+                    .widthIn(max = AppOverlayWidths.compact)
                     .fillMaxWidth()
                     .clip(shape)
                     .background(gradient)

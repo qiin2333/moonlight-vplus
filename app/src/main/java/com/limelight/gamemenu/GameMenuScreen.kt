@@ -28,6 +28,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -89,7 +90,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -111,6 +111,7 @@ import com.limelight.R
 import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.FeatureGuideStore
 import com.limelight.ui.theme.AppCornerRadii
+import com.limelight.ui.theme.AppOverlayWidths
 import com.limelight.ui.theme.AppShapes
 import com.joco.showcase.sequence.SequenceShowcase
 import com.joco.showcase.sequence.rememberSequenceShowcaseState
@@ -218,21 +219,11 @@ internal fun GameMenuScreen(
         guideStore = store
         guidePending = shouldShow
     }
-    val configuration = LocalConfiguration.current
-    val windowWidth = with(LocalDensity.current) {
-        LocalWindowInfo.current.containerSize.width.toDp()
-    }
     val maxMenuHeight = rememberGameMenuMaxHeight()
-    val wideLayout = windowWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp
-    val horizontalInset = if (wideLayout) {
-        GameMenuDimens.wideScreenInset
+    val maxMenuWidth = if (state.isSubmenu && state.pageLayout != GameMenuPageLayout.TOUCH_MODE) {
+        AppOverlayWidths.compact
     } else {
-        GameMenuDimens.compactScreenInset
-    }
-    val menuWidthFraction = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
-    } else {
-        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+        AppOverlayWidths.expanded
     }
     val finishGuide = {
         guideDismissController.clear()
@@ -288,11 +279,10 @@ internal fun GameMenuScreen(
             }
 
             GameMenuDialogShell(
-                widthFraction = menuWidthFraction,
-                horizontalInset = horizontalInset,
+                maxMenuWidth = maxMenuWidth,
                 onDismissRequest = callbacks.onDismiss,
                 onTouchInteraction = callbacks.onTouchInteraction
-            ) {
+            ) { wideLayout ->
                 Surface(
                     color = Color.Transparent,
                     shape = GameMenuDialogShape,
@@ -440,12 +430,16 @@ internal fun shouldRestoreGameMenuFocus(
 
 @Composable
 internal fun GameMenuDialogShell(
-    widthFraction: Float,
-    horizontalInset: Dp,
     onDismissRequest: () -> Unit,
     onTouchInteraction: () -> Unit = {},
-    content: @Composable () -> Unit
+    maxMenuWidth: Dp = AppOverlayWidths.expanded,
+    content: @Composable (wideLayout: Boolean) -> Unit
 ) {
+    val widthFraction = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
+    } else {
+        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+    }
     val backdropInteraction = remember { MutableInteractionSource() }
     val safeDrawingPadding = WindowInsets.safeDrawing.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current
@@ -453,10 +447,20 @@ internal fun GameMenuDialogShell(
         safeDrawingPadding.calculateLeftPadding(layoutDirection),
         safeDrawingPadding.calculateRightPadding(layoutDirection)
     )
-    Box(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
+        val horizontalInset = if (maxWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp) {
+            GameMenuDimens.wideScreenInset
+        } else {
+            GameMenuDimens.compactScreenInset
+        }
+        // Keep the existing small-screen margins, then cap the visible panel itself.
+        val panelWidth = (maxWidth * widthFraction - (safeHorizontalPadding + horizontalInset) * 2)
+            .coerceIn(0.dp, maxMenuWidth)
+        val contentWidth = (panelWidth - GameMenuDimens.outer * 2).coerceAtLeast(0.dp)
+        val wideLayout = contentWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -472,14 +476,11 @@ internal fun GameMenuDialogShell(
         )
         Box(
             modifier = Modifier
-                .fillMaxWidth(widthFraction)
+                .width(panelWidth)
                 .padding(
-                    start = safeHorizontalPadding,
                     top = safeDrawingPadding.calculateTopPadding(),
-                    end = safeHorizontalPadding,
                     bottom = safeDrawingPadding.calculateBottomPadding()
                 )
-                .padding(horizontal = horizontalInset)
                 .testTag(GAME_MENU_PANEL_TAG)
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -489,7 +490,7 @@ internal fun GameMenuDialogShell(
                     }
                 }
         ) {
-            content()
+            content(wideLayout)
         }
     }
 }

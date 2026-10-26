@@ -31,6 +31,9 @@ class UsbDevicePanelTest {
                 androidx.compose.material3.Text("USB panel")
             }
         }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.runOnUiThread { dialog.window?.decorView?.hasWindowFocus() == true }
+        }
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_B)
         compose.waitForIdle()
         compose.runOnIdle { assertFalse(dialog.isShowing) }
