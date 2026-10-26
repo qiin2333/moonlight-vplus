@@ -22,7 +22,8 @@ internal class AuthoredPcmFallback {
         if (!restart && sequences[frame.controllerNumber]?.let { frame.sequenceNumber - it <= 0 } == true)
             return null
         sequences[frame.controllerNumber] = frame.sequenceNumber
-        if (frame.flags.toInt() and 2 != 0 || frame.frameCount == 0) return ControllerRumbleState.ZERO
+        // END may carry the final samples; only an empty marker has no energy to render.
+        if (frame.frameCount == 0) return ControllerRumbleState.ZERO
         var energy = 0.0
         for (i in frame.pcm.indices step 2) {
             val sample = ((frame.pcm[i].toInt() and 255) or (frame.pcm[i + 1].toInt() shl 8)).toShort() / 32768.0

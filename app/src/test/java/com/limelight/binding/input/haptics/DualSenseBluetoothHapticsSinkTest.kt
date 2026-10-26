@@ -43,12 +43,43 @@ class DualSenseBluetoothHapticsSinkTest {
         assertTrue(stopped.await(1, TimeUnit.SECONDS))
     }
 
+    @Test fun failureNotificationFollowsFinalTransportRelease() {
+        val releasing = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+        val failed = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val sink = DualSenseBluetoothHapticsSink({ true }, { false }, { true },
+            onFailure = { failed.countDown() }, release = {
+                releasing.countDown()
+                check(resume.await(2, TimeUnit.SECONDS))
+                true
+            })
+        try {
+            assertTrue(sink.start())
+            sink.submit(pulse())
+            assertTrue(releasing.await(1, TimeUnit.SECONDS))
+            assertEquals("recovery must not start while the old sink can still clear transport state",
+                1L, failed.count)
+            resume.countDown()
+            assertTrue(failed.await(1, TimeUnit.SECONDS))
+            assertFalse(sink.isOperational)
+        } finally {
+            resume.countDown()
+            sink.stopAndThen { stopped.countDown() }
+            assertTrue(stopped.await(2, TimeUnit.SECONDS))
+        }
+    }
+
     @Test fun unavailableTransportNeverAnnouncesOperationalOutput() {
         val stopped = CountDownLatch(1)
-        val sink = DualSenseBluetoothHapticsSink({ false }, { error("must not write") }, { true })
+        val failed = CountDownLatch(1)
+        val sink = DualSenseBluetoothHapticsSink({ false }, { error("must not write") }, { true },
+            onFailure = { failed.countDown() })
         assertFalse(sink.start())
         sink.stopAndThen { stopped.countDown() }
         assertTrue(stopped.await(1, TimeUnit.SECONDS))
+        assertTrue("failed startup must retire its route so a later ready event can retry",
+            failed.await(1, TimeUnit.SECONDS))
     }
 
     @Test fun sequenceGapPreservesPartialPacketAndFilterHistory() {

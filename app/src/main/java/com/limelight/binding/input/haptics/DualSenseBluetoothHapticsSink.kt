@@ -26,6 +26,7 @@ internal class DualSenseBluetoothHapticsSink(
     @Volatile private var stopping = false
     private var finished = false
     private var started = false
+    private var startupFailed = false
     private var worker: Thread? = null
     private var sent = 0L
     private var dropped = 0L
@@ -40,7 +41,10 @@ internal class DualSenseBluetoothHapticsSink(
     override fun start(): Boolean = synchronized(lock) {
         if (started || stopping) return@synchronized isOperational
         started = true
-        if (!ready()) return@synchronized false
+        if (!runCatching(ready).getOrDefault(false)) {
+            startupFailed = true
+            return@synchronized false
+        }
         active = true
         worker = Thread(::run, "DualSenseBtPcm").apply {
             priority = Thread.NORM_PRIORITY + 1
@@ -96,6 +100,7 @@ internal class DualSenseBluetoothHapticsSink(
     private fun run() {
         var deadline = 0L
         var playing = false
+        var failed = startupFailed
         try {
             while (!stopping) {
                 val now = System.nanoTime()
@@ -133,7 +138,7 @@ internal class DualSenseBluetoothHapticsSink(
             active = false
             stopping = true
             LimeLog.warning("DualSense Bluetooth PCM failed: ${failure.message}")
-            onFailure()
+            failed = true
         } finally {
             active = false
             runCatching { release() }
@@ -146,6 +151,8 @@ internal class DualSenseBluetoothHapticsSink(
             }
             LimeLog.info("DualSense Bluetooth PCM stopped: sent=$sent dropped=$dropped underruns=$underruns")
             done.forEach { runCatching(it) }
+            // Recovery may create a new sink on the same writer; retire all old transport access first.
+            if (failed) runCatching(onFailure)
         }
     }
 
