@@ -12,6 +12,7 @@ interface WaveformHapticsSink {
     val releaseFailure: Throwable? get() = null
     fun start(): Boolean
     fun submit(frame: Ds5HapticsPcmFrame)
+    /** Accepts state without physical I/O; the transport worker applies it before subsequent PCM. */
     fun updateControl(state: Ds5HapticsState) {}
     fun stop()
     fun stopAndThen(onStopped: () -> Unit) {

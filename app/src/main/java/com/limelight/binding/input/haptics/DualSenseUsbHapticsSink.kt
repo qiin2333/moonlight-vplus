@@ -70,6 +70,7 @@ internal class DualSenseUsbHapticsSink(
     private var writeIndex = 0
     private var prebuffered = false
     private var lastInputNs = 0L
+    private var pendingControl: Ds5HapticsState? = null // guarded with the PCM ring
 
     private val ringLock = Any()
     private val lifecycleLock = Any()
@@ -91,9 +92,10 @@ internal class DualSenseUsbHapticsSink(
     private var hasSequence = false
 
     override val isOperational: Boolean get() = active.get()
-    override fun updateControl(state: Ds5HapticsState) = synchronized(callbackLock) {
-        val accepting = synchronized(lifecycleLock) { !stopStarted && !stopCompleted }
-        if (accepting) onControl(state)
+    override fun updateControl(state: Ds5HapticsState) {
+        synchronized(lifecycleLock) {
+            if (!stopStarted && !stopCompleted) synchronized(ringLock) { pendingControl = state }
+        }
     }
 
     override fun start(): Boolean {
@@ -240,6 +242,7 @@ internal class DualSenseUsbHapticsSink(
                 readIndex = 0
                 writeIndex = 0
                 prebuffered = false
+                pendingControl = null
             }
             hasSequence = false
             stopCallbacks.toList().also { stopCallbacks.clear() }
@@ -350,7 +353,17 @@ internal class DualSenseUsbHapticsSink(
                 if (!active.get()) return
                 if (done !in slots.indices) { LimeLog.warning("ISO completion failed: $done"); return }
                 val slot = slots[done]
-                fillSlot(slot)
+                val control = synchronized(ringLock) {
+                    // Snapshot controls and PCM together. State accepted after this snapshot
+                    // can only precede samples in a later slot, never the slot being submitted.
+                    fillSlot(slot)
+                    pendingControl.also { pendingControl = null }
+                }
+                synchronized(callbackLock) {
+                    if (!active.get()) return
+                    control?.let(onControl)
+                }
+                if (!active.get()) return
                 val result = transport.submit(done, slot.buffer)
                 if (result != 0) {
                     LimeLog.warning("ISO submit failed: $result")

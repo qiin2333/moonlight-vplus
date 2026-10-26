@@ -76,14 +76,12 @@ class DualSenseUsbHapticsPathTest {
 
     @Test fun submissionFailureRestoresInterfaceAndSelectsFallbackInsteadOfClaimingDirectOutput() {
         val usb = MockUsb(failSubmission = 1)
-        var controlAttached = false
-        val sink = DualSenseUsbHapticsSink(usb,
-            onActiveChanged = { if (!it) controlAttached = false },
-            onControl = { controlAttached = true })
+        var controlsWritten = 0
+        val sink = DualSenseUsbHapticsSink(usb, onControl = { controlsWritten++ })
         sink.updateControl(Ds5HapticsState(ByteArray(8)))
-        assertTrue(controlAttached)
+        assertEquals("accepting controls must not perform HID I/O", 0, controlsWritten)
         assertFalse(sink.start())
-        assertFalse("startup failure must withdraw previously applied host control", controlAttached)
+        assertEquals("failed startup must discard queued host control", 0, controlsWritten)
         val routed = AuthoredPcmOutputRouter().submit(frame(0, 1, 240), sink, true)!!
         assertFalse(routed.direct)
         assertTrue(routed.failedSink)
@@ -120,7 +118,10 @@ class DualSenseUsbHapticsPathTest {
             })
             val updating = Thread {
                 assertTrue(sink.start())
-                if (!duringActivation) sink.updateControl(Ds5HapticsState(ByteArray(8)))
+                if (!duringActivation) {
+                    sink.updateControl(Ds5HapticsState(ByteArray(8)))
+                    usb.completions.add(0)
+                }
             }.apply { start() }
             assertTrue(entered.await(1, TimeUnit.SECONDS))
             val stopping = Thread { sink.stopAndThen { usb.events.add("stopped"); stopped.countDown() } }
@@ -138,6 +139,42 @@ class DualSenseUsbHapticsPathTest {
             assertTrue(usb.events.indexOf("callback-done") < usb.events.indexOf("stopped"))
             if (duringActivation) assertEquals(listOf(true, false), activations)
         }
+    }
+
+    @Test fun blockedHidWriteDoesNotBlockAcceptanceAndLatestControlPrecedesNewPcm() {
+        val usb = MockUsb()
+        val entered = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+        val accepted = CountDownLatch(1)
+        val controls = Collections.synchronizedList(mutableListOf<Int>())
+        val caller = Thread.currentThread()
+        val sink = DualSenseUsbHapticsSink(usb, onControl = {
+            assertNotSame("HID writes belong to the transport worker", caller, Thread.currentThread())
+            controls.add(it.modeFlags0)
+            usb.events.add("control-${it.modeFlags0}")
+            if (it.modeFlags0 == 0) { entered.countDown(); check(resume.await(3, TimeUnit.SECONDS)) }
+        })
+        sink.updateControl(Ds5HapticsState(ByteArray(8)))
+        val receiving = Thread {
+            sink.updateControl(Ds5HapticsState(byteArrayOf(2, 4, 0, 0, 0, 0, 0, 0)))
+            sink.submit(frame(0, 3, 240))
+            accepted.countDown()
+        }
+        try {
+            assertTrue(sink.start())
+            usb.drainStartup()
+            usb.completions.add(0)
+            assertTrue(entered.await(1, TimeUnit.SECONDS))
+            receiving.start()
+            assertTrue("slow HID must not block control or PCM acceptance", accepted.await(200, TimeUnit.MILLISECONDS))
+            resume.countDown()
+            assertTrue(usb.packets.poll(2, TimeUnit.SECONDS)!!.all { it == 0.toByte() })
+            assertPacket(usb.completeOne(), -12345, 23456)
+            assertEquals("new control must be written before submitting the new PCM slot", listOf(0, 2), controls)
+            assertTrue(usb.events.indexOf("control-2") < usb.events.indexOf("pcm"))
+        } finally { resume.countDown(); receiving.join(2000); stop(sink) }
+        sink.updateControl(Ds5HapticsState(ByteArray(8)))
+        assertEquals(listOf(0, 2), controls)
     }
 
     @Test fun repeatedStopCannotCompleteBeforeTheFinalOutputCallback() {
@@ -220,6 +257,7 @@ class DualSenseUsbHapticsPathTest {
             if (submitted++ == failSubmission) return -5
             val bytes = ByteArray(384)
             buffer.duplicate().apply { rewind(); get(bytes) }
+            if (bytes.any { it != 0.toByte() }) events.add("pcm")
             packets.add(bytes)
             return 0
         }

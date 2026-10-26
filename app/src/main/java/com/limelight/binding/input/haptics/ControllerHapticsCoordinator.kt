@@ -97,8 +97,8 @@ internal class ControllerHapticsCoordinator(
     private var audioController: Short? = null
     private var lastAudioContinuousState = ControllerRumbleState.ZERO
     private var lastAudioContinuousExpiresAtMs: Long? = null
-    private var stopping = false
-    private var stopped = false
+    @Volatile private var stopping = false
+    @Volatile private var stopped = false
 
     private val expiryRunnable = Runnable {
         if (stopped || stopping || handler.stopped) return@Runnable
@@ -432,15 +432,15 @@ internal class ControllerHapticsCoordinator(
 
     fun submitDs5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {
         val generation = outputLifecycle.capture(controllerNumber) ?: return
-        runForControllerOutput(controllerNumber) {
-            synchronized(ds5LifecycleLock) {
-                if (!outputLifecycle.isCurrent(controllerNumber, generation) || isStoppingOrStopped()) return@runForControllerOutput
-                if (ds5ControlStates.put(controllerNumber, state) == null) {
-                    LimeLog.info("DualSense authored control state received: player=$controllerNumber")
-                }
-                ds5HapticsBindings.values.filter { it.controllerNumber == controllerNumber }
-                    .forEach { it.sink.updateControl(state) }
+        // State and PCM arrive on the control receive thread. Publish here, before a later
+        // PCM callback can reach its sink; updateControl only accepts state, never transport I/O.
+        synchronized(ds5LifecycleLock) {
+            if (!outputLifecycle.isCurrent(controllerNumber, generation) || isStoppingOrStopped()) return
+            if (ds5ControlStates.put(controllerNumber, state) == null) {
+                LimeLog.info("DualSense authored control state received: player=$controllerNumber")
             }
+            ds5HapticsBindings.values.filter { it.controllerNumber == controllerNumber }
+                .forEach { it.sink.updateControl(state) }
         }
     }
 
