@@ -499,6 +499,8 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
     }
 
+    private var searchBarExpanded = false
+
     private val isSearchBarVisible: Boolean
         get() = searchToggle != null && searchBar?.visibility == View.VISIBLE
 
@@ -515,6 +517,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun showSearchBar(enterInput: Boolean = false) {
+        searchBarExpanded = true
         fadeOut(searchToggle)
         fadeOut(menuToggleView)
         fadeIn(searchBar)
@@ -583,15 +586,18 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun hideSearchBar() {
+        val focusInsideSearch = searchBar?.findFocus() != null
+        searchBarExpanded = false
         clearSearchQuery()
         fadeOut(searchBar)
         fadeIn(searchToggle)
         fadeIn(menuToggleView)
         updateSearchFocusRoutes()
+        if (focusInsideSearch) searchToggle?.requestFocus()
     }
 
     private fun searchFocusTargetId(): Int {
-        return if (isSearchBarVisible) R.id.settings_search_icon else R.id.settings_search_toggle
+        return if (searchBarExpanded) R.id.settings_search_icon else R.id.settings_search_toggle
     }
 
     private fun routePreferenceFocus(view: View, targetId: Int, portrait: Boolean) {
