@@ -51,6 +51,16 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendMultiControllerInput(JNIEnv *env,
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendMultiControllerInputChecked(JNIEnv *env, jclass clazz, jshort controllerNumber,
+                                                           jshort activeGamepadMask, jint buttonFlags,
+                                                           jbyte leftTrigger, jbyte rightTrigger,
+                                                           jshort leftStickX, jshort leftStickY,
+                                                           jshort rightStickX, jshort rightStickY) {
+    return LiSendMultiControllerEvent(controllerNumber, activeGamepadMask, buttonFlags,
+        leftTrigger, rightTrigger, leftStickX, leftStickY, rightStickX, rightStickY);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_sendTouchEvent(JNIEnv *env, jclass clazz,
                                                           jbyte eventType, jint pointerId,
                                                           jfloat x, jfloat y, jfloat pressureOrDistance,
@@ -185,6 +195,24 @@ Java_com_limelight_nvstream_jni_MoonBridge_sendControllerMotionEvent(JNIEnv *env
                                                                      jbyte motionType, jfloat x,
                                                                      jfloat y, jfloat z) {
     return LiSendControllerMotionEvent(controllerNumber, motionType, x, y, z);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_sendControllerMotionFrame(JNIEnv *env, jclass clazz,
+        jbyte controller, jfloat gx, jfloat gy, jfloat gz, jfloat ax, jfloat ay, jfloat az) {
+    return LiSendControllerMotionFrame(controller, gx, gy, gz, ax, ay, az);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_stopControllerMotionEvent(JNIEnv *env, jclass clazz,
+        jbyte controller) {
+    return LiStopControllerMotionEvent(controller);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_resetControllerMotionEvents(JNIEnv *env, jclass clazz,
+        jbyte controller, jboolean clearDemand) {
+    return LiResetControllerMotionEvents(controller, clearDemand);
 }
 
 JNIEXPORT jint JNICALL

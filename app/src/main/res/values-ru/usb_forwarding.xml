@@ -53,4 +53,7 @@
     <string name="usb_type_printer">Принтер</string>
     <string name="usb_type_hub">USB-хаб</string>
     <string name="usb_type_generic">USB-устройство</string>
+    <string name="usb_forward_auto_title">Автоматически подключать к этому компьютеру</string>
+    <string name="usb_forward_auto_type_hint">Нет серийного номера: запоминается тип устройства. Одинаковые устройства подключайте вручную.</string>
+    <string name="usb_forward_auto_ambiguous">Обнаружены одинаковые USB-устройства. Подключите нужное устройство к компьютеру вручную.</string>
 </resources>

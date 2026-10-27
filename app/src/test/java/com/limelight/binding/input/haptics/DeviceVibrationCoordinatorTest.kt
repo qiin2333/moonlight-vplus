@@ -354,63 +354,10 @@ class DeviceVibrationCoordinatorTest {
     }
 
     @Test
-    fun audioReleaseResubmitsAnUnchangedGameLevel() {
-        val executor = Executors.newSingleThreadScheduledExecutor()
-        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
-        val clock = FakeClock()
-        val coordinator = coordinator(executor, vibrations, clock)
-
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        await { vibrations.size == 1 }
-
-        coordinator.claimForAudio()
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        val barrier = executor.submit {}
-        barrier.get(2, TimeUnit.SECONDS)
-        assertEquals(1, vibrations.size)
-
-        // The motor stopped with the audio session: releasing must reprogram the same level
-        // immediately even though its amplitude never changed.
-        coordinator.releaseFromAudio()
-        await { vibrations.size == 2 }
-        assertEquals(Vibration(160, 500), vibrations.last())
-
-        coordinator.stop()
-        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
-    }
+    fun audioReleaseRestoresUnchangedGameLevelWithZeroDelay() = assertRestorationDelay(audio = true)
 
     @Test
-    fun touchCompletionResubmitsAnUnchangedGameLevel() {
-        val executor = Executors.newSingleThreadScheduledExecutor()
-        val vibrations = Collections.synchronizedList(mutableListOf<Vibration>())
-        val clock = FakeClock()
-        val coordinator = coordinator(executor, vibrations, clock)
-
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        await { vibrations.size == 1 }
-
-        coordinator.playTouchHaptic(2_000, 2_000, 50)
-        await { vibrations.size == 2 }
-        assertEquals(Vibration(7, 50), vibrations.last())
-
-        coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
-        val barrier = executor.submit {}
-        barrier.get(2, TimeUnit.SECONDS)
-        assertEquals(2, vibrations.size)
-
-        clock.advance(50)
-        await { vibrations.size == 3 }
-        assertEquals(Vibration(160, 500), vibrations.last())
-
-        coordinator.stop()
-        assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
-    }
-
-    @Test
-    fun audioRestorationIsScheduledWithZeroDelay() = assertRestorationDelay(audio = true)
-
-    @Test
-    fun touchRestorationIsScheduledWithZeroDelay() = assertRestorationDelay(audio = false)
+    fun touchCompletionRestoresUnchangedGameLevelWithZeroDelay() = assertRestorationDelay(audio = false)
 
     private fun assertRestorationDelay(audio: Boolean) {
         val delays = Collections.synchronizedList(mutableListOf<Long>())
@@ -445,9 +392,15 @@ class DeviceVibrationCoordinatorTest {
                 coordinator.playTouchHaptic(2_000, 2_000, 50)
                 await { vibrations.size == 2 }
                 executor.submit {}.get(2, TimeUnit.SECONDS)
+                assertEquals(Vibration(7, 50), vibrations.last())
             }
-            delays.clear()
             val beforeRestore = vibrations.size
+            coordinator.submitGameRumble(ROUTED_GAME, 160, 100)
+            executor.submit {}.get(2, TimeUnit.SECONDS)
+            assertEquals(beforeRestore, vibrations.size)
+
+            // Restoration must reprogram the motor immediately even when its level is unchanged.
+            delays.clear()
             if (audio) coordinator.releaseFromAudio() else clock.advance(50)
             await { vibrations.size == beforeRestore + 1 }
             assertEquals(listOf(0L), delays.toList())

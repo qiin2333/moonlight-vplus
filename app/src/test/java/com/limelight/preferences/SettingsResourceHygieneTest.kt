@@ -30,7 +30,7 @@ class SettingsResourceHygieneTest {
             }
             .toSet()
 
-        listOf("values", "values-zh-rCN", "values-zh-rTW").forEach { directory ->
+        listOf("values", "values-zh-rCN", "values-zh-rTW", "values-ru").forEach { directory ->
             val valuesByName = stringValues(directory)
             referencedText.forEach { name ->
                 val value = valuesByName[name]
@@ -59,30 +59,80 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun pyrowaveDiagnosticIsANonPersistentActionBelowVideoReport() {
-        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
-        val actions = preferences.documentElement.getElementsByTagName("Preference")
-            .asElementSequence().toList()
-        val video = actions.single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "capability_diagnostic" }
-        val pyrowave = actions.single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "pyrowave_capability_diagnostic" }
-        assertEquals(video.parentNode, pyrowave.parentNode)
-        val siblings = video.parentNode.childNodes.asElementSequence().toList()
-        assertEquals(siblings.indexOf(video) + 1, siblings.indexOf(pyrowave))
-        assertEquals("false", pyrowave.getAttributeNS(ANDROID_NAMESPACE, "persistent"))
-    }
+    fun englishAndRussianCoverSettingsChoicesAndDynamicMessages() {
+        fun resources(directory: String) = File(resourceDir, directory).listFiles().orEmpty()
+            .filter { it.isFile && it.extension == "xml" }
+            .flatMap { parse(it).documentElement.childNodes.asElementSequence().toList() }
+            .filter { it.tagName in setOf("string", "string-array", "array", "plurals") }
+            .associateBy { it.getAttribute("name") }
 
-    @Test
-    fun reverseResolutionIsLastDisplayBehaviorPreference() {
-        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
-        val category = preferences.documentElement.getElementsByTagName("PreferenceCategory")
-            .asElementSequence()
-            .single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "category_display_behavior" }
-        val keys = category.childNodes.asElementSequence()
-            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
-            .filter(String::isNotEmpty)
-            .toList()
+        val defaults = resources("values")
+        val russian = resources("values-ru")
+        val referenced = linkedSetOf<String>()
+        val referencePattern = Regex("@(?:string|array)/([A-Za-z0-9_]+)")
+        fun collectReferences(text: String) {
+            referencePattern.findAll(text).forEach { referenced.add(it.groupValues[1]) }
+        }
 
-        assertEquals("checkbox_reverse_resolution", keys.last())
+        collectReferences(File(resourceDir, "xml/preferences.xml").readText())
+        val sourceDir = File(resourceDir.parentFile, "java/com/limelight/preferences")
+        assertTrue("Unable to locate settings sources", sourceDir.isDirectory)
+        val sourceReferences = Regex("(?<![\\w.])R\\.(?:string|array)\\.([A-Za-z0-9_]+)")
+        val layoutReferences = Regex("(?<![\\w.])R\\.layout\\.([A-Za-z0-9_]+)")
+        sourceDir.walkTopDown().filter { it.extension in setOf("kt", "java") }.forEach { source ->
+            val text = source.readText()
+            sourceReferences.findAll(text).forEach { referenced.add(it.groupValues[1]) }
+            layoutReferences.findAll(text).forEach { match ->
+                File(resourceDir, "layout/${match.groupValues[1]}.xml")
+                    .takeIf(File::isFile)?.let { collectReferences(it.readText()) }
+            }
+        }
+
+        val pending = java.util.ArrayDeque(referenced)
+        while (pending.isNotEmpty()) {
+            val name = pending.removeFirst()
+            val resource = defaults[name]
+            assertNotNull("Missing default settings resource: $name", resource)
+            val previous = referenced.toSet()
+            collectReferences(resource!!.textContent)
+            pending.addAll(referenced - previous)
+        }
+
+        // A literal percentage followed by prose (for example, "100% keeps") is not a format token.
+        val placeholders = Regex(
+            "%(?:(\\d+)\\$)?([-#+ 0,(<]*\\d*(?:\\.\\d+)?" +
+                "(?:[bBhHsScCdoxXeEfgGaA]|[tT][HIklMSLNpzZsQBbhAaCYyjmdeRTrDFc]|[%n]))(?![a-zA-Z])",
+        )
+        fun formats(text: String): List<String> {
+            var implicitArgument = 0
+            var previousArgument = 0
+            return placeholders.findAll(text).mapNotNull { match ->
+                val format = match.groupValues[2]
+                if (format.last() in setOf('%', 'n')) return@mapNotNull null
+                val argument = when {
+                    match.groupValues[1].isNotEmpty() -> match.groupValues[1].toInt()
+                    '<' in format -> previousArgument
+                    else -> ++implicitArgument
+                }
+                previousArgument = argument
+                "$argument:${format.replace("<", "")}"
+            }.sorted().toList()
+        }
+        referenced.map { defaults.getValue(it) }
+            .filter { it.tagName == "string" && it.getAttribute("translatable") != "false" }
+            .forEach { original ->
+                val name = original.getAttribute("name")
+                val translated = russian[name]
+                assertNotNull("Missing Russian settings text: $name", translated)
+                if (!name.startsWith("suffix_")) {
+                    assertTrue("Blank English settings text: $name", original.textContent.isNotBlank())
+                    assertTrue("Blank Russian settings text: $name", translated!!.textContent.isNotBlank())
+                }
+                if (original.getAttribute("formatted") != "false") {
+                    assertEquals("Russian settings formatting mismatch: $name",
+                        formats(original.textContent), formats(translated!!.textContent))
+                }
+            }
     }
 
     @Test
@@ -197,7 +247,7 @@ class SettingsResourceHygieneTest {
                 .map { it.textContent.trim().removePrefix("@string/") }
                 .toList()
         }.toSet()
-        listOf("values-zh-rCN", "values-zh-rTW").forEach { directory ->
+        listOf("values-zh-rCN", "values-zh-rTW", "values-ru").forEach { directory ->
             val localizedValues = stringValues(directory)
             localizedLabelNames.forEach { name ->
                 assertTrue("$directory is missing settings list label $name", name in localizedValues)
@@ -206,125 +256,177 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
-    fun settingsCategoriesKeepEveryPreferenceKey() {
+    fun requiredSettingsRemainDiscoverable() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
-        val categories = preferences.documentElement
-            .getElementsByTagName("PreferenceCategory")
+        val actualKeys = preferences.documentElement.getElementsByTagName("*")
             .asElementSequence()
-            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
-
-        setOf(
-            "category_enhanced_touch",
-            "category_float_ball",
-            "category_connection_settings",
-        ).forEach { retiredKey ->
-            assertFalse("Retired category is still present: $retiredKey", retiredKey in categories)
-        }
-
-        val expectedKeysByCategory = mapOf(
+            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+            .toSet()
+        val requiredKeysByCategory = mapOf(
             "category_basic_settings" to setOf(
                 "checkbox_adaptive_bitrate", "list_abr_mode", "seekbar_bitrate_kbps",
                 "list_fec_mode", "seekbar_fec_percentage",
             ),
-            "category_screen_position" to setOf(
-                "video_format",
-                "checkbox_enable_hdr",
-                "checkbox_enable_hdr_high_brightness",
-                "checkbox_hdr_brightness_override",
-                "seekbar_hdr_peak_brightness_nits",
-                "list_hdr_mode",
-                "checkbox_full_range",
-                "capability_diagnostic",
-                "pyrowave_capability_diagnostic",
-            ),
             "category_host_settings" to setOf(
-                "list_background_stream_behavior",
-                "list_quit_behavior",
-                "checkbox_resume_stream",
-                "checkbox_extreme_resume",
-                "checkbox_background_audio",
-                "checkbox_enable_stun",
+                "list_background_stream_behavior", "list_quit_behavior", "checkbox_resume_stream",
+                "checkbox_extreme_resume", "checkbox_background_audio", "checkbox_enable_stun",
             ),
+            "category_screen_position" to setOf(
+                "video_format", "checkbox_enable_hdr", "checkbox_enable_hdr_high_brightness",
+                "checkbox_hdr_brightness_override", "seekbar_hdr_peak_brightness_nits", "list_hdr_mode",
+                "checkbox_full_range", "capability_diagnostic", "pyrowave_capability_diagnostic",
+            ),
+            "category_display_behavior" to setOf("checkbox_reverse_resolution"),
             "category_ui_settings" to setOf(
-                "checkbox_enable_float_ball",
-                "list_float_ball_position",
-                "seekbar_float_ball_auto_hide_delay",
-                "list_float_ball_single_click_action",
-                "list_float_ball_double_click_action",
-                "list_float_ball_long_click_action",
+                "settings_float_ball",
             ),
             "category_microphone_settings" to setOf(
-                "checkbox_enable_mic",
-                "list_mic_initial_state",
-                "list_mic_menu_action_mode",
-                "checkbox_show_mic_button",
-                "list_mic_button_position",
-                "seekbar_mic_bitrate_kbps",
-                "list_mic_icon_color",
-                "list_mic_volume_processing_mode",
-                "checkbox_mic_volume_processing",
-                "checkbox_mic_gain",
-                "seekbar_mic_gain_db",
-                "checkbox_mic_balance",
-                "seekbar_mic_balance_target",
-                "checkbox_mic_voice_enhancement",
+                "checkbox_enable_mic", "list_mic_initial_state", "list_mic_menu_action_mode",
+                "checkbox_show_mic_button", "list_mic_button_position", "seekbar_mic_bitrate_kbps",
+                "list_mic_icon_color", "list_mic_volume_processing_mode", "checkbox_mic_volume_processing",
+                "checkbox_mic_gain", "seekbar_mic_gain_db", "checkbox_mic_balance",
+                "seekbar_mic_balance_target", "checkbox_mic_voice_enhancement",
             ),
             "category_input_settings" to setOf(
-                "checkbox_enable_enhanced_touch",
-                "seekbar_flat_region_pixels",
-                "checkbox_enhanced_touch_on_which_side",
-                "enhanced_touch_zone_divider",
-                "pointer_velocity_factor",
+                "checkbox_enable_enhanced_touch", "seekbar_flat_region_pixels",
+                "checkbox_enhanced_touch_on_which_side", "enhanced_touch_zone_divider", "pointer_velocity_factor",
             ),
             "category_gamepad_settings" to setOf(
-                "list_dualsense_output_mode",
-                "checkbox_dualsense_direct_bluetooth",
-                "checkbox_dualsense_wireless_bridge",
+                "list_dualsense_output_mode", "checkbox_dualsense_direct_bluetooth", "checkbox_dualsense_wireless_bridge",
             ),
         )
+        val requiredKeys = requiredKeysByCategory.values.flatten().toSet()
+        val missingKeys = requiredKeys - actualKeys
+        assertTrue("Missing settings: $missingKeys", missingKeys.isEmpty())
 
-        listOf(
-            "category_basic_settings",
-            "category_screen_position",
-            "category_host_settings",
-            "category_display_behavior",
-            "category_advanced_features",
-            "category_framegen_settings",
-            "category_audio_settings",
-            "category_microphone_settings",
-            "category_gamepad_settings",
-            "category_input_settings",
-            "category_onscreen_controls",
-            "category_crown_features",
-            "category_ui_settings",
-            "category_backup_restore",
-            "category_help",
-        ).forEachIndexed { order, categoryKey ->
-            assertEquals(
-                "Unexpected sidebar order for $categoryKey",
-                order.toString(),
-                categories[categoryKey]?.getAttributeNS(ANDROID_NAMESPACE, "order"),
-            )
+        val categoriesByKey = preferences.documentElement.childNodes.asElementSequence()
+            .filter { it.tagName == "PreferenceCategory" }
+            .associateBy { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+        requiredKeysByCategory.forEach { (categoryKey, expectedKeys) ->
+            val category = categoriesByKey[categoryKey]
+            assertNotNull("Missing settings category: $categoryKey", category)
+            val childKeys = category!!.getElementsByTagName("*").asElementSequence()
+                .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+                .toSet()
+            val misplacedKeys = expectedKeys - childKeys
+            assertTrue("Settings missing from $categoryKey: $misplacedKeys", misplacedKeys.isEmpty())
+        }
+        val floatBallScreen = preferences.documentElement.getElementsByTagName("PreferenceScreen")
+            .asElementSequence()
+            .single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "settings_float_ball" }
+        val floatBallKeys = floatBallScreen.getElementsByTagName("*").asElementSequence()
+            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }.toSet()
+        assertTrue("Floating ball settings must remain discoverable in their feature screen",
+            floatBallKeys.containsAll(setOf(
+                "checkbox_enable_float_ball", "list_float_ball_position", "seekbar_float_ball_auto_hide_delay",
+                "list_float_ball_single_click_action", "list_float_ball_double_click_action",
+                "list_float_ball_long_click_action",
+            )))
+    }
+
+    @Test
+    fun featurePagesKeepNavigationShallowAndDoNotPersistValues() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val root = preferences.documentElement
+        val pages = root.getElementsByTagName("PreferenceScreen").asElementSequence().toList()
+        val expectedPageKeys = setOf(
+            "settings_frame_generation",
+            "settings_hdr", "settings_picture_layout", "settings_float_ball",
+            "settings_performance_overlay", "settings_audio_passthrough", "settings_audio_vibration",
+            "settings_gamepad", "settings_input",
+        )
+        assertEquals("Each feature must have one settings page", expectedPageKeys.size, pages.size)
+        assertEquals(
+            "Feature pages must remain available from the main settings page",
+            expectedPageKeys,
+            pages.map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }.toSet(),
+        )
+
+        pages.forEach { page ->
+            val key = page.getAttributeNS(ANDROID_NAMESPACE, "key")
+            assertEquals("$key must be in a main-page category", "PreferenceCategory", page.parentNode.nodeName)
+            assertTrue("$key must be reachable from the main page", page.parentNode.parentNode === root)
+            assertEquals("$key must not introduce another navigation level", 0,
+                page.getElementsByTagName("PreferenceScreen").length)
+            assertEquals("$key is navigation and must not persist a value", "false",
+                page.getAttributeNS(ANDROID_NAMESPACE, "persistent"))
+            assertEquals("$key must show its navigation affordance", "@layout/preference_widget_navigation",
+                page.getAttributeNS(ANDROID_NAMESPACE, "widgetLayout"))
         }
 
-        expectedKeysByCategory.forEach { (categoryKey, expectedKeys) ->
-            val category = categories[categoryKey]
-            assertNotNull("Missing target category: $categoryKey", category)
-            val actualKeys = category!!.childNodes.asElementSequence()
-                .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
-                .filter(String::isNotEmpty)
-                .toSet()
-            expectedKeys.forEach { preferenceKey ->
+        root.childNodes.asElementSequence().filter { it.tagName == "PreferenceCategory" }
+            .forEach { category ->
+                val directMainSettings = category.getElementsByTagName("*").asElementSequence()
+                    .filter { it.tagName !in setOf("PreferenceScreen", "PreferenceCategory") }
+                    .filter { element ->
+                        generateSequence(element.parentNode) { it.parentNode }
+                            .takeWhile { it !== category }
+                            .none { it.nodeName == "PreferenceScreen" }
+                    }
+                    .filter { it.getAttributeNS(ANDROID_NAMESPACE, "selectable") != "false" }
+                    .toList()
                 assertTrue(
-                    "$preferenceKey is missing from $categoryKey",
-                    preferenceKey in actualKeys,
+                    "${category.getAttributeNS(ANDROID_NAMESPACE, "key")} must retain a setting or action on the main page",
+                    directMainSettings.isNotEmpty(),
                 )
             }
+    }
+
+    @Test
+    fun commonSettingsAndFlatSectionsStayOnTheMainPage() {
+        val root = parse(File(resourceDir, "xml/preferences.xml")).documentElement
+        val mainKeys = root.getElementsByTagName("*").asElementSequence()
+            .filter { element ->
+                generateSequence(element.parentNode) { it.parentNode }
+                    .takeWhile { it !== root }
+                    .none { it.nodeName == "PreferenceScreen" }
+            }
+            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }
+            .toSet()
+        val requiredMainKeys = setOf(
+            "checkbox_enable_mic", "list_mic_initial_state", "list_mic_menu_action_mode", "checkbox_show_mic_button",
+            "seekbar_mic_bitrate_kbps", "list_mic_button_position", "list_mic_icon_color",
+            "list_mic_volume_processing_mode", "checkbox_mic_volume_processing", "checkbox_mic_gain",
+            "seekbar_mic_gain_db", "checkbox_mic_balance", "seekbar_mic_balance_target", "checkbox_mic_voice_enhancement",
+            "controller_diagnostic", "controller_mouse_settings", "seekbar_deadzone", "stick_calibration",
+            "list_native_mouse_mode_preset", "checkbox_touch_keyboard_auto_invoke", "checkbox_remote_ime_auto_show",
+            "checkbox_enable_sops", "list_screen_combination_mode", "checkbox_host_audio",
+            "list_quit_behavior", "list_background_stream_behavior",
+            "checkbox_control_only", "checkbox_lock_screen_after_disconnect", "checkbox_swap_quit_and_disconnect",
+            "checkbox_resume_stream", "checkbox_extreme_resume", "checkbox_background_audio",
+            "checkbox_clipboard_sync_text", "checkbox_clipboard_sync_image", "checkbox_enable_stun",
+            "pref_framegen_pick_lossless_dll", "checkbox_framegen_enabled", "checkbox_framegen_adaptive_enabled",
+            "list_framegen_quality_preset", "pref_framegen_selftest", "checkbox_enable_hdr",
+            "seekbar_output_buffer_queue_limit", "checkbox_force_mtk_max_operating_rate", "list_hevc_low_latency_mode",
+            "background_source", "background_image_url", "local_image_picker", "reset_background_image",
+            "checkbox_show_onscreen_controls", "list_osc_layout", "checkbox_only_show_L3R3",
+            "checkbox_show_guide_button", "checkbox_half_height_osc_portrait", "seekbar_osc_opacity", "reset_osc",
+            "config_sync_export", "config_sync_import", "config_sync_select_directory",
+            "checkbox_config_sync_background_sync", "config_sync_import_external_snapshot",
+            "documentation_handbook", "about_us", "open_source_notices", "check_for_updates",
+            "pref_developer_unlock", "sponsor_panel",
+        )
+        val hiddenBehindPages = requiredMainKeys - mainKeys
+        assertTrue("Settings must not require an extra navigation step: $hiddenBehindPages",
+            hiddenBehindPages.isEmpty())
+    }
+
+    @Test
+    fun settingsAreNotHiddenBehindExpandButtons() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val elements = sequenceOf(preferences.documentElement) +
+            preferences.documentElement.getElementsByTagName("*").asElementSequence()
+        elements.forEach { element ->
+            val expandedCount = element.getAttributeNS(APP_NAMESPACE, "initialExpandedChildrenCount")
+            assertTrue(
+                "${element.getAttributeNS(ANDROID_NAMESPACE, "key")} must not collapse settings behind an expand button",
+                expandedCount.isEmpty() || expandedCount == Int.MAX_VALUE.toString(),
+            )
         }
     }
 
     @Test
-    fun legacyBackedModeSelectorsDoNotPersistSyntheticKeys() {
+    fun uiOnlyPreferencesDoNotPersistValues() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
         val preferencesByKey = preferences.documentElement
             .getElementsByTagName("*")
@@ -337,20 +439,25 @@ class SettingsResourceHygieneTest {
             "list_dualsense_output_mode",
             "list_native_mouse_mode_preset",
             "list_mic_volume_processing_mode",
+            "pyrowave_capability_diagnostic",
         ).forEach { key ->
             val preference = preferencesByKey[key]
-            assertNotNull("Missing synthetic mode selector: $key", preference)
+            assertNotNull("Missing UI-only preference: $key", preference)
             assertTrue(
-                "$key must remain non-persistent so compatibility storage is explicit",
+                "$key must not persist a separate UI value",
                 preference!!.getAttributeNS(ANDROID_NAMESPACE, "persistent") == "false",
             )
         }
     }
 
     private fun stringValues(directory: String): Map<String, String> =
-        parse(File(resourceDir, "$directory/strings.xml"))
-            .documentElement.childNodes.asElementSequence()
-            .filter { it.tagName == "string" }
+        File(resourceDir, directory).listFiles().orEmpty().asSequence()
+            .filter { it.isFile && it.extension == "xml" }
+            .sortedBy { it.name }
+            .flatMap { file ->
+                parse(file).documentElement.childNodes.asElementSequence()
+                    .filter { it.tagName == "string" }
+            }
             .associate { it.getAttribute("name") to it.textContent }
 
     private fun parse(file: File) = DocumentBuilderFactory.newInstance().apply {
@@ -366,5 +473,6 @@ class SettingsResourceHygieneTest {
 
     companion object {
         private const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
+        private const val APP_NAMESPACE = "http://schemas.android.com/apk/res-auto"
     }
 }

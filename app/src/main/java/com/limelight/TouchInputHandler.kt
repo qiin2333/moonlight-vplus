@@ -1435,6 +1435,7 @@ class TouchInputHandler(private val game: Game) {
             relativeTouchContextMap[i] = RelativeTouchContext(conn, i, streamView, prefConfig)
         }
         touchContextMap = if (!prefConfig.touchscreenTrackpad) absoluteTouchContextMap else relativeTouchContextMap
+        game.touchpadInputSettings.apply()
     }
 
     companion object {

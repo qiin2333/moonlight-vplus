@@ -28,126 +28,105 @@
 
     </FrameLayout>
 
-    <!-- App 图标网格容器 -->
+    <!-- 应用网格本身保持在页面中央，标题和提示紧贴其上沿。 -->
     <FrameLayout
-        android:id="@+id/appFragmentContainer"
+        android:id="@+id/appCatalogFrame"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerVertical="true" />
-
-    <!-- 选中框动画 -->
-    <View
-        android:id="@+id/selectionIndicator"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/selection_indicator"
-        android:visibility="invisible"
-        android:elevation="8dp"
+        android:layout_centerVertical="true"
         android:clipChildren="false"
-        android:clipToPadding="false" />
+        android:clipToPadding="false">
 
-    <View
-        android:id="@+id/topPanelScrim"
+        <FrameLayout
+            android:id="@+id/appFragmentContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <View
+            android:id="@+id/selectionIndicator"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/selection_indicator"
+            android:visibility="invisible"
+            android:elevation="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false" />
+    </FrameLayout>
+
+    <!-- 标题区域（电脑名 + 应用名 + 恢复箭头），与列表保持固定间距。 -->
+    <LinearLayout
+        android:id="@+id/appContentColumn"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#00000000"
-        android:clickable="true"
-        android:focusable="false"
-        android:importantForAccessibility="no"
-        android:visibility="gone" />
-
-    <!-- 顶部下拉手柄标签 -->
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/topPanelToggle"
-        android:layout_width="84dp"
-        android:layout_height="36dp"
-        android:layout_centerHorizontal="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginTop="@dimen/activity_safearea_top"
-        android:elevation="4dp"
-        android:gravity="center"
-        android:clickable="true"
-        android:focusable="true"
-        android:focusableInTouchMode="false" />
-
-    <!-- 顶部下拉面板 -->
-
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/topDropdownPanel"
-        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/topPanelToggle"
-        android:layout_marginTop="-32dp"
-        android:layout_centerHorizontal="true"
-        android:clipChildren="false"
-        android:clipToPadding="false"
-        android:elevation="@dimen/appview_panel_elevation"
-        android:visibility="invisible" />
-
-    <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
-    <TextView
-        android:id="@+id/appListText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_below="@id/topPanelToggle"
-        android:layout_marginTop="4dp"
+        android:layout_above="@id/appCatalogFrame"
         android:layout_marginStart="@dimen/appview_content_margin"
         android:layout_marginEnd="@dimen/appview_content_margin"
-        android:gravity="end"
-        android:paddingStart="8dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="@dimen/appview_content_padding"
-        android:preferKeepClear="true"
-        android:textSize="24sp"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="14sp"
-        android:autoSizeMaxTextSize="28sp"
-        android:autoSizeStepGranularity="1sp"
-        android:textStyle="normal"
-        android:fontFamily="sans-serif-light"
-        android:textColor="@color/appview_focusable_entry_text"
-        android:shadowColor="@color/appview_text_shadow"
-        android:shadowDx="2"
-        android:shadowDy="2"
-        android:shadowRadius="4"
-        android:maxLines="3"
-        android:ellipsize="end"
-        android:lineSpacingExtra="4dp"
-        android:breakStrategy="balanced"
-        android:hyphenationFrequency="normal"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="@drawable/appview_focusable_entry_bg" />
+        android:layout_marginBottom="4dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false"
+        android:gravity="end">
 
-    <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示，不参与遥控器焦点导航。 -->
-    <TextView
-        android:id="@+id/appViewTargetReminder"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/appListText"
-        android:layout_marginStart="@dimen/appview_content_margin"
-        android:layout_marginEnd="@dimen/appview_content_margin"
-        android:gravity="end"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:textColor="@color/control_highlight_color"
-        android:textSize="13sp"
-        android:fontFamily="sans-serif-medium"
-        android:maxLines="2"
-        android:ellipsize="end"
-        android:lineSpacingExtra="1dp"
-        android:shadowColor="@color/appview_text_shadow"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="2"
-        android:focusable="false"
-        android:clickable="false"
-        android:importantForAccessibility="yes"
-        android:visibility="gone" />
+        <!-- 短横屏为中间的顶部手柄预留区域；竖屏和高横屏由资源恢复完整宽度。 -->
+        <Space
+            android:id="@+id/appHeaderLeadingSpace"
+            android:layout_width="@dimen/appview_header_spacer_width"
+            android:layout_height="0dp"
+            android:layout_weight="@integer/appview_header_spacer_weight"
+            android:importantForAccessibility="no" />
 
-    <!-- 底部信息容器 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/appListText"
+                style="@style/AppListTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="4dp"
+                android:gravity="end"
+                android:paddingStart="8dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="4dp"
+                android:preferKeepClear="true"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/appview_title_background" />
+
+            <!-- 常驻提示当前生效的非默认屏幕组合/显示器；仅用于信息展示。 -->
+            <TextView
+                android:id="@+id/appViewTargetReminder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textColor="@color/control_highlight_color"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="@integer/appview_target_reminder_max_lines"
+                android:ellipsize="end"
+                android:lineSpacingExtra="1dp"
+                android:shadowColor="@color/appview_text_shadow"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:focusable="false"
+                android:clickable="false"
+                android:importantForAccessibility="yes"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 底部信息固定在安全区域上方，不参与应用列表的垂直居中。 -->
     <LinearLayout
         android:id="@+id/bottomInfoContainer"
         android:layout_width="match_parent"
@@ -202,6 +181,44 @@
         </LinearLayout>
 
     </LinearLayout>
+
+    <View
+        android:id="@+id/topPanelScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#00000000"
+        android:clickable="true"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
+    <!-- 顶部下拉手柄标签 -->
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/topPanelToggle"
+        android:layout_width="84dp"
+        android:layout_height="36dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="@dimen/activity_safearea_top"
+        android:elevation="4dp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:focusableInTouchMode="false" />
+
+    <!-- 顶部下拉面板 -->
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/topDropdownPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/topPanelToggle"
+        android:layout_marginTop="-32dp"
+        android:layout_centerHorizontal="true"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:elevation="@dimen/appview_panel_elevation"
+        android:visibility="invisible" />
 
     <FrameLayout
         android:id="@+id/screenCombinationModeOverlay"

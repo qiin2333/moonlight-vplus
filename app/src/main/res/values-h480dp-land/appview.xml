@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="appview_large_card_width">180dp</dimen>
+    <dimen name="appview_large_card_height">240dp</dimen>
+</resources>

@@ -1,13 +1,24 @@
 package com.limelight.preferences
 
 import android.app.Dialog
+import android.app.Activity
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.hardware.display.DisplayManager
+import android.os.Build
+import android.util.DisplayMetrics
+import android.view.Display
+import android.view.DisplayCutout
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.graphics.drawable.ColorDrawable
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.activity.ComponentDialog
+import androidx.core.view.WindowCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -15,24 +26,33 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
@@ -42,8 +62,11 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.limelight.R
+import com.limelight.binding.input.MenuAxisNavigationState
+import com.limelight.ui.isGamepadNavigationSource
 import com.limelight.ui.theme.AppShapes
-import com.limelight.utils.AppDialogStyler
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Compose implementation of the custom resolutions dialog.
@@ -51,28 +74,70 @@ import com.limelight.utils.AppDialogStyler
  * 窗口与持久化在此;UI 组件见 CustomResolutionsDialogUi.kt,纯逻辑见
  * ResolutionFormat.kt 与 CustomResolutionsStore.kt。
  */
+internal interface CustomDialogController {
+    fun dispatchAxes(event: MotionEvent): Boolean
+}
+
+internal var activeCustomDialogController: CustomDialogController? = null
+
 object CustomResolutionsDialog {
 
-    fun show(context: Context, onClosed: () -> Unit): Dialog {
-        val initial = CustomResolutionsStore.load(context)
+    fun show(
+        context: Context,
+        onClosed: () -> Unit,
+        requestInitialFocus: Boolean = false,
+        targetDisplay: Display? = null
+    ): Dialog {
+        return show(
+            context,
+            CustomResolutionsStore.load(context),
+            { CustomResolutionsStore.save(context, it) },
+            onClosed,
+            requestInitialFocus = requestInitialFocus,
+            targetDisplay = targetDisplay
+        )
+    }
+
+    fun show(
+        context: Context,
+        initial: List<Resolution>,
+        onCommit: (List<Resolution>) -> Unit,
+        onClosed: () -> Unit,
+        requestInitialFocus: Boolean = false,
+        targetDisplay: Display? = null
+    ): Dialog {
         val pixelsText = pixelsTextFactory(context)
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
-        // 取消(返回/点外部/取消按钮)丢弃本次会话的全部改动,恢复进入时的快照
+        // 取消(返回/取消按钮)与未经保存的 dismiss(如宿主 Fragment 销毁)都恢复进入时的快照
         var cancelled = false
+        var confirmedByUser = false
+        var current = initial
+        val controllerFocusRequest = mutableIntStateOf(0)
+        val touchNavigationActive = mutableStateOf(!requestInitialFocus)
+        val axisNavigation = MenuAxisNavigationState()
+        fun discardChanges() {
+            cancelled = true
+            dialog.cancel()
+        }
         val composeView = ComposeView(context).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
+            isFocusable = false
+            isFocusableInTouchMode = false
+            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 CustomResolutionsDialogContent(
                     initial = initial,
                     pixelsText = pixelsText,
-                    onCommit = { CustomResolutionsStore.save(context, it) },
-                    onCancel = {
-                        cancelled = true
-                        dialog.cancel()
-                    },
-                    onConfirm = dialog::dismiss
+                    nativePresets = nativeResolutionPresets(context, targetDisplay),
+                    controllerFocusRequest = controllerFocusRequest.intValue,
+                    touchNavigationActive = touchNavigationActive.value,
+                    onTouchNavigation = { touchNavigationActive.value = true },
+                    onCommit = { current = it },
+                    onCancel = { discardChanges() },
+                    onConfirm = {
+                        confirmedByUser = true
+                        dialog.dismiss()
+                    }
                 )
             }
         }
@@ -83,21 +148,69 @@ object CustomResolutionsDialog {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         )
-        dialog.setCanceledOnTouchOutside(true)
-        AppDialogStyler.installDismissKeys(dialog)
+        // 编辑器有输入成本:禁用"点外部取消",误触不再丢整场编辑;返回键/取消按钮仍是明确的放弃意图
+        dialog.setCanceledOnTouchOutside(false)
+        fun handleDialogKey(keyCode: Int, event: KeyEvent): Boolean {
+            if (event.isGamepadNavigationSource() && event.action == KeyEvent.ACTION_DOWN &&
+                touchNavigationActive.value
+            ) {
+                touchNavigationActive.value = false
+                controllerFocusRequest.intValue++
+            }
+            return com.limelight.ui.UiDismissKeyHandler.handle(
+                event.action,
+                keyCode,
+                onDismiss = ::discardChanges,
+                dismissOnBack = false
+            )
+        }
+        val dialogController = object : CustomDialogController {
+            override fun dispatchAxes(event: MotionEvent): Boolean {
+                if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0) return false
+                val axisPairs = defaultDialogAxisPairs(event)
+                val transition = axisNavigation.update(axisPairs)
+                if (transition.changed && transition.pressedKeyCode != null &&
+                    touchNavigationActive.value
+                ) {
+                    touchNavigationActive.value = false
+                    controllerFocusRequest.intValue++
+                }
+                return false
+            }
+        }
+        activeCustomDialogController = dialogController
+        dialog.window?.decorView?.setOnGenericMotionListener { _, event ->
+            dialogController.dispatchAxes(event)
+        }
+        dialog.setOnKeyListener { _, keyCode, event -> handleDialogKey(keyCode, event) }
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            WindowCompat.setDecorFitsSystemWindows(this, false)
+            val hostWindow = (context as? Activity)?.window
+            if (hostWindow != null) {
+                decorView.systemUiVisibility = hostWindow.decorView.systemUiVisibility
+                if (hostWindow.attributes.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+                    addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
+            }
         }
         dialog.setOnCancelListener { cancelled = true }
         dialog.setOnDismissListener {
-            if (cancelled) {
-                CustomResolutionsStore.save(context, initial)
+            if (activeCustomDialogController === dialogController) {
+                activeCustomDialogController = null
             }
+            if (cancelled || !confirmedByUser) onCommit(initial)
+            else onCommit(current)
             onClosed()
         }
         dialog.show()
         applyDialogWidth(dialog, context)
+        composeView.post {
+            if (dialog.isShowing && requestInitialFocus && !touchNavigationActive.value) {
+                controllerFocusRequest.intValue++
+            }
+        }
         return dialog
     }
 
@@ -112,6 +225,71 @@ object CustomResolutionsDialog {
             WindowManager.LayoutParams.WRAP_CONTENT
         )
     }
+
+    private fun nativeResolutionPresets(context: Context, targetDisplay: Display?): List<Resolution> {
+        val display = targetDisplay ?: targetDisplay(context) ?: return emptyList()
+        val presets = linkedSetOf<Resolution>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val cutout = displayCutout(display, context)
+            if (cutout != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val widthInsets = cutout.safeInsetLeft + cutout.safeInsetRight
+                val heightInsets = cutout.safeInsetBottom + cutout.safeInsetTop
+                if (widthInsets != 0 || heightInsets != 0) {
+                    val metrics = DisplayMetrics()
+                    display.getRealMetrics(metrics)
+                    val width = max(metrics.widthPixels - widthInsets, metrics.heightPixels - heightInsets)
+                    val height = min(metrics.widthPixels - widthInsets, metrics.heightPixels - heightInsets)
+                    addResolutionOrientations(presets, width, height)
+                }
+            }
+            val television = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
+            for (mode in display.supportedModes) {
+                val width = max(mode.physicalWidth, mode.physicalHeight)
+                val height = min(mode.physicalWidth, mode.physicalHeight)
+                if (!television || width > 3840 || height > 2160) {
+                    addResolutionOrientations(presets, width, height)
+                }
+            }
+        }
+        if (presets.isEmpty()) {
+            val metrics = DisplayMetrics()
+            display.getRealMetrics(metrics)
+            val width = metrics.widthPixels.takeIf { it > 0 }
+                ?: context.resources.displayMetrics.widthPixels
+            val height = metrics.heightPixels.takeIf { it > 0 }
+                ?: context.resources.displayMetrics.heightPixels
+            addResolutionOrientations(presets, max(width, height), min(width, height))
+        }
+        return presets.toList()
+    }
+
+    private fun targetDisplay(context: Context): Display? {
+        return (context as? com.limelight.Game)?.externalDisplayManager?.getTargetDisplay()
+            ?: (context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
+                ?.getDisplay(Display.DEFAULT_DISPLAY)
+    }
+
+    private fun displayCutout(display: Display, context: Context): DisplayCutout? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return display.cutout
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+        return (context as? Activity)?.window?.decorView?.rootWindowInsets?.displayCutout
+    }
+
+    private fun addResolutionOrientations(presets: LinkedHashSet<Resolution>, width: Int, height: Int) {
+        val evenWidth = width / 2 * 2
+        val evenHeight = height / 2 * 2
+        if (evenWidth <= 0 || evenHeight <= 0) return
+        if (PreferenceConfiguration.isSquarishScreen(evenWidth, evenHeight)) {
+            presets += Resolution(evenHeight, evenWidth)
+        }
+        presets += Resolution(evenWidth, evenHeight)
+    }
+
+    private fun defaultDialogAxisPairs(event: MotionEvent): List<Pair<Float, Float>> = listOf(
+        event.getAxisValue(MotionEvent.AXIS_HAT_X) to event.getAxisValue(MotionEvent.AXIS_HAT_Y),
+        event.getAxisValue(MotionEvent.AXIS_X) to event.getAxisValue(MotionEvent.AXIS_Y),
+        event.getAxisValue(MotionEvent.AXIS_Z) to event.getAxisValue(MotionEvent.AXIS_RZ)
+    )
 
     /**
      * 像素总数的本地化文案:中文模板以「万」为单位(传 像素数/10000),
@@ -136,6 +314,10 @@ object CustomResolutionsDialog {
 private fun CustomResolutionsDialogContent(
     initial: List<Resolution>,
     pixelsText: (Int) -> String,
+    nativePresets: List<Resolution>,
+    controllerFocusRequest: Int,
+    touchNavigationActive: Boolean,
+    onTouchNavigation: () -> Unit,
     onCommit: (List<Resolution>) -> Unit,
     onCancel: () -> Unit,
     onConfirm: () -> Unit
@@ -154,12 +336,19 @@ private fun CustomResolutionsDialogContent(
     val widthFocus = remember { FocusRequester() }
     val heightFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
+    var addFocusPlaced by remember { mutableStateOf(false) }
+    var handledControllerFocusRequest by remember { mutableIntStateOf(0) }
 
     fun keyOf(r: Resolution) = "${r.width}x${r.height}"
     val rowFocus = remember(resolutions) {
         resolutions.associate { keyOf(it) to FocusRequester() }
     }
     val firstRowFocus = rowFocus[resolutions.firstOrNull()?.let(::keyOf)]
+    val presetCount = (nativePresets.map { it.width to it.height } + PRESETS.map { it.width to it.height })
+        .distinct()
+        .size
+    val presetFocus = remember(presetCount) { List(presetCount) { FocusRequester() } }
+    val firstPresetFocus = presetFocus.firstOrNull()
 
     // 删除行后把焦点还给相邻行;行节点在 LazyColumn 组合后才存在,未挂载时
     // FocusRequester.requestFocus 会抛 IllegalStateException,需短暂重试
@@ -186,17 +375,30 @@ private fun CustomResolutionsDialogContent(
         }
     }
 
-    // 触摸打开时不抢焦点，避免一打开就弹出输入法
+    // Wait for the shown window and Add's layout, then handle each controller request once.
+    // Touch opens leave focus alone so the keyboard does not appear automatically.
     val hostView = LocalView.current
-    LaunchedEffect(Unit) {
-        if (!hostView.isInTouchMode) {
-            widthFocus.requestFocus()
-        }
+    val inputModeManager = LocalInputModeManager.current
+    LaunchedEffect(controllerFocusRequest, addFocusPlaced) {
+        if (!addFocusPlaced || controllerFocusRequest <= handledControllerFocusRequest) return@LaunchedEffect
+        inputModeManager.requestInputMode(InputMode.Keyboard)
+        addFocus.requestFocus()
+        handledControllerFocusRequest = controllerFocusRequest
     }
 
     fun commit(list: List<Resolution>) {
         resolutions = list
         onCommit(list)
+    }
+
+    fun addPreset(preset: Resolution) {
+        if (preset in resolutions) {
+            inputError = ResolutionInputError(null, ResolutionInputReason.DUPLICATE)
+            return
+        }
+        commit((resolutions + preset).sortedWith(resolutionOrder))
+        justAdded = if (hostView.isInTouchMode) null else preset
+        inputError = null
     }
 
     fun addResolution() {
@@ -209,7 +411,7 @@ private fun CustomResolutionsDialogContent(
         }
         val resolution = Resolution(width!!, height!!)
         commit((resolutions + resolution).sortedWith(resolutionOrder))
-        justAdded = resolution
+        justAdded = if (hostView.isInTouchMode) null else resolution
         widthText = ""
         heightText = ""
         inputError = null
@@ -245,12 +447,23 @@ private fun CustomResolutionsDialogContent(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxSurfaceHeight)
+            .wrapContentHeight(unbounded = true)
             .clip(surfaceShape)
             .background(gradient)
             .border(1.dp, outline, surfaceShape)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    onTouchNavigation()
+                    waitForUpOrCancellation()
+                }
+            }
             .padding(14.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier.heightIn(max = maxSurfaceHeight - 28.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             DialogHeader(
                 infoExpanded = infoExpanded,
                 onToggleInfo = { infoExpanded = !infoExpanded }
@@ -281,10 +494,11 @@ private fun CustomResolutionsDialogContent(
                     widthFocus = widthFocus,
                     heightFocus = heightFocus,
                     addFocus = addFocus,
-                    downFromHeight = firstRowFocus ?: addFocus,
+                    downFromHeight = firstPresetFocus ?: firstRowFocus ?: addFocus,
                     leftTarget = leftTarget,
                     onAdd = ::addResolution,
-                    onHeightDone = ::addResolution
+                    onHeightDone = ::addResolution,
+                    onAddPlaced = { addFocusPlaced = true }
                 )
             }
 
@@ -292,10 +506,10 @@ private fun CustomResolutionsDialogContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = (configuration.screenHeightDp * 0.6f).dp),
+                        .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(modifier = Modifier.weight(0.85f)) {
+                    Box(modifier = Modifier.weight(0.85f).fillMaxHeight()) {
                         ResolutionList(
                             resolutions = resolutions,
                             justAdded = justAdded,
@@ -306,17 +520,32 @@ private fun CustomResolutionsDialogContent(
                             onDelete = ::deleteResolution
                         )
                     }
-                    Box(modifier = Modifier.weight(1.15f)) { composer() }
+                    Column(
+                        modifier = Modifier
+                            .weight(1.15f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        composer()
+                        PresetRow(
+                            nativePresets = nativePresets,
+                            focusFor = { presetFocus[it] },
+                            upTarget = addFocus
+                        ) { preset ->
+                            addPreset(Resolution(preset.width, preset.height))
+                        }
+                    }
                 }
             } else {
                 composer()
                 PresetRow(
-                    onPreset = { preset ->
-                        widthText = preset.width.toString()
-                        heightText = preset.height.toString()
-                        inputError = null
-                    }
-                )
+                    nativePresets = nativePresets,
+                    focusFor = { presetFocus[it] },
+                    upTarget = addFocus
+                ) { preset ->
+                    addPreset(Resolution(preset.width, preset.height))
+                }
                 ResolutionList(
                     resolutions = resolutions,
                     justAdded = justAdded,
@@ -325,7 +554,7 @@ private fun CustomResolutionsDialogContent(
                     focusFor = { rowFocus.getValue(keyOf(it)) },
                     rightNeighbor = null,
                     onDelete = ::deleteResolution,
-                    modifier = Modifier.heightIn(max = (configuration.screenHeightDp * 0.42f).dp)
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
 

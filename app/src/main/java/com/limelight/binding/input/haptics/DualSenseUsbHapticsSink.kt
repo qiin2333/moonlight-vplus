@@ -1,17 +1,14 @@
 package com.limelight.binding.input.haptics
 
-import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
-import android.hardware.usb.UsbRequest
-import android.os.Build
-import android.util.Log
+import com.limelight.LimeLog
 import com.limelight.nvstream.Ds5HapticsPcmFrame
+import com.limelight.nvstream.Ds5HapticsState
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.TimeoutException
 
 /**
  * Renders authored DualSense haptics PCM into the UAC isochronous OUT endpoint
@@ -28,23 +25,26 @@ import java.util.concurrent.TimeoutException
  * ## Pipeline
  *
  * [submit] runs on the common-c control receive thread and appends to a ring
- * buffer. A dedicated sender thread keeps [IO_SLOTS] UsbRequests in flight;
+ * buffer. A dedicated sender thread keeps [IO_SLOTS] USBFS ISO URBs in flight;
  * the USB controller consumes one packet per 1 ms frame, so the queued lead
  * is the pacing clock. Consumption starts after a 10 ms prebuffer and emits
- * silence on underrun; DISCONTINUITY/STREAM_END flush the ring.
+ * silence on underrun; discontinuity flushes the ring and stream-end drains its tail.
  *
  * ## Android isochronous caveat
  *
- * UsbRequest on isochronous endpoints is not reliable on every ROM. A failed
- * initialize/queue parks the pump and logs; teardown still restores alt 0.
+ * Android UsbRequest supports only bulk/interrupt. Native USBFS submits genuine
+ * isochronous URBs on the already-authorized descriptor. HID uses synchronous
+ * transfers, so this pump exclusively owns asynchronous completions on that connection.
  */
 internal class DualSenseUsbHapticsSink(
-    private val connection: UsbDeviceConnection,
-    private val streamingInterface: UsbInterface,
-    private val isoEndpoint: UsbEndpoint
+    private val transport: DualSenseUsbHapticsTransport,
+    private val onActiveChanged: (Boolean) -> Unit = {},
+    private val onControl: (Ds5HapticsState) -> Unit = {}
 ) : DualSenseNativeHapticsSink {
+    constructor(connection: UsbDeviceConnection, streamingInterface: UsbInterface, isoEndpoint: UsbEndpoint,
+                onActiveChanged: (Boolean) -> Unit = {}, onControl: (Ds5HapticsState) -> Unit = {}) :
+        this(AndroidDualSenseUsbHapticsTransport(connection, streamingInterface, isoEndpoint), onActiveChanged, onControl)
     companion object {
-        private const val TAG = "DualSenseUsbHaptics"
 
         private const val SAMPLE_RATE = 48000
         private const val SPEAKER_CHANNELS = 2
@@ -58,22 +58,9 @@ internal class DualSenseUsbHapticsSink(
         private const val RING_FRAMES = SAMPLE_RATE / 10 // 100 ms
         private const val STOP_JOIN_TIMEOUT_MS = 1_000L
 
-        // UAC 1.0 control requests
-        private const val UAC_REQTYPE_INTERFACE_SET = 0x21
-        private const val UAC_REQTYPE_ENDPOINT_SET = 0x22
-        private const val UAC_SET_CUR = 0x01
-        private const val UAC_CS_SAM_FREQ = 0x01
-        private const val UAC_CS_VOLUME = 0x02
-        private const val AUDIO_CONTROL_INTERFACE = 0
-        private const val UAC_FEATURE_UNIT_SPEAKER = 2
-
-        // Standard SET_INTERFACE for restoring bandwidth-less alt 0 on stop.
-        private const val USB_REQTYPE_INTERFACE_SET = 0x01
-        private const val USB_REQ_SET_INTERFACE = 0x0B
     }
 
     private class IoSlot {
-        val request = UsbRequest()
         lateinit var buffer: ByteBuffer
     }
 
@@ -82,15 +69,21 @@ internal class DualSenseUsbHapticsSink(
     private var readIndex = 0
     private var writeIndex = 0
     private var prebuffered = false
+    private var lastInputNs = 0L
+    private var pendingControl: Ds5HapticsState? = null // guarded with the PCM ring
 
     private val ringLock = Any()
     private val lifecycleLock = Any()
+    private val callbackLock = Any()
     private val slots = Array(IO_SLOTS) { IoSlot() }
     private val active = AtomicBoolean(false)
     private val requestsClosed = AtomicBoolean(false)
+    @Volatile override var releaseFailure: Throwable? = null
+        private set
     private var startAttempted = false
     private var stopStarted = false
     private var stopCompleted = false
+    private var stopFinishing = false
     private var stopWaiterStarted = false
     private val stopCallbacks = mutableListOf<() -> Unit>()
     private var sendThread: Thread? = null
@@ -99,58 +92,55 @@ internal class DualSenseUsbHapticsSink(
     private var hasSequence = false
 
     override val isOperational: Boolean get() = active.get()
-
-    override fun start(): Boolean = synchronized(lifecycleLock) {
-        if (stopStarted || stopCompleted) return@synchronized false
-        if (startAttempted) return@synchronized active.get()
-        startAttempted = true
-        active.set(true)
-
-        if (isoEndpoint.type != UsbConstants.USB_ENDPOINT_XFER_ISOC) {
-            Log.w(TAG, "Endpoint is not isochronous; pump disabled")
-            active.set(false)
-            stopStarted = true
-            stopCompleted = true
-            return@synchronized false
+    override fun updateControl(state: Ds5HapticsState) {
+        synchronized(lifecycleLock) {
+            if (!stopStarted && !stopCompleted) synchronized(ringLock) { pendingControl = state }
         }
+    }
 
-        // Select alt 1 with the iso endpoint. The passed UsbInterface comes
-        // from endpoint enumeration, which only surfaces non-zero alts.
-        if (!connection.setInterface(streamingInterface)) {
-            Log.w(TAG, "setInterface(alt 1) failed; pump disabled")
-            active.set(false)
-            stopStarted = true
-            stopCompleted = true
-            return@synchronized false
-        }
+    override fun start(): Boolean {
+        val initialized = synchronized(lifecycleLock) {
+            if (stopStarted || stopCompleted) return@synchronized false
+            if (startAttempted) return@synchronized active.get()
+            startAttempted = true
+            active.set(true)
 
-        configureUac()
-
-        for (slot in slots) {
-            slot.buffer = ByteBuffer.allocateDirect(PACKET_SIZE).order(ByteOrder.LITTLE_ENDIAN)
-            if (!slot.request.initialize(connection, isoEndpoint)) {
-                Log.w(TAG, "UsbRequest.initialize failed (iso unsupported on this ROM?)")
-                active.set(false)
-                shutdownUnstarted()
-                stopStarted = true
-                stopCompleted = true
+            if (!transport.open(IO_SLOTS, PACKET_SIZE)) {
+                LimeLog.warning("Could not open DS5 USB isochronous output")
                 return@synchronized false
             }
-        }
-
-        sendThread = Thread({
-            Log.i(TAG, "Iso sender started")
-            try {
-                sendLoop()
-            } finally {
-                Log.i(TAG, "Iso sender stopped")
-                completeStop()
+            for ((index, slot) in slots.withIndex()) {
+                slot.buffer = ByteBuffer.allocateDirect(PACKET_SIZE).order(ByteOrder.LITTLE_ENDIAN)
+                fillSlot(slot)
+                val result = transport.submit(index, slot.buffer)
+                if (result != 0) {
+                    LimeLog.warning("Initial ISO submit failed: $result")
+                    return@synchronized false
+                }
             }
-        }, "ds5-haptics-iso").apply {
-            priority = Thread.MAX_PRIORITY - 1
-            start()
+
+            sendThread = Thread({
+                LimeLog.info("DS5 USB ISO sender started")
+                try {
+                    // Serialize HID callbacks, but never hold lifecycleLock across blocking USB I/O.
+                    synchronized(callbackLock) {
+                        if (synchronized(lifecycleLock) { !stopStarted && !stopCompleted }) {
+                            onActiveChanged(true)
+                        }
+                    }
+                    sendLoop()
+                } finally {
+                    LimeLog.info("DS5 USB ISO sender stopped")
+                    completeStop()
+                }
+            }, "ds5-haptics-iso").apply {
+                priority = Thread.MAX_PRIORITY - 1
+                start()
+            }
+            true
         }
-        true
+        if (!initialized) completeStop()
+        return initialized
     }
 
     /**
@@ -214,7 +204,7 @@ internal class DualSenseUsbHapticsSink(
         }
         if (!shouldStart) return
 
-        Log.w(TAG, "Sender stop timed out; deferring USB transport close")
+        LimeLog.warning("DS5 ISO sender stop timed out; deferring USB transport close")
         Thread({
             var interrupted = false
             while (thread.isAlive) {
@@ -233,50 +223,60 @@ internal class DualSenseUsbHapticsSink(
     }
 
     private fun completeStop() {
-        active.set(false)
-        closeRequests()
-        val callbacks = synchronized(lifecycleLock) {
-            if (stopCompleted) return
+        synchronized(lifecycleLock) {
+            if (stopCompleted || stopFinishing) return
+            stopFinishing = true
             stopStarted = true
+            active.set(false)
+        }
+        closeRequests()
+        releaseRequests()
+        runCatching { synchronized(callbackLock) { onActiveChanged(false) } }.onFailure {
+            LimeLog.warning("Haptics output clear failed: ${it.message}")
+        }
+        val callbacks = synchronized(lifecycleLock) {
+            // Completion includes the final HID callback, not just retirement of ISO buffers.
             stopCompleted = true
             sendThread = null
             synchronized(ringLock) {
                 readIndex = 0
                 writeIndex = 0
                 prebuffered = false
+                pendingControl = null
             }
             hasSequence = false
             stopCallbacks.toList().also { stopCallbacks.clear() }
         }
         callbacks.forEach { callback ->
             runCatching(callback).onFailure {
-                Log.w(TAG, "Haptics stop callback failed", it)
+                LimeLog.warning("Haptics stop callback failed: ${it.message}")
             }
         }
     }
 
     private fun closeRequests() {
         if (!requestsClosed.compareAndSet(false, true)) return
-        slots.forEach { slot ->
-            runCatching { slot.request.close() }.onFailure {
-                Log.w(TAG, "Failed to close haptics USB request", it)
-            }
+        runCatching { transport.cancel() }.onFailure {
+            releaseFailure = it
+            LimeLog.warning("ISO cancellation failed: ${it.message}")
         }
     }
 
-    /** Cleanup for the start() failure paths, where the sender never ran. */
-    private fun shutdownUnstarted() {
-        closeRequests()
-        restoreAlt0()
-    }
-
-    private fun restoreAlt0() {
-        val result = connection.controlTransfer(
-            USB_REQTYPE_INTERFACE_SET, USB_REQ_SET_INTERFACE,
-            0, streamingInterface.id, null, 0, 100
-        )
-        if (result < 0) {
-            Log.w(TAG, "Failed to restore audio interface alt 0; iso bandwidth may stay reserved")
+    private fun releaseRequests() {
+        runCatching {
+            val result = transport.close()
+            if (result != 0) {
+                releaseFailure = IllegalStateException("ISO release failed: $result")
+                LimeLog.warning("ISO buffers retained after uncertain release: $result")
+                return@runCatching
+            }
+            if (!transport.restoreInterface()) {
+                releaseFailure = IllegalStateException("Failed to restore DS5 audio interface alt 0")
+                LimeLog.warning(releaseFailure!!.message!!)
+            }
+        }.onFailure {
+            releaseFailure = it
+            LimeLog.warning("ISO retirement failed: ${it.message}")
         }
     }
 
@@ -285,10 +285,11 @@ internal class DualSenseUsbHapticsSink(
         if (!active.get()) return
         if (frame.sampleRate != SAMPLE_RATE ||
             frame.channelCount.toInt() != HAPTIC_CHANNELS ||
-            frame.bitsPerSample.toInt() != 16
+            frame.bitsPerSample.toInt() != 16 || frame.frameCount !in 0..480 ||
+            frame.pcm.size != frame.frameCount * 4 || frame.flags.toInt() and 7.inv() != 0
         ) {
             if (!formatWarned) {
-                Log.w(TAG, "Unsupported PCM format: ${frame.sampleRate}Hz/" +
+                LimeLog.warning("Unsupported PCM format: ${frame.sampleRate}Hz/" +
                         "${frame.channelCount}ch/${frame.bitsPerSample}bit")
                 formatWarned = true
             }
@@ -296,7 +297,7 @@ internal class DualSenseUsbHapticsSink(
         }
 
         val flags = frame.flags.toInt()
-        val flushMask = Ds5HapticsPcmFrame.FLAG_STREAM_END.toInt() or
+        val flushMask = Ds5HapticsPcmFrame.FLAG_STREAM_START.toInt() or
                 Ds5HapticsPcmFrame.FLAG_DISCONTINUITY.toInt()
         if (flags and flushMask != 0) {
             synchronized(ringLock) {
@@ -305,14 +306,8 @@ internal class DualSenseUsbHapticsSink(
                 prebuffered = false
             }
             hasSequence = false
-            if (flags and Ds5HapticsPcmFrame.FLAG_STREAM_END.toInt() != 0) {
-                return
-            }
         }
-        if (flags and Ds5HapticsPcmFrame.FLAG_STREAM_START.toInt() != 0) {
-            hasSequence = false
-        }
-
+        val streamEnded = flags and Ds5HapticsPcmFrame.FLAG_STREAM_END.toInt() != 0
         // The control stream delivers these frames unreliably: drops and
         // reordering are expected. Stale or duplicate sequences are discarded;
         // a gap just means lost PCM, which appends seamlessly.
@@ -326,6 +321,8 @@ internal class DualSenseUsbHapticsSink(
         val shorts = (frame.pcm.size / 2 / HAPTIC_CHANNELS) * HAPTIC_CHANNELS
 
         synchronized(ringLock) {
+            lastInputNs = System.nanoTime()
+            if (streamEnded) prebuffered = true
             var remaining = shorts
             while (remaining > 0) {
                 // Round the chunk down to a whole L/R frame so writeIndex stays
@@ -350,57 +347,41 @@ internal class DualSenseUsbHapticsSink(
 
     private fun sendLoop() {
         try {
-            for (slot in slots) {
-                if (!active.get()) return
-                fillSlot(slot)
-                if (!slot.request.queue(slot.buffer, PACKET_SIZE)) {
-                    Log.w(TAG, "Initial iso queue failed; stopping pump")
-                    active.set(false)
-                    return
-                }
-            }
-
             while (active.get()) {
-                val done = try {
-                    awaitCompletion()
-                } catch (_: TimeoutException) {
-                    continue
-                }
-                if (done == null) return
-                val slot = slots.firstOrNull { it.request === done } ?: continue
+                val done = transport.reap(500)
+                if (done == -110) continue // ETIMEDOUT
                 if (!active.get()) return
-                fillSlot(slot)
-                if (!slot.request.queue(slot.buffer, PACKET_SIZE)) {
-                    Log.w(TAG, "Iso queue failed; stopping pump")
+                if (done !in slots.indices) { LimeLog.warning("ISO completion failed: $done"); return }
+                val slot = slots[done]
+                val control = synchronized(ringLock) {
+                    // Snapshot controls and PCM together. State accepted after this snapshot
+                    // can only precede samples in a later slot, never the slot being submitted.
+                    fillSlot(slot)
+                    pendingControl.also { pendingControl = null }
+                }
+                synchronized(callbackLock) {
+                    if (!active.get()) return
+                    control?.let(onControl)
+                }
+                if (!active.get()) return
+                val result = transport.submit(done, slot.buffer)
+                if (result != 0) {
+                    LimeLog.warning("ISO submit failed: $result")
                     active.set(false)
                     return
                 }
             }
         } finally {
             active.set(false)
-            // The sender is the last user of the endpoint; park it on alt 0 to
-            // release the isochronous bandwidth.
-            restoreAlt0()
         }
     }
-
-    /**
-     * Waits for one request completion. Uses the timeout overload where
-     * available (API 26+) so the loop can observe shutdown even if a close
-     * does not wake requestWait(); below that, closing a request is the wake.
-     */
-    private fun awaitCompletion(): UsbRequest? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            connection.requestWait(500)
-        } else {
-            connection.requestWait()
-        }
 
     private fun fillSlot(slot: IoSlot) {
         val buffer = slot.buffer
         buffer.rewind()
         synchronized(ringLock) {
-            if (!prebuffered && bufferedFrames() >= PREBUFFER_FRAMES) {
+            if (!prebuffered && (bufferedFrames() >= PREBUFFER_FRAMES ||
+                bufferedFrames() > 0 && System.nanoTime() - lastInputNs >= 8_000_000L)) {
                 prebuffered = true
             }
             for (frame in 0 until FRAMES_PER_PACKET) {
@@ -426,34 +407,4 @@ internal class DualSenseUsbHapticsSink(
         return if (free == 0) ring.size - 1 else free - 1
     }
 
-    /**
-     * UAC 1.0 setup: endpoint sample rate 48 kHz, and the speaker feature
-     * unit to 0 dB — the controller ships with a near-muted default volume,
-     * which would scale the haptic lanes into silence if they route through
-     * the feature unit.
-     */
-    private fun configureUac() {
-        val rate = byteArrayOf(0x80.toByte(), 0xBB.toByte(), 0x00.toByte()) // 48000 LE
-        var res = connection.controlTransfer(
-            UAC_REQTYPE_ENDPOINT_SET, UAC_SET_CUR,
-            (UAC_CS_SAM_FREQ shl 8), isoEndpoint.address, rate, 3, 100
-        )
-        if (res < 0) {
-            // Some devices implement the interface-based variant instead.
-            res = connection.controlTransfer(
-                UAC_REQTYPE_INTERFACE_SET, UAC_SET_CUR,
-                (UAC_CS_SAM_FREQ shl 8), streamingInterface.id, rate, 3, 100
-            )
-        }
-        if (res < 0) {
-            Log.w(TAG, "Sample-rate SET_CUR rejected; relying on stream default")
-        }
-
-        val volume = byteArrayOf(0x00, 0x00) // 0 dB
-        connection.controlTransfer(
-            UAC_REQTYPE_INTERFACE_SET, UAC_SET_CUR,
-            (UAC_CS_VOLUME shl 8), AUDIO_CONTROL_INTERFACE or (UAC_FEATURE_UNIT_SPEAKER shl 8),
-            volume, 2, 100
-        )
-    }
 }

@@ -7,7 +7,7 @@
       强制覆盖：framegen 功能本身在 SDK<29 上会通过 FramegenInterceptor.isAvailable()
       返回 false 自动禁用，因此低版本设备不会触达 framegen 代码。
     -->
-    <uses-sdk tools:overrideLibrary="com.limelight.framegen" />
+    <uses-sdk tools:overrideLibrary="com.limelight.framegen,rikka.shizuku.api,rikka.shizuku.provider,rikka.shizuku.shared,rikka.shizuku.aidl" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -110,6 +110,14 @@
         android:enableOnBackInvokedCallback="false"
         android:theme="@style/AppTheme"
         tools:targetApi="vanillaIceCream">
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <provider
             android:name=".PosterContentProvider"

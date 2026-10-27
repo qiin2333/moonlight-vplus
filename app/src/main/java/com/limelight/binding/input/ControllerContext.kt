@@ -43,6 +43,7 @@ open class GenericControllerContext(
     var triggerDeadzone: Float = 0f
 
     var assignedControllerNumber: Boolean = false
+    @Volatile internal var retired = false
     var reservedControllerNumber: Boolean = false
     internal val controllerArrival = ControllerArrivalTracker()
     var controllerNumber: Short = 0
@@ -75,7 +76,7 @@ open class GenericControllerContext(
 
     val mouseEmulationRunnable: Runnable = object : Runnable {
         override fun run() {
-            if (!mouseEmulationActive) {
+            if (retired || !mouseEmulationActive) {
                 return
             }
 
@@ -146,6 +147,7 @@ open class GenericControllerContext(
     protected open fun onMouseEmulationChanged() = Unit
 
     open fun destroy() {
+        retired = true
         setMouseEmulation(false)
     }
 
@@ -251,10 +253,11 @@ class InputDeviceContext internal constructor(
 
     val batteryStateUpdateRunnable: Runnable = object : Runnable {
         override fun run() {
+            if (retired) return
             handler.rumbleManager.sendControllerBatteryPacket(this@InputDeviceContext)
 
             // Requeue the callback
-            handler.backgroundThreadHandler.postDelayed(this, ControllerHandler.BATTERY_RECHECK_INTERVAL_MS.toLong())
+            if (!retired) handler.backgroundThreadHandler.postDelayed(this, ControllerHandler.BATTERY_RECHECK_INTERVAL_MS.toLong())
         }
     }
 
@@ -262,6 +265,7 @@ class InputDeviceContext internal constructor(
         // Re-read the rates on the main thread: a host disable may have landed while this
         // was queued, and replaying the captured value would resurrect the sensor.
         handler.mainThreadHandler.post {
+            if (retired) return@post
             // A gamepad often enumerates as several InputDevices that all share controller 0.
             // Only the one that actually owns the sensor may re-drive registration, otherwise
             // the sensorless sibling keeps tearing down its neighbour's listener.
@@ -302,12 +306,8 @@ class InputDeviceContext internal constructor(
 
         handler.backgroundThreadHandler.removeCallbacks(enableSensorRunnable)
 
-        if (gyroListener != null) {
-            sensorManager?.unregisterListener(gyroListener)
-        }
-        if (accelListener != null) {
-            sensorManager?.unregisterListener(accelListener)
-        }
+        handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_GYRO)
+        handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_ACCEL)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             synchronized(handler.lightsSessionLock) {
@@ -325,6 +325,7 @@ class InputDeviceContext internal constructor(
             }
         }
 
+        handler.releaseDirectBluetoothHaptics(id)
         directDualSenseBluetoothOutput?.close()
         directDualSenseBluetoothOutput = null
 
@@ -537,15 +538,13 @@ class InputDeviceContext internal constructor(
 
         // Unregister all sensor listeners
         if (gyroListener != null) {
-            sensorManager?.unregisterListener(gyroListener)
-            gyroListener = null
+            handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_GYRO)
 
             // Send a gyro event to ensure the virtual controller is stationary
-            handler.conn.sendControllerMotionEvent(controllerNumber.toByte(), MoonBridge.LI_MOTION_TYPE_GYRO, 0f, 0f, 0f)
+            handler.motionSender.stopGyro(controllerNumber)
         }
         if (accelListener != null) {
-            sensorManager?.unregisterListener(accelListener)
-            accelListener = null
+            handler.unregisterMotionListener(this, MoonBridge.LI_MOTION_TYPE_ACCEL)
 
             // We leave the acceleration as-is to preserve the attitude of the controller
         }
@@ -565,6 +564,7 @@ class InputDeviceContext internal constructor(
 
 class DriverControllerContext(handler: ControllerHandler) : GenericControllerContext(handler) {
     var device: AbstractController? = null
+    internal var usbDevicePath: String? = null
     internal var lastReportedBatteryState: Byte? = null
     internal var lastReportedBatteryPercentage: Byte? = null
     internal val menuKeyDownTimes = ConcurrentHashMap<Int, Long>()

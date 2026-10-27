@@ -7,6 +7,11 @@ import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
 
 public class MoonBridge {
+    public static native long createUsbIsochronousOutput(int fd, int endpoint, int slots, int packetSize);
+    public static native int submitUsbIsochronousOutput(long handle, int slot, java.nio.ByteBuffer buffer);
+    public static native int reapUsbIsochronousOutput(long handle, int timeoutMs);
+    public static native void cancelUsbIsochronousOutput(long handle);
+    public static native int closeUsbIsochronousOutput(long handle);
     /* See documentation in Limelight.h for information about these functions and constants */
 
     public static final AudioConfiguration AUDIO_CONFIGURATION_STEREO = new AudioConfiguration(2, 0x3);
@@ -455,6 +460,13 @@ public class MoonBridge {
         }
     }
 
+    public static void bridgeClDs5HapticsState(short controllerNumber, byte[] state) {
+        if (connectionListener != null) {
+            connectionListener.ds5HapticsState(controllerNumber,
+                    new com.limelight.nvstream.Ds5HapticsState(state));
+        }
+    }
+
     public static void bridgeClDs5HapticsPcm(short controllerNumber, byte flags, int sequenceNumber,
                                                 long presentationTimeUs, int sampleRate, int frameCount,
                                                 byte channelCount, byte bitsPerSample, byte[] pcm) {
@@ -593,6 +605,12 @@ public class MoonBridge {
 
     public static native void sendMouseButton(byte buttonEvent, byte mouseButton);
 
+    public static native int sendMultiControllerInputChecked(short controllerNumber,
+                                                            short activeGamepadMask, int buttonFlags,
+                                                            byte leftTrigger, byte rightTrigger,
+                                                            short leftStickX, short leftStickY,
+                                                            short rightStickX, short rightStickY);
+
     public static native void sendMultiControllerInput(short controllerNumber,
                                     short activeGamepadMask, int buttonFlags,
                                     byte leftTrigger, byte rightTrigger,
@@ -619,6 +637,9 @@ public class MoonBridge {
     public static native int sendControllerTouchEvent(byte controllerNumber, byte eventType, int pointerId, float x, float y, float pressure);
 
     public static native int sendControllerMotionEvent(byte controllerNumber, byte motionType, float x, float y, float z);
+    public static native int sendControllerMotionFrame(byte controllerNumber, float gx, float gy, float gz, float ax, float ay, float az);
+    public static native int stopControllerMotionEvent(byte controllerNumber);
+    public static native int resetControllerMotionEvents(byte controllerNumber, boolean clearDemand);
 
     public static native int sendControllerBatteryEvent(byte controllerNumber, byte batteryState, byte batteryPercentage);
 

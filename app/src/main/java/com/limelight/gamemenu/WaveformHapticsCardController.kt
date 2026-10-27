@@ -67,6 +67,7 @@ internal class WaveformHapticsCardController(private val game: Game) {
                 HapticAvailability.NEEDS_PERMISSION -> R.string.waveform_status_permission
                 HapticAvailability.NEEDS_ASSOCIATION -> R.string.waveform_status_association
                 HapticAvailability.INITIALIZING -> R.string.waveform_status_initializing
+                HapticAvailability.NEEDS_RECONNECT -> R.string.waveform_status_reconnect
                 HapticAvailability.BUSY -> R.string.waveform_status_busy
                 HapticAvailability.DISCONNECTED -> R.string.waveform_status_disconnected
                 else -> R.string.waveform_status_failed

@@ -3,23 +3,22 @@ package com.limelight.utils
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
-import android.os.Build
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.activity.ComponentDialog
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,17 +30,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -51,36 +56,59 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.theme.AppShapes
-import com.limelight.utils.appAccentSoftColor
-import com.limelight.utils.appAccentColor
+import com.limelight.ui.theme.AppOverlayWidths
+import kotlinx.coroutines.flow.first
+import kotlin.math.roundToInt
 
 object AppActionSheet {
+    private val horizontalInset = 10.dp
+
+    private fun windowWidth(context: Context): Int {
+        val resources = context.resources
+        val metrics = resources.displayMetrics
+        val maxWidth = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            (AppOverlayWidths.compact + horizontalInset * 2).value,
+            metrics
+        ).roundToInt()
+        val availableWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            windowManager.currentWindowMetrics.bounds.width()
+        } else {
+            (resources.configuration.screenWidthDp * metrics.density).roundToInt()
+        }
+        return minOf(availableWidth, maxWidth)
+    }
+
     data class Action(
         val id: Int,
         val title: CharSequence,
@@ -91,7 +119,9 @@ object AppActionSheet {
         val sectionStart: Boolean = false,
         val opensSubmenu: Boolean = false,
         val trailingText: CharSequence? = null,
-        val toggle: Boolean = false
+        val toggle: Boolean = false,
+        val iconRes: Int? = null,
+        val emphasized: Boolean = false
     )
 
     /** Hosts custom, live content in the same window, theme, and dismissal model as
@@ -115,6 +145,33 @@ object AppActionSheet {
         subtitle: CharSequence? = null,
         activeStatus: Boolean = false,
         actions: List<Action>,
+        initialActionId: Int? = null,
+        singleChoice: Boolean = false,
+        onAction: (Action) -> Unit,
+        onDismiss: ((Action?) -> Unit)? = null
+    ): Dialog = show(
+        context = context,
+        title = title,
+        subtitle = subtitle,
+        activeStatus = activeStatus,
+        actions = actions,
+        initialActionId = initialActionId,
+        singleChoice = singleChoice,
+        supportingText = null,
+        onAction = onAction,
+        onDismiss = onDismiss
+    )
+
+    /** Supporting copy occupies its own line; subtitle remains the compact status badge. */
+    fun show(
+        context: Context,
+        title: CharSequence,
+        subtitle: CharSequence? = null,
+        activeStatus: Boolean = false,
+        actions: List<Action>,
+        initialActionId: Int? = null,
+        singleChoice: Boolean = false,
+        supportingText: CharSequence?,
         onAction: (Action) -> Unit,
         onDismiss: ((Action?) -> Unit)? = null
     ): Dialog {
@@ -128,13 +185,18 @@ object AppActionSheet {
                     ActionSheetContent(
                         title = title.toString(),
                         subtitle = subtitle?.toString(),
+                        supportingText = supportingText?.toString(),
                         activeStatus = activeStatus,
                         actions = actions,
+                        initialActionId = initialActionId,
+                        singleChoice = singleChoice,
                         focusRequestToken = focusRequestToken.intValue,
                         onAction = { action ->
-                            selectedAction = action
-                            dialog.dismiss()
-                            onAction(action)
+                            if (action.enabled && selectedAction == null) {
+                                selectedAction = action
+                                dialog.dismiss()
+                                onAction(action)
+                            }
                         }
                     )
                 }
@@ -147,6 +209,28 @@ object AppActionSheet {
         return dialog
     }
 
+    internal data class InitialActionPosition(val scrollIndex: Int?, val focusIndex: Int?)
+
+    /** A saved, disabled choice should still be shown, while focus needs an actionable row. */
+    internal fun initialActionPosition(actions: List<Action>, initialActionId: Int?): InitialActionPosition {
+        if (actions.isEmpty()) return InitialActionPosition(null, null)
+        val selectedIndex = actions.indexOfFirst { it.id == initialActionId }.takeIf { it >= 0 }
+        val enabledIndices = actions.indices.filter { actions[it].enabled }
+        val focusIndex = if (selectedIndex == null) {
+            enabledIndices.firstOrNull()
+        } else {
+            // Prefer the following row when equally close, matching forward list navigation.
+            enabledIndices.minWithOrNull(
+                compareBy<Int> { kotlin.math.abs(it - selectedIndex) }
+                    .thenBy { if (it >= selectedIndex) 0 else 1 }
+            )
+        }
+        return InitialActionPosition(selectedIndex ?: focusIndex ?: 0, focusIndex)
+    }
+
+    internal fun initialMultiSelectPosition(actions: List<Action>): InitialActionPosition =
+        initialActionPosition(actions, actions.firstOrNull { it.checked == true }?.id)
+
     fun showMultiSelect(
         context: Context,
         title: CharSequence,
@@ -157,9 +241,12 @@ object AppActionSheet {
         minimumSelectionCount: Int = 0,
         onConfirm: (Set<Int>) -> Unit,
         onReset: (() -> Unit)? = null,
-        forceInitialFocus: Boolean = false
+        forceInitialFocus: Boolean = false,
+        onDismiss: (() -> Unit)? = null,
+        onSelectionChanged: ((Set<Int>) -> Unit)? = null
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        var completed = false
         val focusRequestToken = mutableIntStateOf(0)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
@@ -181,28 +268,42 @@ object AppActionSheet {
                         resetLabel = resetLabel?.toString(),
                         focusRequestToken = focusRequestToken.intValue,
                         onToggle = { action ->
-                            selectedIds = if (action.id in selectedIds) {
+                            val nextSelection = if (action.id in selectedIds) {
                                 if (selectedIds.size > minimumSelectionCount) selectedIds - action.id
                                 else selectedIds
                             } else {
                                 selectedIds + action.id
                             }
+                            if (nextSelection != selectedIds) {
+                                selectedIds = nextSelection
+                                onSelectionChanged?.invoke(nextSelection)
+                            }
                         },
                         onConfirm = {
-                            dialog.dismiss()
-                            onConfirm(selectedIds)
+                            if (!completed && selectedIds.size >= minimumSelectionCount) {
+                                completed = true
+                                dialog.dismiss()
+                                onConfirm(selectedIds)
+                            }
                         },
                         onCancel = dialog::dismiss,
                         onReset = onReset?.let { reset ->
                             {
-                                dialog.dismiss()
-                                reset()
+                                if (!completed) {
+                                    completed = true
+                                    dialog.dismiss()
+                                    reset()
+                                }
                             }
                         },
                         forceInitialFocus = forceInitialFocus
                     )
                 }
             }
+        }
+        dialog.setOnDismissListener {
+            completed = true
+            onDismiss?.invoke()
         }
         prepareDialog(dialog, composeView)
         composeView.post { focusRequestToken.intValue++ }
@@ -218,7 +319,22 @@ object AppActionSheet {
     ) {
         val resolvedHostWindow = hostWindow ?: (contentView.context as? Activity)?.window
 
-        dialog.setContentView(contentView)
+        // Bound the window as well as the panel so taps beside it remain outside
+        // the dialog. Update its width when the host rotates or its window is resized.
+        val dialogContent = if (fullScreen) contentView else object : FrameLayout(contentView.context) {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                super.onConfigurationChanged(newConfig)
+                dialog.window?.let { window ->
+                    window.attributes = window.attributes.apply { width = windowWidth(context) }
+                }
+            }
+        }.apply {
+            addView(contentView, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        dialog.setContentView(dialogContent)
         dialog.setCanceledOnTouchOutside(true)
         dialog.setOnKeyListener { _, keyCode, event ->
             UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)
@@ -238,10 +354,11 @@ object AppActionSheet {
             }
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.attributes = window.attributes.apply {
-                width = ViewGroup.LayoutParams.MATCH_PARENT
+                width = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
+                else windowWidth(contentView.context)
                 height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
                 else ViewGroup.LayoutParams.WRAP_CONTENT
-                gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM
+                gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             }
         }
 
@@ -304,45 +421,66 @@ object AppActionSheet {
     private fun ActionSheetContent(
         title: String,
         subtitle: String?,
+        supportingText: String?,
         activeStatus: Boolean,
         actions: List<Action>,
+        initialActionId: Int?,
+        singleChoice: Boolean,
         focusRequestToken: Int,
         onAction: (Action) -> Unit
     ) {
-        val initialFocusRequester = remember { FocusRequester() }
+        val initialPosition = remember(actions, initialActionId) {
+            initialActionPosition(actions, initialActionId)
+        }
+        val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPosition.scrollIndex ?: 0)
+        val focusRequesters = remember(actions) { actions.map { FocusRequester() } }
         val shouldRequestFocus = isControllerFocusMode()
         val inputModeManager = LocalInputModeManager.current
-        val initialFocusPlaced = remember { mutableStateOf(false) }
+        val windowFocused = LocalWindowInfo.current.isWindowFocused
+        var initialFocusRequested by remember { mutableStateOf(false) }
         LaunchedEffect(
-            actions,
             shouldRequestFocus,
-            initialFocusPlaced.value,
+            windowFocused,
             focusRequestToken
         ) {
-            if (shouldRequestFocus && actions.isNotEmpty() && initialFocusPlaced.value) {
+            val focusIndex = initialPosition.focusIndex
+            // A posted show() token can precede window focus on older Android versions.
+            // Wait for both the focused window and target layout before acquiring focus once.
+            if (shouldRequestFocus && windowFocused && focusRequestToken > 0 && !initialFocusRequested && focusIndex != null) {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                initialFocusRequester.requestFocus()
+                focusListAction(listState, focusIndex, focusRequesters[focusIndex])
+                initialFocusRequested = true
             }
         }
         ActionSheetContainer {
             ActionSheetHeader(title, subtitle, activeStatus)
+            if (!supportingText.isNullOrBlank()) {
+                Text(
+                    text = supportingText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, bottom = 12.dp)
+                )
+            }
             val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.62f).dp
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = maxListHeight),
+                    .heightIn(max = maxListHeight)
+                    .then(if (singleChoice) Modifier.selectableGroup() else Modifier),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 itemsIndexed(actions, key = { _, action -> action.id }) { index, action ->
                     ActionSheetRow(
-                        action,
-                        onAction,
-                        if (index == 0) {
-                            Modifier
-                                .focusRequester(initialFocusRequester)
-                                .onGloballyPositioned { initialFocusPlaced.value = true }
-                        } else Modifier
+                        action = action,
+                        onAction = onAction,
+                        modifier = Modifier.focusRequester(focusRequesters[index]),
+                        singleChoice = singleChoice
                     )
                 }
             }
@@ -365,19 +503,31 @@ object AppActionSheet {
         onReset: (() -> Unit)?,
         forceInitialFocus: Boolean
     ) {
-        val initialFocusRequester = remember { FocusRequester() }
+        val initialPosition = remember(actions) { initialMultiSelectPosition(actions) }
+        val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPosition.scrollIndex ?: 0)
+        val focusRequesters = remember(actions) { actions.map { FocusRequester() } }
+        val cancelFocusRequester = remember { FocusRequester() }
         val shouldRequestFocus = forceInitialFocus || isControllerFocusMode()
         val inputModeManager = LocalInputModeManager.current
-        val initialFocusPlaced = remember { mutableStateOf(false) }
+        val windowFocused = LocalWindowInfo.current.isWindowFocused
+        var cancelFocusPlaced by remember { mutableStateOf(false) }
+        var initialFocusRequested by remember { mutableStateOf(false) }
         LaunchedEffect(
-            actions,
             shouldRequestFocus,
-            initialFocusPlaced.value,
-            focusRequestToken
+            windowFocused,
+            focusRequestToken,
+            cancelFocusPlaced
         ) {
-            if (shouldRequestFocus && initialFocusPlaced.value) {
+            if (shouldRequestFocus && windowFocused && focusRequestToken > 0 && !initialFocusRequested) {
+                val focusIndex = initialPosition.focusIndex
+                if (focusIndex == null && !cancelFocusPlaced) return@LaunchedEffect
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                initialFocusRequester.requestFocus()
+                if (focusIndex == null) {
+                    cancelFocusRequester.requestFocus()
+                } else {
+                    focusListAction(listState, focusIndex, focusRequesters[focusIndex])
+                }
+                initialFocusRequested = true
             }
         }
         ActionSheetContainer {
@@ -387,6 +537,7 @@ object AppActionSheet {
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = maxListHeight),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
@@ -394,11 +545,8 @@ object AppActionSheet {
                     ActionSheetRow(
                         action = action.copy(checked = action.id in selectedIds),
                         onAction = onToggle,
-                        modifier = if (index == 0) {
-                            Modifier
-                                .focusRequester(initialFocusRequester)
-                                .onGloballyPositioned { initialFocusPlaced.value = true }
-                        } else Modifier
+                        modifier = Modifier.focusRequester(focusRequesters[index]),
+                        multiChoice = true
                     )
                 }
             }
@@ -421,11 +569,9 @@ object AppActionSheet {
                 ActionSheetFooterAction(
                     cancelLabel,
                     onCancel,
-                    modifier = if (actions.isEmpty()) {
-                        Modifier
-                            .focusRequester(initialFocusRequester)
-                            .onGloballyPositioned { initialFocusPlaced.value = true }
-                    } else Modifier
+                    modifier = Modifier
+                        .focusRequester(cancelFocusRequester)
+                        .onGloballyPositioned { cancelFocusPlaced = true }
                 )
                 ActionSheetFooterAction(
                     label = confirmLabel,
@@ -436,12 +582,25 @@ object AppActionSheet {
         }
     }
 
+    private suspend fun focusListAction(
+        listState: LazyListState,
+        index: Int,
+        focusRequester: FocusRequester
+    ) {
+        snapshotFlow { listState.layoutInfo.totalItemsCount > 0 }.first { it }
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            listState.scrollToItem(index)
+        }
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == index } }
+            .first { it }
+        focusRequester.requestFocus()
+    }
+
     @Composable
     internal fun ActionSheetContainer(
         respectNavigationBars: Boolean = true,
         shieldBackgroundTouches: Boolean = false,
-        onBoundsChanged: ((Rect) -> Unit)? = null,
-        outerPadding: PaddingValues = PaddingValues(start = 10.dp, end = 10.dp, bottom = 10.dp),
+        outerPadding: PaddingValues = PaddingValues(start = horizontalInset, end = horizontalInset, bottom = 10.dp),
         content: @Composable ColumnScope.() -> Unit
     ) {
         val shape = AppShapes.overlay
@@ -462,13 +621,12 @@ object AppActionSheet {
                 .then(touchShield?.let {
                     Modifier.clickable(it, indication = null, onClick = {})
                 } ?: Modifier)
-                .then(onBoundsChanged?.let { callback ->
-                    Modifier.onGloballyPositioned { callback(it.boundsInRoot()) }
-                } ?: Modifier)
-                .padding(outerPadding)
+                .padding(outerPadding),
+            contentAlignment = Alignment.BottomCenter
         ) {
             Column(
                 modifier = Modifier
+                    .widthIn(max = AppOverlayWidths.compact)
                     .fillMaxWidth()
                     .clip(shape)
                     .background(gradient)
@@ -516,14 +674,13 @@ object AppActionSheet {
                 .onPreviewKeyEvent { event ->
                     val nativeEvent = event.nativeKeyEvent
                     if (enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                        if (nativeEvent.action == KeyEvent.ACTION_UP) onClick()
+                        if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) onClick()
                         true
                     } else {
                         false
                     }
                 }
                 .clickable(enabled = enabled, onClick = onClick)
-                .focusable(enabled)
                 .padding(
                     horizontal = if (compact) 10.dp else 14.dp,
                     vertical = if (compact) 6.dp else 10.dp
@@ -587,10 +744,14 @@ object AppActionSheet {
     internal fun ActionSheetRow(
         action: Action,
         onAction: (Action) -> Unit,
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        singleChoice: Boolean = false,
+        multiChoice: Boolean = false
     ) {
         val rowShape = AppShapes.medium
+        val emphasizedColor = if (action.emphasized && action.enabled) MaterialTheme.colorScheme.primary else null
         var focused by remember(action.id) { mutableStateOf(false) }
+        val activate = { if (action.enabled) onAction(action) }
         Column {
             if (action.sectionStart) {
                 HorizontalDivider(
@@ -619,27 +780,47 @@ object AppActionSheet {
                     .onPreviewKeyEvent { event ->
                         val nativeEvent = event.nativeKeyEvent
                         if (action.enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                            if (nativeEvent.action == KeyEvent.ACTION_UP) onAction(action)
+                            if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) activate()
                             true
                         } else {
                             false
                         }
                     }
-                    .then(if (action.toggle) {
-                        Modifier.toggleable(value = action.checked == true, enabled = action.enabled,
-                            role = Role.Switch, onValueChange = { onAction(action) })
-                    } else Modifier.clickable(enabled = action.enabled) { onAction(action) })
-                    .focusable(action.enabled)
+                    .then(when {
+                        action.toggle -> Modifier.toggleable(
+                            value = action.checked == true, enabled = action.enabled,
+                            role = Role.Switch, onValueChange = { activate() }
+                        )
+                        multiChoice && action.checked != null -> Modifier.toggleable(
+                            value = action.checked, enabled = action.enabled,
+                            role = Role.Checkbox, onValueChange = { activate() }
+                        )
+                        singleChoice && action.checked != null -> Modifier.selectable(
+                            selected = action.checked, enabled = action.enabled,
+                            role = Role.RadioButton, onClick = activate
+                        )
+                        else -> Modifier.clickable(enabled = action.enabled, onClick = activate)
+                    })
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                action.iconRes?.let { iconRes ->
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = (emphasizedColor ?: MaterialTheme.colorScheme.onSurface)
+                            .copy(alpha = if (action.enabled) 1f else 0.38f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = action.title.toString(),
                         color = when {
                             !action.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             action.destructive -> colorResource(R.color.app_action_sheet_danger)
-                            else -> MaterialTheme.colorScheme.onSurface
+                            else -> emphasizedColor ?: MaterialTheme.colorScheme.onSurface
                         },
                         fontSize = 14.sp,
                         maxLines = 2,
@@ -648,7 +829,7 @@ object AppActionSheet {
                     if (!action.description.isNullOrEmpty()) {
                         Text(
                             text = action.description.toString(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            color = (emphasizedColor ?: MaterialTheme.colorScheme.onSurfaceVariant).copy(
                                 alpha = if (action.enabled) 1f else 0.38f
                             ),
                             fontSize = 12.sp,
@@ -683,7 +864,7 @@ object AppActionSheet {
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = "›",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = emphasizedColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 20.sp
                     )
                 }

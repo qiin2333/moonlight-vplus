@@ -66,11 +66,11 @@ class RumbleEnvelopeAnalyzerTest {
 
         clock.nowMs = 20
         val at20 = clock.decompose(analyzer, 0.9f, 0.6f)
-        assertEquals(0.9f * kotlin.math.exp(-0.5f), at20.transientLow, 0.0001f)
-        assertEquals(0.6f * kotlin.math.exp(-0.5f), at20.transientHigh, 0.0001f)
+        assertEquals(0.5458776f, at20.transientLow, 0.0001f)
+        assertEquals(0.3639184f, at20.transientHigh, 0.0001f)
         clock.nowMs = 40
         val at40 = clock.decompose(analyzer, 0.9f, 0.6f)
-        assertEquals(0.9f * kotlin.math.exp(-1f), at40.transientLow, 0.0001f)
+        assertEquals(0.3310915f, at40.transientLow, 0.0001f)
 
         // After ~8 time constants held, the step is entirely sustained.
         var timeMs = 60L

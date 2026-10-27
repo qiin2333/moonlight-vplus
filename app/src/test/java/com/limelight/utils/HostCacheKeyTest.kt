@@ -28,7 +28,6 @@ class HostCacheKeyTest {
         val expected = "legacy-5bd960e40874e5746bab710cfeb5d7d79a7d0e7f8177ce91c1a966b64e08223a"
 
         assertEquals(expected, HostCacheKey.fromUuid("legacy-host"))
-        assertEquals(expected, HostCacheKey.fromUuid("legacy-host"))
     }
 
     @Test

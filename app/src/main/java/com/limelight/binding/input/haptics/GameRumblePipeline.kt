@@ -52,6 +52,14 @@ internal class GameRumblePipeline(
         }
     }
 
+    fun reset(number: Short) {
+        trackers.remove(number)
+        if (number.toInt() == 0) {
+            removeCallbacks(ticker)
+            tickScheduled = false
+        }
+    }
+
     fun stop() {
         stopped = true
         removeCallbacks(ticker)

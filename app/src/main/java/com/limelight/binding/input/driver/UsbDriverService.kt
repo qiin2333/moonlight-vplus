@@ -118,6 +118,12 @@ class UsbDriverService : Service(), UsbDriverListener {
         listener?.reportControllerMotion(controllerId, motionType, x, y, z)
     }
 
+    override fun reportControllerMotionFrame(
+        controllerId: Int, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float
+    ) {
+        listener?.reportControllerMotionFrame(controllerId, gx, gy, gz, ax, ay, az)
+    }
+
     override fun reportControllerBattery(
         controllerId: Int,
         batteryState: Byte,
@@ -170,11 +176,16 @@ class UsbDriverService : Service(), UsbDriverListener {
         val suppressCallback = sessionLock.withLock {
             synchronized(controllersLock) {
                 controllers.remove(controller)
-                controllerDevices.remove(controller)
             }
             sessionHandoff.isStoppingController(controller.getControllerId())
         }
-        if (!suppressCallback) listener?.deviceRemoved(controller)
+        try {
+            // Removal can precede deviceAdded(). Keep the path available so the
+            // listener can retire an initial slot even without a controller context.
+            if (!suppressCallback) listener?.deviceRemoved(controller)
+        } finally {
+            synchronized(controllersLock) { controllerDevices.remove(controller) }
+        }
         if (controller is UsbWaveformController && started) mainHandler.post {
             sessionLock.withLock {
                 if (started) usbManager?.let { manager ->
@@ -472,7 +483,15 @@ class UsbDriverService : Service(), UsbDriverListener {
                 LimeLog.warning("Unable to initialize USB controller: ${it.message}")
             }.getOrNull()
 
-            if (controller == null || !runCatching { controller.start() }.getOrDefault(false)) {
+            if (controller == null) {
+                runCatching { connection.close() }
+                return
+            }
+            // start() can announce the controller before returning. Publish its path first
+            // so the listener can reject a source already leased to USB/IP.
+            synchronized(controllersLock) { controllerDevices[controller] = device.deviceName }
+            if (!runCatching { controller.start() }.getOrDefault(false)) {
+                synchronized(controllersLock) { controllerDevices.remove(controller) }
                 runCatching { connection.close() }
                 return
             }
@@ -490,6 +509,7 @@ class UsbDriverService : Service(), UsbDriverListener {
                 runCatching { controller.stop() }.onFailure {
                     LimeLog.warning("Unable to stop stale USB controller: ${it.message}")
                 }
+                synchronized(controllersLock) { controllerDevices.remove(controller) }
             }
         }
     }
@@ -1053,6 +1073,21 @@ class UsbDriverService : Service(), UsbDriverListener {
                         }
                     }
                 }
+            }
+        }
+
+        /** Snapshot paths before retiring contexts and stopping physical drivers. */
+        fun controllerIdsForDevice(path: String): Set<Int> = forwardingLock.withLock {
+            forwardingServices.flatMap { service ->
+                synchronized(service.controllersLock) {
+                    service.controllerDevices.filterValues { it == path }.keys.map { it.getControllerId() }
+                }
+            }.toSet()
+        }
+
+        fun devicePathForController(controller: AbstractController): String? = forwardingLock.withLock {
+            forwardingServices.firstNotNullOfOrNull { service ->
+                synchronized(service.controllersLock) { service.controllerDevices[controller] }
             }
         }
 

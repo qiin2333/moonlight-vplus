@@ -358,6 +358,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
 
         for (i in 0 until handler.inputDeviceContexts.size()) {
             val deviceContext = handler.inputDeviceContexts.valueAt(i)
+            if (!handler.isContextUsable(deviceContext)) continue
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -379,6 +380,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         }
 
         for (deviceContext in handler.driverControllerContexts.values) {
+            if (!handler.isContextUsable(deviceContext)) continue
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -441,6 +443,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             for (i in 0 until handler.inputDeviceContexts.size()) {
                 val deviceContext = handler.inputDeviceContexts.valueAt(i)
+                if (!handler.isContextUsable(deviceContext)) continue
 
                 if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                     continue
@@ -470,6 +473,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         }
 
         for (deviceContext in handler.driverControllerContexts.values) {
+            if (!handler.isContextUsable(deviceContext)) continue
 
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
@@ -507,6 +511,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         val triggers = AdaptiveTriggers(eventFlags, typeLeft, typeRight, left, right)
         for (i in 0 until handler.inputDeviceContexts.size()) {
             val deviceContext = handler.inputDeviceContexts.valueAt(i)
+            if (!handler.isContextUsable(deviceContext)) continue
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }
@@ -527,6 +532,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
             }
         }
         for (deviceContext in handler.driverControllerContexts.values) {
+            if (!handler.isContextUsable(deviceContext)) continue
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }
@@ -556,6 +562,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         }
 
         for (deviceContext in handler.driverControllerContexts.values) {
+            if (!handler.isContextUsable(deviceContext)) continue
             if (handler.prefConfig.multiController && !deviceContext.assignedControllerNumber) {
                 continue
             }
@@ -564,7 +571,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                     // Post to the background thread: USB transfers can block and this
                     // arrives on the common-c callback thread.
                     handler.backgroundThreadHandler.post {
-                        device.setControllerLED(r, g, b)
+                        if (handler.isContextUsable(deviceContext)) device.setControllerLED(r, g, b)
                     }
                 }
             }
@@ -573,6 +580,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             for (i in 0 until handler.inputDeviceContexts.size()) {
                 val deviceContext = handler.inputDeviceContexts.valueAt(i)
+                if (!handler.isContextUsable(deviceContext)) continue
 
                 if (deviceContext.controllerNumber == controllerNumber &&
                     deviceContext.directDualSenseBluetoothOutput?.updateLightbar(r, g, b) == true
@@ -592,7 +600,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
                         // (onInputDeviceChanged), removed it (onInputDeviceRemoved),
                         // or torn the handler down while we waited. Opening a session on
                         // a stale context would leak it with nothing left to close it.
-                        if (handler.stopped ||
+                        if (!handler.isContextUsable(deviceContext) ||
                             handler.inputDeviceContexts.get(deviceContext.id) !== deviceContext
                         ) {
                             return@synchronized
@@ -642,6 +650,7 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
     // This must not be called on the main thread due to risk of ANRs!
     @TargetApi(31)
     fun sendControllerBatteryPacket(context: InputDeviceContext) {
+        if (!handler.isContextUsable(context)) return
         val currentBatteryStatus: Int
         val currentBatteryCapacity: Float
 

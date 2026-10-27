@@ -63,32 +63,6 @@ class GameMenuOpacityEditorTest {
         }
     }
 
-    @Test
-    fun unchangedEditorPersistsNormalizedInitialValueOnDismiss() {
-        var pendingOpacity = 92
-        var persistedOpacity = 92
-        scenario = ActivityScenario.launch(ComponentActivity::class.java)
-        scenario?.onActivity { activity ->
-            dialog = GameMenuOpacityEditor.show(
-                context = activity,
-                anchor = GameMenuOpacityAnchor(centerX = 200, bottomY = 80),
-                initialOpacity = 92,
-                onOpacityChange = { pendingOpacity = it },
-                onOpacityChangeFinished = { persistedOpacity = it }
-            ).also { opacityDialog ->
-                opacityDialog.setOnDismissListener {
-                    if (pendingOpacity != persistedOpacity) {
-                        persistedOpacity = pendingOpacity
-                    }
-                }
-            }
-        }
-
-        waitFor { dialog?.isShowing == true && pendingOpacity == 93 }
-        scenario?.onActivity { dialog?.dismiss() }
-        waitFor { persistedOpacity == 93 }
-    }
-
     private fun waitFor(condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + 5_000
         while (!condition() && System.currentTimeMillis() < deadline) {

@@ -19,4 +19,6 @@ internal class ControllerArrivalTracker(initiallyReported: Boolean = false) {
     fun markReported() {
         isReported = true
     }
+
+    fun reset() { isReported = false }
 }

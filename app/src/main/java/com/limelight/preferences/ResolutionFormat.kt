@@ -95,3 +95,28 @@ fun ratioGlyphSize(width: Int, height: Int): Pair<Float, Float> {
     val scale = if (minSide < 6f) 6f / minSide else 1f
     return glyphWidth * scale to glyphHeight * scale
 }
+
+/** "WxH" 存储值统一显示为 "W×H";无法解析时原样返回。 */
+fun prettyResolution(value: String): String {
+    val r = com.limelight.preferences.ResolutionValidator.parseResolution(value) ?: return value
+    return r.width.toString() + "×" + r.height.toString()
+}
+
+/**
+ * 紧凑分辨率读数:仅精确命中标准档位(含竖排方向)时映射短名,
+ * 非标准分辨率(如 2340x1080)保留原文,避免 "1080p" 指代歧义。
+ */
+fun compactResolutionLabel(value: String): String {
+    val resolution = com.limelight.preferences.ResolutionValidator.parseResolution(value) ?: return value
+    val direct = resolution.width to resolution.height
+    val reversed = resolution.height to resolution.width
+    val tiers = mapOf(
+        (3840 to 2160) to "4K",
+        (2560 to 1440) to "1440p",
+        (1920 to 1080) to "1080p",
+        (1280 to 720) to "720p",
+        (854 to 480) to "480p",
+        (640 to 360) to "360p"
+    )
+    return tiers[direct] ?: tiers[reversed] ?: value
+}

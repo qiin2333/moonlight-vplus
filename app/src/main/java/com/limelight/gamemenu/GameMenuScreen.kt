@@ -28,6 +28,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
@@ -70,10 +72,10 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.InputMode
@@ -88,7 +90,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -110,6 +111,7 @@ import com.limelight.R
 import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.FeatureGuideStore
 import com.limelight.ui.theme.AppCornerRadii
+import com.limelight.ui.theme.AppOverlayWidths
 import com.limelight.ui.theme.AppShapes
 import com.joco.showcase.sequence.SequenceShowcase
 import com.joco.showcase.sequence.rememberSequenceShowcaseState
@@ -189,18 +191,25 @@ internal fun GameMenuScreen(
     val showcaseState = rememberSequenceShowcaseState()
     val initialFocusRequester = remember { FocusRequester() }
     val menuGroupFocusRequester = remember { FocusRequester() }
+    var handledHardwareFocusRequestToken by remember { mutableIntStateOf(0) }
+    val initialFocusModifier = Modifier
+        .onFocusChanged {
+            if (it.isFocused) {
+                handledHardwareFocusRequestToken = hardwareFocusRequestToken
+            }
+        }
     val inputModeManager = LocalInputModeManager.current
     var guideStore by remember(appContext) { mutableStateOf<FeatureGuideStore?>(null) }
     var guidePending by remember(appContext) { mutableStateOf(false) }
     var guideActive by remember(appContext) { mutableStateOf(false) }
-    var menuContentLaidOut by remember(state.title, state.isSubmenu) { mutableStateOf(false) }
+    var menuHasFocus by remember { mutableStateOf(false) }
+    var menuContentLaidOut by remember(state.pageGeneration) { mutableStateOf(false) }
     var quickActionGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
         mutableStateOf(false)
     }
     var crownGuideTargetLaidOut by remember(state.title, state.isSubmenu) {
         mutableStateOf(false)
     }
-    var menuHasFocus by remember { mutableStateOf(false) }
     var handledRestoreFocusRequestToken by remember { mutableIntStateOf(0) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
@@ -210,21 +219,11 @@ internal fun GameMenuScreen(
         guideStore = store
         guidePending = shouldShow
     }
-    val configuration = LocalConfiguration.current
-    val windowWidth = with(LocalDensity.current) {
-        LocalWindowInfo.current.containerSize.width.toDp()
-    }
     val maxMenuHeight = rememberGameMenuMaxHeight()
-    val wideLayout = windowWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp
-    val horizontalInset = if (wideLayout) {
-        GameMenuDimens.wideScreenInset
+    val maxMenuWidth = if (state.isSubmenu && state.pageLayout != GameMenuPageLayout.TOUCH_MODE) {
+        AppOverlayWidths.compact
     } else {
-        GameMenuDimens.compactScreenInset
-    }
-    val menuWidthFraction = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
-    } else {
-        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+        AppOverlayWidths.expanded
     }
     val finishGuide = {
         guideDismissController.clear()
@@ -238,7 +237,7 @@ internal fun GameMenuScreen(
         onDispose { guideDismissController.clear() }
     }
 
-    GameMenuTheme(palette) {
+    GameMenuTheme {
         SequenceShowcase(state = showcaseState) {
             val quickActionGuideModifier = Modifier.sequenceShowcaseTarget(
                 index = 0,
@@ -280,10 +279,10 @@ internal fun GameMenuScreen(
             }
 
             GameMenuDialogShell(
-                widthFraction = menuWidthFraction,
-                horizontalInset = horizontalInset,
-                onDismissRequest = callbacks.onDismiss
-            ) {
+                maxMenuWidth = maxMenuWidth,
+                onDismissRequest = callbacks.onDismiss,
+                onTouchInteraction = callbacks.onTouchInteraction
+            ) { wideLayout ->
                 Surface(
                     color = Color.Transparent,
                     shape = GameMenuDialogShape,
@@ -314,6 +313,7 @@ internal fun GameMenuScreen(
                                     state.pageLayout == GameMenuPageLayout.TOUCH_MODE),
                             maxMenuHeight = maxMenuHeight,
                             initialFocusRequester = initialFocusRequester,
+                            initialFocusModifier = initialFocusModifier,
                             quickActionGuideModifier = quickActionGuideModifier,
                             crownGuideModifier = crownGuideModifier
                         )
@@ -352,15 +352,18 @@ internal fun GameMenuScreen(
 
     LaunchedEffect(
         hardwareFocusRequestToken,
-        state.title,
-        state.isSubmenu,
+        handledHardwareFocusRequestToken,
+        menuHasFocus,
+        state.pageGeneration,
         guideActive,
         menuContentLaidOut
     ) {
-        if (shouldRequestGameMenuFocus(
+        if (state.controllerNavigationActive && shouldRequestGameMenuFocus(
                 hardwareFocusRequestToken = hardwareFocusRequestToken,
+                handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                 guideActive = guideActive,
-                hasOptions = state.options.isNotEmpty(),
+                hasFocusTarget = state.options.isNotEmpty() ||
+                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE,
                 menuContentLaidOut = menuContentLaidOut,
                 menuHasFocus = menuHasFocus
             )
@@ -403,14 +406,15 @@ internal fun shouldStartGameMenuGuide(
 
 internal fun shouldRequestGameMenuFocus(
     hardwareFocusRequestToken: Int,
+    handledHardwareFocusRequestToken: Int,
     guideActive: Boolean,
-    hasOptions: Boolean,
+    hasFocusTarget: Boolean,
     menuContentLaidOut: Boolean,
     menuHasFocus: Boolean
 ): Boolean {
-    return hardwareFocusRequestToken > 0 &&
+    return hardwareFocusRequestToken > handledHardwareFocusRequestToken &&
         !guideActive &&
-        hasOptions &&
+        hasFocusTarget &&
         menuContentLaidOut &&
         !menuHasFocus
 }
@@ -426,11 +430,16 @@ internal fun shouldRestoreGameMenuFocus(
 
 @Composable
 internal fun GameMenuDialogShell(
-    widthFraction: Float,
-    horizontalInset: Dp,
     onDismissRequest: () -> Unit,
-    content: @Composable () -> Unit
+    onTouchInteraction: () -> Unit = {},
+    maxMenuWidth: Dp = AppOverlayWidths.expanded,
+    content: @Composable (wideLayout: Boolean) -> Unit
 ) {
+    val widthFraction = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        GAME_MENU_LANDSCAPE_WIDTH_FRACTION
+    } else {
+        GAME_MENU_PORTRAIT_WIDTH_FRACTION
+    }
     val backdropInteraction = remember { MutableInteractionSource() }
     val safeDrawingPadding = WindowInsets.safeDrawing.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current
@@ -438,10 +447,20 @@ internal fun GameMenuDialogShell(
         safeDrawingPadding.calculateLeftPadding(layoutDirection),
         safeDrawingPadding.calculateRightPadding(layoutDirection)
     )
-    Box(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
+        val horizontalInset = if (maxWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp) {
+            GameMenuDimens.wideScreenInset
+        } else {
+            GameMenuDimens.compactScreenInset
+        }
+        // Keep the existing small-screen margins, then cap the visible panel itself.
+        val panelWidth = (maxWidth * widthFraction - (safeHorizontalPadding + horizontalInset) * 2)
+            .coerceIn(0.dp, maxMenuWidth)
+        val contentWidth = (panelWidth - GameMenuDimens.outer * 2).coerceAtLeast(0.dp)
+        val wideLayout = contentWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -457,23 +476,21 @@ internal fun GameMenuDialogShell(
         )
         Box(
             modifier = Modifier
-                .fillMaxWidth(widthFraction)
+                .width(panelWidth)
                 .padding(
-                    start = safeHorizontalPadding,
                     top = safeDrawingPadding.calculateTopPadding(),
-                    end = safeHorizontalPadding,
                     bottom = safeDrawingPadding.calculateBottomPadding()
                 )
-                .padding(horizontal = horizontalInset)
                 .testTag(GAME_MENU_PANEL_TAG)
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
+                        onTouchInteraction()
                         waitForUpOrCancellation()
                     }
                 }
         ) {
-            content()
+            content(wideLayout)
         }
     }
 }
@@ -515,10 +532,8 @@ private fun gameMenuPalette() = GameMenuPalette(
 )
 
 @Composable
-private fun GameMenuTheme(
-    palette: GameMenuPalette,
-    content: @Composable () -> Unit
-) {
+internal fun GameMenuTheme(content: @Composable () -> Unit) {
+    val palette = gameMenuPalette()
     val baseColorScheme = if (palette.darkTheme) darkColorScheme() else lightColorScheme()
     MaterialTheme(
         colorScheme = baseColorScheme.copy(
@@ -552,6 +567,7 @@ private fun GameMenuContent(
     wideLayout: Boolean,
     maxMenuHeight: Dp,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     quickActionGuideModifier: Modifier = Modifier,
     crownGuideModifier: Modifier = Modifier
 ) {
@@ -607,6 +623,7 @@ private fun GameMenuContent(
                 state = state,
                 callbacks = callbacks,
                 initialFocusRequester = initialFocusRequester,
+                initialFocusModifier = initialFocusModifier,
                 topFocusRequester = touchModeBackFocusRequester,
                 sliderGestureActive = sliderGestureActive,
                 onSliderGesture = { sliderGestureActive = it },
@@ -627,7 +644,8 @@ private fun GameMenuContent(
                     onInlineToggle = callbacks.onInlineToggle,
                     onSegmentClick = callbacks.onSegmentClick,
                     modifier = Modifier.weight(1f),
-                    initialFocusRequester = initialFocusRequester
+                    initialFocusRequester = initialFocusRequester,
+                    optionFocusModifier = initialFocusModifier
                 )
                 GameMenuCards(
                     state = state,
@@ -644,16 +662,13 @@ private fun GameMenuContent(
                     callbacks.onOptionClick,
                     callbacks.onInlineToggle,
                     callbacks.onSegmentClick,
-                    initialFocusRequester = initialFocusRequester
+                    initialFocusRequester = initialFocusRequester,
+                    optionFocusModifier = initialFocusModifier
                 )
                 if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
-                    TouchPointerSensitivityControl(
-                        state = state.touchPointerSensitivity,
-                        onValueChange = callbacks.onTouchPointerSensitivity,
-                        onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
-                        onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
-                        onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
-                        onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                    TouchModeSensitivityControl(
+                        state = state,
+                        callbacks = callbacks,
                         modifier = Modifier.testTag("touchPointerSensitivity"),
                         onSliderGesture = { sliderGestureActive = it }
                     )
@@ -726,6 +741,7 @@ private fun TouchModeTable(
     state: GameMenuComposeUiState,
     callbacks: GameMenuCallbacks,
     initialFocusRequester: FocusRequester,
+    initialFocusModifier: Modifier,
     topFocusRequester: FocusRequester,
     sliderGestureActive: Boolean,
     onSliderGesture: (Boolean) -> Unit,
@@ -738,7 +754,7 @@ private fun TouchModeTable(
     val compatibleActions = options.filter {
         it.presentation == GameMenuOptionPresentation.COMPATIBLE_ACTION
     }
-    val showSensitivity = state.touchPointerSensitivity.applicable
+    val showSensitivity = state.touchPointerSensitivity.applicable || state.touchpadSensitivity.pointer.applicable
     val secondaryCount = compatibleActions.size + if (showSensitivity) 1 else 0
     val primaryFocusRequesters = remember(primaryModes.size, initialFocusRequester) {
         List(primaryModes.size) { index ->
@@ -787,6 +803,7 @@ private fun TouchModeTable(
                                 topFocusRequester
                             )
                             .focusRequester(focusRequesters[globalIndex])
+                            .then(if (globalIndex == 0) initialFocusModifier else Modifier)
                     )
                 }
             }
@@ -806,13 +823,9 @@ private fun TouchModeTable(
                     secondaryCount,
                     globalIndex
                 )
-                TouchPointerSensitivityControl(
-                    state = state.touchPointerSensitivity,
-                    onValueChange = callbacks.onTouchPointerSensitivity,
-                    onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
-                    onSavePreset = callbacks.onSaveTouchPointerSensitivityPreset,
-                    onApplyPreset = callbacks.onApplyTouchPointerSensitivityPreset,
-                    onManagePresets = callbacks.onManageTouchPointerSensitivityPresets,
+                TouchModeSensitivityControl(
+                    state = state,
+                    callbacks = callbacks,
                     initialFocusRequester = focusRequesters[globalIndex],
                     leftExitRequester = targets.left?.let(focusRequesters::get)
                         ?: FocusRequester.Cancel,
@@ -863,6 +876,46 @@ private fun TouchModeTable(
             }
         }
     }
+}
+
+@Composable
+private fun TouchModeSensitivityControl(
+    state: GameMenuComposeUiState,
+    callbacks: GameMenuCallbacks,
+    initialFocusRequester: FocusRequester? = null,
+    leftExitRequester: FocusRequester = FocusRequester.Default,
+    rightExitRequester: FocusRequester = FocusRequester.Default,
+    upExitRequester: FocusRequester = FocusRequester.Default,
+    downExitRequester: FocusRequester = FocusRequester.Default,
+    modifier: Modifier = Modifier,
+    onSliderGesture: (Boolean) -> Unit
+) {
+    val touchpad = state.touchpadSensitivity.pointer.applicable
+    val parameters = if (touchpad) TouchpadPresetField.entries.map { field ->
+        SensitivityParameter(
+            field.label,
+            if (field == TouchpadPresetField.SENSITIVITY) state.touchpadSensitivity.pointer.percent
+                else state.touchpadSensitivity.scrollPercent,
+            1, field.max, { callbacks.onTouchpadSensitivity(field, it) },
+            callbacks.onTouchpadSensitivityFinished, "touchpad:${field.key}"
+        )
+    } else null
+    TouchPointerSensitivityControl(
+        state = if (touchpad) state.touchpadSensitivity.pointer else state.touchPointerSensitivity,
+        onValueChange = callbacks.onTouchPointerSensitivity,
+        onValueChangeFinished = callbacks.onTouchPointerSensitivityFinished,
+        onSavePreset = if (touchpad) callbacks.onSaveTouchpadPreset else callbacks.onSaveTouchPointerSensitivityPreset,
+        onApplyPreset = if (touchpad) callbacks.onApplyTouchpadPreset else callbacks.onApplyTouchPointerSensitivityPreset,
+        onManagePresets = if (touchpad) callbacks.onManageTouchpadPresets else callbacks.onManageTouchPointerSensitivityPresets,
+        initialFocusRequester = initialFocusRequester,
+        leftExitRequester = leftExitRequester,
+        rightExitRequester = rightExitRequester,
+        upExitRequester = upExitRequester,
+        downExitRequester = downExitRequester,
+        parameters = parameters,
+        modifier = modifier,
+        onSliderGesture = onSliderGesture
+    )
 }
 
 @Composable

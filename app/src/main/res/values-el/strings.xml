@@ -79,7 +79,6 @@
     <string name="suffix_seekbar_bitrate_mbps">Mbps</string>
     <string name="title_checkbox_stretch_video">Επέκταση βίντεο σε πλήρη οθόνη</string>
     <string name="resolution_prefix_native">Εγγενής</string>
-    <string name="resolution_prefix_native_fullscreen">Εγγενής πλήρης οθόνη</string>
     <string name="category_audio_settings">Ρυθμίσεις ήχου</string>
     <string name="title_audio_config_list">Ρύθμιση παραμέτρων ήχου surround</string>
     <string name="suffix_seekbar_deadzone">%</string>
@@ -98,7 +97,6 @@
     <string name="summary_only_l3r3">Απόκρυψη όλων των εικονικών κουμπιών εκτός των L3 και R3</string>
     <string name="dialog_title_reset_osc">Επαναφορά διάταξης</string>
     <string name="toast_reset_osc_success">Επαναφορά των στοιχείων ελέγχου στην οθόνη στις προεπιλογές</string>
-    <string name="title_osc_opacity">Αλλαγή της αδιαφάνειας των στοιχείων ελέγχου στην οθόνη</string>
     <string name="summary_osc_opacity">Κάντε τα στοιχεία ελέγχου στην οθόνη περισσότερο/λιγότερο διαφανή</string>
     <string name="suffix_osc_opacity">%</string>
     <string name="category_ui_settings">Ρυθμίσεις διεπαφής χρήστη</string>
@@ -190,7 +188,6 @@
     <string name="summary_checkbox_mouse_emulation">Με παρατεταμένο πάτημα του κουμπιού Έναρξη θα αλλάξει το gamepad σε λειτουργία ποντικιού</string>
     <string name="category_on_screen_controls_settings">Ρυθμίσεις στοιχείων ελέγχου στην οθόνη</string>
     <string name="summary_reset_osc">Επαναφέρει όλα τα στοιχεία ελέγχου στην οθόνη στο προεπιλεγμένο μέγεθος και τη θέση τους</string>
-    <string name="title_unlock_fps">Ξεκλειδώστε όλους τους πιθανούς ρυθμούς καρέ</string>
     <string name="title_checkbox_show_onscreen_controls">Εμφάνιση στοιχείων ελέγχου στην οθόνη</string>
     <string name="summary_checkbox_vibrate_osc">Δονεί τη συσκευή σας για να μιμηθεί το rumble για τα χειριστήρια στην οθόνη</string>
     <string name="title_reset_osc">Εκκαθάριση αποθηκευμένης διάταξης στοιχείων ελέγχου στην οθόνη</string>
@@ -198,7 +195,6 @@
     <string name="title_checkbox_enable_sops">Βελτιστοποίηση ρυθμίσεων παιχνιδιού</string>
     <string name="summary_checkbox_enable_sops">Επιτρέψτε στη GFE να τροποποιήσει τις ρυθμίσεις του παιχνιδιού για βέλτιστη ροή</string>
     <string name="category_advanced_settings">Προηγμένες ρυθμίσεις</string>
-    <string name="summary_unlock_fps">Η ροή στα 90 ή 120 FPS μπορεί να μειώσει τον λανθάνοντα χρόνο σε συσκευές υψηλών προδιαγραφών, αλλά μπορεί να προκαλέσει καθυστέρηση ή αστάθεια σε συσκευές που δεν μπορούν να την υποστηρίξουν</string>
     <string name="title_video_format">Αλλαγή ρυθμίσεων HEVC</string>
     <string name="title_enable_post_stream_toast">Εμφάνιση μηνύματος λανθάνοντος χρόνου μετά τη ροή</string>
     <string name="summary_video_format">Δεν είστε σίγουροι τι να επιλέξετε; Χρησιμοποιήστε την επιλογή «Αυτόματα». Το HEVC συνιστάται για τις περισσότερες σύγχρονες συσκευές και συνήθως ισορροπεί ποιότητα εικόνας, εύρος ζώνης και HDR· το AV1 μπορεί να εξοικονομήσει εύρος ζώνης όταν υποστηρίζεται και από τις δύο πλευρές, αλλά σε ορισμένες συσκευές μπορεί να έχει μεγαλύτερη καθυστέρηση αποκωδικοποίησης· το H.264 έχει την καλύτερη συμβατότητα, αλλά χρειάζεται περισσότερο εύρος ζώνης και δεν υποστηρίζει HDR.</string>
@@ -260,7 +256,7 @@
     <string name="pyrowave_diag_copy">Αντιγραφή</string>
     <string name="pyrowave_diag_copy_success">Η αναφορά αντιγράφηκε στο πρόχειρο</string>
     <string name="pyrowave_diag_unavailable">Δεν είναι διαθέσιμο</string>
-    <string name="image_saved_successfully">Η εικόνα αποθηκεύτηκε επιτυχώς στο: Picture/vplus</string>
+    <string name="image_saved_successfully">Η εικόνα αποθηκεύτηκε επιτυχώς στο: Pictures/vplus</string>
     <string name="image_save_failed_with_error">Αποτυχία αποθήκευσης εικόνας: %1$s</string>
     <string name="tip_double_tap_mouse">Συμβουλή: πατήστε παρατεταμένα την κενή περιοχή στο πάνω μέρος της λίστας υπολογιστών για να αποθηκεύσετε την τρέχουσα εικόνα φόντου.</string>
     <string name="pyrowave_negotiation_fallback">Η διαπραγμάτευση PyroWave απέτυχε. Μετάβαση σε %1$s.</string>

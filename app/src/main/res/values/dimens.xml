@@ -38,9 +38,16 @@
     <!-- AppView -->
     <dimen name="appview_edge_margin">8dp</dimen>
     <dimen name="appview_content_margin">20dp</dimen>
-    <dimen name="appview_content_padding">15dp</dimen>
     <dimen name="appview_bottom_margin">10dp</dimen>
     <dimen name="appview_icon_button_size">48dp</dimen>
     <dimen name="appview_panel_elevation">12dp</dimen>
+    <dimen name="appview_title_text_size">20sp</dimen>
+    <dimen name="appview_title_min_height">48dp</dimen>
+    <dimen name="appview_header_spacer_width">0dp</dimen>
+    <dimen name="appview_large_card_width">180dp</dimen>
+    <dimen name="appview_large_card_height">240dp</dimen>
+    <dimen name="appview_large_card_padding">10dp</dimen>
+    <dimen name="appview_small_card_width">120dp</dimen>
+    <dimen name="appview_small_card_height">160dp</dimen>
 
 </resources>

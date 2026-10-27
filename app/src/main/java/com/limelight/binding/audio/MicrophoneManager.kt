@@ -365,7 +365,7 @@ class MicrophoneManager(
     }
 
     fun testMicrophoneStatus() {
-        val status = String.format("权限: %s, 流存在: %s, 可用: %s, 激活: %s",
+        val status = context.getString(R.string.mic_status_debug,
             hasMicrophonePermission(),
             microphoneStream != null,
             isMicrophoneAvailable(),

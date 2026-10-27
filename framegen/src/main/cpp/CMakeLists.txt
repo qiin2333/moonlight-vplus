@@ -30,6 +30,11 @@ add_library(volk STATIC "${LSFGVK_ROOT}/thirdparty/volk/volk.c")
 # do not yet declare VK_HUAWEI_hdr_vivid on all supported build hosts.
 cmake_path(SET PYROWAVE_VULKAN_HEADERS NORMALIZE
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third-party/pyrowave/third_party/Granite/third_party/khronos/vulkan-headers/include")
+if(NOT EXISTS "${PYROWAVE_VULKAN_HEADERS}/vulkan/vulkan_core.h")
+    message(FATAL_ERROR
+        "PyroWave Vulkan headers are missing: ${PYROWAVE_VULKAN_HEADERS}/vulkan/vulkan_core.h. "
+        "Run git submodule update --init --recursive third-party/pyrowave from the repository root.")
+endif()
 target_include_directories(volk BEFORE PUBLIC "${PYROWAVE_VULKAN_HEADERS}")
 target_include_directories(volk PUBLIC "${LSFGVK_ROOT}/thirdparty/volk")
 target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_ANDROID_KHR=1)
