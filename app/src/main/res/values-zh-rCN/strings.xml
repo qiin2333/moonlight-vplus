@@ -780,6 +780,9 @@
     <string name="summary_checkbox_gamepad_touchpad_as_mouse">强制使用手柄触摸板来控制主机鼠标，即使在使用触摸板模拟游戏板时也是如此。</string>
     <string name="title_checkbox_gamepad_motion_sensors">允许使用手柄的运动传感器</string>
     <string name="summary_checkbox_gamepad_motion_sensors">使支持的主机能够在模拟具有运动传感器的游戏手柄时请求运动传感器数据。如果在游戏中未使用运动传感器，禁用可能会略微降低电源和网络使用量。</string>
+    <string name="summary_checkbox_gamepad_motion_sensors_android12">Android 12/12L 实验性功能，默认关闭。手柄断连时可能触发系统崩溃，仅用于测试。</string>
+    <string name="title_gamepad_motion_sensors_android12_experimental">要在 Android 12/12L 上启用手柄运动传感器吗？</string>
+    <string name="message_gamepad_motion_sensors_android12_experimental">Android 12/12L 在启用此功能后处理手柄断连时可能崩溃，串流也可能中断。仅在测试此兼容路径时继续。</string>
     <string name="videoformat_av1always">首选 AV1（实验性）</string>
     <string name="videoformat_h264always">首选 H.264</string>
     <string name="toast_controller_type_changed">游戏手柄类型可能会因运动传感器模拟而改变</string>

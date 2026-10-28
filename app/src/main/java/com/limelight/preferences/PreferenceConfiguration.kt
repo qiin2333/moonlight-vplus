@@ -15,6 +15,7 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.preference.PreferenceManager
 import com.limelight.binding.input.MouseAxisCorrection
+import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
@@ -709,6 +710,10 @@ class PreferenceConfiguration {
         internal const val FULL_RANGE_PREF_STRING = "checkbox_full_range"
         private const val GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse"
         private const val GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors"
+        private const val GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING =
+            "gamepad_motion_sensors_android12_opt_in_migrated"
+        internal const val GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING =
+            "gamepad_motion_sensors_android12_opt_in_confirmed"
         private const val GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback"
 
         // 陀螺仪偏好设置
@@ -919,7 +924,6 @@ class PreferenceConfiguration {
         private const val DEFAULT_REDUCE_REFRESH_RATE = false
         private const val DEFAULT_FULL_RANGE = false
         private const val DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE = false
-        private const val DEFAULT_GAMEPAD_MOTION_SENSORS = true
         private const val DEFAULT_GAMEPAD_MOTION_FALLBACK = false
 
         // 陀螺仪偏好默认值
@@ -1392,13 +1396,30 @@ class PreferenceConfiguration {
                 prefs.edit().putBoolean(SMALL_ICONS_PREF_STRING, getDefaultSmallMode(context)).apply()
             }
 
-            if (!prefs.contains(GAMEPAD_MOTION_SENSORS_PREF_STRING) && Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
-                // Android 12 has a nasty bug that causes crashes when the app touches the InputDevice's
-                // associated InputDeviceSensorManager (just calling getSensorManager() is enough).
-                // As a workaround, we will override the default value for the gamepad motion sensor
-                // option to disabled on Android 12 to reduce the impact of this bug.
-                // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
-                prefs.edit().putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false).apply()
+            if (InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT) &&
+                !InputDeviceSensorPolicy.isStable(Build.VERSION.SDK_INT)
+            ) {
+                val migrationComplete = prefs.getBoolean(
+                    GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING,
+                    false
+                )
+                val confirmedInApp = prefs.getBoolean(
+                    GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING,
+                    false
+                )
+                if (!migrationComplete ||
+                    (prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false) && !confirmedInApp)
+                ) {
+                    // Android 12/12L has a framework hotplug crash in InputDeviceSensorManager.
+                    // Keep the opt-in visible, but default it off until the user confirms it in-app.
+                    // The confirmation marker is device-local, so a restored portable preference
+                    // cannot enable the risky path by itself.
+                    // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
+                    prefs.edit()
+                        .putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false)
+                        .putBoolean(GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING, true)
+                        .apply()
+                }
             }
 
             // This must happen after the preferences migration to ensure the preferences are populated
@@ -1644,7 +1665,10 @@ class PreferenceConfiguration {
             config.reduceRefreshRate = prefs.getBoolean(REDUCE_REFRESH_RATE_PREF_STRING, DEFAULT_REDUCE_REFRESH_RATE)
             config.fullRange = prefs.getBoolean(FULL_RANGE_PREF_STRING, DEFAULT_FULL_RANGE)
             config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE)
-            config.gamepadMotionSensors = prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, DEFAULT_GAMEPAD_MOTION_SENSORS)
+            config.gamepadMotionSensors = prefs.getBoolean(
+                GAMEPAD_MOTION_SENSORS_PREF_STRING,
+                InputDeviceSensorPolicy.defaultEnabled(Build.VERSION.SDK_INT)
+            )
             config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK)
             config.enableSimplifyPerfOverlay = false
 
