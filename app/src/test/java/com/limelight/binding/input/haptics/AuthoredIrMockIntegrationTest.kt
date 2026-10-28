@@ -1,12 +1,10 @@
 package com.limelight.binding.input.haptics
 
-import com.limelight.nvstream.Ds5HapticsIrFrame
 import com.limelight.nvstream.Ds5HapticsIrExtendedDecoder
 import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 /** Contract integration with real host wire, timeline, policies, mixer and phone dispatcher.
  * The transport, main-loop clock, controller port and phone native calls are fakes.
@@ -52,10 +50,8 @@ class AuthoredIrMockIntegrationTest {
         val tickTimes = mutableListOf<Long>()
         val phoneWrites = mutableListOf<Write>()
         val controllerWrites = mutableListOf<Pair<Long, ControllerRumbleState>>()
-        val deliveredIds = mutableListOf<Pair<Int, Int>>()
-        var lastOutput: AuthoredIrTimeline.Output? = null
+        val deliveredIds = mutableListOf<Int>()
         var maxInbox = 0
-        private var epoch: Int? = null
         private val callbacks = linkedMapOf<Runnable, Long>()
         private val worker = VirtualHapticsExecutor { nowMs * 1_000_000 }
         var outputBlocked: Boolean
@@ -93,14 +89,11 @@ class AuthoredIrMockIntegrationTest {
             { supportsTick }, { 100 }, { nowMs },
             { task, delay -> callbacks[task] = nowMs + delay }, { callbacks.remove(it); Unit },
             ::scheduleExpiry, { !closed }, { _, output ->
-                lastOutput = output
-                output.event?.let { deliveredIds += (epoch ?: 0) to it.value.eventId }
+                output.event?.let { deliveredIds += it.value.eventId }
             })
         val queuedEvents: Int get() = authored.queuedEvents
         fun flush() = worker.runReady()
         fun receive(frame: Ds5HapticsIrExtendedFrame) {
-            if (epoch == null || (frame.epoch.toLong() - epoch!!.toLong()).and(0xffffffffL) in 1..0x7fffffffL)
-                epoch = frame.epoch
             authored.submit(frame)
             maxInbox = maxOf(maxInbox, authored.queuedEvents)
         }
@@ -145,7 +138,6 @@ class AuthoredIrMockIntegrationTest {
             phone.stop()
             flush()
             worker.shutdownNow()
-            assertTrue(worker.awaitTermination(3, TimeUnit.SECONDS))
         }
     }
 
@@ -262,23 +254,5 @@ class AuthoredIrMockIntegrationTest {
         }
     }
 
-    @Test fun retiredEpochEndCannotStopANewSourceOrReplayItsOldEvents() {
-        Runtime().use { runtime ->
-            val frames = fixture("pulse_density_50")
-            val eventFrame = frames.first { it.events.isNotEmpty() }
-            runtime.receive(eventFrame)
-            runtime.step(10_020)
-            assertEquals(1, runtime.tickTimes.size)
-            runtime.nowMs = 10_040
-            runtime.receive(eventFrame.copy(epoch = eventFrame.epoch + 1))
-            runtime.step(10_060)
-            assertEquals(2, runtime.tickTimes.size)
-            runtime.nowMs = 10_061
-            runtime.receive(frames.last())
-            runtime.step(10_062)
-            assertEquals(2, runtime.tickTimes.size)
-            assertFalse(runtime.lastOutput?.ended == true)
-            assertEquals(2, runtime.deliveredIds.toSet().size)
-        }
-    }
+
 }

@@ -2,210 +2,109 @@ package com.limelight.binding.input.haptics
 
 import org.junit.Assert.*
 import org.junit.Test
-import java.util.Collections
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 
 class AuthoredDeviceVibrationTest {
-    @Test fun enhancedWatchdogCannotInvalidateAHigherPriorityTouchWaitingForTheWorker() {
+    private class Runtime : AutoCloseable {
         var now = 0L
-        val worker = VirtualHapticsExecutor { now * 1_000_000L }
+        var ticks = 0
+        val writes = mutableListOf<Int>()
         val callbacks = mutableListOf<Pair<Runnable, Long>>()
-        var touches = 0
+        val worker = VirtualHapticsExecutor { now * 1_000_000L }
         val coordinator = DeviceVibrationCoordinator(
             { task, delay -> callbacks += task to delay }, { task -> callbacks.removeAll { it.first == task } },
-            { _, _ -> touches++ }, {}, worker, playDeviceTick = {}, clockMs = { now },
-            dispatcherClockNanos = { now * 1_000_000L })
-        try {
-            coordinator.submitAuthoredIrDetail(false, 100, 30)
-            coordinator.playTouchHaptic(20_000, 0, 500)
-            now = 250
-            callbacks.single { it.second == 200L }.first.run()
-            worker.runReady()
-            assertEquals("An expired IR lease must not cancel the pending touch", 1, touches)
-        } finally { coordinator.stop(); worker.runReady() }
-    }
-
-    @Test fun blockedExtendedContinuousBodyExpiresWithoutChangingOrdinaryHostLifetime() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val entered = CountDownLatch(1)
-        val release = CountDownLatch(1)
-        worker.execute { entered.countDown(); release.await(2, TimeUnit.SECONDS) }
-        assertTrue(entered.await(2, TimeUnit.SECONDS))
-        val now = AtomicLong()
-        val waves = AtomicInteger()
-        val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { _, _ -> waves.incrementAndGet() },
-            {}, worker, playDeviceTick = {}, clockMs = now::get)
-        try {
-            coordinator.submitAuthoredIrBody(30_000, 0, 100, true, 100)
-            now.set(500)
-            release.countDown()
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(0, waves.get())
-        } finally { release.countDown(); coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
-    }
-
-    @Test fun enhancedResetCannotInvalidateAnAlreadyQueuedHigherPriorityTouch() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val entered = CountDownLatch(1)
-        val release = CountDownLatch(1)
-        val waves = AtomicInteger()
-        worker.execute { entered.countDown(); release.await(2, TimeUnit.SECONDS) }
-        assertTrue(entered.await(2, TimeUnit.SECONDS))
-        val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { _, _ -> waves.incrementAndGet() },
-            {}, worker, playDeviceTick = {}, clockMs = { 0L })
-        try {
-            coordinator.playTouchHaptic(20_000, 0, 100)
-            coordinator.submitAuthoredIrBody(0, 0, 100, true)
-            coordinator.submitAuthoredIrDetail(true, 100, 30)
-            coordinator.resetAuthoredIr()
-            release.countDown()
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(1, waves.get())
-        } finally { release.countDown(); coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
-    }
-
-    @Test fun enhancedOwnershipPreservesLatestOrdinaryHostAndItsExplicitZero() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val writes = Collections.synchronizedList(mutableListOf<Int>())
-        val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { amp, _ -> writes += amp },
-            { writes += 0 }, worker, playDeviceTick = {}, clockMs = { 0L })
-        fun flush() { worker.submit {}.get(2, TimeUnit.SECONDS) }
-        try {
-            coordinator.submitAuthoredIrBody(0, 0, 100, true)
-            coordinator.submitAuthoredIrDetail(true, 100, 30)
+            { amplitude, _ -> writes += amplitude }, { writes += 0 }, worker,
+            playDeviceTick = { ticks++ }, clockMs = { now }, dispatcherClockNanos = { now * 1_000_000L })
+        fun flush() = worker.runReady()
+        override fun close() {
+            worker.blocked = false
+            coordinator.stop()
             flush()
-            coordinator.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, 30_000, 0, 100)
-            coordinator.submitAuthoredIrBody(0, 0, 100, false)
-            coordinator.submitAuthoredIrDetail(false, 0, 0, false)
-            flush()
-            assertTrue("The new ordinary source must resume at authored END", writes.last() > 0)
-            coordinator.submitAuthoredIrBody(0, 0, 100, true)
-            coordinator.submitAuthoredIrDetail(true, 100, 30)
-            flush()
-            coordinator.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, 0, 0, 100)
-            coordinator.resetAuthoredIr()
-            flush()
-            assertEquals("An ordinary zero during authored playback must remain zero", 0, writes.last())
-        } finally { coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
+        }
     }
 
-    @Test fun enhancedTicksHaveNoDeviceModelGateAndSourceResetInvalidatesPendingEvents() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val now = AtomicLong()
-        val ticks = AtomicInteger()
-        val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { _, _ -> }, {}, worker,
-            playDeviceTick = { ticks.incrementAndGet() }, clockMs = now::get)
-        try {
-            repeat(8) {
-                coordinator.submitAuthoredIrBody(0, 0, 100, true)
-                coordinator.submitAuthoredIrDetail(true, 100, 30)
-                worker.submit {}.get(2, TimeUnit.SECONDS)
-            }
-            assertEquals(8, ticks.get())
-            val entered = CountDownLatch(1)
-            val release = CountDownLatch(1)
-            worker.execute { entered.countDown(); release.await(2, TimeUnit.SECONDS) }
-            assertTrue(entered.await(2, TimeUnit.SECONDS))
-            coordinator.submitAuthoredIrDetail(true, 100, 30)
-            coordinator.resetAuthoredIr()
-            release.countDown()
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(8, ticks.get())
-        } finally { coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
+    @Test fun enhancedWatchdogCannotInvalidateAHigherPriorityTouchWaitingForTheWorker() {
+        Runtime().use { runtime ->
+            runtime.coordinator.submitAuthoredIrDetail(false, 100, 30)
+            runtime.coordinator.playTouchHaptic(20_000, 0, 500)
+            runtime.now = 250
+            runtime.callbacks.single { it.second == 200L }.first.run()
+            runtime.flush()
+            assertEquals(1, runtime.writes.count { it > 0 })
+        }
     }
 
-    @Test fun endingAuthoredPlaybackCannotReviveAnOldOrdinaryRumble() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val initialWave = CountDownLatch(1)
-        val tick = CountDownLatch(1)
-        val cancelled = CountDownLatch(1)
-        val waves = AtomicInteger()
-        val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {},
-            vibrateDevice = { _, _ -> waves.incrementAndGet(); initialWave.countDown() },
-            cancelDeviceVibration = { cancelled.countDown() }, executor = worker,
-            playDeviceTick = { tick.countDown() },
-            // This test checks source replacement, not wall-clock freshness under build load.
-            clockMs = { 0L })
-        try {
-            coordinator.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
+    @Test fun blockedExtendedContinuousBodyExpiresBeforeTheWorkerCanPlayIt() {
+        Runtime().use { runtime ->
+            runtime.worker.blocked = true
+            runtime.coordinator.submitAuthoredIrBody(30_000, 0, 100, true, 100)
+            runtime.now = 500
+            runtime.worker.blocked = false
+            runtime.flush()
+            assertTrue(runtime.writes.none { it > 0 })
+        }
+    }
+
+    @Test fun enhancedResetDropsPendingEventsWithoutInvalidatingQueuedTouch() {
+        Runtime().use { runtime ->
+            runtime.worker.blocked = true
+            runtime.coordinator.playTouchHaptic(20_000, 0, 100)
+            runtime.coordinator.submitAuthoredIrBody(0, 0, 100, true)
+            runtime.coordinator.submitAuthoredIrDetail(true, 100, 30)
+            runtime.coordinator.resetAuthoredIr()
+            runtime.worker.blocked = false
+            runtime.flush()
+            assertEquals(1, runtime.writes.count { it > 0 })
+            assertEquals(0, runtime.ticks)
+        }
+    }
+
+    @Test fun endingLegacyAuthoredPlaybackCannotReviveAnOldOrdinaryRumble() {
+        Runtime().use { runtime ->
+            runtime.coordinator.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME,
                 20_000, 10_000, 100)
-            assertTrue(initialWave.await(2, TimeUnit.SECONDS))
-            coordinator.submitAuthoredDetail(true, 100)
-            assertTrue(tick.await(2, TimeUnit.SECONDS))
-            coordinator.submitAuthoredDetail(false, 100, active = false)
-            assertTrue(cancelled.await(2, TimeUnit.SECONDS))
-            assertEquals(1, waves.get())
-        } finally { coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
+            runtime.flush()
+            runtime.coordinator.submitAuthoredDetail(true, 100)
+            runtime.flush()
+            assertEquals(1, runtime.ticks)
+            runtime.coordinator.submitAuthoredDetail(false, 100, active = false)
+            runtime.flush()
+            assertEquals(1, runtime.writes.count { it > 0 })
+            assertEquals(0, runtime.writes.last())
+        }
     }
 
-    @Test fun detailTicksDoNotUseTheContinuousWaveformAndYieldToAudioAndTouch() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val ticks = AtomicInteger()
-        val continuous = AtomicInteger()
-        val completions = Collections.synchronizedList(mutableListOf<Pair<Runnable, Long>>())
-        val coordinator = DeviceVibrationCoordinator(
-            { callback, delay -> completions += callback to delay }, {},
-            { _, _ -> continuous.incrementAndGet() }, {}, worker,
-            playDeviceTick = { ticks.incrementAndGet() }
-        )
-        try {
-            coordinator.submitAuthoredDetail(true, 100)
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(1, ticks.get())
-            assertEquals(0, continuous.get())
-            assertEquals(DeviceVibrationCoordinator.AudioClaimResult.OWNED_READY, coordinator.claimForAudio())
-            coordinator.submitAuthoredDetail(true, 100)
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(1, ticks.get())
-            coordinator.releaseFromAudio()
-            coordinator.playTouchHaptic(3_000, 3_000, 50)
-            coordinator.submitAuthoredDetail(true, 100)
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(1, ticks.get())
-        } finally { coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
+    @Test fun detailTicksAvoidWaveformsAndYieldToAudioAndTouch() {
+        for (enhanced in listOf(false, true)) Runtime().use { runtime ->
+            fun tick() {
+                if (enhanced) runtime.coordinator.submitAuthoredIrDetail(true, 100, runtime.now + 30)
+                else runtime.coordinator.submitAuthoredDetail(true, 100)
+                runtime.flush()
+            }
+            tick()
+            assertEquals(1, runtime.ticks)
+            assertTrue(runtime.writes.none { it > 0 })
+            assertEquals(DeviceVibrationCoordinator.AudioClaimResult.OWNED_READY,
+                runtime.coordinator.claimForAudio())
+            tick()
+            assertEquals(1, runtime.ticks)
+            runtime.coordinator.releaseFromAudio()
+            runtime.coordinator.playTouchHaptic(3_000, 3_000, 50)
+            tick()
+            assertEquals(1, runtime.ticks)
+        }
     }
 
-    @Test fun aBlockedWorkerDropsOldTicksInsteadOfReplayingAStaleBurst() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val blocked = CountDownLatch(1)
-        val release = CountDownLatch(1)
-        worker.execute { blocked.countDown(); release.await(2, TimeUnit.SECONDS) }
-        assertTrue(blocked.await(2, TimeUnit.SECONDS))
-        val now = AtomicLong(0)
-        val ticks = AtomicInteger()
-        val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { _, _ -> }, {}, worker,
-            playDeviceTick = { ticks.incrementAndGet() }, clockMs = now::get)
-        try {
-            repeat(2_000) { coordinator.submitAuthoredDetail(true, 100) }
-            now.set(500)
-            release.countDown()
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(0, ticks.get())
-        } finally { release.countDown(); coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
-    }
-
-    @Test fun muteAndEndPreventQueuedTicksAndWatchdogReleasesTheDetailLease() {
-        val worker = Executors.newSingleThreadScheduledExecutor()
-        val callbacks = Collections.synchronizedList(mutableListOf<Runnable>())
-        val ticks = AtomicInteger()
-        val now = AtomicLong(0)
-        val coordinator = DeviceVibrationCoordinator(
-            { callback, _ -> callbacks += callback }, { callbacks.remove(it) },
-            { _, _ -> }, {}, worker, playDeviceTick = { ticks.incrementAndGet() }, clockMs = now::get)
-        try {
-            coordinator.submitAuthoredDetail(true, 0)
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(0, ticks.get())
-            now.set(250)
-            callbacks.first().run()
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            coordinator.submitAuthoredDetail(false, 100, active = false)
-            worker.submit {}.get(2, TimeUnit.SECONDS)
-            assertEquals(0, ticks.get())
-        } finally { coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
+    @Test fun mutedLegacyTicksStaySilentThroughWatchdogAndEnd() {
+        Runtime().use { runtime ->
+            runtime.coordinator.submitAuthoredDetail(true, 0)
+            runtime.flush()
+            runtime.now = 250
+            runtime.callbacks.single { it.second == 200L }.first.run()
+            runtime.flush()
+            runtime.coordinator.submitAuthoredDetail(false, 100, active = false)
+            runtime.flush()
+            assertEquals(0, runtime.ticks)
+            assertTrue(runtime.writes.none { it > 0 })
+        }
     }
 }

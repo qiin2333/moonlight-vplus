@@ -317,10 +317,3 @@ dependencies {
     androidTestImplementation libs.androidx.test.espresso.core
     debugImplementation libs.androidx.compose.ui.test.manifest
 }
-
-// Optional full cross-repository corpus; the five packaged fixtures always run in CI.
-tasks.withType(Test).configureEach {
-    if (project.hasProperty("authoredIrFixtureDir")) {
-        systemProperty "authoredIrFixtureDir", project.property("authoredIrFixtureDir")
-    }
-}

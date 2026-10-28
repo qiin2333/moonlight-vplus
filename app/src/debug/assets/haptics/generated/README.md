@@ -26,12 +26,12 @@ Regenerate from 48 kHz interleaved stereo signed 16-bit little-endian PCM:
 analyze_authored_ir_extended input.pcm output.irextbin
 ```
 
-`AuthoredIrFixtureTest` checks every distinct host event through the production
-client timeline. `AuthoredIrMockIntegrationTest` also exercises the production
-coordinator and output worker under packet loss, duplication, reordering,
-stalls, source resets, lease expiry, and ordinary-rumble ownership changes.
-Pass `-PauthoredIrFixtureDir=/path/to/corpus` to run the larger local corpus;
-the five packaged files run by default without external test data.
+`AuthoredIrMockIntegrationTest` exercises these host-generated files through the
+production coordinator, timeline, policies, mixer and phone dispatcher. Cases
+cover clean rain, continuous/mixed output, packet loss/duplication/reordering,
+stalls, missing END, capability fallback and ordinary-rumble restoration.
+Source-clock boundaries and retired epochs are checked in `AuthoredIrTimelineTest`.
+The five packaged files run without external test data.
 
 The debug-only `AuthoredIrTestActivity` replays these files on a device. Its
 counters measure framework calls, not physical actuator motion or fidelity.

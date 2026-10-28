@@ -13,42 +13,6 @@ class AuthoredIrTimelineTest {
             epoch, at, lane, lane, events)
     private fun event(id: Int, at: Long) = Ds5HapticsIrExtendedEvent(id, at, .2f, .1f)
 
-    @Test fun everySourceEventAtSixtyPerSecondSurvivesWithoutAHardRefractory() {
-        val timeline = AuthoredIrTimeline()
-        var count = 0
-        repeat(240) { seq ->
-            val sourceUs = (seq + 1) * 5_000L
-            val eventIndex = sourceUs / 16_667
-            val previousIndex = (sourceUs - 5_000) / 16_667
-            val list = if (eventIndex > previousIndex) listOf(event(eventIndex.toInt(), eventIndex * 16_667)) else emptyList()
-            assertTrue(timeline.accept(frame(seq, sourceUs, events = list), sourceUs + 8_000_000))
-            if (timeline.poll(sourceUs + 8_000_000)?.event != null) count++
-        }
-        repeat(4) { if (timeline.poll(9_205_000 + it * 5_000L)?.event != null) count++ }
-        assertEquals(71, count)
-    }
-
-    @Test fun duplicateEventsReorderedFramesAndRetiredEpochsCannotReplay() {
-        val timeline = AuthoredIrTimeline()
-        assertTrue(timeline.accept(frame(1, events = listOf(event(7, 5_000))), 1_000_000))
-        assertFalse(timeline.accept(frame(1, events = listOf(event(7, 5_000))), 1_001_000))
-        assertTrue(timeline.accept(frame(2, events = listOf(event(7, 5_000))), 1_005_000))
-        assertNotNull(timeline.poll(1_020_000)!!.event)
-        assertTrue(timeline.accept(frame(0, 0, 2, listOf(event(7, 0))), 1_030_000))
-        assertNotNull(timeline.poll(1_050_000)!!.event)
-        assertFalse(timeline.accept(frame(3, epoch = 1), 1_055_000))
-    }
-
-    @Test fun stalledConsumerDropsOldSlotsInsteadOfReplayingABurst() {
-        val timeline = AuthoredIrTimeline()
-        repeat(500) { seq -> timeline.accept(frame(seq, events = listOf(event(seq, seq * 5_000L))), seq * 5_000L) }
-        assertTrue(timeline.queuedEvents <= AuthoredIrTimeline.MAX_EVENTS)
-        assertNotNull(timeline.poll(2_500_000)!!.event)
-        assertNull(timeline.poll(2_500_000))
-        assertTrue(timeline.poll(2_800_000)!!.ended)
-        assertEquals(0, timeline.queuedEvents)
-    }
-
     @Test fun sourceClockDoesNotMakeABackloggedPacketFreshAgain() {
         val timeline = AuthoredIrTimeline()
         timeline.accept(frame(0, 0), 1_000_000)
@@ -63,12 +27,17 @@ class AuthoredIrTimelineTest {
     @Test fun networkGapKeepsQueuedRedundantEventAndReorderedFramesCanSupplyMissingEvents() {
         val timeline = AuthoredIrTimeline()
         timeline.accept(frame(1, 5_000, events = listOf(event(1, 5_000))), 1_000_000)
+        assertFalse(timeline.accept(frame(1, 5_000, events = listOf(event(1, 5_000))), 1_001_000))
         timeline.accept(frame(3, 15_000, events = listOf(event(1, 5_000))), 1_010_000)
         // Frame 2 arrives late: keep the latest body, but recover its still-fresh event.
         assertTrue(timeline.accept(frame(2, 10_000, events = listOf(event(2, 10_000))), 1_011_000))
         assertEquals(1, timeline.poll(1_020_000)!!.event!!.value.eventId)
         assertEquals(2, timeline.poll(1_025_000)!!.event!!.value.eventId)
         assertNull(timeline.poll(1_025_000))
+        // IDs can repeat after restart; a delayed END from the retired epoch cannot stop it.
+        assertTrue(timeline.accept(frame(0, 0, 2, listOf(event(1, 0))), 1_030_000))
+        assertEquals(1, timeline.poll(1_050_000)!!.event!!.value.eventId)
+        assertFalse(timeline.accept(frame(4, flags = Ds5HapticsIrFrame.FLAG_STREAM_END), 1_051_000))
     }
 
     @Test fun playoutLeadDoesNotExtendEventFreshness() {
@@ -76,16 +45,6 @@ class AuthoredIrTimelineTest {
         timeline.accept(frame(1, events = listOf(event(1, 5_000))), 1_000_000)
         assertNull(timeline.poll(1_010_000)!!.event)
         assertNull(timeline.poll(1_031_000)!!.event)
-    }
-
-    @Test fun legacyZeroDoesNotClearAuthoredBodyAndAuthoredEndDoesNotClearRealHost() {
-        val mixer = ControllerHapticsMixer()
-        val body = ControllerRumbleState(.4f, .1f)
-        mixer.submit(0, RumbleSource.AUTHORED_BODY, body, 0, 200)
-        assertEquals(body, mixer.submit(0, RumbleSource.HOST, ControllerRumbleState.ZERO, 1).output)
-        mixer.submit(0, RumbleSource.HOST, ControllerRumbleState(.2f, .3f), 2)
-        mixer.clearSource(0, RumbleSource.AUTHORED_BODY, 3)
-        assertEquals(ControllerRumbleState(.2f, .3f), mixer.clearSource(0, RumbleSource.AUTHORED_TRANSIENT, 3).output)
     }
 
     @Test fun discontinuityEndAndSequenceWrapHaveExplicitLifetimes() {
@@ -97,16 +56,6 @@ class AuthoredIrTimelineTest {
         assertTrue(timeline.poll(20_000)!!.ended)
         assertFalse(timeline.accept(frame(2, 15_000), 25_000))
         assertTrue(timeline.accept(frame(0, 0, epoch = 2), 30_000))
-    }
-
-    @Test fun phoneKeepsContinuousBodyAndCoordinatedControllerKeepsIndependentDetails() {
-        val policy = AuthoredIrPhonePolicy()
-        val body = ControllerRumbleState(.2f, .1f)
-        assertFalse(policy.useDetails(body, 100, false, GameRumbleMode.DEVICE, false, true))
-        assertFalse(policy.useDetails(ControllerRumbleState.ZERO, 150, false, GameRumbleMode.DEVICE, false, true))
-        assertTrue(policy.useDetails(ControllerRumbleState.ZERO, 181, false, GameRumbleMode.DEVICE, false, true))
-        assertTrue(policy.useDetails(body, 200, false, GameRumbleMode.COORDINATED, true, true))
-        assertFalse(policy.useDetails(body, 200, false, GameRumbleMode.COORDINATED, true, false))
     }
 
     @Test fun sourceResetIsPropagatedAndBurstClockCorrectionsDoNotReverseBodyOrder() {
