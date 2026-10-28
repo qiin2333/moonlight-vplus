@@ -7,6 +7,11 @@ a continuous carrier mixed with isolated impacts. They contain no recorded game
 audio. The rain fixture contains 176 distinct events; repeated wire history is
 deliberate.
 
+The [common-c IR contract](../../../../main/jni/moonlight-core/moonlight-common-c/docs/DS5-HAPTICS-IR.md)
+owns field definitions and validation. The client follows the v2 callback API;
+build it together with the matching common-c headers and library. Wire fallback
+to old hosts does not promise drop-in shared-library binary compatibility.
+
 Each `.irv3bin` concatenates little-endian v3 payloads. Each payload starts with
 its 64-byte header, including its own byte length, followed by 0-8 event records
 of 32 bytes each. The final payload carries END. There is no outer file header.
