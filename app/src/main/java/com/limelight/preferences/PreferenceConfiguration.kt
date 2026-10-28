@@ -17,6 +17,7 @@ import androidx.preference.PreferenceManager
 import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.haptics.GameRumbleMode
+import com.limelight.binding.input.haptics.Ds5SimulationMode
 import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
 import kotlin.math.max
@@ -132,6 +133,7 @@ class PreferenceConfiguration {
     var usbDriver = false
     var allowExperimentalHaptics = false
     var hostGamepadSelection = HostGamepadSelection.AUTOMATIC
+    var ds5SimulationMode = Ds5SimulationMode.LEGACY
     var dualSenseWirelessBridge = false
     var dualSenseDirectBluetooth = false
     @JvmField var flipFaceButtons = false
@@ -1533,6 +1535,8 @@ class PreferenceConfiguration {
             config.combineJoyCons = prefs.getBoolean("checkbox_combine_joycons", true)
             config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER)
             config.allowExperimentalHaptics = prefs.getBoolean("checkbox_experimental_haptic_protocols", false)
+            config.ds5SimulationMode = Ds5SimulationMode.fromPreference(
+                prefs.getString("list_ds5_simulation_mode", "legacy"))
             config.hostGamepadSelection = HostGamepadSelection.fromPreference(
                 prefs.getString("list_host_gamepad_selection", "automatic"))
             config.dualSenseWirelessBridge = prefs.getBoolean(

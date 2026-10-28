@@ -2337,4 +2337,7 @@
     <string name="pacing_label_smooth">平滑</string>
     <string name="stats_precise_sync">[精确同步: %1$d渲染/%2$d接收, 跳帧率: %3$.1f%%]</string>
     <string name="mic_status_debug">权限: %1$b, 流存在: %2$b, 可用: %3$b, 激活: %4$b</string>
+    <string name="title_ds5_simulation_mode">DualSense 模拟路径</string>
+    <string name="summary_ds5_simulation_mode">传统模拟保留现有手感；IR v3 分别还原持续振动与短促落点，需要兼容的 Sunshine。重新连接后生效。</string>
+    <string-array name="ds5_simulation_mode_names"><item>传统模拟</item><item>IR v3</item></string-array>
 </resources>

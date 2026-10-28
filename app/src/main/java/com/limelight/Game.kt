@@ -1227,6 +1227,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             "host=${prefConfig.hostGamepadSelection} experimental=${prefConfig.allowExperimentalHaptics} " +
             "systemBluetooth=${prefConfig.dualSenseDirectBluetooth} requested=$requestAuthoredPcm")
         val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
+        val hapticsSession = prefConfig.ds5SimulationMode.sessionOptions(requestAuthoredPcm,
+            prefConfig.controlOnly, prefConfig.hostGamepadSelection)
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
             .setLaunchRefreshRate(prefConfig.fps)
@@ -1248,7 +1250,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
             .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
-            .setAuthoredPcmHaptics(requestAuthoredPcm)
+            .setAuthoredPcmHaptics(hapticsSession.nativePcm)
+            .setAuthoredIrHaptics(hapticsSession.authoredIr)
             .setHostGamepad(hostGamepad)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
@@ -2837,6 +2840,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) {
         controllerHandler.handleSetControllerLED(controllerNumber, r, g, b)
+    }
+
+    override fun ds5HapticsIr(frame: com.limelight.nvstream.Ds5HapticsIrFrame) {
+        controllerHandler.handleDs5HapticsIr(frame)
+    }
+
+    override fun ds5HapticsIrV3(frame: com.limelight.nvstream.Ds5HapticsIrV3Frame) {
+        controllerHandler.handleDs5HapticsIrV3(frame)
     }
 
     override fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame) {

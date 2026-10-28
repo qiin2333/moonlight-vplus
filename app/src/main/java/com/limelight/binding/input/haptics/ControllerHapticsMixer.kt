@@ -4,6 +4,8 @@ package com.limelight.binding.input.haptics
 internal enum class RumbleSource {
     HOST,
     AUTHORED,
+    AUTHORED_BODY,
+    AUTHORED_TRANSIENT,
     AUDIO,
     TEST
 }
@@ -40,6 +42,8 @@ internal class ControllerHapticsMixer(
     private data class SourceStates(
         var host: TimedState? = null,
         var authored: TimedState? = null,
+        var authoredBody: TimedState? = null,
+        var authoredTransient: TimedState? = null,
         var audioContinuous: TimedState? = null,
         var audioTransient: TimedState? = null,
         var test: TimedState? = null
@@ -69,6 +73,8 @@ internal class ControllerHapticsMixer(
         when (source) {
             RumbleSource.HOST -> sources.host = timedState
             RumbleSource.AUTHORED -> sources.authored = timedState
+            RumbleSource.AUTHORED_BODY -> sources.authoredBody = timedState
+            RumbleSource.AUTHORED_TRANSIENT -> sources.authoredTransient = timedState
             RumbleSource.AUDIO -> sources.audioContinuous = timedState
             RumbleSource.TEST -> sources.test = timedState
         }
@@ -109,6 +115,8 @@ internal class ControllerHapticsMixer(
         when (source) {
             RumbleSource.HOST -> sources.host = null
             RumbleSource.AUTHORED -> sources.authored = null
+            RumbleSource.AUTHORED_BODY -> sources.authoredBody = null
+            RumbleSource.AUTHORED_TRANSIENT -> sources.authoredTransient = null
             RumbleSource.AUDIO -> {
                 sources.audioContinuous = null
                 sources.audioTransient = null
@@ -158,6 +166,8 @@ internal class ControllerHapticsMixer(
                 sequenceOf(
                     sources.host,
                     sources.authored,
+                    sources.authoredBody,
+                    sources.authoredTransient,
                     sources.audioContinuous,
                     sources.audioTransient,
                     sources.test
@@ -183,6 +193,14 @@ internal class ControllerHapticsMixer(
             sources.authored = null
             changed = true
         }
+        if (sources.authoredBody?.isExpired(nowMs) == true) {
+            sources.authoredBody = null
+            changed = true
+        }
+        if (sources.authoredTransient?.isExpired(nowMs) == true) {
+            sources.authoredTransient = null
+            changed = true
+        }
         if (sources.host?.isExpired(nowMs) == true) {
             sources.host = null
             changed = true
@@ -206,6 +224,8 @@ internal class ControllerHapticsMixer(
     private fun mix(controllerNumber: Short, sources: SourceStates): MixedRumbleState {
         val host = (sources.host?.state ?: ControllerRumbleState.ZERO)
             .maxWith(sources.authored?.state ?: ControllerRumbleState.ZERO)
+            .maxWith(sources.authoredBody?.state ?: ControllerRumbleState.ZERO)
+            .maxWith(sources.authoredTransient?.state ?: ControllerRumbleState.ZERO)
         val audio = (sources.audioContinuous?.state ?: ControllerRumbleState.ZERO)
             .maxWith(sources.audioTransient?.state ?: ControllerRumbleState.ZERO)
         val test = sources.test?.state ?: ControllerRumbleState.ZERO

@@ -47,6 +47,9 @@ static jmethodID BridgeClSetAdaptiveTriggersMethod;
 static jmethodID BridgeClSetMotionEventStateMethod;
 static jmethodID BridgeClSetControllerLEDMethod;
 static jmethodID BridgeClDs5HapticsPcmMethod;
+static jmethodID BridgeClDs5HapticsIrMethod;
+static jmethodID BridgeClDs5HapticsIrV3Method;
+static bool s_authoredHapticsEnabled;
 static jmethodID BridgeClDs5HapticsStateMethod;
 static jmethodID BridgeClResolutionChangedMethod;
 static jmethodID BridgeClClipboardDataMethod;
@@ -130,6 +133,8 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClSetControllerLEDMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClSetControllerLED", "(SBBB)V");
     BridgeClDs5HapticsPcmMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsPcm", "(SBIJIIBB[B)V");
     BridgeClDs5HapticsStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsState", "(S[B)V");
+    BridgeClDs5HapticsIrMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsIr", "(SBIJI[F)V");
+    BridgeClDs5HapticsIrV3Method = (*env)->GetStaticMethodID(env, clazz, "bridgeClDs5HapticsIrV3", "(SBIIIJI[F[I[J[F)V");
     BridgeClResolutionChangedMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClResolutionChanged", "(II)V");
     BridgeClClipboardDataMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClClipboardData", "([B)V");
     BridgeClCursorUpdateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClCursorUpdate", "(IIIIII[B)V");
@@ -609,6 +614,74 @@ void BridgeClDs5HapticsPcm(const LI_DS5_HAPTICS_PCM_FRAME* frame) {
     }
 }
 
+void BridgeClDs5HapticsIr(const LI_DS5_HAPTICS_IR_FRAME_V2* frame) {
+    if (frame == NULL) return;
+    JNIEnv* env = GetThreadEnv();
+    jfloat values[10];
+    for (int i = 0; i < 2; i++) {
+        values[i * 5] = frame->lanes[i].rmsAmplitude;
+        values[i * 5 + 1] = frame->lanes[i].peakAmplitude;
+        values[i * 5 + 2] = frame->lanes[i].transientStrength;
+        values[i * 5 + 3] = frame->lanes[i].lowBandRatio;
+        values[i * 5 + 4] = frame->lanes[i].zeroCrossingRateHz;
+    }
+    jfloatArray lanes = (*env)->NewFloatArray(env, 10);
+    if (lanes == NULL) { (*env)->ExceptionClear(env); return; }
+    (*env)->SetFloatArrayRegion(env, lanes, 0, 10, values);
+    if (!(*env)->ExceptionCheck(env)) {
+        (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClDs5HapticsIrMethod,
+            (jshort)frame->controllerNumber, (jbyte)frame->flags, (jint)frame->sourceSequenceNumber,
+            (jlong)frame->timestampUs, (jint)frame->sourceFrameCount, lanes);
+    }
+    (*env)->DeleteLocalRef(env, lanes);
+    if ((*env)->ExceptionCheck(env)) (*JVM)->DetachCurrentThread(JVM);
+}
+
+void BridgeClDs5HapticsIrV3(const LI_DS5_HAPTICS_IR_FRAME_V3* frame) {
+    if (frame == NULL || frame->eventCount > LI_DS5_HAPTICS_IR_V3_MAX_EVENTS) return;
+    JNIEnv* env = GetThreadEnv();
+    jfloat values[8], features[32];
+    jint ids[8];
+    jlong times[8];
+    for (int i = 0; i < 2; i++) {
+        values[i*4] = frame->lanes[i].continuousLow;
+        values[i*4+1] = frame->lanes[i].continuousHigh;
+        values[i*4+2] = frame->lanes[i].rawRms;
+        values[i*4+3] = frame->lanes[i].rawPeak;
+    }
+    for (int i = 0; i < frame->eventCount; i++) {
+        ids[i] = (jint)frame->events[i].eventId;
+        times[i] = (jlong)frame->events[i].sourceTimeUs;
+        features[i*4] = frame->events[i].leftStrength;
+        features[i*4+1] = frame->events[i].rightStrength;
+        features[i*4+2] = frame->events[i].confidence;
+        features[i*4+3] = frame->events[i].sharpness;
+    }
+    jfloatArray lanes = (*env)->NewFloatArray(env, 8);
+    jintArray eventIds = (*env)->NewIntArray(env, frame->eventCount);
+    jlongArray eventTimes = (*env)->NewLongArray(env, frame->eventCount);
+    jfloatArray eventFeatures = (*env)->NewFloatArray(env, frame->eventCount * 4);
+    if (!lanes || !eventIds || !eventTimes || !eventFeatures) {
+        (*env)->ExceptionClear(env);
+    } else {
+        (*env)->SetFloatArrayRegion(env, lanes, 0, 8, values);
+        if (frame->eventCount) {
+            (*env)->SetIntArrayRegion(env, eventIds, 0, frame->eventCount, ids);
+            (*env)->SetLongArrayRegion(env, eventTimes, 0, frame->eventCount, times);
+            (*env)->SetFloatArrayRegion(env, eventFeatures, 0, frame->eventCount * 4, features);
+        }
+        if (!(*env)->ExceptionCheck(env)) (*env)->CallStaticVoidMethod(env, GlobalBridgeClass,
+            BridgeClDs5HapticsIrV3Method, (jshort)frame->controllerNumber, (jbyte)frame->flags,
+            (jint)frame->profile, (jint)frame->epoch, (jint)frame->frameSequence,
+            (jlong)frame->windowEndUs, (jint)frame->sourceFrameCount, lanes, eventIds, eventTimes, eventFeatures);
+    }
+    if (lanes) (*env)->DeleteLocalRef(env, lanes);
+    if (eventIds) (*env)->DeleteLocalRef(env, eventIds);
+    if (eventTimes) (*env)->DeleteLocalRef(env, eventTimes);
+    if (eventFeatures) (*env)->DeleteLocalRef(env, eventFeatures);
+    if ((*env)->ExceptionCheck(env)) (*JVM)->DetachCurrentThread(JVM);
+}
+
 void BridgeClResolutionChanged(uint32_t width, uint32_t height) {
     JNIEnv* env = GetThreadEnv();
 
@@ -809,6 +882,13 @@ Java_com_limelight_nvstream_jni_MoonBridge_setDynamicHdrNegotiation(JNIEnv *env,
     s_dynamicHdrPreference = dynamicHdrPreference;
 }
 
+JNIEXPORT void JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_setAuthoredHapticsEnabled(JNIEnv *env, jclass clazz, jboolean enabled) {
+    (void)env;
+    (void)clazz;
+    s_authoredHapticsEnabled = enabled;
+}
+
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass clazz,
                                                            jstring address, jstring appVersion, jstring gfeVersion,
@@ -877,6 +957,9 @@ Java_com_limelight_nvstream_jni_MoonBridge_startConnection(JNIEnv *env, jclass c
 
     CONNECTION_LISTENER_CALLBACKS connectionCallbacks = BridgeConnListenerCallbacks;
     connectionCallbacks.ds5HapticsPcm = authoredPcmHaptics ? BridgeClDs5HapticsPcm : NULL;
+    connectionCallbacks.ds5HapticsIrV2 = !authoredPcmHaptics && s_authoredHapticsEnabled ? BridgeClDs5HapticsIr : NULL;
+    connectionCallbacks.ds5HapticsIrV3 = !authoredPcmHaptics && s_authoredHapticsEnabled ? BridgeClDs5HapticsIrV3 : NULL;
+    s_authoredHapticsEnabled = false;
     LiSetDs5HapticsStateCallback(authoredPcmHaptics ? BridgeClDs5HapticsState : NULL);
 
     int ret = LiStartConnection(&serverInfo,

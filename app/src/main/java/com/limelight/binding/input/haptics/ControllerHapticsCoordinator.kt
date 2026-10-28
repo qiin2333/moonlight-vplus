@@ -8,6 +8,8 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.DriverControllerContext
+import com.limelight.nvstream.Ds5HapticsIrFrame
+import com.limelight.nvstream.Ds5HapticsIrV3Frame
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.Ds5HapticsState
 import com.limelight.nvstream.jni.MoonBridge
@@ -54,7 +56,10 @@ internal class ControllerHapticsCoordinator(
                     durationMs = durationMs
                 )
             },
-            cancelDeviceVibration = handler.deviceVibrator::cancel
+            cancelDeviceVibration = handler.deviceVibrator::cancel,
+            playDeviceTick = if (handler.rumbleManager.supportsDeviceTick) handler.rumbleManager::playDeviceDetailTick else null,
+            detailTickIntervalMs = handler.rumbleManager.deviceTickIntervalMs,
+            clockMs = SystemClock::elapsedRealtime
         )
     }
 
@@ -90,6 +95,25 @@ internal class ControllerHapticsCoordinator(
             postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
             removeCallbacks = handler.mainThreadHandler::removeCallbacks
         )
+    }
+
+    private val authoredIr by lazy {
+        AuthoredIrCoordinator(mixer, renderer, deviceVibrationCoordinator, ::gameRumbleContext,
+            { handler.rumbleManager.supportsDeviceTick }, { handler.prefConfig.deviceRumbleStrength },
+            SystemClock::elapsedRealtime,
+            { task, delay -> handler.mainThreadHandler.postDelayed(task, delay); Unit },
+            handler.mainThreadHandler::removeCallbacks, { scheduleNextExpiry() },
+            { !isStoppingOrStopped() })
+    }
+
+    fun submitDs5HapticsIr(frame: Ds5HapticsIrFrame) = synchronized(ds5LifecycleLock) {
+        if (!isStoppingOrStopped() && outputLifecycle.capture(frame.controllerNumber) != null &&
+            handler.isControllerSlotEnabled(frame.controllerNumber)) authoredIr.submit(frame)
+    }
+
+    fun submitDs5HapticsIrV3(frame: Ds5HapticsIrV3Frame) = synchronized(ds5LifecycleLock) {
+        if (!isStoppingOrStopped() && outputLifecycle.capture(frame.controllerNumber) != null &&
+            handler.isControllerSlotEnabled(frame.controllerNumber)) authoredIr.submit(frame)
     }
 
     @Volatile
@@ -668,6 +692,7 @@ internal class ControllerHapticsCoordinator(
         runOnOutputThread {
             gamePipeline.reset(controllerNumber)
             renderer.retireController(controllerNumber)
+            authoredIr.retire(controllerNumber)
             if (audioController == controllerNumber) {
                 audioController = null
                 lastAudioContinuousState = ControllerRumbleState.ZERO
@@ -820,6 +845,7 @@ internal class ControllerHapticsCoordinator(
 
     private fun stopAllNow() {
         handler.mainThreadHandler.removeCallbacks(expiryRunnable)
+        authoredIr.stop()
         gamePipeline.stop()
         val controllerNumbers = renderer.stop().toMutableSet()
         for (controllerNumber in 0 until ControllerHandler.MAX_GAMEPADS.toInt()) {

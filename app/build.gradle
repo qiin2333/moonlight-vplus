@@ -22,6 +22,13 @@ def escapeBuildConfigString = { value ->
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
+// Optional independent application ID for haptics verification builds.
+def hapticsValidationApplicationId = project.findProperty("hapticsValidationApplicationId")?.toString()?.trim()
+if (hapticsValidationApplicationId != null &&
+        !(hapticsValidationApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
+    throw new GradleException("hapticsValidationApplicationId must be a dotted Android application ID")
+}
+
 def audioHapticsAppLabel = "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
@@ -178,6 +185,10 @@ android {
         }
     }
 
+    if (hapticsValidationApplicationId != null) {
+        productFlavors.all { applicationId hapticsValidationApplicationId }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".vplus_debug"
@@ -305,4 +316,11 @@ dependencies {
     androidTestImplementation libs.androidx.test.runner
     androidTestImplementation libs.androidx.test.espresso.core
     debugImplementation libs.androidx.compose.ui.test.manifest
+}
+
+// Optional full cross-repository corpus; the five packaged fixtures always run in CI.
+tasks.withType(Test).configureEach {
+    if (project.hasProperty("authoredIrFixtureDir")) {
+        systemProperty "authoredIrFixtureDir", project.property("authoredIrFixtureDir")
+    }
 }

@@ -4316,6 +4316,12 @@ class ControllerHandler(
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) =
         rumbleManager.handleSetControllerLED(controllerNumber, r, g, b)
 
+    fun handleDs5HapticsIr(frame: com.limelight.nvstream.Ds5HapticsIrFrame) =
+        hapticsCoordinator.submitDs5HapticsIr(frame)
+
+    fun handleDs5HapticsIrV3(frame: com.limelight.nvstream.Ds5HapticsIrV3Frame) =
+        hapticsCoordinator.submitDs5HapticsIrV3(frame)
+
     fun handleDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
         hapticsCoordinator.submitDs5HapticsPcm(frame)
     }

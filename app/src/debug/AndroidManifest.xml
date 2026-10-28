@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="com.limelight.binding.input.haptics.AuthoredV3TestActivity"
+            android:exported="true" android:label="IR v3 触觉测试" />
+    </application>
+</manifest>

@@ -634,6 +634,13 @@
                     android:entries="@array/game_rumble_mode_names"
                     android:entryValues="@array/game_rumble_mode_values"
                     android:defaultValue="controller" />
+                <ListPreference
+                    android:key="list_ds5_simulation_mode"
+                    android:title="@string/title_ds5_simulation_mode"
+                    android:summary="@string/summary_ds5_simulation_mode"
+                    android:entries="@array/ds5_simulation_mode_names"
+                    android:entryValues="@array/ds5_simulation_mode_values"
+                    android:defaultValue="legacy" />
                 <com.limelight.preferences.SeekBarPreference
                     android:key="seekbar_vibrate_fallback_strength"
                     android:defaultValue="100"

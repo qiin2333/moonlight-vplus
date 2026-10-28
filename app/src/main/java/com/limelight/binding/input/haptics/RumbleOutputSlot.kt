@@ -49,6 +49,15 @@ internal class RumbleOutputSlot<T : Any>(
         pending = null
     }
 
+    /** Source ownership changes must observe the latest genuine ordinary value, even if paced. */
+    fun flushPending() {
+        runnable?.let(removeCallbacks)
+        runnable = null
+        val latest = pending ?: return
+        pending = null
+        write(latest)
+    }
+
     private fun write(value: T) {
         if (value == lastWritten) return
         lastWritten = value

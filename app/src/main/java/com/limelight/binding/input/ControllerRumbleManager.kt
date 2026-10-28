@@ -31,6 +31,24 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class ControllerRumbleManager(private val handler: ControllerHandler) {
 
+    val supportsDeviceTick: Boolean by lazy {
+        supportsDeviceDetailTick(handler.deviceVibrator)
+    }
+
+    val deviceTickIntervalMs: Long
+        get() = com.limelight.binding.input.haptics.DeviceDetailProfile.tickIntervalMs(
+            Build.MANUFACTURER, Build.MODEL, Build.VERSION.SDK_INT, Build.DISPLAY)
+
+    private val deviceTick by lazy { VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK) }
+    private val gameVibrationAttributes by lazy {
+        AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
+    }
+
+    /** Called only on the device coordinator's serial worker, never on the receive/UI thread. */
+    fun playDeviceDetailTick() {
+        if (supportsDeviceTick) handler.deviceVibrator.vibrate(deviceTick, gameVibrationAttributes)
+    }
+
     private data class BaseRumble(val lowFrequency: Short, val highFrequency: Short)
     private data class TriggerRumble(val left: Short, val right: Short)
     private data class AdaptiveTriggers(
@@ -729,6 +747,12 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
 
     companion object {
         private const val PWM_PERIOD_MS = 20L
+
+        fun supportsDeviceDetailTick(vibrator: Vibrator): Boolean =
+            Build.VERSION.SDK_INT >= 30 && vibrator.hasVibrator() && try {
+                vibrator.areEffectsSupported(VibrationEffect.EFFECT_TICK).firstOrNull() ==
+                    Vibrator.VIBRATION_EFFECT_SUPPORT_YES
+            } catch (_: RuntimeException) { false }
 
         fun areBatteryCapacitiesEqual(first: Float, second: Float): Boolean {
             // With no NaNs involved, it is a simple equality comparison.
