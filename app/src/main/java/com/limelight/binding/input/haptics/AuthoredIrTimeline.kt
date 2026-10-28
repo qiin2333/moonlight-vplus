@@ -28,7 +28,7 @@ internal class AuthoredIrTimeline {
     val queuedEvents: Int get() = events.size
 
     fun accept(frame: Ds5HapticsIrExtendedFrame, nowUs: Long): Boolean {
-        if (frame.profile != 1 || frame.windowEndUs < 0 || frame.events.size > 8) return false
+        if (frame.windowEndUs < 0 || frame.events.size > 8) return false
         val oldEpoch = epoch
         val changedEpoch = oldEpoch == null || oldEpoch != frame.epoch
         if (oldEpoch != null && changedEpoch && !newer(frame.epoch, oldEpoch)) return false
@@ -80,7 +80,7 @@ internal class AuthoredIrTimeline {
             seenIds += event.eventId
             if (seenIds.size > SEEN_IDS) seenIds.remove(seenIds.first())
             val sourceLocal = event.sourceTimeUs + offsetUs
-            if (nowUs - sourceLocal > EVENT_FRESH_US || level(event.confidence) == 0f ||
+            if (nowUs - sourceLocal > EVENT_FRESH_US ||
                 maxOf(level(event.leftStrength), level(event.rightStrength)) == 0f) continue
             if (events.size == MAX_EVENTS) events.poll()
             events.add(Event(event, sourceLocal + PLAYOUT_LEAD_US, sourceLocal + EVENT_FRESH_US))

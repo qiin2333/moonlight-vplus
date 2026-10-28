@@ -14,7 +14,7 @@ class AuthoredIrFixtureTest {
         assertTrue("Host-generated fixtures are required", files.size >= if (external == null) 5 else 60)
         for (file in files) {
             val frames = Ds5HapticsIrExtendedDecoder.decode(file.readBytes())
-            val expected = frames.flatMap { it.events }.filter { it.confidence > 0f &&
+            val expected = frames.flatMap { it.events }.filter {
                 maxOf(it.leftStrength, it.rightStrength) > 0f }.map { it.eventId }.toSet()
             val timeline = AuthoredIrTimeline()
             val delivered = mutableListOf<Int>()

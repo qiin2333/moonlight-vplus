@@ -497,20 +497,20 @@ public class MoonBridge {
     }
 
     public static void bridgeClDs5HapticsIrExtended(short controllerNumber, byte flags, int sequence,
-            long timestampUs, int sourceFrames, float[] baseLanes, int profile, int epoch, long windowEndUs,
+            long timestampUs, int sourceFrames, float[] baseLanes, int epoch, long windowEndUs,
             float[] continuous, int[] eventIds, long[] eventTimes, float[] eventFeatures) {
         NvConnectionListener listener = connectionListener;
         if (listener == null || baseLanes == null || baseLanes.length != 10 ||
                 continuous == null || continuous.length != 4 || eventIds == null || eventIds.length > 8 ||
                 eventTimes == null || eventFeatures == null || eventTimes.length != eventIds.length ||
-                eventFeatures.length != eventIds.length * 4) return;
+                eventFeatures.length != eventIds.length * 2) return;
         java.util.ArrayList<Ds5HapticsIrExtendedEvent> events = new java.util.ArrayList<>(eventIds.length);
         for (int i = 0; i < eventIds.length; i++)
-            events.add(new Ds5HapticsIrExtendedEvent(eventIds[i], eventTimes[i], eventFeatures[i*4],
-                    eventFeatures[i*4+1], eventFeatures[i*4+2], eventFeatures[i*4+3]));
+            events.add(new Ds5HapticsIrExtendedEvent(eventIds[i], eventTimes[i], eventFeatures[i*2],
+                    eventFeatures[i*2+1]));
         listener.ds5HapticsIrExtended(new Ds5HapticsIrExtendedFrame(
                 authoredIrBase(controllerNumber, flags, sequence, timestampUs, sourceFrames, baseLanes),
-                profile, epoch, windowEndUs, new Ds5HapticsIrExtendedLane(continuous[0], continuous[1]),
+                epoch, windowEndUs, new Ds5HapticsIrExtendedLane(continuous[0], continuous[1]),
                 new Ds5HapticsIrExtendedLane(continuous[2], continuous[3]), events));
     }
 

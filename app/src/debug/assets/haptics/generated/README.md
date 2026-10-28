@@ -13,8 +13,8 @@ build it together with the matching common-c headers and library. Wire fallback
 to old hosts does not promise drop-in shared-library binary compatibility.
 
 Each `.irextbin` concatenates enhanced IR payloads. Each starts with an original
-72-byte v2 base (version 2, base length 72), then a 40-byte enhancement header
-and 0-8 events of 32 bytes each. The enhancement length at offset 74 covers the
+72-byte v2 base (version 2, base length 72), then a 32-byte enhancement header
+and 0-8 events of 20 bytes each. The enhancement length at offset 74 covers the
 header and events; the whole record is `72 + enhancementLength` bytes. The final
 record carries base END. There is no outer file header. The v2 base is decoded
 into the same data object used by the legacy path; only new continuous/event

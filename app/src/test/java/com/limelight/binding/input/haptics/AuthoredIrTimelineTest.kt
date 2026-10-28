@@ -10,8 +10,8 @@ class AuthoredIrTimelineTest {
                       events: List<Ds5HapticsIrExtendedEvent> = emptyList(), flags: Int = 0) =
         Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, flags, seq, at, 240,
             Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f), Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f)),
-            1, epoch, at, lane, lane, events)
-    private fun event(id: Int, at: Long) = Ds5HapticsIrExtendedEvent(id, at, .2f, .1f, 1f, .7f)
+            epoch, at, lane, lane, events)
+    private fun event(id: Int, at: Long) = Ds5HapticsIrExtendedEvent(id, at, .2f, .1f)
 
     @Test fun everySourceEventAtSixtyPerSecondSurvivesWithoutAHardRefractory() {
         val timeline = AuthoredIrTimeline()

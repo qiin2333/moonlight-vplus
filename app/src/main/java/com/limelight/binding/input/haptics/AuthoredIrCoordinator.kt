@@ -108,7 +108,7 @@ internal class AuthoredIrCoordinator(
             if (output.reset) phone.resetAuthoredIr()
         }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
-        val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) * it.confidence } ?: 0f
+        val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) } ?: 0f
         if (output.ended) pulses.remove(number)
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
         val pulse = AuthoredIrFallback.transientAmplitude(pulses[number]?.first ?: 0f)

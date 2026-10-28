@@ -96,7 +96,7 @@ class AuthoredIrTestActivity : Activity() {
                         acceptedEvents++
                         val event = output.event.value
                         pulse = AuthoredIrFallback.transientAmplitude(
-                            maxOf(event.leftStrength, event.rightStrength) * event.confidence)
+                            maxOf(event.leftStrength, event.rightStrength))
                         pulseUntil = now + 60
                     }
                     if (now >= pulseUntil || output.ended) pulse = 0f
