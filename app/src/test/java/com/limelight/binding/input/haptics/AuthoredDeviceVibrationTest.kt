@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 class AuthoredDeviceVibrationTest {
-    @Test fun v3WatchdogCannotInvalidateAHigherPriorityTouchWaitingForTheWorker() {
+    @Test fun enhancedWatchdogCannotInvalidateAHigherPriorityTouchWaitingForTheWorker() {
         var now = 0L
         val worker = VirtualHapticsExecutor { now * 1_000_000L }
         val callbacks = mutableListOf<Pair<Runnable, Long>>()
@@ -20,7 +20,7 @@ class AuthoredDeviceVibrationTest {
             { _, _ -> touches++ }, {}, worker, playDeviceTick = {}, clockMs = { now },
             dispatcherClockNanos = { now * 1_000_000L })
         try {
-            coordinator.submitAuthoredV3(false, 100, 30)
+            coordinator.submitAuthoredIrDetail(false, 100, 30)
             coordinator.playTouchHaptic(20_000, 0, 500)
             now = 250
             callbacks.single { it.second == 200L }.first.run()
@@ -29,7 +29,7 @@ class AuthoredDeviceVibrationTest {
         } finally { coordinator.stop(); worker.runReady() }
     }
 
-    @Test fun blockedV3ContinuousBodyExpiresWithoutChangingOrdinaryHostLifetime() {
+    @Test fun blockedExtendedContinuousBodyExpiresWithoutChangingOrdinaryHostLifetime() {
         val worker = Executors.newSingleThreadScheduledExecutor()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
@@ -40,7 +40,7 @@ class AuthoredDeviceVibrationTest {
         val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { _, _ -> waves.incrementAndGet() },
             {}, worker, playDeviceTick = {}, clockMs = now::get)
         try {
-            coordinator.submitAuthoredV3Body(30_000, 0, 100, true, 100)
+            coordinator.submitAuthoredIrBody(30_000, 0, 100, true, 100)
             now.set(500)
             release.countDown()
             worker.submit {}.get(2, TimeUnit.SECONDS)
@@ -48,7 +48,7 @@ class AuthoredDeviceVibrationTest {
         } finally { release.countDown(); coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
     }
 
-    @Test fun v3ResetCannotInvalidateAnAlreadyQueuedHigherPriorityTouch() {
+    @Test fun enhancedResetCannotInvalidateAnAlreadyQueuedHigherPriorityTouch() {
         val worker = Executors.newSingleThreadScheduledExecutor()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
@@ -59,41 +59,41 @@ class AuthoredDeviceVibrationTest {
             {}, worker, playDeviceTick = {}, clockMs = { 0L })
         try {
             coordinator.playTouchHaptic(20_000, 0, 100)
-            coordinator.submitAuthoredV3Body(0, 0, 100, true)
-            coordinator.submitAuthoredV3(true, 100, 30)
-            coordinator.resetAuthoredV3()
+            coordinator.submitAuthoredIrBody(0, 0, 100, true)
+            coordinator.submitAuthoredIrDetail(true, 100, 30)
+            coordinator.resetAuthoredIr()
             release.countDown()
             worker.submit {}.get(2, TimeUnit.SECONDS)
             assertEquals(1, waves.get())
         } finally { release.countDown(); coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
     }
 
-    @Test fun v3OwnershipPreservesLatestOrdinaryHostAndItsExplicitZero() {
+    @Test fun enhancedOwnershipPreservesLatestOrdinaryHostAndItsExplicitZero() {
         val worker = Executors.newSingleThreadScheduledExecutor()
         val writes = Collections.synchronizedList(mutableListOf<Int>())
         val coordinator = DeviceVibrationCoordinator({ _, _ -> }, {}, { amp, _ -> writes += amp },
             { writes += 0 }, worker, playDeviceTick = {}, clockMs = { 0L })
         fun flush() { worker.submit {}.get(2, TimeUnit.SECONDS) }
         try {
-            coordinator.submitAuthoredV3Body(0, 0, 100, true)
-            coordinator.submitAuthoredV3(true, 100, 30)
+            coordinator.submitAuthoredIrBody(0, 0, 100, true)
+            coordinator.submitAuthoredIrDetail(true, 100, 30)
             flush()
             coordinator.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, 30_000, 0, 100)
-            coordinator.submitAuthoredV3Body(0, 0, 100, false)
-            coordinator.submitAuthoredV3(false, 0, 0, false)
+            coordinator.submitAuthoredIrBody(0, 0, 100, false)
+            coordinator.submitAuthoredIrDetail(false, 0, 0, false)
             flush()
             assertTrue("The new ordinary source must resume at authored END", writes.last() > 0)
-            coordinator.submitAuthoredV3Body(0, 0, 100, true)
-            coordinator.submitAuthoredV3(true, 100, 30)
+            coordinator.submitAuthoredIrBody(0, 0, 100, true)
+            coordinator.submitAuthoredIrDetail(true, 100, 30)
             flush()
             coordinator.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, 0, 0, 100)
-            coordinator.resetAuthoredV3()
+            coordinator.resetAuthoredIr()
             flush()
             assertEquals("An ordinary zero during authored playback must remain zero", 0, writes.last())
         } finally { coordinator.stop(); worker.awaitTermination(2, TimeUnit.SECONDS) }
     }
 
-    @Test fun v3TicksHaveNoDeviceModelGateAndSourceResetInvalidatesPendingEvents() {
+    @Test fun enhancedTicksHaveNoDeviceModelGateAndSourceResetInvalidatesPendingEvents() {
         val worker = Executors.newSingleThreadScheduledExecutor()
         val now = AtomicLong()
         val ticks = AtomicInteger()
@@ -101,8 +101,8 @@ class AuthoredDeviceVibrationTest {
             playDeviceTick = { ticks.incrementAndGet() }, clockMs = now::get)
         try {
             repeat(8) {
-                coordinator.submitAuthoredV3Body(0, 0, 100, true)
-                coordinator.submitAuthoredV3(true, 100, 30)
+                coordinator.submitAuthoredIrBody(0, 0, 100, true)
+                coordinator.submitAuthoredIrDetail(true, 100, 30)
                 worker.submit {}.get(2, TimeUnit.SECONDS)
             }
             assertEquals(8, ticks.get())
@@ -110,8 +110,8 @@ class AuthoredDeviceVibrationTest {
             val release = CountDownLatch(1)
             worker.execute { entered.countDown(); release.await(2, TimeUnit.SECONDS) }
             assertTrue(entered.await(2, TimeUnit.SECONDS))
-            coordinator.submitAuthoredV3(true, 100, 30)
-            coordinator.resetAuthoredV3()
+            coordinator.submitAuthoredIrDetail(true, 100, 30)
+            coordinator.resetAuthoredIr()
             release.countDown()
             worker.submit {}.get(2, TimeUnit.SECONDS)
             assertEquals(8, ticks.get())

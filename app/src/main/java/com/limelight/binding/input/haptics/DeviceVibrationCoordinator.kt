@@ -32,7 +32,7 @@ internal class DeviceVibrationCoordinator(
     enum class GameSource {
         ROUTED_GAME,
         LEGACY_OVERLAY,
-        AUTHORED_V3
+        AUTHORED_IR
     }
 
     /** Result of an audio claim; ownership and write readiness are independent states. */
@@ -90,7 +90,7 @@ internal class DeviceVibrationCoordinator(
     private var detailTickStarted = false
     private var detailInputAtMs = 0L
     private var detailWatchdog: Runnable? = null
-    private var v3Owned = false
+    private var authoredIrOwned = false
 
     @Volatile
     private var onAudioTouchPreemptRequested: (() -> Boolean)? = null
@@ -108,12 +108,12 @@ internal class DeviceVibrationCoordinator(
         onAudioTouchFinished = onFinished
     }
 
-    fun resetAuthoredV3() {
+    fun resetAuthoredIr() {
         val stop = synchronized(lock) {
             if (closed) return
             if (!audioOwned && !touchActive) generation++
-            gameSources.remove(GameSource.AUTHORED_V3)
-            v3Owned = false
+            gameSources.remove(GameSource.AUTHORED_IR)
+            authoredIrOwned = false
             clearGameRefreshLocked()
             detailOwned = false
             detailTickStarted = false
@@ -127,21 +127,21 @@ internal class DeviceVibrationCoordinator(
         stop?.let(dispatcher::submit)
     }
 
-    /** V3 owns a separate source; ordinary latest states remain available when it releases. */
-    fun submitAuthoredV3Body(low: Short, high: Short, strengthPercent: Int, active: Boolean,
+    /** Extended owns a separate source; ordinary latest states remain available when it releases. */
+    fun submitAuthoredIrBody(low: Short, high: Short, strengthPercent: Int, active: Boolean,
                              expiresAtMs: Long = clockMs() + 200L) {
         val acquired = synchronized(lock) {
             if (closed) return
-            val acquiring = active && !v3Owned
+            val acquiring = active && !authoredIrOwned
             if (acquiring) {
-                v3Owned = true
-                gameSources.remove(GameSource.AUTHORED_V3)
+                authoredIrOwned = true
+                gameSources.remove(GameSource.AUTHORED_IR)
                 clearGameRefreshLocked()
                 lastGameCommandAmplitude = -1
                 if (!audioOwned && !touchActive) generation++
-            } else if (!active && v3Owned) {
-                v3Owned = false
-                gameSources.remove(GameSource.AUTHORED_V3)
+            } else if (!active && authoredIrOwned) {
+                authoredIrOwned = false
+                gameSources.remove(GameSource.AUTHORED_IR)
                 if (!audioOwned && !touchActive) generation++
             }
             acquiring && !audioOwned && !touchActive
@@ -155,7 +155,7 @@ internal class DeviceVibrationCoordinator(
             stop?.let(dispatcher::submit)
             return
         }
-        submitGameRumble(GameSource.AUTHORED_V3, low, high, strengthPercent, expiresAtMs)
+        submitGameRumble(GameSource.AUTHORED_IR, low, high, strengthPercent, expiresAtMs)
     }
 
     /** Refresh the authored-detail lease on every IR frame, including silent frames. */
@@ -163,8 +163,8 @@ internal class DeviceVibrationCoordinator(
         submitDetail(tick, strengthPercent, active, null)
     }
 
-    /** V3 carries source-timed events. Sink backpressure replaces pending work, with no rate gate. */
-    fun submitAuthoredV3(tick: Boolean, strengthPercent: Int, expiresAtMs: Long, active: Boolean = true) {
+    /** Extended carries source-timed events. Sink backpressure replaces pending work, with no rate gate. */
+    fun submitAuthoredIrDetail(tick: Boolean, strengthPercent: Int, expiresAtMs: Long, active: Boolean = true) {
         submitDetail(tick, strengthPercent, active, expiresAtMs)
     }
 
@@ -189,7 +189,7 @@ internal class DeviceVibrationCoordinator(
                     // Authored PCM supersedes the previous game's ordinary-rumble snapshot.
                     // Otherwise ending the PCM lease could revive an old nonzero waveform.
                     if (sourceExpiryMs == null) gameSources.clear()
-                    else gameSources.remove(GameSource.AUTHORED_V3)
+                    else gameSources.remove(GameSource.AUTHORED_IR)
                 }
                 detailInputAtMs = clockMs()
                 scheduleDetailWatchdogLocked()
@@ -372,7 +372,7 @@ internal class DeviceVibrationCoordinator(
             clearGameRefreshLocked()
             gameSources.clear()
             detailOwned = false
-            v3Owned = false
+            authoredIrOwned = false
             detailWatchdog?.let(removeCallback)
             detailWatchdog = null
             VibrationCommand(
@@ -405,7 +405,7 @@ internal class DeviceVibrationCoordinator(
 
     private fun mixedGameAmplitudeLocked(): Int {
         if (detailOwned) return 0
-        if (v3Owned) return gameSources[GameSource.AUTHORED_V3]?.amplitude ?: 0
+        if (authoredIrOwned) return gameSources[GameSource.AUTHORED_IR]?.amplitude ?: 0
         var amplitude = 0
         gameSources.values.forEach { state ->
             amplitude = maxOf(amplitude, state.amplitude)
@@ -450,7 +450,7 @@ internal class DeviceVibrationCoordinator(
             generation = generation,
             sequence = outputSequence,
             urgent = urgent,
-            expiresAtMs = if (v3Owned) gameSources[GameSource.AUTHORED_V3]?.expiresAtMs ?: Long.MAX_VALUE else Long.MAX_VALUE
+            expiresAtMs = if (authoredIrOwned) gameSources[GameSource.AUTHORED_IR]?.expiresAtMs ?: Long.MAX_VALUE else Long.MAX_VALUE
         )
     }
 

@@ -14,7 +14,8 @@ class Ds5SimulationModeTest {
     }
 
     @Test fun explicitIrChoiceAdvertisesOnlyForCompatibleSimulationSessions() {
-        val mode = Ds5SimulationMode.fromPreference("ir_v3")
+        val mode = Ds5SimulationMode.fromPreference("ir_enhanced")
+        assertEquals(mode, Ds5SimulationMode.fromPreference("ir_v3"))
         for (host in listOf(HostGamepadSelection.AUTOMATIC, HostGamepadSelection.HOST, HostGamepadSelection.DS5))
             assertTrue(mode.requestsIr(false, false, host))
         for (host in listOf(HostGamepadSelection.XBOX, HostGamepadSelection.DS4))
@@ -31,8 +32,8 @@ class Ds5SimulationModeTest {
 
     @Test fun changingTheSettingKeepsExistingConnectionSnapshotsIndependent() {
         val oldSession = Ds5SimulationMode.LEGACY.sessionOptions(false, false, HostGamepadSelection.DS5)
-        val irSession = Ds5SimulationMode.IR_V3.sessionOptions(false, false, HostGamepadSelection.DS5)
-        val nativeSession = Ds5SimulationMode.IR_V3.sessionOptions(true, false, HostGamepadSelection.DS5)
+        val irSession = Ds5SimulationMode.IR_ENHANCED.sessionOptions(false, false, HostGamepadSelection.DS5)
+        val nativeSession = Ds5SimulationMode.IR_ENHANCED.sessionOptions(true, false, HostGamepadSelection.DS5)
         assertFalse(oldSession.authoredIr)
         assertTrue(irSession.authoredIr)
         assertFalse(oldSession.nativePcm)

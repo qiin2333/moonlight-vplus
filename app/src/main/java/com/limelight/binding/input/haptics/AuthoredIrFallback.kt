@@ -6,7 +6,7 @@ import kotlin.math.sqrt
  * Raw onset levels otherwise disappear when the phone's weighted 8-bit amplitude is quantized.
  * Preset TICK and continuous body keep their own rendering semantics.
  */
-internal object AuthoredV3Fallback {
+internal object AuthoredIrFallback {
     fun transientAmplitude(strength: Float): Float =
         if (strength.isFinite()) sqrt(strength.coerceIn(0f, 1f)) else 0f
 }

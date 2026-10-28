@@ -4,10 +4,11 @@ import com.limelight.nvstream.HostGamepadSelection
 
 /** A connection-scoped choice; legacy never advertises IR and keeps the host rumble path. */
 enum class Ds5SimulationMode(val preferenceValue: String) {
-    LEGACY("legacy"), IR_V3("ir_v3");
+    // Keep the existing saved value so older test installations retain their selection.
+    LEGACY("legacy"), IR_ENHANCED("ir_v3");
 
     fun requestsIr(nativePcm: Boolean, controlOnly: Boolean, host: HostGamepadSelection): Boolean =
-        this == IR_V3 && !nativePcm && !controlOnly &&
+        this == IR_ENHANCED && !nativePcm && !controlOnly &&
             host != HostGamepadSelection.XBOX && host != HostGamepadSelection.DS4
 
     fun sessionOptions(nativePcm: Boolean, controlOnly: Boolean,
@@ -16,7 +17,8 @@ enum class Ds5SimulationMode(val preferenceValue: String) {
 
     companion object {
         fun fromPreference(value: String?): Ds5SimulationMode =
-            entries.firstOrNull { it.preferenceValue == value } ?: LEGACY
+            if (value == "ir_enhanced") IR_ENHANCED else
+                entries.firstOrNull { it.preferenceValue == value } ?: LEGACY
     }
 }
 

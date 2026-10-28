@@ -1,7 +1,7 @@
 package com.limelight.binding.input.haptics
 
 import com.limelight.nvstream.Ds5HapticsIrFrame
-import com.limelight.nvstream.Ds5HapticsIrV3Frame
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
 
 /** Authored-IR playback stage. Android supplies capabilities, lifecycle and a serial output queue.
  * SDK analysis stays on the host; ordinary rumble keeps its existing GameRumblePipeline.
@@ -19,15 +19,15 @@ internal class AuthoredIrCoordinator(
     private val removeCallbacks: (Runnable) -> Unit,
     private val scheduleExpiry: () -> Unit,
     private val enabled: () -> Boolean = { true },
-    private val onOutput: (Short, AuthoredV3Timeline.Output) -> Unit = { _, _ -> }
+    private val onOutput: (Short, AuthoredIrTimeline.Output) -> Unit = { _, _ -> }
 ) {
     private data class Legacy(val frame: Ds5HapticsIrFrame,
                               val output: AuthoredHapticsRenderer.Output, val tickAt: Long?)
     private val lock = Any()
-    private val timelines = mutableMapOf<Short, AuthoredV3Timeline>()
-    private val last = mutableMapOf<Short, AuthoredV3Timeline.Output>()
+    private val timelines = mutableMapOf<Short, AuthoredIrTimeline>()
+    private val last = mutableMapOf<Short, AuthoredIrTimeline.Output>()
     private val pulses = mutableMapOf<Short, Pair<Float, Long>>()
-    private val policies = mutableMapOf<Short, AuthoredV3PhonePolicy>()
+    private val policies = mutableMapOf<Short, AuthoredIrPhonePolicy>()
     private val legacyRenderers = mutableMapOf<Short, AuthoredHapticsRenderer>()
     private val pendingLegacy = mutableMapOf<Short, Legacy>()
     private var queued = false
@@ -36,9 +36,9 @@ internal class AuthoredIrCoordinator(
 
     val queuedEvents: Int get() = synchronized(lock) { timelines.values.sumOf { it.queuedEvents } }
 
-    fun submit(frame: Ds5HapticsIrV3Frame) = synchronized(lock) {
+    fun submit(frame: Ds5HapticsIrExtendedFrame) = synchronized(lock) {
         if (stopped || !enabled() || frame.controllerNumber.toInt() !in 0 until 16) return@synchronized
-        if (!timelines.getOrPut(frame.controllerNumber, ::AuthoredV3Timeline)
+        if (!timelines.getOrPut(frame.controllerNumber, ::AuthoredIrTimeline)
                 .accept(frame, clockMs() * 1000)) return@synchronized
         pendingLegacy.remove(frame.controllerNumber)
         wakeLocked()
@@ -62,7 +62,7 @@ internal class AuthoredIrCoordinator(
     private fun drain() {
         if (stopped || !enabled()) return
         val now = clockMs()
-        val outputs: MutableList<Pair<Short, AuthoredV3Timeline.Output>>
+        val outputs: MutableList<Pair<Short, AuthoredIrTimeline.Output>>
         val legacy: List<Legacy>
         synchronized(lock) {
             queued = false
@@ -97,7 +97,7 @@ internal class AuthoredIrCoordinator(
         }
     }
 
-    private fun route(number: Short, output: AuthoredV3Timeline.Output, now: Long) {
+    private fun route(number: Short, output: AuthoredIrTimeline.Output, now: Long) {
         if (output.reset) {
             pulses.remove(number)
             policies.remove(number)
@@ -105,14 +105,14 @@ internal class AuthoredIrCoordinator(
         }
         if (number.toInt() == 0 && (output.reset || output.ended)) {
             renderer.flushDevice()
-            if (output.reset) phone.resetAuthoredV3()
+            if (output.reset) phone.resetAuthoredIr()
         }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
         val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) * it.confidence } ?: 0f
         if (output.ended) pulses.remove(number)
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
-        val pulse = AuthoredV3Fallback.transientAmplitude(pulses[number]?.first ?: 0f)
-        val details = targets.hasDevice && policies.getOrPut(number, ::AuthoredV3PhonePolicy)
+        val pulse = AuthoredIrFallback.transientAmplitude(pulses[number]?.first ?: 0f)
+        val details = targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
             .useDetails(output.body, now, output.ended, targets.mode, targets.hasController, supportsTick())
         val plan = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
         val body = if (targets.hasController && targets.mode != GameRumbleMode.DEVICE) output.body else ControllerRumbleState.ZERO
@@ -124,9 +124,9 @@ internal class AuthoredIrCoordinator(
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
             val deviceBody = plan.device ?: ControllerRumbleState.ZERO
-            phone.submitAuthoredV3Body(deviceBody.lowFrequency.motor(), deviceBody.highFrequency.motor(),
+            phone.submitAuthoredIrBody(deviceBody.lowFrequency.motor(), deviceBody.highFrequency.motor(),
                 strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
-            phone.submitAuthoredV3(details && output.event != null, if (details) strengthPercent() else 0,
+            phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,
                 output.event?.expiresUs?.div(1000) ?: now, details && !output.ended)
         }
         onOutput(number, output)
@@ -149,7 +149,7 @@ internal class AuthoredIrCoordinator(
             else {
                 phone.submitAuthoredDetail(false, 0, false)
                 val device = plan.device ?: ControllerRumbleState.ZERO
-                phone.submitAuthoredV3Body(device.lowFrequency.motor(), device.highFrequency.motor(),
+                phone.submitAuthoredIrBody(device.lowFrequency.motor(), device.highFrequency.motor(),
                     strengthPercent(), !pending.output.ended, now + 200)
             }
         }
@@ -164,7 +164,7 @@ internal class AuthoredIrCoordinator(
         policies.remove(number)
         mixer.clearSource(number, RumbleSource.AUTHORED_BODY, clockMs())
         mixer.clearSource(number, RumbleSource.AUTHORED_TRANSIENT, clockMs())
-        if (number.toInt() == 0) phone.resetAuthoredV3()
+        if (number.toInt() == 0) phone.resetAuthoredIr()
     }
 
     fun stop() {

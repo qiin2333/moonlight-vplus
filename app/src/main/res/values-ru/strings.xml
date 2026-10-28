@@ -2159,6 +2159,6 @@
     <string name="videoformat_pyrowave">PyroWave (экспериментально, без генерации кадров)</string>
     <string name="display_resolution_current_not_saved">Используется сейчас · Не сохранено в списке</string>
     <string name="title_ds5_simulation_mode">Путь имитации DualSense</string>
-    <string name="summary_ds5_simulation_mode">Обычная имитация сохраняет привычную вибрацию. IR v3 разделяет непрерывную вибрацию и короткие импульсы и требует совместимого Sunshine. Изменение применяется после переподключения.</string>
-    <string-array name="ds5_simulation_mode_names"><item>Обычная имитация</item><item>IR v3</item></string-array>
+    <string name="summary_ds5_simulation_mode">Обычная имитация сохраняет привычную вибрацию. Расширенный IR использует v2 и добавляет непрерывную вибрацию и короткие импульсы через расширение. Требуется совместимый Sunshine. Изменение применяется после переподключения.</string>
+    <string-array name="ds5_simulation_mode_names"><item>Обычная имитация</item><item>Расширенный IR (v2 + расширение)</item></string-array>
 </resources>

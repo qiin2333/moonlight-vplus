@@ -1,8 +1,8 @@
 package com.limelight.binding.input.haptics
 
 import com.limelight.nvstream.Ds5HapticsIrFrame
-import com.limelight.nvstream.Ds5HapticsIrV3Decoder
-import com.limelight.nvstream.Ds5HapticsIrV3Frame
+import com.limelight.nvstream.Ds5HapticsIrExtendedDecoder
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -12,19 +12,19 @@ import java.util.concurrent.TimeUnit
  * The transport, main-loop clock, controller port and phone native calls are fakes.
  * The production AuthoredIrCoordinator is exercised; Android ControllerHandler/Looper wiring and physical actuator response are outside this test.
  */
-class AuthoredV3MockIntegrationTest {
-    private data class Arrival(val atMs: Long, val frame: Ds5HapticsIrV3Frame)
+class AuthoredIrMockIntegrationTest {
+    private data class Arrival(val atMs: Long, val frame: Ds5HapticsIrExtendedFrame)
     private data class Write(val atMs: Long, val amplitude: Int)
 
-    private fun fixture(name: String): List<Ds5HapticsIrV3Frame> {
-        val asset = sequenceOf(File("src/debug/assets/haptics/generated/$name.irv3bin"),
-            File("app/src/debug/assets/haptics/generated/$name.irv3bin"))
+    private fun fixture(name: String): List<Ds5HapticsIrExtendedFrame> {
+        val asset = sequenceOf(File("src/debug/assets/haptics/generated/$name.irextbin"),
+            File("app/src/debug/assets/haptics/generated/$name.irextbin"))
             .firstOrNull(File::isFile)
         assertNotNull("The packaged host-generated fixture is required: $name", asset)
-        return Ds5HapticsIrV3Decoder.decode(asset!!.readBytes())
+        return Ds5HapticsIrExtendedDecoder.decode(asset!!.readBytes())
     }
 
-    private fun transport(frames: List<Ds5HapticsIrV3Frame>, faults: Boolean = false,
+    private fun transport(frames: List<Ds5HapticsIrExtendedFrame>, faults: Boolean = false,
                           omitEnd: Boolean = false): List<Arrival> {
         val sourceOrigin = frames.first().windowEndUs
         return frames.flatMapIndexed { index, frame ->
@@ -53,7 +53,7 @@ class AuthoredV3MockIntegrationTest {
         val phoneWrites = mutableListOf<Write>()
         val controllerWrites = mutableListOf<Pair<Long, ControllerRumbleState>>()
         val deliveredIds = mutableListOf<Pair<Int, Int>>()
-        var lastOutput: AuthoredV3Timeline.Output? = null
+        var lastOutput: AuthoredIrTimeline.Output? = null
         var maxInbox = 0
         private var epoch: Int? = null
         private val callbacks = linkedMapOf<Runnable, Long>()
@@ -98,7 +98,7 @@ class AuthoredV3MockIntegrationTest {
             })
         val queuedEvents: Int get() = authored.queuedEvents
         fun flush() = worker.runReady()
-        fun receive(frame: Ds5HapticsIrV3Frame) {
+        fun receive(frame: Ds5HapticsIrExtendedFrame) {
             if (epoch == null || (frame.epoch.toLong() - epoch!!.toLong()).and(0xffffffffL) in 1..0x7fffffffL)
                 epoch = frame.epoch
             authored.submit(frame)
@@ -132,7 +132,7 @@ class AuthoredV3MockIntegrationTest {
                 step(time, time !in paused)
             }
             flush()
-            println("V3Mock mode=$mode controller=$hasController phone=$hasPhone tickSupport=$supportsTick " +
+            println("ExtendedMock mode=$mode controller=$hasController phone=$hasPhone tickSupport=$supportsTick " +
                 "events=${deliveredIds.size} ticks=${tickTimes.size} " +
                 "waves=${phoneWrites.count { it.amplitude > 0 }} inbox=$maxInbox workerQueue=$maxOutputQueue")
         }
@@ -193,7 +193,7 @@ class AuthoredV3MockIntegrationTest {
             assertEquals(100, runtime.deliveredIds.size)
             assertEquals(100, runtime.deliveredIds.toSet().size)
             assertEquals(100, runtime.tickTimes.size)
-            assertTrue(runtime.maxInbox <= AuthoredV3Timeline.MAX_EVENTS)
+            assertTrue(runtime.maxInbox <= AuthoredIrTimeline.MAX_EVENTS)
             assertTrue(runtime.controllerWrites.last().second.isZero)
         }
     }
@@ -204,7 +204,7 @@ class AuthoredV3MockIntegrationTest {
             assertTrue(runtime.tickTimes.size in 1..99)
             assertEquals(runtime.deliveredIds.size, runtime.deliveredIds.toSet().size)
             assertTrue(runtime.tickTimes.groupingBy { it }.eachCount().values.all { it == 1 })
-            assertEquals(AuthoredV3Timeline.MAX_EVENTS, runtime.maxInbox)
+            assertEquals(AuthoredIrTimeline.MAX_EVENTS, runtime.maxInbox)
             assertEquals(0, runtime.queuedEvents)
         }
     }

@@ -9,7 +9,7 @@ import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.DriverControllerContext
 import com.limelight.nvstream.Ds5HapticsIrFrame
-import com.limelight.nvstream.Ds5HapticsIrV3Frame
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
 import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.Ds5HapticsState
 import com.limelight.nvstream.jni.MoonBridge
@@ -111,7 +111,7 @@ internal class ControllerHapticsCoordinator(
             handler.isControllerSlotEnabled(frame.controllerNumber)) authoredIr.submit(frame)
     }
 
-    fun submitDs5HapticsIrV3(frame: Ds5HapticsIrV3Frame) = synchronized(ds5LifecycleLock) {
+    fun submitDs5HapticsIrExtended(frame: Ds5HapticsIrExtendedFrame) = synchronized(ds5LifecycleLock) {
         if (!isStoppingOrStopped() && outputLifecycle.capture(frame.controllerNumber) != null &&
             handler.isControllerSlotEnabled(frame.controllerNumber)) authoredIr.submit(frame)
     }

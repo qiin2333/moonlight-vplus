@@ -1,13 +1,13 @@
 package com.limelight.binding.input.haptics
 
 import com.limelight.nvstream.Ds5HapticsIrFrame
-import com.limelight.nvstream.Ds5HapticsIrV3Event
-import com.limelight.nvstream.Ds5HapticsIrV3Frame
+import com.limelight.nvstream.Ds5HapticsIrExtendedEvent
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
 import java.util.PriorityQueue
 
 /** Source-relative clock, bounded event inbox, and latest continuous state. No device rate gate. */
-internal class AuthoredV3Timeline {
-    data class Event(val value: Ds5HapticsIrV3Event, val dueUs: Long, val expiresUs: Long)
+internal class AuthoredIrTimeline {
+    data class Event(val value: Ds5HapticsIrExtendedEvent, val dueUs: Long, val expiresUs: Long)
     data class Output(val body: ControllerRumbleState, val event: Event?, val ended: Boolean,
                       val reset: Boolean = false, val bodyValidUntilUs: Long = Long.MAX_VALUE)
     private data class State(val body: ControllerRumbleState, val sourceUs: Long)
@@ -27,7 +27,7 @@ internal class AuthoredV3Timeline {
 
     val queuedEvents: Int get() = events.size
 
-    fun accept(frame: Ds5HapticsIrV3Frame, nowUs: Long): Boolean {
+    fun accept(frame: Ds5HapticsIrExtendedFrame, nowUs: Long): Boolean {
         if (frame.profile != 1 || frame.windowEndUs < 0 || frame.events.size > 8) return false
         val oldEpoch = epoch
         val changedEpoch = oldEpoch == null || oldEpoch != frame.epoch

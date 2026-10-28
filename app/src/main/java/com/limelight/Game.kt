@@ -2846,8 +2846,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.handleDs5HapticsIr(frame)
     }
 
-    override fun ds5HapticsIrV3(frame: com.limelight.nvstream.Ds5HapticsIrV3Frame) {
-        controllerHandler.handleDs5HapticsIrV3(frame)
+    override fun ds5HapticsIrExtended(frame: com.limelight.nvstream.Ds5HapticsIrExtendedFrame) {
+        controllerHandler.handleDs5HapticsIrExtended(frame)
     }
 
     override fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame) {

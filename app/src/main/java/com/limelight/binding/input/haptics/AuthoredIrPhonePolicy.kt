@@ -1,7 +1,7 @@
 package com.limelight.binding.input.haptics
 
 /** Backend choice is local: one phone actuator cannot overlay a preset on a waveform. */
-internal class AuthoredV3PhonePolicy {
+internal class AuthoredIrPhonePolicy {
     private var continuousUntilMs = 0L
 
     fun useDetails(body: ControllerRumbleState, nowMs: Long, ended: Boolean,

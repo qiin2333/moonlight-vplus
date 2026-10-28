@@ -4,15 +4,17 @@ import com.limelight.nvstream.*
 import org.junit.Assert.*
 import org.junit.Test
 
-class AuthoredV3TimelineTest {
-    private val lane = Ds5HapticsIrV3Lane(0.1f, 0.2f, 0.3f, 0.4f)
+class AuthoredIrTimelineTest {
+    private val lane = Ds5HapticsIrExtendedLane(0.1f, 0.2f)
     private fun frame(seq: Int, at: Long = seq * 5_000L, epoch: Int = 1,
-                      events: List<Ds5HapticsIrV3Event> = emptyList(), flags: Int = 0) =
-        Ds5HapticsIrV3Frame(0, flags, 1, epoch, seq, at, 240, lane, lane, events)
-    private fun event(id: Int, at: Long) = Ds5HapticsIrV3Event(id, at, .2f, .1f, 1f, .7f)
+                      events: List<Ds5HapticsIrExtendedEvent> = emptyList(), flags: Int = 0) =
+        Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, flags, seq, at, 240,
+            Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f), Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f)),
+            1, epoch, at, lane, lane, events)
+    private fun event(id: Int, at: Long) = Ds5HapticsIrExtendedEvent(id, at, .2f, .1f, 1f, .7f)
 
     @Test fun everySourceEventAtSixtyPerSecondSurvivesWithoutAHardRefractory() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         var count = 0
         repeat(240) { seq ->
             val sourceUs = (seq + 1) * 5_000L
@@ -27,7 +29,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun duplicateEventsReorderedFramesAndRetiredEpochsCannotReplay() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         assertTrue(timeline.accept(frame(1, events = listOf(event(7, 5_000))), 1_000_000))
         assertFalse(timeline.accept(frame(1, events = listOf(event(7, 5_000))), 1_001_000))
         assertTrue(timeline.accept(frame(2, events = listOf(event(7, 5_000))), 1_005_000))
@@ -38,9 +40,9 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun stalledConsumerDropsOldSlotsInsteadOfReplayingABurst() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         repeat(500) { seq -> timeline.accept(frame(seq, events = listOf(event(seq, seq * 5_000L))), seq * 5_000L) }
-        assertTrue(timeline.queuedEvents <= AuthoredV3Timeline.MAX_EVENTS)
+        assertTrue(timeline.queuedEvents <= AuthoredIrTimeline.MAX_EVENTS)
         assertNotNull(timeline.poll(2_500_000)!!.event)
         assertNull(timeline.poll(2_500_000))
         assertTrue(timeline.poll(2_800_000)!!.ended)
@@ -48,7 +50,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun sourceClockDoesNotMakeABackloggedPacketFreshAgain() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         timeline.accept(frame(0, 0), 1_000_000)
         timeline.poll(1_020_000)
         assertFalse(timeline.accept(frame(1, 5_000, events = listOf(event(1, 5_000))), 1_180_000))
@@ -59,7 +61,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun networkGapKeepsQueuedRedundantEventAndReorderedFramesCanSupplyMissingEvents() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         timeline.accept(frame(1, 5_000, events = listOf(event(1, 5_000))), 1_000_000)
         timeline.accept(frame(3, 15_000, events = listOf(event(1, 5_000))), 1_010_000)
         // Frame 2 arrives late: keep the latest body, but recover its still-fresh event.
@@ -70,7 +72,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun playoutLeadDoesNotExtendEventFreshness() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         timeline.accept(frame(1, events = listOf(event(1, 5_000))), 1_000_000)
         assertNull(timeline.poll(1_010_000)!!.event)
         assertNull(timeline.poll(1_031_000)!!.event)
@@ -87,7 +89,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun discontinuityEndAndSequenceWrapHaveExplicitLifetimes() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         timeline.accept(frame(-1, 0, events = listOf(event(1, 0))), 10_000)
         assertTrue(timeline.accept(frame(0, 5_000, flags = Ds5HapticsIrFrame.FLAG_DISCONTINUITY), 15_000))
         assertNull(timeline.poll(15_000)!!.event)
@@ -98,7 +100,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun phoneKeepsContinuousBodyAndCoordinatedControllerKeepsIndependentDetails() {
-        val policy = AuthoredV3PhonePolicy()
+        val policy = AuthoredIrPhonePolicy()
         val body = ControllerRumbleState(.2f, .1f)
         assertFalse(policy.useDetails(body, 100, false, GameRumbleMode.DEVICE, false, true))
         assertFalse(policy.useDetails(ControllerRumbleState.ZERO, 150, false, GameRumbleMode.DEVICE, false, true))
@@ -108,7 +110,7 @@ class AuthoredV3TimelineTest {
     }
 
     @Test fun sourceResetIsPropagatedAndBurstClockCorrectionsDoNotReverseBodyOrder() {
-        val timeline = AuthoredV3Timeline()
+        val timeline = AuthoredIrTimeline()
         timeline.accept(frame(1, 5_000).copy(left = lane.copy(continuousLow = .1f), right = lane.copy(continuousLow = .1f)), 1_000_000)
         timeline.accept(frame(2, 10_000).copy(left = lane.copy(continuousLow = .2f), right = lane.copy(continuousLow = .2f)), 1_000_000)
         timeline.accept(frame(3, 15_000).copy(left = lane.copy(continuousLow = .3f), right = lane.copy(continuousLow = .3f)), 1_000_000)

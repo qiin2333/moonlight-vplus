@@ -31,7 +31,7 @@ interface NvConnectionListener {
 
     fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame)
     fun ds5HapticsIr(frame: Ds5HapticsIrFrame) {}
-    fun ds5HapticsIrV3(frame: Ds5HapticsIrV3Frame) {}
+    fun ds5HapticsIrExtended(frame: Ds5HapticsIrExtendedFrame) {}
     fun ds5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {}
 
     fun onResolutionChanged(width: Int, height: Int)

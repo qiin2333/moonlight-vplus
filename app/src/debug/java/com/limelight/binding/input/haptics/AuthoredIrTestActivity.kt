@@ -8,7 +8,7 @@ import com.limelight.LimeLog
 import com.limelight.nvstream.*
 
 /** Actual host analyzer wire fixtures, replayed through production timeline, policy and sink. */
-class AuthoredV3TestActivity : Activity() {
+class AuthoredIrTestActivity : Activity() {
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var status: TextView
     private lateinit var vibrator: Vibrator
@@ -21,16 +21,16 @@ class AuthoredV3TestActivity : Activity() {
         @Suppress("DEPRECATION")
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(25, 35, 25, 20) }
-        status = TextView(this).apply { textSize = 18f; text = "IR v3 实际PCM分析回放\n持续层与事件分开，频率跟随源事件。\n计数只表示系统调用，不代表物理马达完整执行。" }
+        status = TextView(this).apply { textSize = 18f; text = "IR 增强实际 PCM 分析回放\n持续层与事件分开，频率跟随源事件。\n计数只表示系统调用，不代表物理马达完整执行。" }
         layout.addView(status)
         fun button(label: String, asset: String) {
             layout.addView(Button(this).apply { text = label; setOnClickListener { start(asset) } })
         }
-        button("雨景 v3", "rain-haptics.irv3bin")
-        button("50点/秒 PCM", "pulse_density_50.irv3bin")
-        button("持续250Hz PCM", "sustain_250hz_0.12.irv3bin")
-        button("持续300Hz PCM", "sustain_300hz_0.12.irv3bin")
-        button("持续＋短落点", "mixed_clean_body_0.12_separate_0.irv3bin")
+        button("雨景（v2 + 扩展）", "rain-haptics.irextbin")
+        button("50点/秒 PCM", "pulse_density_50.irextbin")
+        button("持续250Hz PCM", "sustain_250hz_0.12.irextbin")
+        button("持续300Hz PCM", "sustain_300hz_0.12.irextbin")
+        button("持续＋短落点", "mixed_clean_body_0.12_separate_0.irextbin")
         layout.addView(Button(this).apply { text = "停止"; setOnClickListener { stop(); status.text = "已停止" } })
         setContentView(layout)
         // This initializes and verifies native callback method lookup in minified builds.
@@ -45,8 +45,8 @@ class AuthoredV3TestActivity : Activity() {
         if (destroyed) return
         stop()
         if (!asset.matches(Regex("[A-Za-z0-9_.-]+"))) return
-        val frames = try { assets.open("haptics/generated/$asset").use { Ds5HapticsIrV3Decoder.decode(it.readBytes()) } }
-            catch (error: Exception) { status.text = "缺少或无效的主机v3分析资产：${error.message}"; return }
+        val frames = try { assets.open("haptics/generated/$asset").use { Ds5HapticsIrExtendedDecoder.decode(it.readBytes()) } }
+            catch (error: Exception) { status.text = "缺少或无效的主机 IR 增强分析资产：${error.message}"; return }
         if (frames.isEmpty()) return
         val token = epoch
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
@@ -68,8 +68,8 @@ class AuthoredV3TestActivity : Activity() {
                 Unit
             }) else null, clockMs = SystemClock::elapsedRealtime)
         device = sink
-        val timeline = AuthoredV3Timeline()
-        var policy = AuthoredV3PhonePolicy()
+        val timeline = AuthoredIrTimeline()
+        var policy = AuthoredIrPhonePolicy()
         val origin = SystemClock.elapsedRealtime() + 400
         val sourceOrigin = frames.first().windowEndUs
         var pulse = 0f
@@ -87,15 +87,15 @@ class AuthoredV3TestActivity : Activity() {
                 val output = timeline.poll(now * 1000)
                 if (output != null) {
                     if (output.reset) {
-                        sink.resetAuthoredV3()
-                        policy = AuthoredV3PhonePolicy()
+                        sink.resetAuthoredIr()
+                        policy = AuthoredIrPhonePolicy()
                         pulse = 0f
                         pulseUntil = 0L
                     }
                     if (output.event != null) {
                         acceptedEvents++
                         val event = output.event.value
-                        pulse = AuthoredV3Fallback.transientAmplitude(
+                        pulse = AuthoredIrFallback.transientAmplitude(
                             maxOf(event.leftStrength, event.rightStrength) * event.confidence)
                         pulseUntil = now + 60
                     }
@@ -104,17 +104,17 @@ class AuthoredV3TestActivity : Activity() {
                         GameRumbleMode.DEVICE, false, supportsTick)
                     val body = if (details) ControllerRumbleState.ZERO else ControllerRumbleState(
                         output.body.lowFrequency, maxOf(output.body.highFrequency, pulse))
-                    sink.submitAuthoredV3Body((body.lowFrequency * 65535).toInt().toShort(),
+                    sink.submitAuthoredIrBody((body.lowFrequency * 65535).toInt().toShort(),
                         (body.highFrequency * 65535).toInt().toShort(), 100, !output.ended, output.bodyValidUntilUs / 1000)
-                    if (details) sink.submitAuthoredV3(output.event != null, 100,
+                    if (details) sink.submitAuthoredIrDetail(output.event != null, 100,
                         output.event?.expiresUs?.div(1000) ?: now, !output.ended)
-                    else sink.submitAuthoredV3(false, 0, now, active = false)
+                    else sink.submitAuthoredIrDetail(false, 0, now, active = false)
                 }
                 if (index < frames.size || timeline.nextWakeUs() != null) ui.postDelayed(this, 1)
                 else ui.postDelayed({
                     if (epoch != token || destroyed) return@postDelayed
                     status.text = "$asset\n帧=$inputFrames，事件=$acceptedEvents\n轻点调用=$calls，连续调用=$waves\n可重放比较；调用计数不代表马达逐个完成。"
-                    LimeLog.info("V3Replay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves")
+                    LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves")
                 }, 250)
             }
         }
