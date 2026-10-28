@@ -77,11 +77,11 @@ object ConfigurationSyncScheduler {
         val triggerAt = System.currentTimeMillis() + delayMs
         val pendingIntent = pendingIntent(appContext)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
-        } else {
-            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
-        }
+        // 不用 setAndAllowWhileIdle:配置同步不值得穿透 Doze 定期强行唤醒
+        // 缓存/冻结中的进程,冻结中的进程被迫在时限内投递广播正是 "main 空闲
+        // 在 nativePollOnce" ANR(Crashlytics 4d05f9e7)的主要来源之一。
+        // Doze 维护窗口会补送,收敛不受影响。
+        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
     }
 
     fun cancel(context: Context) {
@@ -300,10 +300,14 @@ class ConfigurationSyncReceiver : BroadcastReceiver() {
             return
         }
 
-        val pendingResult = goAsync()
-        ConfigurationSyncScheduler.runSync(appContext) {
-            ConfigurationSyncScheduler.schedule(appContext)
-            pendingResult.finish()
-        }
+        // 先把下一轮闹钟排上,保证即使进程在同步途中被杀,同步链也不会断。
+        ConfigurationSyncScheduler.schedule(appContext)
+
+        // 不用 goAsync 把整个同步挂进广播接收窗口:一轮同步含外部 SAF 目录
+        // 读写和 150k 轮 PBKDF2,在慢速存储上足以超出广播时限,触发一次
+        // "main 空闲在 nativePollOnce" 的 ANR(Crashlytics 4d05f9e7)。
+        // 让同步在自己的后台线程独立跑完,接收窗口随 onReceive 立即关闭;
+        // 进程中途被杀只会损失这一轮,下一轮闹钟会重新收敛。
+        ConfigurationSyncScheduler.runSync(appContext)
     }
 }

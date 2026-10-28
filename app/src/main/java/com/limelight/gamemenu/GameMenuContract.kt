@@ -91,7 +91,8 @@ internal data class GameMenuVisibleCards(
     val display: Boolean,
     val audioHaptics: Boolean,
     val gyro: Boolean,
-    val shortcuts: Boolean
+    val shortcuts: Boolean,
+    val waveformHaptics: Boolean
 )
 
 internal data class GameMenuCallbacks(

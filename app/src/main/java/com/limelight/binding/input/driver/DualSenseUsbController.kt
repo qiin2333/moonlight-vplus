@@ -18,6 +18,7 @@ class DualSenseUsbController(
 ) : AbstractPlayStationUsbController(device, connection, deviceId, driverListener) {
 
     override val supportsAdaptiveTriggers: Boolean = true
+    private val hapticsOutput = DualSenseUsbHapticsOutput()
 
     private val inputSession = DualSenseInputSession(
         isControllerReady = ::isControllerReady,
@@ -30,7 +31,8 @@ class DualSenseUsbController(
         },
         onGone = {
             driverListener.onDualSenseNativeHapticsSinkGone(deviceId)
-        }
+        },
+        onReleaseFailure = { error -> releaseUsbResource { throw error } }
     )
 
     init {
@@ -89,7 +91,16 @@ class DualSenseUsbController(
                             "ep=0x${Integer.toHexString(endpoint.address)}"
                     )
                     nativeHapticsOwner.install(
-                        DualSenseUsbHapticsSink(connection, iface, endpoint)
+                        DualSenseUsbHapticsSink(connection, iface, endpoint,
+                            onActiveChanged = { active -> synchronized(outputLock) {
+                                if (!active) hapticsOutput.reset()
+                                hapticsOutput.nativeActive = active
+                                sendCommand(DualSenseUsbOutputReport.rumble(0, 0))
+                            } },
+                            onControl = { control -> synchronized(outputLock) {
+                                hapticsOutput.control = control
+                                sendCommand(DualSenseUsbOutputReport.rumble(0, 0))
+                            } })
                     )
                     return
                 }
@@ -108,6 +119,8 @@ class DualSenseUsbController(
     }
 
     override fun clearControllerSpecificOutput() {
+        hapticsOutput.reset()
+        rumble(0, 0)
         setAdaptiveTriggers(
             DualSenseUsbOutputReport.BOTH_TRIGGER_FLAGS.toByte(),
             DualSenseUsbOutputReport.EFFECT_TYPE_OFF,
@@ -177,6 +190,7 @@ class DualSenseUsbController(
             if (outputClosed) {
                 return
             }
+            hapticsOutput.applyTo(data)
             Log.d(TAG, "sendCommand")
             val res = connection.bulkTransfer(outEndpt, data, data.size, 1000)
             if (res != data.size) {

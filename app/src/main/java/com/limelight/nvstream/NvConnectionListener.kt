@@ -30,6 +30,7 @@ interface NvConnectionListener {
     fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte)
 
     fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame)
+    fun ds5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {}
 
     fun onResolutionChanged(width: Int, height: Int)
 

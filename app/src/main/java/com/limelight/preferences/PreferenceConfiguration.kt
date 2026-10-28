@@ -15,6 +15,7 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.preference.PreferenceManager
 import com.limelight.binding.input.MouseAxisCorrection
+import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
@@ -232,6 +233,8 @@ class PreferenceConfiguration {
     var showAudioHapticsCard = false
     var showGyroCard = false
     var showQuickKeyCard = false
+    // Waveform routes are capability-driven, but the status/test card can still be hidden.
+    var showWaveformHapticsCard = true
 
     // 麦克风设置
     var enableMic = false
@@ -338,6 +341,7 @@ class PreferenceConfiguration {
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
                 .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
                 .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
+                .putBoolean(SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING, showWaveformHapticsCard)
                 .putBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, enableAudioVibration)
                 .putInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, audioVibrationStrength)
                 .putString(AUDIO_VIBRATION_MODE_PREF_STRING, audioVibrationMode)
@@ -598,6 +602,7 @@ class PreferenceConfiguration {
         copy.showAudioHapticsCard = this.showAudioHapticsCard
         copy.showGyroCard = this.showGyroCard
         copy.showQuickKeyCard = this.showQuickKeyCard
+        copy.showWaveformHapticsCard = this.showWaveformHapticsCard
         return copy
     }
 
@@ -683,6 +688,7 @@ class PreferenceConfiguration {
         private const val SHOW_GYRO_CARD_PREF_STRING = "checkbox_show_gyro_card"
         @Suppress("ConstPropertyName")
         private const val SHOW_QuickKeyCard = "checkbox_show_QuickKeyCard"
+        internal const val SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING = "checkbox_show_waveform_haptics_card"
 
         private const val ENHANCED_TOUCH_ON_RIGHT_PREF_STRING = "checkbox_enhanced_touch_on_which_side"
         private const val ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING = "enhanced_touch_zone_divider"
@@ -704,6 +710,10 @@ class PreferenceConfiguration {
         internal const val FULL_RANGE_PREF_STRING = "checkbox_full_range"
         private const val GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse"
         private const val GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors"
+        private const val GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING =
+            "gamepad_motion_sensors_android12_opt_in_migrated"
+        internal const val GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING =
+            "gamepad_motion_sensors_android12_opt_in_confirmed"
         private const val GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback"
 
         // 陀螺仪偏好设置
@@ -800,6 +810,7 @@ class PreferenceConfiguration {
         const val AUDIO_PASSTHROUGH_BUFFER_PREF_STRING = "list_audio_passthrough_buffer"
         const val DEFAULT_AUDIO_PASSTHROUGH_BUFFER = "normal"
         const val UNLOCK_FPS_STRING = "checkbox_unlock_fps"
+        // Retired UI switch, retained only for migrating older installs and backups.
         const val SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING = "checkbox_show_low_resolution_presets"
         const val CROWN_CONFIG_MANAGEMENT_STRING = "crown_config_management"
 
@@ -913,7 +924,6 @@ class PreferenceConfiguration {
         private const val DEFAULT_REDUCE_REFRESH_RATE = false
         private const val DEFAULT_FULL_RANGE = false
         private const val DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE = false
-        private const val DEFAULT_GAMEPAD_MOTION_SENSORS = true
         private const val DEFAULT_GAMEPAD_MOTION_FALLBACK = false
 
         // 陀螺仪偏好默认值
@@ -999,13 +1009,6 @@ class PreferenceConfiguration {
         val RESOLUTIONS = arrayOf(
             "640x360", "854x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", "Native"
         )
-
-        fun isLowResolutionPreset(resolution: String?): Boolean {
-            return when (resolution) {
-                RES_360P, RES_480P, "360x640", "480x854" -> true
-                else -> false
-            }
-        }
 
         // ---- Public static methods ----
 
@@ -1393,13 +1396,30 @@ class PreferenceConfiguration {
                 prefs.edit().putBoolean(SMALL_ICONS_PREF_STRING, getDefaultSmallMode(context)).apply()
             }
 
-            if (!prefs.contains(GAMEPAD_MOTION_SENSORS_PREF_STRING) && Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
-                // Android 12 has a nasty bug that causes crashes when the app touches the InputDevice's
-                // associated InputDeviceSensorManager (just calling getSensorManager() is enough).
-                // As a workaround, we will override the default value for the gamepad motion sensor
-                // option to disabled on Android 12 to reduce the impact of this bug.
-                // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
-                prefs.edit().putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false).apply()
+            if (InputDeviceSensorPolicy.isSupported(Build.VERSION.SDK_INT) &&
+                !InputDeviceSensorPolicy.isStable(Build.VERSION.SDK_INT)
+            ) {
+                val migrationComplete = prefs.getBoolean(
+                    GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING,
+                    false
+                )
+                val confirmedInApp = prefs.getBoolean(
+                    GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING,
+                    false
+                )
+                if (!migrationComplete ||
+                    (prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false) && !confirmedInApp)
+                ) {
+                    // Android 12/12L has a framework hotplug crash in InputDeviceSensorManager.
+                    // Keep the opt-in visible, but default it off until the user confirms it in-app.
+                    // The confirmation marker is device-local, so a restored portable preference
+                    // cannot enable the risky path by itself.
+                    // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
+                    prefs.edit()
+                        .putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false)
+                        .putBoolean(GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING, true)
+                        .apply()
+                }
             }
 
             // This must happen after the preferences migration to ensure the preferences are populated
@@ -1645,7 +1665,10 @@ class PreferenceConfiguration {
             config.reduceRefreshRate = prefs.getBoolean(REDUCE_REFRESH_RATE_PREF_STRING, DEFAULT_REDUCE_REFRESH_RATE)
             config.fullRange = prefs.getBoolean(FULL_RANGE_PREF_STRING, DEFAULT_FULL_RANGE)
             config.gamepadTouchpadAsMouse = prefs.getBoolean(GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING, DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE)
-            config.gamepadMotionSensors = prefs.getBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, DEFAULT_GAMEPAD_MOTION_SENSORS)
+            config.gamepadMotionSensors = prefs.getBoolean(
+                GAMEPAD_MOTION_SENSORS_PREF_STRING,
+                InputDeviceSensorPolicy.defaultEnabled(Build.VERSION.SDK_INT)
+            )
             config.gamepadMotionSensorsFallbackToDevice = prefs.getBoolean(GAMEPAD_MOTION_FALLBACK_PREF_STRING, DEFAULT_GAMEPAD_MOTION_FALLBACK)
             config.enableSimplifyPerfOverlay = false
 
@@ -1670,6 +1693,11 @@ class PreferenceConfiguration {
             // 横屏时快捷卡片默认不开启
             val defaultQuickKeyCard = config.width <= config.height
             config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, defaultQuickKeyCard)
+            // Preserve the historical capability-driven behavior for existing installs.
+            config.showWaveformHapticsCard = prefs.getBoolean(
+                SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+                true
+            )
 
             // 读取麦克风设置
             config.enableMic = prefs.getBoolean(ENABLE_MIC_PREF_STRING, DEFAULT_ENABLE_MIC)

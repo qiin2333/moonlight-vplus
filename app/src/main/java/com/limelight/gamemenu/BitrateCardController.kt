@@ -52,7 +52,6 @@ internal data class DisplayScaleState(
 
 internal data class BitrateCardState(
     val progress: Float,
-    val currentBitrateKbps: Int,
     val maxProgress: Int,
     val maxBitrateKbps: Int,
     val adaptiveBitrate: Boolean,
@@ -63,7 +62,9 @@ internal data class BitrateCardState(
     val frameRates: List<DisplayChoice>,
     val screenModes: List<DisplayChoice>,
     val hapticMode: BitrateCardController.HapticMode,
-    val displayScale: DisplayScaleState = DisplayScaleState()
+    val displayScale: DisplayScaleState = DisplayScaleState(),
+    val screenModeLabel: String = screenModes.firstOrNull { it.selected }?.label ?: "—",
+    val bitrateUpdating: Boolean = false
 ) {
     val selectedBitrateKbps: Int
         get() = BitrateCardController.progressToBitrateKbps(progress.roundToInt(), maxProgress)
@@ -274,9 +275,12 @@ internal class BitrateCardController(
     )
 
     private var abrListener: ((Int, String) -> Unit)? = null
+    private var abrListenerGeneration = 0L
     private var onStateChanged: ((BitrateCardState) -> Unit)? = null
+    private var menuGeneration = 0L
     private var userTracking = false
     private var bitrateToast: Toast? = null
+    private val bitrateRequests = BitrateAdjustmentQueue()
     private val maxProgress = maxProgressFor(supportsExtendedBitrate)
     private val maxBitrateKbps = progressToBitrateKbps(maxProgress, maxProgress)
 
@@ -302,24 +306,30 @@ internal class BitrateCardController(
 
     fun snapshot(): BitrateCardState = state
 
-    fun start(onStateChanged: (BitrateCardState) -> Unit) {
+    fun start(onStateChanged: (BitrateCardState) -> Unit): Long {
         dispose()
+        val generation = ++menuGeneration
         invalidateChoiceCaches()
         this.onStateChanged = onStateChanged
+        appliedDraft = currentDraft()
+        draft = appliedDraft
         state = createState(conn.currentBitrate)
-        emitState()
         bindAbrListener()
         refreshDisplayScale()
+        return generation
     }
 
     private fun bindAbrListener() {
         val service = game.adaptiveBitrateService ?: return
+        val generation = ++abrListenerGeneration
         val listener: (Int, String) -> Unit = { kbps, _ ->
             game.runOnUiThread {
-                if (!userTracking) {
+                if (generation == abrListenerGeneration && game.conn === conn &&
+                    game.adaptiveBitrateService === service &&
+                    !userTracking && !bitrateRequests.isBusy
+                ) {
                     state = state.copy(
-                        progress = bitrateToProgress(kbps, maxProgress).toFloat(),
-                        currentBitrateKbps = kbps
+                        progress = bitrateToProgress(kbps, maxProgress).toFloat()
                     )
                     emitState()
                 }
@@ -343,7 +353,7 @@ internal class BitrateCardController(
             game.startAdaptiveBitrateIfEnabled()
             bindAbrListener()
         } else {
-            abrListener = null
+            unbindAbrListener()
             game.stopAdaptiveBitrate()
         }
         state = createState(conn.currentBitrate)
@@ -355,6 +365,7 @@ internal class BitrateCardController(
         game.prefConfig.abrMode = mode
         game.prefConfig.writeDisplayPreferences(game)
         if (game.prefConfig.enableAdaptiveBitrate) {
+            unbindAbrListener()
             game.stopAdaptiveBitrate()
             game.startAdaptiveBitrateIfEnabled()
             bindAbrListener()
@@ -540,17 +551,18 @@ internal class BitrateCardController(
         userTracking = true
         state = state.copy(progress = bounded)
         emitState()
-        val keyNodes = SEGMENT_BOUNDARIES + maxProgress
         return changed && when (state.hapticMode) {
             HapticMode.ALL -> true
-            HapticMode.KEY_NODES -> currentStep in keyNodes
+            HapticMode.KEY_NODES -> currentStep in SEGMENT_BOUNDARIES || currentStep == maxProgress
             HapticMode.NONE -> false
         }
     }
 
     fun applySelectedBitrate() {
         userTracking = false
-        adjustBitrate(state.selectedBitrateKbps)
+        val request = bitrateRequests.submit(state.selectedBitrateKbps)
+        emitState()
+        request?.let { adjustBitrate(it) }
     }
 
     fun cycleHapticMode() {
@@ -561,16 +573,23 @@ internal class BitrateCardController(
         Toast.makeText(game, mode.label(game), Toast.LENGTH_SHORT).show()
     }
 
-    private fun dispose() {
+    private fun unbindAbrListener() {
+        ++abrListenerGeneration
         val listener = abrListener
         if (listener != null && game.adaptiveBitrateService?.bitrateListener === listener) {
             game.adaptiveBitrateService?.bitrateListener = null
         }
         abrListener = null
+    }
+
+    private fun dispose() {
+        unbindAbrListener()
         userTracking = false
     }
 
-    fun stop() {
+    fun stop(expectedMenuGeneration: Long? = null) {
+        // Dialog dismissal can be delivered after a replacement menu has subscribed.
+        if (expectedMenuGeneration != null && expectedMenuGeneration != menuGeneration) return
         dispose()
         ++displayScaleRequestGeneration
         displayScaleThread?.interrupt()
@@ -586,8 +605,10 @@ internal class BitrateCardController(
         val frameRates = frameRateChoices(frameRate)
         val screenModes = screenModeChoices(screenMode)
         return BitrateCardState(
-            progress = bitrateToProgress(kbps, maxProgress).toFloat(),
-            currentBitrateKbps = kbps,
+            progress = bitrateToProgress(
+                bitrateRequests.latestTargetKbps ?: kbps,
+                maxProgress
+            ).toFloat(),
             maxProgress = maxProgress,
             maxBitrateKbps = maxBitrateKbps,
             adaptiveBitrate = game.prefConfig.enableAdaptiveBitrate,
@@ -597,8 +618,10 @@ internal class BitrateCardController(
             resolutions = resolutions,
             frameRates = frameRates,
             screenModes = screenModes,
+            screenModeLabel = screenModeLabel(screenMode),
             hapticMode = getHapticMode(game),
-            displayScale = displayScaleState
+            displayScale = displayScaleState,
+            bitrateUpdating = bitrateRequests.isBusy
         )
     }
 
@@ -614,12 +637,10 @@ internal class BitrateCardController(
 
     private fun resolutionChoices(selected: String): List<DisplayChoice> {
         val limits = displayChoiceLimits()
-        val showLow = PreferenceManager.getDefaultSharedPreferences(game)
-            .getBoolean(PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING, false)
         val storeValues = cachedStoreResolutions
             ?: DisplayChoiceLists.resolutionStoreValues(game).also { cachedStoreResolutions = it }
         return DisplayChoiceLists
-            .resolutionValues(storeValues, currentResolutionValue(), showLow, listOf(selected))
+            .resolutionValues(storeValues, currentResolutionValue(), listOf(selected))
             .map { value ->
                 val isSelected = value == selected
                 when (value) {
@@ -635,19 +656,26 @@ internal class BitrateCardController(
                             ?: compactResolutionLabel(value),
                         selected = isSelected,
                         enabled = limits.supportsResolution(value),
-                        subLabel = prettyResolution(value)
+                        subLabel = if (value !in storeValues) {
+                            game.getString(R.string.display_resolution_current_not_saved)
+                        } else {
+                            prettyResolution(value)
+                        }
                     )
                 }
             }
     }
 
+    private fun screenModeLabels(): Map<String, String> = DisplayChoiceLists.labelLookup(
+        game.resources,
+        R.array.screen_combination_mode_names,
+        R.array.screen_combination_mode_values
+    )
+
     private fun screenModeChoices(selected: String): List<DisplayChoice> {
-        val labels = DisplayChoiceLists.labelLookup(
-            game.resources,
-            R.array.screen_combination_mode_names,
-            R.array.screen_combination_mode_values
-        )
-        return game.resources.getStringArray(R.array.screen_combination_mode_values).map { value ->
+        val labels = screenModeLabels()
+        // In-stream actions change topology; startup policies stay in the full settings page.
+        return listOf("2", "4", "3").map { value ->
             DisplayChoice(
                 value = value,
                 label = labels[value] ?: value,
@@ -656,12 +684,16 @@ internal class BitrateCardController(
         }
     }
 
+    private fun screenModeLabel(selected: String): String = screenModeLabels()[selected] ?: selected
+
     private fun emitState() {
         state = state.copy(
             resolutions = resolutionChoices(draft.resolution),
             frameRates = frameRateChoices(draft.frameRate),
             screenModes = screenModeChoices(draft.screenMode),
-            displayScale = displayScaleState
+            screenModeLabel = screenModeLabel(draft.screenMode),
+            displayScale = displayScaleState,
+            bitrateUpdating = bitrateRequests.isBusy
         )
         onStateChanged?.invoke(state)
     }
@@ -703,46 +735,68 @@ internal class BitrateCardController(
         bitrateToast = Toast.makeText(game, message, Toast.LENGTH_SHORT).also { it.show() }
     }
 
-    private fun adjustBitrate(bitrateKbps: Int) {
+    private fun adjustBitrate(request: BitrateAdjustmentQueue.Request, showProgress: Boolean = true) {
         try {
-            showBitrateToast(game.getString(R.string.toast_adjusting_bitrate))
-            conn.setBitrate(bitrateKbps, object : NvConnection.BitrateAdjustmentCallback {
+            if (showProgress && onStateChanged != null) {
+                showBitrateToast(game.getString(R.string.toast_adjusting_bitrate))
+            }
+            conn.setBitrate(request.bitrateKbps, object : NvConnection.BitrateAdjustmentCallback {
                 override fun onSuccess(newBitrate: Int) {
                     game.runOnUiThread {
-                        game.prefConfig.bitrate = newBitrate
-                        game.prefConfig.writeDisplayPreferences(game)
-                        game.adaptiveBitrateService?.notifyManualOverride(newBitrate)
-                        state = state.copy(
-                            progress = bitrateToProgress(newBitrate, maxProgress).toFloat(),
-                            currentBitrateKbps = newBitrate
-                        )
-                        emitState()
-                        showBitrateToast(
-                            game.getString(R.string.game_menu_bitrate_adjustment_success, newBitrate / 1000)
-                        )
+                        completeBitrateAdjustment(request, newBitrate)
                     }
                 }
 
                 override fun onFailure(errorMessage: String) {
                     game.runOnUiThread {
-                        val actualBitrate = conn.currentBitrate
-                        state = state.copy(
-                            progress = bitrateToProgress(actualBitrate, maxProgress).toFloat(),
-                            currentBitrateKbps = actualBitrate
-                        )
-                        emitState()
-                        showBitrateToast(
-                            game.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage
-                        )
+                        completeBitrateAdjustment(request, conn.currentBitrate, errorMessage)
                     }
                 }
             })
         } catch (e: Exception) {
             game.runOnUiThread {
-                showBitrateToast(
-                    game.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + e.message
-                )
+                completeBitrateAdjustment(request, conn.currentBitrate, e.message.orEmpty())
             }
+        }
+    }
+
+    private fun completeBitrateAdjustment(
+        request: BitrateAdjustmentQueue.Request,
+        confirmedBitrateKbps: Int,
+        errorMessage: String? = null
+    ) {
+        if (game.conn !== conn || game.isFinishing || game.isDestroyed) {
+            bitrateRequests.discard()
+            return
+        }
+        val completion = bitrateRequests.complete(
+            request, confirmedBitrateKbps.takeIf { errorMessage == null }, userTracking
+        ) ?: return
+        if (errorMessage == null) {
+            game.prefConfig.bitrate = confirmedBitrateKbps
+            game.prefConfig.writeDisplayPreferences(game)
+            game.adaptiveBitrateService?.notifyManualOverride(confirmedBitrateKbps)
+        }
+        state = state.copy(
+            progress = if (completion.settleSelection) {
+                bitrateToProgress(confirmedBitrateKbps, maxProgress).toFloat()
+            } else {
+                state.progress
+            }
+        )
+        emitState()
+        completion.nextRequest?.let { adjustBitrate(it, showProgress = false) }
+        if (completion.reportResult && onStateChanged != null) {
+            showBitrateToast(
+                if (errorMessage == null) {
+                    game.getString(
+                        R.string.game_menu_bitrate_adjustment_success,
+                        confirmedBitrateKbps / 1000
+                    )
+                } else {
+                    game.getString(R.string.game_menu_bitrate_adjustment_failed) + ": " + errorMessage
+                }
+            )
         }
     }
 }

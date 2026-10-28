@@ -1,7 +1,6 @@
 package com.limelight.binding.input.virtual_controller
 
 import android.content.Context
-import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -45,10 +44,7 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +56,7 @@ import com.limelight.gamemenu.GameMenuVerticalScrollbar
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.utils.AppActionSheet
 import com.limelight.ui.theme.AppShapes
+import com.limelight.ui.theme.AppOverlayWidths
 import com.limelight.utils.appAccentSoftColor
 
 /** Stream-local input owner. Neither USB snapshots nor framework axes may reach the host. */
@@ -141,10 +138,6 @@ internal class VirtualControllerOptionsDialog(
                     var cancelPlaced by remember { mutableStateOf(false) }
                     var viewportHeightPx by remember { mutableIntStateOf(0) }
                     val inputMode = LocalInputModeManager.current
-                    val configuration = LocalConfiguration.current
-                    val windowWidth = with(LocalDensity.current) {
-                        LocalWindowInfo.current.containerSize.width.toDp()
-                    }
                     val scrollState = rememberScrollState()
                     scrollBy = { scrollState.dispatchRawDelta(it) }
 
@@ -184,16 +177,7 @@ internal class VirtualControllerOptionsDialog(
                     }
 
                     GameMenuDialogShell(
-                        widthFraction = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                            0.98f
-                        } else {
-                            0.95f
-                        },
-                        horizontalInset = if (windowWidth >= 576.dp) {
-                            GameMenuDimens.wideScreenInset
-                        } else {
-                            GameMenuDimens.compactScreenInset
-                        },
+                        maxMenuWidth = AppOverlayWidths.compact,
                         onDismissRequest = {
                             if (closeConfirmation?.invoke() != true) cancel()
                         }

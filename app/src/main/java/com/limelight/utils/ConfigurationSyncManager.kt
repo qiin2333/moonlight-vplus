@@ -21,6 +21,7 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.DirectConfigTransfer
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.preferences.BackgroundSource
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
 import com.limelight.preferences.TouchpadInputPreferences
@@ -176,6 +177,8 @@ class ConfigurationSyncManager(private val context: Context) {
 
     @Throws(JSONException::class)
     fun exportSyncPackage(): String {
+        // Materialize implicit defaults so restoring a fresh-install backup replaces a later list too.
+        CustomResolutionsStore.load(context)
         val sections = JSONObject()
             .put(
                 SECTION_DEFAULT_PREFERENCES,
@@ -474,6 +477,7 @@ class ConfigurationSyncManager(private val context: Context) {
                 PreferenceManager.getDefaultSharedPreferences(context)
             )
         }
+        CustomResolutionsStore.migrateLegacyLowResolutionPresets(context)
         if (defaultPreferencesImported > 0 || oscSettingsButtonImported > 0 || oscLayoutProfilesImported > 0) {
             context.sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH))
         }
@@ -3348,6 +3352,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_show_display_settings_card",
             "checkbox_show_guide_button",
             "checkbox_show_gyro_card",
+            PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
             MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
             PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
             "checkbox_show_onscreen_controls",

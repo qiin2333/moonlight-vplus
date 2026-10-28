@@ -35,16 +35,9 @@ internal object DisplayChoiceLists {
     fun resolutionValues(
         storeValues: List<String>,
         currentResolution: String,
-        showLowResolutionPresets: Boolean,
         retainedValues: List<String> = emptyList()
     ): List<String> {
-        val retained = listOf(currentResolution) + retainedValues
-        val lowPresets = if (showLowResolutionPresets || retained.any(PreferenceConfiguration::isLowResolutionPreset)) {
-            listOf(PreferenceConfiguration.RES_360P, PreferenceConfiguration.RES_480P)
-        } else {
-            emptyList()
-        }
-        val values = (lowPresets + storeValues + retained)
+        val values = (storeValues + currentResolution + retainedValues)
             .filter(::isFixedResolution)
             .distinct()
             .sortedWith(compareBy(resolutionOrder) { ResolutionValidator.parseResolution(it)!! })
@@ -87,10 +80,9 @@ internal object DisplayChoiceLists {
         return PreferenceConfiguration.getDefaultBitrate(resolved, frameRate)
     }
 
-    /** 商店列表；清空视为未显式配置，候选列表回退出厂基线档（编辑器内仍显示真实空列表）。 */
+    /** 已保存的列表；空列表也是用户的显式选择。 */
     fun resolutionStoreValues(context: Context): List<String> =
         CustomResolutionsStore.load(context).map { it.toString() }
-            .ifEmpty { CustomResolutionsStore.DEFAULT_RESOLUTIONS.map { it.toString() } }
 
     fun labelLookup(res: android.content.res.Resources, namesRes: Int, valuesRes: Int): Map<String, String> {
         val names = res.getStringArray(namesRes)

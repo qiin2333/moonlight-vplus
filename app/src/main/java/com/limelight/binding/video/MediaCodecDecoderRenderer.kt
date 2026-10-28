@@ -1,5 +1,6 @@
 package com.limelight.binding.video
 
+import com.limelight.R
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -3103,8 +3104,8 @@ class MediaCodecDecoderRenderer(
                 totalFramesExpected * 100f
         }
 
-        return String.format(
-            "[精确同步: %d渲染/%d接收, 跳帧率: %.1f%%]",
+        return context.getString(
+            R.string.stats_precise_sync,
             globalVideoStats.totalFramesRendered,
             globalVideoStats.totalFramesReceived,
             skipRate

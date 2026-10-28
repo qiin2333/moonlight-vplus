@@ -87,6 +87,18 @@ class ConfigurationSyncSchemaTest {
     }
 
     @Test
+    fun android12MotionSensorConfirmationStaysDeviceLocal() {
+        assertTrue(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey("checkbox_gamepad_motion_sensors")
+        )
+        assertFalse(
+            ConfigurationSyncManager.isPortableDefaultPreferenceKey(
+                PreferenceConfiguration.GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING
+            )
+        )
+    }
+
+    @Test
     fun microphoneSettingsKeepPolicyPortableAndLastHostStateLocal() {
         listOf(
             MicrophoneButtonPreferences.KEY_SHOW_BUTTON,

@@ -9,6 +9,7 @@ import com.limelight.binding.input.GenericControllerContext
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.DriverControllerContext
 import com.limelight.nvstream.Ds5HapticsPcmFrame
+import com.limelight.nvstream.Ds5HapticsState
 import com.limelight.nvstream.jni.MoonBridge
 import java.util.concurrent.ConcurrentHashMap
 
@@ -31,6 +32,9 @@ internal class ControllerHapticsCoordinator(
     private val mixer = ControllerHapticsMixer()
     private val deviceMixer = ControllerHapticsMixer()
     private val ds5HapticsBindings = ConcurrentHashMap<Int, NativeHapticsBinding>()
+    private val ds5ControlStates = mutableMapOf<Short, Ds5HapticsState>()
+    // Absent: no PCM yet; false: only silence observed; true: nonzero content already logged.
+    private val pcmSeenNonzero = mutableMapOf<Short, Boolean>()
     private val ds5LifecycleLock = Any()
     private val outputLifecycle = ControllerOutputLifecycle()
     private var ds5LifecycleGeneration = 0L
@@ -93,8 +97,8 @@ internal class ControllerHapticsCoordinator(
     private var audioController: Short? = null
     private var lastAudioContinuousState = ControllerRumbleState.ZERO
     private var lastAudioContinuousExpiresAtMs: Long? = null
-    private var stopping = false
-    private var stopped = false
+    @Volatile private var stopping = false
+    @Volatile private var stopped = false
 
     private val expiryRunnable = Runnable {
         if (stopped || stopping || handler.stopped) return@Runnable
@@ -421,10 +425,24 @@ internal class ControllerHapticsCoordinator(
         }
     }
 
-    private val pcmFallback = AuthoredPcmFallback()
+    private val pcmRouter = AuthoredPcmOutputRouter()
     private data class PendingPcm(val state: ControllerRumbleState, val expiresAt: Long, val generation: Long)
     private val pendingPcm = mutableMapOf<Short, PendingPcm>()
     private var pcmDispatchPending = false
+
+    fun submitDs5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {
+        val generation = outputLifecycle.capture(controllerNumber) ?: return
+        // State and PCM arrive on the control receive thread. Publish here, before a later
+        // PCM callback can reach its sink; updateControl only accepts state, never transport I/O.
+        synchronized(ds5LifecycleLock) {
+            if (!outputLifecycle.isCurrent(controllerNumber, generation) || isStoppingOrStopped()) return
+            if (ds5ControlStates.put(controllerNumber, state) == null) {
+                LimeLog.info("DualSense authored control state received: player=$controllerNumber")
+            }
+            ds5HapticsBindings.values.filter { it.controllerNumber == controllerNumber }
+                .forEach { it.sink.updateControl(state) }
+        }
+    }
 
     fun submitDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
         if (isStoppingOrStopped()) return
@@ -432,13 +450,21 @@ internal class ControllerHapticsCoordinator(
         var failedBinding: NativeHapticsBinding? = null
         val dispatch = synchronized(ds5LifecycleLock) {
             if (!outputLifecycle.isCurrent(frame.controllerNumber, generation) || isStoppingOrStopped()) return
-            val reduced = pcmFallback.accept(frame) ?: return
             val binding = ds5HapticsBindings.values.firstOrNull { it.controllerNumber == frame.controllerNumber }
-            var direct = handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE &&
-                binding?.sink?.isOperational == true
-            if (direct) direct = runCatching { binding!!.sink.submit(frame) }.isSuccess
-            if (binding != null && (!binding.sink.isOperational ||
-                    (handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE && !direct))) {
+            val delivery = pcmRouter.submit(frame, binding?.sink,
+                handler.prefConfig.gameRumbleMode != GameRumbleMode.DEVICE) ?: return
+            val direct = delivery.direct
+            val seenNonzero = pcmSeenNonzero[frame.controllerNumber]
+            if (seenNonzero != true) {
+                val nonzero = frame.pcm.any { it != 0.toByte() }
+                if (seenNonzero == null || nonzero) {
+                    LimeLog.info("Authored PCM: player=${frame.controllerNumber} nonzero=$nonzero " +
+                        "direct=$direct sink=${binding?.sink?.javaClass?.simpleName ?: "none"} " +
+                        "control=${ds5ControlStates.containsKey(frame.controllerNumber)}")
+                }
+                pcmSeenNonzero[frame.controllerNumber] = nonzero
+            }
+            if (binding != null && delivery.failedSink) {
                 val entry = ds5HapticsBindings.entries.firstOrNull { it.value === binding }
                 if (entry != null && ds5HapticsBindings.remove(entry.key, binding)) failedBinding = binding
             }
@@ -446,7 +472,7 @@ internal class ControllerHapticsCoordinator(
             // the old generation before the main thread withdrew the controller.
             synchronized(pendingPcm) {
                 pendingPcm[frame.controllerNumber] = PendingPcm(
-                    if (direct) ControllerRumbleState.ZERO else reduced,
+                    delivery.fallback,
                     SystemClock.elapsedRealtime() + 50, generation)
                 if (pcmDispatchPending) false else {
                     pcmDispatchPending = true
@@ -529,6 +555,7 @@ internal class ControllerHapticsCoordinator(
                 }
             }
 
+            synchronized(ds5LifecycleLock) { ds5ControlStates[controllerNumber]?.let(sink::updateControl) }
             if (!runCatching { sink.start() }.getOrDefault(false)) {
                 onAvailability(HapticAvailability.FAILED)
                 synchronized(ds5LifecycleLock) {
@@ -546,6 +573,8 @@ internal class ControllerHapticsCoordinator(
                     false
                 } else {
                     ds5RequestedGenerations.remove(controllerId)
+                    // Host controls may have changed while transport startup was in flight.
+                    ds5ControlStates[controllerNumber]?.let(sink::updateControl)
                     ds5HapticsBindings.remove(controllerId)?.let(replaced::add)
                     // In single-controller mode several devices may share player 0. Preserve the
                     // historical latest-attached-wins policy without dropping the working sink
@@ -631,7 +660,9 @@ internal class ControllerHapticsCoordinator(
     fun retireController(controllerNumber: Short) {
         synchronized(ds5LifecycleLock) {
             outputLifecycle.retire(controllerNumber)
-            pcmFallback.reset(controllerNumber)
+            pcmRouter.reset(controllerNumber)
+            ds5ControlStates.remove(controllerNumber)
+            pcmSeenNonzero.remove(controllerNumber)
             synchronized(pendingPcm) { pendingPcm.remove(controllerNumber) }
         }
         runOnOutputThread {
@@ -656,6 +687,8 @@ internal class ControllerHapticsCoordinator(
         stopAllNow()
         val bindings = synchronized(ds5LifecycleLock) {
             ds5RequestedGenerations.clear()
+            ds5ControlStates.clear()
+            pcmSeenNonzero.clear()
             ds5LifecycleGeneration++
             ds5HapticsBindings.values.toList().also { ds5HapticsBindings.clear() }
         }

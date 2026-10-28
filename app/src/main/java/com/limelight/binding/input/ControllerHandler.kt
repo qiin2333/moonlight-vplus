@@ -8,6 +8,7 @@ import com.limelight.nvstream.HostGamepadSelection
 import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
+import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.input.InputManager
 import android.hardware.usb.UsbManager
@@ -39,6 +40,7 @@ import com.limelight.binding.input.driver.wireless.dualsense.DirectDualSenseBlue
 import com.limelight.binding.input.haptics.ControllerHapticsCoordinator
 import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
 import com.limelight.nvstream.Ds5HapticsPcmFrame
+import com.limelight.nvstream.Ds5HapticsState
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.KeyboardPacket
@@ -376,7 +378,6 @@ class ControllerHandler(
     internal val mainThreadHandler: Handler
     private val backgroundHandlerThread: HandlerThread
     internal val backgroundThreadHandler: Handler
-    private val motionHandlerThread: HandlerThread
     internal val motionSender: ControllerMotionSender
     private val stateSender = ControllerStateSender { controller, mask, buttons, lt, rt, lx, ly, rx, ry ->
         conn.sendControllerInputChecked(controller, mask, buttons, lt, rt, lx, ly, rx, ry)
@@ -411,6 +412,7 @@ class ControllerHandler(
     internal val gyroManager = ControllerGyroManager(this)
     internal val rumbleManager = ControllerRumbleManager(this)
     private val systemWaveformRoutes = ConcurrentHashMap<Int, SystemWaveformRoute>()
+    private val directWaveformRouteIds = ConcurrentHashMap<Int, Int>()
     private val waveformCapabilities = ConcurrentHashMap<Int, HapticRouteSnapshot>()
     private val retiredWaveformRoutes = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
     private val hapticsCoordinator = ControllerHapticsCoordinator(this)
@@ -436,25 +438,13 @@ class ControllerHandler(
         backgroundHandlerThread.start()
         backgroundThreadHandler = Handler(backgroundHandlerThread.looper)
 
-        motionHandlerThread = HandlerThread("ControllerMotion")
-        motionHandlerThread.start()
-        val motionHandler = Handler(motionHandlerThread.looper)
-        motionSender = ControllerMotionSender(
-            schedule = { task, delayMs -> motionHandler.postDelayed(task, delayMs); Unit },
-            cancel = { task -> motionHandler.removeCallbacks(task) },
-            send = { controller, type, x, y, z ->
-                val gyroStop = type == MoonBridge.LI_MOTION_TYPE_GYRO && x == 0f && y == 0f && z == 0f
-                val localGyro = type == MoonBridge.LI_MOTION_TYPE_GYRO &&
-                    (gyroManager.isMouseMode || gyroManager.isRightStickMode) &&
-                    gyroManager.isGyroHoldActiveFor(controller)
-                if (!stopped && isControllerSlotEnabled(controller) &&
-                    (gyroStop || (!isControllerLocallyCaptured(controller) && !localGyro))) {
-                    conn.sendControllerMotionEvent(controller.toByte(), type, x, y, z)
-                } else {
-                    0
-                }
-            }
-        )
+        motionSender = ControllerMotionSender(conn) { controller, type, gyroStop ->
+            val localGyro = type == MoonBridge.LI_MOTION_TYPE_GYRO &&
+                (gyroManager.isMouseMode || gyroManager.isRightStickMode) &&
+                gyroManager.isGyroHoldActiveFor(controller)
+            !stopped && isControllerSlotEnabled(controller) &&
+                (gyroStop || (!isControllerLocallyCaptured(controller) && !localGyro))
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             prefConfig.dualSenseDirectBluetooth &&
@@ -468,6 +458,7 @@ class ControllerHandler(
                         inputDeviceContexts.valueAt(index)
                             .directDualSenseBluetoothOutput?.onTransportReady()
                     }
+                    refreshDirectBluetoothWaveformRoutes()
                 }
             }.also { it.start() }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -968,13 +959,15 @@ class ControllerHandler(
         // Flush rumble while device contexts and HOST fallback paths are still available.
         systemWaveformRoutes.values.forEach { it.sink.stop() }
         systemWaveformRoutes.clear()
+        directWaveformRouteIds.clear()
         waveformCapabilities.clear()
         hapticsCoordinator.stop()
 
         // Stop new device contexts from being created or used
-        stopped = true
-        motionSender.close()
-        motionHandlerThread.quitSafely()
+        withControllerInputLock {
+            stopped = true
+            motionSender.close()
+        }
 
         // Unregister our input device callbacks
         inputManager.unregisterInputDeviceListener(this)
@@ -1417,7 +1410,11 @@ class ControllerHandler(
                     0, controllerArrivalMetadata[0] ?: ControllerArrivalMetadata(
                         MoonBridge.LI_CTYPE_XBOX, STANDARD_GAMEPAD_BUTTON_FLAGS, 0))
             } else context.sendControllerArrival()
-            context.controllerArrival.recordAttempt(result)
+            context.controllerArrival.recordAttempt(result).also { reported ->
+                if (reported && context is InputDeviceContext) {
+                    mainThreadHandler.post { refreshDirectBluetoothWaveformRoutes() }
+                }
+            }
         }
 
     private fun slotOrder(context: GenericControllerContext): List<Int> =
@@ -1604,8 +1601,9 @@ class ControllerHandler(
 
         // InputDevice sensors were added in Android 12, but Android 12 and 12L can crash on a
         // background SensorThread after InputDeviceSensorManager observes a removed device.
-        // Merely accessing dev.sensorManager creates that manager, so don't touch it before
-        // Android 13. Device-level sensor fallback uses the regular SensorManager and remains safe.
+        // Merely accessing dev.sensorManager creates that manager, so keep it disabled by default
+        // on Android 12/12L. Only the explicit compatibility opt-in may touch it there.
+        // Device-level sensor fallback uses the regular SensorManager and remains safe.
         // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             InputDeviceSensorPolicy.shouldUse(
@@ -3508,7 +3506,6 @@ class ControllerHandler(
         ((ANDROID_TO_LI_BUTTON_MAP[keyCode] ?: 0) and USB_MENU_DIRECTION_MASK) != 0
 
     private fun sendNeutralControllerState(context: GenericControllerContext) {
-        motionSender.reset(context.controllerNumber)
         motionSender.stopGyro(context.controllerNumber)
         context.performanceOverlayShortcutState.reset()
         if (context.gyroHoldActive) {
@@ -3731,8 +3728,10 @@ class ControllerHandler(
 
     override fun reportControllerMotion(controllerId: Int, motionType: Byte, x: Float, y: Float, z: Float) {
         val context = driverControllerContexts[controllerId] ?: return
-        if (routeDriverMotion(context, motionType, x, y, z)) {
-            motionSender.submit(context.controllerNumber, motionType, x, y, z)
+        withControllerInputLock {
+            if (routeDriverMotion(context, motionType, x, y, z)) {
+                motionSender.submit(context.controllerNumber, motionType, x, y, z)
+            }
         }
     }
 
@@ -3740,19 +3739,21 @@ class ControllerHandler(
         controllerId: Int, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float
     ) {
         val context = driverControllerContexts[controllerId] ?: return
-        if (!isContextUsable(context)) return
-        val gyro = routeDriverMotion(context, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
-        val accel = routeDriverMotion(context, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
-        if (gyro && accel) {
-            motionSender.submitFrame(context.controllerNumber, gx, gy, gz, ax, ay, az)
-        } else {
-            if (gyro) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
-            else motionSender.pauseGyro(context.controllerNumber, onlyPaired = true)
-            if (accel) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
+        withControllerInputLock {
+            if (!isContextUsable(context)) return@withControllerInputLock
+            val gyro = routeDriverMotion(context, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
+            val accel = routeDriverMotion(context, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
+            if (gyro && accel) {
+                motionSender.submitFrame(context.controllerNumber, gx, gy, gz, ax, ay, az)
+            } else {
+                if (gyro) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
+                else motionSender.pauseGyro(context.controllerNumber, onlyFromFrame = true)
+                if (accel) motionSender.submit(context.controllerNumber, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
+            }
         }
     }
 
-    /** Local gyro consumers run on every source sample, before host forwarding is limited. */
+    /** Local gyro consumers run on every source sample, before host forwarding. */
     private fun routeDriverMotion(
         context: DriverControllerContext, motionType: Byte, x: Float, y: Float, z: Float
     ): Boolean {
@@ -3895,6 +3896,53 @@ class ControllerHandler(
         var inputId: Int? = null, var player: Short? = null
     )
 
+    internal fun releaseDirectBluetoothHaptics(inputId: Int) {
+        directWaveformRouteIds.remove(inputId)?.let { id ->
+            retiredWaveformRoutes.add(id)
+            waveformCapabilities.remove(id)
+            onSystemWaveformSinkGone(id)
+        }
+    }
+
+    private fun refreshDirectBluetoothWaveformRoutes() {
+        if (stopped || !prefConfig.allowExperimentalHaptics || !prefConfig.dualSenseDirectBluetooth) return
+        for (index in 0 until inputDeviceContexts.size()) {
+            val context = inputDeviceContexts.valueAt(index)
+            if (!isContextUsable(context) || !context.hasJoystickAxes) continue
+            val output = context.directDualSenseBluetoothOutput ?: continue
+            val previous = directWaveformRouteIds[context.id]?.let(systemWaveformRoutes::get)
+            if (previous?.player != null && previous.player != context.controllerNumber) {
+                releaseDirectBluetoothHaptics(context.id)
+            }
+            val id = directWaveformRouteIds.getOrPut(context.id) {
+                com.limelight.binding.input.driver.ControllerDriverIdAllocator.allocate()
+            }
+            val route = systemWaveformRoutes.getOrPut(id) {
+                val metadata = HapticRouteSnapshot(id, HapticDeviceIdentity(
+                    "android-bt:${context.id}", context.name ?: "DualSense", context.vendorId, context.productId,
+                    HapticTransport.BLUETOOTH), output.waveformCapability(HapticAvailability.INITIALIZING))
+                waveformCapabilities[id] = metadata
+                val sink = output.createHapticsSink {
+                    mainThreadHandler.post {
+                        if (directWaveformRouteIds[context.id] == id) {
+                            releaseDirectBluetoothHaptics(context.id)
+                        }
+                    }
+                }
+                SystemWaveformRoute(metadata, sink, {}, inputId = context.id)
+            }
+            if (route.player != null || !context.assignedControllerNumber ||
+                !context.controllerArrival.isReported || !output.isWaveformReady) continue
+            route.player = context.controllerNumber
+            hapticsCoordinator.attachWaveformHapticsSink(id, context.controllerNumber, route.sink,
+                sourceActive = { isContextUsable(context) }) { state ->
+                updateWaveformAvailability(id, state)
+                LimeLog.info("DualSense Bluetooth waveform: player=${context.controllerNumber} " +
+                    "state=$state pcmRequested=${conn.authoredPcmHapticsRequested}")
+            }
+        }
+    }
+
     override fun onWaveformRouteChanged(route: HapticRouteSnapshot) {
         if (stopped || route.id in retiredWaveformRoutes) return
         val firstObservation = waveformCapabilities.put(route.id, route) == null
@@ -3938,7 +3986,10 @@ class ControllerHandler(
         .map { snapshot ->
             val route = systemWaveformRoutes[snapshot.id]
             val test = route?.sink?.channelTest
-            HapticRouteView(snapshot, route?.player?.toInt(),
+            val visible = if (snapshot.capability.availability == HapticAvailability.READY &&
+                !conn.authoredPcmHapticsRequested) snapshot.copy(capability = snapshot.capability.copy(
+                    availability = HapticAvailability.NEEDS_RECONNECT)) else snapshot
+            HapticRouteView(visible, route?.player?.toInt(),
                 route?.inputId != null && test?.canTest == true, test?.isTesting == true)
         }
 
@@ -3985,6 +4036,7 @@ class ControllerHandler(
         if (stopped) return
         for ((id, route) in systemWaveformRoutes) {
             val identity = route.metadata.device
+            if (identity.transport != HapticTransport.USB) continue
             if (usbHandoff.blocks(UsbControllerHandoff.Identity(identity.vendorId, identity.productId))) continue
             val devices = InputDevice.getDeviceIds().asSequence().mapNotNull(InputDevice::getDevice).filter {
                 it.vendorId == identity.vendorId && it.productId == identity.productId &&
@@ -4015,6 +4067,7 @@ class ControllerHandler(
                 invalidateSystemWaveformRoute(id, route)
             }
         }
+        refreshDirectBluetoothWaveformRoutes()
     }
 
     override fun onDualSenseNativeHapticsSinkGone(controllerId: Int) {
@@ -4045,11 +4098,8 @@ class ControllerHandler(
 
         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
         val requestedReportRateHz = reportRateHz.toInt().coerceIn(0, 200).toShort()
-        // USB and Bluetooth drivers bypass SensorManager. Record host demand before
-        // looking for an InputDevice sensor, and never replace it with assistant demand.
-        if (isHostRequest) {
-            motionSender.setReportRate(controllerNumber, motionType, requestedReportRateHz.toInt())
-        }
+        // common-c records host forwarding demand before dispatching this callback.
+        // This method controls acquisition, including independent local assistance demand.
         val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
             gyroManager.handleControllerGyroReportRate(
                 controllerNumber,
@@ -4120,12 +4170,10 @@ class ControllerHandler(
 
         val sm = target.sensorManager ?: return
         val sensor = sm.getDefaultSensor(sensorType) ?: return
-        val previousListener = when (motionType) {
-            MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener
-            else -> target.gyroListener
-        }
         val listener = gyroManager.createSensorListener(
-            controllerNumber, motionType, sm === deviceSensorManager, { isContextUsable(target) }
+            controllerNumber, motionType, sm === deviceSensorManager,
+            { current -> isContextUsable(target) &&
+                (if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) target.gyroListener else target.accelListener) === current }
         )
 
         if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && controllerNumber.toInt() == 0) {
@@ -4135,19 +4183,20 @@ class ControllerHandler(
         // Register before dropping anything, so a refused registration leaves the working
         // listener in place instead of killing motion input outright.
         if (sm.registerListener(listener, sensor, 1000000 / effectiveReportRateHz)) {
-            previousListener?.let { sm.unregisterListener(it) }
-            when (motionType) {
-                MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
-                MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
-            }
-            // Exactly one context may hold a listener per motion type, otherwise siblings
-            // keep unregistering each other's listener.
-            for (deviceContext in matchingContexts) {
-                if (deviceContext === target) {
-                    continue
+            val replaced = mutableListOf<Pair<InputDeviceContext, SensorEventListener>>()
+            withControllerInputLock {
+                // Publish one owner atomically, including siblings sharing this slot.
+                for (deviceContext in matchingContexts) {
+                    detachMotionListener(deviceContext, motionType)?.let { replaced.add(deviceContext to it) }
                 }
+                when (motionType) {
+                    MoonBridge.LI_MOTION_TYPE_ACCEL -> target.accelListener = listener
+                    MoonBridge.LI_MOTION_TYPE_GYRO -> target.gyroListener = listener
+                }
+            }
+            replaced.forEach { (context, old) -> context.sensorManager?.unregisterListener(old) }
+            for (deviceContext in matchingContexts) {
                 backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
-                unregisterMotionListener(deviceContext, motionType)
             }
         } else if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
             // A refused registration never delivers samples, so the phantom-gyro
@@ -4159,19 +4208,18 @@ class ControllerHandler(
         }
     }
 
-    private fun unregisterMotionListener(context: InputDeviceContext, motionType: Byte) {
-        val sm = context.sensorManager ?: return
-        when (motionType) {
-            MoonBridge.LI_MOTION_TYPE_ACCEL -> context.accelListener?.let {
-                sm.unregisterListener(it)
-                context.accelListener = null
-            }
-            MoonBridge.LI_MOTION_TYPE_GYRO -> context.gyroListener?.let {
-                sm.unregisterListener(it)
-                context.gyroListener = null
+    internal fun unregisterMotionListener(context: InputDeviceContext, motionType: Byte) {
+        detachMotionListener(context, motionType)?.let { context.sensorManager?.unregisterListener(it) }
+    }
+
+    private fun detachMotionListener(context: InputDeviceContext, motionType: Byte): SensorEventListener? =
+        synchronized(arrivalMetadataLock) {
+            when (motionType) {
+                MoonBridge.LI_MOTION_TYPE_ACCEL -> context.accelListener.also { context.accelListener = null }
+                MoonBridge.LI_MOTION_TYPE_GYRO -> context.gyroListener.also { context.gyroListener = null }
+                else -> null
             }
         }
-    }
 
     // ========== Delegation to Managers ==========
 
@@ -4270,5 +4318,9 @@ class ControllerHandler(
 
     fun handleDs5HapticsPcm(frame: Ds5HapticsPcmFrame) {
         hapticsCoordinator.submitDs5HapticsPcm(frame)
+    }
+
+    fun handleDs5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {
+        hapticsCoordinator.submitDs5HapticsState(controllerNumber, state)
     }
 }

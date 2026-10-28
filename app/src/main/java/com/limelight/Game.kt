@@ -2,9 +2,9 @@
 package com.limelight
 
 import com.limelight.ui.ThemedComponentActivity
-import com.limelight.binding.input.driver.UsbWaveformBackends
 
-import android.hardware.usb.UsbManager
+import com.limelight.binding.input.haptics.WaveformHapticsDevices
+import com.limelight.nvstream.Ds5HapticsState
 
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.audio.AndroidAudioRenderer
@@ -40,6 +40,7 @@ import com.limelight.framegen.FramegenPerformanceEnricher
 import com.limelight.framegen.FramegenRuntimeConfig
 import com.limelight.framegen.FramegenRuntimePlanner
 import com.limelight.gamemenu.GameMenu
+import com.limelight.gamemenu.BitrateCardController
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.binding.video.PerfOverlayListener
 import com.limelight.binding.video.PerformanceInfo
@@ -247,6 +248,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForwarding?.let(action)
     }
     private var activeGameMenu: GameMenu? = null
+    private var streamInForeground = false
+    private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
     private var startHoldWheelView: ComposeView? = null
@@ -1216,9 +1219,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         negotiatedHdrEnabled = willStreamHdr && prefConfig.hdrMode != MoonBridge.HDR_MODE_SDR
         framegenInputHdrEnabled = negotiatedHdrEnabled
 
-        val waveformController = UsbWaveformBackends.hasEligibleController(
-            getSystemService(USB_SERVICE) as? UsbManager,
-            prefConfig.allowExperimentalHaptics)
+        val waveformController = WaveformHapticsDevices.hasEligibleController(
+            this, prefConfig.allowExperimentalHaptics, prefConfig.dualSenseDirectBluetooth)
+        val requestAuthoredPcm = prefConfig.hostGamepadSelection.requestsAuthoredPcm(waveformController,
+            prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE)
+        LimeLog.info("Authored haptics session: candidate=$waveformController " +
+            "host=${prefConfig.hostGamepadSelection} experimental=${prefConfig.allowExperimentalHaptics} " +
+            "systemBluetooth=${prefConfig.dualSenseDirectBluetooth} requested=$requestAuthoredPcm")
         val hostGamepad = prefConfig.hostGamepadSelection.resolve(prefConfig.screenDs5Touchpad, waveformController)
         val config = StreamConfiguration.Builder()
             .setResolution(prefConfig.width, prefConfig.height)
@@ -1241,9 +1248,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // — bypasses both PcmPassthroughRenderer and Ac3PassthroughRenderer.
             .setAudioCodec(if (prefConfig.enableAudioPassthrough) prefConfig.audioCodec else MoonBridge.AUDIO_CODEC_OPUS)
             .setAudioBitrate(prefConfig.audioCodecBitrate)
-            .setAuthoredPcmHaptics(prefConfig.hostGamepadSelection.requestsAuthoredPcm(
-                waveformController,
-                prefConfig.gameRumbleMode != com.limelight.binding.input.haptics.GameRumbleMode.DEVICE))
+            .setAuthoredPcmHaptics(requestAuthoredPcm)
             .setHostGamepad(hostGamepad)
             .setColorSpace(decoderRenderer?.getPreferredColorSpace() ?: 0)
             .setColorRange(
@@ -1435,6 +1440,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             updateAudioHapticsRuntimeEnabled(true)
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
+        streamInForeground = true
+        Dialog.setVisibilityListener { updateKeyboardInterception() }
         KeyboardAccessibilityService.connectionListener = keyboardAccessibilityConnectionListener
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
             bindKeyboardAccessibility(KeyboardAccessibilityService.instance)
@@ -1454,7 +1461,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
     private fun bindKeyboardAccessibility(service: KeyboardAccessibilityService?) {
-        KeyboardAccessibilityService.setIntercepting(true)
+        updateKeyboardInterception()
         if (service != null) {
             service.keyEventCallback = this
         } else {
@@ -1884,7 +1891,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.suppress()
         }
-        KeyboardAccessibilityService.setIntercepting(false)
+        streamInForeground = false
+        Dialog.setVisibilityListener(null)
+        updateKeyboardInterception()
         KeyboardAccessibilityService.instance?.keyEventCallback = null
         KeyboardAccessibilityService.connectionListener = null
         KeyboardAccessibilityEnabler.resetForegroundAttempt()
@@ -1898,6 +1907,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         }
         super.onPause()
+    }
+
+    private fun updateKeyboardInterception() {
+        val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog()
+        val intercepting = streamInForeground && !overlayVisible
+        if (!intercepting && KeyboardAccessibilityService.interceptingEnabled) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
+        KeyboardAccessibilityService.setIntercepting(intercepting)
     }
 
     private fun updateAudioHapticsRuntimeEnabled(foreground: Boolean) {
@@ -2825,6 +2843,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.handleDs5HapticsPcm(frame)
     }
 
+    override fun ds5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {
+        controllerHandler.handleDs5HapticsState(controllerNumber, state)
+    }
+
     private fun prepareFramegenSurface(outputSurface: Surface, showEnabledToast: Boolean) {
         releaseFramegenCapture()
 
@@ -3268,6 +3290,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         updatePipAutoEnter()
     }
 
+    internal fun getBitrateCardController(connection: NvConnection): BitrateCardController {
+        bitrateCardControllerCache?.let { (cachedConnection, controller) ->
+            if (cachedConnection === connection) return controller
+            controller.stop()
+        }
+        return BitrateCardController(
+            this,
+            connection,
+            supportsExtendedBitrate = isPyrowaveSessionActive()
+        ).also { bitrateCardControllerCache = connection to it }
+    }
+
     override fun showGameMenu(device: GameInputDevice?): Boolean {
         return showGameMenuInternal(device, openedFromUsbShortcut = false)
     }
@@ -3301,6 +3335,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
                         if (activeGameMenu === dismissedMenu) {
                             activeGameMenu = null
+                            updateKeyboardInterception()
                         }
                         if (::controllerHandler.isInitialized) {
                             controllerHandler.onExternalGameMenuDismissed()
@@ -3310,6 +3345,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                         device?.onGameMenuDismissed()
                     }
                     activeGameMenu = menu
+                    updateKeyboardInterception()
                     val opened = activeGameMenu?.isShowing() == true
                     if (opened && !openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                         controllerHandler.onExternalGameMenuOpened()

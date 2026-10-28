@@ -113,6 +113,8 @@ open class NvConnection(
     /** Host display device id selected when the stream was started, if any. */
     fun displayName(): String? = context.displayName
 
+    val authoredPcmHapticsRequested: Boolean get() = context.streamConfig.authoredPcmHaptics
+
     /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
     fun applyBitrateLocally(bitrateKbps: Int) {
         context.streamConfig.bitrate = bitrateKbps
@@ -701,6 +703,14 @@ open class NvConnection(
             MoonBridge.LI_ERR_UNSUPPORTED
         }
     }
+
+    fun sendControllerMotionFrame(controller: Byte, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): Int =
+        if (!isMonkey) MoonBridge.sendControllerMotionFrame(controller, gx, gy, gz, ax, ay, az)
+        else MoonBridge.LI_ERR_UNSUPPORTED
+
+    fun stopControllerMotionEvent(controller: Byte): Int =
+        if (!isMonkey) MoonBridge.stopControllerMotionEvent(controller)
+        else MoonBridge.LI_ERR_UNSUPPORTED
 
     fun sendControllerBatteryEvent(controllerNumber: Byte, batteryState: Byte, batteryPercentage: Byte): Int =
         MoonBridge.sendControllerBatteryEvent(controllerNumber, batteryState, batteryPercentage)
