@@ -59,11 +59,14 @@ class AuthoredIrTestActivity : Activity() {
             { callback, delay -> ui.postDelayed(callback, delay); Unit }, { ui.removeCallbacks(it) },
             { amplitude, duration ->
                 @Suppress("DEPRECATION")
-                vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude), attributes)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude), attributes)
+                else vibrator.vibrate(duration, attributes)
                 waves.incrementAndGet()
             }, vibrator::cancel, playDeviceTick = if (supportsTick) ({
                 @Suppress("DEPRECATION")
-                vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), attributes)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                    vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), attributes)
                 calls.incrementAndGet()
                 Unit
             }) else null, clockMs = SystemClock::elapsedRealtime)

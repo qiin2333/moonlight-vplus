@@ -658,27 +658,37 @@ void BridgeClDs5HapticsIrExtended(const LI_DS5_HAPTICS_IR_EXTENDED_FRAME* frame)
         features[i*2] = frame->events[i].leftStrength;
         features[i*2+1] = frame->events[i].rightStrength;
     }
-    jfloatArray baseLanes = (*env)->NewFloatArray(env, 10);
-    jfloatArray lanes = (*env)->NewFloatArray(env, 4);
-    jintArray eventIds = (*env)->NewIntArray(env, frame->eventCount);
-    jlongArray eventTimes = (*env)->NewLongArray(env, frame->eventCount);
-    jfloatArray eventFeatures = (*env)->NewFloatArray(env, frame->eventCount * 2);
-    if (!baseLanes || !lanes || !eventIds || !eventTimes || !eventFeatures) {
-        (*env)->ExceptionClear(env);
-    } else {
-        (*env)->SetFloatArrayRegion(env, baseLanes, 0, 10, baseValues);
-        (*env)->SetFloatArrayRegion(env, lanes, 0, 4, values);
-        if (frame->eventCount) {
-            (*env)->SetIntArrayRegion(env, eventIds, 0, frame->eventCount, ids);
-            (*env)->SetLongArrayRegion(env, eventTimes, 0, frame->eventCount, times);
-            (*env)->SetFloatArrayRegion(env, eventFeatures, 0, frame->eventCount * 2, features);
-        }
-        if (!(*env)->ExceptionCheck(env)) (*env)->CallStaticVoidMethod(env, GlobalBridgeClass,
-            BridgeClDs5HapticsIrExtendedMethod, (jshort)frame->base.controllerNumber, (jbyte)frame->base.flags,
-            (jint)frame->base.sourceSequenceNumber, (jlong)frame->base.timestampUs,
-            (jint)frame->base.sourceFrameCount, baseLanes, (jint)frame->epoch,
-            (jlong)frame->windowEndUs, lanes, eventIds, eventTimes, eventFeatures);
+    jfloatArray baseLanes = NULL, lanes = NULL, eventFeatures = NULL;
+    jintArray eventIds = NULL;
+    jlongArray eventTimes = NULL;
+    baseLanes = (*env)->NewFloatArray(env, 10);
+    if (!baseLanes) goto allocation_failed;
+    lanes = (*env)->NewFloatArray(env, 4);
+    if (!lanes) goto allocation_failed;
+    eventIds = (*env)->NewIntArray(env, frame->eventCount);
+    if (!eventIds) goto allocation_failed;
+    eventTimes = (*env)->NewLongArray(env, frame->eventCount);
+    if (!eventTimes) goto allocation_failed;
+    eventFeatures = (*env)->NewFloatArray(env, frame->eventCount * 2);
+    if (!eventFeatures) goto allocation_failed;
+
+    (*env)->SetFloatArrayRegion(env, baseLanes, 0, 10, baseValues);
+    (*env)->SetFloatArrayRegion(env, lanes, 0, 4, values);
+    if (frame->eventCount) {
+        (*env)->SetIntArrayRegion(env, eventIds, 0, frame->eventCount, ids);
+        (*env)->SetLongArrayRegion(env, eventTimes, 0, frame->eventCount, times);
+        (*env)->SetFloatArrayRegion(env, eventFeatures, 0, frame->eventCount * 2, features);
     }
+    if (!(*env)->ExceptionCheck(env)) (*env)->CallStaticVoidMethod(env, GlobalBridgeClass,
+        BridgeClDs5HapticsIrExtendedMethod, (jshort)frame->base.controllerNumber, (jbyte)frame->base.flags,
+        (jint)frame->base.sourceSequenceNumber, (jlong)frame->base.timestampUs,
+        (jint)frame->base.sourceFrameCount, baseLanes, (jint)frame->epoch,
+        (jlong)frame->windowEndUs, lanes, eventIds, eventTimes, eventFeatures);
+    goto cleanup;
+
+allocation_failed:
+    (*env)->ExceptionClear(env);
+cleanup:
     if (baseLanes) (*env)->DeleteLocalRef(env, baseLanes);
     if (lanes) (*env)->DeleteLocalRef(env, lanes);
     if (eventIds) (*env)->DeleteLocalRef(env, eventIds);

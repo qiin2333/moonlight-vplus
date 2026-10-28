@@ -39,14 +39,19 @@ class ControllerRumbleManager(private val handler: ControllerHandler) {
         get() = com.limelight.binding.input.haptics.DeviceDetailProfile.tickIntervalMs(
             Build.MANUFACTURER, Build.MODEL, Build.VERSION.SDK_INT, Build.DISPLAY)
 
-    private val deviceTick by lazy { VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK) }
+    private val deviceTick by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+        else null
+    }
     private val gameVibrationAttributes by lazy {
         AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
     }
 
     /** Called only on the device coordinator's serial worker, never on the receive/UI thread. */
     fun playDeviceDetailTick() {
-        if (supportsDeviceTick) handler.deviceVibrator.vibrate(deviceTick, gameVibrationAttributes)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && supportsDeviceTick)
+            deviceTick?.let { handler.deviceVibrator.vibrate(it, gameVibrationAttributes) }
     }
 
     private data class BaseRumble(val lowFrequency: Short, val highFrequency: Short)

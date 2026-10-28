@@ -15,14 +15,17 @@ internal class AuthoredIrTimeline {
     private var sequence: Int? = null
     private var lastSourceUs: Long? = null
     private var offsetUs = 0L
+    private var clockWindowStartUs = 0L
+    private var clockWindowSourceUs = 0L
+    private var clockWindowMinGapUs = 0L
     private var body = ControllerRumbleState.ZERO
     private var expiresUs = Long.MIN_VALUE
     private var dirty = false
     private var pendingReset = false
     private var ended = true
     private var terminal = false
-    private val events = PriorityQueue<Event>(compareBy { it.value.sourceTimeUs })
-    private val states = PriorityQueue<State>(compareBy { it.sourceUs })
+    private val events = PriorityQueue<Event>(MAX_EVENTS, compareBy { it.value.sourceTimeUs })
+    private val states = PriorityQueue<State>(MAX_STATES, compareBy { it.sourceUs })
     private val seenIds = LinkedHashSet<Int>()
 
     val queuedEvents: Int get() = events.size
@@ -45,9 +48,22 @@ internal class AuthoredIrTimeline {
             if (changedEpoch) seenIds.clear()
             terminal = false
             offsetUs = nowUs - frame.windowEndUs
+            clockWindowStartUs = nowUs
+            clockWindowSourceUs = frame.windowEndUs
+            clockWindowMinGapUs = offsetUs
         } else if (latest) {
-            // Delayed packets never move the source clock forward or become newly fresh.
-            offsetUs = minOf(offsetUs, nowUs - frame.windowEndUs)
+            val gap = nowUs - frame.windowEndUs
+            clockWindowMinGapUs = minOf(clockWindowMinGapUs, gap)
+            offsetUs = minOf(offsetUs, gap)
+            if (nowUs - clockWindowStartUs >= CLOCK_WINDOW_US) {
+                // Re-anchor to a window minimum only after sustained source progress.
+                // A lone backlogged packet or a burst cannot make itself newly fresh.
+                if (frame.windowEndUs - clockWindowSourceUs >= CLOCK_WINDOW_US / 2)
+                    offsetUs = clockWindowMinGapUs
+                clockWindowStartUs = nowUs
+                clockWindowSourceUs = frame.windowEndUs
+                clockWindowMinGapUs = gap
+            }
         }
         val mappedEnd = frame.windowEndUs + offsetUs
         if (nowUs - mappedEnd > FRAME_FRESH_US && !frame.ended) return false
@@ -126,6 +142,7 @@ internal class AuthoredIrTimeline {
 
     companion object {
         const val MAX_EVENTS = 64
+        private const val CLOCK_WINDOW_US = 1_000_000L
         private const val MAX_STATES = 16
         const val PLAYOUT_LEAD_US = 20_000L
         private const val SEEN_IDS = 512

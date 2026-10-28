@@ -71,4 +71,29 @@ class AuthoredIrTimelineTest {
         assertTrue(reset.reset)
         assertTrue(reset.body.isZero)
     }
+    @Test fun sourceClockDriftDoesNotPermanentlyExpireTheStream() {
+        val timeline = AuthoredIrTimeline()
+        repeat(3600) { seq ->
+            val now = 1_000_000L + seq * 1_000_000L
+            val source = seq * 999_950L // Host runs 50 ppm slower for one hour.
+            assertTrue("clock drift at $seq", timeline.accept(frame(seq, source), now))
+            assertFalse(timeline.poll(now + 20_000)!!.ended)
+        }
+    }
+
+    @Test fun aSourcePauseRecoversOnlyAfterSustainedProgress() {
+        val timeline = AuthoredIrTimeline()
+        timeline.accept(frame(0, 0), 1_000_000)
+        timeline.poll(1_020_000)
+        assertFalse(timeline.accept(frame(1, 5_000), 3_000_000))
+        assertTrue(timeline.poll(3_000_000)!!.ended)
+        var accepted = false
+        for (seq in 2..221) {
+            val now = 3_000_000L + (seq - 1) * 5_000L
+            accepted = timeline.accept(frame(seq), now)
+            timeline.poll(now + 20_000)
+        }
+        assertTrue(accepted)
+    }
+
 }
