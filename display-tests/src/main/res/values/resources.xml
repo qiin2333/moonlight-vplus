@@ -1,5 +1,0 @@
-<resources>
-    <color name="scene_color_1">#ffffff</color>
-    <string name="toast_external_display_disconnected">disconnected</string>
-    <string name="toast_switched_to_external_display">connected</string>
-</resources>
