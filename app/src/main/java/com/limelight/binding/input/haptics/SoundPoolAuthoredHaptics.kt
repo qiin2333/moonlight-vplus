@@ -20,7 +20,10 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     private val loader = Executors.newSingleThreadExecutor { task ->
         Thread(task, "NativeHapticsAssets").apply { isDaemon = true }
     }
-    private val loadLock = Any()
+    // Completion callbacks may run on the UI looper. Serialize load/release
+    // separately so callbacks only take the short readiness-state lock.
+    private val poolLock = Any()
+    private val stateLock = Any()
     private val tones = IntArray(BODY_LEVELS + 1)
     private val mixed = Array(BODY_LEVELS + 1) { IntArray(POINT_LEVELS + 1) }
     private var loaded = 0
@@ -35,7 +38,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
 
     init {
         pool.setOnLoadCompleteListener { _, _, status ->
-            synchronized(loadLock) {
+            synchronized(stateLock) {
                 if (status != 0) {
                     closed = true
                     ready = false
@@ -47,7 +50,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
         val assets = context.applicationContext.assets
         loader.execute {
             try {
-                fun load(name: String): Int = synchronized(loadLock) {
+                fun load(name: String): Int = synchronized(poolLock) {
                     check(!closed)
                     assets.openFd("haptics/native/$name.ogg").use { pool.load(it, 1) }.also {
                         check(it != 0) { "SoundPool rejected $name" }
@@ -56,10 +59,10 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
                 for (body in 0..BODY_LEVELS) tones[body] = load("body_$body")
                 for (body in 0..BODY_LEVELS) for (point in 1..POINT_LEVELS)
                     mixed[body][point] = load("mixed_${body}_$point")
-                synchronized(loadLock) { loadingFinished = true; updateReady() }
+                synchronized(stateLock) { loadingFinished = true; updateReady() }
             } catch (error: Exception) {
                 if (!closed) LimeLog.warning("Native authored haptics unavailable: ${error.message}")
-                synchronized(loadLock) { ready = false }
+                synchronized(stateLock) { ready = false }
             } finally { loader.shutdown() }
         }
     }
@@ -118,9 +121,11 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     }
 
     override fun close() {
-        synchronized(loadLock) {
-            ready = false
-            closed = true
+        synchronized(poolLock) {
+            synchronized(stateLock) {
+                closed = true
+                ready = false
+            }
             loader.shutdownNow()
             pool.release()
         }
