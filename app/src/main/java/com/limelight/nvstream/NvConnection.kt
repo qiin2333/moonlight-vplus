@@ -96,12 +96,15 @@ open class NvConnection(
         }
     }
 
+    internal fun requestStop() {
+        stopped = true
+    }
+
     @Synchronized
     fun stop() {
         // Activity teardown and disconnect-and-quit can both stop this connection.
         // A second stop must not interrupt a newer native session or release its slot.
-        if (stopped) return
-        stopped = true
+        requestStop()
 
         // Claim this attempt's slot before touching the process-wide native connection.
         // Startup failure and stop must never both release it.
@@ -535,11 +538,10 @@ open class NvConnection(
             }
 
             synchronized(MoonBridge::class.java) {
-                if (stopped) {
+                if (!MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener) { stopped }) {
                     if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
                     return@synchronized
                 }
-                MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
                 MoonBridge.setDynamicHdrNegotiation(
                     context.streamConfig.dynamicHdrCaps,
                     if (context.streamConfig.dolbyVisionDirectSurface) 1 else 0,
