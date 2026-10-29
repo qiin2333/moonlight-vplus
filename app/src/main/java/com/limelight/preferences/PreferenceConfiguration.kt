@@ -134,6 +134,7 @@ class PreferenceConfiguration {
     var allowExperimentalHaptics = false
     var hostGamepadSelection = HostGamepadSelection.AUTOMATIC
     var ds5SimulationMode = Ds5SimulationMode.LEGACY
+    var nativeDeviceHaptics = false
     var dualSenseWirelessBridge = false
     var dualSenseDirectBluetooth = false
     @JvmField var flipFaceButtons = false
@@ -1537,6 +1538,7 @@ class PreferenceConfiguration {
             config.allowExperimentalHaptics = prefs.getBoolean("checkbox_experimental_haptic_protocols", false)
             config.ds5SimulationMode = Ds5SimulationMode.fromPreference(
                 prefs.getString("list_ds5_simulation_mode", "legacy"))
+            config.nativeDeviceHaptics = prefs.getBoolean("checkbox_native_device_haptics", false)
             config.hostGamepadSelection = HostGamepadSelection.fromPreference(
                 prefs.getString("list_host_gamepad_selection", "automatic"))
             config.dualSenseWirelessBridge = prefs.getBoolean(

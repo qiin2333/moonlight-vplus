@@ -641,6 +641,11 @@
                     android:entries="@array/ds5_simulation_mode_names"
                     android:entryValues="@array/ds5_simulation_mode_values"
                     android:defaultValue="legacy" />
+                <CheckBoxPreference
+                    android:key="checkbox_native_device_haptics"
+                    android:title="@string/title_native_device_haptics"
+                    android:summary="@string/summary_native_device_haptics"
+                    android:defaultValue="false" />
                 <com.limelight.preferences.SeekBarPreference
                     android:key="seekbar_vibrate_fallback_strength"
                     android:defaultValue="100"

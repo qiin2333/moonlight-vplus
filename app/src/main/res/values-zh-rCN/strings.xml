@@ -2340,4 +2340,6 @@
     <string name="title_ds5_simulation_mode">DualSense 模拟路径</string>
     <string name="summary_ds5_simulation_mode">传统模拟保留现有手感；IR 增强复用 v2，通过扩展区传输持续层和短促落点，需要兼容的 Sunshine。重新连接后生效。</string>
     <string-array name="ds5_simulation_mode_names"><item>传统模拟</item><item>IR 增强（v2 + 扩展）</item></string-array>
+    <string name="title_native_device_haptics">原生设备触觉（实验）</string>
+    <string name="summary_native_device_haptics">在增强 IR 模式下，用原生音频触觉还原轻重短点和持续层。可能增加振动延迟；不支持时沿用原有输出。重新连接后生效。</string>
 </resources>

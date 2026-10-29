@@ -98,6 +98,7 @@ import com.limelight.binding.audio.MicrophoneButtonPositionStore
 import com.limelight.ui.FloatBallPositionStore
 import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.haptics.GameRumbleMode
+import com.limelight.binding.input.haptics.SoundPoolAuthoredHaptics
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.utils.AboutDialogLauncher
@@ -3124,12 +3125,18 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val deviceVibrator = requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator
             val deviceRumbleStrength = findPreference<Preference>("seekbar_vibrate_fallback_strength")!!
+            val nativeHapticsSupported = Build.VERSION.SDK_INT >= 29 && SoundPoolAuthoredHaptics.supported()
+            if (!deviceVibrator.hasVibrator() || !nativeHapticsSupported) {
+                findPreference<Preference>("checkbox_native_device_haptics")?.let {
+                    it.parent?.removePreference(it)
+                }
+            }
             // Routing remains useful without a phone motor because controller-only and Smart
             // still work. Only the device-specific strength control should disappear.
             if (!deviceVibrator.hasVibrator()) {
                 deviceRumbleStrength.parent?.removePreference(deviceRumbleStrength)
             } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                    !deviceVibrator.hasAmplitudeControl()) {
+                    !deviceVibrator.hasAmplitudeControl() && !nativeHapticsSupported) {
                 // Remove the vibration strength selector of the device doesn't have amplitude control
                 deviceRumbleStrength.parent?.removePreference(deviceRumbleStrength)
             }

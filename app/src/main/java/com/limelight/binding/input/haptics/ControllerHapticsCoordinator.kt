@@ -1,6 +1,7 @@
 package com.limelight.binding.input.haptics
 
 import android.os.Looper
+import android.os.Build
 import android.os.SystemClock
 import android.view.MotionEvent
 import com.limelight.LimeLog
@@ -59,7 +60,11 @@ internal class ControllerHapticsCoordinator(
             cancelDeviceVibration = handler.deviceVibrator::cancel,
             playDeviceTick = if (handler.rumbleManager.supportsDeviceTick) handler.rumbleManager::playDeviceDetailTick else null,
             detailTickIntervalMs = handler.rumbleManager.deviceTickIntervalMs,
-            clockMs = SystemClock::elapsedRealtime
+            clockMs = SystemClock::elapsedRealtime,
+            nativeHaptics = if (Build.VERSION.SDK_INT >= 29 && handler.prefConfig.nativeDeviceHaptics &&
+                handler.prefConfig.gameRumbleMode != GameRumbleMode.CONTROLLER && handler.prefConfig.deviceRumbleStrength > 0 &&
+                handler.prefConfig.ds5SimulationMode == Ds5SimulationMode.IR_ENHANCED)
+                SoundPoolAuthoredHaptics.create(handler.activityContext) else null
         )
     }
 

@@ -48,16 +48,33 @@ class AuthoredIrTestActivity : Activity() {
         val frames = try { assets.open("haptics/generated/$asset").use { Ds5HapticsIrExtendedDecoder.decode(it.readBytes()) } }
             catch (error: Exception) { status.text = "缺少或无效的主机 IR 增强分析资产：${error.message}"; return }
         if (frames.isEmpty()) return
+        val resultFile = java.io.File(filesDir, "authored-ir-replay.json")
+        resultFile.writeText(org.json.JSONObject().put("state", "preparing").put("asset", asset)
+            .put("nativeRequested", intent.getBooleanExtra("native", false)).toString())
         val token = epoch
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
         val calls = java.util.concurrent.atomic.AtomicInteger()
         val waves = java.util.concurrent.atomic.AtomicInteger()
+        val nativeCalls = java.util.concurrent.atomic.AtomicInteger()
+        val nativePoints = java.util.concurrent.atomic.AtomicInteger()
         var acceptedEvents = 0
         var inputFrames = 0
         var index = 0
         val active = { !destroyed && epoch == token }
         val postDelayed: (Runnable, Long) -> Unit = { task, delay -> ui.postDelayed(task, delay); Unit }
         val supportsTick = com.limelight.binding.input.ControllerRumbleManager.supportsDeviceDetailTick(vibrator)
+        val native = if (Build.VERSION.SDK_INT >= 29 && intent.getBooleanExtra("native", false))
+            SoundPoolAuthoredHaptics.create(this) else null
+        val nativeSink = native?.let { backend -> object : NativeAuthoredHaptics {
+            override val ready get() = backend.ready
+            override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+                nativeCalls.incrementAndGet()
+                if (point > 0) nativePoints.incrementAndGet()
+                return backend.render(body, point, keepWarm)
+            }
+            override fun stop() = backend.stop()
+            override fun close() = backend.close()
+        } }
         val sink = DeviceVibrationCoordinator(
             postDelayed, ui::removeCallbacks,
             { amplitude, duration ->
@@ -72,7 +89,7 @@ class AuthoredIrTestActivity : Activity() {
                     vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), attributes)
                 calls.incrementAndGet()
                 Unit
-            }) else null, clockMs = SystemClock::elapsedRealtime)
+            }) else null, clockMs = SystemClock::elapsedRealtime, nativeHaptics = nativeSink)
         val mixer = ControllerHapticsMixer()
         val renderer = RumbleOutputRenderer(
             mixer, ControllerHapticsMixer(), SystemClock::elapsedRealtime, postDelayed, ui::removeCallbacks,
@@ -93,12 +110,17 @@ class AuthoredIrTestActivity : Activity() {
             renderer.stop()
             sink.stop()
         }
-        val origin = SystemClock.elapsedRealtime() + 400
+        var origin = SystemClock.elapsedRealtime() + 400
         val sourceOrigin = frames.first().windowEndUs
         val report = Runnable {
             if (!active()) return@Runnable
-            status.text = "$asset\n帧=$inputFrames，事件=$acceptedEvents\n轻点调用=$calls，连续调用=$waves\n可重放比较；调用计数不代表马达逐个完成。"
-            LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves")
+            status.text = "$asset\n帧=$inputFrames，事件=$acceptedEvents\n原生渲染=$nativeCalls，原生短点=$nativePoints\n轻点调用=$calls，连续调用=$waves\n调用计数不代表马达逐个完成。"
+            resultFile.writeText(org.json.JSONObject().put("state", "completed").put("asset", asset)
+                .put("frames", inputFrames).put("events", acceptedEvents)
+                .put("nativeRenders", nativeCalls.get()).put("nativePoints", nativePoints.get())
+                .put("nativeReady", nativeSink?.ready == true).put("ticks", calls.get())
+                .put("waveforms", waves.get()).toString())
+            LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves nativeCalls=$nativeCalls nativePoints=$nativePoints")
         }
         val pump = object : Runnable {
             override fun run() {
@@ -115,7 +137,28 @@ class AuthoredIrTestActivity : Activity() {
             }
         }
         status.text = "即将回放 $asset\nTICK能力=$supportsTick；单手机持续层优先，独立短落点用轻点。"
-        ui.post(pump)
+        if (nativeSink == null) ui.post(pump)
+        else {
+            val deadline = SystemClock.elapsedRealtime() + 15_000
+            val awaitReady = object : Runnable {
+                override fun run() {
+                    if (!active()) return
+                    if (nativeSink.ready) {
+                        origin = SystemClock.elapsedRealtime() + 400
+                        ui.post(pump)
+                    } else if (SystemClock.elapsedRealtime() < deadline) ui.postDelayed(this, 50)
+                    else { status.text = "原生触觉资产未就绪，本轮未播放"; stop() }
+                }
+            }
+            status.text = "正在准备原生设备触觉：$asset"
+            ui.post(awaitReady)
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("asset")?.let(::start)
     }
 
     private fun stop() {

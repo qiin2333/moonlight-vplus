@@ -4,8 +4,8 @@ These five synthetic, stereo haptic PCM fixtures were analyzed by Sunshine's
 `analyze_authored_ir_extended` tool using moonlight-audio-haptics' authored event engine.
 They contain generated rain, 50 onsets/second, sustained 250/300 Hz carriers, and
 a continuous carrier mixed with isolated impacts. They contain no recorded game
-audio. The rain fixture contains 176 distinct events; repeated wire history is
-deliberate.
+audio. The rain fixture uses the SDK's transient/body separation fix: 144 distinct
+events and no continuous layer. Repeated wire history is deliberate.
 
 The [common-c IR contract](../../../../main/jni/moonlight-core/moonlight-common-c/docs/DS5-HAPTICS-IR.md)
 owns field definitions and validation. The client follows the v2 callback API;
@@ -33,5 +33,7 @@ stalls, missing END, capability fallback and ordinary-rumble restoration.
 Source-clock boundaries and retired epochs are checked in `AuthoredIrTimelineTest`.
 The five packaged files run without external test data.
 
-The debug-only `AuthoredIrTestActivity` replays these files on a device. Its
-counters measure framework calls, not physical actuator motion or fidelity.
+The debug-only `AuthoredIrTestActivity` replays these files on a device. Pass
+`--ez native true` to exercise the optional SoundPool backend; it waits for the
+native bank to load before starting the source clock. Counters measure accepted
+events and renderer/framework invocations, not completed physical actuations.

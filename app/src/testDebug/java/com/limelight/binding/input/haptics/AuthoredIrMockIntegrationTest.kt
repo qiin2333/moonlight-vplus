@@ -162,7 +162,10 @@ class AuthoredIrMockIntegrationTest {
                 assertEquals(name, expected, runtime.deliveredIds.toSet().size)
                 assertTrue("$name: phone must use presets while controller carries body",
                     runtime.phoneWrites.none { it.amplitude > 0 })
-                assertTrue("$name: the real continuous layer must survive",
+                if (name == "rain-haptics") {
+                    assertTrue("Rain attacks must not become a continuous controller layer",
+                        runtime.controllerWrites.all { it.second.isZero })
+                } else assertTrue("$name: the real continuous layer must survive",
                     runtime.controllerWrites.any { maxOf(it.second.lowFrequency, it.second.highFrequency) > .01f })
                 assertTrue(runtime.controllerWrites.last().second.isZero)
             }

@@ -2,6 +2,7 @@ package com.limelight.binding.input.haptics
 
 import com.limelight.nvstream.Ds5HapticsIrFrame
 import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
+import kotlin.math.sqrt
 
 /** Authored-IR playback stage. Android supplies capabilities, lifecycle and a serial output queue.
  * SDK analysis stays on the host; ordinary rumble keeps its existing GameRumblePipeline.
@@ -32,6 +33,7 @@ internal class AuthoredIrCoordinator(
     private val pendingLegacy = mutableMapOf<Short, Legacy>()
     private var queued = false
     private var stopped = false
+    private var nativePhone = false
     private val drainTask = Runnable { drain() }
 
     val queuedEvents: Int get() = synchronized(lock) { timelines.values.sumOf { it.queuedEvents } }
@@ -108,11 +110,16 @@ internal class AuthoredIrCoordinator(
             if (output.reset) phone.resetAuthoredIr()
         }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
+        val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored
+        if (number.toInt() == 0 && nativePhone != native) {
+            phone.resetAuthoredIr()
+            nativePhone = native
+        }
         val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) } ?: 0f
         if (output.ended) pulses.remove(number)
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
         val pulse = AuthoredIrFallback.transientAmplitude(pulses[number]?.first ?: 0f)
-        val details = targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
+        val details = native || targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
             .useDetails(output.body, now, output.ended, targets.mode, targets.hasController, supportsTick())
         val plan = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
         val body = if (targets.hasController && targets.mode != GameRumbleMode.DEVICE) output.body else ControllerRumbleState.ZERO
@@ -123,11 +130,28 @@ internal class AuthoredIrCoordinator(
             pulses[number]?.second ?: now)
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
-            val deviceBody = plan.device ?: ControllerRumbleState.ZERO
-            phone.submitAuthoredIrBody(deviceBody.lowFrequency.toMotorShort(), deviceBody.highFrequency.toMotorShort(),
-                strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
-            phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,
-                output.event?.expiresUs?.div(1000) ?: now, details && !output.ended)
+            if (native) {
+                val deviceBody = if (targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
+                    ControllerRumbleState.ZERO else output.body
+                val gain = strengthPercent().coerceIn(0, 200) / 100f
+                // Merge band energy into the carrier's peak amplitude; point strength is never
+                // reduced to the fixed-strength TICK used by the public vibrator fallback.
+                val bodyGain = sqrt(2f * (deviceBody.lowFrequency * deviceBody.lowFrequency +
+                    deviceBody.highFrequency * deviceBody.highFrequency)) * gain
+                phone.submitNativeAuthored(bodyGain,
+                    // Profile 1 carries early band-peak evidence, not the finished PCM crest.
+                    // Native playback needs its own makeup gain; otherwise rain collapses
+                    // into the bank's weakest level. The backend limits physical sample gain.
+                    AuthoredIrFallback.transientAmplitude(eventPower) * 2f * gain,
+                    output.bodyValidUntilUs / 1000, output.event?.expiresUs?.div(1000) ?: now,
+                    active = !output.ended && gain > 0)
+            } else {
+                val deviceBody = plan.device ?: ControllerRumbleState.ZERO
+                phone.submitAuthoredIrBody(deviceBody.lowFrequency.toMotorShort(), deviceBody.highFrequency.toMotorShort(),
+                    strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
+                phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,
+                    output.event?.expiresUs?.div(1000) ?: now, details && !output.ended)
+            }
         }
         onOutput(number, output)
         scheduleExpiry()
@@ -135,6 +159,7 @@ internal class AuthoredIrCoordinator(
 
     private fun routeLegacy(pending: Legacy, now: Long) {
         val number = pending.frame.controllerNumber
+        if (number.toInt() == 0 && nativePhone) { phone.resetAuthoredIr(); nativePhone = false }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
         val details = pending.output.usesDeviceDetails(targets.mode, targets.hasController,
             targets.hasDevice, supportsTick())
