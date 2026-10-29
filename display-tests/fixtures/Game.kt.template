@@ -1,0 +1,203 @@
+@file:Suppress("UNUSED_PARAMETER", "DEPRECATION")
+
+package com.limelight
+
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.res.Configuration
+import android.graphics.Point
+import android.hardware.display.VirtualDisplay
+import android.os.Bundle
+import android.util.AttributeSet
+import android.view.Display
+import android.view.LayoutInflater
+import android.view.SurfaceHolder
+import android.view.View
+import com.limelight.binding.input.capture.InputCaptureManager
+import com.limelight.binding.input.capture.InputCaptureProvider
+import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.ui.StreamView
+import java.security.cert.X509Certificate
+
+/** Android host for production excerpts; networking and controller dependencies are fixtures. */
+class Game : Activity(), SurfaceHolder.Callback {
+    data class Contract(
+        val displayId: Int,
+        val hdr: Boolean,
+        val refreshRate: Int,
+        val width: Int = 1920,
+        val height: Int = 1080
+    )
+
+    lateinit var streamView: StreamView
+    lateinit var targetDisplayResolver: TargetDisplayResolver
+    lateinit var touchInputHandler: TouchInputHandler
+    lateinit var controllerHandler: ControllerHandler
+    var prefConfig = PreferenceConfiguration()
+    var inputCaptureProvider = InputCaptureProvider()
+    var externalStreamView: StreamView? = null
+    var externalDisplayManager: ExternalDisplayManager? = null
+    var selectedDisplayMode: DisplayModeManager.DisplayModeSelection? = null
+    var conn: NvConnection? = null
+    var grabbedInput = true
+    var cursorVisible = false
+    var attemptedConnection = false
+    var surfaceCreated = false
+    var touchReady = false
+    var configureCalls = 0
+    var resumePending = false
+    var audioVibrationService: AudioServiceFixture? = null
+    var usbForwarding: AutoCloseable? = null
+    var virtualController: VirtualControllerFixture? = null
+    var framegenEnabledToastShown = false
+    var pyrowaveFallbackDialogShown = false
+    var orientationManager = OrientationFixture()
+    val startedConnections = mutableListOf<NvConnection>()
+    val events = mutableListOf<String>()
+    val currentTargetDisplay get() = targetDisplayResolver.currentDisplay()
+
+    override fun onCreate(state: Bundle?) {
+        super.onCreate(state)
+        streamView = StreamView(this).apply { id = R.id.surfaceView }
+        setContentView(streamView)
+        targetDisplayResolver = TargetDisplayResolver(this)
+        if (initialNativeResolution) {
+            prefConfig = PreferenceConfiguration.readPreferences(this, targetDisplayResolver.resolve(true))
+        }
+        runSession()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (resumePending) {
+            resumePending = false
+            runSession()
+        }
+    }
+
+    override fun onStop() {
+        resumePending = true
+        attemptedConnection = false
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        externalDisplayManager?.cleanup()
+        super.onDestroy()
+    }
+
+    private fun runSession() {
+        attemptedConnection = false
+        touchReady = false
+        createConnectionAndHandler()
+        touchInputHandler = TouchInputHandler()
+        touchReady = true
+        streamView.holder.addCallback(this)
+        bindExternalDisplay()
+    }
+
+    private fun buildStreamConfiguration(
+        host: String, port: Int, httpsPort: Int, uniqueId: String, pairName: String,
+        pcUseVdd: Boolean?, cert: X509Certificate?, displayName: String?
+    ): StreamConfigResult {
+        check(!touchReady) { "Configuration must precede stream binding" }
+        configureCalls++
+        val id = currentTargetDisplay.displayId
+        events.add("configure:$id")
+        // Deliberately distinct contracts identify the display used by configuration.
+        val config = Contract(
+            id, id != Display.DEFAULT_DISPLAY,
+            if (id == Display.DEFAULT_DISPLAY) 60 else 240,
+            prefConfig.width, prefConfig.height
+        )
+        selectedDisplayMode = DisplayModeManager.DisplayModeSelection(id, -1, config.refreshRate.toFloat())
+        externalDisplayManager?.updateDisplayMode(checkNotNull(selectedDisplayMode))
+        return StreamConfigResult(config)
+    }
+
+    private fun retargetTouchContexts(view: StreamView?) {
+        check(touchReady)
+        events.add("retarget")
+    }
+
+    private fun setupStreamViewListeners(view: StreamView) {
+        check(touchReady && conn != null)
+        events.add("bind")
+        view.holder.addCallback(this)
+    }
+
+    private fun parseServerCert(): X509Certificate? = null
+    fun togglePerformanceOverlay() = Unit
+    fun exitStreamFromDriverShortcut() = Unit
+    fun setMetaKeyCaptureState(enabled: Boolean) = Unit
+    fun connect(display: Display) = createExternalDisplayCallback().onExternalDisplayConnected(display)
+    fun disconnect() = createExternalDisplayCallback().onExternalDisplayDisconnected()
+
+    override fun surfaceCreated(holder: SurfaceHolder) { surfaceCreated = true }
+    override fun surfaceDestroyed(holder: SurfaceHolder) {
+        surfaceCreated = false
+        attemptedConnection = false
+    }
+
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        check(surfaceCreated)
+        val current = checkNotNull(conn) { "Surface callback preceded connection construction" }
+        check(touchReady)
+        if (!attemptedConnection) {
+            attemptedConnection = true
+            startedConnections.add(current)
+            events.add("start:${current.config.displayId}")
+        }
+    }
+
+    // Release the chosen display during layout inflation, before WindowManager.addView().
+    override fun createDisplayContext(display: Display): Context =
+        inflationContext(super.createDisplayContext(display), display)
+
+    private fun inflationContext(base: Context, display: Display): Context = object : ContextWrapper(base) {
+        override fun createWindowContext(type: Int, options: Bundle?): Context =
+            inflationContext(super.createWindowContext(type, options), display)
+
+        override fun getSystemService(name: String): Any? {
+            if (name != Context.LAYOUT_INFLATER_SERVICE) return super.getSystemService(name)
+            return (super.getSystemService(name) as LayoutInflater).cloneInContext(this).apply {
+                factory2 = object : LayoutInflater.Factory2 {
+                    override fun onCreateView(name: String, context: Context, attrs: AttributeSet): View? =
+                        onCreateView(null, name, context, attrs)
+
+                    override fun onCreateView(parent: View?, name: String, context: Context, attrs: AttributeSet): View? {
+                        if (name == StreamView::class.java.name && rejectOnInflation?.display?.displayId == display.displayId) {
+                            rejectOnInflation?.release()
+                            rejectOnInflation = null
+                        }
+                        return null
+                    }
+                }
+            }
+        }
+    }
+
+@@createConnectionAndHandler@@
+
+@@prepareExternalDisplay@@
+
+@@bindExternalDisplay@@
+
+@@createExternalDisplayCallback@@
+
+@@setInputGrabState@@
+
+    companion object {
+        var initialNativeResolution = false
+        var rejectOnInflation: VirtualDisplay? = null
+        const val EXTRA_HOST = "host"
+        const val EXTRA_PORT = "port"
+        const val EXTRA_HTTPS_PORT = "httpsPort"
+        const val EXTRA_UNIQUEID = "uniqueId"
+        const val EXTRA_PAIR_NAME = "pairName"
+        const val EXTRA_PC_USEVDD = "vdd"
+        const val EXTRA_DISPLAY_NAME = "displayName"
+        const val EXTRA_FORCE_RESUME_CURRENT_SESSION = "forceResume"
+    }
+}

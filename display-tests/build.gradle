@@ -1,0 +1,89 @@
+plugins {
+    id 'com.android.application' version '9.2.1'
+    id 'org.jetbrains.kotlin.android' version '2.2.10'
+}
+
+def appSources = file('../app/src/main/java')
+def productionGame = file('../app/src/main/java/com/limelight/Game.kt')
+def generatedSources = layout.buildDirectory.dir('generated/display-sources')
+def gameMethods = ['createConnectionAndHandler', 'prepareExternalDisplay',
+                   'bindExternalDisplay', 'createExternalDisplayCallback', 'setInputGrabState']
+
+// Only class-level functions are extracted. Fail loudly if the source contract changes.
+def functionSource = { String source, String name ->
+    def pattern = ~/(?ms)^    (?:(?:private|override) )?fun ${name}\(.*?^    \}/
+    def matches = source.findAll(pattern)
+    if (matches.size() != 1) throw new GradleException("Expected one Game.${name} function")
+    matches.first()
+}
+
+tasks.register('generateDisplaySources', Sync) {
+    from(appSources) {
+        include 'com/limelight/ExternalDisplayManager.kt', 'com/limelight/TargetDisplayResolver.kt',
+                'com/limelight/DisplayModeWindowApplier.kt', 'com/limelight/DisplayReconnectSettings.kt',
+                'com/limelight/LimeLog.kt', 'com/limelight/ui/StreamView.kt',
+                'com/limelight/binding/input/capture/InputCaptureProvider.kt'
+    }
+    into generatedSources
+    inputs.file(productionGame)
+    inputs.file('fixtures/Game.kt.template')
+    doLast {
+        def source = productionGame.getText('UTF-8').replace('\r\n', '\n')
+        // The small host below cannot execute the full JNI-backed Game activity. Check its
+        // critical lifecycle call order against both real callers, so moving bind too early
+        // in Game cannot leave this harness silently testing a different sequence.
+        ['onCreate', 'prepareConnection'].each { caller ->
+            def body = functionSource(source, caller)
+            def calls = ['createConnectionAndHandler()', 'touchInputHandler.initTouchContexts(']
+            if (caller == 'onCreate') calls << 'connectionCallbackHandler = ConnectionCallbackHandler(this)'
+            calls << 'bindExternalDisplay()'
+            def positions = calls.collect { body.indexOf(it) }
+            if (positions.any { it < 0 } || positions != positions.sort(false)) {
+                throw new GradleException("Game.${caller}: expected connection -> touch -> display binding")
+            }
+        }
+        def host = file('fixtures/Game.kt.template').getText('UTF-8')
+        gameMethods.each { name ->
+            host = host.replace("@@${name}@@", functionSource(source, name))
+        }
+        def target = generatedSources.get().file('com/limelight/Game.kt').asFile
+        target.parentFile.mkdirs()
+        target.setText(host, 'UTF-8')
+    }
+}
+
+tasks.register('syncDisplayRegressionTests', Sync) {
+    from('../app/src/androidTest/java') {
+        include 'com/limelight/ExternalDisplayManagerTest.kt',
+                'com/limelight/TargetDisplayResolverTest.kt'
+    }
+    into layout.buildDirectory.dir('generated/display-tests')
+}
+
+android {
+    namespace 'com.limelight'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.limelight.displaytests'
+        minSdk 22
+        targetSdk 35
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    sourceSets {
+        main.java.srcDir generatedSources.get().asFile
+        androidTest.java.srcDir layout.buildDirectory.dir('generated/display-tests').get().asFile
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions { jvmTarget = '11' }
+}
+
+tasks.named('preBuild') { dependsOn 'generateDisplaySources', 'syncDisplayRegressionTests' }
+
+dependencies {
+    implementation 'androidx.core:core:1.16.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+}

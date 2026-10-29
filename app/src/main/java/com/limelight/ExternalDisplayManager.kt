@@ -44,6 +44,11 @@ class ExternalDisplayManager(
 
     var callback: ExternalDisplayCallback? = null
 
+    /**
+     * Creates the Presentation synchronously and resolves rejected displays back to local output.
+     * Callbacks may run during this call. A host that still needs to build its connection must
+     * attach them afterward and bind the settled [getTargetDisplay] / [getStreamView] snapshot.
+     */
     fun initialize(initialDisplayMode: DisplayModeManager.DisplayModeSelection? = null) {
         displayModeSelection = initialDisplayMode
         targetDisplayResolver.resolve(prefConfig.useExternalDisplay)

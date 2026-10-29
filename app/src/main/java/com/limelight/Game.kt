@@ -806,6 +806,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /**
      * Parse intent extras, build stream config, create NvConnection + ControllerHandler.
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
+     * Output preparation may fall back before Native/HDR/refresh-rate decisions are made.
+     * Call [bindExternalDisplay] only after the connection and touch contexts are ready.
      */
     private fun createConnectionAndHandler() {
         usbForwarding?.close()
@@ -866,7 +868,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.onSensorsReenabled()
     }
 
-    /** Decide the output before building display-dependent connection settings. */
+    /**
+     * Create the output window and settle any fallback before building the connection.
+     * Leave callbacks detached: Presentation.onCreate() can run synchronously in initialize().
+     */
     private fun prepareExternalDisplay() {
         externalDisplayManager?.cleanup()
         externalStreamView = null
@@ -877,6 +882,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         externalStreamView = manager.getStreamView()
     }
 
+    /** Bind the settled output after connection, touch contexts and callback handlers exist. */
     private fun bindExternalDisplay() {
         val manager = externalDisplayManager ?: return
         val callback = createExternalDisplayCallback()
