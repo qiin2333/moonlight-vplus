@@ -1383,12 +1383,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             decoderRenderer = null
         }
 
-        // The Game activity may survive while the stream is stopped. Refresh the
-        // controller motion settings before rebuilding the handler so a resumed
-        // session doesn't keep the values captured by onCreate().
-        prefConfig.refreshControllerMotionPreferencesFrom(
-            PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        )
+        // Refresh display-derived Native dimensions and controller motion settings
+        // without replacing fixed/custom choices committed during this session.
+        val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+        if (prefConfig.isNativeResolution) {
+            prefConfig.width = latestConfig.width
+            prefConfig.height = latestConfig.height
+        }
+        prefConfig.refreshControllerMotionPreferencesFrom(latestConfig)
 
         createConnectionAndHandler()
         performanceOverlayManager?.recordStreamStart()

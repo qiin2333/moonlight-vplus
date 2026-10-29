@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.view.Display
 import android.view.View
 import android.view.WindowManager
@@ -17,9 +19,12 @@ import com.limelight.ui.StreamView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class ExternalDisplayManagerTest {
@@ -78,7 +83,22 @@ class ExternalDisplayManagerTest {
                     }
                 }
                 // A leaked Presentation listener would finish the host on this later removal.
-                external.release()
+                val externalDisplayId = external.display.displayId
+                val removed = CountDownLatch(1)
+                val listener = object : DisplayManager.DisplayListener {
+                    override fun onDisplayAdded(displayId: Int) = Unit
+                    override fun onDisplayChanged(displayId: Int) = Unit
+                    override fun onDisplayRemoved(displayId: Int) {
+                        if (displayId == externalDisplayId) removed.countDown()
+                    }
+                }
+                displays.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
+                try {
+                    external.release()
+                    assertTrue("Display removal was not observed", removed.await(5, TimeUnit.SECONDS))
+                } finally {
+                    displays.unregisterDisplayListener(listener)
+                }
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync()
                 scenario.onActivity { assertFalse(it.isFinishing) }
             }
