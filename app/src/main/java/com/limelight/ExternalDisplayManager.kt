@@ -196,8 +196,17 @@ class ExternalDisplayManager(
             return
         }
 
-        externalPresentation = ExternalDisplayPresentation(activity, display)
-        externalPresentation?.show()
+        val presentation = ExternalDisplayPresentation(activity, display)
+        externalPresentation = presentation
+        try {
+            presentation.show()
+        } catch (e: WindowManager.InvalidDisplayException) {
+            LimeLog.warning("Unable to show presentation on display ${display.displayId}: ${e.message}")
+            targetDisplayResolver.resolve(false)
+            dismissExternalPresentation()
+            callback?.onExternalDisplayDisconnected()
+            return
+        }
 
         val surfaceView = activity.findViewById<View>(R.id.surfaceView)
         surfaceView?.visibility = View.GONE
