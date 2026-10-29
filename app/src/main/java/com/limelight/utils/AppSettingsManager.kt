@@ -377,6 +377,11 @@ class AppSettingsManager(private val context: Context) {
 
             prefConfig.width = intent.getIntExtra(INTENT_LAST_SETTINGS_WIDTH, prefConfig.width)
             prefConfig.height = intent.getIntExtra(INTENT_LAST_SETTINGS_HEIGHT, prefConfig.height)
+            if (intent.hasExtra(INTENT_LAST_SETTINGS_WIDTH) || intent.hasExtra(INTENT_LAST_SETTINGS_HEIGHT)) {
+                // Saved per-game dimensions are explicit sizes, not a Native selection.
+                prefConfig.isNativeResolution = false
+                prefConfig.isCustomResolution = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
+            }
             prefConfig.fps = intent.getIntExtra(INTENT_LAST_SETTINGS_FPS, prefConfig.fps)
             prefConfig.bitrate = intent.getIntExtra(INTENT_LAST_SETTINGS_BITRATE, prefConfig.bitrate)
             prefConfig.resolutionScale = intent.getIntExtra(INTENT_LAST_SETTINGS_RESOLUTION_SCALE, prefConfig.resolutionScale)

@@ -832,9 +832,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         prepareExternalDisplay()
         if (prefConfig.isNativeResolution) {
-            val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-            prefConfig.width = latestConfig.width
-            prefConfig.height = latestConfig.height
+            val size = Point()
+            currentTargetDisplay.getRealSize(size)
+            prefConfig.width = if (prefConfig.reverseResolution) size.y else size.x
+            prefConfig.height = if (prefConfig.reverseResolution) size.x else size.y
         }
         val streamConfigResult = buildStreamConfiguration(
             host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
