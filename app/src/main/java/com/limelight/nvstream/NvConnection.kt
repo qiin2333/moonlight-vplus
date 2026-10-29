@@ -20,6 +20,7 @@ import java.security.NoSuchAlgorithmException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -62,7 +63,9 @@ open class NvConnection(
         }
     private val context: ConnectionContext = ConnectionContext()
     private val isMonkey: Boolean = ActivityManager.isUserAMonkey()
+    @Volatile
     private var stopped = false
+    private val connectionSlotOwned = AtomicBoolean(false)
 
     @Volatile
     var serverVersion: String? = null
@@ -98,6 +101,11 @@ open class NvConnection(
         // Activity teardown and disconnect-and-quit can both stop this connection.
         // A second stop must not interrupt a newer native session or release its slot.
         if (stopped) return
+        stopped = true
+
+        // Claim this attempt's slot before touching the process-wide native connection.
+        // Startup failure and stop must never both release it.
+        if (!connectionSlotOwned.compareAndSet(true, false)) return
 
         MoonBridge.interruptConnection()
 
@@ -106,7 +114,6 @@ open class NvConnection(
             MoonBridge.cleanupBridge()
         }
 
-        stopped = true
         connectionAllowed.release()
     }
 
@@ -461,6 +468,7 @@ open class NvConnection(
 
     fun start(audioRenderer: AudioRenderer, videoDecoderRenderer: VideoDecoderRenderer, connectionListener: NvConnectionListener) {
         Thread {
+            if (stopped) return@Thread
             context.connListener = connectionListener
             val appName = context.streamConfig.app.appName
             // The preflight creates and tears down the Vulkan/Surface candidate.
@@ -511,9 +519,11 @@ open class NvConnection(
             val ib = ByteBuffer.allocate(16)
             ib.putInt(context.riKeyId)
 
+            if (stopped) return@Thread
             try {
                 val waitStartTime = SystemClock.elapsedRealtime()
                 connectionAllowed.acquire()
+                connectionSlotOwned.set(true)
                 val waitMs = SystemClock.elapsedRealtime() - waitStartTime
                 if (waitMs > 10) {
                     LimeLog.info("Connection step 'connection slot wait' completed in ${waitMs}ms")
@@ -525,6 +535,10 @@ open class NvConnection(
             }
 
             synchronized(MoonBridge::class.java) {
+                if (stopped) {
+                    if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
+                    return@synchronized
+                }
                 MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
                 MoonBridge.setDynamicHdrNegotiation(
                     context.streamConfig.dynamicHdrCaps,
@@ -535,7 +549,8 @@ open class NvConnection(
                     startNativeConnection(ib)
                 }
                 if (ret != 0) {
-                    connectionAllowed.release()
+                    MoonBridge.cleanupBridge()
+                    if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
                     return@synchronized
                 }
             }

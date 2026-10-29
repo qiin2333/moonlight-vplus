@@ -230,6 +230,7 @@ public class MoonBridge {
     private static AudioRenderer audioRenderer;
     private static VideoDecoderRenderer videoRenderer;
     private static volatile NvConnectionListener connectionListener;
+    private static final Object connectionListenerLock = new Object();
 
     static {
         System.loadLibrary("moonlight-core");
@@ -554,19 +555,25 @@ public class MoonBridge {
     public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
         MoonBridge.videoRenderer = videoRenderer;
         MoonBridge.audioRenderer = audioRenderer;
-        MoonBridge.connectionListener = connectionListener;
+        synchronized (connectionListenerLock) {
+            MoonBridge.connectionListener = connectionListener;
+        }
     }
 
-    public static synchronized void detachConnectionListener(NvConnectionListener listener) {
-        if (MoonBridge.connectionListener == listener) {
-            MoonBridge.connectionListener = null;
+    public static void detachConnectionListener(NvConnectionListener listener) {
+        synchronized (connectionListenerLock) {
+            if (MoonBridge.connectionListener == listener) {
+                MoonBridge.connectionListener = null;
+            }
         }
     }
 
     public static void cleanupBridge() {
         MoonBridge.videoRenderer = null;
         MoonBridge.audioRenderer = null;
-        MoonBridge.connectionListener = null;
+        synchronized (connectionListenerLock) {
+            MoonBridge.connectionListener = null;
+        }
         MoonBridge.clipboardListener = null;
     }
 
