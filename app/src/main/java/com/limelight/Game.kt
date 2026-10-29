@@ -1834,6 +1834,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         destroying = true
+        if (conn != null) connectionCallbackHandler.stopConnection()
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
         if (isFinishing) {
             StreamReconnectBackdrop.clear()
@@ -1873,10 +1874,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         super.onDestroy()
-
-        if (conn != null && connected) {
-            connectionCallbackHandler.stopConnection()
-        }
 
         usbDriverServiceManager?.stopAndUnbind()
 
