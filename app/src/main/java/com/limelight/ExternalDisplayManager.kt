@@ -187,11 +187,16 @@ class ExternalDisplayManager(
 
     @SuppressLint("ResourceAsColor", "SetTextI18n")
     private fun startExternalDisplayPresentation() {
-        if (!isUsingExternalDisplay() || externalPresentation != null) {
+        if (externalPresentation != null) {
             return
         }
 
-        externalPresentation = ExternalDisplayPresentation(activity, targetDisplayResolver.currentDisplay())
+        val display = targetDisplayResolver.currentDisplay()
+        if (display.displayId == Display.DEFAULT_DISPLAY) {
+            return
+        }
+
+        externalPresentation = ExternalDisplayPresentation(activity, display)
         externalPresentation?.show()
 
         val surfaceView = activity.findViewById<View>(R.id.surfaceView)
@@ -254,8 +259,8 @@ class ExternalDisplayManager(
         fun hasExternalDisplay(context: Context): Boolean {
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
             if (displayManager != null) {
-                for (display in displayManager.displays) {
-                    if (display.displayId != Display.DEFAULT_DISPLAY) {
+                for (display in displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
+                    if (display.displayId != Display.DEFAULT_DISPLAY && display.isValid) {
                         return true
                     }
                 }
