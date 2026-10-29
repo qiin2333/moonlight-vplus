@@ -274,7 +274,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var app: NvApp
     private var desiredRefreshRate = 0f
     private var selectedDisplayMode: DisplayModeManager.DisplayModeSelection? = null
-    private var preparingExternalDisplay = false
     var appSettingsManager: AppSettingsManager? = null
     var computerUuid: String? = null
 
@@ -655,12 +654,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         DisplayPositionManager(this, prefConfig, streamView).setupDisplayPosition()
 
-        setupExternalDisplay()
-
         floatBallHandler = FloatBallHandler(this, prefConfig)
         floatBallHandler.initialize()
 
         connectionCallbackHandler = ConnectionCallbackHandler(this)
+        bindExternalDisplay()
     }
 
     private fun getOrCreateKeyboardUIController(): KeyboardUIController? {
@@ -832,6 +830,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val forceResumeCurrentSession = intent.getBooleanExtra(EXTRA_FORCE_RESUME_CURRENT_SESSION, false)
         val serverCert = parseServerCert()
 
+        prepareExternalDisplay()
         val streamConfigResult = buildStreamConfiguration(
             host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
         )
@@ -861,27 +860,26 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.onSensorsReenabled()
     }
 
-    /** Create or re-create ExternalDisplayManager with the standard callback. */
-    private fun setupExternalDisplay() {
-        preparingExternalDisplay = true
-        try {
-            val configuredDisplayId = selectedDisplayMode?.displayId
-            val manager = ExternalDisplayManager(
-                this,
-                prefConfig,
-                targetDisplayResolver
-            )
-            externalDisplayManager = manager
-            manager.callback = createExternalDisplayCallback()
-            manager.initialize(initialDisplayMode = selectedDisplayMode)
+    /** Decide the output before building display-dependent connection settings. */
+    private fun prepareExternalDisplay() {
+        externalDisplayManager?.cleanup()
+        externalStreamView = null
+        val manager = ExternalDisplayManager(this, prefConfig, targetDisplayResolver)
+        externalDisplayManager = manager
+        // Input and Surface callbacks need the new connection and touch contexts first.
+        manager.initialize()
+        externalStreamView = manager.getStreamView()
+    }
 
-            // The pending connection and decoder were configured before Presentation.show().
-            // Reuse the reconnect reset path if showing it changed the actual output display.
-            if (configuredDisplayId != null && configuredDisplayId != currentTargetDisplay.displayId) {
-                prepareConnection(initializeExternalDisplay = false)
-            }
-        } finally {
-            preparingExternalDisplay = false
+    private fun bindExternalDisplay() {
+        val manager = externalDisplayManager ?: return
+        val callback = createExternalDisplayCallback()
+        manager.callback = callback
+        if (manager.isUsingExternalDisplay()) {
+            callback.onExternalDisplayConnected(manager.getTargetDisplay())
+            externalStreamView?.let(callback::onStreamViewReady)
+        } else {
+            callback.onExternalDisplayDisconnected()
         }
     }
 
@@ -1366,7 +1364,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
     }
 
-    private fun prepareConnection(initializeExternalDisplay: Boolean = true) {
+    private fun prepareConnection() {
         audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
         runOnUiThread {
@@ -1431,11 +1429,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         })
 
-        if (initializeExternalDisplay) {
-            setupExternalDisplay()
-        } else {
-            retargetTouchContexts(externalStreamView ?: streamView)
-        }
+        bindExternalDisplay()
     }
 
     override fun onResume() {
@@ -2977,18 +2971,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         if (!surfaceCreated) {
             throw IllegalStateException("Surface changed before creation!")
-        }
-
-        if (preparingExternalDisplay) {
-            streamView.post {
-                if (!isFinishing && !isDestroyed && holder.surface.isValid &&
-                    holder === activeStreamView?.holder
-                ) {
-                    surfaceCreated(holder)
-                    surfaceChanged(holder, format, width, height)
-                }
-            }
-            return
         }
 
         val shouldPrepareFramegen =

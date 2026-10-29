@@ -7,10 +7,8 @@ import android.view.Display
 /**
  * Resolves the display used by a streaming session.
  *
- * Display selection is intentionally kept separate from Presentation creation. The stream
- * configuration is built before [ExternalDisplayManager] creates its Presentation, so using
- * the Presentation manager as the source of truth would make early Native/HDR/refresh-rate
- * decisions fall back to the default display.
+ * Shares the target between early preference parsing, Presentation creation, and the final
+ * display-dependent stream configuration, including fallback to the default display.
  */
 class TargetDisplayResolver(context: Context) {
     private val displayManager =

@@ -75,6 +75,8 @@ class ExternalDisplayManager(
         return targetDisplayResolver.currentDisplay()
     }
 
+    fun getStreamView(): StreamView? = externalPresentation?.findViewById(R.id.surfaceView)
+
     fun isUsingExternalDisplay(): Boolean = targetDisplayResolver.isExternalDisplaySelected()
 
     /**
