@@ -1,5 +1,6 @@
 package com.limelight.binding.input.haptics
 
+import com.limelight.binding.input.haptics.ControllerRumbleState.Companion.normalizeAmplitude
 import kotlin.math.sqrt
 
 /** The ordinary-motor fallback needs the same perceptual makeup as the v2 fallback.
@@ -8,5 +9,5 @@ import kotlin.math.sqrt
  */
 internal object AuthoredIrFallback {
     fun transientAmplitude(strength: Float): Float =
-        if (strength.isFinite()) sqrt(strength.coerceIn(0f, 1f)) else 0f
+        sqrt(normalizeAmplitude(strength))
 }

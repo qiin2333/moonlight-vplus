@@ -1,5 +1,6 @@
 package com.limelight.binding.input.haptics
 
+import com.limelight.binding.input.haptics.ControllerRumbleState.Companion.normalizeAmplitude
 import com.limelight.nvstream.Ds5HapticsIrFrame
 import com.limelight.nvstream.Ds5HapticsIrExtendedEvent
 import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
@@ -75,8 +76,8 @@ internal class AuthoredIrTimeline {
             terminal = ended
             if (!ended) {
                 val state = State(ControllerRumbleState(
-                    maxOf(level(frame.left.continuousLow), level(frame.right.continuousLow)),
-                    maxOf(level(frame.left.continuousHigh), level(frame.right.continuousHigh))), frame.windowEndUs)
+                    maxOf(normalizeAmplitude(frame.left.continuousLow), normalizeAmplitude(frame.right.continuousLow)),
+                    maxOf(normalizeAmplitude(frame.left.continuousHigh), normalizeAmplitude(frame.right.continuousHigh))), frame.windowEndUs)
                 if (states.size == MAX_STATES) states.poll()
                 states.add(state)
                 expiresUs = mappedEnd + BODY_LEASE_US
@@ -97,7 +98,7 @@ internal class AuthoredIrTimeline {
             if (seenIds.size > SEEN_IDS) seenIds.remove(seenIds.first())
             val sourceLocal = event.sourceTimeUs + offsetUs
             if (nowUs - sourceLocal > EVENT_FRESH_US ||
-                maxOf(level(event.leftStrength), level(event.rightStrength)) == 0f) continue
+                maxOf(normalizeAmplitude(event.leftStrength), normalizeAmplitude(event.rightStrength)) == 0f) continue
             if (events.size == MAX_EVENTS) events.poll()
             events.add(Event(event, sourceLocal + PLAYOUT_LEAD_US, sourceLocal + EVENT_FRESH_US))
             ingested = true
@@ -138,7 +139,6 @@ internal class AuthoredIrTimeline {
 
     private fun newer(next: Int, previous: Int): Boolean =
         (next.toLong() - previous.toLong()).and(0xffffffffL) in 1L..0x7fffffffL
-    private fun level(value: Float) = if (value.isFinite()) value.coerceIn(0f, 1f) else 0f
 
     companion object {
         const val MAX_EVENTS = 64

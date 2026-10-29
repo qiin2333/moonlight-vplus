@@ -47,10 +47,13 @@ internal class ControllerRumbleState(
     companion object {
         val ZERO = ControllerRumbleState()
 
-        private fun normalizeAmplitude(value: Float): Float = when {
+        internal fun normalizeAmplitude(value: Float): Float = when {
             !value.isFinite() || value <= 0f -> 0f
             value >= 1f -> 1f
             else -> value
         }
     }
 }
+
+internal fun Float.toMotorShort(): Short =
+    (coerceIn(0f, 1f) * 65535f).toInt().toShort()

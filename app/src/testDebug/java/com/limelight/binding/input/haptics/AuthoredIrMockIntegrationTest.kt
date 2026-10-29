@@ -6,7 +6,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
-/** Contract integration with real host wire, timeline, policies, mixer and phone dispatcher.
+/** Debug-fixture integration with real host wire, timeline, policies, mixer and phone dispatcher.
  * The transport, main-loop clock, controller port and phone native calls are fakes.
  * The production AuthoredIrCoordinator is exercised; Android ControllerHandler/Looper wiring and physical actuator response are outside this test.
  */

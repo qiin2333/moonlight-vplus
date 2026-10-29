@@ -1,5 +1,6 @@
 package com.limelight.binding.input.haptics
 
+import com.limelight.binding.input.haptics.ControllerRumbleState.Companion.normalizeAmplitude
 import com.limelight.nvstream.Ds5HapticsIrFrame
 import kotlin.math.sqrt
 
@@ -48,13 +49,13 @@ internal class AuthoredHapticsRenderer {
         var rms = 0f
         var attack = 0f
         for (lane in arrayOf(frame.left, frame.right)) {
-            val level = normalized(lane.rms)
-            val ratio = normalized(lane.lowBandRatio)
+            val level = normalizeAmplitude(lane.rms)
+            val ratio = normalizeAmplitude(lane.lowBandRatio)
             low = maxOf(low, level * sqrt(ratio))
             high = maxOf(high, level * sqrt(1f - ratio))
-            peak = maxOf(peak, normalized(lane.peak))
+            peak = maxOf(peak, normalizeAmplitude(lane.peak))
             rms = maxOf(rms, level)
-            attack = maxOf(attack, normalized(lane.transient))
+            attack = maxOf(attack, normalizeAmplitude(lane.transient))
         }
         val isAttack = attack >= 0.025f && peak >= 0.015f
         val onsetTime = lastOnsetUs
@@ -71,6 +72,4 @@ internal class AuthoredHapticsRenderer {
         val body = if (fineTexture) ControllerRumbleState.ZERO else ControllerRumbleState(low, high * 0.45f)
         return Output(rumble, body, tick, false)
     }
-
-    private fun normalized(value: Float) = if (value.isFinite()) value.coerceIn(0f, 1f) else 0f
 }

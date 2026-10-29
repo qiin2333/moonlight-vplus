@@ -874,9 +874,6 @@ internal class ControllerHapticsCoordinator(
     private fun Short.toNormalizedRumble(): Float =
         (toInt() and 0xFFFF) / 65535f
 
-    private fun Float.toMotorShort(): Short =
-        (coerceIn(0f, 1f) * 65535f).toInt().toShort()
-
     private companion object {
         const val NO_CONTROLLER = -1
         const val ANDROID_RUMBLE_INTERVAL_MS = 33L

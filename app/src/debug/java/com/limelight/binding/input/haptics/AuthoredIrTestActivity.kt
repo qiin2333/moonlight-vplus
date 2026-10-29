@@ -7,12 +7,12 @@ import android.widget.*
 import com.limelight.LimeLog
 import com.limelight.nvstream.*
 
-/** Actual host analyzer wire fixtures, replayed through production timeline, policy and sink. */
+/** Host analyzer fixtures fed into the production coordinator and device sink. */
 class AuthoredIrTestActivity : Activity() {
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var status: TextView
     private lateinit var vibrator: Vibrator
-    private var device: DeviceVibrationCoordinator? = null
+    private var stopPlayback: (() -> Unit)? = null
     private var epoch = 0
     private var destroyed = false
 
@@ -54,9 +54,12 @@ class AuthoredIrTestActivity : Activity() {
         val waves = java.util.concurrent.atomic.AtomicInteger()
         var acceptedEvents = 0
         var inputFrames = 0
+        var index = 0
+        val active = { !destroyed && epoch == token }
+        val postDelayed: (Runnable, Long) -> Unit = { task, delay -> ui.postDelayed(task, delay); Unit }
         val supportsTick = com.limelight.binding.input.ControllerRumbleManager.supportsDeviceDetailTick(vibrator)
         val sink = DeviceVibrationCoordinator(
-            { callback, delay -> ui.postDelayed(callback, delay); Unit }, { ui.removeCallbacks(it) },
+            postDelayed, ui::removeCallbacks,
             { amplitude, duration ->
                 @Suppress("DEPRECATION")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -70,55 +73,45 @@ class AuthoredIrTestActivity : Activity() {
                 calls.incrementAndGet()
                 Unit
             }) else null, clockMs = SystemClock::elapsedRealtime)
-        device = sink
-        val timeline = AuthoredIrTimeline()
-        var policy = AuthoredIrPhonePolicy()
+        val mixer = ControllerHapticsMixer()
+        val renderer = RumbleOutputRenderer(
+            mixer, ControllerHapticsMixer(), SystemClock::elapsedRealtime, postDelayed, ui::removeCallbacks,
+            controllerAvailable = { false }, controllerIntervalMs = { 20L }, writeController = {},
+            writeDeviceAmplitude = {
+                sink.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, it, 100)
+            }, enabled = active)
+        val coordinator = AuthoredIrCoordinator(
+            mixer, renderer, sink,
+            context = { GameRumbleContext(GameRumbleMode.DEVICE, hasController = false, hasDevice = vibrator.hasVibrator()) },
+            supportsTick = { supportsTick }, strengthPercent = { 100 }, clockMs = SystemClock::elapsedRealtime,
+            postDelayed = postDelayed, removeCallbacks = ui::removeCallbacks,
+            // Device-only replay has no controller sources to expire.
+            scheduleExpiry = {}, enabled = active,
+            onOutput = { _, output -> if (output.event != null) acceptedEvents++ })
+        stopPlayback = {
+            coordinator.stop()
+            renderer.stop()
+            sink.stop()
+        }
         val origin = SystemClock.elapsedRealtime() + 400
         val sourceOrigin = frames.first().windowEndUs
-        var pulse = 0f
-        var pulseUntil = 0L
-        var index = 0
+        val report = Runnable {
+            if (!active()) return@Runnable
+            status.text = "$asset\n帧=$inputFrames，事件=$acceptedEvents\n轻点调用=$calls，连续调用=$waves\n可重放比较；调用计数不代表马达逐个完成。"
+            LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves")
+        }
         val pump = object : Runnable {
             override fun run() {
                 if (destroyed || epoch != token) return
                 val now = SystemClock.elapsedRealtime()
                 while (index < frames.size && origin + (frames[index].windowEndUs - sourceOrigin) / 1000 <= now) {
-                    val frame = frames[index++]
-                    timeline.accept(frame, now * 1000)
+                    coordinator.submit(frames[index++])
                     inputFrames++
                 }
-                val output = timeline.poll(now * 1000)
-                if (output != null) {
-                    if (output.reset) {
-                        sink.resetAuthoredIr()
-                        policy = AuthoredIrPhonePolicy()
-                        pulse = 0f
-                        pulseUntil = 0L
-                    }
-                    if (output.event != null) {
-                        acceptedEvents++
-                        val event = output.event.value
-                        pulse = AuthoredIrFallback.transientAmplitude(
-                            maxOf(event.leftStrength, event.rightStrength))
-                        pulseUntil = now + 60
-                    }
-                    if (now >= pulseUntil || output.ended) pulse = 0f
-                    val details = policy.useDetails(output.body, now, output.ended,
-                        GameRumbleMode.DEVICE, false, supportsTick)
-                    val body = if (details) ControllerRumbleState.ZERO else ControllerRumbleState(
-                        output.body.lowFrequency, maxOf(output.body.highFrequency, pulse))
-                    sink.submitAuthoredIrBody((body.lowFrequency * 65535).toInt().toShort(),
-                        (body.highFrequency * 65535).toInt().toShort(), 100, !output.ended, output.bodyValidUntilUs / 1000)
-                    if (details) sink.submitAuthoredIrDetail(output.event != null, 100,
-                        output.event?.expiresUs?.div(1000) ?: now, !output.ended)
-                    else sink.submitAuthoredIrDetail(false, 0, now, active = false)
-                }
-                if (index < frames.size || timeline.nextWakeUs() != null) ui.postDelayed(this, 1)
-                else ui.postDelayed({
-                    if (epoch != token || destroyed) return@postDelayed
-                    status.text = "$asset\n帧=$inputFrames，事件=$acceptedEvents\n轻点调用=$calls，连续调用=$waves\n可重放比较；调用计数不代表马达逐个完成。"
-                    LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves")
-                }, 250)
+                if (index < frames.size) {
+                    val next = origin + (frames[index].windowEndUs - sourceOrigin) / 1000
+                    ui.postDelayed(this, (next - now).coerceAtLeast(1))
+                } else ui.postDelayed(report, 250)
             }
         }
         status.text = "即将回放 $asset\nTICK能力=$supportsTick；单手机持续层优先，独立短落点用轻点。"
@@ -128,8 +121,8 @@ class AuthoredIrTestActivity : Activity() {
     private fun stop() {
         epoch++
         ui.removeCallbacksAndMessages(null)
-        device?.stop()
-        device = null
+        stopPlayback?.invoke()
+        stopPlayback = null
     }
 
     override fun onPause() { stop(); super.onPause() }

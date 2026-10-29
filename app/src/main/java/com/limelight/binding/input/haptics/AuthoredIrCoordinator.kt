@@ -124,7 +124,7 @@ internal class AuthoredIrCoordinator(
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
             val deviceBody = plan.device ?: ControllerRumbleState.ZERO
-            phone.submitAuthoredIrBody(deviceBody.lowFrequency.motor(), deviceBody.highFrequency.motor(),
+            phone.submitAuthoredIrBody(deviceBody.lowFrequency.toMotorShort(), deviceBody.highFrequency.toMotorShort(),
                 strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
             phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,
                 output.event?.expiresUs?.div(1000) ?: now, details && !output.ended)
@@ -149,7 +149,7 @@ internal class AuthoredIrCoordinator(
             else {
                 phone.submitAuthoredDetail(false, 0, false)
                 val device = plan.device ?: ControllerRumbleState.ZERO
-                phone.submitAuthoredIrBody(device.lowFrequency.motor(), device.highFrequency.motor(),
+                phone.submitAuthoredIrBody(device.lowFrequency.toMotorShort(), device.highFrequency.toMotorShort(),
                     strengthPercent(), !pending.output.ended, now + 200)
             }
         }
@@ -175,7 +175,6 @@ internal class AuthoredIrCoordinator(
         }
         last.clear(); pulses.clear(); policies.clear()
     }
-    private fun Float.motor() = (coerceIn(0f, 1f) * 65535f).toInt().toShort()
 }
 
 /** Allocation of already-decomposed authored IR; ordinary rumble retains its own allocator. */

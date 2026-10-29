@@ -3,7 +3,7 @@ package com.limelight.nvstream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/** Debug fixture reader; live network payloads use the production common-c decoder. */
+/** Debug-only fixture reader; live network payloads use the production common-c decoder. */
 object Ds5HapticsIrExtendedDecoder {
     fun decode(bytes: ByteArray): List<Ds5HapticsIrExtendedFrame> {
         val b = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
