@@ -7,10 +7,8 @@ import android.view.Display
 /**
  * Resolves the display used by a streaming session.
  *
- * Display selection is intentionally kept separate from Presentation creation. The stream
- * configuration is built before [ExternalDisplayManager] creates its Presentation, so using
- * the Presentation manager as the source of truth would make early Native/HDR/refresh-rate
- * decisions fall back to the default display.
+ * Shares the target between early preference parsing, Presentation creation, and the final
+ * display-dependent stream configuration, including fallback to the default display.
  */
 class TargetDisplayResolver(context: Context) {
     private val displayManager =
@@ -24,14 +22,9 @@ class TargetDisplayResolver(context: Context) {
             return getDefaultDisplay()
         }
 
-        val currentTarget = displayManager.getDisplay(targetDisplayId)
-        if (currentTarget != null && currentTarget.displayId != Display.DEFAULT_DISPLAY) {
-            return currentTarget
-        }
-
-        val externalDisplay = displayManager.displays.firstOrNull {
-            it.displayId != Display.DEFAULT_DISPLAY
-        }
+        val displays = presentationDisplays()
+        val externalDisplay = displays.firstOrNull { it.displayId == targetDisplayId }
+            ?: displays.firstOrNull()
 
         if (externalDisplay != null) {
             targetDisplayId = externalDisplay.displayId
@@ -43,12 +36,16 @@ class TargetDisplayResolver(context: Context) {
     }
 
     fun currentDisplay(): Display {
-        return displayManager.getDisplay(targetDisplayId) ?: getDefaultDisplay()
+        if (targetDisplayId == Display.DEFAULT_DISPLAY) {
+            return getDefaultDisplay()
+        }
+
+        return presentationDisplays().firstOrNull { it.displayId == targetDisplayId }
+            ?: getDefaultDisplay()
     }
 
     fun isExternalDisplaySelected(): Boolean {
-        return targetDisplayId != Display.DEFAULT_DISPLAY &&
-            displayManager.getDisplay(targetDisplayId) != null
+        return currentDisplay().displayId != Display.DEFAULT_DISPLAY
     }
 
     /** Clears the selected target when it is removed and reports whether it was selected. */
@@ -60,6 +57,11 @@ class TargetDisplayResolver(context: Context) {
         targetDisplayId = Display.DEFAULT_DISPLAY
         return true
     }
+
+    // Secondary internal/virtual displays are not necessarily Presentation targets.
+    private fun presentationDisplays(): List<Display> =
+        displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+            .filter { it.displayId != Display.DEFAULT_DISPLAY && it.isValid }
 
     private fun getDefaultDisplay(): Display {
         return displayManager.getDisplay(Display.DEFAULT_DISPLAY)
