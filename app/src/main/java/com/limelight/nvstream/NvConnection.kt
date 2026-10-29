@@ -62,6 +62,7 @@ open class NvConnection(
         }
     private val context: ConnectionContext = ConnectionContext()
     private val isMonkey: Boolean = ActivityManager.isUserAMonkey()
+    private var stopped = false
 
     @Volatile
     var serverVersion: String? = null
@@ -92,7 +93,12 @@ open class NvConnection(
         }
     }
 
+    @Synchronized
     fun stop() {
+        // Activity teardown and disconnect-and-quit can both stop this connection.
+        // A second stop must not interrupt a newer native session or release its slot.
+        if (stopped) return
+
         MoonBridge.interruptConnection()
 
         synchronized(MoonBridge::class.java) {
@@ -100,6 +106,7 @@ open class NvConnection(
             MoonBridge.cleanupBridge()
         }
 
+        stopped = true
         connectionAllowed.release()
     }
 
@@ -723,8 +730,10 @@ open class NvConnection(
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun doStopAndQuit() {
-        this.stop()
         Thread {
+            // Native shutdown joins the input thread and may wait on network I/O.
+            // Complete it here before quitting the host app, away from the UI thread.
+            this.stop()
             val h: NvHTTP
             try {
                 h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
