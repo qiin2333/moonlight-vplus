@@ -183,6 +183,11 @@ class ExternalDisplayManager(
         }
 
         fun isForDisplay(displayId: Int): Boolean = presentationDisplayId == displayId
+
+        fun releaseAfterFailedShow() {
+            // Dialog.dismiss() skips onStop() when addView() failed before mShowing was set.
+            onStop()
+        }
     }
 
     @SuppressLint("ResourceAsColor", "SetTextI18n")
@@ -203,7 +208,9 @@ class ExternalDisplayManager(
         } catch (e: WindowManager.InvalidDisplayException) {
             LimeLog.warning("Unable to show presentation on display ${display.displayId}: ${e.message}")
             targetDisplayResolver.resolve(false)
+            presentation.releaseAfterFailedShow()
             dismissExternalPresentation()
+            activity.findViewById<View>(R.id.surfaceView)?.visibility = View.VISIBLE
             callback?.onExternalDisplayDisconnected()
             return
         }

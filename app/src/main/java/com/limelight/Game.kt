@@ -274,6 +274,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var app: NvApp
     private var desiredRefreshRate = 0f
     private var selectedDisplayMode: DisplayModeManager.DisplayModeSelection? = null
+    private var preparingExternalDisplay = false
     var appSettingsManager: AppSettingsManager? = null
     var computerUuid: String? = null
 
@@ -723,6 +724,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
+                setInputGrabState(grabbedInput)
             }
 
             override fun onStreamViewReady(streamView: StreamView) {
@@ -861,14 +863,26 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     /** Create or re-create ExternalDisplayManager with the standard callback. */
     private fun setupExternalDisplay() {
-        val manager = ExternalDisplayManager(
-            this,
-            prefConfig,
-            targetDisplayResolver
-        )
-        externalDisplayManager = manager
-        manager.callback = createExternalDisplayCallback()
-        manager.initialize(initialDisplayMode = selectedDisplayMode)
+        preparingExternalDisplay = true
+        try {
+            val configuredDisplayId = selectedDisplayMode?.displayId
+            val manager = ExternalDisplayManager(
+                this,
+                prefConfig,
+                targetDisplayResolver
+            )
+            externalDisplayManager = manager
+            manager.callback = createExternalDisplayCallback()
+            manager.initialize(initialDisplayMode = selectedDisplayMode)
+
+            // The pending connection and decoder were configured before Presentation.show().
+            // Reuse the reconnect reset path if showing it changed the actual output display.
+            if (configuredDisplayId != null && configuredDisplayId != currentTargetDisplay.displayId) {
+                prepareConnection(initializeExternalDisplay = false)
+            }
+        } finally {
+            preparingExternalDisplay = false
+        }
     }
 
     /** Bind or re-bind the USB driver service with the current controllerHandler. */
@@ -1352,7 +1366,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionCallbackHandler.connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
     }
 
-    private fun prepareConnection() {
+    private fun prepareConnection(initializeExternalDisplay: Boolean = true) {
         audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
         runOnUiThread {
@@ -1417,7 +1431,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         })
 
-        setupExternalDisplay()
+        if (initializeExternalDisplay) {
+            setupExternalDisplay()
+        } else {
+            retargetTouchContexts(externalStreamView ?: streamView)
+        }
     }
 
     override fun onResume() {
@@ -2246,7 +2264,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
-        if (grab) {
+        if (grab && !prefConfig.enableNativeMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
                 inputCaptureProvider.showCursor()
@@ -2959,6 +2977,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         if (!surfaceCreated) {
             throw IllegalStateException("Surface changed before creation!")
+        }
+
+        if (preparingExternalDisplay) {
+            streamView.post {
+                if (!isFinishing && !isDestroyed && holder.surface.isValid &&
+                    holder === activeStreamView?.holder
+                ) {
+                    surfaceCreated(holder)
+                    surfaceChanged(holder, format, width, height)
+                }
+            }
+            return
         }
 
         val shouldPrepareFramegen =
