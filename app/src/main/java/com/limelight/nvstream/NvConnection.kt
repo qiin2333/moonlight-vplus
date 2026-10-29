@@ -548,7 +548,8 @@ open class NvConnection(
                     context.streamConfig.dynamicHdrPreference,
                 )
                 val ret = timeConnectionStep("native connection") {
-                    startNativeConnection(ib)
+                    // A cancelled pending start follows the normal failure/permit cleanup path.
+                    if (stopped) -1 else startNativeConnection(ib)
                 }
                 if (ret != 0) {
                     MoonBridge.cleanupBridge()

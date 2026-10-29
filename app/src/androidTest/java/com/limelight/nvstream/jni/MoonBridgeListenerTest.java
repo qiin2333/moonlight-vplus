@@ -16,7 +16,7 @@ public class MoonBridgeListenerTest {
         return (NvConnectionListener) Proxy.newProxyInstance(
                 NvConnectionListener.class.getClassLoader(),
                 new Class<?>[]{NvConnectionListener.class}, (proxy, method, args) -> {
-                    if (method.getName().equals("connectionStarted")) calls.incrementAndGet();
+                    if (method.getDeclaringClass() == NvConnectionListener.class) calls.incrementAndGet();
                     return null;
                 });
     }
@@ -37,6 +37,17 @@ public class MoonBridgeListenerTest {
         MoonBridge.detachConnectionListener(listener);
         assertFalse(MoonBridge.setupBridge(null, null, listener, cancelled::get));
         MoonBridge.bridgeClConnectionStarted();
+        assertEquals(0, calls.get());
+    }
+
+    @Test
+    public void cancelledStartupDoesNotReportNativeStages() {
+        AtomicInteger calls = new AtomicInteger();
+        AtomicBoolean cancelled = new AtomicBoolean();
+        assertTrue(MoonBridge.setupBridge(null, null, listener(calls), cancelled::get));
+
+        cancelled.set(true);
+        MoonBridge.bridgeClStageStarting(0);
         assertEquals(0, calls.get());
     }
 

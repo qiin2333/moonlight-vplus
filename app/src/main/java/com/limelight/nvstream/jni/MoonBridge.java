@@ -230,6 +230,7 @@ public class MoonBridge {
     private static AudioRenderer audioRenderer;
     private static VideoDecoderRenderer videoRenderer;
     private static volatile NvConnectionListener connectionListener;
+    private static volatile java.util.function.BooleanSupplier connectionCancelled;
     private static final Object connectionListenerLock = new Object();
 
     static {
@@ -387,6 +388,13 @@ public class MoonBridge {
     }
 
     public static void bridgeClStageStarting(int stage) {
+        // LiStartConnection clears its interrupt flag before the first stage callback.
+        // Reapply this attempt's cancellation even if its listener was detached meanwhile.
+        java.util.function.BooleanSupplier isCancelled = connectionCancelled;
+        if (isCancelled != null && isCancelled.getAsBoolean()) {
+            interruptConnection();
+            return;
+        }
         NvConnectionListener listener = connectionListener;
         if (listener != null) {
             listener.stageStarting(getStageName(stage));
@@ -575,6 +583,7 @@ public class MoonBridge {
             if (isCancelled.getAsBoolean()) return false;
             MoonBridge.videoRenderer = videoRenderer;
             MoonBridge.audioRenderer = audioRenderer;
+            MoonBridge.connectionCancelled = isCancelled;
             MoonBridge.connectionListener = connectionListener;
             return true;
         }
@@ -593,6 +602,7 @@ public class MoonBridge {
         MoonBridge.audioRenderer = null;
         synchronized (connectionListenerLock) {
             MoonBridge.connectionListener = null;
+            MoonBridge.connectionCancelled = null;
         }
         MoonBridge.clipboardListener = null;
     }
