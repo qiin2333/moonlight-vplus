@@ -52,13 +52,16 @@ class ExternalDisplayManager(
         checkForExternalDisplay()
 
         if (isUsingExternalDisplay()) {
+            startExternalDisplayPresentation()
+            if (!isUsingExternalDisplay()) return
+
+            // Dim the local screen only after the presentation has been accepted.
             val window = activity.window
             if (window != null) {
                 val layoutParams = window.attributes
                 layoutParams.screenBrightness = 0.3f
                 window.attributes = layoutParams
             }
-            startExternalDisplayPresentation()
         }
     }
 

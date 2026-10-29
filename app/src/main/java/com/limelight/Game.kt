@@ -713,6 +713,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             override fun onExternalDisplayConnected(display: Display) {
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
+                inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
             }
 
@@ -721,7 +722,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
                 setInputGrabState(grabbedInput)
             }
 
@@ -831,6 +831,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val serverCert = parseServerCert()
 
         prepareExternalDisplay()
+        if (prefConfig.isNativeResolution) {
+            val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+            prefConfig.width = latestConfig.width
+            prefConfig.height = latestConfig.height
+        }
         val streamConfigResult = buildStreamConfiguration(
             host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
         )
@@ -1383,13 +1388,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             decoderRenderer = null
         }
 
-        // Refresh display-derived Native dimensions and controller motion settings
-        // without replacing fixed/custom choices committed during this session.
+        // Refresh controller motion settings before rebuilding the handler.
         val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        if (prefConfig.isNativeResolution) {
-            prefConfig.width = latestConfig.width
-            prefConfig.height = latestConfig.height
-        }
         prefConfig.refreshControllerMotionPreferencesFrom(latestConfig)
 
         createConnectionAndHandler()

@@ -43,6 +43,10 @@ class ExternalDisplayManagerTest {
             val intent = Intent(context, HelpActivity::class.java).setData(Uri.parse("about:blank"))
             ActivityScenario.launch<HelpActivity>(intent).use { scenario ->
                 scenario.onActivity { activity ->
+                    val originalBrightness = 0.7f
+                    activity.window.attributes = activity.window.attributes.apply {
+                        screenBrightness = originalBrightness
+                    }
                     val localView = StreamView(activity).apply {
                         id = R.id.surfaceView
                         visibility = View.GONE
@@ -71,6 +75,7 @@ class ExternalDisplayManagerTest {
                             assertEquals(Display.DEFAULT_DISPLAY, resolver.currentDisplay().displayId)
                             assertNull(presentationField.get(manager))
                             assertEquals(View.VISIBLE, localView.visibility)
+                            assertEquals(originalBrightness, activity.window.attributes.screenBrightness, 0f)
                             disconnects++
                         }
                     }
@@ -78,6 +83,7 @@ class ExternalDisplayManagerTest {
                         manager.initialize()
                         assertEquals(1, disconnects)
                         assertFalse(manager.isUsingExternalDisplay())
+                        assertEquals(originalBrightness, activity.window.attributes.screenBrightness, 0f)
                     } finally {
                         manager.cleanup()
                     }
