@@ -2,13 +2,12 @@ package com.limelight.binding.input.haptics
 
 import android.content.Context
 
-/** Owned exclusively by DeviceVibrationCoordinator's hardware worker. */
+/** Native renderer for sustained backgrounds and graded points, owned by the device worker. */
 internal interface NativeAuthoredHaptics {
     val ready: Boolean
     /** False while loading; true only after an unrecoverable initialization/playback failure. */
     val failed: Boolean get() = false
     val backendName: String get() = "native"
-    val supportsContinuous: Boolean get() = true
     /** Rendering gains with user strength already applied; the backend may shape/quantize/limit.
      * Returns the elapsed-realtime deadline for restoring the background after a point.
      */
@@ -42,7 +41,6 @@ internal class NativeAuthoredFallback(
     override val ready get() = !closed && selected.ready
     override val failed get() = closed || selected.failed
     override val backendName get() = selected.backendName
-    override val supportsContinuous get() = selected.supportsContinuous
 
     override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
         if (closed) return null
@@ -51,9 +49,8 @@ internal class NativeAuthoredFallback(
             preferred.close()
         }
         val target = selected
-        // Capability may change between routing on the main loop and dispatch on this worker.
-        if (!target.ready || !target.supportsContinuous && ControllerRumbleState.normalizeAmplitude(body) > 0f)
-            return null
+        // Readiness may change between routing on the main loop and dispatch on this worker.
+        if (!target.ready) return null
         // A rejected write is not replayed: the next fresh source state can use the fallback.
         return target.render(body, point, keepWarm)
     }

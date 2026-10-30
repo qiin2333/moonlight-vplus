@@ -112,9 +112,7 @@ internal class AuthoredIrCoordinator(
         val targets = targetsFor(number)
         val pointOnly = targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
             .useDetails(output.body, now, output.ended, targets.mode, targets.hasController)
-        val nativeContinuous = phone.supportsNativeContinuous
-        val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored &&
-            (nativeContinuous || pointOnly)
+        val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored
         if (number.toInt() == 0 && nativePhone != native) {
             phone.resetAuthoredIr()
             nativePhone = native
@@ -134,8 +132,7 @@ internal class AuthoredIrCoordinator(
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
             if (native) {
-                val nativeBody = if (!nativeContinuous ||
-                    targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
+                val nativeBody = if (targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
                     ControllerRumbleState.ZERO else output.body
                 val gain = strengthPercent().coerceIn(0, 200) / 100f
                 // Merge band energy into the carrier's peak amplitude; point strength is never

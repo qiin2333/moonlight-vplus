@@ -4,10 +4,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NativeAuthoredFallbackTest {
-    @Test fun loadingDoesNotFailOverButPermanentFailureChangesCapabilitiesBeforeTheNextFreshWrite() {
+    @Test fun loadingDoesNotFailOverButPermanentFailureSelectsTheNextBackend() {
         for (failsWhileLoading in listOf(true, false)) {
             val calls = mutableListOf<String>()
-            class Sink(val name: String, override val supportsContinuous: Boolean) : NativeAuthoredHaptics {
+            class Sink(val name: String) : NativeAuthoredHaptics {
                 override var ready = true
                 override var failed = false
                 override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
@@ -17,8 +17,8 @@ class NativeAuthoredFallbackTest {
                 override fun stop() { calls += "$name:stop" }
                 override fun close() { calls += "$name:close" }
             }
-            val preferred = Sink("preferred", true)
-            val fallback = Sink("fallback", false)
+            val preferred = Sink("preferred")
+            val fallback = Sink("fallback")
             val sink = NativeAuthoredFallback(preferred, fallback)
             if (failsWhileLoading) {
                 preferred.ready = false
@@ -30,10 +30,7 @@ class NativeAuthoredFallbackTest {
             preferred.failed = true
             preferred.ready = false
             assertTrue(sink.ready)
-            assertFalse(sink.supportsContinuous)
-            sink.render(.1f, .2f, true) // A body command routed before failure must not reach RichTap.
-            assertFalse(calls.contains("fallback:render"))
-            sink.render(0f, .2f, true)
+            sink.render(.1f, .2f, true)
             assertTrue(calls.indexOf("preferred:close") < calls.indexOf("fallback:render"))
             fallback.failed = true
             fallback.ready = false

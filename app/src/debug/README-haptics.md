@@ -31,9 +31,9 @@ analyze_authored_ir_extended input.pcm output.irextbin
 ```
 
 `AuthoredIrTestActivity` accepts `--es asset <name>.irextbin --ez native true`.
-The optional native backend is SoundPool or RichTap; continuous/mixed effects
-fall back when the selected backend cannot render them. Use `--ez measure true`
-only for flat-device latency capture. Sensor data and event timestamps stay in
+The optional native backend is SoundPool or RichTap; both render sustained
+backgrounds and graded points. Use `--ez measure true` only for flat-device
+latency capture. Sensor data and event timestamps stay in
 app-private files. Replay and measurement code are debug-only; sampling reuses
 the high-rate sensor permission already present in the main manifest for controller motion.
 Temporary probe apps, raw captures and benchmark reports are not committed.

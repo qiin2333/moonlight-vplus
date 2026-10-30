@@ -105,7 +105,6 @@ internal class DeviceVibrationCoordinator(
     private var nativeWakeAt = Long.MAX_VALUE
 
     val supportsNativeAuthored: Boolean get() = nativeHaptics?.ready == true
-    val supportsNativeContinuous: Boolean get() = nativeHaptics?.supportsContinuous == true
 
     /** Points keep their source deadline and strength; continuous replacements are paced at 20ms.
      * Like the existing dispatcher, stalled hardware keeps the latest event rather than a backlog.

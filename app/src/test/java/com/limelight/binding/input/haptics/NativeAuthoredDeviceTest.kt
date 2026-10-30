@@ -5,7 +5,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NativeAuthoredDeviceTest {
-    private class Runtime(private val continuous: Boolean = true) : AutoCloseable {
+    private class Runtime : AutoCloseable {
         var now = 0L
         val renders = mutableListOf<Pair<Float, Float>>()
         val warms = mutableListOf<Boolean>()
@@ -19,7 +19,6 @@ class NativeAuthoredDeviceTest {
         val remove: (Runnable) -> Unit = { task -> callbacks.removeAll { it.first == task } }
         val sink = object : NativeAuthoredHaptics {
             override val ready = true
-            override val supportsContinuous = continuous
             override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
                 renders += body to point
                 warms += keepWarm
@@ -60,12 +59,11 @@ class NativeAuthoredDeviceTest {
         override fun close() { worker.blocked = false; stopIr?.invoke(); phone.stop(); flush() }
     }
 
-    private fun frame(sequence: Int = 0, timeUs: Long = 0,
-                      body: Ds5HapticsIrExtendedLane = Ds5HapticsIrExtendedLane(.1f, .2f)):
-        Ds5HapticsIrExtendedFrame {
+    private fun frame(): Ds5HapticsIrExtendedFrame {
         val lane = Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f)
-        return Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, 0, sequence, timeUs, 240, lane, lane),
-            1, timeUs, body, body, listOf(Ds5HapticsIrExtendedEvent(sequence + 1, timeUs, .01f, .004f)))
+        val body = Ds5HapticsIrExtendedLane(.1f, .2f)
+        return Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, 0, 0, 0, 240, lane, lane),
+            1, 0, body, body, listOf(Ds5HapticsIrExtendedEvent(1, 0, .01f, .004f)))
     }
 
     @Test fun bodyUpdatesKeepAFreshPointAndNewPointsBypassContinuousPacing() {
@@ -164,18 +162,13 @@ class NativeAuthoredDeviceTest {
     }
 
     @Test fun extendedIrUsesGradedPointsAndRespectsControllerDeviceAllocation() {
-        for (continuous in listOf(true, false)) for (mode in GameRumbleMode.entries)
-            for (hasController in listOf(true, false)) Runtime(continuous).use { r ->
+        for (mode in GameRumbleMode.entries)
+            for (hasController in listOf(true, false)) Runtime().use { r ->
             val controllers = mutableListOf<ControllerRumbleState>()
             val coordinator = r.authored(mode, hasController, controllers = controllers)
             coordinator.submit(frame())
             r.flush(); r.advance(20)
             if (mode == GameRumbleMode.CONTROLLER) assertTrue(r.renders.isEmpty())
-            else if (!continuous && (mode == GameRumbleMode.DEVICE || !hasController)) {
-                // The empty preroll may warm the sink before the scheduled body arrives.
-                assertTrue(r.renders.all { it.first == 0f && it.second == 0f })
-                assertTrue(r.ordinary.any { it > 0 })
-            }
             else {
                 assertEquals(.2f, r.renders.last().second, .0001f)
                 if (mode == GameRumbleMode.COORDINATED && hasController) {
@@ -183,22 +176,6 @@ class NativeAuthoredDeviceTest {
                     assertTrue(controllers.last().highFrequency <= .2f)
                 } else assertEquals(.31623f, r.renders.last().first, .0001f)
             }
-        }
-    }
-
-    @Test fun transientBackendWaitsThroughBodyGapsThenIgnoresInaudibleResidualBody() {
-        Runtime(continuous = false).use { r ->
-            val coordinator = r.authored(GameRumbleMode.DEVICE, hasController = false)
-            coordinator.submit(frame()); r.flush(); r.advance(20)
-            r.now = 40
-            coordinator.submit(frame(1, 40_000, Ds5HapticsIrExtendedLane(0f, 0f)))
-            r.flush(); r.advance(20)
-            assertTrue("A brief body gap must not switch to the transient backend",
-                r.renders.none { it.second > 0 })
-            r.now = 150
-            coordinator.submit(frame(2, 150_000, Ds5HapticsIrExtendedLane(.001f, .001f)))
-            r.flush(); r.advance(20)
-            assertEquals(0f to .2f, r.renders.last())
         }
     }
 }

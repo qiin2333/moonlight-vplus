@@ -52,7 +52,6 @@ class RichTapAuthoredHapticsTest {
         var now = 0L
         var stops = 0
         val sink = RichTapAuthoredHaptics({ packets += it }, { stops++ }, { now }, 7)
-        assertTrue(sink.supportsContinuous)
         assertEquals(4000L, sink.render(.15f, 0f, false))
         for (time in 20L..3980L step 20L) {
             now = time

@@ -13,6 +13,7 @@ import java.io.File
 class AuthoredIrMockIntegrationTest {
     private data class Arrival(val atMs: Long, val frame: Ds5HapticsIrExtendedFrame)
     private data class Write(val atMs: Long, val amplitude: Int)
+    private data class NativeWrite(val atMs: Long, val body: Float, val point: Float)
 
     private fun fixture(name: String): List<Ds5HapticsIrExtendedFrame> {
         val asset = sequenceOf(File("src/debug/assets/haptics/generated/$name.irextbin"),
@@ -43,7 +44,7 @@ class AuthoredIrMockIntegrationTest {
         val hasPhone: Boolean = true,
         val supportsTick: Boolean = true,
         val strength: Int = 100,
-        nativePoints: Boolean = false
+        native: Boolean = false
     ) : AutoCloseable {
         var nowMs = 10_000L
         private var closed = false
@@ -53,7 +54,7 @@ class AuthoredIrMockIntegrationTest {
         val phoneWrites = mutableListOf<Write>()
         val controllerWrites = mutableListOf<Pair<Long, ControllerRumbleState>>()
         val controllerPeakHigh = mutableMapOf<Short, Float>()
-        val nativeWrites = mutableListOf<Pair<Float, Float>>()
+        val nativeWrites = mutableListOf<NativeWrite>()
         val deliveredIds = mutableListOf<Int>()
         var maxInbox = 0
         private val callbacks = linkedMapOf<Runnable, Long>()
@@ -68,11 +69,10 @@ class AuthoredIrMockIntegrationTest {
             { phoneWrites += Write(nowMs, 0) }, worker,
             playDeviceTick = if (supportsTick) ({ tickTimes += nowMs; Unit }) else null,
             clockMs = { nowMs }, dispatcherClockNanos = { nowMs * 1_000_000 },
-            nativeHaptics = if (nativePoints) object : NativeAuthoredHaptics {
+            nativeHaptics = if (native) object : NativeAuthoredHaptics {
                 override val ready = true
-                override val supportsContinuous = false
                 override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
-                    nativeWrites += body to point
+                    nativeWrites += NativeWrite(nowMs, body, point)
                     return null
                 }
                 override fun stop() = Unit
@@ -218,15 +218,15 @@ class AuthoredIrMockIntegrationTest {
         val frames = fixture("mixed_clean_body_0.12_separate_0")
         val expected = frames.flatMap { it.events }.map { it.eventId }.toSet().size
         val otherPlayer = frames.map { it.copy(base = it.base.copy(controllerNumber = 1)) }
-        Runtime(nativePoints = true, supportsTick = false).use { runtime ->
+        Runtime(native = true, supportsTick = false).use { runtime ->
             runtime.replay((transport(frames) + transport(otherPlayer)).sortedBy { it.atMs })
             val bodyHigh = frames.maxOf { maxOf(it.left.continuousHigh, it.right.continuousHigh) }
             assertEquals(setOf<Short>(0, 1), runtime.controllerPeakHigh.keys)
             assertTrue(runtime.controllerPeakHigh.getValue(0) <= bodyHigh)
             assertTrue(runtime.controllerPeakHigh.getValue(1) > bodyHigh)
             // Player two's same-numbered events and END must not drive or clear the shared phone.
-            assertEquals(expected, runtime.nativeWrites.count { it.second > 0f })
-            assertTrue(runtime.nativeWrites.all { it.first == 0f })
+            assertEquals(expected, runtime.nativeWrites.count { it.point > 0f })
+            assertTrue(runtime.nativeWrites.all { it.body == 0f })
             assertTrue(runtime.phoneWrites.none { it.amplitude > 0 })
             assertTrue(runtime.tickTimes.isEmpty())
             assertTrue(runtime.controllerWrites.any { it.second.highFrequency > .01f })
@@ -236,14 +236,14 @@ class AuthoredIrMockIntegrationTest {
 
     @Test fun disconnectMovesBodyToPhoneAndReconnectRestoresTheSplit() {
         val disconnected = 11_000L..11_699L
-        Runtime(nativePoints = true, supportsTick = false).use { runtime ->
+        Runtime(native = true, supportsTick = false).use { runtime ->
             runtime.replay(transport(fixture("mixed_clean_body_0.12_separate_0")), disconnected = disconnected)
-            assertTrue(runtime.phoneWrites.any { it.atMs in disconnected && it.amplitude > 0 })
+            assertTrue(runtime.nativeWrites.any { it.atMs in disconnected && it.body > 0 })
             assertTrue(runtime.controllerWrites.none { it.first in disconnected })
             assertTrue(runtime.controllerWrites.any { it.first in 11_700L..11_740L && !it.second.isZero })
-            assertTrue(runtime.phoneWrites.filter { it.atMs > 11_720 }.all { it.amplitude == 0 })
+            assertTrue(runtime.nativeWrites.filter { it.atMs > 11_720 }.all { it.body == 0f })
+            assertTrue(runtime.phoneWrites.none { it.amplitude > 0 })
             assertEquals(runtime.deliveredIds.size, runtime.deliveredIds.toSet().size)
-            assertTrue(runtime.nativeWrites.all { it.first == 0f })
             assertTrue(runtime.controllerWrites.last().second.isZero)
         }
     }

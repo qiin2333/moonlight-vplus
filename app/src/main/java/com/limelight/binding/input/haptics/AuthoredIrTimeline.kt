@@ -25,7 +25,7 @@ internal class AuthoredIrTimeline {
     private var pendingReset = false
     private var ended = true
     private var terminal = false
-    private val events = PriorityQueue<Event>(MAX_EVENTS, compareBy { it.value.sourceTimeUs })
+    private val events = PriorityQueue<Ds5HapticsIrExtendedEvent>(MAX_EVENTS, compareBy { it.sourceTimeUs })
     private val states = PriorityQueue<State>(MAX_STATES, compareBy { it.sourceUs })
     private val seenIds = LinkedHashSet<Int>()
 
@@ -100,7 +100,7 @@ internal class AuthoredIrTimeline {
             if (nowUs - sourceLocal > EVENT_FRESH_US ||
                 maxOf(normalizeAmplitude(event.leftStrength), normalizeAmplitude(event.rightStrength)) == 0f) continue
             if (events.size == MAX_EVENTS) events.poll()
-            events.add(Event(event, sourceLocal + EVENT_FRESH_US))
+            events.add(event)
             ingested = true
         }
         return ingested
@@ -122,18 +122,17 @@ internal class AuthoredIrTimeline {
         }
         var selected: Event? = null
         // After a stalled consumer, discard missed source slots; do not replay a catch-up train.
-        while (events.isNotEmpty() && events.peek()!!.value.sourceTimeUs + offsetUs + PLAYOUT_LEAD_US <= nowUs) {
+        while (events.isNotEmpty() && events.peek()!!.sourceTimeUs + offsetUs + PLAYOUT_LEAD_US <= nowUs) {
             val event = events.poll() ?: break
-            val sourceLocal = event.value.sourceTimeUs + offsetUs
-            if (nowUs <= sourceLocal + EVENT_FRESH_US) selected = event.copy(
-                expiresUs = sourceLocal + EVENT_FRESH_US)
+            val sourceLocal = event.sourceTimeUs + offsetUs
+            if (nowUs <= sourceLocal + EVENT_FRESH_US) selected = Event(event, sourceLocal + EVENT_FRESH_US)
         }
         if (!dirty && selected == null) return null
         dirty = false
         return Output(body, selected, ended, pendingReset, expiresUs).also { pendingReset = false }
     }
 
-    fun nextWakeUs(): Long? = listOfNotNull(events.peek()?.value?.sourceTimeUs?.let { it + offsetUs + PLAYOUT_LEAD_US },
+    fun nextWakeUs(): Long? = listOfNotNull(events.peek()?.sourceTimeUs?.let { it + offsetUs + PLAYOUT_LEAD_US },
         states.peek()?.sourceUs?.let { it + offsetUs + PLAYOUT_LEAD_US },
         expiresUs.takeUnless { ended }).minOrNull()
 
