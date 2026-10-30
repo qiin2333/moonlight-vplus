@@ -341,7 +341,6 @@ class PreferenceConfiguration {
                 .putBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, showDisplaySettingsCard)
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
                 .putBoolean(SHOW_GYRO_CARD_PREF_STRING, showGyroCard)
-                .putBoolean(SHOW_QuickKeyCard, showQuickKeyCard)
                 .putBoolean(SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING, showWaveformHapticsCard)
                 .putBoolean(AUDIO_VIBRATION_ENABLE_PREF_STRING, enableAudioVibration)
                 .putInt(AUDIO_VIBRATION_STRENGTH_PREF_STRING, audioVibrationStrength)
@@ -421,6 +420,15 @@ class PreferenceConfiguration {
             e.printStackTrace()
             false
         }
+    }
+
+    /** Save an explicit visibility change; unrelated saves must leave the orientation default unset. */
+    fun setQuickKeyCardVisibility(context: Context, visible: Boolean) {
+        if (showQuickKeyCard == visible) return
+        showQuickKeyCard = visible
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+            .putBoolean(SHOW_QuickKeyCard, visible)
+            .apply()
     }
 
     /**

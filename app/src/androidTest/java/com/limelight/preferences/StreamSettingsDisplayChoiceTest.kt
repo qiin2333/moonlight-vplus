@@ -120,8 +120,15 @@ class StreamSettingsDisplayChoiceTest {
                     assertTrue(config.isNativeResolution)
                     assertEquals(if (reversed) 1600 to 2560 else menuSize, config.width to config.height)
                     assertEquals(reversed, config.showQuickKeyCard)
-                    for (visible in listOf(false, true)) {
-                        preferences.edit().putBoolean("checkbox_show_QuickKeyCard", visible).commit()
+                    config.setQuickKeyCardVisibility(context, config.showQuickKeyCard)
+                    config.enablePerfOverlay = !config.enablePerfOverlay
+                    assertTrue(config.writePreferences(context, synchronous = true))
+                    assertFalse(preferences.contains("checkbox_show_QuickKeyCard"))
+                    for (visible in listOf(!reversed, reversed)) {
+                        config.setQuickKeyCardVisibility(context, visible)
+                        assertTrue(preferences.contains("checkbox_show_QuickKeyCard"))
+                        assertEquals(visible, preferences.getBoolean("checkbox_show_QuickKeyCard", !visible))
+                        assertTrue(config.writePreferences(context, synchronous = true))
                         val reloaded = PreferenceConfiguration.readPreferences(context, virtualDisplay.display)
                         assertEquals(visible, reloaded.showQuickKeyCard)
                     }
