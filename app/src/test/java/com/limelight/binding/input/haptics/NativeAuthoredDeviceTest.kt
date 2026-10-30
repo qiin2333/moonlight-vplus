@@ -5,7 +5,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NativeAuthoredDeviceTest {
-    private class Runtime : AutoCloseable {
+    private class Runtime(private val continuous: Boolean = true) : AutoCloseable {
         var now = 0L
         val renders = mutableListOf<Pair<Float, Float>>()
         val warms = mutableListOf<Boolean>()
@@ -18,6 +18,7 @@ class NativeAuthoredDeviceTest {
         val remove: (Runnable) -> Unit = { task -> callbacks.removeAll { it.first == task } }
         val sink = object : NativeAuthoredHaptics {
             override val ready = true
+            override val supportsContinuous = continuous
             override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
                 renders += body to point
                 warms += keepWarm
@@ -140,7 +141,7 @@ class NativeAuthoredDeviceTest {
     }
 
     @Test fun extendedIrUsesGradedPointsAndRespectsControllerDeviceAllocation() {
-        for (mode in GameRumbleMode.entries) Runtime().use { r ->
+        for (continuous in listOf(true, false)) for (mode in GameRumbleMode.entries) Runtime(continuous).use { r ->
             val mixer = ControllerHapticsMixer()
             val controllers = mutableListOf<ControllerRumbleState>()
             val renderer = RumbleOutputRenderer(mixer, ControllerHapticsMixer(), { r.now }, r.post, r.remove,
@@ -156,6 +157,11 @@ class NativeAuthoredDeviceTest {
                 1, 0, body, body, listOf(Ds5HapticsIrExtendedEvent(1, 0, .01f, .004f))))
             r.flush(); r.advance(20)
             if (mode == GameRumbleMode.CONTROLLER) assertTrue(r.renders.isEmpty())
+            else if (mode == GameRumbleMode.DEVICE && !continuous) {
+                // The empty preroll may warm the sink before the scheduled body arrives.
+                assertTrue(r.renders.all { it.first == 0f && it.second == 0f })
+                assertTrue(r.ordinary.any { it > 0 })
+            }
             else {
                 assertEquals(.2f, r.renders.last().second, .0001f)
                 if (mode == GameRumbleMode.COORDINATED) {

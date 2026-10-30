@@ -18,6 +18,7 @@ class AuthoredIrTestActivity : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         @Suppress("DEPRECATION")
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(25, 35, 25, 20) }
@@ -52,6 +53,9 @@ class AuthoredIrTestActivity : Activity() {
         resultFile.writeText(org.json.JSONObject().put("state", "preparing").put("asset", asset)
             .put("nativeRequested", intent.getBooleanExtra("native", false)).toString())
         val token = epoch
+        val measurement = if (intent.getBooleanExtra("measure", false)) AuthoredIrMeasurement(this) else null
+        val sourceEvents = mutableSetOf<Int>()
+        var sourceBody = false
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
         val calls = java.util.concurrent.atomic.AtomicInteger()
         val waves = java.util.concurrent.atomic.AtomicInteger()
@@ -64,16 +68,15 @@ class AuthoredIrTestActivity : Activity() {
         val postDelayed: (Runnable, Long) -> Unit = { task, delay -> ui.postDelayed(task, delay); Unit }
         val supportsTick = com.limelight.binding.input.ControllerRumbleManager.supportsDeviceDetailTick(vibrator)
         val native = if (Build.VERSION.SDK_INT >= 29 && intent.getBooleanExtra("native", false))
-            SoundPoolAuthoredHaptics.create(this) else null
-        val nativeSink = native?.let { backend -> object : NativeAuthoredHaptics {
-            override val ready get() = backend.ready
+            NativeAuthoredHaptics.create(this) else null
+        val nativeSink = native?.let { backend -> object : NativeAuthoredHaptics by backend {
             override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+                measurement?.mark(if (point > 0) "native_point" else "native_body", body, point)
                 nativeCalls.incrementAndGet()
                 if (point > 0) nativePoints.incrementAndGet()
                 return backend.render(body, point, keepWarm)
             }
-            override fun stop() = backend.stop()
-            override fun close() = backend.close()
+            override fun stop() { measurement?.mark("native_stop"); backend.stop() }
         } }
         val sink = DeviceVibrationCoordinator(
             postDelayed, ui::removeCallbacks,
@@ -109,16 +112,20 @@ class AuthoredIrTestActivity : Activity() {
             coordinator.stop()
             renderer.stop()
             sink.stop()
+            measurement?.close()
         }
-        var origin = SystemClock.elapsedRealtime() + 400
+        val preRoll = if (measurement != null) 2000L else 400L
+        var origin = SystemClock.elapsedRealtime() + preRoll
         val sourceOrigin = frames.first().windowEndUs
         val report = Runnable {
             if (!active()) return@Runnable
+            measurement?.close()
             status.text = "$asset\n帧=$inputFrames，事件=$acceptedEvents\n原生渲染=$nativeCalls，原生短点=$nativePoints\n轻点调用=$calls，连续调用=$waves\n调用计数不代表马达逐个完成。"
             resultFile.writeText(org.json.JSONObject().put("state", "completed").put("asset", asset)
                 .put("frames", inputFrames).put("events", acceptedEvents)
                 .put("nativeRenders", nativeCalls.get()).put("nativePoints", nativePoints.get())
                 .put("nativeReady", nativeSink?.ready == true).put("ticks", calls.get())
+                .put("nativeBackend", native?.backendName ?: "fallback")
                 .put("waveforms", waves.get()).toString())
             LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves nativeCalls=$nativeCalls nativePoints=$nativePoints")
         }
@@ -127,6 +134,17 @@ class AuthoredIrTestActivity : Activity() {
                 if (destroyed || epoch != token) return
                 val now = SystemClock.elapsedRealtime()
                 while (index < frames.size && origin + (frames[index].windowEndUs - sourceOrigin) / 1000 <= now) {
+                    if (measurement != null) {
+                        val frame = frames[index]
+                        frame.events.filter { sourceEvents.add(it.eventId) }.forEach {
+                            measurement.mark("source_event", point = maxOf(it.leftStrength, it.rightStrength), eventId = it.eventId)
+                        }
+                        if (!sourceBody && maxOf(frame.left.continuousLow, frame.left.continuousHigh,
+                                frame.right.continuousLow, frame.right.continuousHigh) > 0f) {
+                            sourceBody = true
+                            measurement.mark("source_body")
+                        }
+                    }
                     coordinator.submit(frames[index++])
                     inputFrames++
                 }
@@ -144,7 +162,7 @@ class AuthoredIrTestActivity : Activity() {
                 override fun run() {
                     if (!active()) return
                     if (nativeSink.ready) {
-                        origin = SystemClock.elapsedRealtime() + 400
+                        origin = SystemClock.elapsedRealtime() + preRoll
                         ui.post(pump)
                     } else if (SystemClock.elapsedRealtime() < deadline) ui.postDelayed(this, 50)
                     else { status.text = "原生触觉资产未就绪，本轮未播放"; stop() }

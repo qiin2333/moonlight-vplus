@@ -1116,5 +1116,5 @@
     <string name="summary_ds5_simulation_mode">傳統模擬保留現有手感；IR 增強重用 v2，透過擴充區傳輸持續層和短促落點，需要相容的 Sunshine。重新連線後生效。</string>
     <string-array name="ds5_simulation_mode_names"><item>傳統模擬</item><item>IR 增強（v2 + 擴充）</item></string-array>
     <string name="title_native_device_haptics">原生裝置觸覺（實驗）</string>
-    <string name="summary_native_device_haptics">在增強 IR 模式下，以原生音訊觸覺還原輕重短點與持續層。可能增加震動延遲；不支援時沿用原有輸出。重新連線後生效。</string>
+    <string name="summary_native_device_haptics">在增強 IR 模式下，以原生裝置觸覺還原輕重短點與持續層。可能增加震動延遲；不支援時沿用原有輸出。重新連線後生效。</string>
 </resources>

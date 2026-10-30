@@ -98,7 +98,7 @@ import com.limelight.binding.audio.MicrophoneButtonPositionStore
 import com.limelight.ui.FloatBallPositionStore
 import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.haptics.GameRumbleMode
-import com.limelight.binding.input.haptics.SoundPoolAuthoredHaptics
+import com.limelight.binding.input.haptics.NativeAuthoredHaptics
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.utils.AboutDialogLauncher
@@ -3125,7 +3125,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             val deviceVibrator = requireActivity().getSystemService(VIBRATOR_SERVICE) as Vibrator
             val deviceRumbleStrength = findPreference<Preference>("seekbar_vibrate_fallback_strength")!!
-            val nativeHapticsSupported = Build.VERSION.SDK_INT >= 29 && SoundPoolAuthoredHaptics.supported()
+            val nativeHapticsSupported = Build.VERSION.SDK_INT >= 29 && NativeAuthoredHaptics.supported()
             if (!deviceVibrator.hasVibrator() || !nativeHapticsSupported) {
                 findPreference<Preference>("checkbox_native_device_haptics")?.let {
                     it.parent?.removePreference(it)

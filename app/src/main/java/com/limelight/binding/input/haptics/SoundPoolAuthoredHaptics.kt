@@ -16,6 +16,7 @@ import kotlin.math.roundToInt
  * A point and its background share one stream, because separate voices can mask the point.
  */
 internal class SoundPoolAuthoredHaptics private constructor(context: Context, attributes: AudioAttributes) : NativeAuthoredHaptics {
+    override val backendName = "SoundPool"
     private val pool = SoundPool.Builder().setMaxStreams(2).setAudioAttributes(attributes).build()
     private val loader = Executors.newSingleThreadExecutor { task ->
         Thread(task, "NativeHapticsAssets").apply { isDaemon = true }

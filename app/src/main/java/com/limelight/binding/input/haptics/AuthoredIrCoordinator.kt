@@ -110,7 +110,10 @@ internal class AuthoredIrCoordinator(
             if (output.reset) phone.resetAuthoredIr()
         }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
-        val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored
+        val nativeBody = if (targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
+            ControllerRumbleState.ZERO else output.body
+        val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored &&
+            (nativeBody.isZero || phone.supportsNativeContinuous)
         if (number.toInt() == 0 && nativePhone != native) {
             phone.resetAuthoredIr()
             nativePhone = native
@@ -131,13 +134,11 @@ internal class AuthoredIrCoordinator(
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
             if (native) {
-                val deviceBody = if (targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
-                    ControllerRumbleState.ZERO else output.body
                 val gain = strengthPercent().coerceIn(0, 200) / 100f
                 // Merge band energy into the carrier's peak amplitude; point strength is never
                 // reduced to the fixed-strength TICK used by the public vibrator fallback.
-                val bodyGain = sqrt(2f * (deviceBody.lowFrequency * deviceBody.lowFrequency +
-                    deviceBody.highFrequency * deviceBody.highFrequency)) * gain
+                val bodyGain = sqrt(2f * (nativeBody.lowFrequency * nativeBody.lowFrequency +
+                    nativeBody.highFrequency * nativeBody.highFrequency)) * gain
                 phone.submitNativeAuthored(bodyGain,
                     // Profile 1 carries early band-peak evidence, not the finished PCM crest.
                     // Native playback needs its own makeup gain; otherwise rain collapses
