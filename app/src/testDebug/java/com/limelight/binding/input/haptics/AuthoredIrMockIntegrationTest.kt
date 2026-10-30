@@ -39,9 +39,11 @@ class AuthoredIrMockIntegrationTest {
 
     private class Runtime(
         val mode: GameRumbleMode = GameRumbleMode.COORDINATED,
-        val hasController: Boolean = true,
+        var hasController: Boolean = true,
         val hasPhone: Boolean = true,
-        val supportsTick: Boolean = true
+        val supportsTick: Boolean = true,
+        val strength: Int = 100,
+        nativePoints: Boolean = false
     ) : AutoCloseable {
         var nowMs = 10_000L
         private var closed = false
@@ -50,6 +52,8 @@ class AuthoredIrMockIntegrationTest {
         val tickTimes = mutableListOf<Long>()
         val phoneWrites = mutableListOf<Write>()
         val controllerWrites = mutableListOf<Pair<Long, ControllerRumbleState>>()
+        val controllerPeakHigh = mutableMapOf<Short, Float>()
+        val nativeWrites = mutableListOf<Pair<Float, Float>>()
         val deliveredIds = mutableListOf<Int>()
         var maxInbox = 0
         private val callbacks = linkedMapOf<Runnable, Long>()
@@ -63,14 +67,28 @@ class AuthoredIrMockIntegrationTest {
             { amplitude, _ -> phoneWrites += Write(nowMs, amplitude) },
             { phoneWrites += Write(nowMs, 0) }, worker,
             playDeviceTick = if (supportsTick) ({ tickTimes += nowMs; Unit }) else null,
-            clockMs = { nowMs }, dispatcherClockNanos = { nowMs * 1_000_000 })
+            clockMs = { nowMs }, dispatcherClockNanos = { nowMs * 1_000_000 },
+            nativeHaptics = if (nativePoints) object : NativeAuthoredHaptics {
+                override val ready = true
+                override val supportsContinuous = false
+                override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+                    nativeWrites += body to point
+                    return null
+                }
+                override fun stop() = Unit
+                override fun close() = Unit
+            } else null)
         private fun targets(number: Short) = GameRumbleContext(mode, hasController,
             hasPhone && number.toInt() == 0)
         private val renderer = RumbleOutputRenderer(mixer, deviceMixer, { nowMs },
             { task, delay -> callbacks[task] = nowMs + delay }, { callbacks.remove(it); Unit },
             { hasController }, { 20L },
-            { controllerWrites += nowMs to it.output },
-            { phone.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, it, 100) },
+            {
+                controllerWrites += nowMs to it.output
+                controllerPeakHigh[it.controllerNumber] = maxOf(
+                    controllerPeakHigh[it.controllerNumber] ?: 0f, it.output.highFrequency)
+            },
+            { phone.submitGameRumble(DeviceVibrationCoordinator.GameSource.ROUTED_GAME, it, strength) },
             { !closed })
         private val ordinary = GameRumblePipeline(renderer, ::targets, { nowMs },
             { task, delay -> callbacks[task] = nowMs + delay }, { callbacks.remove(it); Unit })
@@ -86,7 +104,7 @@ class AuthoredIrMockIntegrationTest {
             }
         }
         private val authored = AuthoredIrCoordinator(mixer, renderer, phone, ::targets,
-            { supportsTick }, { 100 }, { nowMs },
+            { supportsTick }, { strength }, { nowMs },
             { task, delay -> callbacks[task] = nowMs + delay }, { callbacks.remove(it); Unit },
             ::scheduleExpiry, { !closed }, { _, output ->
                 output.event?.let { deliveredIds += it.value.eventId }
@@ -117,10 +135,16 @@ class AuthoredIrMockIntegrationTest {
             renderer.flushDevice()
             flush()
         }
-        fun replay(arrivals: List<Arrival>, paused: LongRange = LongRange.EMPTY) {
+        fun replay(arrivals: List<Arrival>, paused: LongRange = LongRange.EMPTY,
+                   disconnected: LongRange = LongRange.EMPTY) {
             var index = 0
+            val controllerInitiallyPresent = hasController
             for (time in nowMs..arrivals.last().atMs + 300) {
                 nowMs = time
+                val connected = controllerInitiallyPresent && time !in disconnected
+                // Match the Android adapter's dedupe reset when its physical sink changes.
+                if (connected != hasController) renderer.resetController(0)
+                hasController = connected
                 while (index < arrivals.size && arrivals[index].atMs <= time) receive(arrivals[index++].frame)
                 step(time, time !in paused)
             }
@@ -176,6 +200,51 @@ class AuthoredIrMockIntegrationTest {
             assertTrue(runtime.tickTimes.none { it in 10_600L..12_000L })
             assertTrue(runtime.controllerWrites.isEmpty())
             assertEquals(0, runtime.phoneWrites.last().amplitude)
+        }
+    }
+
+    @Test fun mutedPhoneLeavesRainTransientsOnTheController() {
+        Runtime(strength = 0).use { runtime ->
+            runtime.replay(transport(fixture("pulse_density_50")))
+            assertTrue(runtime.tickTimes.isEmpty())
+            assertTrue(runtime.phoneWrites.none { it.amplitude > 0 })
+            assertTrue("Muting the phone must not discard controller impacts",
+                runtime.controllerWrites.any { !it.second.isZero })
+            assertTrue(runtime.controllerWrites.last().second.isZero)
+        }
+    }
+
+    @Test fun coordinatedNativeMixedKeepsBodyOnControllerAndEveryPointOnPhone() {
+        val frames = fixture("mixed_clean_body_0.12_separate_0")
+        val expected = frames.flatMap { it.events }.map { it.eventId }.toSet().size
+        val otherPlayer = frames.map { it.copy(base = it.base.copy(controllerNumber = 1)) }
+        Runtime(nativePoints = true, supportsTick = false).use { runtime ->
+            runtime.replay((transport(frames) + transport(otherPlayer)).sortedBy { it.atMs })
+            val bodyHigh = frames.maxOf { maxOf(it.left.continuousHigh, it.right.continuousHigh) }
+            assertEquals(setOf<Short>(0, 1), runtime.controllerPeakHigh.keys)
+            assertTrue(runtime.controllerPeakHigh.getValue(0) <= bodyHigh)
+            assertTrue(runtime.controllerPeakHigh.getValue(1) > bodyHigh)
+            // Player two's same-numbered events and END must not drive or clear the shared phone.
+            assertEquals(expected, runtime.nativeWrites.count { it.second > 0f })
+            assertTrue(runtime.nativeWrites.all { it.first == 0f })
+            assertTrue(runtime.phoneWrites.none { it.amplitude > 0 })
+            assertTrue(runtime.tickTimes.isEmpty())
+            assertTrue(runtime.controllerWrites.any { it.second.highFrequency > .01f })
+            assertTrue(runtime.controllerWrites.last().second.isZero)
+        }
+    }
+
+    @Test fun disconnectMovesBodyToPhoneAndReconnectRestoresTheSplit() {
+        val disconnected = 11_000L..11_699L
+        Runtime(nativePoints = true, supportsTick = false).use { runtime ->
+            runtime.replay(transport(fixture("mixed_clean_body_0.12_separate_0")), disconnected = disconnected)
+            assertTrue(runtime.phoneWrites.any { it.atMs in disconnected && it.amplitude > 0 })
+            assertTrue(runtime.controllerWrites.none { it.first in disconnected })
+            assertTrue(runtime.controllerWrites.any { it.first in 11_700L..11_740L && !it.second.isZero })
+            assertTrue(runtime.phoneWrites.filter { it.atMs > 11_720 }.all { it.amplitude == 0 })
+            assertEquals(runtime.deliveredIds.size, runtime.deliveredIds.toSet().size)
+            assertTrue(runtime.nativeWrites.all { it.first == 0f })
+            assertTrue(runtime.controllerWrites.last().second.isZero)
         }
     }
 

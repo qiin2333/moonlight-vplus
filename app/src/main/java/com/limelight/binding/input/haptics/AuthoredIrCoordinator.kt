@@ -109,7 +109,7 @@ internal class AuthoredIrCoordinator(
             renderer.flushDevice()
             if (output.reset) phone.resetAuthoredIr()
         }
-        val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
+        val targets = targetsFor(number)
         val pointOnly = targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
             .useDetails(output.body, now, output.ended, targets.mode, targets.hasController)
         val nativeContinuous = phone.supportsNativeContinuous
@@ -165,10 +165,15 @@ internal class AuthoredIrCoordinator(
     private fun transientAmplitude(strength: Float): Float =
         sqrt(ControllerRumbleState.normalizeAmplitude(strength))
 
+    private fun targetsFor(number: Short): GameRumbleContext = context(number).let {
+        // A muted phone cannot accept the details removed from the controller signal.
+        if (number.toInt() == 0 && strengthPercent() > 0) it else it.copy(hasDevice = false)
+    }
+
     private fun routeLegacy(pending: Legacy, now: Long) {
         val number = pending.controllerNumber
         if (number.toInt() == 0 && nativePhone) { phone.resetAuthoredIr(); nativePhone = false }
-        val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
+        val targets = targetsFor(number)
         val details = pending.output.usesDeviceDetails(targets.mode, targets.hasController,
             targets.hasDevice, supportsTick())
         val state = if (details) pending.output.body else pending.output.rumble
