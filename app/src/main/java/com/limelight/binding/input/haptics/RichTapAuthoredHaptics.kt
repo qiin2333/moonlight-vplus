@@ -11,10 +11,9 @@ import com.limelight.LimeLog
 import java.lang.reflect.Method
 import kotlin.math.roundToInt
 
-/** Graded HE2 transients. Continuous renewal failed device acceptance, so it stays on the
- * existing fallback (or on the physical controller in coordinated mode).
- * No SDK exemptions, unbounded loops or separate competing motor voices.
- * Owned by the existing serial device worker; all source timing/expiry stays in the IR coordinator.
+/** A single finite HE2 voice for body and points. State updates replace the envelope;
+ * they never append work to the vendor timeline. Source expiry and ownership remain
+ * with the existing IR coordinator and serial device worker.
  */
 internal class RichTapAuthoredHaptics(
     private val play: (IntArray) -> Unit,
@@ -23,28 +22,61 @@ internal class RichTapAuthoredHaptics(
     private val processId: Int
 ) : NativeAuthoredHaptics {
     override val backendName = "RichTap"
-    override val supportsContinuous = false
     @Volatile override var ready = true
         private set
     override val failed get() = !ready
     private var active = false
     private var sequence = 0
     private var pointUntil = 0L
+    private var bodyUntil = 0L
+    private var renewAt = 0L
+    private var bodyLevel = 0
 
     override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
         if (!ready) return null
         val now = clockMs()
         val pointValue = level(point)
+        val requestedBody = level(body)
+        // Hysteresis keeps small analysis fluctuations from restarting the carrier.
+        val target = if (requestedBody > 0 && now < bodyUntil &&
+            kotlin.math.abs(requestedBody - bodyLevel) < BODY_STEP) bodyLevel
+            else (requestedBody + BODY_STEP / 2) / BODY_STEP * BODY_STEP
         if (pointValue == 0 && now < pointUntil) return pointUntil
-        if (pointValue == 0) { stop(); return null }
         return try {
-            check(ControllerRumbleState.normalizeAmplitude(body) == 0f) { "RichTap continuous output unavailable" }
-            val header = intArrayOf(2, 2, processId, (1 shl 16) or (++sequence and 65535),
-                0x10001, 0, 0, 1)
-            active = true
-            play(header + intArrayOf(4097, 5, 0, 0, pointValue, FREQUENCY, 0))
-            pointUntil = now + 40L
-            pointUntil
+            when {
+                target > 0 -> {
+                    val from = if (now < bodyUntil) bodyLevel else 0
+                    if (pointValue > 0 || target != bodyLevel || now >= renewAt) {
+                        val peak = (target + pointValue).coerceAtMost(100)
+                        val curve = if (pointValue > 0) intArrayOf(
+                            0, from, 0, 2, peak, 0, 12, target, 0,
+                            BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0
+                        ) else intArrayOf(
+                            0, from, 0, 2, target, 0,
+                            BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0
+                        )
+                        active = true
+                        play(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
+                            FREQUENCY, BODY_DURATION_MS, curve.size / 3) + curve))
+                        bodyLevel = target
+                        bodyUntil = now + BODY_DURATION_MS
+                        renewAt = now + BODY_RENEW_MS
+                        if (pointValue > 0) pointUntil = now + MIXED_POINT_HOLD_MS
+                    }
+                    if (now < pointUntil) minOf(pointUntil, renewAt) else renewAt
+                }
+                pointValue > 0 -> {
+                    val hadBody = now < bodyUntil
+                    bodyLevel = 0
+                    bodyUntil = 0
+                    renewAt = 0
+                    active = true
+                    play(pattern(intArrayOf(4097, 5, 0, 0, pointValue, FREQUENCY, 0)))
+                    pointUntil = now + if (hadBody) MIXED_POINT_HOLD_MS else POINT_HOLD_MS
+                    pointUntil
+                }
+                else -> { stop(); null }
+            }
         } catch (error: Exception) {
             ready = false
             LimeLog.warning("RichTap authored haptics disabled: ${error.message}")
@@ -53,8 +85,15 @@ internal class RichTapAuthoredHaptics(
         }
     }
 
+    private fun pattern(event: IntArray): IntArray = intArrayOf(
+        2, 2, processId, (1 shl 16) or (++sequence and 65535), 0x10001, 0, 0, 1
+    ) + event
+
     override fun stop() {
         pointUntil = 0
+        bodyUntil = 0
+        renewAt = 0
+        bodyLevel = 0
         if (active) { active = false; cancel() }
     }
 
@@ -62,6 +101,11 @@ internal class RichTapAuthoredHaptics(
 
     companion object {
         private const val FREQUENCY = 56
+        private const val BODY_STEP = 5
+        private const val BODY_DURATION_MS = 5_000
+        private const val BODY_RENEW_MS = 4_000L
+        private const val POINT_HOLD_MS = 40L
+        private const val MIXED_POINT_HOLD_MS = 100L
         // Device rendering gain, not a physical-force percentage. User strength is applied
         // upstream; use the tested HE range without changing the host's energy evidence.
         private fun level(gain: Float) =
@@ -96,8 +140,11 @@ internal class RichTapAuthoredHaptics(
                 RichTapAuthoredHaptics(
                     play = { raw -> vibrator.vibrate(factory.invoke(null, raw, 1, 0, 255, 0) as VibrationEffect, attributes) },
                     cancel = {
+                        // Parameter zero stops the native voice without the blocking cancel/restart
+                        // sequence seen on vendor services. Use framework cancellation only
+                        // if that native stop is rejected.
                         try { vibrator.vibrate(parameter.invoke(null, 0, 0, 0) as VibrationEffect, attributes) }
-                        finally { vibrator.cancel() }
+                        catch (_: Exception) { vibrator.cancel() }
                     }, clockMs = SystemClock::elapsedRealtime, processId = Process.myPid())
             } catch (error: Exception) {
                 LimeLog.warning("RichTap authored haptics unavailable: ${error.message}")

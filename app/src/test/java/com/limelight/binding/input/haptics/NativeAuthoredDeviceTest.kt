@@ -164,20 +164,21 @@ class NativeAuthoredDeviceTest {
     }
 
     @Test fun extendedIrUsesGradedPointsAndRespectsControllerDeviceAllocation() {
-        for (continuous in listOf(true, false)) for (mode in GameRumbleMode.entries) Runtime(continuous).use { r ->
+        for (continuous in listOf(true, false)) for (mode in GameRumbleMode.entries)
+            for (hasController in listOf(true, false)) Runtime(continuous).use { r ->
             val controllers = mutableListOf<ControllerRumbleState>()
-            val coordinator = r.authored(mode, controllers = controllers)
+            val coordinator = r.authored(mode, hasController, controllers = controllers)
             coordinator.submit(frame())
             r.flush(); r.advance(20)
             if (mode == GameRumbleMode.CONTROLLER) assertTrue(r.renders.isEmpty())
-            else if (mode == GameRumbleMode.DEVICE && !continuous) {
+            else if (!continuous && (mode == GameRumbleMode.DEVICE || !hasController)) {
                 // The empty preroll may warm the sink before the scheduled body arrives.
                 assertTrue(r.renders.all { it.first == 0f && it.second == 0f })
                 assertTrue(r.ordinary.any { it > 0 })
             }
             else {
                 assertEquals(.2f, r.renders.last().second, .0001f)
-                if (mode == GameRumbleMode.COORDINATED) {
+                if (mode == GameRumbleMode.COORDINATED && hasController) {
                     assertEquals(0f, r.renders.last().first, 0f)
                     assertTrue(controllers.last().highFrequency <= .2f)
                 } else assertEquals(.31623f, r.renders.last().first, .0001f)

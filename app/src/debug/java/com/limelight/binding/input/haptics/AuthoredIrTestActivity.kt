@@ -151,7 +151,7 @@ class AuthoredIrTestActivity : Activity() {
                 } else ui.postDelayed(report, 250)
             }
         }
-        status.text = "即将回放 $asset\nTICK能力=$supportsTick；单手机持续层优先，独立短落点用轻点。"
+        status.text = "即将回放 $asset\nTICK能力=$supportsTick；按当前后端能力还原持续层与短点。"
         if (nativeSink == null) ui.post(pump)
         else {
             val deadline = SystemClock.elapsedRealtime() + 15_000

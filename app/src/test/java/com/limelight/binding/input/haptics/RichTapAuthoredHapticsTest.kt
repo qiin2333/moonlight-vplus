@@ -47,4 +47,72 @@ class RichTapAuthoredHapticsTest {
         assertEquals(1, stops)
         assertNull(sink.render(0f, .1f, false))
     }
+    @Test fun steadyBodyIsRenewedWithoutQueuingOrCancellingEachInputUpdate() {
+        val packets = mutableListOf<IntArray>()
+        var now = 0L
+        var stops = 0
+        val sink = RichTapAuthoredHaptics({ packets += it }, { stops++ }, { now }, 7)
+        assertTrue(sink.supportsContinuous)
+        assertEquals(4000L, sink.render(.15f, 0f, false))
+        for (time in 20L..3980L step 20L) {
+            now = time
+            sink.render(if (time % 40 == 0L) .158f else .161f, 0f, false)
+        }
+        assertEquals(1, packets.size)
+        assertEquals(4096, packets.single()[8])
+        assertEquals(5000, packets.single()[14])
+        now = 4000
+        sink.render(.15f, 0f, false)
+        assertEquals(2, packets.size)
+        assertEquals(50, packets.last()[17])
+        assertEquals(0, stops)
+        now = 4010
+        sink.render(0f, 0f, false)
+        sink.stop()
+        assertEquals(1, stops)
+        now = 4020
+        sink.render(.15f, 0f, false)
+        assertEquals(0, packets.last()[17])
+    }
+
+    @Test fun mixedEnvelopePreservesTheBodyAndProtectsFreshPointsFromBodyRefresh() {
+        val packets = mutableListOf<IntArray>()
+        var now = 0L
+        val sink = RichTapAuthoredHaptics({ packets += it }, {}, { now }, 7)
+        sink.render(.15f, 0f, false)
+        now = 20
+        assertEquals(120L, sink.render(.15f, .12f, false))
+        val mixed = packets.last()
+        assertEquals(4096, mixed[8])
+        assertEquals(5, mixed[15])
+        val levels = mixed.drop(16).chunked(3).map { it[1] }
+        assertEquals(listOf(50, 90, 50, 50, 50), levels)
+        now = 40
+        sink.render(.21f, 0f, false)
+        assertEquals(2, packets.size)
+        now = 60
+        sink.render(.21f, .09f, false)
+        assertEquals(3, packets.size)
+        assertEquals(100, packets.last()[20])
+        now = 160
+        sink.render(.06f, 0f, false)
+        assertEquals(4, packets.size)
+        assertEquals(20, packets.last()[20])
+    }
+
+    @Test fun expiredCarrierStartsFreshAndSilenceResetsItsState() {
+        val packets = mutableListOf<IntArray>()
+        var now = 0L
+        val sink = RichTapAuthoredHaptics({ packets += it }, {}, { now }, 7)
+        sink.render(.15f, 0f, false)
+        now = 6000
+        sink.render(.21f, 0f, false)
+        assertEquals(0, packets.last()[17])
+        sink.render(Float.NaN, Float.NEGATIVE_INFINITY, false)
+        assertTrue(sink.ready)
+        now += 20
+        sink.render(.15f, 0f, false)
+        assertEquals(0, packets.last()[17])
+    }
+
 }
