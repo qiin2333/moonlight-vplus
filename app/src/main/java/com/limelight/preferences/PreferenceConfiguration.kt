@@ -1686,9 +1686,6 @@ class PreferenceConfiguration {
                 config.enableAudioVibration
             )
             config.showGyroCard = prefs.getBoolean(SHOW_GYRO_CARD_PREF_STRING, true)
-            // 横屏时快捷卡片默认不开启
-            val defaultQuickKeyCard = config.width <= config.height
-            config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, defaultQuickKeyCard)
             // Preserve the historical capability-driven behavior for existing installs.
             config.showWaveformHapticsCard = prefs.getBoolean(
                 SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
@@ -1754,6 +1751,10 @@ class PreferenceConfiguration {
                 config.width = config.height
                 config.height = temp
             }
+
+            // Default to visible for the final portrait dimensions; preserve an explicit choice.
+            val defaultQuickKeyCard = config.width <= config.height
+            config.showQuickKeyCard = prefs.getBoolean(SHOW_QuickKeyCard, defaultQuickKeyCard)
 
             // 读取画面位置设置
             val posString = prefs.getString(SCREEN_POSITION_PREF_STRING, DEFAULT_SCREEN_POSITION) ?: DEFAULT_SCREEN_POSITION

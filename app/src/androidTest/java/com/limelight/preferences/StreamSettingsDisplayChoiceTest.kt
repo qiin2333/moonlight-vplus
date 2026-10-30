@@ -98,6 +98,7 @@ class StreamSettingsDisplayChoiceTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 
+    /** Virtual displays model a portrait launcher without changing the test device's orientation. */
     @Test
     fun nativePreferencesMatchTheMenuAcrossDisplayOrientationsAndReversal() {
         val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -113,10 +114,17 @@ class StreamSettingsDisplayChoiceTest {
                     preferences.edit()
                         .putString(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_NATIVE)
                         .putBoolean("checkbox_reverse_resolution", reversed)
+                        .remove("checkbox_show_QuickKeyCard")
                         .commit()
                     val config = PreferenceConfiguration.readPreferences(context, virtualDisplay.display)
                     assertTrue(config.isNativeResolution)
                     assertEquals(if (reversed) 1600 to 2560 else menuSize, config.width to config.height)
+                    assertEquals(reversed, config.showQuickKeyCard)
+                    for (visible in listOf(false, true)) {
+                        preferences.edit().putBoolean("checkbox_show_QuickKeyCard", visible).commit()
+                        val reloaded = PreferenceConfiguration.readPreferences(context, virtualDisplay.display)
+                        assertEquals(visible, reloaded.showQuickKeyCard)
+                    }
                 }
             } finally {
                 virtualDisplay.release()
