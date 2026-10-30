@@ -180,8 +180,6 @@ class ShortcutTrampoline : ThemedActivity() {
                 })
             }
         } else {
-            finish()
-
             var i = Intent(this@ShortcutTrampoline, PcView::class.java)
             i.action = Intent.ACTION_MAIN
             i.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
@@ -201,6 +199,9 @@ class ShortcutTrampoline : ThemedActivity() {
                 }
             }
 
+            // ShortcutTrampoline is noHistory, so let CLEAR_TASK replace its task as
+            // part of this launch. Finishing first can leave the system without a
+            // task while it processes this multi-activity start request.
             startActivities(intentStack.toTypedArray())
         }
     }
