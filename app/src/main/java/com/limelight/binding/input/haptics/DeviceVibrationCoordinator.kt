@@ -275,7 +275,7 @@ internal class DeviceVibrationCoordinator(
             if (!active) {
                 if (!detailOwned) return
                 detailOwned = false
-                if (sourceExpiryMs == null || !audioOwned && !touchActive) generation++
+                if (!audioOwned && !touchActive) generation++
                 detailWatchdog?.let(removeCallback)
                 detailWatchdog = null
                 if (audioOwned || touchActive) null else currentGameCommandLocked(forceRefresh = true)
@@ -285,7 +285,7 @@ internal class DeviceVibrationCoordinator(
                 if (acquired) {
                     detailOwned = true
                     detailTickStarted = false
-                    if (sourceExpiryMs == null || !audioOwned && !touchActive) generation++
+                    if (!audioOwned && !touchActive) generation++
                     clearGameRefreshLocked()
                     // Authored PCM supersedes the previous game's ordinary-rumble snapshot.
                     // Otherwise ending the PCM lease could revive an old nonzero waveform.

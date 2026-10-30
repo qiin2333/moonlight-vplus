@@ -33,6 +33,23 @@ class AuthoredDeviceVibrationTest {
         }
     }
 
+    @Test fun legacyDetailEdgesCannotInvalidateQueuedTouch() {
+        for (release in listOf(false, true)) Runtime().use { runtime ->
+            if (release) {
+                runtime.coordinator.submitAuthoredDetail(false, 100)
+                runtime.flush()
+                runtime.writes.clear()
+            }
+            runtime.worker.blocked = true
+            runtime.coordinator.playTouchHaptic(20_000, 0, 100)
+            runtime.coordinator.submitAuthoredDetail(true, 100, active = !release)
+            runtime.worker.blocked = false
+            runtime.flush()
+            assertEquals("legacy detail release=$release", 1, runtime.writes.count { it > 0 })
+            assertEquals(0, runtime.ticks)
+        }
+    }
+
     @Test fun blockedExtendedContinuousBodyExpiresBeforeTheWorkerCanPlayIt() {
         Runtime().use { runtime ->
             runtime.worker.blocked = true
