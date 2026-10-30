@@ -12,6 +12,10 @@ internal data class DisplayReconnectSettings(
     val bitrate: Int,
     val screenCombinationMode: Int
 ) {
+    fun isResolutionOnlyChangeFrom(previous: DisplayReconnectSettings): Boolean =
+        (width != previous.width || height != previous.height) &&
+            fps == previous.fps && screenCombinationMode == previous.screenCombinationMode
+
     fun applyTo(config: PreferenceConfiguration) {
         config.isNativeResolution = nativeResolution
         config.isCustomResolution = customResolution

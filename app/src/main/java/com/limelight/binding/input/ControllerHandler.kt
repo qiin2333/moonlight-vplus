@@ -414,7 +414,7 @@ class ControllerHandler(
     private val systemWaveformRoutes = ConcurrentHashMap<Int, SystemWaveformRoute>()
     private val directWaveformRouteIds = ConcurrentHashMap<Int, Int>()
     private val waveformCapabilities = ConcurrentHashMap<Int, HapticRouteSnapshot>()
-    private val retiredWaveformRoutes = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
+    private val retiredWaveformRoutes = java.util.Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
     private val hapticsCoordinator = ControllerHapticsCoordinator(this)
     private var directDualSenseBluetoothTransport: AndroidBluetoothHidHostTransport? = null
 

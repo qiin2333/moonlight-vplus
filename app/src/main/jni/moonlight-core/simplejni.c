@@ -422,6 +422,11 @@ Java_com_limelight_nvstream_jni_MoonBridge_setCursorMode(JNIEnv *env, jclass cla
 }
 
 JNIEXPORT jint JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_requestResolutionChange(JNIEnv *env, jclass clazz, jint width, jint height) {
+    return LiRequestResolutionChange(width, height);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getNegotiatedAudioCodec(JNIEnv *env, jclass clazz) {
     return LiGetNegotiatedAudioCodec();
 }

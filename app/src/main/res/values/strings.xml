@@ -1495,9 +1495,12 @@ Tap again to replace it.</string>
     <string name="settings_search_match_separator">", "</string>
     <string name="game_menu_display_settings">Display settings</string>
     <string name="display_settings_info">About display settings</string>
-    <string name="display_settings_help">Changing the resolution, frame rate or screen mode briefly disconnects and automatically reconnects the stream. Selecting the current value does not reconnect.\n\n⚠ marks frame rates above this device’s screen refresh rate.\n\nDisplay scaling changes the size of text and controls on the host. Release the slider to apply it without reconnecting. If the host needs more time or a display restart, a separate message will appear.</string>
-    <string name="display_settings_reconnect_hint">Selecting a different value briefly disconnects and reconnects the stream.</string>
+    <string name="display_settings_help">Changing only the resolution first tries to keep the connection, with automatic reconnection if needed. Changing the frame rate or screen mode briefly reconnects the stream. Selecting the current value does not reconnect.\n\n⚠ marks frame rates above this device’s screen refresh rate.\n\nDisplay scaling changes the size of text and controls on the host. Release the slider to apply it without reconnecting. If the host needs more time or a display restart, a separate message will appear.</string>
     <string name="display_settings_reconnecting">Reconnecting to apply display settings…</string>
+    <string name="display_settings_switch_hint">Resolution changes try to apply without disconnecting. If needed, the stream reconnects automatically. Frame rate and screen mode changes require a brief reconnect.</string>
+    <string name="resolution_switch_adjusting">Adjusting resolution…</string>
+    <string name="resolution_switch_target">%1$d × %2$d</string>
+    <string name="resolution_switch_reconnecting">Restoring stream…</string>
     <string name="display_spec_resolution">Resolution</string>
     <string name="display_spec_fps">Frame rate</string>
     <string name="display_spec_screen">Screen</string>

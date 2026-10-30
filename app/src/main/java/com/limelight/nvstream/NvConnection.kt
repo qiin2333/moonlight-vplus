@@ -130,6 +130,19 @@ open class NvConnection(
     /** Host display device id selected when the stream was started, if any. */
     fun displayName(): String? = context.displayName
 
+    /** Serialize against stop and never target the process-wide native connection after losing ownership. */
+    @Synchronized
+    fun requestResolutionChange(width: Int, height: Int): Boolean = synchronized(MoonBridge::class.java) {
+        if (stopped || !connectionSlotOwned.get()) return@synchronized false
+        MoonBridge.requestResolutionChange(width, height) == 0
+    }
+
+    fun applyResolutionLocally(width: Int, height: Int) {
+        context.streamConfig.updateResolution(width, height)
+        context.negotiatedWidth = width
+        context.negotiatedHeight = height
+    }
+
     val authoredPcmHapticsRequested: Boolean get() = context.streamConfig.authoredPcmHaptics
 
     /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
