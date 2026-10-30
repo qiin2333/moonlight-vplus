@@ -2158,10 +2158,10 @@
     <string name="title_shizuku_keyboard_authorization">Доступ через Shizuku</string>
     <string name="videoformat_pyrowave">PyroWave (экспериментально, без генерации кадров)</string>
     <string name="display_resolution_current_not_saved">Используется сейчас · Не сохранено в списке</string>
-    <string name="title_ds5_simulation_mode">Путь имитации DualSense</string>
-    <string name="summary_ds5_simulation_mode">Обычная имитация сохраняет привычную вибрацию. Расширенный IR использует v2 и добавляет непрерывную вибрацию и короткие импульсы через расширение. Требуется совместимый Sunshine. Изменение применяется после переподключения.</string>
-    <string-array name="ds5_simulation_mode_names"><item>Обычная имитация</item><item>Расширенный IR (v2 + расширение)</item></string-array>
+    <string name="title_ds5_simulation_mode">Имитация вибрации DualSense</string>
+    <string name="summary_ds5_simulation_mode">Обычная имитация сохраняет привычную вибрацию. Расширенный IR разделяет непрерывную вибрацию и короткие импульсы. Требуется совместимый Sunshine с эмуляцией DualSense на хосте. Прямая передача на контроллер имеет приоритет. Для применения переподключитесь.</string>
+    <string-array name="ds5_simulation_mode_names"><item>Обычная имитация</item><item>Расширенный IR</item></string-array>
     <string name="title_native_device_haptics">Нативная тактильная отдача устройства (экспериментально)</string>
     <string name="summary_native_device_haptics">Использовать доступные нативные эффекты. Некоторые устройства поддерживают только короткие удары разной силы; фон и смешанные эффекты используют прежний вывод. Возможна дополнительная задержка. Для применения переподключитесь.</string>
-    <string name="summary_native_device_haptics_requires_output">Требуется расширенный IR, вывод на устройство или совместный вывод и сила вибрации устройства выше нуля. После изменения переподключитесь.</string>
+    <string name="summary_native_device_haptics_requires_output">Требуется эмуляция DualSense на хосте, расширенный IR, вывод на устройство или совместный вывод и сила вибрации устройства выше нуля. Для применения переподключитесь.</string>
 </resources>

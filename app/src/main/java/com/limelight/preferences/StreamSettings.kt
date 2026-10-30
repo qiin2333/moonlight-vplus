@@ -100,6 +100,7 @@ import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.input.haptics.Ds5SimulationMode
 import com.limelight.binding.input.haptics.NativeAuthoredHaptics
+import com.limelight.nvstream.HostGamepadSelection
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.utils.AboutDialogLauncher
@@ -3847,9 +3848,10 @@ class StreamSettings : ThemedAppCompatActivity() {
         /** Reapplies preference presentation derived from the changed stored value. */
         private fun refreshSettingsPresentation(changedKey: String? = null) {
             if (changedKey == null || changedKey in setOf(
-                    "list_ds5_simulation_mode", PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING,
+                    "list_ds5_simulation_mode", "list_host_gamepad_selection",
+                    PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING,
                     "seekbar_vibrate_fallback_strength")) {
-                updateNativeDeviceHapticsPreference()
+                updateHapticsPreferences()
             }
             if (changedKey == null || changedKey.contains("float_ball")) {
                 updateFloatBallSettingsSummary()
@@ -3901,14 +3903,18 @@ class StreamSettings : ThemedAppCompatActivity() {
             updateFeaturePageSummaries()
         }
 
-        private fun updateNativeDeviceHapticsPreference() {
-            val preference = findPreference<Preference>("checkbox_native_device_haptics") ?: return
+        private fun updateHapticsPreferences() {
             val prefs = preferenceManager.sharedPreferences ?: return
+            val host = HostGamepadSelection.fromPreference(
+                prefs.getString("list_host_gamepad_selection", "automatic"))
+            findPreference<Preference>("list_ds5_simulation_mode")?.isEnabled =
+                Ds5SimulationMode.IR_ENHANCED.requestsIr(nativePcm = false, controlOnly = false, host = host)
+            val preference = findPreference<Preference>("checkbox_native_device_haptics") ?: return
             val enabled = Ds5SimulationMode.fromPreference(
                 prefs.getString("list_ds5_simulation_mode", "legacy")).allowsNativeDeviceHaptics(
                 GameRumbleMode.fromPreferenceValue(prefs.getString(
                     PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING, "controller")),
-                prefs.getInt("seekbar_vibrate_fallback_strength", 100))
+                prefs.getInt("seekbar_vibrate_fallback_strength", 100), host)
             preference.isEnabled = enabled
             preference.setSummary(if (enabled) R.string.summary_native_device_haptics
                 else R.string.summary_native_device_haptics_requires_output)

@@ -16,10 +16,16 @@ class Ds5SimulationModeTest {
     @Test fun explicitIrChoiceAdvertisesOnlyForCompatibleSimulationSessions() {
         val mode = Ds5SimulationMode.fromPreference("ir_enhanced")
         assertEquals(mode, Ds5SimulationMode.fromPreference("ir_v3"))
-        for (host in listOf(HostGamepadSelection.AUTOMATIC, HostGamepadSelection.HOST, HostGamepadSelection.DS5))
+        for (host in listOf(HostGamepadSelection.AUTOMATIC, HostGamepadSelection.HOST, HostGamepadSelection.DS5)) {
             assertTrue(mode.requestsIr(false, false, host))
-        for (host in listOf(HostGamepadSelection.XBOX, HostGamepadSelection.DS4))
+            for (output in listOf(GameRumbleMode.DEVICE, GameRumbleMode.COORDINATED))
+                assertTrue(mode.allowsNativeDeviceHaptics(output, 100, host))
+        }
+        for (host in listOf(HostGamepadSelection.XBOX, HostGamepadSelection.DS4)) {
             assertFalse(mode.requestsIr(false, false, host))
+            for (output in listOf(GameRumbleMode.DEVICE, GameRumbleMode.COORDINATED))
+                assertFalse(mode.allowsNativeDeviceHaptics(output, 100, host))
+        }
     }
 
     @Test fun rawPcmAndControlOnlyAlwaysSuppressIrRegardlessOfTheSavedOption() {
@@ -39,9 +45,10 @@ class Ds5SimulationModeTest {
         assertFalse(oldSession.nativePcm)
         assertTrue(nativeSession.nativePcm)
         assertFalse(nativeSession.authoredIr)
-        assertFalse(Ds5SimulationMode.LEGACY.allowsNativeDeviceHaptics(GameRumbleMode.DEVICE, 100))
-        assertFalse(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.CONTROLLER, 100))
-        assertFalse(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.DEVICE, 0))
-        assertTrue(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.COORDINATED, 100))
+        for (host in HostGamepadSelection.entries) {
+            assertFalse(Ds5SimulationMode.LEGACY.allowsNativeDeviceHaptics(GameRumbleMode.DEVICE, 100, host))
+            assertFalse(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.CONTROLLER, 100, host))
+            assertFalse(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.DEVICE, 0, host))
+        }
     }
 }

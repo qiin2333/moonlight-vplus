@@ -2337,10 +2337,10 @@
     <string name="pacing_label_smooth">平滑</string>
     <string name="stats_precise_sync">[精确同步: %1$d渲染/%2$d接收, 跳帧率: %3$.1f%%]</string>
     <string name="mic_status_debug">权限: %1$b, 流存在: %2$b, 可用: %3$b, 激活: %4$b</string>
-    <string name="title_ds5_simulation_mode">DualSense 模拟路径</string>
-    <string name="summary_ds5_simulation_mode">传统模拟保留现有手感；IR 增强复用 v2，通过扩展区传输持续层和短促落点，需要兼容的 Sunshine。重新连接后生效。</string>
-    <string-array name="ds5_simulation_mode_names"><item>传统模拟</item><item>IR 增强（v2 + 扩展）</item></string-array>
+    <string name="title_ds5_simulation_mode">DualSense 振动模拟</string>
+    <string name="summary_ds5_simulation_mode">传统模拟沿用现有效果；IR 增强分别还原持续振动和清脆短点。需兼容的 Sunshine，且主机模拟 DualSense；原生手柄直通优先。重新连接后生效。</string>
+    <string-array name="ds5_simulation_mode_names"><item>传统模拟</item><item>IR 增强</item></string-array>
     <string name="title_native_device_haptics">原生设备触觉（实验）</string>
     <string name="summary_native_device_haptics">按设备能力使用原生触觉；部分设备仅支持轻重短点，持续与混合效果沿用原有输出。可能增加振动延迟。重新连接后生效。</string>
-    <string name="summary_native_device_haptics_requires_output">需选择 IR 增强、设备或协同输出，并将设备振动力度设为大于零。修改后重新连接生效。</string>
+    <string name="summary_native_device_haptics_requires_output">需主机模拟 DualSense、选择 IR 增强及设备或协同输出，并将设备振动力度设为大于零。重新连接后生效。</string>
 </resources>
