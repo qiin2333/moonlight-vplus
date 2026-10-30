@@ -66,6 +66,8 @@ internal class ResolutionSwitchController(
                     if (requested.bitrate == previousBitrate) {
                         complete(attempt, connection)
                     } else {
+                        handler.removeCallbacksAndMessages(null)
+                        handler.postDelayed({ fallback(attempt, "bitrate adjustment timeout") }, 5000)
                         connection.setBitrate(requested.bitrate, object : NvConnection.BitrateAdjustmentCallback {
                             override fun onSuccess(newBitrate: Int) {
                                 activity.runOnUiThread {
