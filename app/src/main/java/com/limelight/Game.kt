@@ -323,12 +323,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var isExtremeResumeEnabled = false
     @Volatile private var isChangingResolution = false
     private var displaySettingsCommitted = false
-    private val resolutionSwitchHandler = Handler(Looper.getMainLooper())
-    @Volatile private var resolutionSwitch: ResolutionSwitchSession? = null
-    private var resolutionTransition: ResolutionTransitionOverlay? = null
-    @Volatile private var resolutionReconnectOnStart = false
+    private val resolutionSwitchController = ResolutionSwitchController(this, ::changeResolution) { width, height ->
+        cursorServiceManager.onStreamResolutionChanged(width, height)
+        orientationManager.onServerResolutionChanged(width > height)
+        updateStreamViewSize(width, height)
+    }
     internal val isApplyingDisplaySettings: Boolean
-        get() = isChangingResolution || resolutionSwitch != null || resolutionReconnectOnStart
+        get() = isChangingResolution || resolutionSwitchController.isApplying
     private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
@@ -1847,7 +1848,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         destroying = true
-        cancelResolutionSwitch()
+        resolutionSwitchController.cancel()
         if (conn != null) connectionCallbackHandler.stopConnection()
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
         if (isFinishing) {
@@ -2040,89 +2041,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         displaySettingsCommitted = true
         activeGameMenu?.dismiss()
         activeGameMenu = null
-        val attempt = ResolutionSwitchSession(requested.width, requested.height)
-        resolutionSwitch = attempt
-        val transition = ResolutionTransitionOverlay(this, attempt.width, attempt.height)
-        resolutionTransition = transition
-        ResolutionTransitionOverlay.captureFrame(this, activeStreamView) { frame ->
-            if (resolutionSwitch !== attempt || destroying || isFinishing) {
-                frame?.recycle()
-                return@captureFrame
-            }
-            transition.setFrame(frame)
-            if (conn !== connection || decoderRenderer !== renderer) {
-                fallbackResolutionSwitch(attempt, "stream replaced")
-                return@captureFrame
-            }
-            renderer.awaitResolutionFrame(attempt.width, attempt.height) { width, height ->
-                runOnUiThread {
-                    if (resolutionSwitch !== attempt || !attempt.isWaitingFor(width, height) ||
-                        destroying || isFinishing) return@runOnUiThread
-                    if (conn !== connection || decoderRenderer !== renderer) {
-                        fallbackResolutionSwitch(attempt, "stream replaced")
-                        return@runOnUiThread
-                    }
-                    if (requested.bitrate != previous.bitrate) {
-                        connection.setBitrate(requested.bitrate, object : NvConnection.BitrateAdjustmentCallback {
-                            override fun onSuccess(newBitrate: Int) {
-                                runOnUiThread {
-                                    if (conn === connection && decoderRenderer === renderer && resolutionSwitch === attempt &&
-                                        attempt.state == ResolutionSwitchSession.State.WAITING &&
-                                        !destroying && !isFinishing) {
-                                        adaptiveBitrateService?.notifyManualOverride(newBitrate)
-                                        completeResolutionSwitch(attempt)
-                                    }
-                                }
-                            }
-                            override fun onFailure(errorMessage: String) {
-                                runOnUiThread { fallbackResolutionSwitch(attempt, "bitrate adjustment failed") }
-                            }
-                        })
-                    } else {
-                        completeResolutionSwitch(attempt)
-                    }
-                }
-            }
-            resolutionSwitchHandler.postDelayed({ fallbackResolutionSwitch(attempt, "new frame timeout") }, 5000)
-            if (!connection.requestResolutionChange(attempt.width, attempt.height)) {
-                fallbackResolutionSwitch(attempt, "request unsupported or failed")
-            }
+        resolutionSwitchController.start(connection, renderer, requested, previous.bitrate, activeStreamView) {
+            !destroying && conn === connection && decoderRenderer === renderer
         }
-    }
-
-    private fun completeResolutionSwitch(attempt: ResolutionSwitchSession) {
-        if (resolutionSwitch !== attempt || destroying || isFinishing ||
-            !attempt.presented(attempt.width, attempt.height)) return
-        resolutionSwitchHandler.removeCallbacksAndMessages(null)
-        conn?.applyResolutionLocally(attempt.width, attempt.height)
-        cursorServiceManager.onStreamResolutionChanged(attempt.width, attempt.height)
-        orientationManager.onServerResolutionChanged(attempt.width > attempt.height)
-        updateStreamViewSize(attempt.width, attempt.height)
-        LimeLog.info("Resolution hot switch presented: ${attempt.width}x${attempt.height}")
-        resolutionTransition?.reveal {
-            if (resolutionSwitch === attempt) {
-                resolutionSwitch = null
-                resolutionTransition = null
-            }
-        }
-    }
-
-    private fun fallbackResolutionSwitch(attempt: ResolutionSwitchSession, reason: String) {
-        if (resolutionSwitch !== attempt || destroying || isFinishing || !attempt.fallback()) return
-        LimeLog.info("Resolution hot switch falling back to reconnect: $reason")
-        resolutionSwitchHandler.removeCallbacksAndMessages(null)
-        decoderRenderer?.cancelResolutionFrameWait()
-        resolutionTransition?.reconnecting()
-        changeResolution()
-    }
-
-    private fun cancelResolutionSwitch() {
-        resolutionSwitchHandler.removeCallbacksAndMessages(null)
-        resolutionSwitch?.cancel()
-        resolutionSwitch = null
-        decoderRenderer?.cancelResolutionFrameWait()
-        resolutionTransition?.dispose()
-        resolutionTransition = null
     }
 
     fun changeResolution() {
@@ -2132,7 +2053,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             displaySettingsCommitted = true
             activeGameMenu?.dismiss()
             activeGameMenu = null
-            val backdrop = resolutionTransition?.takeBackdrop()
+            val backdrop = resolutionSwitchController.takeBackdrop()
             if (backdrop != null) {
                 StreamReconnectBackdrop.stage(backdrop)
                 recreateAfterResolutionChange()
@@ -2173,11 +2094,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onStop() {
         super.onStop()
-        if (resolutionSwitch != null && !isChangingResolution) {
-            resolutionReconnectOnStart = !isFinishing &&
-                resolutionSwitch?.state == ResolutionSwitchSession.State.WAITING
-            cancelResolutionSwitch()
-        }
+        resolutionSwitchController.onStop(isChangingResolution)
         usbForeground = false
         usbForwarding?.stopForeground()
 
@@ -2516,12 +2433,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun connectionTerminated(errorCode: Int) {
         // Decide on the same thread as frame completion; an earlier WAITING snapshot can go stale.
         runOnUiThread {
-            if (destroying || isFinishing || isChangingResolution || resolutionReconnectOnStart) return@runOnUiThread
-            val attempt = resolutionSwitch
-            if (attempt?.state == ResolutionSwitchSession.State.WAITING) {
-                fallbackResolutionSwitch(attempt, "connection terminated: $errorCode")
-                return@runOnUiThread
-            }
+            if (destroying || isFinishing || isChangingResolution ||
+                resolutionSwitchController.connectionTerminated(errorCode)) return@runOnUiThread
             if (::remoteImeController.isInitialized) {
                 remoteImeController.resetSession()
             }
@@ -2662,11 +2575,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onStart() {
         super.onStart()
-        if (resolutionReconnectOnStart) {
-            resolutionReconnectOnStart = false
-            changeResolution()
-            return
-        }
+        if (resolutionSwitchController.onStart()) return
 
         val stoppedVirtualControllerVisibility = restoreVirtualControllerAfterStop()
 
@@ -2865,9 +2774,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             baseHeight = alignedHeight
         }
 
-        val attempt = resolutionSwitch
-        if (isChangingResolution || resolutionReconnectOnStart ||
-            (attempt != null && !attempt.isWaitingFor(baseWidth, baseHeight))) return
+        if (isChangingResolution || !resolutionSwitchController.acceptsNotification(baseWidth, baseHeight)) return
 
         // Decoder sizing must use the encoded stream dimensions. baseWidth/baseHeight describe
         // the unscaled host resolution and are only used by the UI and saved stream settings.
