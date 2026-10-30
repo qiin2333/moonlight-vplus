@@ -773,6 +773,9 @@ public class MoonBridge {
     /** Selects host-composited or locally-rendered cursor mode for this session. */
     public static native int setCursorMode(int cursorMode);
 
+    /** Returns zero if queued. Actual application must be confirmed by video output. */
+    public static native int requestResolutionChange(int width, int height);
+
     /** @return Negotiated audio codec for the active connection (AUDIO_CODEC_OPUS/AC3/EAC3). */
     public static native int getNegotiatedAudioCodec();
 

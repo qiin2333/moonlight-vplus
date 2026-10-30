@@ -1071,7 +1071,7 @@ class GameMenu(
             AppActionSheet.show(
                 context = game,
                 title = title,
-                supportingText = getString(R.string.display_settings_reconnect_hint),
+                supportingText = getString(R.string.display_settings_switch_hint),
                 actions = actions,
                 initialActionId = availableChoices.indexOfFirst { it.selected }.takeIf { it >= 0 },
                 singleChoice = true,

@@ -394,6 +394,8 @@ internal class BitrateCardController(
 
     fun applyDisplayDraft(): Boolean {
         if (!draft.changedFrom(appliedDraft)) return false
+        if (game.isApplyingDisplaySettings) return false
+        val previous = DisplayReconnectSettings.capture(game.prefConfig)
         val limits = displayChoiceLimits()
         val frameRateChanged = draft.frameRate != appliedDraft.frameRate
         val streamSizeChanged = draft.resolution != appliedDraft.resolution ||
@@ -415,10 +417,8 @@ internal class BitrateCardController(
         draft = appliedDraft
         if (warnAboutFrameRate) {
             Toast.makeText(game, R.string.display_frame_rate_above_refresh_rate, Toast.LENGTH_LONG).show()
-        } else {
-            showBitrateToast(game.getString(R.string.display_settings_reconnecting))
         }
-        game.changeResolution()
+        game.applyDisplaySettings(previous)
         return true
     }
 

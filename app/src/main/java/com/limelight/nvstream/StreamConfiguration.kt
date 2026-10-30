@@ -5,6 +5,11 @@ import com.limelight.nvstream.jni.MoonBridge
 
 class StreamConfiguration private constructor() {
 
+    internal fun updateResolution(width: Int, height: Int) {
+        this.width = width
+        this.height = height
+    }
+
     var app: NvApp = NvApp("Steam")
         private set
     var width: Int = 1280

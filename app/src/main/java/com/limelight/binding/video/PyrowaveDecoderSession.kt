@@ -77,6 +77,10 @@ internal class PyrowaveDecoderSession(
     val latestFrameTimings: PyrowaveFrameTimings
         get() = synchronized(lock) { lastFrameTimings }
 
+    /** Geometry of the handle which actually presented, never the next requested configuration. */
+    @Volatile var lastPresentedSize: Pair<Int, Int>? = null
+        private set
+
     /**
      * Surface callbacks only publish the latest target. The decoder worker
      * applies it before the next frame, without holding the native-operation
@@ -287,6 +291,9 @@ internal class PyrowaveDecoderSession(
                 recoveryAttempts = 0
                 lastFrameTimings = safeGetTimings(activeNative, handle)
                 dynamicMetadataApplied = usingGpu && requestedDynamicHdrFormat != 0
+                if (lastPresentedSize?.first != width || lastPresentedSize?.second != height) {
+                    lastPresentedSize = width to height
+                }
                 return SubmitResult.SUCCESS
             }
 
