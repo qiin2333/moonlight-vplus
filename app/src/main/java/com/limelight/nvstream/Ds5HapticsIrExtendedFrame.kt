@@ -16,6 +16,5 @@ data class Ds5HapticsIrExtendedFrame(
     val controllerNumber: Short get() = base.controllerNumber
     val flags: Int get() = base.flags
     val frameSequence: Int get() = base.sequenceNumber
-    val sourceFrameCount: Int get() = base.sourceFrameCount
     val ended: Boolean get() = base.ended
 }

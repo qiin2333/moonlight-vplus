@@ -8,7 +8,7 @@ import java.util.PriorityQueue
 
 /** Source-relative clock, bounded event inbox, and latest continuous state. No device rate gate. */
 internal class AuthoredIrTimeline {
-    data class Event(val value: Ds5HapticsIrExtendedEvent, val dueUs: Long, val expiresUs: Long)
+    data class Event(val value: Ds5HapticsIrExtendedEvent, val expiresUs: Long)
     data class Output(val body: ControllerRumbleState, val event: Event?, val ended: Boolean,
                       val reset: Boolean = false, val bodyValidUntilUs: Long = Long.MAX_VALUE)
     private data class State(val body: ControllerRumbleState, val sourceUs: Long)
@@ -100,7 +100,7 @@ internal class AuthoredIrTimeline {
             if (nowUs - sourceLocal > EVENT_FRESH_US ||
                 maxOf(normalizeAmplitude(event.leftStrength), normalizeAmplitude(event.rightStrength)) == 0f) continue
             if (events.size == MAX_EVENTS) events.poll()
-            events.add(Event(event, sourceLocal + PLAYOUT_LEAD_US, sourceLocal + EVENT_FRESH_US))
+            events.add(Event(event, sourceLocal + EVENT_FRESH_US))
             ingested = true
         }
         return ingested
@@ -126,7 +126,7 @@ internal class AuthoredIrTimeline {
             val event = events.poll() ?: break
             val sourceLocal = event.value.sourceTimeUs + offsetUs
             if (nowUs <= sourceLocal + EVENT_FRESH_US) selected = event.copy(
-                dueUs = sourceLocal + PLAYOUT_LEAD_US, expiresUs = sourceLocal + EVENT_FRESH_US)
+                expiresUs = sourceLocal + EVENT_FRESH_US)
         }
         if (!dirty && selected == null) return null
         dirty = false

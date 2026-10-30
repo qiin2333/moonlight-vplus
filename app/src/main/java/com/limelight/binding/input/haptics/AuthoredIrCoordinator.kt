@@ -22,7 +22,7 @@ internal class AuthoredIrCoordinator(
     private val enabled: () -> Boolean = { true },
     private val onOutput: (Short, AuthoredIrTimeline.Output) -> Unit = { _, _ -> }
 ) {
-    private data class Legacy(val frame: Ds5HapticsIrFrame,
+    private data class Legacy(val controllerNumber: Short,
                               val output: AuthoredHapticsRenderer.Output, val tickAt: Long?)
     private val lock = Any()
     private val timelines = mutableMapOf<Short, AuthoredIrTimeline>()
@@ -51,7 +51,7 @@ internal class AuthoredIrCoordinator(
         val output = legacyRenderers.getOrPut(frame.controllerNumber, ::AuthoredHapticsRenderer)
             .render(frame) ?: return@synchronized
         val tickAt = if (output.tick) clockMs() else pendingLegacy[frame.controllerNumber]?.tickAt
-        pendingLegacy[frame.controllerNumber] = Legacy(frame, output, tickAt)
+        pendingLegacy[frame.controllerNumber] = Legacy(frame.controllerNumber, output, tickAt)
         wakeLocked()
     }
 
@@ -166,7 +166,7 @@ internal class AuthoredIrCoordinator(
         sqrt(ControllerRumbleState.normalizeAmplitude(strength))
 
     private fun routeLegacy(pending: Legacy, now: Long) {
-        val number = pending.frame.controllerNumber
+        val number = pending.controllerNumber
         if (number.toInt() == 0 && nativePhone) { phone.resetAuthoredIr(); nativePhone = false }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
         val details = pending.output.usesDeviceDetails(targets.mode, targets.hasController,

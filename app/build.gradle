@@ -22,13 +22,6 @@ def escapeBuildConfigString = { value ->
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 def enableX86TestAbi = (project.findProperty("enableX86TestAbi") ?: "false").toString().toBoolean()
-// Optional independent application ID for haptics verification builds.
-def hapticsValidationApplicationId = project.findProperty("hapticsValidationApplicationId")?.toString()?.trim()
-if (hapticsValidationApplicationId != null &&
-        !(hapticsValidationApplicationId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) {
-    throw new GradleException("hapticsValidationApplicationId must be a dotted Android application ID")
-}
-
 def audioHapticsAppLabel = "Moonlight V+"
 def audioHapticsSdkDir = (
         project.findProperty("audioHapticsSdkDir")
@@ -183,10 +176,6 @@ android {
                 keyPassword envKeyPassword
             }
         }
-    }
-
-    if (hapticsValidationApplicationId != null) {
-        productFlavors.all { applicationId hapticsValidationApplicationId }
     }
 
     buildTypes {
