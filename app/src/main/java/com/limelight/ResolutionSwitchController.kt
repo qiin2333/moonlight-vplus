@@ -6,6 +6,7 @@ import android.os.Looper
 import android.view.SurfaceView
 import com.limelight.binding.video.MediaCodecDecoderRenderer
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.http.NvHTTP
 import com.limelight.utils.ResolutionTransitionOverlay
 
 /**
@@ -66,8 +67,13 @@ internal class ResolutionSwitchController(
                     if (requested.bitrate == previousBitrate) {
                         complete(attempt, connection)
                     } else {
-                        // setBitrate has its own total HTTP deadline and reports failures below.
+                        // Replace the frame timer with a callback watchdog. HTTP cancellation
+                        // cannot unblock every operation (e.g. system DNS), so a callback may stall.
                         handler.removeCallbacksAndMessages(null)
+                        handler.postDelayed(
+                            { fallback(attempt, "bitrate callback timeout") },
+                            NvHTTP.TimeoutConfig.DEFAULT.bitrateCallTimeoutMs.toLong() + BITRATE_CALLBACK_GRACE_MS
+                        )
                         connection.setBitrate(requested.bitrate, object : NvConnection.BitrateAdjustmentCallback {
                             override fun onSuccess(newBitrate: Int) {
                                 activity.runOnUiThread {
@@ -155,5 +161,7 @@ internal class ResolutionSwitchController(
     private companion object {
         // Initial budget for display reconfiguration, encoder restart and confirmed presentation.
         const val FRAME_CONFIRM_TIMEOUT_MS = 5_000L
+        // Give the HTTP timeout's failure callback time to reach the UI thread first.
+        const val BITRATE_CALLBACK_GRACE_MS = 1_000L
     }
 }
