@@ -4,7 +4,6 @@ import android.app.Activity
 import android.media.AudioAttributes
 import android.os.*
 import android.widget.*
-import com.limelight.LimeLog
 import com.limelight.nvstream.*
 
 /** Host analyzer fixtures fed into the production coordinator and device sink. */
@@ -22,7 +21,7 @@ class AuthoredIrTestActivity : Activity() {
         @Suppress("DEPRECATION")
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(25, 35, 25, 20) }
-        status = TextView(this).apply { textSize = 18f; text = "IR 增强实际 PCM 分析回放\n持续层与事件分开，频率跟随源事件。\n计数只表示系统调用，不代表物理马达完整执行。" }
+        status = TextView(this).apply { textSize = 18f; text = "主机 PCM 分析的 IR 回放\n持续层与短点分开，按当前后端能力输出。\n计数只表示系统调用，不代表物理马达完整执行。" }
         layout.addView(status)
         fun button(label: String, asset: String) {
             layout.addView(Button(this).apply { text = label; setOnClickListener { start(asset) } })
@@ -126,7 +125,6 @@ class AuthoredIrTestActivity : Activity() {
                 .put("nativeReady", nativeSink?.ready == true).put("ticks", calls.get())
                 .put("nativeBackend", native?.backendName ?: "fallback")
                 .put("waveforms", waves.get()).toString())
-            LimeLog.info("ExtendedReplay asset=$asset frames=$inputFrames events=$acceptedEvents tickCalls=$calls waves=$waves nativeCalls=$nativeCalls nativePoints=$nativePoints")
         }
         val pump = object : Runnable {
             override fun run() {

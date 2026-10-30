@@ -21,7 +21,7 @@ The rain file includes the local SDK transient/body separation fix. This client
 PR does not contain that SDK change. Fixture playback is not online Sunshine
 streaming acceptance.
 
-The [common-c IR contract](../../../../main/jni/moonlight-core/moonlight-common-c/docs/DS5-HAPTICS-IR.md)
+The [common-c IR contract](../main/jni/moonlight-core/moonlight-common-c/docs/DS5-HAPTICS-IR.md)
 owns wire layout and validation. Each file concatenates enhanced v2 payloads;
 the debug decoder only supports fixture replay. Live traffic uses common-c.
 Regenerate from 48 kHz stereo signed 16-bit little-endian PCM:
@@ -34,5 +34,6 @@ analyze_authored_ir_extended input.pcm output.irextbin
 The optional native backend is SoundPool or RichTap; continuous/mixed effects
 fall back when the selected backend cannot render them. Use `--ez measure true`
 only for flat-device latency capture. Sensor data and event timestamps stay in
-app-private files; the sensor permission and replay page are debug-only.
+app-private files. Replay and measurement code are debug-only; sampling reuses
+the high-rate sensor permission already present in the main manifest for controller motion.
 Temporary probe apps, raw captures and benchmark reports are not committed.

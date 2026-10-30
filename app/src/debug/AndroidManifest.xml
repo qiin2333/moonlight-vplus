@@ -1,5 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <application>
         <activity android:name="com.limelight.binding.input.haptics.AuthoredIrTestActivity"
             android:exported="true" android:label="IR 增强触觉测试" />
