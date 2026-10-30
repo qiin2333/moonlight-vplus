@@ -58,6 +58,7 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.input.ClipboardSyncManager
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.services.StreamNotificationService
@@ -836,10 +837,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         prepareExternalDisplay()
         if (prefConfig.isNativeResolution) {
-            val size = Point()
-            currentTargetDisplay.getRealSize(size)
-            prefConfig.width = if (prefConfig.reverseResolution) size.y else size.x
-            prefConfig.height = if (prefConfig.reverseResolution) size.x else size.y
+            DisplayChoiceLists.nativeSize(this, currentTargetDisplay)?.let { (width, height) ->
+                prefConfig.width = if (prefConfig.reverseResolution) height else width
+                prefConfig.height = if (prefConfig.reverseResolution) width else height
+            }
         }
         val streamConfigResult = buildStreamConfiguration(
             host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName

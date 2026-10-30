@@ -99,6 +99,32 @@ class StreamSettingsDisplayChoiceTest {
     }
 
     @Test
+    fun nativePreferencesMatchTheMenuAcrossDisplayOrientationsAndReversal() {
+        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        for ((width, height) in listOf(1600 to 2560, 2560 to 1600)) {
+            val virtualDisplay = checkNotNull(displayManager.createVirtualDisplay(
+                "NativeResolutionTest", width, height, 240, null,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+            ))
+            try {
+                val menuSize = DisplayChoiceLists.nativeSize(context, virtualDisplay.display)
+                assertEquals(2560 to 1600, menuSize)
+                for (reversed in listOf(false, true)) {
+                    preferences.edit()
+                        .putString(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_NATIVE)
+                        .putBoolean("checkbox_reverse_resolution", reversed)
+                        .commit()
+                    val config = PreferenceConfiguration.readPreferences(context, virtualDisplay.display)
+                    assertTrue(config.isNativeResolution)
+                    assertEquals(if (reversed) 1600 to 2560 else menuSize, config.width to config.height)
+                }
+            } finally {
+                virtualDisplay.release()
+            }
+        }
+    }
+
+    @Test
     fun oneDpadStepMovesFromResolutionRowToFrameRateRow() {
         launchSettings()
         focusResolutionRow()

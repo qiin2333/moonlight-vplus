@@ -6,13 +6,11 @@ import com.limelight.nvstream.HostGamepadSelection
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.graphics.Point
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Build
 import android.view.Display
 import android.view.KeyEvent
-import android.view.WindowManager
 import androidx.preference.PreferenceManager
 import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.InputDeviceSensorPolicy
@@ -1359,19 +1357,11 @@ class PreferenceConfiguration {
             config.isCustomResolution =
                 resStr != RES_NATIVE && !RESOLUTIONS.contains(resStr)
 
-            // 添加Native分辨率支持
             if (resStr == RES_NATIVE) {
-                // 获取设备原生分辨率
-                val display = nativeDisplay
-                    ?: (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-                val size = Point()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    display.getRealSize(size) // 需要API 17+
-                } else {
-                    display.getSize(size) // 兼容旧版本
-                }
-                config.width = size.x
-                config.height = size.y
+                // Match the menu's landscape Native base; reverseResolution is applied below.
+                val size = DisplayChoiceLists.nativeSize(context, nativeDisplay)
+                config.width = size?.first ?: getWidthFromResolutionString(DEFAULT_RESOLUTION)
+                config.height = size?.second ?: getHeightFromResolutionString(DEFAULT_RESOLUTION)
             } else {
                 // 原有解析逻辑
                 config.width = getWidthFromResolutionString(resStr)
