@@ -654,12 +654,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         DisplayPositionManager(this, prefConfig, streamView).setupDisplayPosition()
 
-        setupExternalDisplay()
-
         floatBallHandler = FloatBallHandler(this, prefConfig)
         floatBallHandler.initialize()
 
         connectionCallbackHandler = ConnectionCallbackHandler(this)
+        bindExternalDisplay()
     }
 
     private fun getOrCreateKeyboardUIController(): KeyboardUIController? {
@@ -714,6 +713,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             override fun onExternalDisplayConnected(display: Display) {
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
+                inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
             }
 
@@ -722,7 +722,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
+                setInputGrabState(grabbedInput)
             }
 
             override fun onStreamViewReady(streamView: StreamView) {
@@ -806,6 +806,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /**
      * Parse intent extras, build stream config, create NvConnection + ControllerHandler.
      * Shared by [onCreate] (first launch) and [prepareConnection] (resume reconnect).
+     * Output preparation may fall back before Native/HDR/refresh-rate decisions are made.
+     * Call [bindExternalDisplay] only after the connection and touch contexts are ready.
      */
     private fun createConnectionAndHandler() {
         usbForwarding?.close()
@@ -830,6 +832,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val forceResumeCurrentSession = intent.getBooleanExtra(EXTRA_FORCE_RESUME_CURRENT_SESSION, false)
         val serverCert = parseServerCert()
 
+        prepareExternalDisplay()
+        if (prefConfig.isNativeResolution) {
+            val size = Point()
+            currentTargetDisplay.getRealSize(size)
+            prefConfig.width = if (prefConfig.reverseResolution) size.y else size.x
+            prefConfig.height = if (prefConfig.reverseResolution) size.x else size.y
+        }
         val streamConfigResult = buildStreamConfiguration(
             host, port, httpsPort, uniqueId, pairName, pcUseVdd, serverCert, displayName
         )
@@ -859,16 +868,31 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         controllerHandler.onSensorsReenabled()
     }
 
-    /** Create or re-create ExternalDisplayManager with the standard callback. */
-    private fun setupExternalDisplay() {
-        val manager = ExternalDisplayManager(
-            this,
-            prefConfig,
-            targetDisplayResolver
-        )
+    /**
+     * Create the output window and settle any fallback before building the connection.
+     * Leave callbacks detached: Presentation.onCreate() can run synchronously in initialize().
+     */
+    private fun prepareExternalDisplay() {
+        externalDisplayManager?.cleanup()
+        externalStreamView = null
+        val manager = ExternalDisplayManager(this, prefConfig, targetDisplayResolver)
         externalDisplayManager = manager
-        manager.callback = createExternalDisplayCallback()
-        manager.initialize(initialDisplayMode = selectedDisplayMode)
+        // Input and Surface callbacks need the new connection and touch contexts first.
+        manager.initialize()
+        externalStreamView = manager.getStreamView()
+    }
+
+    /** Bind the settled output after connection, touch contexts and callback handlers exist. */
+    private fun bindExternalDisplay() {
+        val manager = externalDisplayManager ?: return
+        val callback = createExternalDisplayCallback()
+        manager.callback = callback
+        if (manager.isUsingExternalDisplay()) {
+            callback.onExternalDisplayConnected(manager.getTargetDisplay())
+            externalStreamView?.let(callback::onStreamViewReady)
+        } else {
+            callback.onExternalDisplayDisconnected()
+        }
     }
 
     /** Bind or re-bind the USB driver service with the current controllerHandler. */
@@ -1374,12 +1398,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             decoderRenderer = null
         }
 
-        // The Game activity may survive while the stream is stopped. Refresh the
-        // controller motion settings before rebuilding the handler so a resumed
-        // session doesn't keep the values captured by onCreate().
-        prefConfig.refreshControllerMotionPreferencesFrom(
-            PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        )
+        // Refresh controller motion settings before rebuilding the handler.
+        val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+        prefConfig.refreshControllerMotionPreferencesFrom(latestConfig)
 
         createConnectionAndHandler()
         performanceOverlayManager?.recordStreamStart()
@@ -1420,7 +1441,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         })
 
-        setupExternalDisplay()
+        bindExternalDisplay()
     }
 
     override fun onResume() {
@@ -1816,6 +1837,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         destroying = true
+        if (conn != null) connectionCallbackHandler.stopConnection()
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
         if (isFinishing) {
             StreamReconnectBackdrop.clear()
@@ -1855,10 +1877,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         super.onDestroy()
-
-        if (conn != null && connected) {
-            connectionCallbackHandler.stopConnection()
-        }
 
         usbDriverServiceManager?.stopAndUnbind()
 
@@ -2249,7 +2267,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
-        if (grab) {
+        if (grab && !prefConfig.enableNativeMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
                 inputCaptureProvider.showCursor()

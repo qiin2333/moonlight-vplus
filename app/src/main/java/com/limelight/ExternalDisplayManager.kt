@@ -44,6 +44,11 @@ class ExternalDisplayManager(
 
     var callback: ExternalDisplayCallback? = null
 
+    /**
+     * Creates the Presentation synchronously and resolves rejected displays back to local output.
+     * Callbacks may run during this call. A host that still needs to build its connection must
+     * attach them afterward and bind the settled [getTargetDisplay] / [getStreamView] snapshot.
+     */
     fun initialize(initialDisplayMode: DisplayModeManager.DisplayModeSelection? = null) {
         displayModeSelection = initialDisplayMode
         targetDisplayResolver.resolve(prefConfig.useExternalDisplay)
@@ -52,13 +57,16 @@ class ExternalDisplayManager(
         checkForExternalDisplay()
 
         if (isUsingExternalDisplay()) {
+            startExternalDisplayPresentation()
+            if (!isUsingExternalDisplay()) return
+
+            // Dim the local screen only after the presentation has been accepted.
             val window = activity.window
             if (window != null) {
                 val layoutParams = window.attributes
                 layoutParams.screenBrightness = 0.3f
                 window.attributes = layoutParams
             }
-            startExternalDisplayPresentation()
         }
     }
 
@@ -74,6 +82,8 @@ class ExternalDisplayManager(
     fun getTargetDisplay(): Display {
         return targetDisplayResolver.currentDisplay()
     }
+
+    fun getStreamView(): StreamView? = externalPresentation?.findViewById(R.id.surfaceView)
 
     fun isUsingExternalDisplay(): Boolean = targetDisplayResolver.isExternalDisplaySelected()
 
@@ -183,16 +193,37 @@ class ExternalDisplayManager(
         }
 
         fun isForDisplay(displayId: Int): Boolean = presentationDisplayId == displayId
+
+        fun releaseAfterFailedShow() {
+            // Dialog.dismiss() skips onStop() when addView() failed before mShowing was set.
+            onStop()
+        }
     }
 
     @SuppressLint("ResourceAsColor", "SetTextI18n")
     private fun startExternalDisplayPresentation() {
-        if (!isUsingExternalDisplay() || externalPresentation != null) {
+        if (externalPresentation != null) {
             return
         }
 
-        externalPresentation = ExternalDisplayPresentation(activity, targetDisplayResolver.currentDisplay())
-        externalPresentation?.show()
+        val display = targetDisplayResolver.currentDisplay()
+        if (display.displayId == Display.DEFAULT_DISPLAY) {
+            return
+        }
+
+        val presentation = ExternalDisplayPresentation(activity, display)
+        externalPresentation = presentation
+        try {
+            presentation.show()
+        } catch (e: WindowManager.InvalidDisplayException) {
+            LimeLog.warning("Unable to show presentation on display ${display.displayId}: ${e.message}")
+            targetDisplayResolver.resolve(false)
+            presentation.releaseAfterFailedShow()
+            dismissExternalPresentation()
+            activity.findViewById<View>(R.id.surfaceView)?.visibility = View.VISIBLE
+            callback?.onExternalDisplayDisconnected()
+            return
+        }
 
         val surfaceView = activity.findViewById<View>(R.id.surfaceView)
         surfaceView?.visibility = View.GONE
@@ -254,8 +285,8 @@ class ExternalDisplayManager(
         fun hasExternalDisplay(context: Context): Boolean {
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
             if (displayManager != null) {
-                for (display in displayManager.displays) {
-                    if (display.displayId != Display.DEFAULT_DISPLAY) {
+                for (display in displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
+                    if (display.displayId != Display.DEFAULT_DISPLAY && display.isValid) {
                         return true
                     }
                 }

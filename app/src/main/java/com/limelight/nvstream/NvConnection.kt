@@ -20,6 +20,7 @@ import java.security.NoSuchAlgorithmException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -62,6 +63,9 @@ open class NvConnection(
         }
     private val context: ConnectionContext = ConnectionContext()
     private val isMonkey: Boolean = ActivityManager.isUserAMonkey()
+    @Volatile
+    private var stopped = false
+    private val connectionSlotOwned = AtomicBoolean(false)
 
     @Volatile
     var serverVersion: String? = null
@@ -92,7 +96,20 @@ open class NvConnection(
         }
     }
 
+    internal fun requestStop() {
+        stopped = true
+    }
+
+    @Synchronized
     fun stop() {
+        // Activity teardown and disconnect-and-quit can both stop this connection.
+        // A second stop must not interrupt a newer native session or release its slot.
+        requestStop()
+
+        // Claim this attempt's slot before touching the process-wide native connection.
+        // Startup failure and stop must never both release it.
+        if (!connectionSlotOwned.compareAndSet(true, false)) return
+
         MoonBridge.interruptConnection()
 
         synchronized(MoonBridge::class.java) {
@@ -457,6 +474,7 @@ open class NvConnection(
 
     fun start(audioRenderer: AudioRenderer, videoDecoderRenderer: VideoDecoderRenderer, connectionListener: NvConnectionListener) {
         Thread {
+            if (stopped) return@Thread
             context.connListener = connectionListener
             val appName = context.streamConfig.app.appName
             // The preflight creates and tears down the Vulkan/Surface candidate.
@@ -507,9 +525,11 @@ open class NvConnection(
             val ib = ByteBuffer.allocate(16)
             ib.putInt(context.riKeyId)
 
+            if (stopped) return@Thread
             try {
                 val waitStartTime = SystemClock.elapsedRealtime()
                 connectionAllowed.acquire()
+                connectionSlotOwned.set(true)
                 val waitMs = SystemClock.elapsedRealtime() - waitStartTime
                 if (waitMs > 10) {
                     LimeLog.info("Connection step 'connection slot wait' completed in ${waitMs}ms")
@@ -521,17 +541,22 @@ open class NvConnection(
             }
 
             synchronized(MoonBridge::class.java) {
-                MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
+                if (!MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener) { stopped }) {
+                    if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
+                    return@synchronized
+                }
                 MoonBridge.setDynamicHdrNegotiation(
                     context.streamConfig.dynamicHdrCaps,
                     if (context.streamConfig.dolbyVisionDirectSurface) 1 else 0,
                     context.streamConfig.dynamicHdrPreference,
                 )
                 val ret = timeConnectionStep("native connection") {
-                    startNativeConnection(ib)
+                    // A cancelled pending start follows the normal failure/permit cleanup path.
+                    if (stopped) -1 else startNativeConnection(ib)
                 }
                 if (ret != 0) {
-                    connectionAllowed.release()
+                    MoonBridge.cleanupBridge()
+                    if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
                     return@synchronized
                 }
             }
@@ -726,8 +751,10 @@ open class NvConnection(
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun doStopAndQuit() {
-        this.stop()
         Thread {
+            // Native shutdown joins the input thread and may wait on network I/O.
+            // Complete it here before quitting the host app, away from the UI thread.
+            this.stop()
             val h: NvHTTP
             try {
                 h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)

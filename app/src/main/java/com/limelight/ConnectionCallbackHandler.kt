@@ -293,6 +293,9 @@ class ConnectionCallbackHandler(private val game: Game) {
      * 停止连接并清理相关资源。
      */
     fun stopConnection() {
+        val connection = game.conn
+        connection?.requestStop()
+
         // 重置尝试连接标志。
         game.attemptedConnection = false
 
@@ -330,11 +333,10 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             // Restore host-composited cursor mode before native control-stream teardown.
             game.cursorServiceManager.stopService()
-
-            // Stop may take a few hundred ms to do some network I/O to tell
-            // the server we're going away and clean up. Let it run in a separate
-            // thread to keep things smooth for the UI.
-            Thread { game.conn?.stop() }.start()
         }
+
+        // A pending startup also needs teardown, even before connectionStarted().
+        // Native shutdown remains off the UI thread.
+        if (connection != null) Thread { connection.stop() }.start()
     }
 }

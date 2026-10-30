@@ -235,6 +235,8 @@ public class MoonBridge {
     private static AudioRenderer audioRenderer;
     private static VideoDecoderRenderer videoRenderer;
     private static volatile NvConnectionListener connectionListener;
+    private static volatile java.util.function.BooleanSupplier connectionCancelled;
+    private static final Object connectionListenerLock = new Object();
 
     static {
         System.loadLibrary("moonlight-core");
@@ -391,83 +393,103 @@ public class MoonBridge {
     }
 
     public static void bridgeClStageStarting(int stage) {
-        if (connectionListener != null) {
-            connectionListener.stageStarting(getStageName(stage));
+        // LiStartConnection clears its interrupt flag before the first stage callback.
+        // Reapply this attempt's cancellation even if its listener was detached meanwhile.
+        java.util.function.BooleanSupplier isCancelled = connectionCancelled;
+        if (isCancelled != null && isCancelled.getAsBoolean()) {
+            interruptConnection();
+            return;
+        }
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.stageStarting(getStageName(stage));
         }
     }
 
     public static void bridgeClStageComplete(int stage) {
-        if (connectionListener != null) {
-            connectionListener.stageComplete(getStageName(stage));
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.stageComplete(getStageName(stage));
         }
     }
 
     public static void bridgeClStageFailed(int stage, int errorCode) {
-        if (connectionListener != null) {
-            connectionListener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
         }
     }
 
     public static void bridgeClConnectionStarted() {
-        if (connectionListener != null) {
-            connectionListener.connectionStarted();
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.connectionStarted();
         }
     }
 
     public static void bridgeClConnectionTerminated(int errorCode) {
-        if (connectionListener != null) {
-            connectionListener.connectionTerminated(errorCode);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.connectionTerminated(errorCode);
         }
     }
 
     public static void bridgeClRumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
-        if (connectionListener != null) {
-            connectionListener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
         }
     }
 
     public static void bridgeClConnectionStatusUpdate(int connectionStatus) {
-        if (connectionListener != null) {
-            connectionListener.connectionStatusUpdate(connectionStatus);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.connectionStatusUpdate(connectionStatus);
         }
     }
 
     public static void bridgeClSetHdrMode(boolean enabled, byte[] hdrMetadata) {
-        if (connectionListener != null) {
-            connectionListener.setHdrMode(enabled, hdrMetadata);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setHdrMode(enabled, hdrMetadata);
         }
     }
 
     public static void bridgeClRumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger) {
-        if (connectionListener != null) {
-            connectionListener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
         }
     }
 
     public static void bridgeClSetAdaptiveTriggers(short controllerNumber, byte eventFlags,
                                                    byte typeLeft, byte typeRight,
                                                    byte[] left, byte[] right) {
-        if (connectionListener != null) {
-            connectionListener.setAdaptiveTriggers(
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setAdaptiveTriggers(
                     controllerNumber, eventFlags, typeLeft, typeRight, left, right);
         }
     }
 
     public static void bridgeClSetMotionEventState(short controllerNumber, byte eventType, short sampleRateHz) {
-        if (connectionListener != null) {
-            connectionListener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
         }
     }
 
     public static void bridgeClSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
-        if (connectionListener != null) {
-            connectionListener.setControllerLED(controllerNumber, r, g, b);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setControllerLED(controllerNumber, r, g, b);
         }
     }
 
     public static void bridgeClDs5HapticsState(short controllerNumber, byte[] state) {
-        if (connectionListener != null) {
-            connectionListener.ds5HapticsState(controllerNumber,
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.ds5HapticsState(controllerNumber,
                     new com.limelight.nvstream.Ds5HapticsState(state));
         }
     }
@@ -475,8 +497,9 @@ public class MoonBridge {
     public static void bridgeClDs5HapticsPcm(short controllerNumber, byte flags, int sequenceNumber,
                                                 long presentationTimeUs, int sampleRate, int frameCount,
                                                 byte channelCount, byte bitsPerSample, byte[] pcm) {
-        if (connectionListener != null) {
-            connectionListener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
                     controllerNumber, flags, sequenceNumber, presentationTimeUs,
                     sampleRate, frameCount, channelCount, bitsPerSample, pcm));
         }
@@ -515,8 +538,9 @@ public class MoonBridge {
     }
 
     public static void bridgeClResolutionChanged(int width, int height) {
-        if (connectionListener != null) {
-            connectionListener.onResolutionChanged(width, height);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onResolutionChanged(width, height);
         }
     }
 
@@ -546,8 +570,9 @@ public class MoonBridge {
 
     public static void bridgeClCursorUpdate(int flags, int shapeId, int width, int height,
                                             int hotspotX, int hotspotY, byte[] bgraPixels) {
-        if (connectionListener != null) {
-            connectionListener.onCursorUpdate(flags, shapeId, width, height,
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onCursorUpdate(flags, shapeId, width, height,
                     hotspotX, hotspotY, bgraPixels);
         }
     }
@@ -588,22 +613,34 @@ public class MoonBridge {
         return sendClipboardFrameNative(frame);
     }
 
-    public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
-        MoonBridge.videoRenderer = videoRenderer;
-        MoonBridge.audioRenderer = audioRenderer;
-        MoonBridge.connectionListener = connectionListener;
+    public static boolean setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer,
+                                      NvConnectionListener connectionListener,
+                                      java.util.function.BooleanSupplier isCancelled) {
+        synchronized (connectionListenerLock) {
+            if (isCancelled.getAsBoolean()) return false;
+            MoonBridge.videoRenderer = videoRenderer;
+            MoonBridge.audioRenderer = audioRenderer;
+            MoonBridge.connectionCancelled = isCancelled;
+            MoonBridge.connectionListener = connectionListener;
+            return true;
+        }
     }
 
-    public static synchronized void detachConnectionListener(NvConnectionListener listener) {
-        if (MoonBridge.connectionListener == listener) {
-            MoonBridge.connectionListener = null;
+    public static void detachConnectionListener(NvConnectionListener listener) {
+        synchronized (connectionListenerLock) {
+            if (MoonBridge.connectionListener == listener) {
+                MoonBridge.connectionListener = null;
+            }
         }
     }
 
     public static void cleanupBridge() {
         MoonBridge.videoRenderer = null;
         MoonBridge.audioRenderer = null;
-        MoonBridge.connectionListener = null;
+        synchronized (connectionListenerLock) {
+            MoonBridge.connectionListener = null;
+            MoonBridge.connectionCancelled = null;
+        }
         MoonBridge.clipboardListener = null;
     }
 
