@@ -321,14 +321,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     var currentHostAddress: String? = null
     private var shouldResumeSession = false
     private var isExtremeResumeEnabled = false
-    private var isChangingResolution = false
+    @Volatile private var isChangingResolution = false
     private var displaySettingsCommitted = false
     private val resolutionSwitchHandler = Handler(Looper.getMainLooper())
     @Volatile private var resolutionSwitch: ResolutionSwitchSession? = null
     private var resolutionTransition: ResolutionTransitionOverlay? = null
-    private var resolutionReconnectOnStart = false
+    @Volatile private var resolutionReconnectOnStart = false
     internal val isApplyingDisplaySettings: Boolean
-        get() = isChangingResolution || resolutionSwitch != null
+        get() = isChangingResolution || resolutionSwitch != null || resolutionReconnectOnStart
     private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
@@ -1077,7 +1077,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 val outputSize = newRenderer.decodedOutputSize()
                 runOnUiThread {
                     if (decoderRenderer !== newRenderer || destroying || isFinishing) return@runOnUiThread
-                    if (prefConfig.resolutionScale == 100 && outputSize != null) {
+                    if (!isApplyingDisplaySettings && prefConfig.resolutionScale == 100 && outputSize != null) {
                         // A fallback reconnect may encode 720p from an unchanged 4K desktop.
                         // Keep stream choices tied to decoded output, not that desktop notice.
                         prefConfig.width = outputSize.first
@@ -2024,13 +2024,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     /** The draft is already saved, so either path can recover the exact requested settings. */
     internal fun applyDisplaySettings(previous: DisplayReconnectSettings) {
+        if (isApplyingDisplaySettings || destroying || isFinishing) return
+        val connection = conn
+        val renderer = decoderRenderer
         val requested = DisplayReconnectSettings.capture(prefConfig)
-        val canSwitch = requested.isResolutionOnlyChangeFrom(previous) && connected &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && decoderRenderer != null &&
+        val canSwitch = requested.canSwitchResolutionFrom(previous, prefConfig.enableAdaptiveBitrate) && connected &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             prefConfig.resolutionScale == 100 && framegenCapture == null && !shouldUseFramegen() &&
-            externalDisplayManager?.isUsingExternalDisplay() != true &&
-            requested.width % 2 == 0 && requested.height % 2 == 0
-        if (!canSwitch) {
+            externalDisplayManager?.isUsingExternalDisplay() != true
+        if (!canSwitch || connection == null || renderer == null) {
             Toast.makeText(this, R.string.display_settings_reconnecting, Toast.LENGTH_SHORT).show()
             changeResolution()
             return
@@ -2048,16 +2050,25 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 return@captureFrame
             }
             transition.setFrame(frame)
-            decoderRenderer?.awaitResolutionFrame(attempt.width, attempt.height) { width, height ->
+            if (conn !== connection || decoderRenderer !== renderer) {
+                fallbackResolutionSwitch(attempt, "stream replaced")
+                return@captureFrame
+            }
+            renderer.awaitResolutionFrame(attempt.width, attempt.height) { width, height ->
                 runOnUiThread {
-                    if (resolutionSwitch !== attempt || attempt.state != ResolutionSwitchSession.State.WAITING ||
-                        width != attempt.width || height != attempt.height) return@runOnUiThread
-                    val connection = conn ?: return@runOnUiThread fallbackResolutionSwitch(attempt, "connection lost")
+                    if (resolutionSwitch !== attempt || !attempt.isWaitingFor(width, height) ||
+                        destroying || isFinishing) return@runOnUiThread
+                    if (conn !== connection || decoderRenderer !== renderer) {
+                        fallbackResolutionSwitch(attempt, "stream replaced")
+                        return@runOnUiThread
+                    }
                     if (requested.bitrate != previous.bitrate) {
                         connection.setBitrate(requested.bitrate, object : NvConnection.BitrateAdjustmentCallback {
                             override fun onSuccess(newBitrate: Int) {
                                 runOnUiThread {
-                                    if (conn === connection && resolutionSwitch === attempt) {
+                                    if (conn === connection && decoderRenderer === renderer && resolutionSwitch === attempt &&
+                                        attempt.state == ResolutionSwitchSession.State.WAITING &&
+                                        !destroying && !isFinishing) {
                                         adaptiveBitrateService?.notifyManualOverride(newBitrate)
                                         completeResolutionSwitch(attempt)
                                     }
@@ -2073,14 +2084,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 }
             }
             resolutionSwitchHandler.postDelayed({ fallbackResolutionSwitch(attempt, "new frame timeout") }, 5000)
-            if (conn?.requestResolutionChange(attempt.width, attempt.height) != true) {
+            if (!connection.requestResolutionChange(attempt.width, attempt.height)) {
                 fallbackResolutionSwitch(attempt, "request unsupported or failed")
             }
         }
     }
 
     private fun completeResolutionSwitch(attempt: ResolutionSwitchSession) {
-        if (resolutionSwitch !== attempt || !attempt.presented(attempt.width, attempt.height)) return
+        if (resolutionSwitch !== attempt || destroying || isFinishing ||
+            !attempt.presented(attempt.width, attempt.height)) return
         resolutionSwitchHandler.removeCallbacksAndMessages(null)
         conn?.applyResolutionLocally(attempt.width, attempt.height)
         cursorServiceManager.onStreamResolutionChanged(attempt.width, attempt.height)
@@ -2096,7 +2108,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun fallbackResolutionSwitch(attempt: ResolutionSwitchSession, reason: String) {
-        if (resolutionSwitch !== attempt || !attempt.fallback() || destroying || isFinishing) return
+        if (resolutionSwitch !== attempt || destroying || isFinishing || !attempt.fallback()) return
         LimeLog.info("Resolution hot switch falling back to reconnect: $reason")
         resolutionSwitchHandler.removeCallbacksAndMessages(null)
         decoderRenderer?.cancelResolutionFrameWait()
@@ -2502,17 +2514,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun connectionTerminated(errorCode: Int) {
-        val attempt = resolutionSwitch
-        if (attempt != null && (attempt.state == ResolutionSwitchSession.State.WAITING || isChangingResolution)) {
-            runOnUiThread { fallbackResolutionSwitch(attempt, "connection terminated: $errorCode") }
-            return
+        // Decide on the same thread as frame completion; an earlier WAITING snapshot can go stale.
+        runOnUiThread {
+            if (destroying || isFinishing || isChangingResolution || resolutionReconnectOnStart) return@runOnUiThread
+            val attempt = resolutionSwitch
+            if (attempt?.state == ResolutionSwitchSession.State.WAITING) {
+                fallbackResolutionSwitch(attempt, "connection terminated: $errorCode")
+                return@runOnUiThread
+            }
+            if (::remoteImeController.isInitialized) {
+                remoteImeController.resetSession()
+            }
+            usbForwarding?.stopForeground()
+            // The existing termination handler probes network connectivity before displaying UI.
+            Thread { connectionCallbackHandler.connectionTerminated(errorCode) }.start()
         }
-        if (::remoteImeController.isInitialized) {
-            remoteImeController.resetSession()
-        }
-        val forwarding = usbForwarding
-        runOnUiThread { forwarding?.stopForeground() }
-        connectionCallbackHandler.connectionTerminated(errorCode)
     }
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
@@ -2849,9 +2865,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             baseHeight = alignedHeight
         }
 
-        cursorServiceManager.onStreamResolutionChanged(baseWidth, baseHeight)
-
-        orientationManager.syncOrientationOnFirstFrame(baseWidth, baseHeight)
+        val attempt = resolutionSwitch
+        if (isChangingResolution || resolutionReconnectOnStart ||
+            (attempt != null && !attempt.isWaitingFor(baseWidth, baseHeight))) return
 
         // Decoder sizing must use the encoded stream dimensions. baseWidth/baseHeight describe
         // the unscaled host resolution and are only used by the UI and saved stream settings.
@@ -2860,19 +2876,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         runOnUiThread {
-            if (destroying || isFinishing) return@runOnUiThread
-            val attempt = resolutionSwitch
-            if (attempt != null) {
-                // Preferences already contain the saved target. Neither an old notification nor
-                // a failed attempt may overwrite it before the reconnect reads those preferences.
-                if (baseWidth != attempt.width || baseHeight != attempt.height) return@runOnUiThread
-            } else {
-                if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) return@runOnUiThread
-                LimeLog.info("Resolution changed: ${prefConfig.width}x${prefConfig.height} -> ${baseWidth}x${baseHeight}")
-                prefConfig.width = baseWidth
-                prefConfig.height = baseHeight
-                Toast.makeText(this, getString(R.string.host_resolution_changed, baseWidth, baseHeight), Toast.LENGTH_SHORT).show()
-            }
+            // Only a confirmed frame may update display metadata during a switch. A pending
+            // reconnect must retain the saved target even after its decoder wait was cancelled.
+            if (destroying || isFinishing || isApplyingDisplaySettings) return@runOnUiThread
+            cursorServiceManager.onStreamResolutionChanged(baseWidth, baseHeight)
+            orientationManager.syncOrientationOnFirstFrame(baseWidth, baseHeight)
+            if (prefConfig.width == baseWidth && prefConfig.height == baseHeight) return@runOnUiThread
+            LimeLog.info("Resolution changed: ${prefConfig.width}x${prefConfig.height} -> ${baseWidth}x${baseHeight}")
+            prefConfig.width = baseWidth
+            prefConfig.height = baseHeight
+            Toast.makeText(this, getString(R.string.host_resolution_changed, baseWidth, baseHeight), Toast.LENGTH_SHORT).show()
             orientationManager.onServerResolutionChanged(baseWidth > baseHeight)
             updateStreamViewSize(baseWidth, baseHeight)
         }

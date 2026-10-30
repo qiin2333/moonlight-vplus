@@ -1,13 +1,16 @@
 package com.limelight
 
-/** One attempt; terminal decisions cannot be undone by late decoder or timeout callbacks. */
+/** UI-thread transitions; other threads may inspect the target and state. Terminal states stay final. */
 internal class ResolutionSwitchSession(val width: Int, val height: Int) {
     enum class State { WAITING, COMPLETE, RECONNECTING, CANCELLED }
     @Volatile var state = State.WAITING
         private set
 
+    fun isWaitingFor(width: Int, height: Int): Boolean =
+        state == State.WAITING && width == this.width && height == this.height
+
     fun presented(width: Int, height: Int): Boolean {
-        if (state != State.WAITING || width != this.width || height != this.height) return false
+        if (!isWaitingFor(width, height)) return false
         state = State.COMPLETE
         return true
     }
@@ -18,5 +21,7 @@ internal class ResolutionSwitchSession(val width: Int, val height: Int) {
         return true
     }
 
-    fun cancel() { state = State.CANCELLED }
+    fun cancel() {
+        if (state == State.WAITING) state = State.CANCELLED
+    }
 }
