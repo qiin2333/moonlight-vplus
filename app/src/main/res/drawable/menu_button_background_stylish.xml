@@ -24,10 +24,10 @@
     <item android:state_focused="true">
         <layer-list>
             <!-- 外圈光晕 -->
-            <item>
+            <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="2dp">
                 <shape android:shape="oval">
                     <solid android:color="?attr/appAccent10"/>
-                    <stroke android:width="2dp" android:color="?attr/appAccent27"/>
+                    <stroke android:width="1.5dp" android:color="?attr/appAccent27"/>
                 </shape>
             </item>
             <!-- 内圈高光 -->
