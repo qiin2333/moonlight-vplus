@@ -125,9 +125,6 @@ class AuthoredIrMockIntegrationTest {
                 step(time, time !in paused)
             }
             flush()
-            println("ExtendedMock mode=$mode controller=$hasController phone=$hasPhone tickSupport=$supportsTick " +
-                "events=${deliveredIds.size} ticks=${tickTimes.size} " +
-                "waves=${phoneWrites.count { it.amplitude > 0 }} inbox=$maxInbox workerQueue=$maxOutputQueue")
         }
         override fun close() {
             closed = true

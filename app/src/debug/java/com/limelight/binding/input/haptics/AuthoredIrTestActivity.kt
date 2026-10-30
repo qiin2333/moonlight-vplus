@@ -30,7 +30,6 @@ class AuthoredIrTestActivity : Activity() {
         button("雨景（v2 + 扩展）", "rain-haptics.irextbin")
         button("50点/秒 PCM", "pulse_density_50.irextbin")
         button("持续250Hz PCM", "sustain_250hz_0.12.irextbin")
-        button("持续300Hz PCM", "sustain_300hz_0.12.irextbin")
         button("持续＋短落点", "mixed_clean_body_0.12_separate_0.irextbin")
         layout.addView(Button(this).apply { text = "停止"; setOnClickListener { stop(); status.text = "已停止" } })
         setContentView(layout)

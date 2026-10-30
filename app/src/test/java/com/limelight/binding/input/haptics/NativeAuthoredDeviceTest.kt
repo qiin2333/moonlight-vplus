@@ -12,6 +12,7 @@ class NativeAuthoredDeviceTest {
         val ordinary = mutableListOf<Int>()
         var stops = 0
         var closes = 0
+        private var stopIr: (() -> Unit)? = null
         private val callbacks = mutableListOf<Pair<Runnable, Long>>()
         val worker = VirtualHapticsExecutor { now * 1_000_000 }
         val post: (Runnable, Long) -> Unit = { task, delay -> callbacks += task to (now + delay) }
@@ -31,6 +32,20 @@ class NativeAuthoredDeviceTest {
             { ordinary += 0 }, worker, clockMs = { now },
             dispatcherClockNanos = { now * 1_000_000 }, nativeHaptics = sink)
 
+        fun authored(mode: GameRumbleMode, hasController: Boolean = true,
+                     controllers: MutableList<ControllerRumbleState> = mutableListOf()): AuthoredIrCoordinator {
+            val mixer = ControllerHapticsMixer()
+            val renderer = RumbleOutputRenderer(mixer, ControllerHapticsMixer(), { now }, post, remove,
+                controllerAvailable = { hasController }, controllerIntervalMs = { 20L },
+                writeController = { controllers += it.output }, writeDeviceAmplitude = {})
+            return AuthoredIrCoordinator(mixer, renderer, phone,
+                context = { GameRumbleContext(mode, hasController, hasDevice = true) },
+                supportsTick = { false }, strengthPercent = { 100 }, clockMs = { now },
+                postDelayed = post, removeCallbacks = remove, scheduleExpiry = {}).also {
+                stopIr = { it.stop(); renderer.stop() }
+            }
+        }
+
         fun submit(body: Float = .1f, point: Float = 0f) =
             phone.submitNativeAuthored(body, point, now + 200, now + 30)
         fun flush() {
@@ -42,7 +57,15 @@ class NativeAuthoredDeviceTest {
             worker.runReady()
         }
         fun advance(ms: Long) { now += ms; flush() }
-        override fun close() { worker.blocked = false; phone.stop(); flush() }
+        override fun close() { worker.blocked = false; stopIr?.invoke(); phone.stop(); flush() }
+    }
+
+    private fun frame(sequence: Int = 0, timeUs: Long = 0,
+                      body: Ds5HapticsIrExtendedLane = Ds5HapticsIrExtendedLane(.1f, .2f)):
+        Ds5HapticsIrExtendedFrame {
+        val lane = Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f)
+        return Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, 0, sequence, timeUs, 240, lane, lane),
+            1, timeUs, body, body, listOf(Ds5HapticsIrExtendedEvent(sequence + 1, timeUs, .01f, .004f)))
     }
 
     @Test fun bodyUpdatesKeepAFreshPointAndNewPointsBypassContinuousPacing() {
@@ -142,19 +165,9 @@ class NativeAuthoredDeviceTest {
 
     @Test fun extendedIrUsesGradedPointsAndRespectsControllerDeviceAllocation() {
         for (continuous in listOf(true, false)) for (mode in GameRumbleMode.entries) Runtime(continuous).use { r ->
-            val mixer = ControllerHapticsMixer()
             val controllers = mutableListOf<ControllerRumbleState>()
-            val renderer = RumbleOutputRenderer(mixer, ControllerHapticsMixer(), { r.now }, r.post, r.remove,
-                controllerAvailable = { true }, controllerIntervalMs = { 20L },
-                writeController = { controllers += it.output }, writeDeviceAmplitude = {})
-            val coordinator = AuthoredIrCoordinator(mixer, renderer, r.phone,
-                context = { GameRumbleContext(mode, hasController = true, hasDevice = true) },
-                supportsTick = { false }, strengthPercent = { 100 }, clockMs = { r.now },
-                postDelayed = r.post, removeCallbacks = r.remove, scheduleExpiry = {})
-            val lane = Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f)
-            val body = Ds5HapticsIrExtendedLane(.1f, .2f)
-            coordinator.submit(Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, 0, 0, 0, 240, lane, lane),
-                1, 0, body, body, listOf(Ds5HapticsIrExtendedEvent(1, 0, .01f, .004f))))
+            val coordinator = r.authored(mode, controllers = controllers)
+            coordinator.submit(frame())
             r.flush(); r.advance(20)
             if (mode == GameRumbleMode.CONTROLLER) assertTrue(r.renders.isEmpty())
             else if (mode == GameRumbleMode.DEVICE && !continuous) {
@@ -169,7 +182,22 @@ class NativeAuthoredDeviceTest {
                     assertTrue(controllers.last().highFrequency <= .2f)
                 } else assertEquals(.31623f, r.renders.last().first, .0001f)
             }
-            coordinator.stop(); renderer.stop()
+        }
+    }
+
+    @Test fun transientBackendWaitsThroughBodyGapsThenIgnoresInaudibleResidualBody() {
+        Runtime(continuous = false).use { r ->
+            val coordinator = r.authored(GameRumbleMode.DEVICE, hasController = false)
+            coordinator.submit(frame()); r.flush(); r.advance(20)
+            r.now = 40
+            coordinator.submit(frame(1, 40_000, Ds5HapticsIrExtendedLane(0f, 0f)))
+            r.flush(); r.advance(20)
+            assertTrue("A brief body gap must not switch to the transient backend",
+                r.renders.none { it.second > 0 })
+            r.now = 150
+            coordinator.submit(frame(2, 150_000, Ds5HapticsIrExtendedLane(.001f, .001f)))
+            r.flush(); r.advance(20)
+            assertEquals(0f to .2f, r.renders.last())
         }
     }
 }

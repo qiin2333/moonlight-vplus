@@ -62,6 +62,13 @@ class AuthoredHapticsRendererTest {
         assertFalse(fine.usesDeviceDetails(GameRumbleMode.CONTROLLER, true, true, true))
     }
 
+    @Test fun legacyTickCalibrationOnlyUsesTheMeasuredFirmware() {
+        assertEquals(40L, DeviceDetailProfile.tickIntervalMs("meizu", "meizu 17", 33, "Flyme 10.5.0.0A"))
+        assertEquals(90L, DeviceDetailProfile.tickIntervalMs("meizu", "meizu 17", 34, "Flyme 10.5.0.0A"))
+        assertEquals(90L, DeviceDetailProfile.tickIntervalMs("meizu", "meizu 17", 33, "other firmware"))
+        assertEquals(90L, DeviceDetailProfile.tickIntervalMs("other", "other", 33, "Flyme 10.5.0.0A"))
+    }
+
     private fun frame(timeUs: Long, transient: Float = 0.25f): Ds5HapticsIrFrame {
         val lane = Ds5HapticsIrLane(0.05f, 0.1f, transient, 0.1f, 440f)
         return Ds5HapticsIrFrame(0, 0, (timeUs / 5_000).toInt(), timeUs, 240, lane, lane)

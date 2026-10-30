@@ -2341,5 +2341,6 @@
     <string name="summary_ds5_simulation_mode">传统模拟保留现有手感；IR 增强复用 v2，通过扩展区传输持续层和短促落点，需要兼容的 Sunshine。重新连接后生效。</string>
     <string-array name="ds5_simulation_mode_names"><item>传统模拟</item><item>IR 增强（v2 + 扩展）</item></string-array>
     <string name="title_native_device_haptics">原生设备触觉（实验）</string>
-    <string name="summary_native_device_haptics">在增强 IR 模式下，用原生设备触觉还原轻重短点和持续层。可能增加振动延迟；不支持时沿用原有输出。重新连接后生效。</string>
+    <string name="summary_native_device_haptics">按设备能力使用原生触觉；部分设备仅支持轻重短点，持续与混合效果沿用原有输出。可能增加振动延迟。重新连接后生效。</string>
+    <string name="summary_native_device_haptics_requires_output">需选择 IR 增强、设备或协同输出，并将设备振动力度设为大于零。修改后重新连接生效。</string>
 </resources>

@@ -62,8 +62,8 @@ internal class ControllerHapticsCoordinator(
             detailTickIntervalMs = handler.rumbleManager.deviceTickIntervalMs,
             clockMs = SystemClock::elapsedRealtime,
             nativeHaptics = if (Build.VERSION.SDK_INT >= 29 && handler.prefConfig.nativeDeviceHaptics &&
-                handler.prefConfig.gameRumbleMode != GameRumbleMode.CONTROLLER && handler.prefConfig.deviceRumbleStrength > 0 &&
-                handler.prefConfig.ds5SimulationMode == Ds5SimulationMode.IR_ENHANCED)
+                handler.prefConfig.ds5SimulationMode.allowsNativeDeviceHaptics(
+                    handler.prefConfig.gameRumbleMode, handler.prefConfig.deviceRumbleStrength))
                 NativeAuthoredHaptics.create(handler.activityContext) else null
         )
     }

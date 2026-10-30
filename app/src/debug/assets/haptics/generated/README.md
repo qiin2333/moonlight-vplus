@@ -1,39 +1,38 @@
-# Authored IR v2 enhancement fixtures
+# Authored IR acceptance fixtures
 
-These five synthetic, stereo haptic PCM fixtures were analyzed by Sunshine's
-`analyze_authored_ir_extended` tool using moonlight-audio-haptics' authored event engine.
-They contain generated rain, 50 onsets/second, sustained 250/300 Hz carriers, and
-a continuous carrier mixed with isolated impacts. They contain no recorded game
-audio. The rain fixture uses the SDK's transient/body separation fix: 144 distinct
-events and no continuous layer. Repeated wire history is deliberate.
+These four synthetic stereo PCM scenes were analyzed by Sunshine's
+`analyze_authored_ir_extended` tool using moonlight-audio-haptics. No recorded
+game audio or raw PCM is packaged.
+
+| Fixture | Regression / handheld purpose |
+| --- | --- |
+| `rain-haptics` | Irregular graded points: 144 events and no continuous layer. |
+| `pulse_density_50` | 100 events in two seconds; density, network faults and backpressure. |
+| `sustain_250hz_0.12` | Continuous output, lease expiry and missing END. |
+| `mixed_clean_body_0.12_separate_0` | Body/point allocation and single-phone fallback. |
+
+The redundant 300 Hz sustain fixture was removed: client allocation and output
+use the same continuous branch. These files are shared by the debug replay page
+and `AuthoredIrMockIntegrationTest`, which exercises the production coordinator,
+timeline, mixer and phone dispatcher. Transport faults and clocks are simulated;
+software counts do not prove physical actuator fidelity.
+
+The rain file includes the local SDK transient/body separation fix. This client
+PR does not contain that SDK change. Fixture playback is not online Sunshine
+streaming acceptance.
 
 The [common-c IR contract](../../../../main/jni/moonlight-core/moonlight-common-c/docs/DS5-HAPTICS-IR.md)
-owns field definitions and validation. The client follows the v2 callback API;
-build it together with the matching common-c headers and library. Wire fallback
-to old hosts does not promise drop-in shared-library binary compatibility.
-
-Each `.irextbin` concatenates enhanced IR payloads. Each starts with an original
-72-byte v2 base (version 2, base length 72), then a 32-byte enhancement header
-and 0-8 events of 20 bytes each. The enhancement length at offset 74 covers the
-header and events; the whole record is `72 + enhancementLength` bytes. The final
-record carries base END. There is no outer file header. The v2 base is decoded
-into the same data object used by the legacy path; only new continuous/event
-information belongs to the enhancement.
-
-Regenerate from 48 kHz interleaved stereo signed 16-bit little-endian PCM:
+owns wire layout and validation. Each file concatenates enhanced v2 payloads;
+the debug decoder only supports fixture replay. Live traffic uses common-c.
+Regenerate from 48 kHz stereo signed 16-bit little-endian PCM:
 
 ```text
 analyze_authored_ir_extended input.pcm output.irextbin
 ```
 
-`AuthoredIrMockIntegrationTest` exercises these host-generated files through the
-production coordinator, timeline, policies, mixer and phone dispatcher. Cases
-cover clean rain, continuous/mixed output, packet loss/duplication/reordering,
-stalls, missing END, capability fallback and ordinary-rumble restoration.
-Source-clock boundaries and retired epochs are checked in `AuthoredIrTimelineTest`.
-The five packaged files run without external test data.
-
-The debug-only `AuthoredIrTestActivity` replays these files on a device. Pass
-`--ez native true` to exercise the optional SoundPool backend; it waits for the
-native bank to load before starting the source clock. Counters measure accepted
-events and renderer/framework invocations, not completed physical actuations.
+`AuthoredIrTestActivity` accepts `--es asset <name>.irextbin --ez native true`.
+The optional native backend is SoundPool or RichTap; continuous/mixed effects
+fall back when the selected backend cannot render them. Use `--ez measure true`
+only for flat-device latency capture. Sensor data and event timestamps stay in
+app-private files; the sensor permission and replay page are debug-only.
+Temporary probe apps, raw captures and benchmark reports are not committed.

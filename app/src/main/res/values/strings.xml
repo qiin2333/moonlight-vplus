@@ -2417,7 +2417,8 @@ Tap again to replace it.</string>
     <string name="stats_precise_sync">[Precise sync: %1$d rendered/%2$d received, skip rate: %3$.1f%%]</string>
     <string name="mic_status_debug">Permission: %1$b, stream exists: %2$b, available: %3$b, active: %4$b</string>
     <string name="title_native_device_haptics">Native device haptics (experimental)</string>
-    <string name="summary_native_device_haptics">Use native device haptics for graded impacts and continuous layers with Enhanced IR. May add vibration delay. Requires device support; otherwise uses the existing output. Reconnect to apply.</string>
+    <string name="summary_native_device_haptics">Use supported native effects with Enhanced IR. Some devices support graded short impacts only; continuous and mixed effects use the existing output. May add vibration delay. Reconnect to apply.</string>
+    <string name="summary_native_device_haptics_requires_output">Requires Enhanced IR, Device or Coordinated output, and device vibration strength above zero. Reconnect after changing settings.</string>
     <string name="title_ds5_simulation_mode">DualSense simulation path</string>
     <string name="summary_ds5_simulation_mode">Legacy keeps the existing rumble feel. Enhanced IR reuses v2 and adds continuous layers and short impacts through an optional extension. Requires compatible Sunshine. Reconnect to apply.</string>
     <string-array name="ds5_simulation_mode_names"><item>Legacy simulation</item><item>Enhanced IR (v2 + extension)</item></string-array>

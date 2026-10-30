@@ -110,10 +110,11 @@ internal class AuthoredIrCoordinator(
             if (output.reset) phone.resetAuthoredIr()
         }
         val targets = context(number).let { if (number.toInt() == 0) it else it.copy(hasDevice = false) }
-        val nativeBody = if (targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
-            ControllerRumbleState.ZERO else output.body
+        val pointOnly = targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
+            .useDetails(output.body, now, output.ended, targets.mode, targets.hasController)
+        val nativeContinuous = phone.supportsNativeContinuous
         val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored &&
-            (nativeBody.isZero || phone.supportsNativeContinuous)
+            (nativeContinuous || pointOnly)
         if (number.toInt() == 0 && nativePhone != native) {
             phone.resetAuthoredIr()
             nativePhone = native
@@ -121,9 +122,8 @@ internal class AuthoredIrCoordinator(
         val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) } ?: 0f
         if (output.ended) pulses.remove(number)
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
-        val pulse = AuthoredIrFallback.transientAmplitude(pulses[number]?.first ?: 0f)
-        val details = native || targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
-            .useDetails(output.body, now, output.ended, targets.mode, targets.hasController, supportsTick())
+        val pulse = transientAmplitude(pulses[number]?.first ?: 0f)
+        val details = native || pointOnly && supportsTick()
         val plan = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
         val body = if (targets.hasController && targets.mode != GameRumbleMode.DEVICE) output.body else ControllerRumbleState.ZERO
         mixer.submit(number, RumbleSource.AUTHORED_BODY, body, now, output.bodyValidUntilUs / 1000)
@@ -134,6 +134,9 @@ internal class AuthoredIrCoordinator(
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
             if (native) {
+                val nativeBody = if (!nativeContinuous ||
+                    targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
+                    ControllerRumbleState.ZERO else output.body
                 val gain = strengthPercent().coerceIn(0, 200) / 100f
                 // Merge band energy into the carrier's peak amplitude; point strength is never
                 // reduced to the fixed-strength TICK used by the public vibrator fallback.
@@ -143,7 +146,7 @@ internal class AuthoredIrCoordinator(
                     // Profile 1 carries early band-peak evidence, not the finished PCM crest.
                     // Native playback needs its own makeup gain; otherwise rain collapses
                     // into the bank's weakest level. The backend limits physical sample gain.
-                    AuthoredIrFallback.transientAmplitude(eventPower) * 2f * gain,
+                    transientAmplitude(eventPower) * 2f * gain,
                     output.bodyValidUntilUs / 1000, output.event?.expiresUs?.div(1000) ?: now,
                     active = !output.ended && gain > 0)
             } else {
@@ -157,6 +160,10 @@ internal class AuthoredIrCoordinator(
         onOutput(number, output)
         scheduleExpiry()
     }
+
+    // Match v2's perceptual makeup before 8-bit motor output is quantized.
+    private fun transientAmplitude(strength: Float): Float =
+        sqrt(ControllerRumbleState.normalizeAmplitude(strength))
 
     private fun routeLegacy(pending: Legacy, now: Long) {
         val number = pending.frame.controllerNumber

@@ -32,6 +32,8 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     @Volatile private var closed = false
     @Volatile override var ready = false
         private set
+    @Volatile override var failed = false
+        private set
     private var stream = 0
     private var tone = -1
     private var toneRefreshAt = 0L
@@ -41,8 +43,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
         pool.setOnLoadCompleteListener { _, _, status ->
             synchronized(stateLock) {
                 if (status != 0) {
-                    closed = true
-                    ready = false
+                    failed = true
                     LimeLog.warning("Native authored haptics asset decoding failed: $status")
                 } else loaded++
                 updateReady()
@@ -52,7 +53,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
         loader.execute {
             try {
                 fun load(name: String): Int = synchronized(poolLock) {
-                    check(!closed)
+                    check(!closed && !failed)
                     assets.openFd("haptics/native/$name.ogg").use { pool.load(it, 1) }.also {
                         check(it != 0) { "SoundPool rejected $name" }
                     }
@@ -63,18 +64,19 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
                 synchronized(stateLock) { loadingFinished = true; updateReady() }
             } catch (error: Exception) {
                 if (!closed) LimeLog.warning("Native authored haptics unavailable: ${error.message}")
-                synchronized(stateLock) { ready = false }
+                synchronized(stateLock) { failed = true; ready = false }
             } finally { loader.shutdown() }
         }
     }
 
     private fun updateReady() {
-        ready = !closed && loadingFinished && loaded == (BODY_LEVELS + 1) * (POINT_LEVELS + 1)
+        ready = !closed && !failed && loadingFinished && loaded == (BODY_LEVELS + 1) * (POINT_LEVELS + 1)
     }
 
     override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
         if (!ready) { stop(); return null }
         return try { renderReady(body, point, keepWarm) } catch (error: Exception) {
+            failed = true
             ready = false
             stop()
             LimeLog.warning("Native authored haptics disabled: ${error.message}")

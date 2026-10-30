@@ -98,6 +98,7 @@ import com.limelight.binding.audio.MicrophoneButtonPositionStore
 import com.limelight.ui.FloatBallPositionStore
 import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.haptics.GameRumbleMode
+import com.limelight.binding.input.haptics.Ds5SimulationMode
 import com.limelight.binding.input.haptics.NativeAuthoredHaptics
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
@@ -3845,6 +3846,11 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         /** Reapplies preference presentation derived from the changed stored value. */
         private fun refreshSettingsPresentation(changedKey: String? = null) {
+            if (changedKey == null || changedKey in setOf(
+                    "list_ds5_simulation_mode", PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING,
+                    "seekbar_vibrate_fallback_strength")) {
+                updateNativeDeviceHapticsPreference()
+            }
             if (changedKey == null || changedKey.contains("float_ball")) {
                 updateFloatBallSettingsSummary()
             }
@@ -3893,6 +3899,19 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
             refreshFeaturePageVisibility(preferenceScreen)
             updateFeaturePageSummaries()
+        }
+
+        private fun updateNativeDeviceHapticsPreference() {
+            val preference = findPreference<Preference>("checkbox_native_device_haptics") ?: return
+            val prefs = preferenceManager.sharedPreferences ?: return
+            val enabled = Ds5SimulationMode.fromPreference(
+                prefs.getString("list_ds5_simulation_mode", "legacy")).allowsNativeDeviceHaptics(
+                GameRumbleMode.fromPreferenceValue(prefs.getString(
+                    PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING, "controller")),
+                prefs.getInt("seekbar_vibrate_fallback_strength", 100))
+            preference.isEnabled = enabled
+            preference.setSummary(if (enabled) R.string.summary_native_device_haptics
+                else R.string.summary_native_device_haptics_requires_output)
         }
 
         /** Capability filtering can empty a feature or an internal group on older devices. */

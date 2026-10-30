@@ -39,5 +39,9 @@ class Ds5SimulationModeTest {
         assertFalse(oldSession.nativePcm)
         assertTrue(nativeSession.nativePcm)
         assertFalse(nativeSession.authoredIr)
+        assertFalse(Ds5SimulationMode.LEGACY.allowsNativeDeviceHaptics(GameRumbleMode.DEVICE, 100))
+        assertFalse(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.CONTROLLER, 100))
+        assertFalse(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.DEVICE, 0))
+        assertTrue(Ds5SimulationMode.IR_ENHANCED.allowsNativeDeviceHaptics(GameRumbleMode.COORDINATED, 100))
     }
 }

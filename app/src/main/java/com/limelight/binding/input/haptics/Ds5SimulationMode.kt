@@ -7,6 +7,9 @@ enum class Ds5SimulationMode(val preferenceValue: String) {
     // Keep the existing saved value so older test installations retain their selection.
     LEGACY("legacy"), IR_ENHANCED("ir_v3");
 
+    fun allowsNativeDeviceHaptics(output: GameRumbleMode, strength: Int): Boolean =
+        this == IR_ENHANCED && output != GameRumbleMode.CONTROLLER && strength > 0
+
     fun requestsIr(nativePcm: Boolean, controlOnly: Boolean, host: HostGamepadSelection): Boolean =
         this == IR_ENHANCED && !nativePcm && !controlOnly &&
             host != HostGamepadSelection.XBOX && host != HostGamepadSelection.DS4

@@ -26,6 +26,7 @@ internal class RichTapAuthoredHaptics(
     override val supportsContinuous = false
     @Volatile override var ready = true
         private set
+    override val failed get() = !ready
     private var active = false
     private var sequence = 0
     private var pointUntil = 0L
@@ -70,7 +71,7 @@ internal class RichTapAuthoredHaptics(
             if (Build.VERSION.SDK_INT < 26) return null
             return try {
                 val type = Class.forName("android.os.RichTapVibrationEffect")
-                val support = type.getMethod("checkIfRichTapSupport").invoke(null) as Int
+                val support = type.getMethod("checkIfRichTapSupport").invoke(null) as? Int ?: return null
                 if (support <= 2 || (support shr 8 and 255) < 24) null else
                     type.getMethod("createPatternHeWithParam", IntArray::class.java, Int::class.javaPrimitiveType,
                         Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType) to
