@@ -47,7 +47,7 @@ internal object GameMenuCardVisibilityEditor {
                 config.showDisplaySettingsCard = DISPLAY_SETTINGS in selectedIds
                 config.showAudioHapticsCard = AUDIO_HAPTICS in selectedIds
                 config.showGyroCard = GYRO in selectedIds
-                config.showQuickKeyCard = SHORTCUTS in selectedIds
+                config.setQuickKeyCardVisibility(context, SHORTCUTS in selectedIds)
                 config.showWaveformHapticsCard = WAVEFORM_HAPTICS in selectedIds
                 config.writePreferences(context)
                 onSaved(config)
