@@ -66,8 +66,8 @@ internal class ResolutionSwitchController(
                     if (requested.bitrate == previousBitrate) {
                         complete(attempt, connection)
                     } else {
+                        // setBitrate has its own total HTTP deadline and reports failures below.
                         handler.removeCallbacksAndMessages(null)
-                        handler.postDelayed({ fallback(attempt, "bitrate adjustment timeout") }, 5000)
                         connection.setBitrate(requested.bitrate, object : NvConnection.BitrateAdjustmentCallback {
                             override fun onSuccess(newBitrate: Int) {
                                 activity.runOnUiThread {
@@ -81,7 +81,7 @@ internal class ResolutionSwitchController(
                     }
                 }
             }
-            handler.postDelayed({ fallback(attempt, "new frame timeout") }, 5000)
+            handler.postDelayed({ fallback(attempt, "new frame timeout") }, FRAME_CONFIRM_TIMEOUT_MS)
             if (!connection.requestResolutionChange(attempt.width, attempt.height)) {
                 fallback(attempt, "request unsupported or failed")
             }
@@ -150,5 +150,10 @@ internal class ResolutionSwitchController(
         pendingRenderer?.cancelResolutionFrameWait()
         transition?.reconnecting()
         reconnect()
+    }
+
+    private companion object {
+        // Initial budget for display reconfiguration, encoder restart and confirmed presentation.
+        const val FRAME_CONFIRM_TIMEOUT_MS = 5_000L
     }
 }
