@@ -129,7 +129,7 @@ internal class ResolutionSwitchController(
             !activity.isFinishing && !activity.isDestroyed
 
     private fun complete(attempt: ResolutionSwitchSession, connection: NvConnection) {
-        if (!isWaiting(attempt) || !attempt.presented(attempt.width, attempt.height)) return
+        if (!isWaiting(attempt) || !attempt.complete()) return
         handler.removeCallbacksAndMessages(null)
         connection.applyResolutionLocally(attempt.width, attempt.height)
         onPresented(attempt.width, attempt.height)

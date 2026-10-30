@@ -1279,7 +1279,6 @@
     <string name="display_settings_reconnecting">Переподключение для применения настроек экрана…</string>
     <string name="display_settings_switch_hint">Изменение разрешения применяется без разрыва соединения, если это возможно. При необходимости трансляция переподключается автоматически. Изменение частоты кадров или режима экрана требует краткого переподключения.</string>
     <string name="resolution_switch_adjusting">Изменение разрешения…</string>
-    <string name="resolution_switch_target">%1$d × %2$d</string>
     <string name="resolution_switch_reconnecting">Восстановление трансляции…</string>
     <string name="display_spec_resolution">Разрешение</string>
     <string name="display_spec_fps">Частота</string>

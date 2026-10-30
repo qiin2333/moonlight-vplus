@@ -9,8 +9,8 @@ internal class ResolutionSwitchSession(val width: Int, val height: Int) {
     fun isWaitingFor(width: Int, height: Int): Boolean =
         state == State.WAITING && width == this.width && height == this.height
 
-    fun presented(width: Int, height: Int): Boolean {
-        if (!isWaitingFor(width, height)) return false
+    fun complete(): Boolean {
+        if (state != State.WAITING) return false
         state = State.COMPLETE
         return true
     }

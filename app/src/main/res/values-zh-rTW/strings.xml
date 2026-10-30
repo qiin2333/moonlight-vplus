@@ -609,7 +609,6 @@
     <string name="display_settings_reconnecting">正在重新連線以套用顯示設定…</string>
     <string name="display_settings_switch_hint">僅變更解析度時會嘗試保持連線，必要時自動重新連線。變更幀率或螢幕模式需要短暫重新連線。</string>
     <string name="resolution_switch_adjusting">正在調整解析度…</string>
-    <string name="resolution_switch_target">%1$d × %2$d</string>
     <string name="resolution_switch_reconnecting">正在恢復串流…</string>
     <string name="display_spec_resolution">解析度</string>
     <string name="display_spec_fps">幀率</string>

@@ -4,32 +4,31 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ResolutionSwitchSessionTest {
-    @Test fun oldFramesCannotCompleteAndTimeoutWinsOverLateFrames() {
+    @Test fun timeoutPreventsLateCompletionAndTargetMatching() {
         val attempt = ResolutionSwitchSession(2560, 1440)
         assertFalse(attempt.isWaitingFor(1920, 1080))
         assertTrue(attempt.isWaitingFor(2560, 1440))
-        assertFalse(attempt.presented(1920, 1080))
         assertTrue(attempt.fallback())
         attempt.cancel()
         assertFalse(attempt.isWaitingFor(2560, 1440))
-        assertFalse(attempt.presented(2560, 1440))
+        assertFalse(attempt.complete())
         assertFalse(attempt.fallback())
         assertEquals(ResolutionSwitchSession.State.RECONNECTING, attempt.state)
     }
 
-    @Test fun presentedTargetPreventsLateTimeoutFromReconnecting() {
+    @Test fun completionPreventsLateTimeoutOrDuplicateCompletion() {
         val attempt = ResolutionSwitchSession(1920, 1080)
-        assertTrue(attempt.presented(1920, 1080))
+        assertTrue(attempt.complete())
         attempt.cancel()
         assertEquals(ResolutionSwitchSession.State.COMPLETE, attempt.state)
         assertFalse(attempt.fallback())
-        assertFalse(attempt.presented(1920, 1080))
+        assertFalse(attempt.complete())
     }
 
-    @Test fun leavingTheActivityCancelsAllLateCompletions() {
+    @Test fun cancellationPreventsLateCompletionAndFallback() {
         val attempt = ResolutionSwitchSession(1280, 720)
         attempt.cancel()
-        assertFalse(attempt.presented(1280, 720))
+        assertFalse(attempt.complete())
         assertFalse(attempt.fallback())
     }
 

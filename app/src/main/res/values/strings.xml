@@ -1499,7 +1499,7 @@ Tap again to replace it.</string>
     <string name="display_settings_reconnecting">Reconnecting to apply display settings…</string>
     <string name="display_settings_switch_hint">Resolution changes try to apply without disconnecting. If needed, the stream reconnects automatically. Frame rate and screen mode changes require a brief reconnect.</string>
     <string name="resolution_switch_adjusting">Adjusting resolution…</string>
-    <string name="resolution_switch_target">%1$d × %2$d</string>
+    <string name="resolution_switch_target" translatable="false">%1$d × %2$d</string>
     <string name="resolution_switch_reconnecting">Restoring stream…</string>
     <string name="display_spec_resolution">Resolution</string>
     <string name="display_spec_fps">Frame rate</string>

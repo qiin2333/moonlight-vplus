@@ -1173,7 +1173,6 @@
     <string name="display_settings_reconnecting">正在重新连接以应用显示设置…</string>
     <string name="display_settings_switch_hint">仅更改分辨率时会尝试保持连接，必要时自动重连。更改帧率或屏幕模式需要短暂重连。</string>
     <string name="resolution_switch_adjusting">正在调整分辨率…</string>
-    <string name="resolution_switch_target">%1$d × %2$d</string>
     <string name="resolution_switch_reconnecting">正在恢复串流…</string>
     <string name="display_spec_resolution">分辨率</string>
     <string name="display_spec_fps">帧率</string>
