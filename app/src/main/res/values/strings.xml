@@ -2416,4 +2416,11 @@ Tap again to replace it.</string>
     <string name="pacing_label_smooth">Smooth</string>
     <string name="stats_precise_sync">[Precise sync: %1$d rendered/%2$d received, skip rate: %3$.1f%%]</string>
     <string name="mic_status_debug">Permission: %1$b, stream exists: %2$b, available: %3$b, active: %4$b</string>
+    <string name="title_native_device_haptics">Native device haptics (experimental)</string>
+    <string name="summary_native_device_haptics">Mix sustained vibration with graded short impacts using supported native effects. Falls back to the existing output when unavailable. May add latency or brief seams in sustained effects. Reconnect to apply.</string>
+    <string name="summary_native_device_haptics_requires_output">Requires DualSense emulation on the host, Enhanced IR, Device or Coordinated output, and device vibration strength above zero. Reconnect to apply.</string>
+    <string name="title_ds5_simulation_mode">DualSense vibration simulation</string>
+    <string name="summary_ds5_simulation_mode">Legacy keeps the existing rumble feel. Enhanced IR separates continuous vibration and short impacts. Requires compatible Sunshine with DualSense emulation on the host. Native controller passthrough takes priority. Reconnect to apply.</string>
+    <string-array name="ds5_simulation_mode_names"><item>Legacy simulation</item><item>Enhanced IR</item></string-array>
+    <string-array name="ds5_simulation_mode_values" translatable="false"><item>legacy</item><item>ir_v3</item></string-array>
 </resources>

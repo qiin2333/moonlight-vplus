@@ -60,6 +60,7 @@ class StreamConfiguration private constructor() {
     var hostGamepad: String? = null
         private set
     var authoredPcmHaptics: Boolean = false
+    var authoredIrHaptics: Boolean = false
         private set
 
     /** Sunshine dynamic HDR negotiation (client opt-in). All zero = legacy client. */
@@ -139,6 +140,7 @@ class StreamConfiguration private constructor() {
         }
 
         fun setAuthoredPcmHaptics(enabled: Boolean): Builder = apply { config.authoredPcmHaptics = enabled }
+        fun setAuthoredIrHaptics(enabled: Boolean): Builder = apply { config.authoredIrHaptics = enabled }
 
         fun setAudioBitrate(bitrate: Int): Builder = apply { config.audioBitrate = bitrate }
 

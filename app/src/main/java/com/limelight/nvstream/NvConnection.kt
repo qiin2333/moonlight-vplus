@@ -262,8 +262,10 @@ open class NvConnection(
     }
 
     /** Start the native connection with the current negotiated session state. */
-    private fun startNativeConnection(ib: ByteBuffer): Int =
-        MoonBridge.startConnection(
+    private fun startNativeConnection(ib: ByteBuffer): Int {
+        MoonBridge.setAuthoredHapticsEnabled(context.streamConfig.authoredIrHaptics &&
+            !context.streamConfig.authoredPcmHaptics && !context.streamConfig.getControlOnly())
+        return MoonBridge.startConnection(
             context.serverAddress.address,
             context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
             context.serverCodecModeSupport,
@@ -285,6 +287,7 @@ open class NvConnection(
             context.streamConfig.authoredPcmHaptics,
             context.streamConfig.fecPercentage
         )
+    }
 
     @Throws(XmlPullParserException::class, IOException::class, InterruptedException::class)
     private fun startApp(): Boolean {

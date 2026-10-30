@@ -1,6 +1,11 @@
 package com.limelight.nvstream.jni;
 
 import com.limelight.nvstream.Ds5HapticsPcmFrame;
+import com.limelight.nvstream.Ds5HapticsIrFrame;
+import com.limelight.nvstream.Ds5HapticsIrLane;
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame;
+import com.limelight.nvstream.Ds5HapticsIrExtendedLane;
+import com.limelight.nvstream.Ds5HapticsIrExtendedEvent;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.RemoteTextContext;
 import com.limelight.nvstream.av.audio.AudioRenderer;
@@ -500,6 +505,38 @@ public class MoonBridge {
         }
     }
 
+    private static Ds5HapticsIrFrame authoredIrBase(short controllerNumber, byte flags, int sequence,
+            long timestampUs, int sourceFrames, float[] lanes) {
+        return new Ds5HapticsIrFrame(controllerNumber, flags & 0xff, sequence, timestampUs, sourceFrames,
+                new Ds5HapticsIrLane(lanes[0], lanes[1], lanes[2], lanes[3], lanes[4]),
+                new Ds5HapticsIrLane(lanes[5], lanes[6], lanes[7], lanes[8], lanes[9]));
+    }
+
+    public static void bridgeClDs5HapticsIr(short controllerNumber, byte flags, int sequence,
+            long timestampUs, int sourceFrames, float[] lanes) {
+        NvConnectionListener listener = connectionListener;
+        if (listener != null && lanes != null && lanes.length == 10)
+            listener.ds5HapticsIr(authoredIrBase(controllerNumber, flags, sequence, timestampUs, sourceFrames, lanes));
+    }
+
+    public static void bridgeClDs5HapticsIrExtended(short controllerNumber, byte flags, int sequence,
+            long timestampUs, int sourceFrames, float[] baseLanes, int epoch, long windowEndUs,
+            float[] continuous, int[] eventIds, long[] eventTimes, float[] eventFeatures) {
+        NvConnectionListener listener = connectionListener;
+        if (listener == null || baseLanes == null || baseLanes.length != 10 ||
+                continuous == null || continuous.length != 4 || eventIds == null || eventIds.length > 8 ||
+                eventTimes == null || eventFeatures == null || eventTimes.length != eventIds.length ||
+                eventFeatures.length != eventIds.length * 2) return;
+        java.util.ArrayList<Ds5HapticsIrExtendedEvent> events = new java.util.ArrayList<>(eventIds.length);
+        for (int i = 0; i < eventIds.length; i++)
+            events.add(new Ds5HapticsIrExtendedEvent(eventIds[i], eventTimes[i], eventFeatures[i*2],
+                    eventFeatures[i*2+1]));
+        listener.ds5HapticsIrExtended(new Ds5HapticsIrExtendedFrame(
+                authoredIrBase(controllerNumber, flags, sequence, timestampUs, sourceFrames, baseLanes),
+                epoch, windowEndUs, new Ds5HapticsIrExtendedLane(continuous[0], continuous[1]),
+                new Ds5HapticsIrExtendedLane(continuous[2], continuous[3]), events));
+    }
+
     public static void bridgeClResolutionChanged(int width, int height) {
         NvConnectionListener listener = connectionListener;
         if (listener != null) {
@@ -716,6 +753,9 @@ public class MoonBridge {
 
     /** Returns wire-level bytes received by the active video RTP stream. */
     public static native long getRtpVideoBytesReceived();
+
+    // Consumed by the next native start; coordinated/device routes accept authored IR.
+    public static native void setAuthoredHapticsEnabled(boolean enabled);
 
     public static native String getLaunchUrlQueryParameters();
 

@@ -1112,4 +1112,10 @@
     <string name="pacing_label_smooth">平滑</string>
     <string name="stats_precise_sync">[精確同步: %1$d渲染/%2$d接收, 跳幀率: %3$.1f%%]</string>
     <string name="mic_status_debug">權限: %1$b, 串流存在: %2$b, 可用: %3$b, 啟用: %4$b</string>
+    <string name="title_ds5_simulation_mode">DualSense 震動模擬</string>
+    <string name="summary_ds5_simulation_mode">傳統模擬沿用現有效果；IR 增強分別還原持續震動和清脆短點。需相容的 Sunshine，且主機模擬 DualSense；原生手把直通優先。重新連線後生效。</string>
+    <string-array name="ds5_simulation_mode_names"><item>傳統模擬</item><item>IR 增強</item></string-array>
+    <string name="title_native_device_haptics">原生裝置觸覺（實驗）</string>
+    <string name="summary_native_device_haptics">依裝置能力使用原生觸覺；部分裝置僅支援輕重短點，持續與混合效果沿用原有輸出。可能增加震動延遲。重新連線後生效。</string>
+    <string name="summary_native_device_haptics_requires_output">需主機模擬 DualSense、選擇 IR 增強及裝置或協同輸出，並將裝置震動強度設為大於零。重新連線後生效。</string>
 </resources>
