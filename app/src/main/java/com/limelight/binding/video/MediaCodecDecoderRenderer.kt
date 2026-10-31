@@ -1221,7 +1221,7 @@ class MediaCodecDecoderRenderer(
         } catch (e: IOException) {
             e.printStackTrace()
             if (throwOnCodecError) {
-                throw RuntimeException(e)
+                throw IllegalStateException(e)
             }
         } finally {
             if (!configured && videoDecoder != null) {
