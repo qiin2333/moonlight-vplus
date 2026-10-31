@@ -3356,6 +3356,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                             activeGameMenu = null
                             updateKeyboardInterception()
                         }
+                        // A dialog window can release Android pointer capture without
+                        // delivering another Activity focus callback when it closes.
+                        // Re-run the provider's focus recovery so mouse and touchpad input
+                        // resumes immediately after returning to the stream.
+                        inputCaptureProvider.onWindowFocusChanged(true)
                         if (::controllerHandler.isInitialized) {
                             controllerHandler.onExternalGameMenuDismissed()
                         }
