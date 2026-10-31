@@ -749,4 +749,5 @@
     <string name="mouse_axis_correction_90">Rodar 90 graus</string>
     <string name="mouse_axis_correction_180">Rodar 180 graus</string>
     <string name="mouse_axis_correction_270">Rodar 270 graus</string>
+    <string name="layout_page_device_text_1a70f">Alternar toque</string>
 </resources>

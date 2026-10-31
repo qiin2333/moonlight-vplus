@@ -268,4 +268,5 @@
     <string name="mouse_axis_correction_270">Putar 270 derajat</string>
     <string name="summary_checkbox_reverse_resolution">Aktifkan hanya jika orientasi atau dimensi gambar salah; dapat bertentangan dengan rotasi perangkat.</string>
     <string name="summary_checkbox_rotable_screen">Secara otomatis menyinkronkan tata letak streaming saat perangkat beralih antara orientasi potret dan lanskap.</string>
+    <string name="layout_page_device_text_1a70f">Sakelar sentuhan</string>
 </resources>

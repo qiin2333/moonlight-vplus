@@ -235,4 +235,5 @@
     <string name="mouse_axis_correction_270">Rotire cu 270 de grade</string>
     <string name="summary_checkbox_reverse_resolution">Activați numai când orientarea sau dimensiunile imaginii sunt incorecte; poate intra în conflict cu rotirea în funcție de dispozitiv.</string>
     <string name="summary_checkbox_rotable_screen">Sincronizează automat aspectul fluxului când dispozitivul comută între orientarea portret și peisaj.</string>
+    <string name="layout_page_device_text_1a70f">Comutare atingere</string>
 </resources>

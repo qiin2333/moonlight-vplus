@@ -98,6 +98,47 @@ class StreamSettingsDisplayChoiceTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 
+    /** Virtual displays model a portrait launcher without changing the test device's orientation. */
+    @Test
+    fun nativePreferencesMatchTheMenuAcrossDisplayOrientationsAndReversal() {
+        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        for ((width, height) in listOf(1600 to 2560, 2560 to 1600)) {
+            val virtualDisplay = checkNotNull(displayManager.createVirtualDisplay(
+                "NativeResolutionTest", width, height, 240, null,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+            ))
+            try {
+                val menuSize = DisplayChoiceLists.nativeSize(context, virtualDisplay.display)
+                assertEquals(2560 to 1600, menuSize)
+                for (reversed in listOf(false, true)) {
+                    preferences.edit()
+                        .putString(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.RES_NATIVE)
+                        .putBoolean("checkbox_reverse_resolution", reversed)
+                        .remove("checkbox_show_QuickKeyCard")
+                        .commit()
+                    val config = PreferenceConfiguration.readPreferences(context, virtualDisplay.display)
+                    assertTrue(config.isNativeResolution)
+                    assertEquals(if (reversed) 1600 to 2560 else menuSize, config.width to config.height)
+                    assertEquals(reversed, config.showQuickKeyCard)
+                    config.setQuickKeyCardVisibility(context, config.showQuickKeyCard)
+                    config.enablePerfOverlay = !config.enablePerfOverlay
+                    assertTrue(config.writePreferences(context, synchronous = true))
+                    assertFalse(preferences.contains("checkbox_show_QuickKeyCard"))
+                    for (visible in listOf(!reversed, reversed)) {
+                        config.setQuickKeyCardVisibility(context, visible)
+                        assertTrue(preferences.contains("checkbox_show_QuickKeyCard"))
+                        assertEquals(visible, preferences.getBoolean("checkbox_show_QuickKeyCard", !visible))
+                        assertTrue(config.writePreferences(context, synchronous = true))
+                        val reloaded = PreferenceConfiguration.readPreferences(context, virtualDisplay.display)
+                        assertEquals(visible, reloaded.showQuickKeyCard)
+                    }
+                }
+            } finally {
+                virtualDisplay.release()
+            }
+        }
+    }
+
     @Test
     fun oneDpadStepMovesFromResolutionRowToFrameRateRow() {
         launchSettings()

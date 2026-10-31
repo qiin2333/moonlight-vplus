@@ -85,3 +85,5 @@ tools/mock-sunshine/.generated/
 
 # Baseline profile binary artifacts
 app/nonRoot/release/baselineProfiles/
+
+!docs/resolution-hot-switch.md

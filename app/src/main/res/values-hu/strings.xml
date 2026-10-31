@@ -309,4 +309,5 @@
     <string name="mouse_axis_correction_270">Elforgatás 270 fokkal</string>
     <string name="summary_checkbox_reverse_resolution">Csak akkor engedélyezze, ha a kép tájolása vagy méretei hibásak; ütközhet az eszközforgatás követésével.</string>
     <string name="summary_checkbox_rotable_screen">Automatikusan szinkronizálja a stream elrendezését, amikor az eszköz álló és fekvő tájolás között vált.</string>
+    <string name="layout_page_device_text_1a70f">Érintés váltása</string>
 </resources>

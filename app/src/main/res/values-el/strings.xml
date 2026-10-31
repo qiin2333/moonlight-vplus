@@ -268,4 +268,5 @@
     <string name="mouse_axis_correction_270">Περιστροφή 270 μοιρών</string>
     <string name="summary_checkbox_reverse_resolution">Ενεργοποιήστε το μόνο όταν ο προσανατολισμός ή οι διαστάσεις της εικόνας είναι λανθασμένα· μπορεί να έρχεται σε σύγκρουση με την περιστροφή σύμφωνα με τη συσκευή.</string>
     <string name="summary_checkbox_rotable_screen">Συγχρονίζει αυτόματα τη διάταξη της ροής όταν η συσκευή αλλάζει μεταξύ κατακόρυφου και οριζόντιου προσανατολισμού.</string>
+    <string name="layout_page_device_text_1a70f">Εναλλαγή αφής</string>
 </resources>

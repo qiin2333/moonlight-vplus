@@ -337,4 +337,5 @@
     <string name="mouse_axis_correction_270">Obróć o 270 stopni</string>
     <string name="summary_checkbox_reverse_resolution">Włączaj tylko wtedy, gdy orientacja lub wymiary obrazu są nieprawidłowe; może kolidować z obracaniem zgodnie z urządzeniem.</string>
     <string name="summary_checkbox_rotable_screen">Automatycznie synchronizuje układ strumienia, gdy urządzenie przełącza się między orientacją pionową i poziomą.</string>
+    <string name="layout_page_device_text_1a70f">Przełącz dotyk</string>
 </resources>

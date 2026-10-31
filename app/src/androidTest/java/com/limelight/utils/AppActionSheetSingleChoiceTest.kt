@@ -75,7 +75,7 @@ class AppActionSheetSingleChoiceTest {
             decor.getLocationOnScreen(location)
             val density = decor.resources.displayMetrics.density
             val hostWidth = composeTestRule.activity.window.decorView.width
-            assertEquals("Window fills the phone up to its width cap", minOf(hostWidth.toFloat(), 580f * density), decor.width.toFloat(), 2f)
+            assertEquals("Window fills the phone up to its width cap", minOf(hostWidth.toFloat(), 660f * density), decor.width.toFloat(), 2f)
             assertEquals("Window is horizontally centered", hostWidth / 2f, location[0] + decor.width / 2f, 2f)
             floatArrayOf(location[0] + decor.width / 2f, location[1] - 64f * density)
         }

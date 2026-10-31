@@ -152,7 +152,7 @@ public class DigitalSwitchButton extends Element {
         listener = new DigitalSwitchButtonListener() {
             @Override
             public void onClick() {
-                valueSendHandler.sendEvent(true);
+                valueSendHandler.sendDigitalSwitchEvent(true, false);
             }
 
             @Override
@@ -162,7 +162,7 @@ public class DigitalSwitchButton extends Element {
 
             @Override
             public void onRelease() {
-                valueSendHandler.sendEvent(false);
+                valueSendHandler.sendDigitalSwitchEvent(false, false);
             }
         };
     }
@@ -278,7 +278,8 @@ public class DigitalSwitchButton extends Element {
     protected void releaseLatchedInput() {
         if (isPressed()) {
             setPressed(false);
-            onReleaseCallback();
+            valueSendHandler.sendDigitalSwitchEvent(false, true);
+            elementController.getHandler().removeCallbacks(longClickRunnable);
         }
     }
 

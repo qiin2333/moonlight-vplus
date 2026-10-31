@@ -1169,9 +1169,11 @@
 
     <string name="game_menu_display_settings">显示设置</string>
     <string name="display_settings_info">显示设置说明</string>
-    <string name="display_settings_help">更改分辨率、帧率或屏幕模式后，会短暂断开并自动重连；选择当前值不会重连。\n\n⚠ 表示帧率高于本机屏幕刷新率。\n\n显示缩放用于调整主机文字和界面的大小，松开滑杆后应用，无需重连。若主机要求稍后生效或重启显示，会另行提示。</string>
-    <string name="display_settings_reconnect_hint">选择新值后将短暂断开并自动重连。</string>
+    <string name="display_settings_help">仅更改分辨率时会尝试保持连接，必要时自动重连；更改帧率或屏幕模式需要短暂重连。选择当前值不会重连。\n\n⚠ 表示帧率高于本机屏幕刷新率。\n\n显示缩放用于调整主机文字和界面的大小，松开滑杆后应用，无需重连。若主机要求稍后生效或重启显示，会另行提示。</string>
     <string name="display_settings_reconnecting">正在重新连接以应用显示设置…</string>
+    <string name="display_settings_switch_hint">仅更改分辨率时会尝试保持连接，必要时自动重连。更改帧率或屏幕模式需要短暂重连。</string>
+    <string name="resolution_switch_adjusting">正在调整分辨率…</string>
+    <string name="resolution_switch_reconnecting">正在恢复串流…</string>
     <string name="display_spec_resolution">分辨率</string>
     <string name="display_spec_fps">帧率</string>
     <string name="display_spec_screen">屏幕</string>
@@ -2337,4 +2339,10 @@
     <string name="pacing_label_smooth">平滑</string>
     <string name="stats_precise_sync">[精确同步: %1$d渲染/%2$d接收, 跳帧率: %3$.1f%%]</string>
     <string name="mic_status_debug">权限: %1$b, 流存在: %2$b, 可用: %3$b, 激活: %4$b</string>
+    <string name="title_ds5_simulation_mode">DualSense 振动模拟</string>
+    <string name="summary_ds5_simulation_mode">传统模拟沿用现有效果；IR 增强分别还原持续振动和清脆短点。需兼容的 Sunshine，且主机模拟 DualSense；原生手柄直通优先。重新连接后生效。</string>
+    <string-array name="ds5_simulation_mode_names"><item>传统模拟</item><item>IR 增强</item></string-array>
+    <string name="title_native_device_haptics">原生设备触觉（实验）</string>
+    <string name="summary_native_device_haptics">按设备能力合成持续振动与轻重短点，不可用时沿用原有输出。可能增加延迟，持续效果可能有短暂接缝。重新连接后生效。</string>
+    <string name="summary_native_device_haptics_requires_output">需主机模拟 DualSense、选择 IR 增强及设备或协同输出，并将设备振动力度设为大于零。重新连接后生效。</string>
 </resources>

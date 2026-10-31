@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
  */
 internal object DisplayChoiceLists {
 
-    /** 面板真实尺寸(横屏归一化)，仅用于 Native 的摘要和推荐码率。 */
+    /** Native 统一以横屏为基准，调用方再应用分辨率反转，不随临时屏幕方向交换宽高。 */
     fun nativeSize(context: Context, display: Display?): Pair<Int, Int>? {
         val resolved = display
             ?: (context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)

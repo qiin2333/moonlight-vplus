@@ -220,4 +220,5 @@
     <string name="mouse_axis_correction_270">Завъртане на 270 градуса</string>
     <string name="summary_checkbox_reverse_resolution">Включвайте само когато ориентацията или размерите на изображението са неправилни; може да влезе в конфликт с въртенето според устройството.</string>
     <string name="summary_checkbox_rotable_screen">Автоматично синхронизира оформлението на поточното предаване, когато устройството превключва между портретна и пейзажна ориентация.</string>
+    <string name="layout_page_device_text_1a70f">Превключване на докосването</string>
 </resources>
