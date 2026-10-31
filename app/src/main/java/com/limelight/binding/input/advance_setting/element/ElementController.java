@@ -1632,14 +1632,8 @@ public class ElementController {
                 @Override
                 public void sendEvent(boolean down) {
                     if (down) {
-                        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(true)));
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(!mouseEnable));
-                        //保存到数据库中
-                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
-                        //做实际的设置
-                        controllerManager.getTouchController().enableTouch(!mouseEnable);
-                        if (!mouseEnable) {
+                        boolean enabled = controllerManager.getPageConfigController().toggleTouchEnabled();
+                        if (enabled) {
                             showToast(context.getString(R.string.toast_touch_enabled_short));
                         } else {
                             showToast(context.getString(R.string.toast_touch_disabled_short));

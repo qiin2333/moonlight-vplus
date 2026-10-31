@@ -229,4 +229,5 @@
     <string name="mouse_axis_correction_270">270 度回転</string>
     <string name="summary_checkbox_reverse_resolution">画像の向きやサイズが正しくない場合のみ有効にしてください。端末の回転に従う設定と競合する可能性があります。</string>
     <string name="summary_checkbox_rotable_screen">端末が縦向きと横向きを切り替えるとき、ストリームのレイアウトを自動的に同期します。</string>
+    <string name="layout_page_device_text_1a70f">タッチ入力切り替え</string>
 </resources>

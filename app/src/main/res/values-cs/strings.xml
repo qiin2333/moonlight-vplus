@@ -313,4 +313,5 @@
     <string name="mouse_axis_correction_270">Otočit o 270 stupňů</string>
     <string name="summary_checkbox_reverse_resolution">Povolte pouze při nesprávné orientaci nebo rozměrech obrazu; může být v konfliktu s otáčením podle zařízení.</string>
     <string name="summary_checkbox_rotable_screen">Automaticky synchronizuje rozložení streamu při přepnutí zařízení mezi orientací na výšku a na šířku.</string>
+    <string name="layout_page_device_text_1a70f">Přepínač dotyku</string>
 </resources>

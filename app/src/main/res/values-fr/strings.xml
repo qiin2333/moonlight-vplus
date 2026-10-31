@@ -350,4 +350,5 @@
     <string name="mouse_axis_correction_270">Pivoter de 270 degrés</string>
     <string name="summary_checkbox_reverse_resolution">Activez uniquement si l’orientation ou les dimensions de l’image sont incorrectes ; peut entrer en conflit avec la rotation de l’appareil.</string>
     <string name="summary_checkbox_rotable_screen">Synchronise automatiquement la disposition du flux lorsque l’appareil passe du mode portrait au mode paysage, ou inversement.</string>
+    <string name="layout_page_device_text_1a70f">Activer ou désactiver le tactile</string>
 </resources>
