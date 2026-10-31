@@ -762,6 +762,11 @@ open class NvConnection(
         }
     }
 
+    /** The host enabled client-driven resolution changes for this session; valid once connected. */
+    val supportsClientResolutionChange: Boolean
+        get() = !isMonkey &&
+            (MoonBridge.getHostFeatureFlags() and MoonBridge.LI_FF_CLIENT_RESOLUTION_CHANGE) != 0
+
     @Throws(IOException::class, XmlPullParserException::class)
     fun doStopAndQuit() {
         Thread {

@@ -965,6 +965,10 @@
     <string name="summary_checkbox_reverse_resolution">Запрашивать выбранное разрешение, поменяв ширину и высоту местами. Для портретных и нестандартных конфигураций экрана.</string>
     <string name="title_checkbox_rotable_screen">Автоповорот</string>
     <string name="summary_checkbox_rotable_screen">Автоматически синхронизировать ориентацию трансляции при переключении устройства между книжной и альбомной ориентацией.</string>
+    <string name="title_follow_window_resolution">Подстраивать под размер окна</string>
+    <string name="summary_follow_window_resolution">При изменении размера окна приложения (разделённый экран, свободные окна, складные устройства, DeX, а также поворот при включённой опции «Автоповорот») просить хост подогнать разрешение трансляции под окно (нужна поддержка хоста).</string>
+    <string name="title_follow_external_display_resolution">Подстраивать под внешний дисплей</string>
+    <string name="summary_follow_external_display_resolution">При трансляции на внешний дисплей просить хост подогнать разрешение трансляции под этот дисплей (нужна поддержка хоста).</string>
     <string name="title_moonlight_vplus_pc_download">Скачать Moonlight V+ для ПК</string>
     <string name="title_enable_analytics">Аналитика</string>
     <string name="summary_enable_analytics">Анонимная статистика использования для улучшения приложения</string>

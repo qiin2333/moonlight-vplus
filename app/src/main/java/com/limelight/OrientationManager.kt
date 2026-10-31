@@ -29,6 +29,11 @@ class OrientationManager(
 ) {
     var connection: NvConnection? = null
     var connected = false
+    /**
+     * True while client-driven dynamic resolution follows where the stream is shown. Its size
+     * requests already carry the orientation, so rotate-display would only race them.
+     */
+    var resolutionFollowsViewport: () -> Boolean = { false }
 
     /** 上次已知的旋转方向：-1=未知, 0=竖屏, 1=横屏 */
     private var lastRotation = -1
@@ -229,9 +234,15 @@ class OrientationManager(
             else -> lastRotation = currentOrientation
         }
 
+        pendingRotationRunnable?.let { handler.removeCallbacks(it) }
+        pendingRotationRunnable = null
+        if (resolutionFollowsViewport()) {
+            LimeLog.info("handleRotationChange: dynamic resolution follows the rotation, skipping rotate-display")
+            return
+        }
+
         val angle = if (isLandscape) 0 else 90
 
-        pendingRotationRunnable?.let { handler.removeCallbacks(it) }
         val runnable = Runnable {
             LimeLog.info("handleRotationChange: notifying server, angle=$angle")
             conn.rotateDisplay(angle, object : NvConnection.DisplayRotationCallback {
