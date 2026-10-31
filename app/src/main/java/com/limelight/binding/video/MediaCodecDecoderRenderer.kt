@@ -1612,6 +1612,8 @@ class MediaCodecDecoderRenderer(
             return false
         }
 
+        var recoveryFailure: RendererException? = null
+
         // We need some sort of recovery, so quiesce all threads before starting that
         synchronized(codecRecoveryMonitor) {
             if (!framePacingController.hasActiveTimingThread()) {
@@ -1743,9 +1745,9 @@ class MediaCodecDecoderRenderer(
                             stopping = true
                             codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
                         } catch (e: IllegalStateException) {
-                            // If we failed to recover after all of these attempts, just crash
-                            notifyCrashOnce(e)
-                            throw RendererException(createDiagnostics(), e)
+                            // End the stream and let the existing recovery cleanup wake waiters.
+                            stopping = true
+                            recoveryFailure = RendererException(createDiagnostics(), e)
                         }
                     }
 
@@ -1790,6 +1792,11 @@ class MediaCodecDecoderRenderer(
             }
         }
 
+        // Report after releasing the monitor so connection teardown can join recovery waiters.
+        recoveryFailure?.let {
+            it.printStackTrace()
+            notifyCrashOnce(it)
+        }
         return true
     }
 
