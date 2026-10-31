@@ -85,6 +85,14 @@ public class ElementController {
     public interface SendEventHandler {
         void sendEvent(boolean down);
 
+        /**
+         * Delivers a DigitalSwitchButton transition and identifies cleanup releases.
+         * Existing handlers retain their normal press/release behavior by default.
+         */
+        default void sendDigitalSwitchEvent(boolean down, boolean cleanup) {
+            sendEvent(down);
+        }
+
         void sendEvent(int analog1, int analog2);
     }
 
@@ -1113,7 +1121,8 @@ public class ElementController {
         this.mode = mode;
         switch (mode) {
             case Normal:
-                controllerManager.getTouchController().enableTouch(true);
+                controllerManager.getTouchController().enableTouch(
+                        controllerManager.getPageConfigController().isTouchEnabled());
                 this.mode = Mode.Normal;
                 clearAlignmentGuides();
                 elementsLayout.removeView(editGridView);
@@ -1638,6 +1647,13 @@ public class ElementController {
                         } else {
                             showToast(context.getString(R.string.toast_touch_disabled_short));
                         }
+                    }
+                }
+
+                @Override
+                public void sendDigitalSwitchEvent(boolean down, boolean cleanup) {
+                    if (!cleanup) {
+                        sendEvent(true);
                     }
                 }
 

@@ -226,7 +226,8 @@ public class PageConfigController {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(enabled));
         controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
-        controllerManager.getTouchController().enableTouch(enabled);
+        // Refresh both the settings switch and the runtime state from the saved profile value.
+        loadMouseEnable();
         return enabled;
     }
 
@@ -289,7 +290,7 @@ public class PageConfigController {
     private void loadMouseEnable(){
         //mouse enable
         Switch mouseEnableSwitch = pageConfig.findViewById(R.id.mouse_enable_switch);
-        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(true)));
+        boolean mouseEnable = isTouchEnabled();
         //设置switch
         mouseEnableSwitch.setOnCheckedChangeListener(null);
         mouseEnableSwitch.setChecked(mouseEnable);
