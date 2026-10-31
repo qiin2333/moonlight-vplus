@@ -340,4 +340,5 @@
     <string name="mouse_axis_correction_270">Um 270 Grad drehen</string>
     <string name="summary_checkbox_reverse_resolution">Nur aktivieren, wenn Ausrichtung oder Abmessungen des Bildes nicht stimmen; kann mit der Drehung des Geräts in Konflikt geraten.</string>
     <string name="summary_checkbox_rotable_screen">Synchronisiert das Stream-Layout automatisch, wenn das Gerät zwischen Hoch- und Querformat wechselt.</string>
+    <string name="layout_page_device_text_1a70f">Touch-Eingabe umschalten</string>
 </resources>

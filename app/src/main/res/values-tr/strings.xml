@@ -250,4 +250,5 @@
     <string name="mouse_axis_correction_270">270 derece döndür</string>
     <string name="summary_checkbox_reverse_resolution">Yalnızca görüntü yönü veya boyutları hatalı olduğunda etkinleştirin; cihaz döndürmeyi izleme ayarıyla çakışabilir.</string>
     <string name="summary_checkbox_rotable_screen">Cihaz dikey ve yatay yön arasında geçiş yaptığında akış düzenini otomatik olarak senkronize eder.</string>
+    <string name="layout_page_device_text_1a70f">Dokunmayı değiştir</string>
 </resources>

@@ -263,4 +263,5 @@
     <string name="mouse_axis_correction_270">Roter 270 grader</string>
     <string name="summary_checkbox_reverse_resolution">Aktiver bare når bilderetningen eller -dimensjonene er feil; kan komme i konflikt med å følge enhetens rotasjon.</string>
     <string name="summary_checkbox_rotable_screen">Synkroniserer strømmelayouten automatisk når enheten bytter mellom stående og liggende retning.</string>
+    <string name="layout_page_device_text_1a70f">Slå berøring av/på</string>
 </resources>

@@ -320,4 +320,5 @@
     <string name="mouse_axis_correction_270">Girar 270 graus</string>
     <string name="summary_checkbox_reverse_resolution">Ative somente quando a orientação ou as dimensões da imagem estiverem incorretas; pode entrar em conflito com Seguir rotação da tela.</string>
     <string name="summary_checkbox_rotable_screen">Sincroniza automaticamente o layout do streaming quando o dispositivo alterna entre as orientações retrato e paisagem.</string>
+    <string name="layout_page_device_text_1a70f">Alternar toque</string>
 </resources>

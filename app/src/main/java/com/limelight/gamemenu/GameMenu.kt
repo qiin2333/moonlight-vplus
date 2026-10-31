@@ -996,11 +996,12 @@ class GameMenu(
                 "crown_touch",
                 getString(R.string.crown_control_touch_subtitle)
             ) {
-                controllerManager?.touchController?.enableTouch(mouse_enable_switch)
-                Toast.makeText(game,
-                    if (mouse_enable_switch) getString(R.string.toast_touch_enabled) else getString(R.string.toast_touch_disabled),
-                    Toast.LENGTH_SHORT).show()
-                mouse_enable_switch = !mouse_enable_switch
+                val enabled = controllerManager?.pageConfigController?.toggleTouchEnabled() ?: return@createCrownOption
+                Toast.makeText(
+                    game,
+                    if (enabled) getString(R.string.toast_touch_enabled) else getString(R.string.toast_touch_disabled),
+                    Toast.LENGTH_SHORT
+                ).show()
             },
             createCrownOption(
                 getString(R.string.game_menu_configure_settings),
@@ -2436,8 +2437,6 @@ class GameMenu(
         private const val PREF_NAME = "custom_special_keys"
         private const val KEY_NAME = "data"
         private const val HAPTIC_FEEDBACK_SETTING = "haptic_feedback_enabled"
-
-        private var mouse_enable_switch = false
 
         private val ICON_MAP = mapOf(
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,

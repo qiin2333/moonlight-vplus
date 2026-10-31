@@ -344,4 +344,5 @@
     <string name="mouse_axis_correction_270">Ruota di 270 gradi</string>
     <string name="summary_checkbox_reverse_resolution">Attiva solo quando l\'orientamento o le dimensioni dell\'immagine sono errati; potrebbe entrare in conflitto con la rotazione del dispositivo.</string>
     <string name="summary_checkbox_rotable_screen">Sincronizza automaticamente il layout dello streaming quando il dispositivo passa dall\'orientamento verticale a quello orizzontale e viceversa.</string>
+    <string name="layout_page_device_text_1a70f">Attiva o disattiva il tocco</string>
 </resources>

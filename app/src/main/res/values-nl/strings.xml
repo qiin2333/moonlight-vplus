@@ -279,4 +279,5 @@
     <string name="mouse_axis_correction_270">270 graden draaien</string>
     <string name="summary_checkbox_reverse_resolution">Schakel dit alleen in als de beeldoriëntatie of -afmetingen onjuist zijn; kan conflicteren met het volgen van de apparaatrotatie.</string>
     <string name="summary_checkbox_rotable_screen">Synchroniseert de streamindeling automatisch wanneer het apparaat wisselt tussen staande en liggende stand.</string>
+    <string name="layout_page_device_text_1a70f">Aanraakbediening schakelen</string>
 </resources>

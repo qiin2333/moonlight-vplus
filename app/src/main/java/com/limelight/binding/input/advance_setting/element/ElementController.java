@@ -85,6 +85,14 @@ public class ElementController {
     public interface SendEventHandler {
         void sendEvent(boolean down);
 
+        /**
+         * Delivers a DigitalSwitchButton transition and identifies cleanup releases.
+         * Existing handlers retain their normal press/release behavior by default.
+         */
+        default void sendDigitalSwitchEvent(boolean down, boolean cleanup) {
+            sendEvent(down);
+        }
+
         void sendEvent(int analog1, int analog2);
     }
 
@@ -1113,7 +1121,8 @@ public class ElementController {
         this.mode = mode;
         switch (mode) {
             case Normal:
-                controllerManager.getTouchController().enableTouch(true);
+                controllerManager.getTouchController().enableTouch(
+                        controllerManager.getPageConfigController().isTouchEnabled());
                 this.mode = Mode.Normal;
                 clearAlignmentGuides();
                 elementsLayout.removeView(editGridView);
@@ -1632,18 +1641,19 @@ public class ElementController {
                 @Override
                 public void sendEvent(boolean down) {
                     if (down) {
-                        boolean mouseEnable = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(true)));
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(PageConfigController.COLUMN_BOOLEAN_TOUCH_ENABLE, String.valueOf(!mouseEnable));
-                        //保存到数据库中
-                        controllerManager.getSuperConfigDatabaseHelper().updateConfig(currentConfigId, contentValues);
-                        //做实际的设置
-                        controllerManager.getTouchController().enableTouch(!mouseEnable);
-                        if (!mouseEnable) {
+                        boolean enabled = controllerManager.getPageConfigController().toggleTouchEnabled();
+                        if (enabled) {
                             showToast(context.getString(R.string.toast_touch_enabled_short));
                         } else {
                             showToast(context.getString(R.string.toast_touch_disabled_short));
                         }
+                    }
+                }
+
+                @Override
+                public void sendDigitalSwitchEvent(boolean down, boolean cleanup) {
+                    if (!cleanup) {
+                        sendEvent(true);
                     }
                 }
 

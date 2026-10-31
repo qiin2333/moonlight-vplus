@@ -1120,4 +1120,5 @@
     <string name="title_native_device_haptics">原生裝置觸覺（實驗）</string>
     <string name="summary_native_device_haptics">依裝置能力使用原生觸覺；部分裝置僅支援輕重短點，持續與混合效果沿用原有輸出。可能增加震動延遲。重新連線後生效。</string>
     <string name="summary_native_device_haptics_requires_output">需主機模擬 DualSense、選擇 IR 增強及裝置或協同輸出，並將裝置震動強度設為大於零。重新連線後生效。</string>
+    <string name="layout_page_device_text_1a70f">觸控開關</string>
 </resources>
