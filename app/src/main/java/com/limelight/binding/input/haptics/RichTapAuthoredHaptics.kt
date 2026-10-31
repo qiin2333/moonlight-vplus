@@ -17,12 +17,11 @@ import kotlin.math.roundToInt
  * with the existing IR coordinator and serial device worker.
  */
 internal class RichTapAuthoredHaptics(
-    private val play: (IntArray) -> Unit,
+    private val play: (IntArray, Int) -> Unit,
     private val cancel: () -> Unit,
     private val clockMs: () -> Long,
     private val processId: Int,
-    private val startCarrier: ((IntArray, Int) -> Unit)? = null,
-    private val updateAmplitude: ((Int) -> Unit)? = null
+    private val updateAmplitude: (Int) -> Unit
 ) : NativeAuthoredHaptics {
     override val backendName = "RichTap"
     @Volatile override var ready = true
@@ -55,30 +54,27 @@ internal class RichTapAuthoredHaptics(
         return try {
             // Use global gain only for continuous levels. Keep points in a native
             // envelope and protect them from intervening parameter writes.
-            if (target > 0 && pointValue == 0 && startCarrier != null && updateAmplitude != null &&
+            if (target > 0 && pointValue == 0 &&
                 (parameterCarrier || target != bodyLevel || now >= renewAt)) {
                 return renderParameters(target, now)
             }
             when {
                 target > 0 -> {
-                    val from = if (now < bodyUntil) bodyLevel else 0
-                    if (pointValue > 0 || target != bodyLevel || now >= renewAt) {
+                    if (pointValue > 0) {
+                        val from = if (now < bodyUntil) bodyLevel else 0
                         val peak = mixedPeak(target, pointValue)
-                        val curve = if (pointValue > 0) intArrayOf(
+                        val curve = intArrayOf(
                             0, minOf(from, target), 0, 2, peak, 0, 12, target, 0,
-                            BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0
-                        ) else intArrayOf(
-                            0, from, 0, 2, target, 0,
                             BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0
                         )
                         active = true
                         parameterCarrier = false
                         play(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
-                            FREQUENCY, BODY_DURATION_MS, curve.size / 3) + curve))
+                            FREQUENCY, BODY_DURATION_MS, curve.size / 3) + curve), 255)
                         bodyLevel = target
                         bodyUntil = now + BODY_DURATION_MS
                         renewAt = now + BODY_RENEW_MS
-                        if (pointValue > 0) pointUntil = now + MIXED_POINT_HOLD_MS
+                        pointUntil = now + MIXED_POINT_HOLD_MS
                     }
                     nextWake(now)
                 }
@@ -89,7 +85,7 @@ internal class RichTapAuthoredHaptics(
                     renewAt = 0
                     active = true
                     parameterCarrier = false
-                    play(pattern(intArrayOf(4097, 5, 0, 0, pointValue, FREQUENCY, 0)))
+                    play(pattern(intArrayOf(4097, 5, 0, 0, pointValue, FREQUENCY, 0)), 255)
                     pointUntil = now + if (hadBody) MIXED_POINT_HOLD_MS else POINT_HOLD_MS
                     pointUntil
                 }
@@ -104,21 +100,21 @@ internal class RichTapAuthoredHaptics(
     }
 
     private fun renderParameters(target: Int, now: Long): Long {
-        if (!parameterCarrier || now >= bodyUntil || now >= renewAt) {
+        if (!parameterCarrier || now >= renewAt) {
             // A constant native carrier is started with the requested global gain;
             // subsequent gain changes do not replace its five-second envelope.
             // HE2 continuous events require at least four curve points.
             val curve = intArrayOf(0, 0, 0, 2, 100, 0,
                 BODY_DURATION_MS - 2, 100, 0, BODY_DURATION_MS, 100, 0)
             active = true
-            startCarrier!!.invoke(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
+            play(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
                 FREQUENCY, BODY_DURATION_MS, curve.size / 3) + curve), amplitude(target))
             parameterCarrier = true
             bodyLevel = target
             bodyUntil = now + BODY_DURATION_MS
             renewAt = now + BODY_RENEW_MS
         } else if (target != bodyLevel) {
-            updateAmplitude!!.invoke(amplitude(target))
+            updateAmplitude(amplitude(target))
             bodyLevel = target
         }
         return nextWake(now)
@@ -187,16 +183,14 @@ internal class RichTapAuthoredHaptics(
             if (Build.VERSION.SDK_INT < 26) return null
             val (factory, parameter) = api() ?: return null
             return try {
-                @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 if (!vibrator.hasVibrator()) return null
                 val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-                val start: (IntArray, Int) -> Unit = { raw, gain ->
-                    vibrator.vibrate(factory.invoke(null, raw, 1, 0, gain, 0) as VibrationEffect, attributes)
-                }
                 RichTapAuthoredHaptics(
-                    play = { raw -> start(raw, 255) },
+                    play = { raw, gain ->
+                        vibrator.vibrate(factory.invoke(null, raw, 1, 0, gain, 0) as VibrationEffect, attributes)
+                    },
                     cancel = {
                         // Parameter zero stops the native voice without the blocking cancel/restart
                         // sequence seen on vendor services. Use framework cancellation only
@@ -204,7 +198,6 @@ internal class RichTapAuthoredHaptics(
                         try { vibrator.vibrate(parameter.invoke(null, 0, 0, 0) as VibrationEffect, attributes) }
                         catch (_: Exception) { vibrator.cancel() }
                     }, clockMs = SystemClock::elapsedRealtime, processId = Process.myPid(),
-                    startCarrier = start,
                     updateAmplitude = { gain ->
                         vibrator.vibrate(parameter.invoke(null, -1, gain, -1) as VibrationEffect, attributes)
                     })
