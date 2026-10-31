@@ -65,7 +65,7 @@ internal class RichTapAuthoredHaptics(
                     if (pointValue > 0 || target != bodyLevel || now >= renewAt) {
                         val peak = mixedPeak(target, pointValue)
                         val curve = if (pointValue > 0) intArrayOf(
-                            0, from, 0, 2, peak, 0, 12, target, 0,
+                            0, minOf(from, target), 0, 2, peak, 0, 12, target, 0,
                             BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0
                         ) else intArrayOf(
                             0, from, 0, 2, target, 0,

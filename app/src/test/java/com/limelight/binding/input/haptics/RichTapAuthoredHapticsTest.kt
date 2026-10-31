@@ -124,6 +124,8 @@ class RichTapAuthoredHapticsTest {
             now += 300
             sink.render(.3f, point, false)
             val levels = packets.last().drop(16).chunked(3).map { it[1] }
+            assertEquals(70, levels[0])
+            assertTrue(levels[1] > levels[0])
             assertEquals(70, levels[2])
             assertEquals(70, levels[3])
             peaks += levels[1]
