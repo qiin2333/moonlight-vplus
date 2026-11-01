@@ -101,6 +101,12 @@ class DynamicResolutionManager(
     /** Asks the host to go back to the size the stream was launched at. */
     fun requestLaunchSize() = request(launchWidth, launchHeight)
 
+    /**
+     * The host applies this client's requests: connected, not refused for this session, and streaming
+     * its display 1:1. A hold, debounce or unanswered request is temporary and doesn't change it.
+     */
+    val canChangeStream: Boolean get() = active && isHostStreamingDisplay1To1()
+
     /** [isHeld] turned false: sends the latest size requested meanwhile, if any. */
     fun onHoldReleased() {
         if (pending != null) scheduleSend()
