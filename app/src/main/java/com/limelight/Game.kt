@@ -3799,12 +3799,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun resolutionFollowsViewport(): Boolean {
-        if (!hostAcceptsResolutionChanges) return false
-        return if (externalDisplayManager?.isUsingExternalDisplay() == true) {
-            prefConfig.followExternalDisplayResolution
-        } else {
-            prefConfig.followWindowResolution
-        }
+        val followsViewport = hostAcceptsResolutionChanges &&
+            if (externalDisplayManager?.isUsingExternalDisplay() == true) {
+                prefConfig.followExternalDisplayResolution
+            } else {
+                prefConfig.followWindowResolution
+            }
+        return resolutionOwnership.followsRotation(followsViewport)
     }
 
     /** The host enabled LI_FF_CLIENT_RESOLUTION_CHANGE for the running session. */

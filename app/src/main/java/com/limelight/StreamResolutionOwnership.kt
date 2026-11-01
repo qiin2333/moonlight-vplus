@@ -72,4 +72,11 @@ internal class StreamResolutionOwnership(
         reconnectOnStart = false
         return true
     }
+
+    /**
+     * Whether automatic resolution, rather than the host's rotate-display, carries a rotation of a
+     * stream whose viewport it [followsViewport]. Only true while the host applies its requests;
+     * otherwise the rotation would be held and never reach the host.
+     */
+    fun followsRotation(followsViewport: Boolean): Boolean = followsViewport && automatic.canChangeStream
 }

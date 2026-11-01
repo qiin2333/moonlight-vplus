@@ -16,11 +16,12 @@ import org.junit.Test
 class StreamResolutionOwnershipTest {
     private val scheduler = FakeScheduler()
     private val sent = mutableListOf<StreamSize>()
+    private var sendResult = 0
     /** Game.isChangingResolution: a reconnect replaces the Activity. */
     private var reconnecting = false
     private val ownership = StreamResolutionOwnership({ w, h ->
         sent += StreamSize(w, h)
-        0
+        sendResult
     }, { reconnecting }, scheduler)
     private val automatic get() = ownership.automatic
 
@@ -237,5 +238,76 @@ class StreamResolutionOwnershipTest {
         automatic.request(2400, 1080)
         settle()
         assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    // Rotation: Game.resolutionFollowsViewport() skips the host's rotate-display only when
+    // automatic resolution will carry the rotation instead.
+
+    @Test
+    fun automaticCarriesRotationWhileHostStreamsItsDisplay1To1() {
+        connect()
+        assertTrue(ownership.followsRotation(true))
+        assertFalse(ownership.followsRotation(false))
+    }
+
+    @Test
+    fun scaledHostDisplayLeavesRotationToRotateDisplay() {
+        // Host monitor 2560x1440 streamed at 1920x1080: automatic requests are held for good.
+        automatic.onConnected(1920, 1080, 100)
+        hostReport(2560, 1440)
+        assertFalse(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun resolutionScaleLeavesRotationToRotateDisplay() {
+        // Launched at 1920x1080 with a 50 % resolution scale: the host streams 960x540 of its
+        // 1920x1080 display.
+        automatic.onConnected(1920, 1080, 50)
+        hostReport(1920, 1080)
+        assertFalse(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun rotationGoesToRotateDisplayBeforeTheStreamStartReport() {
+        automatic.onConnected(1920, 1080, 100)
+        assertFalse(ownership.followsRotation(true))
+        hostReport(1920, 1080)
+        assertTrue(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun refusedRequestsLeaveRotationToRotateDisplay() {
+        connect()
+        sendResult = -2
+        automatic.request(1080, 2400)
+        settle()
+        assertEquals(listOf(StreamSize(1080, 2400)), sent)
+        assertFalse(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun disconnectedStreamLeavesRotationToRotateDisplay() {
+        connect()
+        automatic.onDisconnected()
+        assertFalse(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun menuSwitchHoldStillOwnsRotation() {
+        // The held size is sent after the switch; a rotate-display meanwhile would race it.
+        connect()
+        assertTrue(ownership.begin(ResolutionSwitchSession(1280, 720)))
+        automatic.request(1080, 2400)
+        assertTrue(hostReport(1280, 720))
+        assertTrue(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun unansweredRequestStillOwnsRotation() {
+        connect()
+        automatic.request(1080, 2400)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(1080, 2400)), sent)
+        assertTrue(ownership.followsRotation(true))
     }
 }
