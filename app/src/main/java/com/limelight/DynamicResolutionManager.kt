@@ -54,6 +54,7 @@ class DynamicResolutionManager(
     private var pending: StreamSize? = null
     private var requested: StreamSize? = null
     private var inFlight = false
+    private var lastSendFailed = false
 
     // Host reports are posted from a native thread; drop any that were queued before a disconnect.
     @Volatile private var connectionGeneration = 0
@@ -74,6 +75,7 @@ class DynamicResolutionManager(
         // already have arrived, so hostDisplay is kept.
         stream = StreamSize(width * resolutionScale / 100, height * resolutionScale / 100)
         requested = null
+        lastSendFailed = false
         active = true
     }
 
@@ -94,6 +96,8 @@ class DynamicResolutionManager(
             cancelPending()
             return
         }
+        // A newer size replaces a failed one; its own send decides again.
+        lastSendFailed = false
         pending = size
         scheduleSend()
     }
@@ -102,10 +106,11 @@ class DynamicResolutionManager(
     fun requestLaunchSize() = request(launchWidth, launchHeight)
 
     /**
-     * The host applies this client's requests: connected, not refused for this session, and streaming
-     * its display 1:1. A hold, debounce or unanswered request is temporary and doesn't change it.
+     * The host applies this client's requests: connected, not refused for this session, the latest
+     * request didn't fail to send, and the host streams its display 1:1. A hold, debounce or
+     * unanswered request is temporary and doesn't change it.
      */
-    val canChangeStream: Boolean get() = active && isHostStreamingDisplay1To1()
+    val canChangeStream: Boolean get() = active && !lastSendFailed && isHostStreamingDisplay1To1()
 
     /** [isHeld] turned false: sends the latest size requested meanwhile, if any. */
     fun onHoldReleased() {
@@ -171,6 +176,7 @@ class DynamicResolutionManager(
         val rc = sendRequest(size.width, size.height)
         if (rc != 0) {
             LimeLog.warning("DynamicRes: resolution change request failed: $rc")
+            lastSendFailed = true
             if (rc == ERR_UNSUPPORTED) active = false
             return
         }
