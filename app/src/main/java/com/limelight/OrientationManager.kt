@@ -32,6 +32,7 @@ class OrientationManager(
     /**
      * True while client-driven dynamic resolution carries rotations: its size requests already carry
      * the orientation, so rotate-display would only race them. Checked when rotate-display is due.
+     * Calling it records that decision for the failed-send hand-back, so call it only then.
      */
     var resolutionFollowsViewport: () -> Boolean = { false }
 
@@ -44,6 +45,8 @@ class OrientationManager(
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingRotationRunnable: Runnable? = null
+    /** rotate-display angle left to dynamic resolution, in case it can't send it. */
+    private var rotationLeftToDynamicResolution: Int? = null
 
     companion object {
         private const val ROTATION_DEBOUNCE_MS = 3000L
@@ -162,6 +165,7 @@ class OrientationManager(
         isServerInitiatedRotation = false
         pendingRotationRunnable?.let { handler.removeCallbacks(it) }
         pendingRotationRunnable = null
+        rotationLeftToDynamicResolution = null
     }
 
     /**
@@ -170,6 +174,17 @@ class OrientationManager(
     fun cleanup() {
         handler.removeCallbacksAndMessages(null)
         pendingRotationRunnable = null
+        rotationLeftToDynamicResolution = null
+    }
+
+    /** Dynamic resolution couldn't send the rotation it took over: notify the server after all. */
+    fun onRotationReturned() {
+        val angle = rotationLeftToDynamicResolution ?: return
+        rotationLeftToDynamicResolution = null
+        val conn = connection
+        if (conn == null || !connected) return
+        LimeLog.info("OrientationManager: dynamic resolution couldn't send the rotation, notifying server, angle=$angle")
+        rotateDisplay(conn, angle)
     }
 
     // ──────────────────────────────────────────────
@@ -235,6 +250,7 @@ class OrientationManager(
         }
 
         pendingRotationRunnable?.let { handler.removeCallbacks(it) }
+        rotationLeftToDynamicResolution = null
         val angle = if (isLandscape) 0 else 90
 
         val runnable = Runnable {
@@ -243,19 +259,24 @@ class OrientationManager(
             // changed meanwhile (e.g. the host's first report arrived or refused its requests).
             if (resolutionFollowsViewport()) {
                 LimeLog.info("handleRotationChange: dynamic resolution follows the rotation, skipping rotate-display")
+                rotationLeftToDynamicResolution = angle
                 return@Runnable
             }
             LimeLog.info("handleRotationChange: notifying server, angle=$angle")
-            conn.rotateDisplay(angle, object : NvConnection.DisplayRotationCallback {
-                override fun onSuccess(angle: Int) {
-                    LimeLog.info("Display rotated to $angle degrees")
-                }
-                override fun onFailure(errorMessage: String) {
-                    LimeLog.warning("Failed to rotate display: $errorMessage")
-                }
-            })
+            rotateDisplay(conn, angle)
         }
         pendingRotationRunnable = runnable
         handler.postDelayed(runnable, ROTATION_DEBOUNCE_MS)
+    }
+
+    private fun rotateDisplay(conn: NvConnection, angle: Int) {
+        conn.rotateDisplay(angle, object : NvConnection.DisplayRotationCallback {
+            override fun onSuccess(angle: Int) {
+                LimeLog.info("Display rotated to $angle degrees")
+            }
+            override fun onFailure(errorMessage: String) {
+                LimeLog.warning("Failed to rotate display: $errorMessage")
+            }
+        })
     }
 }

@@ -16,6 +16,13 @@ internal class StreamResolutionOwnership(
 ) {
     val automatic = DynamicResolutionManager(sendRequest, scheduler, isHeld = { isApplying })
 
+    /** Called when the size carrying a rotation that [followsRotation] took over fails to send. */
+    var onRotationReturned: () -> Unit = {}
+
+    init {
+        automatic.onRotationNotSent = { onRotationReturned() }
+    }
+
     /** The hot switch that owns the stream, if any. */
     @Volatile var current: ResolutionSwitchSession? = null
         private set
@@ -77,8 +84,15 @@ internal class StreamResolutionOwnership(
      * Whether automatic resolution, rather than the host's rotate-display, carries a rotation of a
      * stream whose viewport it [followsViewport]. Only true while the host applies its requests;
      * otherwise the rotation would be held and never reach the host.
+     *
+     * Also records the decision so a failed send of the rotation's size can hand it back via
+     * [onRotationReturned]. Call it only when the debounced rotate-display is due.
      */
-    fun followsRotation(followsViewport: Boolean): Boolean = followsViewport && automatic.canChangeStream
+    fun followsRotation(followsViewport: Boolean): Boolean {
+        val follows = followsViewport && automatic.canChangeStream
+        automatic.carryRotation(follows)
+        return follows
+    }
 
     companion object {
         /**

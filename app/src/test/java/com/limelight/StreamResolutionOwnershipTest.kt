@@ -360,6 +360,154 @@ class StreamResolutionOwnershipTest {
         assertTrue(ownership.followsRotation(true))
     }
 
+    // A rotation rotate-display skipped because its size was still waiting to be sent is handed back
+    // if that send fails, and only then.
+
+    private var returnedRotations = 0
+
+    private fun countReturnedRotations() {
+        ownership.onRotationReturned = { returnedRotations++ }
+    }
+
+    @Test
+    fun rotationBehindUnansweredRequestIsReturnedIfItsSendFails() {
+        countReturnedRotations()
+        connect()
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.request(1080, 2400)
+        assertTrue(ownership.followsRotation(true))
+        sendResult = -4
+        hostReport(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(1600, 1200), StreamSize(1080, 2400)), sent)
+        assertEquals(1, returnedRotations)
+
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(1, returnedRotations)
+    }
+
+    @Test
+    fun rotationHeldByMenuSwitchIsReturnedIfItsSendFails() {
+        countReturnedRotations()
+        connect()
+        val attempt = ResolutionSwitchSession(1280, 720)
+        assertTrue(ownership.begin(attempt))
+        automatic.request(1080, 2400)
+        assertTrue(hostReport(1280, 720))
+        assertTrue(ownership.followsRotation(true))
+        assertTrue(attempt.complete())
+        sendResult = -4
+        assertTrue(ownership.finish(attempt))
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(1080, 2400)), sent)
+        assertEquals(1, returnedRotations)
+    }
+
+    @Test
+    fun rotationIsKeptWhenItsDelayedSendSucceeds() {
+        countReturnedRotations()
+        connect()
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.request(1080, 2400)
+        assertTrue(ownership.followsRotation(true))
+        hostReport(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        hostReport(1080, 2400)
+        sendResult = -4
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(3, sent.size)
+        assertEquals(0, returnedRotations)
+    }
+
+    @Test
+    fun alreadySentRotationIsNotReturnedByLaterFailure() {
+        countReturnedRotations()
+        connect()
+        automatic.request(1080, 2400)
+        scheduler.advance(DEBOUNCE_MS)
+        assertTrue(ownership.followsRotation(true))
+        hostReport(1080, 2400)
+        sendResult = -4
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(2, sent.size)
+        assertEquals(0, returnedRotations)
+    }
+
+    @Test
+    fun droppedRotationSizeIsNotReturnedByLaterFailure() {
+        // e.g. entering PiP or starting a menu switch drops the unsent size; an unrelated failure
+        // later must not rotate the host.
+        countReturnedRotations()
+        connect()
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.request(1080, 2400)
+        assertTrue(ownership.followsRotation(true))
+        automatic.cancelPending()
+        hostReport(1600, 1200)
+        sendResult = -4
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(2, sent.size)
+        assertEquals(0, returnedRotations)
+    }
+
+    @Test
+    fun rotationSizeAlreadyStreamedIsNotReturnedByLaterFailure() {
+        countReturnedRotations()
+        connect()
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.request(1600, 1200)
+        assertTrue(ownership.followsRotation(true))
+        hostReport(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        sendResult = -4
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(2, sent.size)
+        assertEquals(0, returnedRotations)
+    }
+
+    @Test
+    fun rotationLeftToRotateDisplayIsNotReturned() {
+        countReturnedRotations()
+        connect()
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.request(1080, 2400)
+        assertTrue(ownership.followsRotation(true))
+        // A newer rotation went to rotate-display
+        assertFalse(ownership.followsRotation(false))
+        sendResult = -4
+        hostReport(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(2, sent.size)
+        assertEquals(0, returnedRotations)
+    }
+
+    @Test
+    fun disconnectDropsTheRotationClaim() {
+        countReturnedRotations()
+        connect()
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.request(1080, 2400)
+        assertTrue(ownership.followsRotation(true))
+        automatic.onDisconnected()
+        connect()
+        sendResult = -4
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(2, sent.size)
+        assertEquals(0, returnedRotations)
+    }
+
     @Test
     fun pictureInPictureLeavesWindowRotationToRotateDisplay() {
         assertTrue(StreamResolutionOwnership.followsViewport(
