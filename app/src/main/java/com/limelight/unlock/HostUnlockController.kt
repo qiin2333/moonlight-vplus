@@ -120,6 +120,8 @@ class HostUnlockController(
             Arrays.fill(pin, '\u0000')
             return
         }
+        // Manual and re-entered PINs count too, so the auto prompt never repeats a failed PIN.
+        if (hostLocked == true) attemptedForCurrentLock = true
         sender.send(pin, shouldContinue = { hostLocked != false }) { result ->
             when {
                 result == HostUnlockKeySender.Result.CANCELLED -> Unit
