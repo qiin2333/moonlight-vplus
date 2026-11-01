@@ -180,7 +180,7 @@ class DynamicResolutionManager(
         inFlight = false
     }
 
-    private class MainLooperScheduler : Scheduler {
+    internal class MainLooperScheduler : Scheduler {
         private val handler = Handler(Looper.getMainLooper())
         override fun post(task: Runnable) { handler.post(task) }
         override fun postDelayed(task: Runnable, delayMs: Long) { handler.postDelayed(task, delayMs) }

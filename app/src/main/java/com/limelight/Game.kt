@@ -327,19 +327,29 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var isExtremeResumeEnabled = false
     @Volatile private var isChangingResolution = false
     private var displaySettingsCommitted = false
+    private val resolutionOwnership = StreamResolutionOwnership(
+        sendRequest = { width, height ->
+            val connection = conn
+            when {
+                connection == null || !connection.supportsClientResolutionChange -> DynamicResolutionManager.ERR_UNSUPPORTED
+                connection.requestResolutionChange(width, height) -> 0
+                else -> DynamicResolutionManager.ERR_SEND_FAILED
+            }
+        },
+        isReconnecting = { isChangingResolution },
+    )
+    val dynResManager: DynamicResolutionManager get() = resolutionOwnership.automatic
     private val resolutionSwitchController = ResolutionSwitchController(
         this,
+        resolutionOwnership,
         ::changeResolution,
-        { width, height ->
-            cursorServiceManager.onStreamResolutionChanged(width, height)
-            orientationManager.onServerResolutionChanged(width > height)
-            updateStreamViewSize(width, height)
-        },
-        // Sends a window or display size held back while the switch owned the stream, if any
-        onCompleted = { dynResManager.onHoldReleased() },
-    )
+    ) { width, height ->
+        cursorServiceManager.onStreamResolutionChanged(width, height)
+        orientationManager.onServerResolutionChanged(width > height)
+        updateStreamViewSize(width, height)
+    }
     internal val isApplyingDisplaySettings: Boolean
-        get() = isChangingResolution || resolutionSwitchController.isApplying
+        get() = resolutionOwnership.isApplying
     private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
@@ -379,18 +389,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     var usbDriverServiceManager: UsbDriverServiceManager? = null
     var externalDisplayManager: ExternalDisplayManager? = null
     private lateinit var targetDisplayResolver: TargetDisplayResolver
-    val dynResManager = DynamicResolutionManager(
-        sendRequest = { width, height ->
-            val connection = conn
-            when {
-                connection == null || !connection.supportsClientResolutionChange -> DynamicResolutionManager.ERR_UNSUPPORTED
-                connection.requestResolutionChange(width, height) -> 0
-                else -> DynamicResolutionManager.ERR_SEND_FAILED
-            }
-        },
-        // A menu resolution switch owns the stream until it completes or reconnects
-        isHeld = { isApplyingDisplaySettings },
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -2103,8 +2101,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         displaySettingsCommitted = true
         activeGameMenu?.dismiss()
         activeGameMenu = null
-        // The menu choice is newer than any window size still waiting to be requested
-        dynResManager.cancelPending()
         resolutionSwitchController.start(connection, renderer, requested, previous.bitrate, activeStreamView) {
             !destroying && conn === connection && decoderRenderer === renderer
         }
@@ -2872,14 +2868,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             baseHeight = alignedHeight
         }
 
-        // The host's display size; may arrive before connectionStarted, so don't gate on connected.
-        // Dynamic resolution tracks every report, including ones a menu switch ignores (e.g. one
-        // arriving after its confirmed frame), so it can compare held sizes with the real stream.
-        if (conn?.supportsClientResolutionChange == true) {
-            dynResManager.onHostResolutionChanged(width, height)
-        }
-
-        if (isChangingResolution || !resolutionSwitchController.acceptsNotification(baseWidth, baseHeight)) return
+        // Dynamic resolution sees every report, even before connectionStarted; the rest of the
+        // stream ignores reports during a reconnect or a switch that waits for another size.
+        val hostSupportsAutomatic = conn?.supportsClientResolutionChange == true
+        if (!resolutionOwnership.onHostReport(width, height, baseWidth, baseHeight, hostSupportsAutomatic)) return
 
         // Decoder sizing must use the encoded stream dimensions. baseWidth/baseHeight describe
         // the unscaled host resolution and are only used by the UI and saved stream settings.
