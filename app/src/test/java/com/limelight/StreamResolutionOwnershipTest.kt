@@ -310,4 +310,71 @@ class StreamResolutionOwnershipTest {
         assertEquals(listOf(StreamSize(1080, 2400)), sent)
         assertTrue(ownership.followsRotation(true))
     }
+
+    @Test
+    fun failedSendLeavesRotationToRotateDisplay() {
+        connect()
+        sendResult = -4
+        automatic.request(1080, 2400)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(1080, 2400)), sent)
+        assertFalse(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun successfulSendAfterFailureOwnsRotationAgain() {
+        connect()
+        sendResult = -4
+        automatic.request(1080, 2400)
+        scheduler.advance(DEBOUNCE_MS)
+        sendResult = 0
+        automatic.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(1080, 2400), StreamSize(2400, 1080)), sent)
+        assertTrue(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun reconnectForgetsFailedSend() {
+        connect()
+        sendResult = -4
+        automatic.request(1080, 2400)
+        scheduler.advance(DEBOUNCE_MS)
+        automatic.onDisconnected()
+        connect()
+        assertTrue(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun newerSizeAfterFailedSendOwnsRotationAgain() {
+        // The size carrying this rotation is still held when rotate-display is due; it will be sent
+        // after the menu switch, so rotate-display must not run as well.
+        connect()
+        sendResult = -4
+        automatic.request(1600, 1200)
+        scheduler.advance(DEBOUNCE_MS)
+        assertFalse(ownership.followsRotation(true))
+        sendResult = 0
+        assertTrue(ownership.begin(ResolutionSwitchSession(1280, 720)))
+        automatic.request(1080, 2400)
+        assertTrue(ownership.followsRotation(true))
+    }
+
+    @Test
+    fun pictureInPictureLeavesWindowRotationToRotateDisplay() {
+        assertTrue(StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = false, followExternalDisplay = false, followWindow = true, inPictureInPicture = false))
+        assertFalse(StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = false, followExternalDisplay = false, followWindow = true, inPictureInPicture = true))
+    }
+
+    @Test
+    fun pictureInPictureKeepsExternalDisplayRotation() {
+        assertTrue(StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = true, followExternalDisplay = true, followWindow = false, inPictureInPicture = true))
+        assertFalse(StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = true, followExternalDisplay = false, followWindow = true, inPictureInPicture = false))
+        assertFalse(StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = false, followExternalDisplay = true, followWindow = false, inPictureInPicture = false))
+    }
 }

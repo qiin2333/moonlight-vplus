@@ -79,4 +79,17 @@ internal class StreamResolutionOwnership(
      * otherwise the rotation would be held and never reach the host.
      */
     fun followsRotation(followsViewport: Boolean): Boolean = followsViewport && automatic.canChangeStream
+
+    companion object {
+        /**
+         * Whether automatic resolution follows where the stream is shown: the external display it is
+         * streamed to, or this window, which it doesn't follow in picture-in-picture.
+         */
+        fun followsViewport(
+            onExternalDisplay: Boolean,
+            followExternalDisplay: Boolean,
+            followWindow: Boolean,
+            inPictureInPicture: Boolean,
+        ): Boolean = if (onExternalDisplay) followExternalDisplay else followWindow && !inPictureInPicture
+    }
 }

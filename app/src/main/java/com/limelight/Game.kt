@@ -3799,12 +3799,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun resolutionFollowsViewport(): Boolean {
-        val followsViewport = hostAcceptsResolutionChanges &&
-            if (externalDisplayManager?.isUsingExternalDisplay() == true) {
-                prefConfig.followExternalDisplayResolution
-            } else {
-                prefConfig.followWindowResolution
-            }
+        val followsViewport = hostAcceptsResolutionChanges && StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = externalDisplayManager?.isUsingExternalDisplay() == true,
+            followExternalDisplay = prefConfig.followExternalDisplayResolution,
+            followWindow = prefConfig.followWindowResolution,
+            inPictureInPicture = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode,
+        )
         return resolutionOwnership.followsRotation(followsViewport)
     }
 
