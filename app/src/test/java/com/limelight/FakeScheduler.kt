@@ -17,6 +17,10 @@ internal class FakeScheduler : DynamicResolutionManager.Scheduler {
         tasks.removeAll { it.runnable === task }
     }
 
+    override fun cancelAll() {
+        tasks.clear()
+    }
+
     /** Runs due tasks in time order; ties run in posting order, like a Handler. */
     fun advance(ms: Long) {
         val end = now + ms

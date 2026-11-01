@@ -53,7 +53,7 @@ open class NvConnection(
     outputDisplay: Display,
     displayName: String? = null,
     forceResumeCurrentSession: Boolean = false
-) {
+) : DisplayRotator {
     private val clientName: String =
         pairName.ifEmpty {
             // Settings.Global.getString can return null on some OEM ROMs.
@@ -872,7 +872,7 @@ open class NvConnection(
         fun onFailure(errorMessage: String)
     }
 
-    fun rotateDisplay(angle: Int, callback: DisplayRotationCallback?) {
+    final override fun rotateDisplay(angle: Int, callback: DisplayRotationCallback?) {
         Thread {
             val h: NvHTTP
             try {
