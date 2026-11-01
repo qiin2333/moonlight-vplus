@@ -1608,7 +1608,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         jitterMonitorManager?.applyVisibility()
         notificationOverlayManager.setHiding(false)
         notificationOverlayManager.applyVisibility()
-        microphoneManager?.setEnableMic(prefConfig.enableMic)
         micButton?.visibility = if (
             snapshot.microphoneButtonVisible && prefConfig.enableMic
         ) View.VISIBLE else View.GONE
@@ -1667,7 +1666,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         performanceOverlayManager?.hideOverlayImmediate()
         jitterMonitorManager?.hideImmediate()
         notificationOverlayManager.setHiding(true)
-        microphoneManager?.setEnableMic(false)
         controllerHandler.disableSensors()
     }
 
