@@ -55,6 +55,11 @@ class DynamicResolutionManager(
     private var requested: StreamSize? = null
     private var inFlight = false
     private var lastSendFailed = false
+    // The size waiting to be sent carries a rotation that rotate-display skipped.
+    private var pendingCarriesRotation = false
+
+    /** Called when the size carrying a rotation (see [carryRotation]) fails to send. */
+    var onRotationNotSent: () -> Unit = {}
 
     // Host reports are posted from a native thread; drop any that were queued before a disconnect.
     @Volatile private var connectionGeneration = 0
@@ -112,6 +117,15 @@ class DynamicResolutionManager(
      */
     val canChangeStream: Boolean get() = active && !lastSendFailed && isHostStreamingDisplay1To1()
 
+    /**
+     * Whether rotate-display was skipped for a rotation. If so and a size is still waiting to be
+     * sent, that size (or a newer one replacing it) carries the rotation: if its send fails,
+     * [onRotationNotSent] runs once. Dropping it unsent, sending it, or disconnecting ends this.
+     */
+    fun carryRotation(carries: Boolean) {
+        pendingCarriesRotation = carries && pending != null
+    }
+
     /** [isHeld] turned false: sends the latest size requested meanwhile, if any. */
     fun onHoldReleased() {
         if (pending != null) scheduleSend()
@@ -121,6 +135,7 @@ class DynamicResolutionManager(
     fun cancelPending() {
         scheduler.cancel(sendTask)
         pending = null
+        pendingCarriesRotation = false
     }
 
     /** The host reported its display size. May be called from any thread. */
@@ -164,6 +179,7 @@ class DynamicResolutionManager(
         val size = pending ?: return
         if (size == stream || size == requested) {
             pending = null
+            pendingCarriesRotation = false
             return
         }
         if (!isHostStreamingDisplay1To1()) {
@@ -171,6 +187,8 @@ class DynamicResolutionManager(
             return
         }
         pending = null
+        val carriesRotation = pendingCarriesRotation
+        pendingCarriesRotation = false
 
         LimeLog.info("DynamicRes: requesting ${size.width}x${size.height}")
         val rc = sendRequest(size.width, size.height)
@@ -178,6 +196,7 @@ class DynamicResolutionManager(
             LimeLog.warning("DynamicRes: resolution change request failed: $rc")
             lastSendFailed = true
             if (rc == ERR_UNSUPPORTED) active = false
+            if (carriesRotation) onRotationNotSent()
             return
         }
         requested = size
@@ -189,6 +208,7 @@ class DynamicResolutionManager(
         scheduler.cancel(sendTask)
         scheduler.cancel(inFlightTimeoutTask)
         pending = null
+        pendingCarriesRotation = false
         inFlight = false
     }
 

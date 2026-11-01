@@ -428,6 +428,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             prefConfig.onscreenController || prefConfig.enableCrownFeatures
         ) { currentTargetDisplay }
         orientationManager.resolutionFollowsViewport = ::resolutionFollowsViewport
+        resolutionOwnership.onRotationReturned = orientationManager::onRotationReturned
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
 
         val globalPrefs = PreferenceManager.getDefaultSharedPreferences(this)
