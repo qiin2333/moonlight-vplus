@@ -23,13 +23,17 @@ import android.os.Looper
  * - keeps at most one request in flight. A newer size waits until the host reports (or
  *   [IN_FLIGHT_TIMEOUT_MS] passes) and is then debounced again, which also keeps requests clear
  *   of the host's 250 ms rate limit;
- * - skips the size being streamed and never repeats a request until the stream size changes.
+ * - skips the size being streamed and never repeats a request until the stream size changes;
+ * - while [isHeld] (a menu resolution switch owns the stream) sends nothing, keeping only the
+ *   latest size requested meanwhile for [onHoldReleased]. The hold is re-checked on every send,
+ *   so a missed release only delays that size until the next request or host report.
  *
  * Must be used from the main thread, except [onHostResolutionChanged].
  */
 class DynamicResolutionManager(
     private val sendRequest: (width: Int, height: Int) -> Int,
     private val scheduler: Scheduler = MainLooperScheduler(),
+    private val isHeld: () -> Boolean = { false },
 ) {
     interface Scheduler {
         fun post(task: Runnable)
@@ -97,6 +101,11 @@ class DynamicResolutionManager(
     /** Asks the host to go back to the size the stream was launched at. */
     fun requestLaunchSize() = request(launchWidth, launchHeight)
 
+    /** [isHeld] turned false: sends the latest size requested meanwhile, if any. */
+    fun onHoldReleased() {
+        if (pending != null) scheduleSend()
+    }
+
     /** Drops a size that hasn't been sent yet, e.g. when the window enters PiP. */
     fun cancelPending() {
         scheduler.cancel(sendTask)
@@ -139,8 +148,8 @@ class DynamicResolutionManager(
     }
 
     private fun sendPending() {
-        // While in flight or not 1:1, pending stays queued for the next host report.
-        if (!active || inFlight) return
+        // While held, in flight or not 1:1, pending stays queued for the release or next host report.
+        if (!active || inFlight || isHeld()) return
         val size = pending ?: return
         if (size == stream || size == requested) {
             pending = null

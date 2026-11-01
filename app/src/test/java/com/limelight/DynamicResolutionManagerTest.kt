@@ -12,10 +12,12 @@ class DynamicResolutionManagerTest {
     private val scheduler = FakeScheduler()
     private val sent = mutableListOf<StreamSize>()
     private var sendResult = 0
+    /** A menu resolution switch owns the stream. */
+    private var held = false
     private val manager = DynamicResolutionManager({ w, h ->
         sent += StreamSize(w, h)
         sendResult
-    }, scheduler)
+    }, scheduler, isHeld = { held })
 
     /** Starts a stream; the host's stream-start report says its display is [displayWidth]x[displayHeight]. */
     private fun connect(
@@ -281,6 +283,155 @@ class DynamicResolutionManagerTest {
         manager.request(1280, 720)
         scheduler.advance(DEBOUNCE_MS)
         assertEquals(listOf(StreamSize(1080, 2400), StreamSize(1280, 720)), sent)
+    }
+
+    /** Game.applyDisplaySettings: the user picked a resolution in the menu. */
+    private fun beginMenuSwitch() {
+        manager.cancelPending()
+        held = true
+    }
+
+    /** ResolutionSwitchController.onCompleted. */
+    private fun finishMenuSwitch() {
+        held = false
+        manager.onHoldReleased()
+    }
+
+    @Test
+    fun viewportChangeDuringMenuSwitchIsSentAfterIt() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        report(1280, 720)
+        manager.request(2400, 1080)
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+
+        finishMenuSwitch()
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(2400, 1080)), sent)
+    }
+
+    @Test
+    fun menuSwitchWithoutViewportChangeKeepsMenuChoice() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        report(1280, 720)
+        finishMenuSwitch()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun latestViewportDuringMenuSwitchIsSentOnce() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        manager.request(1000, 800)
+        report(1280, 720)
+        manager.request(2400, 1080)
+        finishMenuSwitch()
+        scheduler.advance(DEBOUNCE_MS)
+        manager.onHoldReleased()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(2400, 1080)), sent)
+    }
+
+    @Test
+    fun sizeQueuedBeforeMenuSwitchDoesNotOverrideIt() {
+        connect(1920, 1080)
+        manager.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS / 2)
+        beginMenuSwitch()
+        report(1280, 720)
+        finishMenuSwitch()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun scheduledSendWaitsWhileHeld() {
+        connect(1920, 1080)
+        manager.request(2400, 1080)
+        held = true
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+
+        finishMenuSwitch()
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(2400, 1080)), sent)
+    }
+
+    @Test
+    fun viewportMatchingMenuChoiceIsNotRequested() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        report(1280, 720)
+        manager.request(1280, 720)
+        finishMenuSwitch()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun hostReportLateInMenuSwitchStillCountsForRelease() {
+        // The switch can confirm its frame before the host's control-stream report arrives.
+        connect(1920, 1080)
+        beginMenuSwitch()
+        manager.request(1280, 720)
+        scheduler.advance(DEBOUNCE_MS)
+        report(1280, 720)
+        finishMenuSwitch()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun droppedHeldSizeIsNotSentAfterMenuSwitch() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        manager.request(2400, 1080)
+        manager.cancelPending()
+        finishMenuSwitch()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun disconnectDuringMenuSwitchDropsHeldSize() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        manager.request(2400, 1080)
+        manager.onDisconnected()
+        finishMenuSwitch()
+        connect(1920, 1080)
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun releaseWhileStillHeldSendsNothing() {
+        // e.g. the switch fell back to a reconnect, which keeps the stream held until teardown
+        connect(1920, 1080)
+        beginMenuSwitch()
+        manager.request(2400, 1080)
+        manager.onHoldReleased()
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+    }
+
+    @Test
+    fun missedReleaseOnlyDelaysHeldSizeUntilNextHostReport() {
+        connect(1920, 1080)
+        beginMenuSwitch()
+        report(1280, 720)
+        manager.request(2400, 1080)
+        scheduler.advance(DEBOUNCE_MS)
+        held = false
+        scheduler.advance(IN_FLIGHT_TIMEOUT_MS + DEBOUNCE_MS)
+        assertEquals(emptyList<StreamSize>(), sent)
+
+        report(1280, 720)
+        scheduler.advance(DEBOUNCE_MS)
+        assertEquals(listOf(StreamSize(2400, 1080)), sent)
     }
 
     private class FakeScheduler : DynamicResolutionManager.Scheduler {
