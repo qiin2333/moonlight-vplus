@@ -17,6 +17,8 @@ internal class ResolutionSwitchController(
     private val activity: Activity,
     private val reconnect: () -> Unit,
     private val onPresented: (Int, Int) -> Unit,
+    /** Runs once a hot switch stops owning the stream without a reconnect, after [isApplying] turned false. */
+    private val onCompleted: () -> Unit = {},
 ) {
     private val handler = Handler(Looper.getMainLooper())
     @Volatile private var current: ResolutionSwitchSession? = null
@@ -121,6 +123,7 @@ internal class ResolutionSwitchController(
     fun takeBackdrop() = transition?.takeBackdrop()
 
     fun cancel() {
+        val hadAttempt = current != null
         handler.removeCallbacksAndMessages(null)
         current?.cancel()
         current = null
@@ -128,6 +131,8 @@ internal class ResolutionSwitchController(
         pendingRenderer = null
         transition?.dispose()
         transition = null
+        // A disposed transition never finishes its reveal, so report the end here instead.
+        if (hadAttempt && !isApplying) onCompleted()
     }
 
     private fun isWaiting(attempt: ResolutionSwitchSession): Boolean =
@@ -141,12 +146,16 @@ internal class ResolutionSwitchController(
         onPresented(attempt.width, attempt.height)
         LimeLog.info("Resolution hot switch presented: ${attempt.width}x${attempt.height}")
         transition?.reveal {
-            if (current === attempt) {
-                current = null
-                pendingRenderer = null
-                transition = null
-            }
+            finishCompleted(attempt)
         }
+    }
+
+    private fun finishCompleted(attempt: ResolutionSwitchSession) {
+        if (current !== attempt) return
+        current = null
+        pendingRenderer = null
+        transition = null
+        onCompleted()
     }
 
     private fun fallback(attempt: ResolutionSwitchSession, reason: String) {
