@@ -47,4 +47,7 @@ interface NvConnectionListener {
     )
 
     fun onRemoteTextContext(context: RemoteTextContext)
+
+    /** Called on the control receive thread; only hosts with LI_FF_HOST_SESSION_STATE send it. */
+    fun onHostSessionStateChanged(locked: Boolean) {}
 }

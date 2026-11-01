@@ -55,6 +55,7 @@ static jmethodID BridgeClResolutionChangedMethod;
 static jmethodID BridgeClClipboardDataMethod;
 static jmethodID BridgeClCursorUpdateMethod;
 static jmethodID BridgeClRemoteTextContextMethod;
+static jmethodID BridgeClHostSessionStateMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
 // Pre-allocated byte buffer for AC3/E-AC3 raw frame passthrough.
@@ -66,6 +67,7 @@ static jshortArray DecodedAudioBuffer;
 static jbyteArray EncodedAudioBuffer;
 
 void BridgeClRemoteTextContext(const LI_REMOTE_TEXT_CONTEXT* context);
+void BridgeClHostSessionState(uint8_t state);
 
 void DetachThread(void* context) {
     (*JVM)->DetachCurrentThread(JVM);
@@ -140,6 +142,8 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeClCursorUpdateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClCursorUpdate", "(IIIIII[B)V");
     BridgeClRemoteTextContextMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClRemoteTextContext", "([IJJ)V");
     LiSetRemoteTextContextCallback(BridgeClRemoteTextContext);
+    BridgeClHostSessionStateMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeClHostSessionState", "(Z)V");
+    LiSetHostSessionStateCallback(BridgeClHostSessionState);
 }
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -809,6 +813,16 @@ void BridgeClRemoteTextContext(const LI_REMOTE_TEXT_CONTEXT* context) {
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClRemoteTextContextMethod,
                                  array, (jlong)context->activationId, (jlong)context->inputToken);
     (*env)->DeleteLocalRef(env, array);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+    }
+}
+
+void BridgeClHostSessionState(uint8_t state) {
+    JNIEnv* env = GetThreadEnv();
+    (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClHostSessionStateMethod,
+                                 state == LI_HOST_SESSION_LOCKED ? JNI_TRUE : JNI_FALSE);
     if ((*env)->ExceptionCheck(env)) {
         (*env)->ExceptionDescribe(env);
         (*env)->ExceptionClear(env);

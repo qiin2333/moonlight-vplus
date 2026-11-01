@@ -79,6 +79,7 @@ import com.limelight.utils.UiHelper
 import com.limelight.utils.AnalyticsManager
 import com.limelight.utils.AppCacheManager
 import com.limelight.utils.AppSettingsManager
+import com.limelight.unlock.HostUnlockController
 import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.services.KeyboardAccessibilityService
 
@@ -297,6 +298,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var jitterMonitorManager: JitterMonitorManager? = null
     lateinit var cursorServiceManager: CursorServiceManager
     lateinit var floatBallHandler: FloatBallHandler
+    private var hostUnlockController: HostUnlockController? = null
     lateinit var connectionCallbackHandler: ConnectionCallbackHandler
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
@@ -1478,6 +1480,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
         streamInForeground = true
+        hostUnlockController?.onStreamForegroundChanged(true)
         Dialog.setVisibilityListener { updateKeyboardInterception() }
         KeyboardAccessibilityService.connectionListener = keyboardAccessibilityConnectionListener
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) {
@@ -1867,6 +1870,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             cancelKeepAliveNotification()
         }
         micButtonPositionController?.dispose()
+        hostUnlockController?.release()
+        hostUnlockController = null
         virtualController?.cleanup()
         if (::remoteImeController.isInitialized) {
             remoteImeController.dispose()
@@ -1927,6 +1932,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             floatBallHandler.suppress()
         }
         streamInForeground = false
+        hostUnlockController?.onStreamForegroundChanged(false)
         Dialog.setVisibilityListener(null)
         updateKeyboardInterception()
         KeyboardAccessibilityService.instance?.keyEventCallback = null
@@ -1945,7 +1951,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun updateKeyboardInterception() {
-        val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog()
+        val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog() ||
+            hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible
         if (!intercepting && KeyboardAccessibilityService.interceptingEnabled) {
             keyboardInputHandler.releaseForwardedKeys()
@@ -3318,6 +3325,26 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             connection,
             supportsExtendedBitrate = isPyrowaveSessionActive()
         ).also { bitrateCardControllerCache = connection to it }
+    }
+
+    private fun obtainHostUnlockController(): HostUnlockController? {
+        if (destroying) return null
+        return hostUnlockController ?: HostUnlockController(this) {
+            updateKeyboardInterception()
+        }.also {
+            hostUnlockController = it
+            it.onStreamForegroundChanged(streamInForeground)
+        }
+    }
+
+    fun startHostUnlock() {
+        obtainHostUnlockController()?.startManual()
+    }
+
+    override fun onHostSessionStateChanged(locked: Boolean) {
+        runOnUiThread {
+            obtainHostUnlockController()?.onHostSessionStateChanged(locked)
+        }
     }
 
     override fun showGameMenu(device: GameInputDevice?): Boolean {

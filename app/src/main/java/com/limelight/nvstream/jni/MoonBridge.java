@@ -139,6 +139,7 @@ public class MoonBridge {
 
     public static final int LI_FF_TOUCHPAD_FRAME_EVENTS = 0x20;
     public static final int LI_FF_CURSOR_SHAPE = 0x40;
+    public static final int LI_FF_HOST_SESSION_STATE = 0x800;
 
     public static final int LI_CURSOR_UPDATE_FLAG_SHAPE = 0x01;
     public static final int LI_CURSOR_UPDATE_FLAG_VISIBLE = 0x02;
@@ -586,6 +587,14 @@ public class MoonBridge {
                 values[6], values[7], values[8], values[9],
                 values[10], values[11], values[12], values[13],
                 values[14], values[15]));
+    }
+
+    /** Invoked on the control receive thread when the host reports its session lock state. */
+    public static void bridgeClHostSessionState(boolean locked) {
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onHostSessionStateChanged(locked);
+        }
     }
 
     /**

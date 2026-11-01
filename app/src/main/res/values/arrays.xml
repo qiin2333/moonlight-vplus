@@ -611,6 +611,7 @@
         <item>@string/float_ball_action_open_menu</item>
         <item>@string/float_ball_action_toggle_visibility</item>
         <item>@string/float_ball_action_show_perf_overlay</item>
+        <item>@string/quick_btn_unlock_host</item>
     </string-array>
     <string-array name="float_ball_action_values" translatable="false">
         <item>none</item>
@@ -618,6 +619,7 @@
         <item>open_menu</item>
         <item>toggle_visibility</item>
         <item>show_perf_overlay</item>
+        <item>unlock_host</item>
     </string-array>
     <string-array name="float_ball_position_entries">
         <item>@string/mic_button_position_top_left</item>
