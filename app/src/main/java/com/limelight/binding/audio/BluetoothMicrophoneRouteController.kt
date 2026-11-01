@@ -33,10 +33,12 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
     private var activeLease: MicrophoneRouteOwnership.Lease? = null
     private var legacyConnected = false
     private var legacyAudioState: LegacyBluetoothAudioState? = null
+    private var scoNudged = false
     private var active = false
 
-    @Volatile var input: MicrophoneInputDevice? = null
-        private set
+    @Volatile private var activeKey: String? = null
+
+    fun isReady(device: MicrophoneInputDevice): Boolean = activeKey == device.key
 
     fun activate(device: MicrophoneInputDevice, isCurrent: () -> Boolean,
                  onRouteLost: () -> Unit, complete: (Boolean) -> Unit) {
@@ -70,9 +72,12 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
             completed = true
             timeout?.let(worker::removeCallbacks)
             timeout = null
+            val diagnostics = routeDiagnostics(device.address)
             active = success
+            activeKey = device.key.takeIf { success }
             if (!success) clearOwnedRoute()
-            LimeLog.info("Bluetooth microphone route: connected=$success, elapsed=${SystemClock.elapsedRealtime() - start}")
+            LimeLog.info("Bluetooth microphone route: connected=$success, " +
+                "elapsed=${SystemClock.elapsedRealtime() - start}, $diagnostics")
             complete(success)
         }
         fun changed() {
@@ -83,18 +88,22 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 return
             }
             try {
-                if (Build.VERSION.SDK_INT < 31 && legacyConnected && activeLease?.routeRequested == true) {
-                    audio.isBluetoothScoOn = true
+                if (activeLease?.routeRequested == true) {
+                    if (Build.VERSION.SDK_INT < 31 && legacyConnected) {
+                        audio.isBluetoothScoOn = true
+                    } else if (Build.VERSION.SDK_INT >= 31 &&
+                        scoNudged && Api31.isSelected(audio, device.id)) {
+                        audio.isBluetoothScoOn = true
+                    }
                 }
                 val connected = audio.mode == AudioManager.MODE_IN_COMMUNICATION &&
-                    if (Build.VERSION.SDK_INT >= 31) Api31.isSelected(audio, device.id) else legacyConnected
+                    (if (Build.VERSION.SDK_INT >= 31)
+                        Api31.isSelected(audio, device.id) &&
+                            scoAudioConfirmed(device.type, device.address)
+                    else legacyConnected)
                 if (connected) {
-                    input = matchingBluetoothInput(device, MicrophoneInputDeviceRepository.rawDevices(context))
-                    if (!completed && input != null) finish(true)
-                    else if (active && input == null) {
-                        clearOwnedRoute()
-                        onRouteLost()
-                    }
+                    // The recording input is checked on the actual AudioRecord after start.
+                    if (!completed) finish(true)
                 } else if (active) {
                     clearOwnedRoute()
                     onRouteLost()
@@ -120,10 +129,14 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 finish(false)
                 return
             }
+            // HFP is required only for classic Bluetooth SCO. LE Audio uses the
+            // communication route directly and has no HFP proxy to query.
+            if (device.type == 7) {
+                legacyAudioState = LegacyBluetoothAudioState(worker).also { it.open(context) }
+            }
             unregister = if (Build.VERSION.SDK_INT >= 31) {
                 Api31.observe(audio, ::changed)
             } else {
-                legacyAudioState = LegacyBluetoothAudioState(worker).also { it.open(context) }
                 val receiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
                         if (generation.get() != token || !isCurrent()) return
@@ -141,8 +154,11 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
             lease.modeRequested = true
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
             lease.routeRequested = true
-            val accepted = if (Build.VERSION.SDK_INT >= 31) Api31.select(audio, device.id)
-                else {
+            val accepted = if (Build.VERSION.SDK_INT >= 31) {
+                val selected = Api31.select(audio, device.id)
+                if (selected && device.type == 7) requestLegacyScoCompatibility()
+                selected
+            } else {
                     @Suppress("DEPRECATION")
                     audio.startBluetoothSco()
                     true
@@ -154,10 +170,25 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
             val poll = object : Runnable {
                 override fun run() {
                     if (completed || generation.get() != token) return
-                    val expired = SystemClock.elapsedRealtime() - start >= 5000L
+                    val elapsed = SystemClock.elapsedRealtime() - start
+                    val expired = elapsed >= 5000L
                     if (Build.VERSION.SDK_INT < 31 && (!legacyConnected || expired)) {
                         // Some systems establish SCO without delivering its connected broadcast.
-                        legacyConnected = confirmedLegacyScoState(legacyConnected, legacyAudioState?.isAudioConnected())
+                        legacyConnected = confirmedLegacyScoState(
+                            legacyConnected,
+                            legacyAudioState?.isAudioConnected(device.address)
+                        )
+                    } else if (Build.VERSION.SDK_INT >= 31 && !expired && !scoNudged &&
+                        elapsed >= SCO_NUDGE_DELAY_MS && activeLease?.routeRequested == true &&
+                        !scoAudioConfirmed(device.type, device.address)) {
+                        // Several OEM stacks accept setCommunicationDevice without opening the
+                        // SCO link; the legacy request is still what actually starts the audio.
+                        scoNudged = true
+                        try {
+                            @Suppress("DEPRECATION")
+                            audio.startBluetoothSco()
+                            audio.isBluetoothScoOn = true
+                        } catch (_: RuntimeException) { }
                     }
                     changed()
                     if (!completed) {
@@ -192,6 +223,7 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
             if (isCurrent()) complete(true)
             return
         }
+        legacyDrain.restartIfExpired(SystemClock.elapsedRealtime())
         val poll = object : Runnable {
             override fun run() {
                 if (!isCurrent()) return
@@ -221,19 +253,66 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
         legacyAudioState?.close()
         legacyAudioState = null
         active = false
-        input = null
+        activeKey = null
         activeLease = null
         legacyConnected = false
         return ownership.release(ownerToken)
     }
 
+    /** The proxy answer is authoritative once known; a pending proxy must delay success. */
+    private fun scoAudioConfirmed(type: Int, address: String): Boolean {
+        if (type != 7) return true
+        val state = legacyAudioState ?: return false
+        if (state.isServicePending()) return false
+        return bluetoothScoAudioConfirmed(state.isAudioConnected(address), type)
+    }
+
+    /** A snapshot for logs; never a substitute for the HFP confirmation itself. */
+    private fun routeDiagnostics(targetAddress: String = ""): String {
+        val communication = if (Build.VERSION.SDK_INT >= 31) {
+            try { audio.communicationDevice?.let { "${it.id}/${it.type}" } }
+            catch (_: RuntimeException) { null }
+        } else null
+        val scoOn = try { audio.isBluetoothScoOn } catch (_: RuntimeException) { null }
+        return "sdk=${Build.VERSION.SDK_INT}, mode=${audio.mode}, " +
+            "communicationDevice=$communication, scoOn=$scoOn, legacyScoRequested=$scoNudged, " +
+            "hfpAudio=${legacyAudioState?.isAudioConnected(targetAddress)}"
+    }
+
+    /** Some API 31+ OEM stacks expose a selected communication device but only
+     * switch the SCO input HAL after the legacy request is also issued. */
+    private fun requestLegacyScoCompatibility() {
+        if (scoNudged) return
+        scoNudged = true
+        try {
+            @Suppress("DEPRECATION")
+            audio.startBluetoothSco()
+            @Suppress("DEPRECATION")
+            audio.isBluetoothScoOn = true
+            LimeLog.info("Bluetooth microphone: requested legacy SCO compatibility")
+        } catch (e: RuntimeException) {
+            LimeLog.warning("Bluetooth microphone: legacy SCO compatibility request failed: " +
+                e.javaClass.simpleName)
+        }
+    }
+
     private fun createLease(): MicrophoneRouteOwnership.Lease {
+
         // Pending cleanup retains only the application AudioManager, never this controller's callbacks.
         val manager = audio
         return MicrophoneRouteOwnership.Lease(ownerToken,
             clearRoute = {
-                if (Build.VERSION.SDK_INT >= 31) Api31.clear(manager)
-                else {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    Api31.clear(manager)
+                    if (scoNudged) {
+                        scoNudged = false
+                        try {
+                            @Suppress("DEPRECATION")
+                            manager.stopBluetoothSco()
+                            manager.isBluetoothScoOn = false
+                        } catch (_: RuntimeException) { }
+                    }
+                } else {
                     legacyDrain.begin(SystemClock.elapsedRealtime())
                     @Suppress("DEPRECATION")
                     manager.stopBluetoothSco()
@@ -251,6 +330,9 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
         private val worker by lazy { Handler(HandlerThread("MicrophoneRoute").apply { start() }.looper) }
         private val ownership = MicrophoneRouteOwnership()
         private val legacyDrain = MicrophoneRouteDrain()
+
+        // setCommunicationDevice responds immediately, long before the SCO link carries audio.
+        private const val SCO_NUDGE_DELAY_MS = 1200L
 
         fun choices(context: Context): List<MicrophoneInputDevice> = try {
             val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

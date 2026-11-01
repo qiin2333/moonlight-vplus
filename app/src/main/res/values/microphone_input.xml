@@ -11,6 +11,31 @@
     <string name="mic_input_failed">Unable to select this microphone. Please try again.</string>
     <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
     <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
-    <string name="mic_input_bluetooth_quality">Using the Bluetooth microphone may reduce playback quality.</string>
+    <string name="mic_input_bluetooth_quality">Using a Bluetooth microphone may change the communication output route and reduce playback quality.</string>
     <string name="mic_input_system_silenced">Microphone muted by Android</string>
+    <string name="title_mic_test">Test microphone</string>
+    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
+    <string name="title_mic_test_devices">Input devices</string>
+    <string name="mic_test_start">Start test</string>
+    <string name="mic_test_stop">Stop test</string>
+    <string name="mic_test_waveform">Local waveform</string>
+    <string name="mic_test_idle">Select an input and start the test.</string>
+    <string name="mic_test_source">Audio source</string>
+    <string name="mic_test_route">Actual route</string>
+    <string name="mic_test_rms">RMS level</string>
+    <string name="mic_test_peak">Peak level</string>
+    <string name="mic_test_record">Record</string>
+    <string name="mic_test_recording">Recording %1$d/15s</string>
+    <string name="mic_test_stop_recording">Stop recording</string>
+    <string name="mic_test_play">Play</string>
+    <string name="mic_test_playing">Playing</string>
+    <string name="mic_test_preferred_route">Preferred input</string>
+    <string name="mic_test_recording_route">Recording configuration</string>
+    <string name="mic_test_display_gain">Display gain: %1$s</string>
+    <string name="mic_test_selected_input">Selected input</string>
+    <string name="mic_test_bound_input">Bound input</string>
+    <string name="mic_test_communication_route">Communication route</string>
+    <string name="mic_test_format">Capture format</string>
+    <string name="mic_test_buffer">Audio buffer</string>
+    <string name="mic_test_session">Audio session</string>
 </resources>

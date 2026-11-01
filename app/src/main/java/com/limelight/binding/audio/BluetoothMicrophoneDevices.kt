@@ -4,8 +4,33 @@ import java.security.MessageDigest
 
 internal fun isBluetoothMicrophone(type: Int): Boolean = type == 7 || type == 26
 
+/** Classic SCO needs an explicit recording port; LE Audio exposes less portable state. */
+internal fun requiresBluetoothRecordingBinding(type: Int): Boolean = type == 7
+
+/** Classic HFP/SCO exposes the voice uplink at the narrowband/wideband voice rate. */
+internal const val BLUETOOTH_SCO_SAMPLE_RATE = 16000
+
+internal fun microphoneCaptureSampleRate(choice: MicrophoneInputDevice?): Int =
+    if (choice?.communication == true && choice.type == 7) BLUETOOTH_SCO_SAMPLE_RATE
+    else MicrophoneConfig.SAMPLE_RATE
+
+internal fun bluetoothAddressMatches(targetAddress: String, connectedAddress: String): Boolean =
+    targetAddress.isBlank() || targetAddress.equals(connectedAddress, ignoreCase = true)
+
+/** Android AudioSource values: MIC = 1, VOICE_COMMUNICATION = 7.
+ * Bluetooth SCO input follows the communication audio path used by voice-call
+ * applications; the SCO sample rate is selected by the capture layer. */
+internal fun microphoneCaptureSource(communicationInput: Boolean, voiceCommunicationConfigured: Boolean): Int =
+    if (communicationInput || voiceCommunicationConfigured) 7 else 1
+
 internal fun confirmedLegacyScoState(broadcastConnected: Boolean, actualConnected: Boolean?): Boolean =
     actualConnected ?: broadcastConnected
+
+/** setCommunicationDevice is accepted before the SCO link exists; HFP audio is the only
+ *  portable evidence that a classic headset microphone actually carries PCM. LE audio
+ *  links (type 26) have no HFP state and keep trusting the communication route. */
+internal fun bluetoothScoAudioConfirmed(hfpAudioConnected: Boolean?, type: Int): Boolean =
+    type != 7 || hfpAudioConnected == true
 
 /** Communication output identities must never be confused with AudioRecord input IDs. */
 internal fun communicationMicrophoneChoices(outputs: List<MicrophoneInputDescriptor>): List<MicrophoneInputDevice> {

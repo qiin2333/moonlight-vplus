@@ -4,6 +4,33 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BluetoothMicrophoneDevicesTest {
+    @Test fun ordinaryInputsKeepTheOriginalMicSource() {
+        assertFalse(MicrophoneConfig.useVoiceCommunication())
+        assertEquals(1, microphoneCaptureSource(false, MicrophoneConfig.useVoiceCommunication()))
+        assertTrue(MicrophoneConfig.enableAcousticEchoCanceler())
+        assertTrue(MicrophoneConfig.enableAutomaticGainControl())
+        assertTrue(MicrophoneConfig.enableNoiseSuppressor())
+    }
+
+    @Test fun explicitCommunicationInputUsesTheCommunicationSourceForBluetoothRouting() {
+        assertEquals(7, microphoneCaptureSource(true, false))
+        assertEquals(7, microphoneCaptureSource(true, true))
+        assertEquals(1, microphoneCaptureSource(false, false))
+    }
+
+    @Test fun classicBluetoothUsesTheVoiceCaptureRate() {
+        val bluetooth = MicrophoneInputDevice("bt", 1, 7, "Headset", null, true)
+        val leAudio = bluetooth.copy(type = 26)
+        val builtIn = bluetooth.copy(communication = false, type = 15)
+        assertEquals(16000, microphoneCaptureSampleRate(bluetooth))
+        assertEquals(MicrophoneConfig.SAMPLE_RATE, microphoneCaptureSampleRate(leAudio))
+        assertEquals(MicrophoneConfig.SAMPLE_RATE, microphoneCaptureSampleRate(builtIn))
+    }
+
+    @Test fun anExplicitVoiceSourceConfigurationIsStillHonored() {
+        assertEquals(7, microphoneCaptureSource(false, true))
+    }
+
     @Test fun actualScoAudioCanConfirmAMissedConnectedBroadcast() {
         assertTrue(confirmedLegacyScoState(false, true))
     }
@@ -15,6 +42,26 @@ class BluetoothMicrophoneDevicesTest {
     @Test fun unavailableProfileQueryDoesNotDiscardBroadcastEvidence() {
         assertTrue(confirmedLegacyScoState(true, null))
         assertFalse(confirmedLegacyScoState(false, null))
+    }
+
+    @Test fun hfpAudioIsTheGroundTruthForClassicScoChoices() {
+        assertFalse(bluetoothScoAudioConfirmed(false, 7))
+        assertTrue(bluetoothScoAudioConfirmed(true, 7))
+    }
+
+    @Test fun hfpConfirmationCanBeScopedToTheSelectedBluetoothDevice() {
+        assertTrue(bluetoothAddressMatches("AA:BB:CC:DD:EE:FF", "aa:bb:cc:dd:ee:ff"))
+        assertFalse(bluetoothAddressMatches("AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"))
+        assertTrue(bluetoothAddressMatches("", "11:22:33:44:55:66"))
+    }
+
+    @Test fun anUnqueryableClassicProfileCannotConfirmHfpAudio() {
+        assertFalse(bluetoothScoAudioConfirmed(null, 7))
+    }
+
+    @Test fun leAudioChoicesNeverRequireAnHfpLink() {
+        assertTrue(bluetoothScoAudioConfirmed(false, 26))
+        assertTrue(bluetoothScoAudioConfirmed(null, 26))
     }
 
     private fun output(id: Int = 10, type: Int = 7, address: String = "headset-a", name: String = "Phone") =
@@ -86,4 +133,5 @@ class BluetoothMicrophoneDevicesTest {
         assertEquals(DEFAULT_MICROPHONE_INPUT, resolvedMicrophoneInputKey(old, listOf(comm)))
         assertEquals(DEFAULT_MICROPHONE_INPUT, validMicrophonePreference("communication-session:7:10"))
     }
+
 }

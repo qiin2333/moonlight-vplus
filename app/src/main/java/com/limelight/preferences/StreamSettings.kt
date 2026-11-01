@@ -2996,6 +2996,14 @@ class StreamSettings : ThemedAppCompatActivity() {
             setupFramegenPreferences()
             setupConfigSyncPreferences()
             setupMicVolumeProcessingPreferences()
+            findPreference<Preference>("preference_mic_test")?.let { preference ->
+                preference.isVisible = resources.getBoolean(R.bool.enable_mic_test)
+                if (preference.isVisible) {
+                    preference.setOnPreferenceClickListener {
+                        MicrophoneTestLauncher.launch(requireContext())
+                    }
+                }
+            }
             setupInputModePresetPreference()
             setupPerfOverlayPreferences()
             setupMicrophoneButtonPositionPreference()

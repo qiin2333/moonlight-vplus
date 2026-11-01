@@ -135,10 +135,10 @@ internal fun selectMicrophoneInput(
     key: String,
     choices: List<MicrophoneInputDevice>,
     capturing: Boolean,
-    requestRoute: ((Boolean) -> Unit) -> Boolean,
+    requestRoute: ((MicrophoneInputResult) -> Unit) -> Boolean,
     save: (MicrophoneInputDevice?) -> Unit,
     canComplete: () -> Boolean = { true },
-    onComplete: (Boolean) -> Unit = {}
+    onComplete: (MicrophoneInputResult) -> Unit = {}
 ): Boolean {
     val choice = choices.firstOrNull { it.key == key && isSelectableMicrophoneInput(it.type) }
     if (key != DEFAULT_MICROPHONE_INPUT && choice == null) return false
@@ -146,10 +146,9 @@ internal fun selectMicrophoneInput(
         save(choice)
         return true
     }
-    return requestRoute { success ->
+    return requestRoute { result ->
         if (canComplete()) {
-            if (success) save(choice)
-            onComplete(success)
+            completeMicrophoneInput(result, save, onComplete)
         }
     }
 }

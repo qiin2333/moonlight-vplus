@@ -44,23 +44,15 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
 
     fun choices(): List<MicrophoneInputDevice> = snapshot().choices
 
-    fun selectedChoice(): MicrophoneInputDevice? {
+    fun resolveSelection(): MicrophoneInputResolution {
         val choices = choices()
-        val resolved = selection.resolve(choices)
-        return choices.firstOrNull { it.key == resolved }
+        selection.resolve(choices)
+        return resolveMicrophoneInput(selectedKey, choices)
     }
 
     fun saveSelection(choice: MicrophoneInputDevice?) {
         val savedKey = selection.select(choice)
         preferences.edit { putString("selected_input_device_key", savedKey) }
-    }
-
-    fun applySaved(record: AudioRecord): Boolean {
-        if (selectedKey == DEFAULT_MICROPHONE_INPUT) return true
-        val choice = selectedChoice()
-        // Communication routes are established asynchronously by the recording session.
-        return if (choice == null || choice.communication) apply(record, DEFAULT_MICROPHONE_INPUT)
-            else apply(record, choice.key)
     }
 
     fun apply(record: AudioRecord, key: String): Boolean {
@@ -95,11 +87,6 @@ internal class MicrophoneInputDeviceRepository(context: Context) {
         return device.name.takeIf(String::isNotBlank)?.let {
             context.getString(R.string.mic_input_named_device, it, typeName)
         } ?: typeName
-    }
-
-    companion object {
-        internal fun rawDevices(context: Context): List<MicrophoneInputDevice> =
-            if (Build.VERSION.SDK_INT >= 23) Api23.devices(context) else emptyList()
     }
 
     @RequiresApi(23)

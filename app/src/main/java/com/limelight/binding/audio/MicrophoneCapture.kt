@@ -4,6 +4,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioManager
 import android.media.AudioRecordingConfiguration
+import android.media.AudioRouting
 import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
@@ -26,24 +27,45 @@ import kotlin.concurrent.withLock
 internal class MicrophoneRouteChange(
     val prepare: ((Boolean) -> Unit) -> Unit,
     val rollback: ((Boolean) -> Unit) -> Unit,
-    val expectedInputId: () -> Int?,
     val isReady: () -> Boolean = { true },
     val restoreInput: ((AudioRecord) -> Boolean)? = null,
-    val restoredInputId: () -> Int? = { null }
+    val restoredInputId: () -> Int? = { null },
+    val recreateRecorder: Boolean = false,
+    val communicationInput: Boolean = false
 )
 
-class MicrophoneCapture(
+internal class MicrophoneCaptureInput(
+    val choice: MicrophoneInputDevice?,
+    val configure: (AudioRecord) -> Boolean,
+    val routeChange: MicrophoneRouteChange? = null,
+    expectedCommunicationInputId: Int? = null
+) {
+    @Volatile private var boundCommunicationInputId = expectedCommunicationInputId
+
+    fun bindCommunicationInput(id: Int?) {
+        boundCommunicationInputId = id
+    }
+
+    val contract = MicrophoneInputContract(
+        choice,
+        { boundCommunicationInputId },
+    ) { routeChange?.isReady?.invoke() != false }
+}
+
+class MicrophoneCapture internal constructor(
     private val dataCallback: MicrophoneDataCallback,
-    private val configureInput: (AudioRecord) -> Boolean = { true },
-    private val onInputFailure: () -> Unit = {},
+    private val initialInput: MicrophoneCaptureInput,
     private val onCaptureStopped: () -> Unit = {},
-    private val onCaptureReady: () -> Unit = {}
+    private val onInitialResult: (MicrophoneInputResult) -> Unit = {},
+    private val onInputLost: () -> Unit = {}
 ) {
     private val routeLock = ReentrantLock()
     private var captureThread: Thread? = null
     private var audioRecord: AudioRecord? = null
     private val running = AtomicBoolean(false)
     private var bufferSize: Int = MicrophoneConfig.CAPTURE_BUFFER_SIZE
+    private var captureSampleRate = MicrophoneConfig.SAMPLE_RATE
+    private var sampleRateConverter: Pcm16SampleRateConverter? = null
     private var audioSource = MediaRecorder.AudioSource.MIC
 
     private var echoCanceler: AcousticEchoCanceler? = null
@@ -62,8 +84,14 @@ class MicrophoneCapture(
     private val routeRefreshRequested = AtomicBoolean(true)
     @Volatile private var systemSilenced = false
     private var unregisterRecordingCallback: (() -> Unit)? = null
+    private var unregisterRoutingCallback: (() -> Unit)? = null
     private var lastPcmRouteId: Int? = null
     @Volatile private var acceptingInput = false
+    @Volatile private var activeContract: MicrophoneInputContract? = null
+    @Volatile private var observedInput = MicrophoneObservedInput(null, null)
+    private var initialReported = false
+    private var startupStage: MicrophoneRouteStage? = null
+    private var lastRouteCheckMs = 0L
 
     private class RestoreRoute(
         val actualId: Int?,
@@ -72,15 +100,20 @@ class MicrophoneCapture(
     )
 
     private class InputSwitch(
-        val expectedId: Int?,
         val configure: (AudioRecord) -> Boolean,
-        val complete: (Boolean) -> Unit,
+        val complete: (MicrophoneInputResult) -> Unit,
         var restore: RestoreRoute? = null,
         var recovery: MicrophoneSwitchRecovery? = null,
         val routeChange: MicrophoneRouteChange? = null,
         var stage: MicrophoneRouteStage? = null,
         var restoreAction: MicrophoneSwitchRecovery.Action? = null,
-        var restoring: Boolean = false
+        var restoring: Boolean = false,
+        var previousAudioSource: Int? = null,
+        var previousCaptureSampleRate: Int? = null,
+        val captureInput: MicrophoneCaptureInput,
+        val contract: MicrophoneInputContract,
+        var previousContract: MicrophoneInputContract? = null,
+        val initial: Boolean = false
     )
 
     private val inputSwitch = AtomicReference<InputSwitch?>()
@@ -93,7 +126,8 @@ class MicrophoneCapture(
         if (running.get()) return true
 
         try {
-            val minBufferSize = AudioRecord.getMinBufferSize(MicrophoneConfig.SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
+            configureCaptureFormat(initialInput.choice)
+            val minBufferSize = AudioRecord.getMinBufferSize(captureSampleRate, CHANNEL_CONFIG, AUDIO_FORMAT)
             if (minBufferSize == AudioRecord.ERROR_BAD_VALUE) {
                 LimeLog.severe("不支持的音频参数")
                 return false
@@ -102,11 +136,9 @@ class MicrophoneCapture(
                 return false
             }
 
-            bufferSize = maxOf(minBufferSize * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE)
-            audioSource = if (MicrophoneConfig.useVoiceCommunication()) MediaRecorder.AudioSource.VOICE_COMMUNICATION
-                else MediaRecorder.AudioSource.MIC
-
-            audioRecord = createRecord(configureInput, strict = false)
+            bufferSize = maxOf(minBufferSize * 2, MicrophoneConfig.captureBufferSize(captureSampleRate))
+            audioSource = microphoneCaptureSource(initialInput.choice?.communication == true,
+                MicrophoneConfig.useVoiceCommunication())
 
             // 从配置加载音量增益及其平衡参数
             volumeProcessor.configure(
@@ -118,45 +150,62 @@ class MicrophoneCapture(
                 voiceEnhancementEnabled = MicrophoneConfig.isVoiceEnhancementEnabled()
             )
 
-            initializeAudioEffects()
-
             running.set(true)
             lastFrameTime = SystemClock.elapsedRealtimeNanos()
 
             captureThread = Thread({
-                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
-
                 val buffer = ByteBuffer.allocateDirect(bufferSize)
                 val data = ByteArray(bufferSize)
 
                 try {
-                    // Saved explicit inputs need the same verification as an in-session switch.
-                    if (Build.VERSION.SDK_INT >= 23) {
-                        audioRecord!!.preferredDevice?.id?.let { preferredId ->
-                            inputSwitch.compareAndSet(null, InputSwitch(preferredId, configureInput,
-                                { success -> if (!success) onInputFailure() },
-                                InputRouting.systemDefault(),
-                                MicrophoneSwitchRecovery(preferredId, null, null, true, SystemClock.elapsedRealtime())))
-                        }
-                    }
-                    try {
+                    Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+                    val openRecorder = {
                         routeLock.withLock {
-                            if (!running.get()) return@Thread
-                            audioRecord!!.startRecording()
-                            check(audioRecord!!.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+                            if (running.get()) {
+                                audioRecord = createRecord(initialInput.configure)
+                                if (running.get()) {
+                                    initializeAudioEffects()
+                                    audioRecord!!.startRecording()
+                                    check(audioRecord!!.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+                                    check(reapplyInputAfterStart(initialInput.configure, "initial") ||
+                                        !requiresRecordingBinding(initialInput)) {
+                                        "Initial microphone recording input was not retained"
+                                    }
+                                    bindConfiguredCommunicationInput(initialInput)
+                                }
+                            }
                         }
-                    } catch (e: RuntimeException) {
-                        val pending = inputSwitch.get()
-                        if (pending?.recovery?.recreate(SystemClock.elapsedRealtime()) != MicrophoneSwitchRecovery.Action.RECREATE ||
-                            !restoreInput(pending, recreate = true)) throw e
                     }
+                    val initialChange = initialInput.routeChange
+                    if (initialChange != null) {
+                        val stage = MicrophoneRouteStage()
+                        startupStage = stage
+                        stage.start(running::get, {}, initialChange.prepare)
+                        val opened = stage.openWhenReady(running::get, openRecorder)
+                        check(opened || !running.get()) { "Initial microphone route unavailable" }
+                        startupStage = null
+                    } else openRecorder()
+                    if (!running.get()) return@Thread
+                    val expectedId = initialInput.contract.expectedId
+                    inputSwitch.set(InputSwitch(initialInput.configure, ::reportInitial,
+                        recovery = MicrophoneSwitchRecovery(expectedId, null, null, true,
+                            SystemClock.elapsedRealtime()), routeChange = initialInput.routeChange,
+                        captureInput = initialInput, contract = initialInput.contract, initial = true))
                     acceptingInput = running.get()
-                    if (acceptingInput) onCaptureReady()
                     LimeLog.info("麦克风捕获已启动，缓冲区大小: $bufferSize 字节")
 
                     while (running.get()) {
                         val pending = inputSwitch.get()
-                        if (pending != null && pending.recovery == null && !prepareInputSwitch(pending)) continue
+                        if (pending != null && pending.recovery == null && !prepareInputSwitch(pending)) {
+                            Thread.sleep(5)
+                            continue
+                        }
+                        if (pending?.restoreAction != null && pending.stage?.result == null) {
+                            // A failed recreation may have released AudioRecord already.
+                            // Wait for the route rollback before reading or recreating it.
+                            Thread.sleep(5)
+                            continue
+                        }
                         if (pending?.restoreAction != null && pending.stage?.result != null) {
                             if (pending.stage?.result != true ||
                                 !restoreInput(pending, pending.restoreAction == MicrophoneSwitchRecovery.Action.RECREATE)) break
@@ -165,11 +214,12 @@ class MicrophoneCapture(
                         }
                         // stop() may skip the recorder while route preparation owns the lock.
                         if (!running.get()) break
+                        val record = audioRecord ?: break
                         val bytesRead = try {
                             if (pending != null && Build.VERSION.SDK_INT >= 23) {
-                                audioRecord!!.read(buffer, bufferSize, AudioRecord.READ_NON_BLOCKING)
+                                record.read(buffer, bufferSize, AudioRecord.READ_NON_BLOCKING)
                             } else {
-                                audioRecord!!.read(buffer, bufferSize)
+                                record.read(buffer, bufferSize)
                             }
                         } catch (e: RuntimeException) {
                             LimeLog.warning("Microphone read exception: ${e.javaClass.simpleName}")
@@ -177,37 +227,55 @@ class MicrophoneCapture(
                         }
                         if (!running.get()) break
                         val refreshRequested = routeRefreshRequested.getAndSet(false)
-                        if (refreshRequested || pending != null) {
-                            cachedRoutedId = queryRoutedInputId()
-                        }
-                        val verifyingCommunicationRoute = pending?.recovery != null && pending.routeChange != null
-                        if (Build.VERSION.SDK_INT >= 29 && (refreshRequested || verifyingCommunicationRoute)) {
-                            RecordingState.isSilenced(audioRecord!!)?.let { silenced ->
-                                if (silenced != systemSilenced) {
-                                    LimeLog.info("Microphone system silence changed: silenced=$silenced")
-                                }
-                                systemSilenced = silenced
+                        val now = SystemClock.elapsedRealtime()
+                        if (refreshRequested || pending != null ||
+                            (activeContract?.choice != null && now - lastRouteCheckMs >= 100L)) {
+                            val updated = queryObservedInput()
+                            if (updated != observedInput) {
+                                LimeLog.info("Microphone recording input: source=$audioSource, " +
+                                    "deviceType=${updated.type}, deviceId=${updated.id}, silenced=${updated.silenced}")
                             }
+                            observedInput = updated
+                            cachedRoutedId = observedInput.id
+                            lastRouteCheckMs = now
+                            if (observedInput.silenced != systemSilenced) {
+                                LimeLog.info("Microphone system silence changed: silenced=${observedInput.silenced}")
+                            }
+                            systemSilenced = observedInput.silenced
                         }
                         if (bytesRead > 0) {
                             if (lastPcmRouteId != cachedRoutedId) frameBufferPos = 0
                             lastPcmRouteId = cachedRoutedId
                             buffer.get(data, 0, bytesRead)
                             buffer.clear()
-                            processAudioData(data, 0, bytesRead)
+                            if (pending == null && activeContract?.matches(observedInput) == true) {
+                                processCapturedData(data, 0, bytesRead)
+                            } else frameBufferPos = 0
+                        }
+                        if (pending == null && activeContract != null &&
+                            !activeContract!!.matches(observedInput)) {
+                            activeContract = null
+                            frameBufferPos = 0
+                            onInputLost()
                         }
                         if (pending?.recovery != null && pending.restoreAction == null) {
-                            val silenced = pending.routeChange != null && systemSilenced
                             val routeLost = !pending.restoring && pending.routeChange?.isReady?.invoke() == false
+                            val contract = if (pending.restoring) pending.previousContract else pending.contract
+                            val silenced = contract?.choice?.communication == true && systemSilenced
                             val action = pending.recovery!!.observe(SystemClock.elapsedRealtime(), cachedRoutedId,
-                                bytesRead, routeUsable = !silenced && !routeLost)
+                                if (contract?.matches(observedInput) == true) bytesRead else 0,
+                                routeUsable = !silenced && !routeLost)
+                            if (pending.initial && action != MicrophoneSwitchRecovery.Action.WAIT &&
+                                action != MicrophoneSwitchRecovery.Action.SUCCEEDED) break
                             when (action) {
                                 MicrophoneSwitchRecovery.Action.SUCCEEDED -> finishInputSwitch(pending, true)
                                 MicrophoneSwitchRecovery.Action.FAILED -> finishInputSwitch(pending, false)
                                 MicrophoneSwitchRecovery.Action.RESTORE,
                                 MicrophoneSwitchRecovery.Action.RECREATE -> {
                                     LimeLog.warning("Microphone input recovery: action=$action, read=$bytesRead")
-                                    if (pending.routeChange != null) beginRouteRestore(pending, action)
+                                    val restoreAction = if (pending.routeChange?.recreateRecorder == true)
+                                        MicrophoneSwitchRecovery.Action.RECREATE else action
+                                    if (pending.routeChange != null) beginRouteRestore(pending, restoreAction)
                                     else if (!restoreInput(pending, action == MicrophoneSwitchRecovery.Action.RECREATE)) break
                                 }
                                 MicrophoneSwitchRecovery.Action.STOP -> {
@@ -230,10 +298,15 @@ class MicrophoneCapture(
                     running.set(false)
                     acceptingInput = false
                     cachedRoutedId = null
+                    activeContract = null
+                    startupStage?.cancel()
                     val pending = inputSwitch.getAndSet(null)
                     pending?.stage?.cancel()
-                    release()
-                    pending?.complete?.invoke(false)
+                    try { release() } catch (e: RuntimeException) {
+                        LimeLog.warning("Microphone recorder cleanup failed: ${e.javaClass.simpleName}")
+                    }
+                    pending?.complete?.invoke(MicrophoneInputResult.Stopped)
+                    if (!initialReported) reportInitial(MicrophoneInputResult.Stopped)
                     onCaptureStopped()
                 }
             }, "MicrophoneCapture")
@@ -295,10 +368,20 @@ class MicrophoneCapture(
         }
     }
 
+    private fun processCapturedData(data: ByteArray, offset: Int, length: Int) {
+        val converter = sampleRateConverter
+        if (converter == null) processAudioData(data, offset, length)
+        else {
+            val converted = converter.process(data, offset, length)
+            if (converted.isNotEmpty()) processAudioData(converted, 0, converted.size)
+        }
+    }
+
     fun stop() {
         running.set(false)
         acceptingInput = false
-        inputSwitch.set(null)
+        startupStage?.cancel()
+        inputSwitch.getAndSet(null)?.stage?.cancel()
 
         // Stop AudioRecord first so a blocking read can return before its native resources
         // are released. Releasing while the capture thread is still inside read() can crash
@@ -335,13 +418,12 @@ class MicrophoneCapture(
     }
 
     internal fun requestInput(
-        expectedId: Int?,
-        configure: (AudioRecord) -> Boolean,
-        routeChange: MicrophoneRouteChange? = null,
-        complete: (Boolean) -> Unit
+        input: MicrophoneCaptureInput,
+        complete: (MicrophoneInputResult) -> Unit
     ): Boolean {
         if (!running.get() || !acceptingInput) return false
-        val pending = InputSwitch(expectedId, configure, complete, routeChange = routeChange)
+        val pending = InputSwitch(input.configure, complete,
+            routeChange = input.routeChange, captureInput = input, contract = input.contract)
         if (!inputSwitch.compareAndSet(null, pending)) return false
         if (!running.get()) {
             inputSwitch.compareAndSet(pending, null)
@@ -350,12 +432,18 @@ class MicrophoneCapture(
         return true
     }
 
-    internal fun isInputSwitchPending(): Boolean = inputSwitch.get() != null
+    internal fun isInputSwitchPending(): Boolean = running.get() &&
+        (!acceptingInput || inputSwitch.get() != null)
 
+    internal fun hasConfirmedInput(): Boolean = running.get() && !isInputSwitchPending() &&
+        activeContract?.matches(observedInput) == true
+
+    @RequiresPermission(android.Manifest.permission.RECORD_AUDIO)
     private fun prepareInputSwitch(pending: InputSwitch): Boolean = routeLock.withLock {
         if (!running.get() || inputSwitch.get() !== pending) return false
-        val record = audioRecord ?: return false
+        if (pending.previousContract == null) pending.previousContract = activeContract
         val restore = pending.restore ?: try {
+            val record = checkNotNull(audioRecord)
             if (Build.VERSION.SDK_INT >= 23) InputRouting.snapshot(record)
             else RestoreRoute(null, null) { true }
         } catch (e: RuntimeException) {
@@ -364,23 +452,43 @@ class MicrophoneCapture(
             return false
         }
         pending.restore = restore
+        if (pending.previousAudioSource == null) pending.previousAudioSource = audioSource
+        if (pending.previousCaptureSampleRate == null) pending.previousCaptureSampleRate = captureSampleRate
         val change = pending.routeChange
         if (change != null && pending.stage == null) {
             val stage = MicrophoneRouteStage()
             pending.stage = stage
-            // Snapshot precedes any communication-mode change or clearing of a pinned input.
-            try {
-                if (Build.VERSION.SDK_INT >= 23) record.setPreferredDevice(null)
-                change.prepare { success -> stage.complete(success) }
-            } catch (_: RuntimeException) { stage.complete(false) }
+            // Release the old input session before changing the communication route.
+            stage.start(
+                isCurrent = { running.get() && inputSwitch.get() === pending },
+                beforeRequest = {
+                    if (change.recreateRecorder) release()
+                    else if (Build.VERSION.SDK_INT >= 23) audioRecord?.setPreferredDevice(null)
+                },
+                request = change.prepare)
         }
-        if (change != null && pending.stage?.result == null) return true
-        val accepted = (change == null || pending.stage?.result == true) &&
-            try { pending.configure(record) } catch (_: RuntimeException) { false }
-        val expectedId = change?.expectedInputId?.invoke() ?: pending.expectedId
+        if (change != null && pending.stage?.result == null) return false
+        var accepted = false
+        if (change != null && change.recreateRecorder && pending.stage?.result == true) {
+            try {
+                val source = microphoneCaptureSource(change.communicationInput,
+                    MicrophoneConfig.useVoiceCommunication())
+                if (!recreateRecord(pending.configure, source, pending.captureInput,
+                        microphoneCaptureSampleRate(pending.captureInput.choice))) return false
+                accepted = true
+            } catch (e: RuntimeException) {
+                LimeLog.warning("Microphone recorder recreation failed: ${e.javaClass.simpleName}")
+            }
+        } else {
+            accepted = (change == null || pending.stage?.result == true) &&
+                try { audioRecord?.let(pending.configure) == true } catch (_: RuntimeException) { false }
+        }
+        val expectedId = pending.contract.expectedId
         pending.recovery = MicrophoneSwitchRecovery(expectedId, restore.actualId,
             restore.expectedId, accepted, SystemClock.elapsedRealtime())
-        if (change != null && !accepted) beginRouteRestore(pending, MicrophoneSwitchRecovery.Action.RESTORE)
+        if (!accepted) pending.restoring = true
+        if (change != null && !accepted) beginRouteRestore(pending, if (change.recreateRecorder)
+            MicrophoneSwitchRecovery.Action.RECREATE else MicrophoneSwitchRecovery.Action.RESTORE)
         LimeLog.info("Microphone input switch requested; accepted=$accepted")
         true
     }
@@ -390,35 +498,110 @@ class MicrophoneCapture(
         val stage = MicrophoneRouteStage()
         pending.stage = stage
         pending.restoreAction = action
-        try { pending.routeChange!!.rollback { stage.complete(it) } }
-        catch (_: RuntimeException) { stage.complete(false) }
+        stage.start(
+            isCurrent = { running.get() && inputSwitch.get() === pending },
+            beforeRequest = {
+                if (action == MicrophoneSwitchRecovery.Action.RECREATE) release()
+            },
+            request = pending.routeChange!!.rollback)
+    }
+
+    @RequiresPermission(android.Manifest.permission.RECORD_AUDIO)
+    private fun recreateRecord(
+        configure: (AudioRecord) -> Boolean,
+        source: Int = audioSource,
+        captureInput: MicrophoneCaptureInput? = null,
+        sampleRate: Int = captureSampleRate
+    ): Boolean {
+        release()
+        if (!running.get()) return false
+        audioSource = source
+        configureCaptureFormat(captureInput?.choice, sampleRate)
+        audioRecord = createRecord(configure)
+        if (!running.get()) return false
+        initializeAudioEffects()
+        if (!running.get()) return false
+        audioRecord!!.startRecording()
+        check(audioRecord!!.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+        check(reapplyInputAfterStart(configure, "recreate") ||
+            !requiresRecordingBinding(captureInput)) {
+            "Microphone recording input was not retained after recreation"
+        }
+        captureInput?.let(::bindConfiguredCommunicationInput)
+        frameBufferPos = 0
+        lastPcmRouteId = null
+        return true
+    }
+
+    /** Some OEMs accept the pre-start preferred device but apply it only after recording starts. */
+    private fun reapplyInputAfterStart(configure: (AudioRecord) -> Boolean, phase: String): Boolean {
+        val record = audioRecord ?: return false
+        try {
+            val accepted = configure(record)
+            LimeLog.info("Microphone preferred input reapplied after start: phase=$phase, accepted=$accepted")
+            routeRefreshRequested.set(true)
+            return accepted
+        } catch (e: RuntimeException) {
+            LimeLog.warning("Microphone preferred input reapply failed: ${e.javaClass.simpleName}")
+            routeRefreshRequested.set(true)
+            return false
+        }
+    }
+
+    private fun requiresRecordingBinding(input: MicrophoneCaptureInput?): Boolean =
+        input?.choice?.communication == true && requiresBluetoothRecordingBinding(input.choice.type)
+
+    private fun configureCaptureFormat(input: MicrophoneInputDevice?, sampleRate: Int = microphoneCaptureSampleRate(input)) {
+        captureSampleRate = sampleRate
+        val minBufferSize = AudioRecord.getMinBufferSize(captureSampleRate, CHANNEL_CONFIG, AUDIO_FORMAT)
+        check(minBufferSize > 0) { "Unsupported microphone sample rate: $captureSampleRate" }
+        bufferSize = maxOf(minBufferSize * 2, MicrophoneConfig.captureBufferSize(captureSampleRate))
+        sampleRateConverter = if (captureSampleRate == MicrophoneConfig.SAMPLE_RATE) null
+        else Pcm16SampleRateConverter(captureSampleRate, MicrophoneConfig.SAMPLE_RATE)
+    }
+
+    private fun bindConfiguredCommunicationInput(input: MicrophoneCaptureInput) {
+        if (input.choice?.communication != true || Build.VERSION.SDK_INT < 23) return
+        val preferred = try { audioRecord?.preferredDevice } catch (_: RuntimeException) { null }
+        input.bindCommunicationInput(preferred?.id)
+        LimeLog.info("Microphone communication binding: choiceType=${input.choice.type}, " +
+            "preferredType=${preferred?.type}, preferredId=${preferred?.id}")
     }
 
     private fun finishInputSwitch(pending: InputSwitch, success: Boolean) {
         val completed = running.get() && inputSwitch.compareAndSet(pending, null)
         if (completed) {
             LimeLog.info("Microphone input switch completed; success=$success")
-            pending.complete(success)
+            val contract = if (success) pending.contract else pending.previousContract
+            activeContract = contract?.takeIf { it.matches(observedInput) }
+            frameBufferPos = 0
+            val active = activeContract?.let { MicrophoneActiveInput(it.choice, observedInput) }
+            pending.complete(when {
+                active == null -> MicrophoneInputResult.Stopped
+                success -> MicrophoneInputResult.Applied(active)
+                else -> MicrophoneInputResult.Restored(active)
+            })
+        }
+    }
+
+    private fun reportInitial(result: MicrophoneInputResult) {
+        if (!initialReported) {
+            initialReported = true
+            onInitialResult(result)
         }
     }
 
     private fun restoreInput(pending: InputSwitch, recreate: Boolean): Boolean {
         if (!running.get() || inputSwitch.get() !== pending) return false
+        pending.restoring = true
         val restore = pending.restore ?: return false
         val apply = pending.routeChange?.restoreInput ?: restore.apply
         return try {
             routeLock.withLock {
                 if (!running.get() || inputSwitch.get() !== pending) return false
                 if (recreate) {
-                    release()
-                    if (!running.get()) return false
-                    audioRecord = createRecord(apply, strict = true)
-                    if (!running.get()) return false
-                    initializeAudioEffects()
-                    if (!running.get()) return false
-                    audioRecord!!.startRecording()
-                    check(audioRecord!!.recordingState == AudioRecord.RECORDSTATE_RECORDING)
-                    frameBufferPos = 0
+                    if (!recreateRecord(apply, pending.previousAudioSource ?: audioSource,
+                            pending.captureInput, pending.previousCaptureSampleRate ?: captureSampleRate)) return false
                 } else {
                     val accepted = try { apply(audioRecord!!) } catch (_: RuntimeException) { false }
                     LimeLog.info("Microphone previous route requested on existing recorder; accepted=$accepted")
@@ -426,7 +609,6 @@ class MicrophoneCapture(
             }
             val restoreId = if (pending.routeChange?.restoreInput != null)
                 pending.routeChange.restoredInputId() else restore.expectedId
-            if (pending.routeChange?.restoreInput != null && restoreId == null) return false
             pending.recovery!!.recoveryStarted(SystemClock.elapsedRealtime(), restoreId)
             true
         } catch (_: SecurityException) {
@@ -439,19 +621,19 @@ class MicrophoneCapture(
     }
 
     @RequiresPermission(android.Manifest.permission.RECORD_AUDIO)
-    private fun createRecord(configure: (AudioRecord) -> Boolean, strict: Boolean): AudioRecord {
-        val record = AudioRecord(audioSource, MicrophoneConfig.SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize)
+    private fun createRecord(configure: (AudioRecord) -> Boolean): AudioRecord {
+        val record = AudioRecord(audioSource, captureSampleRate, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize)
         try {
             check(record.state == AudioRecord.STATE_INITIALIZED) { "AudioRecord initialization failed" }
-            if (!configure(record)) {
-                if (strict) error("Microphone input preference rejected")
-                LimeLog.warning("Microphone input preference rejected; using system default")
-                onInputFailure()
-            }
+            check(configure(record)) { "Microphone input preference rejected" }
             if (Build.VERSION.SDK_INT >= 29) {
                 unregisterRecordingCallback = RecordingState.observe(record) { routeRefreshRequested.set(true) }
             }
+            if (Build.VERSION.SDK_INT >= 24) {
+                unregisterRoutingCallback = RoutingState.observe(record) { routeRefreshRequested.set(true) }
+            }
             routeRefreshRequested.set(true)
+            LimeLog.info("Microphone recorder created: source=$audioSource")
             return record
         } catch (e: RuntimeException) {
             record.release()
@@ -469,16 +651,20 @@ class MicrophoneCapture(
         return cachedRoutedId
     }
 
-    private fun queryRoutedInputId(): Int? {
+    private fun queryObservedInput(): MicrophoneObservedInput {
         return if (Build.VERSION.SDK_INT >= 23) {
-            try { audioRecord?.routedDevice?.id } catch (_: RuntimeException) { null }
-        } else null
+            try {
+                val device = audioRecord?.routedDevice
+                val routed = MicrophoneObservedInput(device?.id, device?.type)
+                val recording = if (Build.VERSION.SDK_INT >= 29)
+                    audioRecord?.let(RecordingState::input) else null
+                reconcileMicrophoneInput(routed, recording)
+            } catch (_: RuntimeException) { MicrophoneObservedInput(null, null) }
+        } else MicrophoneObservedInput(null, null)
     }
 
     @RequiresApi(23)
     private object InputRouting {
-        fun systemDefault() = RestoreRoute(null, null) { it.setPreferredDevice(null) }
-
         fun snapshot(record: AudioRecord): RestoreRoute {
             val actual = record.routedDevice
             val preferred = record.preferredDevice
@@ -489,10 +675,31 @@ class MicrophoneCapture(
         }
     }
 
+    @RequiresApi(24)
+    private object RoutingState {
+        fun observe(record: AudioRecord, changed: () -> Unit): () -> Unit {
+            val enabled = AtomicBoolean(true)
+            val listener = AudioRouting.OnRoutingChangedListener { if (enabled.get()) changed() }
+            try { record.addOnRoutingChangedListener(listener, null) }
+            catch (_: RuntimeException) { enabled.set(false) }
+            return {
+                if (enabled.getAndSet(false)) {
+                    try { record.removeOnRoutingChangedListener(listener) } catch (_: RuntimeException) { }
+                }
+            }
+        }
+    }
+
     @RequiresApi(29)
     private object RecordingState {
-        fun isSilenced(record: AudioRecord): Boolean? = try {
-            record.activeRecordingConfiguration?.isClientSilenced
+        fun input(record: AudioRecord): MicrophoneObservedInput? = try {
+            record.activeRecordingConfiguration?.let { config ->
+                if (config.clientAudioSessionId != record.audioSessionId) MicrophoneObservedInput(null, null)
+                else {
+                    val device = config.audioDevice
+                    MicrophoneObservedInput(device?.id, device?.type, config.isClientSilenced)
+                }
+            }
         } catch (_: RuntimeException) { null }
 
         fun observe(record: AudioRecord, changed: () -> Unit): () -> Unit {
@@ -635,12 +842,22 @@ class MicrophoneCapture(
     }
 
     private fun release() = routeLock.withLock {
+        unregisterRoutingCallback?.invoke()
+        unregisterRoutingCallback = null
         unregisterRecordingCallback?.invoke()
         unregisterRecordingCallback = null
         systemSilenced = false
+        cachedRoutedId = null
+        sampleRateConverter?.reset()
+        sampleRateConverter = null
+        captureSampleRate = MicrophoneConfig.SAMPLE_RATE
+        frameBufferPos = 0
+        lastPcmRouteId = null
         releaseAudioEffects()
 
-        audioRecord?.let {
+        val record = audioRecord
+        audioRecord = null
+        record?.let {
             try {
                 if (it.state == AudioRecord.STATE_INITIALIZED) it.stop()
             } catch (_: IllegalStateException) {
@@ -649,7 +866,6 @@ class MicrophoneCapture(
                 it.release()
             }
         }
-        audioRecord = null
     }
 
     fun isAudioEffectsWorking(): Boolean {
@@ -659,8 +875,8 @@ class MicrophoneCapture(
     }
 
     fun getAudioSourceInfo(): String {
-        return if (MicrophoneConfig.useVoiceCommunication()) {
-            "VOICE_COMMUNICATION (系统级AEC/AGC/NS)"
+        return if (audioSource == MediaRecorder.AudioSource.VOICE_COMMUNICATION) {
+            "VOICE_COMMUNICATION"
         } else {
             "MIC (使用硬件音频效果器)"
         }

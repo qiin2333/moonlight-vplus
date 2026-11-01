@@ -32,4 +32,28 @@ class MicrophoneRouteDrainTest {
         drain.begin(6200)
         assertNull(drain.observe(6300, false))
     }
+
+    @Test fun newReleaseWaitsAFreshWindowAfterATimeout() {
+        val drain = MicrophoneRouteDrain()
+        drain.begin(0)
+        assertEquals(false, drain.observe(5000, false))
+        drain.begin(6000)
+        assertNull(drain.observe(6100, false))
+        assertEquals(false, drain.observe(11200, false))
+    }
+
+    @Test fun activationAfterATimeoutWaitsAFreshWindowForDisconnection() {
+        val drain = MicrophoneRouteDrain()
+        drain.begin(0)
+        assertEquals(false, drain.observe(5000, false))
+        drain.restartIfExpired(6000)
+        assertNull(drain.observe(6100, false))
+        assertEquals(true, drain.observe(6200, true))
+    }
+
+    @Test fun foreignScoStillStartsImmediatelyWithoutOurOwnExpiredDrain() {
+        val drain = MicrophoneRouteDrain()
+        drain.restartIfExpired(0)
+        assertEquals(true, drain.observe(100, false))
+    }
 }
