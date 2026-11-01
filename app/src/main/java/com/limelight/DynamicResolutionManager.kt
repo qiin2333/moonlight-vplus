@@ -39,6 +39,8 @@ class DynamicResolutionManager(
         fun post(task: Runnable)
         fun postDelayed(task: Runnable, delayMs: Long)
         fun cancel(task: Runnable)
+        /** Cancels every task posted to this scheduler instance only. */
+        fun cancelAll()
     }
 
     internal data class StreamSize(val width: Int, val height: Int) {
@@ -217,6 +219,7 @@ class DynamicResolutionManager(
         override fun post(task: Runnable) { handler.post(task) }
         override fun postDelayed(task: Runnable, delayMs: Long) { handler.postDelayed(task, delayMs) }
         override fun cancel(task: Runnable) { handler.removeCallbacks(task) }
+        override fun cancelAll() { handler.removeCallbacksAndMessages(null) }
     }
 
     companion object {
