@@ -347,7 +347,7 @@ class EasyTierController(
                         TabRow(
                                 selectedTabIndex = if (state.selectedTab == EasyTierTab.STATUS) 0 else 1,
                                 containerColor = Color.Transparent,
-                                contentColor = accent
+                                contentColor = primary
                         ) {
                             Tab(
                                     selected = state.selectedTab == EasyTierTab.STATUS,
