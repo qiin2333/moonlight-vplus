@@ -2426,4 +2426,39 @@ Tap again to replace it.</string>
     <string name="summary_ds5_simulation_mode">Legacy keeps the existing rumble feel. Enhanced IR separates continuous vibration and short impacts. Requires compatible Sunshine with DualSense emulation on the host. Native controller passthrough takes priority. Reconnect to apply.</string>
     <string-array name="ds5_simulation_mode_names"><item>Legacy simulation</item><item>Enhanced IR</item></string-array>
     <string-array name="ds5_simulation_mode_values" translatable="false"><item>legacy</item><item>ir_v3</item></string-array>
+    <!-- Host fingerprint unlock -->
+    <string name="quick_btn_unlock_host">Fingerprint unlock</string>
+    <string name="host_unlock_not_connected">Not connected to a host</string>
+    <string name="host_unlock_unsupported">This device does not support strong biometric authentication (Android 9 or later required)</string>
+    <string name="host_unlock_not_enrolled">Enroll a fingerprint in system settings first</string>
+    <string name="host_unlock_key_invalidated">Your fingerprints changed. Set up the unlock PIN again</string>
+    <string name="host_unlock_error">Fingerprint unlock failed</string>
+    <string name="host_unlock_setup_title">Set up fingerprint unlock</string>
+    <string name="host_unlock_setup_message">Enter the Windows PIN of %1$s. It is encrypted on this device and can only be used after fingerprint verification.\n\nWhile streaming, if the host is locked you will be asked for your fingerprint and the PIN is typed automatically. Hosts with an older Sunshine can use the \"Fingerprint unlock\" quick button instead.</string>
+    <string name="host_unlock_setup_hint">Windows PIN (digits only)</string>
+    <string name="host_unlock_setup_save">Save</string>
+    <string name="host_unlock_setup_invalid">The PIN must be %1$d to %2$d digits</string>
+    <string name="host_unlock_prompt_title">Unlock host</string>
+    <string name="host_unlock_prompt_description">After verification, the PIN is typed on the host followed by Enter. Make sure the host shows the lock screen.</string>
+    <string name="host_unlock_prompt_setup_description">Verify your fingerprint to save the PIN</string>
+    <string name="host_unlock_saved_title">PIN saved</string>
+    <string name="host_unlock_saved_message">Unlock the host now? Only do this while the host shows the lock screen.</string>
+    <string name="host_unlock_now">Unlock now</string>
+    <string name="host_unlock_later">Later</string>
+    <string name="host_unlock_sent">Unlock PIN sent to the host</string>
+    <string name="host_unlock_send_failed">Could not send the PIN because the stream disconnected</string>
+    <string name="pcview_menu_auto_unlock">Auto unlock host</string>
+    <string name="pcview_menu_auto_unlock_summary">Ask for your fingerprint and type the PIN when the streamed host is locked</string>
+    <string name="host_unlock_enabled">Auto unlock enabled</string>
+    <string name="host_unlock_disable_title">Turn off auto unlock?</string>
+    <string name="host_unlock_disable_message">The PIN saved for %1$s on this device will be deleted.</string>
+    <string name="host_unlock_disable_confirm">Turn off</string>
+    <string name="host_unlock_disabled">Auto unlock turned off</string>
+    <string name="host_unlock_prompt_auto_description">The host is locked. After verification, the PIN is typed to unlock it.</string>
+    <string name="host_unlock_host_unlocked">Host unlocked</string>
+    <string name="host_unlock_not_locked">The host is not locked</string>
+    <string name="host_unlock_still_locked_title">Host is still locked</string>
+    <string name="host_unlock_still_locked_message">The PIN may be wrong, or the lock screen is not asking for a PIN. Set up the PIN again?</string>
+    <string name="host_unlock_reset_pin">Set up again</string>
+    <string name="host_unlock_close">Close</string>
 </resources>

@@ -588,6 +588,14 @@ public class MoonBridge {
                 values[14], values[15]));
     }
 
+    /** Invoked on the control receive thread when the host reports its session lock state. */
+    public static void bridgeClHostSessionState(boolean locked) {
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onHostSessionStateChanged(locked);
+        }
+    }
+
     /**
      * Encode a v1 clipboard frame and send it to the host. Returns 0 on success;
      * negative on failure (-1 invalid args, -2 unsupported by host, -3 transport).
