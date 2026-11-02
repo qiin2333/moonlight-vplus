@@ -77,8 +77,7 @@ class HostUnlockUi(
             filters = arrayOf(InputFilter.LengthFilter(HostUnlockPin.MAX_LENGTH))
             isSingleLine = true
             hint = dialogContext.getString(R.string.host_unlock_setup_hint)
-            setTextColor(ContextCompat.getColor(dialogContext, R.color.app_dialog_text_primary))
-            setHintTextColor(ContextCompat.getColor(dialogContext, R.color.app_dialog_text_secondary))
+            AppDialogStyler.styleTextInput(this)
         }
         val container = LinearLayout(dialogContext).apply {
             val horizontal = (20 * density).toInt()
@@ -96,7 +95,9 @@ class HostUnlockUi(
             .setPositiveButton(R.string.host_unlock_setup_save, null)
             .setNegativeButton(R.string.dialog_button_cancel, null)
             .create()
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+        )
         dialog.setOnDismissListener {
             input.text?.clear()
             if (activeDialog === dialog) activeDialog = null
