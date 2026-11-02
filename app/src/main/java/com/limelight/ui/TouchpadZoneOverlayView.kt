@@ -9,19 +9,24 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
 import com.limelight.R
+import com.limelight.binding.input.touchpad.TouchpadZoneGeometry
 import com.limelight.nvstream.jni.MoonBridge
 import kotlin.math.max
 
 /**
- * Non-interactive visual feedback for screen-backed DualSense touch contacts.
- * Contact coordinates are normalized to the stream content, so [coordinateViewProvider]
- * must return the view holding that content; its position/scale inside this overlay's
- * parent map the contacts onto the (possibly letterboxed or zoomed) stream.
+ * Reusable overlay for a screen touchpad surface: draws the zone outline, pad
+ * contact dots and the activation hint. The zone stays visible while idle so the
+ * surface is always locatable, and brightens on contact, reveal and resize.
+ * Non-interactive — gesture routing lives in the caller (TouchInputHandler), which
+ * pushes state in through the setters. Coordinates are normalized to the stream
+ * content; [coordinateViewProvider] must return the view holding that content so
+ * contacts map onto the (possibly letterboxed or zoomed) stream.
  */
-class Ds5TouchpadFeedbackView(
+class TouchpadZoneOverlayView(
     context: Context,
     private val coordinateViewProvider: () -> View?,
 ) : View(context) {
+
     private data class Contact(
         var x: Float,
         var y: Float,
@@ -58,9 +63,27 @@ class Ds5TouchpadFeedbackView(
         style = Paint.Style.STROKE
         strokeWidth = 1.8f * density
     }
+    private val zoneOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 1.8f * density
+    }
+    // Subtitle-style under-stroke: keeps the outline legible on bright game content.
+    private val zoneOutlineInkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        style = Paint.Style.STROKE
+        strokeWidth = 4.5f * density
+    }
 
     private var introStartedAt = 0L
     private var touchpadPressed = false
+    private var resizing = false
+
+    /** Zone surface in stream-normalized coordinates; null when the pad is off. */
+    private var zoneRect: TouchpadZoneGeometry.NormalizedRect? = null
+    private var lastContactAt = 0L
+    private var zoneRevealUntil = 0L
+    private val scratchPoint = FloatArray(2)
 
     init {
         isClickable = false
@@ -71,7 +94,36 @@ class Ds5TouchpadFeedbackView(
 
     fun showActivatedHint() {
         introStartedAt = SystemClock.uptimeMillis()
-        invalidate()
+        postInvalidateOnAnimation()
+    }
+
+    /**
+     * Draw the zone outline prominently for a few seconds so the user can see where
+     * the pad surface is right after enabling or resizing it; idle stays calm after.
+     */
+    fun showZoneReveal() {
+        zoneRevealUntil = SystemClock.uptimeMillis() + ZONE_REVEAL_MS
+        postInvalidateOnAnimation()
+    }
+
+    /** Show zone chrome for the given zone; pass null when the pad is disabled. */
+    fun setZoneRect(rect: TouchpadZoneGeometry.NormalizedRect?) {
+        if (zoneRect == rect) return
+        zoneRect = rect
+        postInvalidateOnAnimation()
+    }
+
+    fun setPadPressed(pressed: Boolean) {
+        if (touchpadPressed == pressed) return
+        touchpadPressed = pressed
+        postInvalidateOnAnimation()
+    }
+
+    /** Emphasize the outline while the user is resizing the zone. */
+    fun setResizing(active: Boolean) {
+        if (resizing == active) return
+        resizing = active
+        postInvalidateOnAnimation()
     }
 
     fun updateContact(eventType: Byte, pointerId: Int, normalizedX: Float, normalizedY: Float) {
@@ -79,6 +131,7 @@ class Ds5TouchpadFeedbackView(
         when (eventType) {
             MoonBridge.LI_TOUCH_EVENT_DOWN,
             MoonBridge.LI_TOUCH_EVENT_MOVE -> {
+                lastContactAt = now
                 val contact = contacts.getOrPut(pointerId) { Contact(normalizedX, normalizedY) }
                 contact.x = normalizedX
                 contact.y = normalizedY
@@ -101,23 +154,74 @@ class Ds5TouchpadFeedbackView(
         postInvalidateOnAnimation()
     }
 
-    fun setTouchpadPressed(pressed: Boolean) {
-        if (touchpadPressed == pressed) return
-        touchpadPressed = pressed
-        postInvalidateOnAnimation()
-    }
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val now = SystemClock.uptimeMillis()
-        var needsNextFrame = drawContacts(canvas, now)
+        var needsNextFrame = drawZoneChrome(canvas, now)
+        needsNextFrame = drawContacts(canvas, now) || needsNextFrame
         needsNextFrame = drawActivatedHint(canvas, now) || needsNextFrame
         if (needsNextFrame) postInvalidateOnAnimation()
     }
 
+    /** Map stream-normalized coordinates onto this overlay through the content transform. */
+    private fun mapNormalizedToOverlay(x: Float, y: Float, out: FloatArray) {
+        val coordinateView = coordinateViewProvider()
+        if (coordinateView != null &&
+            coordinateView.width > 0 && coordinateView.height > 0 &&
+            coordinateView.scaleX > 0f && coordinateView.scaleY > 0f
+        ) {
+            // The stream content is laid out inside this overlay's parent via
+            // x/y and scale, so map normalized coordinates through that transform.
+            out[0] = coordinateView.x + x.coerceIn(0f, 1f) *
+                coordinateView.width * coordinateView.scaleX
+            out[1] = coordinateView.y + y.coerceIn(0f, 1f) *
+                coordinateView.height * coordinateView.scaleY
+        } else {
+            out[0] = x.coerceIn(0f, 1f) * width
+            out[1] = y.coerceIn(0f, 1f) * height
+        }
+    }
+
+    /**
+     * Zone affordances: a faint double-stroked outline stays visible while idle so
+     * the surface is always locatable; contact, reveal and resize brighten it.
+     */
+    private fun drawZoneChrome(canvas: Canvas, now: Long): Boolean {
+        val rect = zoneRect ?: return false
+        val point = FloatArray(2)
+        mapNormalizedToOverlay(rect.left, rect.top, point)
+        val left = point[0]
+        val top = point[1]
+        mapNormalizedToOverlay(rect.right, rect.bottom, point)
+        val right = point[0]
+        val bottom = point[1]
+
+        val contactActive = now - lastContactAt < ZONE_ACTIVE_MS
+        val revealing = now < zoneRevealUntil
+        val outlineActive = resizing || touchpadPressed || contactActive ||
+            introStartedAt != 0L || revealing
+
+        // Subtitle-style double stroke: dark under-stroke first, bright line on top.
+        zoneOutlineInkPaint.alpha = if (outlineActive) 220 else 200
+        canvas.drawRoundRect(
+            RectF(left, top, right, bottom),
+            10f * density,
+            10f * density,
+            zoneOutlineInkPaint,
+        )
+        zoneOutlinePaint.alpha = if (outlineActive) 240 else 215
+        zoneOutlinePaint.strokeWidth = if (resizing) 2.6f * density else 1.8f * density
+        canvas.drawRoundRect(
+            RectF(left, top, right, bottom),
+            10f * density,
+            10f * density,
+            zoneOutlinePaint,
+        )
+        return contactActive || revealing
+    }
+
     private fun drawContacts(canvas: Canvas, now: Long): Boolean {
         val radius = (if (touchpadPressed) 23f else 18f) * density
-        val coordinateView = coordinateViewProvider()
         var animating = false
         val iterator = contacts.iterator()
         while (iterator.hasNext()) {
@@ -133,22 +237,9 @@ class Ds5TouchpadFeedbackView(
                 animating = true
                 1f - fraction
             }
-            val x: Float
-            val y: Float
-            if (coordinateView != null &&
-                coordinateView.width > 0 && coordinateView.height > 0 &&
-                coordinateView.scaleX > 0f && coordinateView.scaleY > 0f
-            ) {
-                // The stream content is laid out inside this overlay's parent via
-                // x/y and scale, so map normalized contacts through that transform.
-                x = coordinateView.x + contact.x.coerceIn(0f, 1f) *
-                    coordinateView.width * coordinateView.scaleX
-                y = coordinateView.y + contact.y.coerceIn(0f, 1f) *
-                    coordinateView.height * coordinateView.scaleY
-            } else {
-                x = contact.x.coerceIn(0f, 1f) * width
-                y = contact.y.coerceIn(0f, 1f) * height
-            }
+            mapNormalizedToOverlay(contact.x, contact.y, scratchPoint)
+            val x = scratchPoint[0]
+            val y = scratchPoint[1]
             contactFillPaint.color = if (touchpadPressed) 0xFF8AB4F8.toInt() else Color.WHITE
             contactStrokePaint.color = if (touchpadPressed) 0xFF8AB4F8.toInt() else Color.WHITE
             contactFillPaint.alpha = ((if (touchpadPressed) 92 else 42) * alpha).toInt()
@@ -182,7 +273,7 @@ class Ds5TouchpadFeedbackView(
         }.coerceIn(0f, 1f)
 
         val title = resources.getString(R.string.ds5_touchpad_active_title)
-        val subtitle = resources.getString(R.string.ds5_touchpad_active_subtitle)
+        val subtitle = resources.getString(R.string.ds5_touchpad_active_subtitle_zone)
         val horizontalPadding = 18f * density
         val iconWidth = 30f * density
         val iconGap = 12f * density
@@ -229,5 +320,7 @@ class Ds5TouchpadFeedbackView(
         const val CONTACT_FADE_MS = 150f
         const val INTRO_DURATION_MS = 2600L
         const val INTRO_FADE_MS = 240L
+        const val ZONE_ACTIVE_MS = 600L
+        const val ZONE_REVEAL_MS = 5000L
     }
 }

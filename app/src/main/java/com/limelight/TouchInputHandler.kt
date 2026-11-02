@@ -20,6 +20,7 @@ import com.limelight.binding.input.touchpad.NonRootTouchpadHandler
 import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
 import com.limelight.binding.input.touchpad.ScreenDs5PressureClickDetector
 import com.limelight.binding.input.touchpad.ScreenDs5TapClickDetector
+import com.limelight.binding.input.touchpad.TouchpadZoneGeometry
 import com.limelight.binding.input.virtual_controller.VirtualController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -112,7 +113,6 @@ class TouchInputHandler(private val game: Game) {
     private var screenDs5PressureClickFired = false
     private val screenDs5ClickHandler = Handler(Looper.getMainLooper())
     private var screenDs5ClickReleaseCallback: Runnable? = null
-
     // ---- 公共入口 ----
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -470,6 +470,7 @@ class TouchInputHandler(private val game: Game) {
                 lastButtonState = buttonState
             } else {
                 // This case is for fingers
+                updateScreenDs5TouchpadGestureRoute(view, event)
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                     enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
@@ -483,8 +484,25 @@ class TouchInputHandler(private val game: Game) {
                     return true
                 }
 
-                if (game.prefConfig.screenDs5Touchpad && trySendScreenDs5TouchpadEvent(view, event)) {
-                    return true
+                when (ds5Route) {
+                    Ds5Route.PAD -> {
+                        val handled = trySendScreenDs5TouchpadEvent(view, event)
+                        // Deliver the final UP/CANCEL to the pad first, then release
+                        // the route so the last contact and tap-click still land.
+                        if (event.actionMasked == MotionEvent.ACTION_UP ||
+                            event.actionMasked == MotionEvent.ACTION_CANCEL
+                        ) {
+                            ds5Route = Ds5Route.NONE
+                        }
+                        if (handled) {
+                            return true
+                        }
+                    }
+                    Ds5Route.RESIZE -> {
+                        handleScreenDs5Resize(view, event)
+                        return true
+                    }
+                    Ds5Route.NONE -> {}
                 }
 
                 if (game.getisTouchOverrideEnabled()) {
@@ -1129,6 +1147,137 @@ class TouchInputHandler(private val game: Game) {
         return getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
     }
 
+    /** Route of the current gesture over the screen DS5 pad. */
+    private enum class Ds5Route { NONE, PAD, RESIZE }
+
+    private var ds5Route = Ds5Route.NONE
+    private var ds5ResizeEdges: TouchpadZoneGeometry.EdgeSet? = null
+    private var ds5ResizePointerId = MotionEvent.INVALID_POINTER_ID
+    private var ds5ResizeWorkingRect: TouchpadZoneGeometry.NormalizedRect? = null
+
+    /** Half-width of the edge resize band, in content-normalized units. Capped at a
+     *  quarter of the zone dimension so the interior stays usable as a pad. */
+    private fun screenDs5ResizeBand(view: View?, axis: Int, zone: TouchpadZoneGeometry.NormalizedRect): Float {
+        val content = game.activeStreamView ?: view ?: return 0f
+        if (content.width <= 0 || content.height <= 0) return 0f
+        val bandPx = SCREEN_DS5_RESIZE_BAND_DP * game.resources.displayMetrics.density
+        val bandNormalized = if (axis == 0) bandPx / content.width else bandPx / content.height
+        val zoneDimension = if (axis == 0) zone.width else zone.height
+        return bandNormalized.coerceAtMost(zoneDimension * RESIZE_BAND_ZONE_FRACTION)
+    }
+
+    /**
+     * Decide gesture ownership for the screen DS5 pad. The first finger decides for the
+     * whole gesture (until every finger lifts), so pad contacts, zone resizing and the
+     * surrounding multi-touch never split mid-gesture:
+     * - on the zone borders -> resize: the flagged borders follow the finger
+     * - inside the zone -> pad contacts
+     * - outside -> falls through to the selected touch mode pipeline
+     */
+    private fun updateScreenDs5TouchpadGestureRoute(view: View?, event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                finishScreenDs5Resize(persist = true)
+                ds5Route = Ds5Route.NONE
+                if (!game.prefConfig.screenDs5Touchpad ||
+                    game.screenDs5TouchpadHostSupport == Game.ScreenDs5HostSupport.UNSUPPORTED
+                ) {
+                    return
+                }
+                val position = getStreamViewRelativeNormalizedXY(view, event, event.actionIndex)
+                val zone = TouchpadZoneGeometry.parseZoneRect(
+                    game.prefConfig.screenDs5TouchpadZoneRect
+                )
+                val edges = TouchpadZoneGeometry.edgeHitTest(
+                    zone, position[0], position[1],
+                    screenDs5ResizeBand(view, 0, zone), screenDs5ResizeBand(view, 1, zone),
+                )
+                if (edges != null) {
+                    ds5Route = Ds5Route.RESIZE
+                    ds5ResizeEdges = edges
+                    ds5ResizePointerId = event.getPointerId(event.actionIndex)
+                    ds5ResizeWorkingRect = zone
+                    game.screenDs5Touchpad.overlay?.setResizing(true)
+                    return
+                }
+                if (TouchpadZoneGeometry.hitTest(zone, position[0], position[1])) {
+                    ds5Route = Ds5Route.PAD
+                    LimeLog.info("ScreenDs5 pad: gesture owned at %.2f,%.2f".format(position[0], position[1]))
+                }
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (ds5Route == Ds5Route.RESIZE &&
+                    event.getPointerId(event.actionIndex) == ds5ResizePointerId
+                ) {
+                    // The resizing finger lifted: persist now, but keep RESIZE
+                    // ownership until the gesture ends so leftover fingers (whose
+                    // DOWN this route already consumed) never leak into the
+                    // touch-mode pipeline without a matching DOWN.
+                    finishScreenDs5Resize(persist = true)
+                    ds5ResizePointerId = MotionEvent.INVALID_POINTER_ID
+                }
+            }
+            // PAD gestures keep their route here so the final UP/CANCEL still
+            // reaches the pad (contact release + tap-click) before clearing.
+            // RESIZE keeps ownership too: its terminal UP/CANCEL is consumed and
+            // finished inside handleScreenDs5Resize, after which it clears the
+            // route itself.
+        }
+    }
+
+    /** Drive the working zone from the resizing finger; consumes the gesture's
+     *  terminal UP/CANCEL (persist on lift, discarded on cancel) and clears the
+     *  route once the gesture ends. */
+    private fun handleScreenDs5Resize(view: View?, event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_MOVE -> {
+                val edges = ds5ResizeEdges ?: return
+                val pointerIndex = event.findPointerIndex(ds5ResizePointerId)
+                if (pointerIndex < 0) return
+                val working = ds5ResizeWorkingRect ?: return
+                val position = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
+                val next = TouchpadZoneGeometry.resizeEdges(working, edges, position[0], position[1])
+                if (next != working) {
+                    ds5ResizeWorkingRect = next
+                    game.screenDs5Touchpad.overlay?.setZoneRect(next)
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                finishScreenDs5Resize(persist = event.actionMasked == MotionEvent.ACTION_UP)
+                ds5Route = Ds5Route.NONE
+            }
+        }
+    }
+
+    private fun finishScreenDs5Resize(persist: Boolean) {
+        if (ds5Route != Ds5Route.RESIZE) {
+            ds5ResizeEdges = null
+            return
+        }
+        val working = ds5ResizeWorkingRect
+        if (persist && working != null) {
+            game.screenDs5Touchpad.persistZoneRect(working)
+            game.screenDs5Touchpad.overlay?.showZoneReveal()
+        }
+        game.screenDs5Touchpad.overlay?.setResizing(false)
+        ds5ResizeEdges = null
+        ds5ResizePointerId = MotionEvent.INVALID_POINTER_ID
+        ds5ResizeWorkingRect = null
+    }
+
+    /** Drop any in-flight screen DS5 gesture and clear pad state on the host. */
+    fun cancelScreenDs5TouchpadGesture() {
+        if (ds5Route == Ds5Route.RESIZE) {
+            finishScreenDs5Resize(persist = false)
+        }
+        ds5Route = Ds5Route.NONE
+        releaseScreenDs5Click()
+        game.conn?.sendControllerTouchEvent(
+            0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f
+        )
+        game.screenDs5Touchpad.overlay?.cancelAllContacts()
+    }
+
     /** Forward touchscreen contacts through controller 0 as DualSense touchpad contacts. */
     private fun trySendScreenDs5TouchpadEvent(view: View?, event: MotionEvent): Boolean {
         val eventType = getLiTouchTypeFromEvent(event)
@@ -1148,7 +1297,7 @@ class TouchInputHandler(private val game: Game) {
             val supported = result == 0
             noteScreenDs5HostSupport(result)
             if (supported) {
-                game.ds5TouchpadFeedbackView?.updateContact(
+                game.screenDs5Touchpad.overlay?.updateContact(
                     eventType,
                     event.getPointerId(pointerIndex),
                     position[0],
@@ -1169,7 +1318,7 @@ class TouchInputHandler(private val game: Game) {
                 }
                 // Clear local feedback even if the send failed, so recorded contacts
                 // don't linger on screen.
-                game.ds5TouchpadFeedbackView?.cancelAllContacts()
+                game.screenDs5Touchpad.overlay?.cancelAllContacts()
                 result == 0
             }
             else -> sendPointer(event.actionIndex)
@@ -1193,6 +1342,7 @@ class TouchInputHandler(private val game: Game) {
         when (result) {
             0 -> game.setScreenDs5TouchpadHostSupport(true)
             MoonBridge.LI_ERR_UNSUPPORTED -> {
+                LimeLog.warning("ScreenDs5 pad: host rejected controller touch")
                 game.setScreenDs5TouchpadHostSupport(false)
                 Toast.makeText(
                     game,
@@ -1290,7 +1440,7 @@ class TouchInputHandler(private val game: Game) {
     private fun pressScreenDs5Click(view: View, autoRelease: Boolean) {
         releaseScreenDs5Click()
         game.controllerHandler.setScreenDs5TouchpadPressed(true)
-        game.ds5TouchpadFeedbackView?.setTouchpadPressed(true)
+        game.screenDs5Touchpad.overlay?.setPadPressed(true)
         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         if (autoRelease) {
             screenDs5ClickReleaseCallback = Runnable {
@@ -1304,7 +1454,7 @@ class TouchInputHandler(private val game: Game) {
         screenDs5ClickReleaseCallback?.let { screenDs5ClickHandler.removeCallbacks(it) }
         screenDs5ClickReleaseCallback = null
         game.controllerHandler.setScreenDs5TouchpadPressed(false)
-        game.ds5TouchpadFeedbackView?.setTouchpadPressed(false)
+        game.screenDs5Touchpad.overlay?.setPadPressed(false)
     }
 
     private fun updateTrackedScreenPressure(event: MotionEvent): Boolean? {
@@ -1446,6 +1596,8 @@ class TouchInputHandler(private val game: Game) {
         // 50ms clickpad hold).
         private const val SCREEN_DS5_TAP_MOVEMENT_DP = 24f
         private const val SCREEN_DS5_CLICK_RELEASE_MS = 50L
+        private const val SCREEN_DS5_RESIZE_BAND_DP = 24f
+        private const val RESIZE_BAND_ZONE_FRACTION = 0.25f
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100L
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20f
         private const val STYLUS_UP_DEAD_ZONE_DELAY = 150L

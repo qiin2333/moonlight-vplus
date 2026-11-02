@@ -185,6 +185,12 @@ class PreferenceConfiguration {
     var touchscreenTrackpad = false
     /** Use the device touchscreen as the touchpad of a virtual DualSense controller. */
     var screenDs5Touchpad = false
+    /**
+     * Touchable rect of the screen DS5 pad, as "left,top,right,bottom" normalized to
+     * the stream content: touches inside it reach the pad and the rest of the screen
+     * stays regular multi-touch.
+     */
+    var screenDs5TouchpadZoneRect = DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT
     /** Ask the host to auto-invoke its touch keyboard when a text field gains focus (Sunshine extension). */
     var touchKeyboardAutoInvoke = true
     /** Auto-open the local IME on API 33+ when the host reports a trusted editable activation. */
@@ -390,6 +396,7 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putString(MOUSE_AXIS_CORRECTION_PREF_STRING, mouseAxisCorrection.preferenceValue)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
+                .putString(SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING, screenDs5TouchpadZoneRect)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
                 .putString(
                     HEVC_LOW_LATENCY_MODE_PREF_STRING,
@@ -790,6 +797,7 @@ class PreferenceConfiguration {
         const val TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING = "checkbox_touch_keyboard_auto_invoke"
         const val REMOTE_IME_AUTO_SHOW_PREF_STRING = "checkbox_remote_ime_auto_show"
         const val SCREEN_DS5_TOUCHPAD_PREF_STRING = "checkbox_screen_ds5_touchpad"
+        const val SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING = "string_screen_ds5_touchpad_zone_rect"
         const val ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer"
         const val NATIVE_MOUSE_MODE_PRESET_PREF_STRING = "list_native_mouse_mode_preset"
         const val ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch"
@@ -921,6 +929,8 @@ class PreferenceConfiguration {
         const val DEFAULT_AUDIO_VIBRATION_MODE = "auto"
         const val DEFAULT_AUDIO_VIBRATION_SCENE = 0 // Game/Movie
         private const val DEFAULT_FLIP_FACE_BUTTONS = false
+        /** Bottom-centered strip sized after a thumb sweep; left,top,right,bottom normalized. */
+        const val DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT = "0.18,0.74,0.82,0.94"
         private const val DEFAULT_AUDIO_CONFIG = "2" // Stereo
         private const val DEFAULT_LATENCY_TOAST = false
         private const val DEFAULT_ENABLE_STUN = false
@@ -1630,6 +1640,10 @@ class PreferenceConfiguration {
             config.touchscreenTrackpad = touchModeState.touchscreenTrackpad
             config.enableNativeMousePointer = touchModeState.nativeMousePointer
             config.screenDs5Touchpad = touchModeState.screenDs5Touchpad
+            config.screenDs5TouchpadZoneRect = prefs.getString(
+                SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING,
+                DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT
+            ) ?: DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT
             config.touchKeyboardAutoInvoke = prefs.getBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, true)
             config.remoteImeAutoShow = prefs.getBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, true)
             config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)
