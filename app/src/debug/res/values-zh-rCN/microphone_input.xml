@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">系统默认</string>
+    <string name="mic_input_builtin">内置麦克风</string>
+    <string name="mic_input_wired">有线耳机</string>
+    <string name="mic_input_bluetooth">蓝牙麦克风</string>
+    <string name="mic_input_bluetooth_permission">蓝牙麦克风（需要权限）</string>
+    <string name="mic_input_usb">USB 麦克风</string>
+    <string name="mic_input_microphone">麦克风</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_test_error_permission">需要麦克风权限。</string>
+    <string name="mic_test_error_route_lost">蓝牙麦克风路由已断开。</string>
+    <string name="mic_test_error_route_activation">无法启用所选麦克风路由。</string>
+    <string name="mic_test_error_start">无法启动麦克风测试。</string>
+    <string name="mic_test_error_playback">无法创建音频播放。</string>
+    <string name="mic_test_error_playback_init">音频播放初始化失败。</string>
+    <string name="mic_test_error_read">麦克风采集失败。</string>
+    <string name="mic_test_error_read_code">麦克风采集失败（%1$d）。</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Системный микрофон</string>
+    <string name="mic_input_builtin">Встроенный микрофон</string>
+    <string name="mic_input_wired">Проводная гарнитура</string>
+    <string name="mic_input_bluetooth">Микрофон Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Микрофон Bluetooth (нужно разрешение)</string>
+    <string name="mic_input_usb">USB-микрофон</string>
+    <string name="mic_input_microphone">Микрофон</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_test_error_permission">Требуется разрешение на использование микрофона.</string>
+    <string name="mic_test_error_route_lost">Маршрут Bluetooth-микрофона потерян.</string>
+    <string name="mic_test_error_route_activation">Не удалось включить выбранный маршрут микрофона.</string>
+    <string name="mic_test_error_start">Не удалось запустить тест микрофона.</string>
+    <string name="mic_test_error_playback">Не удалось создать воспроизведение.</string>
+    <string name="mic_test_error_playback_init">Не удалось инициализировать воспроизведение.</string>
+    <string name="mic_test_error_read">Ошибка захвата с микрофона.</string>
+    <string name="mic_test_error_read_code">Ошибка захвата с микрофона (%1$d).</string>
+</resources>

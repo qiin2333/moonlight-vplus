@@ -125,21 +125,16 @@ private fun MicrophoneTestScreen(
     var snapshot by remember { mutableStateOf(MicrophoneTestSnapshot()) }
     val backDescription = stringResource(R.string.controller_diag_back)
     val context = LocalContext.current
-    val firstFocus = remember { FocusRequester() }
-    val startFocus = remember { FocusRequester() }
-    var initialFocusRequested by remember { mutableStateOf(false) }
+    val initialFocus = remember { FocusRequester() }
 
     BackHandler(onBack = onBack)
     LaunchedEffect(Unit) {
         choices = session.choices()
         names = session.displayNames(choices)
     }
-    LaunchedEffect(choices.size, initialFocusRequested) {
-        if (!initialFocusRequested) {
-            delay(120)
-            if (choices.isNotEmpty()) firstFocus.requestFocus() else startFocus.requestFocus()
-            initialFocusRequested = true
-        }
+    LaunchedEffect(Unit) {
+        delay(120)
+        initialFocus.requestFocus()
     }
 
     fun selectedDevice(): MicrophoneInputDevice? =
@@ -156,9 +151,18 @@ private fun MicrophoneTestScreen(
         val granted = isGranted(Manifest.permission.RECORD_AUDIO) &&
             (!bluetoothRequired || isGranted(Manifest.permission.BLUETOOTH_CONNECT))
         if (granted) {
-            session.start(choice) { snapshot = it }
+            val refreshedChoices = session.choices()
+            choices = refreshedChoices
+            names = session.displayNames(refreshedChoices)
+            val resolvedChoice = if (choice?.key == "communication:permission") {
+                refreshedChoices.firstOrNull { it.communication }
+            } else {
+                choice
+            }
+            resolvedChoice?.let { selectedKey = it.key }
+            session.start(resolvedChoice) { snapshot = it }
         } else {
-            snapshot = MicrophoneTestSnapshot(error = "Microphone permission is required")
+            snapshot = MicrophoneTestSnapshot(error = context.getString(R.string.mic_test_error_permission))
         }
     }
 
@@ -203,6 +207,8 @@ private fun MicrophoneTestScreen(
                         modifier = Modifier
                             .clickable(onClick = onBack)
                             .focusable()
+                            .focusRequester(initialFocus)
+                            .consumeConfirm(onBack)
                             .semantics { contentDescription = backDescription }
                     )
                     Text(
@@ -239,7 +245,7 @@ private fun MicrophoneTestScreen(
                         MicrophoneChoice(
                             label = stringResource(R.string.mic_input_default),
                             selected = selectedKey == DEFAULT_MICROPHONE_INPUT,
-                            focusRequester = if (choices.isEmpty()) firstFocus else null
+                            focusRequester = null
                         ) {
                             selectedKey = DEFAULT_MICROPHONE_INPUT
                             session.stop()
@@ -250,7 +256,7 @@ private fun MicrophoneTestScreen(
                         MicrophoneChoice(
                             label = names[device.key] ?: device.name,
                             selected = selectedKey == device.key,
-                            focusRequester = if (choices.firstOrNull()?.key == device.key) firstFocus else null
+                            focusRequester = null
                         ) {
                             selectedKey = device.key
                             session.stop()
@@ -273,7 +279,6 @@ private fun MicrophoneTestScreen(
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .focusRequester(startFocus)
                                     .consumeConfirm {
                                         if (snapshot.running) {
                                             session.stop()
@@ -295,7 +300,9 @@ private fun MicrophoneTestScreen(
                                     session.toggleRecording()
                                 },
                                 enabled = snapshot.running,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .consumeConfirm { session.toggleRecording() }
                             ) {
                                 Text(
                                     if (snapshot.recording) {
@@ -308,7 +315,9 @@ private fun MicrophoneTestScreen(
                             Button(
                                 onClick = { session.playRecording() },
                                 enabled = snapshot.hasRecording && !snapshot.playing,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .consumeConfirm { session.playRecording() }
                             ) {
                                 Text(
                                     stringResource(

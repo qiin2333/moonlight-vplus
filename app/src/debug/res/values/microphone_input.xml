@@ -4,7 +4,9 @@
     <string name="mic_input_builtin">Built-in microphone</string>
     <string name="mic_input_wired">Wired headset</string>
     <string name="mic_input_bluetooth">Bluetooth microphone</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth microphone (permission required)</string>
     <string name="mic_input_usb">USB microphone</string>
+    <string name="mic_input_microphone">Microphone</string>
     <string name="mic_input_active">Recording from: %1$s</string>
     <string name="mic_input_unavailable">Selected device is unavailable.</string>
     <string name="mic_input_route_pending">Waiting for the audio input route</string>
@@ -38,4 +40,12 @@
     <string name="mic_test_format">Capture format</string>
     <string name="mic_test_buffer">Audio buffer</string>
     <string name="mic_test_session">Audio session</string>
+    <string name="mic_test_error_permission">Microphone permission is required.</string>
+    <string name="mic_test_error_route_lost">Bluetooth microphone route was lost.</string>
+    <string name="mic_test_error_route_activation">Unable to activate the selected microphone route.</string>
+    <string name="mic_test_error_start">Unable to start the microphone test.</string>
+    <string name="mic_test_error_playback">Unable to create audio playback.</string>
+    <string name="mic_test_error_playback_init">Audio playback initialization failed.</string>
+    <string name="mic_test_error_read">Microphone capture failed.</string>
+    <string name="mic_test_error_read_code">Microphone capture failed (%1$d).</string>
 </resources>

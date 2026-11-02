@@ -14,6 +14,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
+import com.limelight.R
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
@@ -86,11 +87,13 @@ internal class MicrophoneTestSession(context: android.content.Context) {
             if (choice?.communication == true) {
                 bluetoothRoute.activate(choice, { generation.get() == token },
                     onRouteLost = {
-                        if (generation.get() == token) publishError("Bluetooth microphone route lost")
+                        if (generation.get() == token) {
+                            publishError(appContext.getString(R.string.mic_test_error_route_lost))
+                        }
                     }) { success ->
                     if (generation.get() != token) return@activate
                     if (success) createRecorder(token, choice)
-                    else publishError("Unable to activate the selected microphone route")
+                    else publishError(appContext.getString(R.string.mic_test_error_route_activation))
                 }
             } else {
                 createRecorder(token, choice)
@@ -108,7 +111,12 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     }
 
     fun close() {
-        stop()
+        generation.incrementAndGet()
+        listener = null
+        stopRecorder()
+        stopPlayback()
+        clearRecording()
+        bluetoothRoute.close()
         worker.quitSafely()
     }
 
@@ -171,12 +179,12 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 AudioTrack.MODE_STREAM
             )
         } } catch (e: RuntimeException) {
-            publishError("Unable to create playback: ${e.javaClass.simpleName}")
+            publishError(appContext.getString(R.string.mic_test_error_playback))
             return
         }
         if (track.state != AudioTrack.STATE_INITIALIZED) {
             track.release()
-            publishError("Audio playback initialization failed")
+            publishError(appContext.getString(R.string.mic_test_error_playback_init))
             return
         }
         val thread = Thread({
@@ -229,7 +237,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.RECORD_AUDIO) !=
                     PackageManager.PERMISSION_GRANTED
                 ) {
-                    publishError("Microphone permission is required")
+                    publishError(appContext.getString(R.string.mic_test_error_permission))
                     return@synchronized
                 }
                 var newRecord: AudioRecord? = null
@@ -274,7 +282,11 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                     check(reapplied || input == null) {
                         "Microphone input preference was not retained after start"
                     }
-                    if (generation.get() != token) return@synchronized
+                    if (generation.get() != token) {
+                        releaseRecorder(newRecord)
+                        newRecord = null
+                        return@synchronized
+                    }
                     val startedRecord = newRecord!!
                     record = startedRecord
                     newRecord = null
@@ -293,7 +305,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                     newRecord = null
                     LimeLog.warning("Microphone test failed: ${e.javaClass.simpleName}")
                     if (generation.get() == token) {
-                        publishError(e.message ?: "Unable to start microphone test")
+                        publishError(appContext.getString(R.string.mic_test_error_start))
                         stopRecorder()
                         bluetoothRoute.release()
                     }
@@ -328,6 +340,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                         audioRecord.read(buffer, 0, buffer.size)
                     }
                     if (read > 1) {
+                        if (generation.get() != token || !running.get()) break
                         val metrics = pcmMetrics(buffer, read)
                         synchronized(recordingLock) {
                             if (recordingActive) {
@@ -346,6 +359,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                         while (waveform.size > WAVEFORM_POINTS) waveform.removeFirst()
                         val now = android.os.SystemClock.elapsedRealtime()
                         if (now - lastPublish >= PUBLISH_INTERVAL_MS) {
+                            if (generation.get() != token || !running.get()) break
                             lastPublish = now
                             publishSnapshot(
                                 audioRecord, source, waveform.toList(), metrics.rms, metrics.peak,
@@ -353,7 +367,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                             )
                         }
                     } else if (read < 0) {
-                        publishError("AudioRecord read failed: $read")
+                        publishError(appContext.getString(R.string.mic_test_error_read_code, read))
                         break
                     } else {
                         Thread.sleep(10)
@@ -363,7 +377,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 Thread.currentThread().interrupt()
             } catch (e: RuntimeException) {
                 LimeLog.warning("Microphone test read failed: ${e.javaClass.simpleName}")
-                publishError(e.message ?: "Microphone test read failed")
+                publishError(appContext.getString(R.string.mic_test_error_read))
             }
         }, "MicrophoneTestCapture")
         captureThread = thread
@@ -528,6 +542,11 @@ internal class MicrophoneTestSession(context: android.content.Context) {
             try { record?.release() } catch (_: RuntimeException) { }
             record = null
         }
+    }
+
+    private fun releaseRecorder(audioRecord: AudioRecord?) {
+        try { audioRecord?.stop() } catch (_: RuntimeException) { }
+        try { audioRecord?.release() } catch (_: RuntimeException) { }
     }
 
     private fun stopPlayback() {

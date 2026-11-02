@@ -1,8 +1,10 @@
 package com.limelight.binding.audio
 
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -11,6 +13,8 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import com.limelight.LimeLog
+import com.limelight.R
+import androidx.core.content.ContextCompat
 import java.util.concurrent.atomic.AtomicLong
 
 internal data class MicrophoneTestInputDevice(
@@ -64,6 +68,19 @@ internal class MicrophoneTestDeviceRepository(context: Context) {
 
     private fun communicationChoices(): List<MicrophoneTestInputDevice> {
         if (Build.VERSION.SDK_INT >= 31) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                return listOf(
+                    MicrophoneTestInputDevice(
+                        key = "communication:permission",
+                        id = -1,
+                        type = 7,
+                        name = "",
+                        communication = true
+                    )
+                )
+            }
             return try {
                 audio.availableCommunicationDevices
                     .filter { it.isSink && isBluetoothType(it.type) }
@@ -103,14 +120,19 @@ internal class MicrophoneTestDeviceRepository(context: Context) {
     catch (_: RuntimeException) { false }
 
     private fun displayName(device: MicrophoneTestInputDevice): String {
-        val kind = when (device.type) {
-            15 -> "Built-in microphone"
-            3 -> "Wired headset"
-            7, 26 -> "Bluetooth microphone"
-            11, 12, 22 -> "USB microphone"
-            else -> "Microphone"
+        if (device.key == "communication:permission") {
+            return context.getString(R.string.mic_input_bluetooth_permission)
         }
-        return device.name.takeIf(String::isNotBlank)?.let { "$it · $kind" } ?: kind
+        val kind = when (device.type) {
+            15 -> context.getString(R.string.mic_input_builtin)
+            3 -> context.getString(R.string.mic_input_wired)
+            7, 26 -> context.getString(R.string.mic_input_bluetooth)
+            11, 12, 22 -> context.getString(R.string.mic_input_usb)
+            else -> context.getString(R.string.mic_input_microphone)
+        }
+        return device.name.takeIf(String::isNotBlank)?.let {
+            context.getString(R.string.mic_input_named_device, it, kind)
+        } ?: kind
     }
 
     private fun deviceAddress(device: AudioDeviceInfo): String = if (Build.VERSION.SDK_INT >= 28) {
@@ -170,19 +192,16 @@ internal class MicrophoneTestBluetoothRouteController(context: Context) {
                         (it.id == device.id || device.id < 0)
                 } ?: return false
                 if (!audio.setCommunicationDevice(target)) return false
+                return audio.communicationDevice?.id == target.id
             }
             @Suppress("DEPRECATION")
             audio.startBluetoothSco()
-            @Suppress("DEPRECATION")
-            audio.isBluetoothScoOn = true
             val deadline = SystemClock.elapsedRealtime() + 5000L
             while (SystemClock.elapsedRealtime() < deadline) {
                 if (generation.get() != token || !isCurrent()) return false
-                val selected = Build.VERSION.SDK_INT < 31 ||
-                    audio.communicationDevice?.id == device.id || device.id < 0
                 @Suppress("DEPRECATION")
                 val sco = audio.isBluetoothScoOn
-                if (selected && (sco || SystemClock.elapsedRealtime() + 3500L >= deadline)) return true
+                if (sco) return true
                 Thread.sleep(100L)
             }
         } catch (e: InterruptedException) {

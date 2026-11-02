@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">系統預設</string>
+    <string name="mic_input_builtin">內建麥克風</string>
+    <string name="mic_input_wired">有線耳機</string>
+    <string name="mic_input_bluetooth">藍牙麥克風</string>
+    <string name="mic_input_bluetooth_permission">藍牙麥克風（需要權限）</string>
+    <string name="mic_input_usb">USB 麥克風</string>
+    <string name="mic_input_microphone">麥克風</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_test_error_permission">需要麥克風權限。</string>
+    <string name="mic_test_error_route_lost">藍牙麥克風路由已中斷。</string>
+    <string name="mic_test_error_route_activation">無法啟用所選麥克風路由。</string>
+    <string name="mic_test_error_start">無法啟動麥克風測試。</string>
+    <string name="mic_test_error_playback">無法建立音訊播放。</string>
+    <string name="mic_test_error_playback_init">音訊播放初始化失敗。</string>
+    <string name="mic_test_error_read">麥克風擷取失敗。</string>
+    <string name="mic_test_error_read_code">麥克風擷取失敗（%1$d）。</string>
+</resources>
