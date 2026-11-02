@@ -22,6 +22,7 @@
         <item>打開選單</item>
         <item>切換懸浮球顯示或隱藏</item>
         <item>顯示效能監控圖層</item>
+        <item>指紋解鎖主機</item>
     </string-array>
     <string-array name="framegen_quality_preset_names">
         <item>@string/framegen_quality_performance</item>

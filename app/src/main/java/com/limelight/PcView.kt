@@ -26,6 +26,8 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import com.limelight.ui.ThemedActivity
 import com.limelight.utils.AppTheme
+import com.limelight.unlock.HostUnlockCredentialStore
+import com.limelight.unlock.HostUnlockUi
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.computers.ComputerManagerService
@@ -222,10 +224,12 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         private const val NETWORK_QUALITY_ID = 18
         private const val ADD_PC_MANUALLY_ID = 19
         private const val ADD_PC_QR_SCAN_ID = 20
+        private const val AUTO_UNLOCK_ID = 21
 
     }
 
     // UI Components
+    private val hostUnlockUi by lazy { HostUnlockUi(this) }
     private var noPcFoundLayout: View? = null
     private lateinit var pcGridAdapter: PcGridAdapter
     private var pcListView: AbsListView? = null
@@ -450,6 +454,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     override fun onDestroy() {
         AboutDialogLauncher.release(this)
         UpdateManager.cleanup()
+        hostUnlockUi.release()
         super.onDestroy()
 
         uiScope.cancel()
@@ -1725,6 +1730,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 .edit {
                     remove(details.uuid)
                 }
+        HostUnlockCredentialStore.remove(this, details.uuid)
 
         for (i in 0 until pcGridAdapter.rawCount) {
             val computer = pcGridAdapter.getRawItem(i)
@@ -2787,6 +2793,17 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             if (details.vddCapabilityVersion != 0) {
                 add(SECONDARY_SCREEN_ID, R.string.pcview_menu_secondary_screen)
             }
+            if (!details.nvidiaServer &&
+                HostUnlockUi.availability(this@PcView) != HostUnlockUi.Availability.UNSUPPORTED
+            ) {
+                this.add(AppActionSheet.Action(
+                    id = AUTO_UNLOCK_ID,
+                    title = getString(R.string.pcview_menu_auto_unlock),
+                    description = getString(R.string.pcview_menu_auto_unlock_summary),
+                    toggle = true,
+                    checked = HostUnlockCredentialStore.has(this@PcView, details.uuid)
+                ))
+            }
         }
 
         if (paired && details.state == ComputerDetails.State.ONLINE && details.supportsNetworkQualityProbe()) {
@@ -2940,8 +2957,36 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 showHostMoreActionSheet(details)
                 true
             }
+            AUTO_UNLOCK_ID -> {
+                toggleAutoUnlock(details)
+                true
+            }
             else -> false
         }
+    }
+
+    private fun toggleAutoUnlock(details: ComputerDetails) {
+        val hostUuid = details.uuid ?: return
+        val hostName = details.name.orEmpty()
+        if (!HostUnlockCredentialStore.has(this, hostUuid)) {
+            hostUnlockUi.showSetup(hostUuid, hostName) { pin ->
+                java.util.Arrays.fill(pin, '\u0000')
+                showToast(getString(R.string.host_unlock_enabled))
+            }
+            return
+        }
+
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
+            .setTitle(R.string.host_unlock_disable_title)
+            .setMessage(getString(R.string.host_unlock_disable_message, hostName))
+            .setPositiveButton(R.string.host_unlock_disable_confirm) { _, _ ->
+                HostUnlockCredentialStore.remove(this, hostUuid)
+                showToast(getString(R.string.host_unlock_disabled))
+            }
+            .setNegativeButton(R.string.dialog_button_cancel, null)
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, this)
     }
 
     private fun runNetworkQualityTest(computer: ComputerDetails) {

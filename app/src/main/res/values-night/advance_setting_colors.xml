@@ -88,4 +88,12 @@
     <color name="add_pc_accent_focus">@color/ui_shell_accent_focus</color>
     <color name="add_pc_badge_ring">#FF15161B</color>
 
+    <!-- EasyTier 控制面板：暗色沿用原 crown 系取值 -->
+    <color name="easytier_panel_background">#F21B1B22</color>
+    <color name="easytier_section_background">#CC252833</color>
+    <color name="easytier_input_background">#E62F3340</color>
+    <color name="easytier_text_primary">#F7F3F7</color>
+    <color name="easytier_text_secondary">#C9D0D8</color>
+    <color name="easytier_warning">#FF7777</color>
+
 </resources>

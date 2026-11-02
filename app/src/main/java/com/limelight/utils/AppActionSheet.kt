@@ -45,7 +45,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -840,7 +839,7 @@ object AppActionSheet {
                 }
                 if (action.toggle) {
                     Spacer(Modifier.width(10.dp))
-                    Switch(checked = action.checked == true, onCheckedChange = null, enabled = action.enabled)
+                    AppSwitch(checked = action.checked == true, onCheckedChange = null, enabled = action.enabled)
                 } else if (!action.trailingText.isNullOrEmpty()) {
                     Spacer(Modifier.width(10.dp))
                     Text(
