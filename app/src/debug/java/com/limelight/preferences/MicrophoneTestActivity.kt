@@ -151,8 +151,10 @@ private fun MicrophoneTestScreen(
         val choice = pendingPermissionChoice
         pendingPermissionChoice = null
         val bluetoothRequired = choice?.communication == true && android.os.Build.VERSION.SDK_INT >= 31
-        val granted = grants[Manifest.permission.RECORD_AUDIO] == true &&
-            (!bluetoothRequired || grants[Manifest.permission.BLUETOOTH_CONNECT] == true)
+        fun isGranted(permission: String): Boolean = grants[permission]
+            ?: (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
+        val granted = isGranted(Manifest.permission.RECORD_AUDIO) &&
+            (!bluetoothRequired || isGranted(Manifest.permission.BLUETOOTH_CONNECT))
         if (granted) {
             session.start(choice) { snapshot = it }
         } else {

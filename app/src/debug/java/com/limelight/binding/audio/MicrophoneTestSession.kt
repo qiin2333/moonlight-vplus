@@ -294,9 +294,9 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                     LimeLog.warning("Microphone test failed: ${e.javaClass.simpleName}")
                     if (generation.get() == token) {
                         publishError(e.message ?: "Unable to start microphone test")
+                        stopRecorder()
+                        bluetoothRoute.release()
                     }
-                    stopRecorder()
-                    bluetoothRoute.release()
                 }
             }
         }
