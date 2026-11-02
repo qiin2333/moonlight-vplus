@@ -1861,6 +1861,7 @@
     <string name="quick_btn_controller">Геймпад</string>
     <string name="quick_btn_perf">Стат.</string>
     <string name="quick_btn_remote_mouse">Курсор ПК</string>
+    <string name="quick_btn_unlock_host">Разблокировка по отпечатку</string>
     <string name="quick_button_editor_title">Быстрые действия</string>
     <string name="quick_button_reset_default">Сброс</string>
     <string name="quick_action_edit">Изменить действия</string>

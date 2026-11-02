@@ -6,13 +6,13 @@ import org.junit.Test
 
 class QuickActionRegistryTest {
     @Test
-    fun onlyLocalKeyboardRunsWithGameFocus() {
+    fun gameFocusActionsAreRegistered() {
         val focusedActionIds = QuickActionRegistry.getAllActions(null)
             .values
             .filter(StreamAction::isWithGameFocus)
             .map(StreamAction::id)
 
-        assertEquals(listOf("toggle_keyboard"), focusedActionIds)
+        assertEquals(listOf("toggle_keyboard", "unlock_host"), focusedActionIds)
     }
 
     @Test
