@@ -470,4 +470,3 @@ private fun Modifier.consumeConfirm(onConfirm: () -> Unit): Modifier =
         if (event.type == KeyEventType.KeyUp) onConfirm()
         true
     }
-
