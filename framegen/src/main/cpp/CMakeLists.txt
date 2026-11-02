@@ -40,7 +40,8 @@ target_include_directories(volk PUBLIC "${LSFGVK_ROOT}/thirdparty/volk")
 target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_ANDROID_KHR=1)
 
 # ----- 第三方依赖：DXBC / PE 解析 -----
-# DXBC 与 pe-parse 均由受控的 lsfg-vk-android-legacy 仓库提供。
+# DXBC 由受控的 lsfg-vk-android-legacy 仓库提供；pe-parse
+# 仍由该仓库声明的 trailofbits 子模块提供。
 add_subdirectory("${LSFGVK_ROOT}/thirdparty/dxbc" dxbc_build EXCLUDE_FROM_ALL)
 add_subdirectory("${LSFGVK_ROOT}/thirdparty/pe-parse/pe-parser-library" peparse_build EXCLUDE_FROM_ALL)
 
