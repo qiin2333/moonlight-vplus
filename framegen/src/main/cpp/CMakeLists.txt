@@ -40,9 +40,16 @@ target_include_directories(volk PUBLIC "${LSFGVK_ROOT}/thirdparty/volk")
 target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_ANDROID_KHR=1)
 
 # ----- 第三方依赖：DXBC / PE 解析 -----
-# 阶段 4：复用 lsfg-vk-android 自带的 dxbc + pe-parse，
-# 用于验证 Lossless.dll 中 shader 资源可以在 Android 侧被读取并转译。
-add_subdirectory("${LSFGVK_ROOT}/thirdparty/dxbc" dxbc_build EXCLUDE_FROM_ALL)
+# DXBC 的原始仓库已不可用，且 framegen 的嵌套 .gitmodules 会让递归
+# checkout 在构建开始前失败。将固定版本源码放在主仓库中，避免构建依赖
+# 外部仓库是否仍然存在；pe-parse 仍由 lsfg-vk-android 的有效子模块提供。
+set(DXBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third-party/dxbc")
+if(NOT EXISTS "${DXBC_ROOT}/CMakeLists.txt")
+    message(FATAL_ERROR
+        "DXBC sources are missing: ${DXBC_ROOT}/CMakeLists.txt. "
+        "Restore the vendored third-party/dxbc directory.")
+endif()
+add_subdirectory("${DXBC_ROOT}" dxbc_build EXCLUDE_FROM_ALL)
 add_subdirectory("${LSFGVK_ROOT}/thirdparty/pe-parse/pe-parser-library" peparse_build EXCLUDE_FROM_ALL)
 
 # ----- 上游 framegen 核心 -----

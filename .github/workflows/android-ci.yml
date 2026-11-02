@@ -34,9 +34,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          submodules: recursive
+          # The framegen submodule contains a stale nested DXBC URL. DXBC is
+          # vendored in third-party/dxbc; initialize only the remaining
+          # dependencies below instead of letting checkout recurse into it.
+          submodules: true
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Initialize native dependency submodules
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          common_c="app/src/main/jni/moonlight-core/moonlight-common-c"
+          pyrowave="third-party/pyrowave"
+          lsfg="framegen/src/main/cpp/lsfg-vk-android"
+
+          git -C "$common_c" submodule sync --recursive
+          git -C "$common_c" submodule update --init --force --recursive
+
+          git -C "$pyrowave" submodule sync --recursive
+          git -C "$pyrowave" submodule update --init --force --recursive
+
+          # DXBC is vendored by the application. These are the only nested
+          # lsfg-vk-android dependencies still needed by framegen/CMakeLists.txt.
+          git -C "$lsfg" submodule sync -- thirdparty/pe-parse thirdparty/toml11 thirdparty/volk
+          git -C "$lsfg" submodule update --init --force \
+            thirdparty/pe-parse thirdparty/toml11 thirdparty/volk
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
