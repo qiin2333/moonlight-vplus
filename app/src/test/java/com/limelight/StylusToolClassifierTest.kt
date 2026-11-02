@@ -33,6 +33,70 @@ class StylusToolClassifierTest {
     }
 
     @Test
+    fun stylusDoesNotRequirePointerCapture() {
+        assertFalse(pointerEventRequiresCapture(hasStylusTool = true, captureActive = false))
+    }
+
+    @Test
+    fun mouseStillRequiresPointerCapture() {
+        assertTrue(pointerEventRequiresCapture(hasStylusTool = false, captureActive = false))
+        assertFalse(pointerEventRequiresCapture(hasStylusTool = false, captureActive = true))
+    }
+
+    @Test
+    fun mixedPointerEventsPreferTheActionStylusPointer() {
+        assertEquals(
+            1,
+            findStylusToolPointerIndex(2, 1) {
+                if (it == 0) MotionEvent.TOOL_TYPE_FINGER else MotionEvent.TOOL_TYPE_STYLUS
+            }
+        )
+    }
+
+    @Test
+    fun fingerPointerTransitionsStayOnTheFingerPathWhenStylusRemainsDown() {
+        assertFalse(
+            stylusActionPointer(
+                MotionEvent.ACTION_POINTER_UP,
+                actionIndex = 1,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_STYLUS else MotionEvent.TOOL_TYPE_FINGER }
+        )
+        assertTrue(
+            stylusActionPointer(
+                MotionEvent.ACTION_POINTER_UP,
+                actionIndex = 0,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_STYLUS else MotionEvent.TOOL_TYPE_FINGER }
+        )
+    }
+
+    @Test
+    fun mixedMoveAndCancelStayOnTheFingerPath() {
+        assertFalse(
+            stylusActionPointer(
+                MotionEvent.ACTION_MOVE,
+                actionIndex = 0,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_STYLUS else MotionEvent.TOOL_TYPE_FINGER }
+        )
+        assertFalse(
+            stylusActionPointer(
+                MotionEvent.ACTION_CANCEL,
+                actionIndex = 0,
+                pointerCount = 2
+            ) { if (it == 0) MotionEvent.TOOL_TYPE_FINGER else MotionEvent.TOOL_TYPE_ERASER }
+        )
+        assertTrue(
+            stylusActionPointer(
+                MotionEvent.ACTION_MOVE,
+                actionIndex = 0,
+                pointerCount = 1
+            ) { MotionEvent.TOOL_TYPE_STYLUS }
+        )
+    }
+
+    @Test
     fun historicalMotionSamplesAreVisitedBeforeCurrentSamples() {
         val visited = mutableListOf<Pair<Int, Int>>()
 
