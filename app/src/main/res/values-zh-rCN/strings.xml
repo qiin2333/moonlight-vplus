@@ -2345,4 +2345,6 @@
     <string name="title_native_device_haptics">原生设备触觉（实验）</string>
     <string name="summary_native_device_haptics">按设备能力合成持续振动与轻重短点，不可用时沿用原有输出。可能增加延迟，持续效果可能有短暂接缝。重新连接后生效。</string>
     <string name="summary_native_device_haptics_requires_output">需主机模拟 DualSense、选择 IR 增强及设备或协同输出，并将设备振动力度设为大于零。重新连接后生效。</string>
+    <string name="title_mic_test">测试麦克风</string>
+    <string name="summary_mic_test">直接采集本机麦克风并显示波形，不进入串流。</string>
 </resources>
