@@ -685,7 +685,7 @@
 
     <string name="category_host_settings">Host</string>
     <string name="title_checkbox_enable_sops">Automatically optimize game settings</string>
-    <string name="summary_checkbox_enable_sops">Allow compatible host software to adjust supported games for the requested stream resolution and quality. Changes are made on the host.</string>
+    <string name="summary_checkbox_enable_sops">Let Foundation Sunshine adjust supported games on the host to match the requested stream resolution and quality. Can also improve capture with DLSS Frame Generation enabled.</string>
     <string name="title_checkbox_host_audio">Play audio on PC</string>
     <string name="summary_checkbox_host_audio">Play audio from the computer and this device</string>
     <string name="title_checkbox_clipboard_sync_text">Sync clipboard text with PC</string>
