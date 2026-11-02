@@ -111,6 +111,7 @@
     <color name="easytier_input_background">#FFFFFFFF</color>
     <color name="easytier_text_primary">@color/ui_shell_text_primary</color>
     <color name="easytier_text_secondary">@color/ui_shell_text_secondary</color>
+    <color name="easytier_warning">#C62828</color>
 
     <!-- 通用对话框颜色 -->
     <color name="app_dialog_title_color">@color/app_dialog_text_primary</color>

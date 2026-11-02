@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -292,9 +294,12 @@ class EasyTierController(
             }
         }
 
+        // Pink accents that read fine on the dark panel lose contrast on the light one.
+        val primary = if (panel.luminance() > 0.5f) lerp(accent, Color.Black, 0.3f) else accent
+
         MaterialTheme(
                 colorScheme = darkColorScheme(
-                        primary = accent,
+                        primary = primary,
                         surface = panel,
                         onSurface = textPrimary,
                         surfaceVariant = input,
@@ -630,7 +635,7 @@ class EasyTierController(
     @Composable
     private fun EasyTierPeerCard(peer: FinalPeerInfo) {
         val titleColor = if (!peer.isInSameSubnet) {
-            Color(0xFFFF7777)
+            colorResource(R.color.easytier_warning)
         } else {
             colorResource(R.color.easytier_text_primary)
         }

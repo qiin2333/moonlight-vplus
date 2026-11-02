@@ -94,5 +94,6 @@
     <color name="easytier_input_background">#E62F3340</color>
     <color name="easytier_text_primary">#F7F3F7</color>
     <color name="easytier_text_secondary">#C9D0D8</color>
+    <color name="easytier_warning">#FF7777</color>
 
 </resources>
