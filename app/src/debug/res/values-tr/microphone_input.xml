@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Sistem varsayılanı</string>
+    <string name="mic_input_builtin">Dahili mikrofon</string>
+    <string name="mic_input_wired">Kablolu kulaklık</string>
+    <string name="mic_input_bluetooth">Bluetooth mikrofonu</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth mikrofonu (izin gerekli)</string>
+    <string name="mic_input_usb">USB mikrofonu</string>
+    <string name="mic_input_microphone">Mikrofon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Şuradan kaydediliyor: %1$s</string>
+    <string name="mic_input_unavailable">Seçilen cihaz kullanılamıyor.</string>
+    <string name="mic_input_route_pending">Ses giriş yolu bekleniyor</string>
+    <string name="mic_input_failed">Bu mikrofon seçilemiyor. Tekrar deneyin.</string>
+    <string name="mic_input_bluetooth_quality">Bluetooth mikrofonu kullanmak iletişim çıkış yolunu değiştirebilir ve oynatma kalitesini düşürebilir.</string>
+    <string name="mic_input_system_silenced">Mikrofon Android tarafından sessize alındı</string>
+    <string name="title_mic_test">Mikrofonu test et</string>
+    <string name="summary_mic_test">Akış başlatmadan yerel mikrofon sesini yakalar ve dalga biçimini gösterir.</string>
+    <string name="title_mic_test_devices">Giriş cihazları</string>
+    <string name="mic_test_start">Testi başlat</string>
+    <string name="mic_test_stop">Testi durdur</string>
+    <string name="mic_test_waveform">Yerel dalga biçimi</string>
+    <string name="mic_test_idle">Bir giriş seçin ve testi başlatın.</string>
+    <string name="mic_test_source">Ses kaynağı</string>
+    <string name="mic_test_route">Gerçek yol</string>
+    <string name="mic_test_rms">RMS düzeyi</string>
+    <string name="mic_test_peak">Tepe düzeyi</string>
+    <string name="mic_test_record">Kaydet</string>
+    <string name="mic_test_recording">Kayıt %1$d/15 sn</string>
+    <string name="mic_test_stop_recording">Kaydı durdur</string>
+    <string name="mic_test_play">Oynat</string>
+    <string name="mic_test_playing">Oynatılıyor</string>
+    <string name="mic_test_preferred_route">Tercih edilen giriş</string>
+    <string name="mic_test_recording_route">Kayıt yapılandırması</string>
+    <string name="mic_test_display_gain">Görüntüleme kazancı: %1$s</string>
+    <string name="mic_test_selected_input">Seçilen giriş</string>
+    <string name="mic_test_bound_input">Bağlı giriş</string>
+    <string name="mic_test_communication_route">İletişim yolu</string>
+    <string name="mic_test_format">Yakalama biçimi</string>
+    <string name="mic_test_buffer">Ses arabelleği</string>
+    <string name="mic_test_session">Ses oturumu</string>
+    <string name="mic_test_error_permission">Mikrofon izni gerekiyor.</string>
+    <string name="mic_test_error_route_lost">Bluetooth mikrofon yolu kaybedildi.</string>
+    <string name="mic_test_error_route_activation">Seçilen mikrofon yolu etkinleştirilemiyor.</string>
+    <string name="mic_test_error_start">Mikrofon testi başlatılamıyor.</string>
+    <string name="mic_test_error_playback">Ses oynatma oluşturulamıyor.</string>
+    <string name="mic_test_error_playback_init">Ses oynatma başlatılamadı.</string>
+    <string name="mic_test_error_read">Mikrofon yakalama başarısız oldu.</string>
+    <string name="mic_test_error_read_code">Mikrofon yakalama başarısız oldu (%1$d).</string>
+</resources>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Rendszer alapértelmezettje</string>
+    <string name="mic_input_builtin">Beépített mikrofon</string>
+    <string name="mic_input_wired">Vezetékes headset</string>
+    <string name="mic_input_bluetooth">Bluetooth-mikrofon</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth-mikrofon (engedély szükséges)</string>
+    <string name="mic_input_usb">USB-mikrofon</string>
+    <string name="mic_input_microphone">Mikrofon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Felvétel innen: %1$s</string>
+    <string name="mic_input_unavailable">A kiválasztott eszköz nem érhető el.</string>
+    <string name="mic_input_route_pending">Várakozás a hangbemeneti útvonalra</string>
+    <string name="mic_input_failed">A mikrofon nem választható ki. Próbáld újra.</string>
+    <string name="mic_input_bluetooth_quality">A Bluetooth-mikrofon megváltoztathatja a kommunikációs kimeneti útvonalat és csökkentheti a lejátszás minőségét.</string>
+    <string name="mic_input_system_silenced">Az Android elnémította a mikrofont</string>
+    <string name="title_mic_test">Mikrofon tesztelése</string>
+    <string name="summary_mic_test">Helyi mikrofonhangot rögzít és hullámformát jelenít meg stream indítása nélkül.</string>
+    <string name="title_mic_test_devices">Bemeneti eszközök</string>
+    <string name="mic_test_start">Teszt indítása</string>
+    <string name="mic_test_stop">Teszt leállítása</string>
+    <string name="mic_test_waveform">Helyi hullámforma</string>
+    <string name="mic_test_idle">Válassz bemenetet, majd indítsd el a tesztet.</string>
+    <string name="mic_test_source">Hangforrás</string>
+    <string name="mic_test_route">Tényleges útvonal</string>
+    <string name="mic_test_rms">RMS-szint</string>
+    <string name="mic_test_peak">Csúcsszint</string>
+    <string name="mic_test_record">Felvétel</string>
+    <string name="mic_test_recording">Felvétel %1$d/15 mp</string>
+    <string name="mic_test_stop_recording">Felvétel leállítása</string>
+    <string name="mic_test_play">Lejátszás</string>
+    <string name="mic_test_playing">Lejátszás</string>
+    <string name="mic_test_preferred_route">Előnyben részesített bemenet</string>
+    <string name="mic_test_recording_route">Felvételi konfiguráció</string>
+    <string name="mic_test_display_gain">Megjelenítési erősítés: %1$s</string>
+    <string name="mic_test_selected_input">Kiválasztott bemenet</string>
+    <string name="mic_test_bound_input">Hozzárendelt bemenet</string>
+    <string name="mic_test_communication_route">Kommunikációs útvonal</string>
+    <string name="mic_test_format">Rögzítési formátum</string>
+    <string name="mic_test_buffer">Hangpuffer</string>
+    <string name="mic_test_session">Hangmunkamenet</string>
+    <string name="mic_test_error_permission">Mikrofonengedély szükséges.</string>
+    <string name="mic_test_error_route_lost">A Bluetooth-mikrofon útvonala megszakadt.</string>
+    <string name="mic_test_error_route_activation">A kiválasztott mikrofonútvonal nem aktiválható.</string>
+    <string name="mic_test_error_start">A mikrofonteszt nem indítható el.</string>
+    <string name="mic_test_error_playback">A hanglejátszás nem hozható létre.</string>
+    <string name="mic_test_error_playback_init">A hanglejátszás inicializálása sikertelen.</string>
+    <string name="mic_test_error_read">A mikrofon rögzítése sikertelen.</string>
+    <string name="mic_test_error_read_code">A mikrofon rögzítése sikertelen (%1$d).</string>
+</resources>

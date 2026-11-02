@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Системен стандартен</string>
+    <string name="mic_input_builtin">Вграден микрофон</string>
+    <string name="mic_input_wired">Кабелни слушалки</string>
+    <string name="mic_input_bluetooth">Bluetooth микрофон</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth микрофон (изисква се разрешение)</string>
+    <string name="mic_input_usb">USB микрофон</string>
+    <string name="mic_input_microphone">Микрофон</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Запис от: %1$s</string>
+    <string name="mic_input_unavailable">Избраното устройство не е налично.</string>
+    <string name="mic_input_route_pending">Изчакване на аудио входния маршрут</string>
+    <string name="mic_input_failed">Микрофонът не може да бъде избран. Опитайте отново.</string>
+    <string name="mic_input_bluetooth_quality">Bluetooth микрофонът може да промени комуникационния изход и да намали качеството на възпроизвеждане.</string>
+    <string name="mic_input_system_silenced">Микрофонът е заглушен от Android</string>
+    <string name="title_mic_test">Тест на микрофона</string>
+    <string name="summary_mic_test">Записва звука от локалния микрофон и показва формата на вълната, без да стартира стрийм.</string>
+    <string name="title_mic_test_devices">Входни устройства</string>
+    <string name="mic_test_start">Стартиране на теста</string>
+    <string name="mic_test_stop">Спиране на теста</string>
+    <string name="mic_test_waveform">Локална форма на вълната</string>
+    <string name="mic_test_idle">Изберете вход и стартирайте теста.</string>
+    <string name="mic_test_source">Аудио източник</string>
+    <string name="mic_test_route">Реален маршрут</string>
+    <string name="mic_test_rms">RMS ниво</string>
+    <string name="mic_test_peak">Пиково ниво</string>
+    <string name="mic_test_record">Запис</string>
+    <string name="mic_test_recording">Запис %1$d/15 сек.</string>
+    <string name="mic_test_stop_recording">Спиране на записа</string>
+    <string name="mic_test_play">Възпроизвеждане</string>
+    <string name="mic_test_playing">Възпроизвеждане</string>
+    <string name="mic_test_preferred_route">Предпочитан вход</string>
+    <string name="mic_test_recording_route">Конфигурация на записа</string>
+    <string name="mic_test_display_gain">Усилване на дисплея: %1$s</string>
+    <string name="mic_test_selected_input">Избран вход</string>
+    <string name="mic_test_bound_input">Свързан вход</string>
+    <string name="mic_test_communication_route">Комуникационен маршрут</string>
+    <string name="mic_test_format">Формат на записа</string>
+    <string name="mic_test_buffer">Аудио буфер</string>
+    <string name="mic_test_session">Аудио сесия</string>
+    <string name="mic_test_error_permission">Необходимо е разрешение за микрофона.</string>
+    <string name="mic_test_error_route_lost">Маршрутът на Bluetooth микрофона е изгубен.</string>
+    <string name="mic_test_error_route_activation">Избраният маршрут на микрофона не може да бъде активиран.</string>
+    <string name="mic_test_error_start">Тестът на микрофона не може да бъде стартиран.</string>
+    <string name="mic_test_error_playback">Аудиото не може да бъде възпроизведено.</string>
+    <string name="mic_test_error_playback_init">Неуспешно инициализиране на възпроизвеждането.</string>
+    <string name="mic_test_error_read">Записът от микрофона е неуспешен.</string>
+    <string name="mic_test_error_read_code">Записът от микрофона е неуспешен (%1$d).</string>
+</resources>

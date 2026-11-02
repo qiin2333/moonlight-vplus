@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Par défaut du système</string>
+    <string name="mic_input_builtin">Microphone intégré</string>
+    <string name="mic_input_wired">Casque filaire</string>
+    <string name="mic_input_bluetooth">Microphone Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Microphone Bluetooth (autorisation requise)</string>
+    <string name="mic_input_usb">Microphone USB</string>
+    <string name="mic_input_microphone">Microphone</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Enregistrement depuis : %1$s</string>
+    <string name="mic_input_unavailable">L\'appareil sélectionné est indisponible.</string>
+    <string name="mic_input_route_pending">En attente de la route d\'entrée audio</string>
+    <string name="mic_input_failed">Impossible de sélectionner ce microphone. Réessayez.</string>
+    <string name="mic_input_bluetooth_quality">Un microphone Bluetooth peut modifier la sortie de communication et réduire la qualité de lecture.</string>
+    <string name="mic_input_system_silenced">Microphone désactivé par Android</string>
+    <string name="title_mic_test">Tester le microphone</string>
+    <string name="summary_mic_test">Capture l\'audio du microphone local et affiche sa forme d\'onde sans démarrer de flux.</string>
+    <string name="title_mic_test_devices">Périphériques d\'entrée</string>
+    <string name="mic_test_start">Démarrer le test</string>
+    <string name="mic_test_stop">Arrêter le test</string>
+    <string name="mic_test_waveform">Forme d\'onde locale</string>
+    <string name="mic_test_idle">Sélectionnez une entrée et démarrez le test.</string>
+    <string name="mic_test_source">Source audio</string>
+    <string name="mic_test_route">Route réelle</string>
+    <string name="mic_test_rms">Niveau RMS</string>
+    <string name="mic_test_peak">Niveau de crête</string>
+    <string name="mic_test_record">Enregistrer</string>
+    <string name="mic_test_recording">Enregistrement %1$d/15 s</string>
+    <string name="mic_test_stop_recording">Arrêter l\'enregistrement</string>
+    <string name="mic_test_play">Lire</string>
+    <string name="mic_test_playing">Lecture</string>
+    <string name="mic_test_preferred_route">Entrée préférée</string>
+    <string name="mic_test_recording_route">Configuration d\'enregistrement</string>
+    <string name="mic_test_display_gain">Gain d\'affichage : %1$s</string>
+    <string name="mic_test_selected_input">Entrée sélectionnée</string>
+    <string name="mic_test_bound_input">Entrée liée</string>
+    <string name="mic_test_communication_route">Route de communication</string>
+    <string name="mic_test_format">Format de capture</string>
+    <string name="mic_test_buffer">Tampon audio</string>
+    <string name="mic_test_session">Session audio</string>
+    <string name="mic_test_error_permission">L\'autorisation du microphone est requise.</string>
+    <string name="mic_test_error_route_lost">La route du microphone Bluetooth a été perdue.</string>
+    <string name="mic_test_error_route_activation">Impossible d\'activer la route du microphone sélectionnée.</string>
+    <string name="mic_test_error_start">Impossible de démarrer le test du microphone.</string>
+    <string name="mic_test_error_playback">Impossible de créer la lecture audio.</string>
+    <string name="mic_test_error_playback_init">Échec de l\'initialisation de la lecture audio.</string>
+    <string name="mic_test_error_read">Échec de la capture du microphone.</string>
+    <string name="mic_test_error_read_code">Échec de la capture du microphone (%1$d).</string>
+</resources>

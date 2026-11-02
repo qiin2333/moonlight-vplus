@@ -8,6 +8,7 @@
     <string name="mic_input_usb">USB 麦克风</string>
     <string name="mic_input_microphone">麦克风</string>
     <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
     <string name="mic_input_active">正在录音：%1$s</string>
     <string name="mic_input_unavailable">所选设备不可用。</string>
     <string name="mic_input_route_pending">正在等待音频输入路由</string>
