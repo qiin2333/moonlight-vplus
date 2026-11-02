@@ -44,19 +44,28 @@ internal class MicrophoneTestDeviceRepository(context: Context) {
         if (Build.VERSION.SDK_INT < 23) return key == DEFAULT_MICROPHONE_INPUT
         if (key == DEFAULT_MICROPHONE_INPUT) return record.setPreferredDevice(null)
         val target = inputDevices().firstOrNull { it.key == key } ?: return false
-        val raw = rawInputDevices().firstOrNull { it.id == target.id } ?: return false
+        val raw = rawInputDevices().firstOrNull { audioDeviceId(it) == target.id } ?: return false
         return try { record.setPreferredDevice(raw) } catch (_: RuntimeException) { false }
     }
 
     private fun inputDevices(): List<MicrophoneTestInputDevice> = rawInputDevices().map { raw ->
         MicrophoneTestInputDevice(
-            key = "input:${raw.type}:${raw.id}",
-            id = raw.id,
-            type = raw.type,
-            name = raw.productName?.toString().orEmpty(),
+            key = "input:${audioDeviceType(raw)}:${audioDeviceId(raw)}",
+            id = audioDeviceId(raw),
+            type = audioDeviceType(raw),
+            name = audioDeviceName(raw),
             address = deviceAddress(raw)
         )
     }
+
+    private fun audioDeviceId(device: AudioDeviceInfo): Int =
+        if (Build.VERSION.SDK_INT >= 23) device.id else -1
+
+    private fun audioDeviceType(device: AudioDeviceInfo): Int =
+        if (Build.VERSION.SDK_INT >= 23) device.type else -1
+
+    private fun audioDeviceName(device: AudioDeviceInfo): String =
+        if (Build.VERSION.SDK_INT >= 23) device.productName?.toString().orEmpty() else ""
 
     private fun rawInputDevices(): List<AudioDeviceInfo> = if (Build.VERSION.SDK_INT >= 23) {
         try {
@@ -150,7 +159,6 @@ internal class MicrophoneTestBluetoothRouteController(context: Context) {
     fun activate(
         device: MicrophoneTestInputDevice,
         isCurrent: () -> Boolean,
-        onRouteLost: () -> Unit,
         complete: (Boolean) -> Unit
     ) {
         val token = generation.incrementAndGet()
