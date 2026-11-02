@@ -1848,6 +1848,7 @@
     <string name="diag_hlg_transfer">Передача HLG</string>
     <string name="diag_pq_transfer">Передача PQ</string>
     <string name="quick_btn_mic">Микр.</string>
+    <string name="quick_btn_unlock_host">Разблокировка</string>
     <string name="quick_btn_sleep">Сон</string>
     <string name="quick_btn_quit">Выход</string>
     <string name="quick_btn_win">Win</string>

@@ -133,8 +133,7 @@ object StreamActionRegistry {
         "unlock_host" to StreamAction(
             "unlock_host", "Unlock", R.drawable.ic_btn_unlock,
             labelRes = R.string.quick_btn_unlock_host,
-            tintableIcon = true,
-            isWithGameFocus = true
+            tintableIcon = true
         ),
     )
 
