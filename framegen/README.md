@@ -1,6 +1,6 @@
 # :framegen — Lossless Scaling Frame Generation 桥接模块
 
-把上游 [`lsfg-vk-android`](https://github.com/FrankBarretta/lsfg-vk-android)（MIT）作为子模块引入，
+把受控的 [`lsfg-vk-android-legacy`](https://github.com/AlkaidLab/lsfg-vk-android-legacy)（MIT）作为子模块引入，
 在 moonlight-android 里提供 AHardwareBuffer → Vulkan compute 的插帧管线。
 
 > **当前状态：阶段 1 — 骨架。** 只验证 CMake 链路 + JNI 装载，无任何业务功能。
