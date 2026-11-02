@@ -53,6 +53,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     private var record: AudioRecord? = null
     private var captureThread: Thread? = null
     private var running = AtomicBoolean(false)
+    private val recorderLock = Any()
     private var listener: ((MicrophoneTestSnapshot) -> Unit)? = null
     private var playbackThread: Thread? = null
     private var playback: AudioTrack? = null
@@ -223,68 +224,80 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     private fun createRecorder(token: Long, choice: MicrophoneInputDevice?) {
         handler.post {
             if (generation.get() != token) return@post
-            if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.RECORD_AUDIO) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                publishError("Microphone permission is required")
-                return@post
-            }
-            try {
-                val sampleRate = captureSampleRate(choice)
-                val minBuffer = AudioRecord.getMinBufferSize(
-                    sampleRate, AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT
-                )
-                check(minBuffer > 0) { "AudioRecord buffer unavailable" }
-                val bufferSize = maxOf(minBuffer * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE)
-                val source = microphoneCaptureSource(choice?.communication == true, false)
-                val input = matchingInput(choice)
-                val audioRecord = AudioRecord(
-                    source,
-                    sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
-                check(audioRecord.state == AudioRecord.STATE_INITIALIZED) {
-                    "AudioRecord initialization failed"
+            synchronized(recorderLock) {
+                if (generation.get() != token) return@synchronized
+                if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.RECORD_AUDIO) !=
+                    PackageManager.PERMISSION_GRANTED
+                ) {
+                    publishError("Microphone permission is required")
+                    return@synchronized
                 }
-                // Some OEMs expose a Bluetooth communication endpoint but no matching
-                // AudioRecord input port. Keep the communication route and let the
-                // platform choose its recording endpoint instead of failing the test.
-                val key = input?.key ?: if (choice?.communication == true) {
-                    DEFAULT_MICROPHONE_INPUT
-                } else {
-                    choice?.key ?: DEFAULT_MICROPHONE_INPUT
+                var newRecord: AudioRecord? = null
+                try {
+                    val sampleRate = captureSampleRate(choice)
+                    val minBuffer = AudioRecord.getMinBufferSize(
+                        sampleRate, AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT
+                    )
+                    check(minBuffer > 0) { "AudioRecord buffer unavailable" }
+                    val bufferSize = maxOf(minBuffer * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE)
+                    val source = microphoneCaptureSource(choice?.communication == true, false)
+                    val input = matchingInput(choice)
+                    newRecord = AudioRecord(
+                        source,
+                        sampleRate,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+                    check(newRecord!!.state == AudioRecord.STATE_INITIALIZED) {
+                        "AudioRecord initialization failed"
+                    }
+                    // Some OEMs expose a Bluetooth communication endpoint but no matching
+                    // AudioRecord input port. Keep the communication route and let the
+                    // platform choose its recording endpoint instead of failing the test.
+                    val key = input?.key ?: if (choice?.communication == true) {
+                        DEFAULT_MICROPHONE_INPUT
+                    } else {
+                        choice?.key ?: DEFAULT_MICROPHONE_INPUT
+                    }
+                    check(devices.apply(newRecord!!, key)) {
+                        "Microphone input preference rejected"
+                    }
+                    newRecord!!.startRecording()
+                    check(newRecord!!.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                        "AudioRecord did not start"
+                    }
+                    // Some OEMs accept the preferred input before start but only apply it
+                    // after the recording session owns the route.
+                    val reapplied = devices.apply(newRecord!!, key)
+                    check(reapplied || input == null) {
+                        "Microphone input preference was not retained after start"
+                    }
+                    if (generation.get() != token) return@synchronized
+                    val startedRecord = newRecord!!
+                    record = startedRecord
+                    newRecord = null
+                    captureSampleRate = sampleRate
+                    running.set(true)
+                    if (choice?.communication == true) {
+                        startCommunicationKeepalive(token, sampleRate)
+                    }
+                    publishSnapshot(
+                        startedRecord, source, emptyList(), 0f, 0f, choice, input, bufferSize, sampleRate
+                    )
+                    capture(token, startedRecord, source, bufferSize, choice, input, sampleRate)
+                } catch (e: Exception) {
+                    try { newRecord?.stop() } catch (_: RuntimeException) { }
+                    try { newRecord?.release() } catch (_: RuntimeException) { }
+                    newRecord = null
+                    LimeLog.warning("Microphone test failed: ${e.javaClass.simpleName}")
+                    if (generation.get() == token) {
+                        publishError(e.message ?: "Unable to start microphone test")
+                    }
+                    stopRecorder()
+                    bluetoothRoute.release()
                 }
-                check(devices.apply(audioRecord, key)) {
-                    "Microphone input preference rejected"
-                }
-                audioRecord.startRecording()
-                check(audioRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                    "AudioRecord did not start"
-                }
-                // Some OEMs accept the preferred input before start but only apply it
-                // after the recording session owns the route.
-                val reapplied = devices.apply(audioRecord, key)
-                check(reapplied || input == null) {
-                    "Microphone input preference was not retained after start"
-                }
-                record = audioRecord
-                captureSampleRate = sampleRate
-                running.set(true)
-                if (choice?.communication == true) {
-                    startCommunicationKeepalive(token, sampleRate)
-                }
-                publishSnapshot(
-                    audioRecord, source, emptyList(), 0f, 0f, choice, input, bufferSize, sampleRate
-                )
-                capture(token, audioRecord, source, bufferSize, choice, input, sampleRate)
-            } catch (e: Exception) {
-                LimeLog.warning("Microphone test failed: ${e.javaClass.simpleName}")
-                publishError(e.message ?: "Unable to start microphone test")
-                stopRecorder()
-                bluetoothRoute.release()
             }
         }
     }
@@ -319,7 +332,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                         synchronized(recordingLock) {
                             if (recordingActive) {
                                 val maxBytes = (recordingSampleRate ?: sampleRate) *
-                                    MAX_RECORDING_SECONDS / 1000 * 2
+                                    MAX_RECORDING_SECONDS * 2
                                 val remaining = (maxBytes - recordingData.size()).coerceAtLeast(0)
                                 val writable = minOf(read, remaining - (remaining % 2))
                                 if (writable > 0) recordingData.write(buffer, 0, writable)
@@ -506,13 +519,15 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     }
 
     private fun stopRecorder() {
-        running.set(false)
-        stopCommunicationKeepalive()
-        try { record?.stop() } catch (_: RuntimeException) { }
-        captureThread?.interrupt()
-        captureThread = null
-        try { record?.release() } catch (_: RuntimeException) { }
-        record = null
+        synchronized(recorderLock) {
+            running.set(false)
+            stopCommunicationKeepalive()
+            try { record?.stop() } catch (_: RuntimeException) { }
+            captureThread?.interrupt()
+            captureThread = null
+            try { record?.release() } catch (_: RuntimeException) { }
+            record = null
+        }
     }
 
     private fun stopPlayback() {

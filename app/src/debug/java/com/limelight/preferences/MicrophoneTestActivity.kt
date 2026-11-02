@@ -1,12 +1,13 @@
 package com.limelight.preferences
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,7 +66,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -96,7 +96,6 @@ class MicrophoneTestActivity : ThemedAppCompatActivity() {
             )
         }
     }
-
     override fun onDestroy() {
         session.close()
         super.onDestroy()
@@ -122,6 +121,7 @@ private fun MicrophoneTestScreen(
     var choices by remember { mutableStateOf(session.choices()) }
     var names by remember { mutableStateOf(session.displayNames(choices)) }
     var selectedKey by remember { mutableStateOf(DEFAULT_MICROPHONE_INPUT) }
+    var pendingPermissionChoice by remember { mutableStateOf<MicrophoneInputDevice?>(null) }
     var snapshot by remember { mutableStateOf(MicrophoneTestSnapshot()) }
     val backDescription = stringResource(R.string.controller_diag_back)
     val context = LocalContext.current
@@ -145,20 +145,37 @@ private fun MicrophoneTestScreen(
     fun selectedDevice(): MicrophoneInputDevice? =
         choices.firstOrNull { it.key == selectedKey }
 
-    fun startTest() {
-        val permissions = buildList {
-            add(Manifest.permission.RECORD_AUDIO)
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
-                add(Manifest.permission.BLUETOOTH_CONNECT)
-            }
-        }.toTypedArray()
-        if (permissions.any {
-                ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-            }
-        ) {
-            ActivityCompat.requestPermissions(context as Activity, permissions, REQUEST_CODE)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val choice = pendingPermissionChoice
+        pendingPermissionChoice = null
+        val bluetoothRequired = choice?.communication == true && android.os.Build.VERSION.SDK_INT >= 31
+        val granted = grants[Manifest.permission.RECORD_AUDIO] == true &&
+            (!bluetoothRequired || grants[Manifest.permission.BLUETOOTH_CONNECT] == true)
+        if (granted) {
+            session.start(choice) { snapshot = it }
         } else {
-            session.start(selectedDevice()) { snapshot = it }
+            snapshot = MicrophoneTestSnapshot(error = "Microphone permission is required")
+        }
+    }
+
+    fun startTest() {
+        val choice = selectedDevice()
+        val permissions = buildList {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+                PackageManager.PERMISSION_GRANTED
+            ) add(Manifest.permission.RECORD_AUDIO)
+            if (choice?.communication == true && android.os.Build.VERSION.SDK_INT >= 31 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) !=
+                PackageManager.PERMISSION_GRANTED
+            ) add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        if (permissions.isNotEmpty()) {
+            pendingPermissionChoice = choice
+            permissionLauncher.launch(permissions.toTypedArray())
+        } else {
+            session.start(choice) { snapshot = it }
         }
     }
 
@@ -454,4 +471,3 @@ private fun Modifier.consumeConfirm(onConfirm: () -> Unit): Modifier =
         true
     }
 
-private const val REQUEST_CODE = 3107
