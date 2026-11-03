@@ -14,6 +14,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.limelight.LimeLog
+import com.limelight.R
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
@@ -53,6 +54,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     private var record: AudioRecord? = null
     private var captureThread: Thread? = null
     private var running = AtomicBoolean(false)
+    private val recorderLock = Any()
     private var listener: ((MicrophoneTestSnapshot) -> Unit)? = null
     private var playbackThread: Thread? = null
     private var playback: AudioTrack? = null
@@ -64,6 +66,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     private val recordingData = ByteArrayOutputStream()
     private var recordingActive = false
     private var recordingStartedAt = 0L
+    private var recordingSampleRate: Int? = null
     private var lastSnapshot = MicrophoneTestSnapshot()
     private var captureSampleRate = MicrophoneConfig.SAMPLE_RATE
 
@@ -74,19 +77,19 @@ internal class MicrophoneTestSession(context: android.content.Context) {
 
     fun start(choice: MicrophoneInputDevice?, onChanged: (MicrophoneTestSnapshot) -> Unit) {
         val token = generation.incrementAndGet()
-        listener = onChanged
+        listener = null
         stopRecorder()
+        stopPlayback()
+        clearRecording()
+        listener = onChanged
         publish(MicrophoneTestSnapshot())
         bluetoothRoute.release {
             if (generation.get() != token) return@release
             if (choice?.communication == true) {
-                bluetoothRoute.activate(choice, { generation.get() == token },
-                    onRouteLost = {
-                        if (generation.get() == token) publishError("Bluetooth microphone route lost")
-                    }) { success ->
+                bluetoothRoute.activate(choice, { generation.get() == token }) { success ->
                     if (generation.get() != token) return@activate
                     if (success) createRecorder(token, choice)
-                    else publishError("Unable to activate the selected microphone route")
+                    else publishError(appContext.getString(R.string.mic_test_error_route_activation))
                 }
             } else {
                 createRecorder(token, choice)
@@ -96,6 +99,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
 
     fun stop() {
         generation.incrementAndGet()
+        listener = null
         stopRecorder()
         stopPlayback()
         clearRecording()
@@ -104,7 +108,12 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     }
 
     fun close() {
-        stop()
+        generation.incrementAndGet()
+        listener = null
+        stopRecorder()
+        stopPlayback()
+        clearRecording()
+        bluetoothRoute.close()
         worker.quitSafely()
     }
 
@@ -116,6 +125,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
             } else {
                 stopPlayback()
                 recordingData.reset()
+                recordingSampleRate = captureSampleRate
                 recordingStartedAt = android.os.SystemClock.elapsedRealtime()
                 recordingActive = true
             }
@@ -124,16 +134,20 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     }
 
     fun playRecording() {
-        val data = synchronized(recordingLock) { recordingData.toByteArray() }
+        val recording = synchronized(recordingLock) {
+            recordingData.toByteArray() to (recordingSampleRate ?: captureSampleRate)
+        }
+        val data = recording.first
+        val sampleRate = recording.second
         if (data.isEmpty() || synchronized(playbackLock) { playbackThread?.isAlive == true }) return
         val minBuffer = AudioTrack.getMinBufferSize(
-            captureSampleRate,
+            sampleRate,
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
         if (minBuffer <= 0) return
-        val bufferSize = maxOf(minBuffer, data.size)
-        val track = if (Build.VERSION.SDK_INT >= 23) {
+        val bufferSize = maxOf(minBuffer * 2, sampleRate / 5 * 2)
+        val track = try { if (Build.VERSION.SDK_INT >= 23) {
             AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
@@ -143,7 +157,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 )
                 .setAudioFormat(
                     AudioFormat.Builder()
-                        .setSampleRate(captureSampleRate)
+                        .setSampleRate(sampleRate)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                         .build()
@@ -155,12 +169,20 @@ internal class MicrophoneTestSession(context: android.content.Context) {
             @Suppress("DEPRECATION")
             AudioTrack(
                 AudioManager.STREAM_MUSIC,
-                MicrophoneConfig.SAMPLE_RATE,
+                sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize,
                 AudioTrack.MODE_STREAM
             )
+        } } catch (e: RuntimeException) {
+            publishError(appContext.getString(R.string.mic_test_error_playback))
+            return
+        }
+        if (track.state != AudioTrack.STATE_INITIALIZED) {
+            track.release()
+            publishError(appContext.getString(R.string.mic_test_error_playback_init))
+            return
         }
         val thread = Thread({
             try {
@@ -207,68 +229,85 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     private fun createRecorder(token: Long, choice: MicrophoneInputDevice?) {
         handler.post {
             if (generation.get() != token) return@post
-            if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.RECORD_AUDIO) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                publishError("Microphone permission is required")
-                return@post
-            }
-            try {
-                val sampleRate = captureSampleRate(choice)
-                val minBuffer = AudioRecord.getMinBufferSize(
-                    sampleRate, AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT
-                )
-                check(minBuffer > 0) { "AudioRecord buffer unavailable" }
-                val bufferSize = maxOf(minBuffer * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE)
-                val source = microphoneCaptureSource(choice?.communication == true, false)
-                val input = matchingInput(choice)
-                val audioRecord = AudioRecord(
-                    source,
-                    sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
-                check(audioRecord.state == AudioRecord.STATE_INITIALIZED) {
-                    "AudioRecord initialization failed"
+            synchronized(recorderLock) {
+                if (generation.get() != token) return@synchronized
+                if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.RECORD_AUDIO) !=
+                    PackageManager.PERMISSION_GRANTED
+                ) {
+                    publishError(appContext.getString(R.string.mic_test_error_permission))
+                    return@synchronized
                 }
-                // Some OEMs expose a Bluetooth communication endpoint but no matching
-                // AudioRecord input port. Keep the communication route and let the
-                // platform choose its recording endpoint instead of failing the test.
-                val key = input?.key ?: if (choice?.communication == true) {
-                    DEFAULT_MICROPHONE_INPUT
-                } else {
-                    choice?.key ?: DEFAULT_MICROPHONE_INPUT
+                var newRecord: AudioRecord? = null
+                try {
+                    val sampleRate = captureSampleRate(choice)
+                    val minBuffer = AudioRecord.getMinBufferSize(
+                        sampleRate, AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT
+                    )
+                    check(minBuffer > 0) { "AudioRecord buffer unavailable" }
+                    val bufferSize = maxOf(minBuffer * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE)
+                    val source = microphoneCaptureSource(choice?.communication == true, false)
+                    val input = matchingInput(choice)
+                    newRecord = AudioRecord(
+                        source,
+                        sampleRate,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+                    check(newRecord!!.state == AudioRecord.STATE_INITIALIZED) {
+                        "AudioRecord initialization failed"
+                    }
+                    // Some OEMs expose a Bluetooth communication endpoint but no matching
+                    // AudioRecord input port. Keep the communication route and let the
+                    // platform choose its recording endpoint instead of failing the test.
+                    val key = input?.key ?: if (choice?.communication == true) {
+                        DEFAULT_MICROPHONE_INPUT
+                    } else {
+                        choice?.key ?: DEFAULT_MICROPHONE_INPUT
+                    }
+                    check(devices.apply(newRecord!!, key)) {
+                        "Microphone input preference rejected"
+                    }
+                    newRecord!!.startRecording()
+                    check(newRecord!!.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                        "AudioRecord did not start"
+                    }
+                    // Some OEMs accept the preferred input before start but only apply it
+                    // after the recording session owns the route.
+                    val reapplied = devices.apply(newRecord!!, key)
+                    check(reapplied || input == null) {
+                        "Microphone input preference was not retained after start"
+                    }
+                    if (generation.get() != token) {
+                        releaseRecorder(newRecord)
+                        newRecord = null
+                        return@synchronized
+                    }
+                    val startedRecord = newRecord!!
+                    record = startedRecord
+                    newRecord = null
+                    captureSampleRate = sampleRate
+                    running.set(true)
+                    if (choice?.communication == true && choice.type == 7) {
+                        startCommunicationKeepalive(token, sampleRate)
+                    }
+                    publishSnapshot(
+                        token, startedRecord, source, emptyList(), 0f, 0f,
+                        choice, input, bufferSize, sampleRate
+                    )
+                    capture(token, startedRecord, source, bufferSize, choice, input, sampleRate)
+                } catch (e: Exception) {
+                    try { newRecord?.stop() } catch (_: RuntimeException) { }
+                    try { newRecord?.release() } catch (_: RuntimeException) { }
+                    newRecord = null
+                    LimeLog.warning("Microphone test failed: ${e.javaClass.simpleName}")
+                    if (generation.get() == token) {
+                        publishError(appContext.getString(R.string.mic_test_error_start))
+                        stopRecorder()
+                        bluetoothRoute.release()
+                    }
                 }
-                check(devices.apply(audioRecord, key)) {
-                    "Microphone input preference rejected"
-                }
-                audioRecord.startRecording()
-                check(audioRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                    "AudioRecord did not start"
-                }
-                // Some OEMs accept the preferred input before start but only apply it
-                // after the recording session owns the route.
-                val reapplied = devices.apply(audioRecord, key)
-                check(reapplied || input == null) {
-                    "Microphone input preference was not retained after start"
-                }
-                record = audioRecord
-                captureSampleRate = sampleRate
-                running.set(true)
-                if (choice?.communication == true) {
-                    startCommunicationKeepalive(token, sampleRate)
-                }
-                publishSnapshot(
-                    audioRecord, source, emptyList(), 0f, 0f, choice, input, bufferSize, sampleRate
-                )
-                capture(token, audioRecord, source, bufferSize, choice, input, sampleRate)
-            } catch (e: Exception) {
-                LimeLog.warning("Microphone test failed: ${e.javaClass.simpleName}")
-                publishError(e.message ?: "Unable to start microphone test")
-                stopRecorder()
-                bluetoothRoute.release()
             }
         }
     }
@@ -291,21 +330,37 @@ internal class MicrophoneTestSession(context: android.content.Context) {
             val buffer = ByteArray(bufferSize)
             val waveform = ArrayDeque<Float>(WAVEFORM_POINTS)
             var lastPublish = 0L
+            var bluetoothRouteObserved = false
             try {
                 while (generation.get() == token && running.get()) {
+                    if (choice?.communication == true && Build.VERSION.SDK_INT >= 23) {
+                        val routed = try { audioRecord.routedDevice } catch (_: RuntimeException) { null }
+                        if (routed != null && isBluetoothType(routed.type)) {
+                            bluetoothRouteObserved = true
+                        } else if (bluetoothRouteObserved) {
+                            publishError(
+                                appContext.getString(R.string.mic_test_error_route_lost), token
+                            )
+                            break
+                        }
+                    }
                     val read = if (Build.VERSION.SDK_INT >= 23) {
                         audioRecord.read(buffer, 0, buffer.size, AudioRecord.READ_NON_BLOCKING)
                     } else {
                         audioRecord.read(buffer, 0, buffer.size)
                     }
                     if (read > 1) {
+                        if (generation.get() != token || !running.get()) break
                         val metrics = pcmMetrics(buffer, read)
                         synchronized(recordingLock) {
                             if (recordingActive) {
-                                recordingData.write(buffer, 0, read)
-                                if (android.os.SystemClock.elapsedRealtime() - recordingStartedAt >=
-                                    MAX_RECORDING_MS
-                                ) {
+                                val maxBytes = (recordingSampleRate ?: sampleRate) *
+                                    MAX_RECORDING_SECONDS * 2
+                                val remaining = (maxBytes - recordingData.size()).coerceAtLeast(0)
+                                val writable = minOf(read, remaining - (remaining % 2))
+                                if (writable > 0) recordingData.write(buffer, 0, writable)
+                                if (writable < read ||
+                                    android.os.SystemClock.elapsedRealtime() - recordingStartedAt >= MAX_RECORDING_MS) {
                                     recordingActive = false
                                 }
                             }
@@ -314,14 +369,15 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                         while (waveform.size > WAVEFORM_POINTS) waveform.removeFirst()
                         val now = android.os.SystemClock.elapsedRealtime()
                         if (now - lastPublish >= PUBLISH_INTERVAL_MS) {
+                            if (generation.get() != token || !running.get()) break
                             lastPublish = now
                             publishSnapshot(
-                                audioRecord, source, waveform.toList(), metrics.rms, metrics.peak,
+                                token, audioRecord, source, waveform.toList(), metrics.rms, metrics.peak,
                                 choice, input, bufferSize, sampleRate
                             )
                         }
                     } else if (read < 0) {
-                        publishError("AudioRecord read failed: $read")
+                        publishError(appContext.getString(R.string.mic_test_error_read_code, read), token)
                         break
                     } else {
                         Thread.sleep(10)
@@ -331,7 +387,9 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 Thread.currentThread().interrupt()
             } catch (e: RuntimeException) {
                 LimeLog.warning("Microphone test read failed: ${e.javaClass.simpleName}")
-                publishError(e.message ?: "Microphone test read failed")
+                publishError(appContext.getString(R.string.mic_test_error_read), token)
+            } finally {
+                cleanupCapture(token, audioRecord)
             }
         }, "MicrophoneTestCapture")
         captureThread = thread
@@ -371,6 +429,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     }
 
     private fun publishSnapshot(
+        token: Long,
         audioRecord: AudioRecord,
         source: Int,
         waveform: List<Float>,
@@ -431,7 +490,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 "Unavailable (Android < 7)"
             },
             displayGain = waveformDisplayGain(waveform)
-        ))
+        ), token)
     }
 
     private fun formatDevice(device: android.media.AudioDeviceInfo?): String {
@@ -463,11 +522,12 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         }
     }
 
-    private fun publishError(message: String) {
-        publish(MicrophoneTestSnapshot(error = message))
+    private fun publishError(message: String, token: Long? = null) {
+        if (token != null && generation.get() != token) return
+        publish(MicrophoneTestSnapshot(error = message), token)
     }
 
-    private fun publish(snapshot: MicrophoneTestSnapshot) {
+    private fun publish(snapshot: MicrophoneTestSnapshot, token: Long? = null) {
         val enriched = synchronized(recordingLock) {
             snapshot.copy(
                 recording = recordingActive,
@@ -482,33 +542,58 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         lastSnapshot = enriched
         val callback = listener ?: return
         mainHandler.post {
-            if (listener === callback) callback(enriched)
+            if (listener === callback && (token == null || generation.get() == token)) {
+                callback(enriched)
+            }
         }
     }
 
+    private fun cleanupCapture(token: Long, audioRecord: AudioRecord) {
+        if (generation.get() != token) return
+        synchronized(recorderLock) {
+            if (generation.get() != token || record !== audioRecord) return
+            running.set(false)
+            stopCommunicationKeepalive()
+            record = null
+            if (captureThread === Thread.currentThread()) captureThread = null
+        }
+        releaseRecorder(audioRecord)
+    }
+
     private fun stopRecorder() {
-        running.set(false)
-        stopCommunicationKeepalive()
-        try { record?.stop() } catch (_: RuntimeException) { }
-        captureThread?.interrupt()
-        captureThread = null
-        try { record?.release() } catch (_: RuntimeException) { }
-        record = null
+        synchronized(recorderLock) {
+            running.set(false)
+            stopCommunicationKeepalive()
+            try { record?.stop() } catch (_: RuntimeException) { }
+            captureThread?.interrupt()
+            captureThread = null
+            try { record?.release() } catch (_: RuntimeException) { }
+            record = null
+        }
+    }
+
+    private fun releaseRecorder(audioRecord: AudioRecord?) {
+        try { audioRecord?.stop() } catch (_: RuntimeException) { }
+        try { audioRecord?.release() } catch (_: RuntimeException) { }
     }
 
     private fun stopPlayback() {
         synchronized(playbackLock) {
             val track = playback
+            val thread = playbackThread
             try { track?.stop() } catch (_: RuntimeException) { }
             playback = null
-            playbackThread?.interrupt()
+            playbackThread = null
+            thread?.interrupt()
         }
+        publish(lastSnapshot)
     }
 
     private fun clearRecording() {
         synchronized(recordingLock) {
             recordingActive = false
             recordingStartedAt = 0L
+            recordingSampleRate = null
             recordingData.reset()
         }
     }

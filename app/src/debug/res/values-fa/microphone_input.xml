@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">پیش‌فرض سیستم</string>
+    <string name="mic_input_builtin">میکروفون داخلی</string>
+    <string name="mic_input_wired">هدست سیمی</string>
+    <string name="mic_input_bluetooth">میکروفون بلوتوث</string>
+    <string name="mic_input_bluetooth_permission">میکروفون بلوتوث (نیازمند مجوز)</string>
+    <string name="mic_input_usb">میکروفون USB</string>
+    <string name="mic_input_microphone">میکروفون</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">ضبط از: %1$s</string>
+    <string name="mic_input_unavailable">دستگاه انتخاب‌شده در دسترس نیست.</string>
+    <string name="mic_input_route_pending">در انتظار مسیر ورودی صدا</string>
+    <string name="mic_input_failed">انتخاب این میکروفون ممکن نیست. دوباره تلاش کنید.</string>
+    <string name="mic_input_bluetooth_quality">استفاده از میکروفون بلوتوث ممکن است مسیر خروجی ارتباط و کیفیت پخش را تغییر دهد.</string>
+    <string name="mic_input_system_silenced">میکروفون توسط اندروید بی‌صدا شده است</string>
+    <string name="title_mic_test">آزمایش میکروفون</string>
+    <string name="summary_mic_test">صدای میکروفون محلی را ضبط می‌کند و بدون شروع استریم، شکل موج را نشان می‌دهد.</string>
+    <string name="title_mic_test_devices">دستگاه‌های ورودی</string>
+    <string name="mic_test_start">شروع آزمایش</string>
+    <string name="mic_test_stop">توقف آزمایش</string>
+    <string name="mic_test_waveform">شکل موج محلی</string>
+    <string name="mic_test_idle">یک ورودی انتخاب کنید و آزمایش را شروع کنید.</string>
+    <string name="mic_test_source">منبع صدا</string>
+    <string name="mic_test_route">مسیر واقعی</string>
+    <string name="mic_test_rms">سطح RMS</string>
+    <string name="mic_test_peak">سطح اوج</string>
+    <string name="mic_test_record">ضبط</string>
+    <string name="mic_test_recording">ضبط %1$d/15 ثانیه</string>
+    <string name="mic_test_stop_recording">توقف ضبط</string>
+    <string name="mic_test_play">پخش</string>
+    <string name="mic_test_playing">در حال پخش</string>
+    <string name="mic_test_preferred_route">ورودی ترجیحی</string>
+    <string name="mic_test_recording_route">پیکربندی ضبط</string>
+    <string name="mic_test_display_gain">بهره نمایش: %1$s</string>
+    <string name="mic_test_selected_input">ورودی انتخاب‌شده</string>
+    <string name="mic_test_bound_input">ورودی متصل</string>
+    <string name="mic_test_communication_route">مسیر ارتباط</string>
+    <string name="mic_test_format">قالب ضبط</string>
+    <string name="mic_test_buffer">بافر صدا</string>
+    <string name="mic_test_session">نشست صدا</string>
+    <string name="mic_test_error_permission">مجوز میکروفون لازم است.</string>
+    <string name="mic_test_error_route_lost">مسیر میکروفون بلوتوث از دست رفت.</string>
+    <string name="mic_test_error_route_activation">فعال‌سازی مسیر میکروفون انتخاب‌شده ممکن نیست.</string>
+    <string name="mic_test_error_start">آزمایش میکروفون شروع نشد.</string>
+    <string name="mic_test_error_playback">ایجاد پخش صدا ممکن نیست.</string>
+    <string name="mic_test_error_playback_init">راه‌اندازی پخش صدا ناموفق بود.</string>
+    <string name="mic_test_error_read">ضبط از میکروفون ناموفق بود.</string>
+    <string name="mic_test_error_read_code">ضبط از میکروفون ناموفق بود (%1$d).</string>
+</resources>

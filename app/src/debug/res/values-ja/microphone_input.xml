@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">システムのデフォルト</string>
+    <string name="mic_input_builtin">内蔵マイク</string>
+    <string name="mic_input_wired">有線ヘッドセット</string>
+    <string name="mic_input_bluetooth">Bluetooth マイク</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth マイク（権限が必要）</string>
+    <string name="mic_input_usb">USB マイク</string>
+    <string name="mic_input_microphone">マイク</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">録音中: %1$s</string>
+    <string name="mic_input_unavailable">選択したデバイスは利用できません。</string>
+    <string name="mic_input_route_pending">音声入力ルートを待機中</string>
+    <string name="mic_input_failed">このマイクを選択できません。もう一度お試しください。</string>
+    <string name="mic_input_bluetooth_quality">Bluetooth マイクを使うと通信出力ルートが変わり、再生品質が低下する場合があります。</string>
+    <string name="mic_input_system_silenced">Android によりマイクがミュートされています</string>
+    <string name="title_mic_test">マイクをテスト</string>
+    <string name="summary_mic_test">ストリームを開始せずに、端末のマイク音声を取得して波形を表示します。</string>
+    <string name="title_mic_test_devices">入力デバイス</string>
+    <string name="mic_test_start">テスト開始</string>
+    <string name="mic_test_stop">テスト停止</string>
+    <string name="mic_test_waveform">ローカル波形</string>
+    <string name="mic_test_idle">入力を選択してテストを開始してください。</string>
+    <string name="mic_test_source">音声ソース</string>
+    <string name="mic_test_route">実際のルート</string>
+    <string name="mic_test_rms">RMS レベル</string>
+    <string name="mic_test_peak">ピークレベル</string>
+    <string name="mic_test_record">録音</string>
+    <string name="mic_test_recording">録音中 %1$d/15 秒</string>
+    <string name="mic_test_stop_recording">録音停止</string>
+    <string name="mic_test_play">再生</string>
+    <string name="mic_test_playing">再生中</string>
+    <string name="mic_test_preferred_route">優先入力</string>
+    <string name="mic_test_recording_route">録音設定</string>
+    <string name="mic_test_display_gain">表示ゲイン: %1$s</string>
+    <string name="mic_test_selected_input">選択した入力</string>
+    <string name="mic_test_bound_input">割り当てられた入力</string>
+    <string name="mic_test_communication_route">通信ルート</string>
+    <string name="mic_test_format">取得形式</string>
+    <string name="mic_test_buffer">音声バッファ</string>
+    <string name="mic_test_session">音声セッション</string>
+    <string name="mic_test_error_permission">マイクの権限が必要です。</string>
+    <string name="mic_test_error_route_lost">Bluetooth マイクのルートが失われました。</string>
+    <string name="mic_test_error_route_activation">選択したマイクルートを有効にできません。</string>
+    <string name="mic_test_error_start">マイクテストを開始できません。</string>
+    <string name="mic_test_error_playback">音声再生を作成できません。</string>
+    <string name="mic_test_error_playback_init">音声再生の初期化に失敗しました。</string>
+    <string name="mic_test_error_read">マイクの取得に失敗しました。</string>
+    <string name="mic_test_error_read_code">マイクの取得に失敗しました（%1$d）。</string>
+</resources>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Implicit de sistem</string>
+    <string name="mic_input_builtin">Microfon încorporat</string>
+    <string name="mic_input_wired">Căști cu fir</string>
+    <string name="mic_input_bluetooth">Microfon Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Microfon Bluetooth (este necesară permisiunea)</string>
+    <string name="mic_input_usb">Microfon USB</string>
+    <string name="mic_input_microphone">Microfon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Se înregistrează de la: %1$s</string>
+    <string name="mic_input_unavailable">Dispozitivul selectat nu este disponibil.</string>
+    <string name="mic_input_route_pending">Se așteaptă ruta de intrare audio</string>
+    <string name="mic_input_failed">Microfonul nu poate fi selectat. Încearcă din nou.</string>
+    <string name="mic_input_bluetooth_quality">Folosirea unui microfon Bluetooth poate schimba ruta de comunicare și poate reduce calitatea redării.</string>
+    <string name="mic_input_system_silenced">Microfon dezactivat de Android</string>
+    <string name="title_mic_test">Testare microfon</string>
+    <string name="summary_mic_test">Capturează sunetul microfonului local și afișează forma de undă fără a porni un stream.</string>
+    <string name="title_mic_test_devices">Dispozitive de intrare</string>
+    <string name="mic_test_start">Pornește testul</string>
+    <string name="mic_test_stop">Oprește testul</string>
+    <string name="mic_test_waveform">Formă de undă locală</string>
+    <string name="mic_test_idle">Selectează o intrare și pornește testul.</string>
+    <string name="mic_test_source">Sursă audio</string>
+    <string name="mic_test_route">Rută actuală</string>
+    <string name="mic_test_rms">Nivel RMS</string>
+    <string name="mic_test_peak">Nivel maxim</string>
+    <string name="mic_test_record">Înregistrează</string>
+    <string name="mic_test_recording">Înregistrare %1$d/15 sec.</string>
+    <string name="mic_test_stop_recording">Oprește înregistrarea</string>
+    <string name="mic_test_play">Redă</string>
+    <string name="mic_test_playing">Se redă</string>
+    <string name="mic_test_preferred_route">Intrare preferată</string>
+    <string name="mic_test_recording_route">Configurație înregistrare</string>
+    <string name="mic_test_display_gain">Amplificare afișare: %1$s</string>
+    <string name="mic_test_selected_input">Intrare selectată</string>
+    <string name="mic_test_bound_input">Intrare asociată</string>
+    <string name="mic_test_communication_route">Rută de comunicare</string>
+    <string name="mic_test_format">Format captură</string>
+    <string name="mic_test_buffer">Memorie tampon audio</string>
+    <string name="mic_test_session">Sesiune audio</string>
+    <string name="mic_test_error_permission">Este necesară permisiunea pentru microfon.</string>
+    <string name="mic_test_error_route_lost">Ruta microfonului Bluetooth a fost pierdută.</string>
+    <string name="mic_test_error_route_activation">Ruta microfonului selectat nu poate fi activată.</string>
+    <string name="mic_test_error_start">Testul microfonului nu poate fi pornit.</string>
+    <string name="mic_test_error_playback">Redarea audio nu poate fi creată.</string>
+    <string name="mic_test_error_playback_init">Inițializarea redării audio a eșuat.</string>
+    <string name="mic_test_error_read">Captura microfonului a eșuat.</string>
+    <string name="mic_test_error_read_code">Captura microfonului a eșuat (%1$d).</string>
+</resources>

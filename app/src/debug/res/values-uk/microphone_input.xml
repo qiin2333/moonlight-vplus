@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Системний за замовчуванням</string>
+    <string name="mic_input_builtin">Вбудований мікрофон</string>
+    <string name="mic_input_wired">Дротова гарнітура</string>
+    <string name="mic_input_bluetooth">Мікрофон Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Мікрофон Bluetooth (потрібен дозвіл)</string>
+    <string name="mic_input_usb">Мікрофон USB</string>
+    <string name="mic_input_microphone">Мікрофон</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Запис із: %1$s</string>
+    <string name="mic_input_unavailable">Вибраний пристрій недоступний.</string>
+    <string name="mic_input_route_pending">Очікування маршруту аудіовходу</string>
+    <string name="mic_input_failed">Не вдалося вибрати цей мікрофон. Спробуйте ще раз.</string>
+    <string name="mic_input_bluetooth_quality">Мікрофон Bluetooth може змінити маршрут зв’язку та знизити якість відтворення.</string>
+    <string name="mic_input_system_silenced">Мікрофон вимкнено Android</string>
+    <string name="title_mic_test">Тест мікрофона</string>
+    <string name="summary_mic_test">Захоплює звук локального мікрофона та показує форму хвилі без запуску потоку.</string>
+    <string name="title_mic_test_devices">Пристрої вводу</string>
+    <string name="mic_test_start">Почати тест</string>
+    <string name="mic_test_stop">Зупинити тест</string>
+    <string name="mic_test_waveform">Локальна форма хвилі</string>
+    <string name="mic_test_idle">Виберіть вхід і почніть тест.</string>
+    <string name="mic_test_source">Джерело аудіо</string>
+    <string name="mic_test_route">Фактичний маршрут</string>
+    <string name="mic_test_rms">Рівень RMS</string>
+    <string name="mic_test_peak">Піковий рівень</string>
+    <string name="mic_test_record">Запис</string>
+    <string name="mic_test_recording">Запис %1$d/15 с</string>
+    <string name="mic_test_stop_recording">Зупинити запис</string>
+    <string name="mic_test_play">Відтворити</string>
+    <string name="mic_test_playing">Відтворення</string>
+    <string name="mic_test_preferred_route">Бажаний вхід</string>
+    <string name="mic_test_recording_route">Конфігурація запису</string>
+    <string name="mic_test_display_gain">Підсилення відображення: %1$s</string>
+    <string name="mic_test_selected_input">Вибраний вхід</string>
+    <string name="mic_test_bound_input">Прив’язаний вхід</string>
+    <string name="mic_test_communication_route">Маршрут зв’язку</string>
+    <string name="mic_test_format">Формат захоплення</string>
+    <string name="mic_test_buffer">Аудіобуфер</string>
+    <string name="mic_test_session">Аудіосеанс</string>
+    <string name="mic_test_error_permission">Потрібен дозвіл на використання мікрофона.</string>
+    <string name="mic_test_error_route_lost">Маршрут мікрофона Bluetooth втрачено.</string>
+    <string name="mic_test_error_route_activation">Не вдалося активувати вибраний маршрут мікрофона.</string>
+    <string name="mic_test_error_start">Не вдалося запустити тест мікрофона.</string>
+    <string name="mic_test_error_playback">Не вдалося створити відтворення аудіо.</string>
+    <string name="mic_test_error_playback_init">Не вдалося ініціалізувати відтворення аудіо.</string>
+    <string name="mic_test_error_read">Не вдалося захопити звук із мікрофона.</string>
+    <string name="mic_test_error_read_code">Не вдалося захопити звук із мікрофона (%1$d).</string>
+</resources>

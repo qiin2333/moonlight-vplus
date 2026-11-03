@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">بنەڕەتی سیستەم</string>
+    <string name="mic_input_builtin">مایکرۆفۆنی ناوخۆ</string>
+    <string name="mic_input_wired">هێدفۆنی وایەردار</string>
+    <string name="mic_input_bluetooth">مایکرۆفۆنی Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">مایکرۆفۆنی Bluetooth (ڕێپێدان پێویستە)</string>
+    <string name="mic_input_usb">مایکرۆفۆنی USB</string>
+    <string name="mic_input_microphone">مایکرۆفۆن</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">تۆمارکردن لە: %1$s</string>
+    <string name="mic_input_unavailable">ئامێری هەڵبژێردراو بەردەست نییە.</string>
+    <string name="mic_input_route_pending">چاوەڕوانی ڕێڕەوی دەنگی هاتنەژوورەوە</string>
+    <string name="mic_input_failed">نەتوانرا ئەم مایکرۆفۆنە هەڵبژێردرێت. دووبارە هەوڵ بدەرەوە.</string>
+    <string name="mic_input_bluetooth_quality">بەکارهێنانی مایکرۆفۆنی Bluetooth لەوانەیە ڕێڕەوی دەرچوونی پەیوەندی بگۆڕێت و کوالێتی پەخشکردن کەم بکات.</string>
+    <string name="mic_input_system_silenced">مایکرۆفۆن لەلایەن Android ـەوە بێدەنگ کرا</string>
+    <string name="title_mic_test">تاقیکردنەوەی مایکرۆفۆن</string>
+    <string name="summary_mic_test">دەنگی مایکرۆفۆنی ناوخۆ دەگرێت و شێوەی موجەکەی پیشان دەدات بەبێ دەستپێکردنی ستریم.</string>
+    <string name="title_mic_test_devices">ئامێرەکانی هاتنەژوورەوە</string>
+    <string name="mic_test_start">دەستپێکردنی تاقیکردنەوە</string>
+    <string name="mic_test_stop">وەستاندنی تاقیکردنەوە</string>
+    <string name="mic_test_waveform">شێوەی موجی ناوخۆ</string>
+    <string name="mic_test_idle">هاتنەژوورەوە هەڵبژێرە و تاقیکردنەوەکە دەست پێ بکە.</string>
+    <string name="mic_test_source">سەرچاوەی دەنگ</string>
+    <string name="mic_test_route">ڕێڕەوی ڕاستەقینە</string>
+    <string name="mic_test_rms">ئاستی RMS</string>
+    <string name="mic_test_peak">ئاستی لووتکە</string>
+    <string name="mic_test_record">تۆمارکردن</string>
+    <string name="mic_test_recording">تۆمارکردن %1$d/15 چرکە</string>
+    <string name="mic_test_stop_recording">وەستاندنی تۆمارکردن</string>
+    <string name="mic_test_play">پەخشکردن</string>
+    <string name="mic_test_playing">لە پەخشکردندایە</string>
+    <string name="mic_test_preferred_route">هاتنەژوورەوەی پەسەندکراو</string>
+    <string name="mic_test_recording_route">ڕێکخستنی تۆمارکردن</string>
+    <string name="mic_test_display_gain">قازانجی پیشاندان: %1$s</string>
+    <string name="mic_test_selected_input">هاتنەژوورەوەی هەڵبژێردراو</string>
+    <string name="mic_test_bound_input">هاتنەژوورەوەی بەستراو</string>
+    <string name="mic_test_communication_route">ڕێڕەوی پەیوەندی</string>
+    <string name="mic_test_format">فۆرماتی گرتن</string>
+    <string name="mic_test_buffer">بەفەری دەنگ</string>
+    <string name="mic_test_session">دانیشتنی دەنگ</string>
+    <string name="mic_test_error_permission">ڕێپێدانی مایکرۆفۆن پێویستە.</string>
+    <string name="mic_test_error_route_lost">ڕێڕەوی مایکرۆفۆنی Bluetooth ون بوو.</string>
+    <string name="mic_test_error_route_activation">نەتوانرا ڕێڕەوی مایکرۆفۆنی هەڵبژێردراو چالاک بکرێت.</string>
+    <string name="mic_test_error_start">نەتوانرا تاقیکردنەوەی مایکرۆفۆن دەست پێ بکرێت.</string>
+    <string name="mic_test_error_playback">نەتوانرا پەخشکردنی دەنگ دروست بکرێت.</string>
+    <string name="mic_test_error_playback_init">دەستپێکردنی پەخشکردنی دەنگ سەرکەوتوو نەبوو.</string>
+    <string name="mic_test_error_read">گرتنی دەنگی مایکرۆفۆن سەرکەوتوو نەبوو.</string>
+    <string name="mic_test_error_read_code">گرتنی دەنگی مایکرۆفۆن سەرکەوتوو نەبوو (%1$d).</string>
+</resources>

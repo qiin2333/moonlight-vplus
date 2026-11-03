@@ -1,12 +1,13 @@
 package com.limelight.preferences
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,7 +66,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -96,7 +96,6 @@ class MicrophoneTestActivity : ThemedAppCompatActivity() {
             )
         }
     }
-
     override fun onDestroy() {
         session.close()
         super.onDestroy()
@@ -122,43 +121,67 @@ private fun MicrophoneTestScreen(
     var choices by remember { mutableStateOf(session.choices()) }
     var names by remember { mutableStateOf(session.displayNames(choices)) }
     var selectedKey by remember { mutableStateOf(DEFAULT_MICROPHONE_INPUT) }
+    var pendingPermissionChoice by remember { mutableStateOf<MicrophoneInputDevice?>(null) }
     var snapshot by remember { mutableStateOf(MicrophoneTestSnapshot()) }
     val backDescription = stringResource(R.string.controller_diag_back)
     val context = LocalContext.current
-    val firstFocus = remember { FocusRequester() }
-    val startFocus = remember { FocusRequester() }
-    var initialFocusRequested by remember { mutableStateOf(false) }
+    val initialFocus = remember { FocusRequester() }
 
     BackHandler(onBack = onBack)
     LaunchedEffect(Unit) {
         choices = session.choices()
         names = session.displayNames(choices)
     }
-    LaunchedEffect(choices.size, initialFocusRequested) {
-        if (!initialFocusRequested) {
-            delay(120)
-            if (choices.isNotEmpty()) firstFocus.requestFocus() else startFocus.requestFocus()
-            initialFocusRequested = true
-        }
+    LaunchedEffect(Unit) {
+        delay(120)
+        initialFocus.requestFocus()
     }
 
     fun selectedDevice(): MicrophoneInputDevice? =
         choices.firstOrNull { it.key == selectedKey }
 
-    fun startTest() {
-        val permissions = buildList {
-            add(Manifest.permission.RECORD_AUDIO)
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
-                add(Manifest.permission.BLUETOOTH_CONNECT)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val choice = pendingPermissionChoice
+        pendingPermissionChoice = null
+        val bluetoothRequired = choice?.communication == true && android.os.Build.VERSION.SDK_INT >= 31
+        fun isGranted(permission: String): Boolean = grants[permission]
+            ?: (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
+        val granted = isGranted(Manifest.permission.RECORD_AUDIO) &&
+            (!bluetoothRequired || isGranted(Manifest.permission.BLUETOOTH_CONNECT))
+        if (granted) {
+            val refreshedChoices = session.choices()
+            choices = refreshedChoices
+            names = session.displayNames(refreshedChoices)
+            val resolvedChoice = if (choice?.key == "communication:permission") {
+                refreshedChoices.firstOrNull { it.communication }
+            } else {
+                choice
             }
-        }.toTypedArray()
-        if (permissions.any {
-                ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-            }
-        ) {
-            ActivityCompat.requestPermissions(context as Activity, permissions, REQUEST_CODE)
+            resolvedChoice?.let { selectedKey = it.key }
+            session.start(resolvedChoice) { snapshot = it }
         } else {
-            session.start(selectedDevice()) { snapshot = it }
+            snapshot = MicrophoneTestSnapshot(error = context.getString(R.string.mic_test_error_permission))
+        }
+    }
+
+    fun startTest() {
+        val choice = selectedDevice()
+        val permissions = buildList {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+                PackageManager.PERMISSION_GRANTED
+            ) add(Manifest.permission.RECORD_AUDIO)
+            if (choice?.communication == true && android.os.Build.VERSION.SDK_INT >= 31 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) !=
+                PackageManager.PERMISSION_GRANTED
+            ) add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        if (permissions.isNotEmpty()) {
+            pendingPermissionChoice = choice
+            permissionLauncher.launch(permissions.toTypedArray())
+        } else {
+            session.start(choice) { snapshot = it }
         }
     }
 
@@ -184,6 +207,8 @@ private fun MicrophoneTestScreen(
                         modifier = Modifier
                             .clickable(onClick = onBack)
                             .focusable()
+                            .focusRequester(initialFocus)
+                            .consumeConfirm(onBack)
                             .semantics { contentDescription = backDescription }
                     )
                     Text(
@@ -220,7 +245,7 @@ private fun MicrophoneTestScreen(
                         MicrophoneChoice(
                             label = stringResource(R.string.mic_input_default),
                             selected = selectedKey == DEFAULT_MICROPHONE_INPUT,
-                            focusRequester = if (choices.isEmpty()) firstFocus else null
+                            focusRequester = null
                         ) {
                             selectedKey = DEFAULT_MICROPHONE_INPUT
                             session.stop()
@@ -231,7 +256,7 @@ private fun MicrophoneTestScreen(
                         MicrophoneChoice(
                             label = names[device.key] ?: device.name,
                             selected = selectedKey == device.key,
-                            focusRequester = if (choices.firstOrNull()?.key == device.key) firstFocus else null
+                            focusRequester = null
                         ) {
                             selectedKey = device.key
                             session.stop()
@@ -254,7 +279,6 @@ private fun MicrophoneTestScreen(
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .focusRequester(startFocus)
                                     .consumeConfirm {
                                         if (snapshot.running) {
                                             session.stop()
@@ -276,7 +300,9 @@ private fun MicrophoneTestScreen(
                                     session.toggleRecording()
                                 },
                                 enabled = snapshot.running,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .consumeConfirm { session.toggleRecording() }
                             ) {
                                 Text(
                                     if (snapshot.recording) {
@@ -289,7 +315,9 @@ private fun MicrophoneTestScreen(
                             Button(
                                 onClick = { session.playRecording() },
                                 enabled = snapshot.hasRecording && !snapshot.playing,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .consumeConfirm { session.playRecording() }
                             ) {
                                 Text(
                                     stringResource(
@@ -453,5 +481,3 @@ private fun Modifier.consumeConfirm(onConfirm: () -> Unit): Modifier =
         if (event.type == KeyEventType.KeyUp) onConfirm()
         true
     }
-
-private const val REQUEST_CODE = 3107

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Systemstandard</string>
+    <string name="mic_input_builtin">Innebygd mikrofon</string>
+    <string name="mic_input_wired">Kablet headset</string>
+    <string name="mic_input_bluetooth">Bluetooth-mikrofon</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth-mikrofon (tillatelse kreves)</string>
+    <string name="mic_input_usb">USB-mikrofon</string>
+    <string name="mic_input_microphone">Mikrofon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Tar opp fra: %1$s</string>
+    <string name="mic_input_unavailable">Den valgte enheten er ikke tilgjengelig.</string>
+    <string name="mic_input_route_pending">Venter på lydinngangsrute</string>
+    <string name="mic_input_failed">Kan ikke velge denne mikrofonen. Prøv igjen.</string>
+    <string name="mic_input_bluetooth_quality">En Bluetooth-mikrofon kan endre kommunikasjonsruten og redusere avspillingskvaliteten.</string>
+    <string name="mic_input_system_silenced">Mikrofonen er dempet av Android</string>
+    <string name="title_mic_test">Test mikrofon</string>
+    <string name="summary_mic_test">Tar opp lyd fra den lokale mikrofonen og viser bølgeformen uten å starte en strøm.</string>
+    <string name="title_mic_test_devices">Inndataenheter</string>
+    <string name="mic_test_start">Start test</string>
+    <string name="mic_test_stop">Stopp test</string>
+    <string name="mic_test_waveform">Lokal bølgeform</string>
+    <string name="mic_test_idle">Velg en inngang og start testen.</string>
+    <string name="mic_test_source">Lydkilde</string>
+    <string name="mic_test_route">Faktisk rute</string>
+    <string name="mic_test_rms">RMS-nivå</string>
+    <string name="mic_test_peak">Toppnivå</string>
+    <string name="mic_test_record">Ta opp</string>
+    <string name="mic_test_recording">Tar opp %1$d/15 sek.</string>
+    <string name="mic_test_stop_recording">Stopp opptak</string>
+    <string name="mic_test_play">Spill av</string>
+    <string name="mic_test_playing">Spiller av</string>
+    <string name="mic_test_preferred_route">Foretrukket inngang</string>
+    <string name="mic_test_recording_route">Opptakskonfigurasjon</string>
+    <string name="mic_test_display_gain">Visningsforsterkning: %1$s</string>
+    <string name="mic_test_selected_input">Valgt inngang</string>
+    <string name="mic_test_bound_input">Bundet inngang</string>
+    <string name="mic_test_communication_route">Kommunikasjonsrute</string>
+    <string name="mic_test_format">Opptaksformat</string>
+    <string name="mic_test_buffer">Lydbuffer</string>
+    <string name="mic_test_session">Lydøkt</string>
+    <string name="mic_test_error_permission">Mikrofontillatelse kreves.</string>
+    <string name="mic_test_error_route_lost">Bluetooth-mikrofonruten gikk tapt.</string>
+    <string name="mic_test_error_route_activation">Kan ikke aktivere den valgte mikrofonruten.</string>
+    <string name="mic_test_error_start">Kan ikke starte mikrofontesten.</string>
+    <string name="mic_test_error_playback">Kan ikke opprette lydavspilling.</string>
+    <string name="mic_test_error_playback_init">Kunne ikke initialisere lydavspilling.</string>
+    <string name="mic_test_error_read">Mikrofonopptak mislyktes.</string>
+    <string name="mic_test_error_read_code">Mikrofonopptak mislyktes (%1$d).</string>
+</resources>
