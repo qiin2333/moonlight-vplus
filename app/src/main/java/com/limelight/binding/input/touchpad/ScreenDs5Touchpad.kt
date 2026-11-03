@@ -1,5 +1,7 @@
 package com.limelight.binding.input.touchpad
 
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.ViewGroup
 import com.limelight.Game
 import com.limelight.LimeLog
@@ -44,16 +46,12 @@ class ScreenDs5Touchpad(private val game: Game) {
     /**
      * Toggle the pad layer at runtime: persist the preference, attach/detach the
      * overlay, and (un)declare controller 0 on the host. Re-selecting the same mode
-     * reveals the zone again and retries a pending host update without rebuilding it.
+     * retries a pending host update without rebuilding the surface.
      */
     fun setEnabled(enabled: Boolean) {
         if (enabled && game.screenDs5TouchpadHostSupport == Game.ScreenDs5HostSupport.UNSUPPORTED) return
         if (game.prefConfig.screenDs5Touchpad == enabled) {
             if (hostUpdatePending) updateHost()
-            if (enabled) {
-                pendingZoneReveal = true
-                revealIfEnabled()
-            }
             return
         }
         if (enabled) rememberTouchMode() else activationFallback = null
@@ -85,6 +83,15 @@ class ScreenDs5Touchpad(private val game: Game) {
     fun toggle(): Boolean {
         setEnabled(!enabled)
         return enabled
+    }
+
+    /** Observe screen touches without changing their input ownership. */
+    fun onScreenTouchEvent(event: MotionEvent) {
+        if (!enabled || !event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)) return
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> overlay?.setScreenTouchActive(true)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> overlay?.setScreenTouchActive(false)
+        }
     }
 
     private fun rememberTouchMode() {
