@@ -11,8 +11,6 @@
     <string name="mic_input_failed">Δεν είναι δυνατή η επιλογή αυτού του μικροφώνου. Δοκιμάστε ξανά.</string>
     <string name="mic_input_bluetooth_quality">Η χρήση μικροφώνου Bluetooth ενδέχεται να αλλάξει τη διαδρομή εξόδου επικοινωνίας και να μειώσει την ποιότητα αναπαραγωγής.</string>
     <string name="mic_input_system_silenced">Το μικρόφωνο έχει τεθεί σε σίγαση από το σύστημα</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

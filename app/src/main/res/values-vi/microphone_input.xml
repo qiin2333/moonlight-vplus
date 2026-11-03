@@ -11,8 +11,6 @@
     <string name="mic_input_failed">Không thể chọn micrô này. Vui lòng thử lại.</string>
     <string name="mic_input_bluetooth_quality">Sử dụng micrô Bluetooth có thể thay đổi đường phát âm thanh liên lạc và làm giảm chất lượng phát.</string>
     <string name="mic_input_system_silenced">Micrô đã bị hệ thống tắt tiếng</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

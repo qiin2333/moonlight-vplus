@@ -11,8 +11,6 @@
     <string name="mic_input_failed">Não foi possível selecionar este microfone. Tente novamente.</string>
     <string name="mic_input_bluetooth_quality">Usar um microfone Bluetooth pode alterar a saída de comunicação e reduzir a qualidade de reprodução.</string>
     <string name="mic_input_system_silenced">Microfone silenciado pelo sistema</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

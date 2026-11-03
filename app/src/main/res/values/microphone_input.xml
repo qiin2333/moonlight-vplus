@@ -13,8 +13,6 @@
     <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
     <string name="mic_input_bluetooth_quality">Using a Bluetooth microphone may change the communication output route and reduce playback quality.</string>
     <string name="mic_input_system_silenced">Microphone muted by Android</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

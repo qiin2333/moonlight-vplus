@@ -11,8 +11,6 @@
     <string name="mic_input_failed">انتخاب این میکروفون ممکن نیست. دوباره تلاش کنید.</string>
     <string name="mic_input_bluetooth_quality">استفاده از میکروفون بلوتوث ممکن است مسیر خروجی ارتباطی را تغییر دهد و کیفیت پخش را کاهش دهد.</string>
     <string name="mic_input_system_silenced">میکروفون توسط سیستم بی‌صدا شده است</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

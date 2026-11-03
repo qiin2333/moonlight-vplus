@@ -70,8 +70,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
-import com.limelight.binding.audio.DEFAULT_MICROPHONE_INPUT
-import com.limelight.binding.audio.MicrophoneInputDevice
+import com.limelight.binding.audio.MICROPHONE_TEST_DEFAULT_INPUT
+import com.limelight.binding.audio.MicrophoneTestInputDevice
 import com.limelight.binding.audio.MicrophoneTestSession
 import com.limelight.binding.audio.MicrophoneTestSnapshot
 import com.limelight.ui.ThemedAppCompatActivity
@@ -120,8 +120,8 @@ private fun MicrophoneTestScreen(
     )
     var choices by remember { mutableStateOf(session.choices()) }
     var names by remember { mutableStateOf(session.displayNames(choices)) }
-    var selectedKey by remember { mutableStateOf(DEFAULT_MICROPHONE_INPUT) }
-    var pendingPermissionChoice by remember { mutableStateOf<MicrophoneInputDevice?>(null) }
+    var selectedKey by remember { mutableStateOf(MICROPHONE_TEST_DEFAULT_INPUT) }
+    var pendingPermissionChoice by remember { mutableStateOf<MicrophoneTestInputDevice?>(null) }
     var snapshot by remember { mutableStateOf(MicrophoneTestSnapshot()) }
     val backDescription = stringResource(R.string.controller_diag_back)
     val context = LocalContext.current
@@ -137,7 +137,7 @@ private fun MicrophoneTestScreen(
         initialFocus.requestFocus()
     }
 
-    fun selectedDevice(): MicrophoneInputDevice? =
+    fun selectedDevice(): MicrophoneTestInputDevice? =
         choices.firstOrNull { it.key == selectedKey }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -244,10 +244,10 @@ private fun MicrophoneTestScreen(
                     item {
                         MicrophoneChoice(
                             label = stringResource(R.string.mic_input_default),
-                            selected = selectedKey == DEFAULT_MICROPHONE_INPUT,
+                            selected = selectedKey == MICROPHONE_TEST_DEFAULT_INPUT,
                             focusRequester = null
                         ) {
-                            selectedKey = DEFAULT_MICROPHONE_INPUT
+                            selectedKey = MICROPHONE_TEST_DEFAULT_INPUT
                             session.stop()
                             snapshot = MicrophoneTestSnapshot()
                         }

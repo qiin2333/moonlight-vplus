@@ -11,8 +11,6 @@
     <string name="mic_input_failed">Acest microfon nu poate fi selectat. Încercați din nou.</string>
     <string name="mic_input_bluetooth_quality">Utilizarea unui microfon Bluetooth poate schimba ieșirea pentru comunicații și poate reduce calitatea redării.</string>
     <string name="mic_input_system_silenced">Microfon dezactivat de sistem</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

@@ -11,8 +11,6 @@
     <string name="mic_input_failed">Tidak dapat memilih mikrofon ini. Coba lagi.</string>
     <string name="mic_input_bluetooth_quality">Menggunakan mikrofon Bluetooth dapat mengubah rute keluaran komunikasi dan menurunkan kualitas pemutaran.</string>
     <string name="mic_input_system_silenced">Mikrofon dibisukan oleh sistem</string>
-    <string name="title_mic_test">Test microphone</string>
-    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
     <string name="title_mic_test_devices">Input devices</string>
     <string name="mic_test_start">Start test</string>
     <string name="mic_test_stop">Stop test</string>

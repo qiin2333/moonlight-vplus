@@ -26,7 +26,7 @@ internal data class MicrophoneTestInputDevice(
     val address: String = ""
 )
 
-internal const val DEFAULT_MICROPHONE_INPUT = "default"
+internal const val MICROPHONE_TEST_DEFAULT_INPUT = "default"
 
 internal class MicrophoneTestDeviceRepository(context: Context) {
     private val context = context.applicationContext
@@ -35,14 +35,14 @@ internal class MicrophoneTestDeviceRepository(context: Context) {
     fun devices(): List<MicrophoneTestInputDevice> = inputDevices()
 
     fun choices(): List<MicrophoneTestInputDevice> =
-        inputDevices().filterNot { isBluetoothType(it.type) } + communicationChoices()
+        inputDevices().filterNot { isMicrophoneTestBluetoothType(it.type) } + communicationChoices()
 
     fun displayNames(devices: List<MicrophoneTestInputDevice>): Map<String, String> =
         devices.associate { it.key to displayName(it) }
 
     fun apply(record: AudioRecord, key: String): Boolean {
-        if (Build.VERSION.SDK_INT < 23) return key == DEFAULT_MICROPHONE_INPUT
-        if (key == DEFAULT_MICROPHONE_INPUT) return record.setPreferredDevice(null)
+        if (Build.VERSION.SDK_INT < 23) return key == MICROPHONE_TEST_DEFAULT_INPUT
+        if (key == MICROPHONE_TEST_DEFAULT_INPUT) return record.setPreferredDevice(null)
         val target = inputDevices().firstOrNull { it.key == key } ?: return false
         val raw = rawInputDevices().firstOrNull { audioDeviceId(it) == target.id } ?: return false
         return try { record.setPreferredDevice(raw) } catch (_: RuntimeException) { false }
@@ -92,7 +92,7 @@ internal class MicrophoneTestDeviceRepository(context: Context) {
             }
             return try {
                 audio.availableCommunicationDevices
-                    .filter { it.isSink && isBluetoothType(it.type) }
+                    .filter { it.isSink && isMicrophoneTestBluetoothType(it.type) }
                     .map {
                         MicrophoneTestInputDevice(
                             key = "communication:${it.type}:${it.id}",
@@ -196,7 +196,7 @@ internal class MicrophoneTestBluetoothRouteController(context: Context) {
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
             if (Build.VERSION.SDK_INT >= 31) {
                 val target = audio.availableCommunicationDevices.firstOrNull {
-                    it.isSink && isBluetoothType(it.type) &&
+                    it.isSink && isMicrophoneTestBluetoothType(it.type) &&
                         (it.id == device.id || device.id < 0)
                 } ?: return false
                 if (!audio.setCommunicationDevice(target)) return false
@@ -226,24 +226,18 @@ internal class MicrophoneTestBluetoothRouteController(context: Context) {
     }
 }
 
-internal typealias MicrophoneInputDevice = MicrophoneTestInputDevice
-internal typealias MicrophoneInputDeviceRepository = MicrophoneTestDeviceRepository
-internal typealias BluetoothMicrophoneRouteController = MicrophoneTestBluetoothRouteController
+internal fun isMicrophoneTestBluetoothType(type: Int): Boolean = type == 7 || type == 26
 
-internal fun isBluetoothMicrophone(type: Int): Boolean = isBluetoothType(type)
-
-internal fun isBluetoothType(type: Int): Boolean = type == 7 || type == 26
-
-internal fun microphoneCaptureSource(communicationInput: Boolean, voiceCommunicationConfigured: Boolean): Int =
+internal fun microphoneTestCaptureSource(communicationInput: Boolean, voiceCommunicationConfigured: Boolean): Int =
     if (communicationInput || voiceCommunicationConfigured) 7 else 1
 
-internal fun microphoneCaptureSampleRate(choice: MicrophoneInputDevice?): Int =
+internal fun microphoneTestCaptureSampleRate(choice: MicrophoneTestInputDevice?): Int =
     if (choice?.communication == true && choice.type == 7) 16000 else MicrophoneConfig.SAMPLE_RATE
 
-internal fun matchingBluetoothInput(
-    target: MicrophoneInputDevice,
-    inputs: List<MicrophoneInputDevice>
-): MicrophoneInputDevice? {
+internal fun matchingMicrophoneTestBluetoothInput(
+    target: MicrophoneTestInputDevice,
+    inputs: List<MicrophoneTestInputDevice>
+): MicrophoneTestInputDevice? {
     val candidates = inputs.filter { !it.communication && it.type == target.type }
     if (target.address.isNotBlank()) {
         val exact = candidates.filter { it.address.equals(target.address, ignoreCase = true) }
