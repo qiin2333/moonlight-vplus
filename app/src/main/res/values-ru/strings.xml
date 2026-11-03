@@ -1849,7 +1849,6 @@
     <string name="diag_hlg_transfer">Передача HLG</string>
     <string name="diag_pq_transfer">Передача PQ</string>
     <string name="quick_btn_mic">Микр.</string>
-    <string name="quick_btn_unlock_host">Разблокировка</string>
     <string name="quick_btn_sleep">Сон</string>
     <string name="quick_btn_quit">Выход</string>
     <string name="quick_btn_win">Win</string>
@@ -1863,6 +1862,7 @@
     <string name="quick_btn_controller">Геймпад</string>
     <string name="quick_btn_perf">Стат.</string>
     <string name="quick_btn_remote_mouse">Курсор ПК</string>
+    <string name="quick_btn_unlock_host">Разблокировка по отпечатку</string>
     <string name="quick_button_editor_title">Быстрые действия</string>
     <string name="quick_button_reset_default">Сброс</string>
     <string name="quick_action_edit">Изменить действия</string>
@@ -2170,4 +2170,6 @@
     <string name="summary_native_device_haptics_requires_output">Требуется эмуляция DualSense на хосте, расширенный IR, вывод на устройство или совместный вывод и сила вибрации устройства выше нуля. Для применения переподключитесь.</string>
     <string name="title_ds5_single_tap_to_click">Щелчок одним касанием DS5 (совместимость)</string>
     <string name="summary_ds5_single_tap_to_click">Выключено: двойное касание выполняет щелчок, удержание второго касания удерживает кнопку. Включено: одно касание выполняет щелчок. Сильное нажатие работает в обоих режимах.</string>
+    <string name="title_mic_test">Тест микрофона</string>
+    <string name="summary_mic_test">Захватывает звук локального микрофона и показывает его форму волны без запуска трансляции.</string>
 </resources>

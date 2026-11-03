@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">ברירת מחדל של המערכת</string>
+    <string name="mic_input_builtin">מיקרופון מובנה</string>
+    <string name="mic_input_wired">אוזנייה קווית</string>
+    <string name="mic_input_bluetooth">מיקרופון Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">מיקרופון Bluetooth (נדרשת הרשאה)</string>
+    <string name="mic_input_usb">מיקרופון USB</string>
+    <string name="mic_input_microphone">מיקרופון</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">הקלטה מ־%1$s</string>
+    <string name="mic_input_unavailable">המכשיר שנבחר אינו זמין.</string>
+    <string name="mic_input_route_pending">ממתין לנתיב קלט השמע</string>
+    <string name="mic_input_failed">לא ניתן לבחור במיקרופון זה. נסה שוב.</string>
+    <string name="mic_input_bluetooth_quality">שימוש במיקרופון Bluetooth עשוי לשנות את נתיב פלט התקשורת ולהפחית את איכות ההשמעה.</string>
+    <string name="mic_input_system_silenced">Android השתיק את המיקרופון</string>
+    <string name="title_mic_test">בדיקת מיקרופון</string>
+    <string name="summary_mic_test">לכידת שמע מהמיקרופון המקומי והצגת צורת הגל בלי להתחיל הזרמה.</string>
+    <string name="title_mic_test_devices">התקני קלט</string>
+    <string name="mic_test_start">התחלת בדיקה</string>
+    <string name="mic_test_stop">עצירת בדיקה</string>
+    <string name="mic_test_waveform">צורת גל מקומית</string>
+    <string name="mic_test_idle">בחר קלט והתחל את הבדיקה.</string>
+    <string name="mic_test_source">מקור שמע</string>
+    <string name="mic_test_route">נתיב בפועל</string>
+    <string name="mic_test_rms">רמת RMS</string>
+    <string name="mic_test_peak">רמת שיא</string>
+    <string name="mic_test_record">הקלטה</string>
+    <string name="mic_test_recording">הקלטה %1$d/15 שנ׳</string>
+    <string name="mic_test_stop_recording">עצירת הקלטה</string>
+    <string name="mic_test_play">השמעה</string>
+    <string name="mic_test_playing">מתנגן</string>
+    <string name="mic_test_preferred_route">קלט מועדף</string>
+    <string name="mic_test_recording_route">תצורת הקלטה</string>
+    <string name="mic_test_display_gain">הגברת תצוגה: %1$s</string>
+    <string name="mic_test_selected_input">קלט שנבחר</string>
+    <string name="mic_test_bound_input">קלט משויך</string>
+    <string name="mic_test_communication_route">נתיב תקשורת</string>
+    <string name="mic_test_format">פורמט לכידה</string>
+    <string name="mic_test_buffer">חוצץ שמע</string>
+    <string name="mic_test_session">סשן שמע</string>
+    <string name="mic_test_error_permission">נדרשת הרשאת מיקרופון.</string>
+    <string name="mic_test_error_route_lost">נתיב מיקרופון Bluetooth אבד.</string>
+    <string name="mic_test_error_route_activation">לא ניתן להפעיל את נתיב המיקרופון שנבחר.</string>
+    <string name="mic_test_error_start">לא ניתן להתחיל את בדיקת המיקרופון.</string>
+    <string name="mic_test_error_playback">לא ניתן ליצור השמעת שמע.</string>
+    <string name="mic_test_error_playback_init">אתחול השמעת השמע נכשל.</string>
+    <string name="mic_test_error_read">לכידת המיקרופון נכשלה.</string>
+    <string name="mic_test_error_read_code">לכידת המיקרופון נכשלה (%1$d).</string>
+</resources>

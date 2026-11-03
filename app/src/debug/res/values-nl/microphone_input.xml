@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Systeemstandaard</string>
+    <string name="mic_input_builtin">Ingebouwde microfoon</string>
+    <string name="mic_input_wired">Bedrade headset</string>
+    <string name="mic_input_bluetooth">Bluetooth-microfoon</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth-microfoon (toestemming vereist)</string>
+    <string name="mic_input_usb">USB-microfoon</string>
+    <string name="mic_input_microphone">Microfoon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Opnemen vanaf: %1$s</string>
+    <string name="mic_input_unavailable">Het geselecteerde apparaat is niet beschikbaar.</string>
+    <string name="mic_input_route_pending">Wachten op de audio-ingangsroute</string>
+    <string name="mic_input_failed">Deze microfoon kan niet worden geselecteerd. Probeer het opnieuw.</string>
+    <string name="mic_input_bluetooth_quality">Een Bluetooth-microfoon kan de communicatieroute wijzigen en de afspeelkwaliteit verminderen.</string>
+    <string name="mic_input_system_silenced">Microfoon gedempt door Android</string>
+    <string name="title_mic_test">Microfoon testen</string>
+    <string name="summary_mic_test">Legt lokale microfoonaudio vast en toont de golfvorm zonder een stream te starten.</string>
+    <string name="title_mic_test_devices">Invoerapparaten</string>
+    <string name="mic_test_start">Test starten</string>
+    <string name="mic_test_stop">Test stoppen</string>
+    <string name="mic_test_waveform">Lokale golfvorm</string>
+    <string name="mic_test_idle">Selecteer een ingang en start de test.</string>
+    <string name="mic_test_source">Audiobron</string>
+    <string name="mic_test_route">Werkelijke route</string>
+    <string name="mic_test_rms">RMS-niveau</string>
+    <string name="mic_test_peak">Piekwaarde</string>
+    <string name="mic_test_record">Opnemen</string>
+    <string name="mic_test_recording">Opname %1$d/15 s</string>
+    <string name="mic_test_stop_recording">Opname stoppen</string>
+    <string name="mic_test_play">Afspelen</string>
+    <string name="mic_test_playing">Wordt afgespeeld</string>
+    <string name="mic_test_preferred_route">Voorkeursingang</string>
+    <string name="mic_test_recording_route">Opnameconfiguratie</string>
+    <string name="mic_test_display_gain">Weergaveversterking: %1$s</string>
+    <string name="mic_test_selected_input">Geselecteerde ingang</string>
+    <string name="mic_test_bound_input">Gekoppelde ingang</string>
+    <string name="mic_test_communication_route">Communicatieroute</string>
+    <string name="mic_test_format">Opnameformaat</string>
+    <string name="mic_test_buffer">Audiobuffer</string>
+    <string name="mic_test_session">Audiosessie</string>
+    <string name="mic_test_error_permission">Microfoontoestemming is vereist.</string>
+    <string name="mic_test_error_route_lost">Bluetooth-microfo route is verloren gegaan.</string>
+    <string name="mic_test_error_route_activation">De geselecteerde microfoonroute kan niet worden geactiveerd.</string>
+    <string name="mic_test_error_start">De microfoontest kan niet worden gestart.</string>
+    <string name="mic_test_error_playback">Audioafspelen kan niet worden gemaakt.</string>
+    <string name="mic_test_error_playback_init">Initialiseren van audioafspelen mislukt.</string>
+    <string name="mic_test_error_read">Microfoonopname mislukt.</string>
+    <string name="mic_test_error_read_code">Microfoonopname mislukt (%1$d).</string>
+</resources>

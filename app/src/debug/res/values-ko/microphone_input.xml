@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">시스템 기본값</string>
+    <string name="mic_input_builtin">내장 마이크</string>
+    <string name="mic_input_wired">유선 헤드셋</string>
+    <string name="mic_input_bluetooth">Bluetooth 마이크</string>
+    <string name="mic_input_bluetooth_permission">Bluetooth 마이크(권한 필요)</string>
+    <string name="mic_input_usb">USB 마이크</string>
+    <string name="mic_input_microphone">마이크</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">녹음 중: %1$s</string>
+    <string name="mic_input_unavailable">선택한 기기를 사용할 수 없습니다.</string>
+    <string name="mic_input_route_pending">오디오 입력 경로 대기 중</string>
+    <string name="mic_input_failed">이 마이크를 선택할 수 없습니다. 다시 시도하세요.</string>
+    <string name="mic_input_bluetooth_quality">Bluetooth 마이크를 사용하면 통신 출력 경로가 변경되고 재생 품질이 낮아질 수 있습니다.</string>
+    <string name="mic_input_system_silenced">Android에서 마이크를 음소거했습니다</string>
+    <string name="title_mic_test">마이크 테스트</string>
+    <string name="summary_mic_test">스트리밍을 시작하지 않고 로컬 마이크 오디오를 캡처해 파형을 표시합니다.</string>
+    <string name="title_mic_test_devices">입력 장치</string>
+    <string name="mic_test_start">테스트 시작</string>
+    <string name="mic_test_stop">테스트 중지</string>
+    <string name="mic_test_waveform">로컬 파형</string>
+    <string name="mic_test_idle">입력을 선택하고 테스트를 시작하세요.</string>
+    <string name="mic_test_source">오디오 소스</string>
+    <string name="mic_test_route">실제 경로</string>
+    <string name="mic_test_rms">RMS 레벨</string>
+    <string name="mic_test_peak">피크 레벨</string>
+    <string name="mic_test_record">녹음</string>
+    <string name="mic_test_recording">녹음 중 %1$d/15초</string>
+    <string name="mic_test_stop_recording">녹음 중지</string>
+    <string name="mic_test_play">재생</string>
+    <string name="mic_test_playing">재생 중</string>
+    <string name="mic_test_preferred_route">선호 입력</string>
+    <string name="mic_test_recording_route">녹음 구성</string>
+    <string name="mic_test_display_gain">표시 게인: %1$s</string>
+    <string name="mic_test_selected_input">선택한 입력</string>
+    <string name="mic_test_bound_input">연결된 입력</string>
+    <string name="mic_test_communication_route">통신 경로</string>
+    <string name="mic_test_format">캡처 형식</string>
+    <string name="mic_test_buffer">오디오 버퍼</string>
+    <string name="mic_test_session">오디오 세션</string>
+    <string name="mic_test_error_permission">마이크 권한이 필요합니다.</string>
+    <string name="mic_test_error_route_lost">Bluetooth 마이크 경로가 끊어졌습니다.</string>
+    <string name="mic_test_error_route_activation">선택한 마이크 경로를 활성화할 수 없습니다.</string>
+    <string name="mic_test_error_start">마이크 테스트를 시작할 수 없습니다.</string>
+    <string name="mic_test_error_playback">오디오 재생을 만들 수 없습니다.</string>
+    <string name="mic_test_error_playback_init">오디오 재생을 초기화하지 못했습니다.</string>
+    <string name="mic_test_error_read">마이크 캡처에 실패했습니다.</string>
+    <string name="mic_test_error_read_code">마이크 캡처에 실패했습니다(%1$d).</string>
+</resources>

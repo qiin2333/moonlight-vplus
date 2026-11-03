@@ -1,0 +1,5 @@
+<resources>
+    <string name="title_mic_test">Test microphone</string>
+    <string name="summary_mic_test">Capture local microphone audio and view its waveform without starting a stream.</string>
+    <bool name="enable_mic_test">false</bool>
+</resources>

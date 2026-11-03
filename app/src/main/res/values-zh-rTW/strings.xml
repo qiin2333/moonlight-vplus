@@ -1121,6 +1121,8 @@
     <string name="summary_native_device_haptics">依裝置能力使用原生觸覺；部分裝置僅支援輕重短點，持續與混合效果沿用原有輸出。可能增加震動延遲。重新連線後生效。</string>
     <string name="summary_native_device_haptics_requires_output">需主機模擬 DualSense、選擇 IR 增強及裝置或協同輸出，並將裝置震動強度設為大於零。重新連線後生效。</string>
     <string name="layout_page_device_text_1a70f">觸控開關</string>
+    <string name="title_mic_test">測試麥克風</string>
+    <string name="summary_mic_test">直接擷取本機麥克風並顯示波形，不進入串流。</string>
     <!-- 指紋解鎖主機 -->
     <string name="quick_btn_unlock_host">指紋解鎖</string>
     <string name="host_unlock_not_connected">未連線到主機</string>
