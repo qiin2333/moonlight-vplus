@@ -75,6 +75,14 @@ class MicrophoneInputSessionTest {
         assertFalse(contract.matches(bluetoothInput.copy(id = 31)))
     }
 
+    @Test fun missingPreferredDeviceDoesNotEraseKnownRecordingBinding() {
+        val input = MicrophoneCaptureInput(bluetooth, { true },
+            expectedCommunicationInputId = bluetoothInput.id)
+        input.bindCommunicationInput(null)
+        assertTrue(input.contract.matches(bluetoothInput))
+        assertFalse(input.contract.matches(bluetoothInput.copy(id = 31)))
+    }
+
     @Test fun communicationOutputIdIsNeverComparedToRecordingInputId() {
         val contract = MicrophoneInputContract(bluetooth, { bluetoothInput.id }) { true }
         assertNotEquals(bluetooth.id, bluetoothInput.id)

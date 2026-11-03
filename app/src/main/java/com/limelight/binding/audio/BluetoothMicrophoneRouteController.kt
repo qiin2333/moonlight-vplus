@@ -220,7 +220,29 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
 
     private fun awaitReleased(isCurrent: () -> Boolean, complete: (Boolean) -> Unit) {
         if (Build.VERSION.SDK_INT >= 31) {
-            if (isCurrent()) complete(true)
+            val startedAt = SystemClock.elapsedRealtime()
+            val poll = object : Runnable {
+                override fun run() {
+                    if (!isCurrent()) return
+                    val released = try {
+                        audio.communicationDevice == null && audio.mode == AudioManager.MODE_NORMAL
+                    } catch (_: RuntimeException) {
+                        false
+                    }
+                    if (released) {
+                        drainTask = null
+                        complete(true)
+                    } else if (SystemClock.elapsedRealtime() - startedAt >= MODERN_RELEASE_TIMEOUT_MS) {
+                        drainTask = null
+                        LimeLog.warning("Bluetooth communication route release timed out")
+                        complete(false)
+                    } else {
+                        worker.postDelayed(this, MODERN_RELEASE_POLL_MS)
+                    }
+                }
+            }
+            drainTask = poll
+            worker.post(poll)
             return
         }
         legacyDrain.restartIfExpired(SystemClock.elapsedRealtime())
@@ -333,6 +355,8 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
 
         // setCommunicationDevice responds immediately, long before the SCO link carries audio.
         private const val SCO_NUDGE_DELAY_MS = 1200L
+        private const val MODERN_RELEASE_POLL_MS = 50L
+        private const val MODERN_RELEASE_TIMEOUT_MS = 1500L
 
         fun choices(context: Context): List<MicrophoneInputDevice> = try {
             val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

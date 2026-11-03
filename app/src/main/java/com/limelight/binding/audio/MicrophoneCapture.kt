@@ -43,7 +43,7 @@ internal class MicrophoneCaptureInput(
     @Volatile private var boundCommunicationInputId = expectedCommunicationInputId
 
     fun bindCommunicationInput(id: Int?) {
-        boundCommunicationInputId = id
+        if (id != null) boundCommunicationInputId = id
     }
 
     val contract = MicrophoneInputContract(
