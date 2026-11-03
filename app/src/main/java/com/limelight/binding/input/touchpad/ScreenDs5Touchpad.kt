@@ -47,7 +47,7 @@ class ScreenDs5Touchpad(private val game: Game) {
             // mode so runtime toggles match what the menu selects.
             game.prefConfig.enableEnhancedTouch = true
             game.prefConfig.touchscreenTrackpad = false
-            game.prefConfig.enableNativeMousePointer = false
+            game.enableNativeMousePointer(false)
             game.setTouchMode(false)
         }
         game.prefConfig.writePreferences(game)
