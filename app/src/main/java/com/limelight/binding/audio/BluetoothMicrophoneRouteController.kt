@@ -225,7 +225,10 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 override fun run() {
                     if (!isCurrent()) return
                     val released = try {
-                        audio.communicationDevice == null && audio.mode == AudioManager.MODE_NORMAL
+                        // Android reports the default A2DP output as the active communication
+                        // device after clearCommunicationDevice(). It is not evidence that our
+                        // explicit Bluetooth microphone route is still owned.
+                        audio.mode == AudioManager.MODE_NORMAL
                     } catch (_: RuntimeException) {
                         false
                     }
