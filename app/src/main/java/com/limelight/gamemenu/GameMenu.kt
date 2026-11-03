@@ -577,7 +577,8 @@ class GameMenu(
         val label: String,
         val selected: Boolean,
         val runnable: Runnable,
-        val subtitle: String? = null
+        val subtitle: String? = null,
+        val allowReselect: Boolean = false
     )
 
     /**
@@ -880,7 +881,8 @@ class GameMenu(
                         touchPointerSensitivityController.refreshApplicability()
                         touchpadSensitivityController.refresh()
                     },
-                    subtitle = getString(R.string.game_menu_touch_mode_ds5_summary)
+                    subtitle = getString(R.string.game_menu_touch_mode_ds5_summary),
+                    allowReselect = true
                 )
             )
         }
@@ -1449,7 +1451,7 @@ class GameMenu(
     }
 
     private fun handleInlineSegmentClick(segment: SegmentOption) {
-        if (segment.selected) return
+        if (segment.selected && !segment.allowReselect) return
         segment.runnable.run()
         refreshCurrentMenuPage()
     }
