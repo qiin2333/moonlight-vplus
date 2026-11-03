@@ -1259,6 +1259,10 @@ class TouchInputHandler(private val game: Game) {
             game.screenDs5Touchpad.persistZoneRect(working)
             game.screenDs5Touchpad.overlay?.showZoneReveal()
         }
+        // Discard a canceled preview and keep the outline aligned with hit-testing.
+        game.screenDs5Touchpad.overlay?.setZoneRect(
+            TouchpadZoneGeometry.parseZoneRect(game.prefConfig.screenDs5TouchpadZoneRect)
+        )
         game.screenDs5Touchpad.overlay?.setResizing(false)
         ds5ResizeEdges = null
         ds5ResizePointerId = MotionEvent.INVALID_POINTER_ID
