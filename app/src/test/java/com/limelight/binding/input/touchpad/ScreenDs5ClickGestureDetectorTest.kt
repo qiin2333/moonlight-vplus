@@ -17,10 +17,6 @@ class ScreenDs5ClickGestureDetectorTest {
         assertEquals(Action.PRESS, detector.onDown(1, 100f, 200f, 1150L, false))
     }
 
-    @Test fun singleContactDoesNotPressTheButton() {
-        firstTap()
-    }
-
     @Test fun secondDownPressesImmediatelyAndLiftReleasesWithoutAnotherClick() {
         startHold()
         assertEquals(Action.RELEASE, detector.onUp(1, 100f, 200f, 1200L))
@@ -39,14 +35,13 @@ class ScreenDs5ClickGestureDetectorTest {
         assertEquals(Action.NONE, detector.onDown(0, 100f, 200f, 6100L, false))
     }
 
-    @Test fun lateSecondContactStartsANewFirstTap() {
-        firstTap()
-        assertEquals(Action.NONE, detector.onDown(0, 100f, 200f, 1351L, false))
-    }
-
-    @Test fun doubleTapTimeoutIncludesItsBoundary() {
-        firstTap()
-        assertEquals(Action.PRESS, detector.onDown(0, 100f, 200f, 1350L, false))
+    @Test fun doubleTapTimeoutIncludesTheBoundaryAndRejectsTheNextMillisecond() {
+        for ((time, expected) in listOf(1350L to Action.PRESS, 1351L to Action.NONE)) {
+            detector.cancel()
+            firstTap()
+            assertEquals("Second contact at $time", expected,
+                detector.onDown(0, 100f, 200f, time, false))
+        }
     }
 
     @Test fun distantSecondContactDoesNotClick() {
@@ -96,12 +91,15 @@ class ScreenDs5ClickGestureDetectorTest {
         assertEquals(Action.RELEASE, detector.onUp(1, 100f, 200f, 2150L))
     }
 
-    @Test fun pressureStillPressesAndReleasesInStandardMode() {
-        detector.onDown(0, 100f, 200f, 1000L, false)
-        assertEquals(Action.PRESS, detector.onPressureChanged(true))
-        assertEquals(Action.RELEASE, detector.onPressureChanged(false))
-        assertEquals(Action.NONE, detector.onUp(0, 100f, 200f, 1100L))
-        assertEquals(Action.NONE, detector.onDown(0, 100f, 200f, 1200L, false))
+    @Test fun pressureReleaseDoesNotTapOrPrimeAnotherHoldInEitherMode() {
+        for (legacy in listOf(false, true)) {
+            detector.cancel()
+            assertEquals(Action.NONE, detector.onDown(0, 100f, 200f, 1000L, legacy))
+            assertEquals(Action.PRESS, detector.onPressureChanged(true))
+            assertEquals(Action.RELEASE, detector.onPressureChanged(false))
+            assertEquals(Action.NONE, detector.onUp(0, 100f, 200f, 1100L))
+            assertEquals(Action.NONE, detector.onDown(0, 100f, 200f, 1200L, legacy))
+        }
     }
 
     @Test fun pressureHeldUntilLiftReleasesExactlyOnce() {
@@ -117,13 +115,6 @@ class ScreenDs5ClickGestureDetectorTest {
         assertEquals(Action.TAP, detector.onUp(0, 100f, 200f, 1050L))
         assertEquals(Action.NONE, detector.onDown(0, 100f, 200f, 1150L, true))
         assertEquals(Action.NONE, detector.onUp(0, 100f, 200f, 6150L))
-    }
-
-    @Test fun legacyPressureDoesNotGenerateAnExtraTapOnLift() {
-        detector.onDown(0, 100f, 200f, 1000L, true)
-        assertEquals(Action.PRESS, detector.onPressureChanged(true))
-        assertEquals(Action.RELEASE, detector.onPressureChanged(false))
-        assertEquals(Action.NONE, detector.onUp(0, 100f, 200f, 1100L))
     }
 
     @Test fun changingToLegacyModeCannotConsumeAPendingStandardTap() {

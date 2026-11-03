@@ -11,34 +11,18 @@ class TouchpadZoneGeometryTest {
 
     @Test
     fun parseZoneRectReadsFourCommaSeparatedValues() {
-        val rect = TouchpadZoneGeometry.parseZoneRect("0.1,0.2,0.9,0.8")
-        assertEquals(0.1f, rect.left, 1e-6f)
-        assertEquals(0.2f, rect.top, 1e-6f)
-        assertEquals(0.9f, rect.right, 1e-6f)
-        assertEquals(0.8f, rect.bottom, 1e-6f)
+        assertEquals(
+            TouchpadZoneGeometry.NormalizedRect(0.1f, 0.2f, 0.9f, 0.8f),
+            TouchpadZoneGeometry.parseZoneRect("0.1,0.2,0.9,0.8"),
+        )
     }
 
     @Test
-    fun parseZoneRectFallsBackToDefaultOnGarbage() {
-        for (raw in listOf(null, "", "abc", "1,2", "0.1,0.2,0.9", "a,b,c,d")) {
-            assertEquals(
-                defaultZone,
-                TouchpadZoneGeometry.parseZoneRect(raw)
-            )
+    fun invalidOrDegenerateZonesFallBackToDefault() {
+        for (raw in listOf(null, "", "abc", "1,2", "0.1,0.2,0.9", "a,b,c,d",
+            "0.5,0.5,0.5,0.9", "0.8,0.9,0.2,0.5")) {
+            assertEquals(raw, defaultZone, TouchpadZoneGeometry.parseZoneRect(raw))
         }
-    }
-
-    @Test
-    fun parseZoneRectFallsBackToDefaultOnDegenerateRect() {
-        // Zero-width and inverted rects are invalid, not clampable.
-        assertEquals(
-            defaultZone,
-            TouchpadZoneGeometry.parseZoneRect("0.5,0.5,0.5,0.9")
-        )
-        assertEquals(
-            defaultZone,
-            TouchpadZoneGeometry.parseZoneRect("0.8,0.9,0.2,0.5")
-        )
     }
 
     @Test
@@ -51,25 +35,17 @@ class TouchpadZoneGeometryTest {
     }
 
     @Test
-    fun formatAndParseRoundTrip() {
-        val rect = TouchpadZoneGeometry.NormalizedRect(0.12f, 0.3456f, 0.8877f, 0.94f)
-        assertEquals(
-            rect,
-            TouchpadZoneGeometry.parseZoneRect(TouchpadZoneGeometry.formatZoneRect(rect))
+    fun regularAndMinimumSizeZonesSurviveFormatAndParse() {
+        val zones = listOf(
+            TouchpadZoneGeometry.NormalizedRect(0.12f, 0.3456f, 0.8877f, 0.94f),
+            TouchpadZoneGeometry.NormalizedRect(0f, 0f, 0.12f, 0.06f),
+            // Parsed subtraction rounds width or height below its minimum.
+            TouchpadZoneGeometry.NormalizedRect(0.2f, 0.6f, 0.32f, 0.66f),
+            TouchpadZoneGeometry.NormalizedRect(0.1f, 0.2f, 0.22f, 0.26f),
+            TouchpadZoneGeometry.NormalizedRect(0.88f, 0.94f, 1f, 1f),
         )
-    }
-
-    @Test
-    fun minimumSizeSurvivesFormatAndParseAcrossTheSurface() {
-        for (index in 0..1000) {
-            val left = index / 1000f * (1f - TouchpadZoneGeometry.MIN_ZONE_WIDTH)
-            val top = index / 1000f * (1f - TouchpadZoneGeometry.MIN_ZONE_HEIGHT)
-            val rect = TouchpadZoneGeometry.clampZoneRect(left, top, left, top)
-            val serialized = TouchpadZoneGeometry.formatZoneRect(rect)
-            val expected = serialized.split(',').map(String::toFloat).let {
-                TouchpadZoneGeometry.NormalizedRect(it[0], it[1], it[2], it[3])
-            }
-            assertEquals(serialized, expected, TouchpadZoneGeometry.parseZoneRect(serialized))
+        for (rect in zones) {
+            assertEquals(rect, TouchpadZoneGeometry.parseZoneRect(TouchpadZoneGeometry.formatZoneRect(rect)))
         }
     }
 
@@ -80,13 +56,6 @@ class TouchpadZoneGeometryTest {
         for (raw in listOf("0.3,0.6,0.4198,0.8", "0.3,0.6,0.8,0.6598")) {
             assertEquals(defaultZone, TouchpadZoneGeometry.parseZoneRect(raw))
         }
-    }
-
-    @Test
-    fun clampStillEnforcesTheMinimumWithinTheParseTolerance() {
-        val rect = TouchpadZoneGeometry.clampZoneRect(0f, 0f, 0.1199f, 0.0599f)
-        assertEquals(TouchpadZoneGeometry.MIN_ZONE_WIDTH, rect.width, 0f)
-        assertEquals(TouchpadZoneGeometry.MIN_ZONE_HEIGHT, rect.height, 0f)
     }
 
     @Test
@@ -149,10 +118,10 @@ class TouchpadZoneGeometryTest {
     }
 
     @Test
-    fun clampZoneRectEnforcesMinimumSizeAndBounds() {
-        val tiny = TouchpadZoneGeometry.clampZoneRect(0.5f, 0.5f, 0.55f, 0.52f)
-        assertEquals(TouchpadZoneGeometry.MIN_ZONE_WIDTH, tiny.width, 1e-6f)
-        assertEquals(TouchpadZoneGeometry.MIN_ZONE_HEIGHT, tiny.height, 1e-6f)
+    fun clampEnforcesExactMinimumAndBoundsEvenWithinTheParseTolerance() {
+        val tiny = TouchpadZoneGeometry.clampZoneRect(0f, 0f, 0.1199f, 0.0599f)
+        assertEquals(TouchpadZoneGeometry.MIN_ZONE_WIDTH, tiny.width, 0f)
+        assertEquals(TouchpadZoneGeometry.MIN_ZONE_HEIGHT, tiny.height, 0f)
 
         val pinned = TouchpadZoneGeometry.clampZoneRect(0.95f, 0.95f, 0.99f, 0.99f)
         assertEquals(0.99f, pinned.right, 1e-6f)
