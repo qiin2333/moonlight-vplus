@@ -293,7 +293,6 @@ class ConnectionCallbackHandler(private val game: Game) {
      * 停止连接并清理相关资源。
      */
     fun stopConnection() {
-        game.screenDs5Touchpad.cancelPendingHostUpdate()
         val connection = game.conn
         connection?.requestStop()
 

@@ -1,10 +1,8 @@
 package com.limelight.binding.input.touchpad
 
-import android.content.ContentValues
 import android.view.ViewGroup
 import com.limelight.Game
 import com.limelight.LimeLog
-import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.preferences.TouchModePreferenceState
 import com.limelight.ui.TouchpadZoneOverlayView
 
@@ -21,7 +19,7 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     private var pendingZoneReveal = false
     private var container: ViewGroup? = null
-    private var pendingHostUpdate: Runnable? = null
+    private var hostUpdatePending = false
     private var activationFallback: TouchModePreferenceState? = null
 
     private val enabled: Boolean
@@ -51,7 +49,7 @@ class ScreenDs5Touchpad(private val game: Game) {
     fun setEnabled(enabled: Boolean) {
         if (enabled && game.screenDs5TouchpadHostSupport == Game.ScreenDs5HostSupport.UNSUPPORTED) return
         if (game.prefConfig.screenDs5Touchpad == enabled) {
-            if (pendingHostUpdate != null) updateHost()
+            if (hostUpdatePending) updateHost()
             return
         }
         if (enabled) rememberTouchMode() else activationFallback = null
@@ -65,7 +63,6 @@ class ScreenDs5Touchpad(private val game: Game) {
             game.setTouchMode(false)
         }
         game.prefConfig.writePreferences(game)
-        syncTouchModeConfig()
         game.touchInputHandler.cancelScreenDs5TouchpadGesture()
         if (enabled) {
             container?.let { attach(it) }
@@ -110,16 +107,6 @@ class ScreenDs5Touchpad(private val game: Game) {
         setEnabled(false)
     }
 
-    private fun syncTouchModeConfig() {
-        val manager = game.controllerManager ?: return
-        val configId = manager.pageConfigController?.currentConfigId ?: return
-        val values = ContentValues().apply {
-            put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, game.prefConfig.touchscreenTrackpad.toString())
-            put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, game.prefConfig.enableEnhancedTouch.toString())
-        }
-        manager.superConfigDatabaseHelper?.updateConfig(configId, values)
-    }
-
     fun setSingleTapToClick(enabled: Boolean) {
         if (game.prefConfig.screenDs5SingleTapToClick == enabled) return
         cancelGesture()
@@ -131,38 +118,17 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     /** Re-declare controller 0 as DualSense after host negotiations settle. */
     fun redeclareOnHost() {
-        if (enabled || pendingHostUpdate != null) updateHost()
+        if (enabled || hostUpdatePending) updateHost()
     }
 
     private fun updateHost() {
-        cancelPendingHostUpdate()
-        val controller = game.controllerHandler
-        var attempts = 0
-        val update = object : Runnable {
-            override fun run() {
-                if (pendingHostUpdate !== this || game.controllerHandler !== controller ||
-                    !game.connected || game.isFinishing || game.isDestroyed
-                ) return
-                val result = controller.setScreenDs5TouchpadEnabled(enabled)
-                if (result == 0) {
-                    pendingHostUpdate = null
-                    return
-                }
-                attempts++
-                LimeLog.warning("Screen DS5 touchpad controller update failed: enabled=$enabled, result=$result, attempt=$attempts")
-                if (attempts < 3) game.streamView.postDelayed(this, 150L)
-                // Keep the latest intent pending after exhaustion, for an explicit
-                // retry or the next host-ready callback; never spin indefinitely.
-            }
+        hostUpdatePending = true
+        if (!game.connected || game.isFinishing || game.isDestroyed) return
+        val result = game.controllerHandler.setScreenDs5TouchpadEnabled(enabled)
+        hostUpdatePending = result != 0
+        if (hostUpdatePending) {
+            LimeLog.warning("Screen DS5 touchpad controller update failed: enabled=$enabled, result=$result")
         }
-        pendingHostUpdate = update
-        update.run()
-    }
-
-    /** Cancel the old request before another mode change or stream teardown. */
-    fun cancelPendingHostUpdate() {
-        pendingHostUpdate?.let { game.streamView.removeCallbacks(it) }
-        pendingHostUpdate = null
     }
 
     /** Persist a zone rect (edge-resize lift). */
