@@ -1542,6 +1542,9 @@ class TouchInputHandler(private val game: Game) {
         }
 
     fun setTouchMode(enableRelativeTouch: Boolean) {
+        if (ds5Route != Ds5Route.NONE) {
+            cancelScreenDs5TouchpadGesture()
+        }
         for (i in touchContextMap.indices) {
             if (enableRelativeTouch) {
                 game.prefConfig.touchscreenTrackpad = true

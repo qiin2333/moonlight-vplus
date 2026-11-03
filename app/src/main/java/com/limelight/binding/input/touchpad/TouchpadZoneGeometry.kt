@@ -49,7 +49,12 @@ object TouchpadZoneGeometry {
         val top = parts[1].coerceIn(0f, 1f)
         val right = parts[2].coerceIn(0f, 1f)
         val bottom = parts[3].coerceIn(0f, 1f)
-        if (right - left < MIN_ZONE_WIDTH || bottom - top < MIN_ZONE_HEIGHT) {
+        // Each endpoint is saved to four decimals; allow their combined rounding
+        // error plus float subtraction error only when reading persisted geometry.
+        val parseTolerance = 0.0001f + 1e-7f
+        if (right - left < MIN_ZONE_WIDTH - parseTolerance ||
+            bottom - top < MIN_ZONE_HEIGHT - parseTolerance
+        ) {
             return parseZoneRect(DEFAULT_ZONE_RECT)
         }
         return NormalizedRect(left, top, right, bottom)
