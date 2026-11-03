@@ -6,11 +6,15 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
+import android.text.TextPaint
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.View
+import androidx.core.content.ContextCompat
 import com.limelight.R
 import com.limelight.binding.input.touchpad.TouchpadZoneGeometry
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.utils.UiHelper
 import kotlin.math.max
 
 /**
@@ -43,37 +47,42 @@ class TouchpadZoneOverlayView(
     private val contactStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         style = Paint.Style.STROKE
-        strokeWidth = 1.8f * density
+        strokeWidth = 1f * density
     }
     private val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xDC171923.toInt()
+        color = ContextCompat.getColor(context, R.color.game_menu_card_background)
+        alpha = 245
         style = Paint.Style.FILL
     }
-    private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = sp(14f)
+    private val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ContextCompat.getColor(context, R.color.game_menu_text_primary)
+        textSize = sp(13f)
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
-    private val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xCFFFFFFF.toInt()
+    private val subtitlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ContextCompat.getColor(context, R.color.game_menu_text_secondary)
         textSize = sp(11f)
     }
     private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF8AB4F8.toInt()
         style = Paint.Style.STROKE
-        strokeWidth = 1.8f * density
+        strokeWidth = 1.5f * density
     }
     private val zoneOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         style = Paint.Style.STROKE
-        strokeWidth = 1.8f * density
+        strokeWidth = 1f * density
     }
-    // Subtitle-style under-stroke: keeps the outline legible on bright game content.
+    // A narrow, translucent backing keeps the fine border visible on bright content.
     private val zoneOutlineInkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
         style = Paint.Style.STROKE
-        strokeWidth = 4.5f * density
     }
+    private val zoneFillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val resizeHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeWidth = 2.5f * density
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val zoneBounds = RectF()
 
     private var introStartedAt = 0L
     private var touchpadPressed = false
@@ -145,6 +154,7 @@ class TouchpadZoneOverlayView(
             }
             MoonBridge.LI_TOUCH_EVENT_UP,
             MoonBridge.LI_TOUCH_EVENT_CANCEL -> {
+                lastContactAt = now
                 val contact = contacts.getOrPut(pointerId) { Contact(normalizedX, normalizedY) }
                 contact.x = normalizedX
                 contact.y = normalizedY
@@ -156,6 +166,7 @@ class TouchpadZoneOverlayView(
 
     fun cancelAllContacts() {
         val now = SystemClock.uptimeMillis()
+        if (contacts.values.any { it.releasedAt == 0L }) lastContactAt = now
         contacts.values.forEach { it.releasedAt = now }
         postInvalidateOnAnimation()
     }
@@ -163,9 +174,10 @@ class TouchpadZoneOverlayView(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val now = SystemClock.uptimeMillis()
-        var needsNextFrame = drawZoneChrome(canvas, now)
-        needsNextFrame = drawContacts(canvas, now) || needsNextFrame
-        needsNextFrame = drawActivatedHint(canvas, now) || needsNextFrame
+        val accent = UiHelper.accentColor(context)
+        var needsNextFrame = drawZoneChrome(canvas, now, accent)
+        needsNextFrame = drawContacts(canvas, now, accent) || needsNextFrame
+        needsNextFrame = drawActivatedHint(canvas, now, accent) || needsNextFrame
         if (needsNextFrame) postInvalidateOnAnimation()
     }
 
@@ -189,45 +201,60 @@ class TouchpadZoneOverlayView(
     }
 
     /**
-     * Zone affordances: a faint double-stroked outline stays visible while idle so
-     * the surface is always locatable; contact, reveal and resize brighten it.
+     * Idle chrome stays neutral and quiet. Touch reveals the surface, while an
+     * actual button press or resize uses the same accent as the rest of the app.
      */
-    private fun drawZoneChrome(canvas: Canvas, now: Long): Boolean {
+    private fun drawZoneChrome(canvas: Canvas, now: Long, accent: Int): Boolean {
         val rect = zoneRect ?: return false
-        val point = FloatArray(2)
-        mapNormalizedToOverlay(rect.left, rect.top, point)
-        val left = point[0]
-        val top = point[1]
-        mapNormalizedToOverlay(rect.right, rect.bottom, point)
-        val right = point[0]
-        val bottom = point[1]
+        mapNormalizedToOverlay(rect.left, rect.top, scratchPoint)
+        zoneBounds.left = scratchPoint[0]
+        zoneBounds.top = scratchPoint[1]
+        mapNormalizedToOverlay(rect.right, rect.bottom, scratchPoint)
+        zoneBounds.right = scratchPoint[0]
+        zoneBounds.bottom = scratchPoint[1]
 
-        val contactActive = now - lastContactAt < ZONE_ACTIVE_MS
+        val contactActive = contacts.values.any { it.releasedAt == 0L }
+        val contactFade = if (lastContactAt == 0L) 0f else
+            (1f - (now - lastContactAt).toFloat() / ZONE_ACTIVE_MS).coerceIn(0f, 1f)
         val revealing = now < zoneRevealUntil
-        val outlineActive = resizing || touchpadPressed || contactActive ||
-            introStartedAt != 0L || revealing
+        val revealFade = ((zoneRevealUntil - now).toFloat() / ZONE_ACTIVE_MS).coerceIn(0f, 1f)
+        val emphasis = if (resizing || touchpadPressed || contactActive) 1f
+            else max(contactFade, revealFade)
+        val corner = 12f * density
 
-        // Subtitle-style double stroke: dark under-stroke first, bright line on top.
-        zoneOutlineInkPaint.alpha = if (outlineActive) 220 else 200
-        canvas.drawRoundRect(
-            RectF(left, top, right, bottom),
-            10f * density,
-            10f * density,
-            zoneOutlineInkPaint,
-        )
-        zoneOutlinePaint.alpha = if (outlineActive) 240 else 215
-        zoneOutlinePaint.strokeWidth = if (resizing) 2.6f * density else 1.8f * density
-        canvas.drawRoundRect(
-            RectF(left, top, right, bottom),
-            10f * density,
-            10f * density,
-            zoneOutlinePaint,
-        )
-        return contactActive || revealing
+        zoneFillPaint.color = Color.BLACK
+        zoneFillPaint.alpha = (8 + 8 * emphasis).toInt()
+        canvas.drawRoundRect(zoneBounds, corner, corner, zoneFillPaint)
+        if (touchpadPressed) {
+            zoneFillPaint.color = accent
+            zoneFillPaint.alpha = 12
+            canvas.drawRoundRect(zoneBounds, corner, corner, zoneFillPaint)
+        }
+        zoneOutlinePaint.color = if (touchpadPressed || resizing) accent else Color.WHITE
+        zoneOutlinePaint.alpha = when {
+            resizing || touchpadPressed -> 220
+            else -> (82 + 90 * emphasis).toInt()
+        }
+        zoneOutlinePaint.strokeWidth = (if (resizing || touchpadPressed) 1.5f else 1f) * density
+        zoneOutlineInkPaint.alpha = (55 + 30 * emphasis).toInt()
+        zoneOutlineInkPaint.strokeWidth = zoneOutlinePaint.strokeWidth + 1.25f * density
+        canvas.drawRoundRect(zoneBounds, corner, corner, zoneOutlineInkPaint)
+        canvas.drawRoundRect(zoneBounds, corner, corner, zoneOutlinePaint)
+        if (resizing) {
+            resizeHandlePaint.color = accent
+            val cx = zoneBounds.centerX()
+            val cy = zoneBounds.centerY()
+            val handle = 8f * density
+            canvas.drawLine(cx - handle, zoneBounds.top, cx + handle, zoneBounds.top, resizeHandlePaint)
+            canvas.drawLine(cx - handle, zoneBounds.bottom, cx + handle, zoneBounds.bottom, resizeHandlePaint)
+            canvas.drawLine(zoneBounds.left, cy - handle, zoneBounds.left, cy + handle, resizeHandlePaint)
+            canvas.drawLine(zoneBounds.right, cy - handle, zoneBounds.right, cy + handle, resizeHandlePaint)
+        }
+        return (!contactActive && contactFade > 0f) || revealing
     }
 
-    private fun drawContacts(canvas: Canvas, now: Long): Boolean {
-        val radius = (if (touchpadPressed) 23f else 18f) * density
+    private fun drawContacts(canvas: Canvas, now: Long, accent: Int): Boolean {
+        val radius = (if (touchpadPressed) 11f else 9f) * density
         var animating = false
         val iterator = contacts.iterator()
         while (iterator.hasNext()) {
@@ -246,24 +273,21 @@ class TouchpadZoneOverlayView(
             mapNormalizedToOverlay(contact.x, contact.y, scratchPoint)
             val x = scratchPoint[0]
             val y = scratchPoint[1]
-            contactFillPaint.color = if (touchpadPressed) 0xFF8AB4F8.toInt() else Color.WHITE
-            contactStrokePaint.color = if (touchpadPressed) 0xFF8AB4F8.toInt() else Color.WHITE
-            contactFillPaint.alpha = ((if (touchpadPressed) 92 else 42) * alpha).toInt()
-            contactStrokePaint.alpha = (220 * alpha).toInt()
+            contactFillPaint.color = if (touchpadPressed) accent else Color.WHITE
+            contactStrokePaint.color = if (touchpadPressed) accent else Color.WHITE
+            contactFillPaint.alpha = ((if (touchpadPressed) 64 else 24) * alpha).toInt()
+            contactStrokePaint.alpha = ((if (touchpadPressed) 230 else 170) * alpha).toInt()
+            contactStrokePaint.strokeWidth = (if (touchpadPressed) 1.4f else 1f) * density
             canvas.drawCircle(x, y, radius, contactFillPaint)
             canvas.drawCircle(x, y, radius, contactStrokePaint)
-            if (touchpadPressed) {
-                contactStrokePaint.alpha = (105 * alpha).toInt()
-                canvas.drawCircle(x, y, radius + 6f * density, contactStrokePaint)
-            }
-            canvas.drawCircle(x, y, 3.5f * density, contactFillPaint.apply {
-                this.alpha = (210 * alpha).toInt()
+            canvas.drawCircle(x, y, 2f * density, contactFillPaint.apply {
+                this.alpha = (190 * alpha).toInt()
             })
         }
         return animating
     }
 
-    private fun drawActivatedHint(canvas: Canvas, now: Long): Boolean {
+    private fun drawActivatedHint(canvas: Canvas, now: Long, accent: Int): Boolean {
         if (introStartedAt == 0L) return false
         val elapsed = now - introStartedAt
         if (elapsed >= INTRO_DURATION_MS) {
@@ -278,17 +302,24 @@ class TouchpadZoneOverlayView(
             else -> 1f
         }.coerceIn(0f, 1f)
 
-        val title = resources.getString(R.string.ds5_touchpad_active_title)
-        val subtitle = resources.getString(
+        val horizontalPadding = 16f * density
+        val iconWidth = 24f * density
+        val iconGap = 10f * density
+        val textLimit = (width - 32f * density - horizontalPadding * 2 - iconWidth - iconGap)
+            .coerceAtLeast(0f)
+        val title = TextUtils.ellipsize(resources.getString(R.string.ds5_touchpad_active_title),
+            titlePaint, textLimit, TextUtils.TruncateAt.END).toString()
+        val subtitle = TextUtils.ellipsize(resources.getString(
             if (singleTapToClick) R.string.ds5_touchpad_active_subtitle_single_tap
             else R.string.ds5_touchpad_active_subtitle_zone
-        )
-        val horizontalPadding = 18f * density
-        val iconWidth = 30f * density
-        val iconGap = 12f * density
+        ), subtitlePaint, textLimit, TextUtils.TruncateAt.END).toString()
         val textWidth = max(titlePaint.measureText(title), subtitlePaint.measureText(subtitle))
         val pillWidth = horizontalPadding * 2 + iconWidth + iconGap + textWidth
-        val pillHeight = 58f * density
+        val titleMetrics = titlePaint.fontMetrics
+        val subtitleMetrics = subtitlePaint.fontMetrics
+        val titleHeight = titleMetrics.descent - titleMetrics.ascent
+        val subtitleHeight = subtitleMetrics.descent - subtitleMetrics.ascent
+        val pillHeight = max(54f * density, titleHeight + subtitleHeight + 22f * density)
         val left = (width - pillWidth) / 2f
         val top = 24f * density
 
@@ -296,25 +327,28 @@ class TouchpadZoneOverlayView(
         canvas.saveLayerAlpha(pillBounds, (255 * fade).toInt())
         canvas.drawRoundRect(
             pillBounds,
-            18f * density,
-            18f * density,
+            16f * density,
+            16f * density,
             pillPaint,
         )
 
         val iconLeft = left + horizontalPadding
-        val iconTop = top + 19f * density
+        val iconTop = top + (pillHeight - 18f * density) / 2f
+        iconPaint.color = accent
         canvas.drawRoundRect(
-            RectF(iconLeft, iconTop, iconLeft + iconWidth, iconTop + 20f * density),
+            RectF(iconLeft, iconTop, iconLeft + iconWidth, iconTop + 18f * density),
             5f * density,
             5f * density,
             iconPaint,
         )
-        canvas.drawCircle(iconLeft + 10f * density, iconTop + 10f * density, 2f * density, iconPaint)
-        canvas.drawCircle(iconLeft + 20f * density, iconTop + 10f * density, 2f * density, iconPaint)
+        canvas.drawCircle(iconLeft + 8f * density, iconTop + 9f * density, 1.5f * density, iconPaint)
+        canvas.drawCircle(iconLeft + 16f * density, iconTop + 9f * density, 1.5f * density, iconPaint)
 
         val textLeft = iconLeft + iconWidth + iconGap
-        canvas.drawText(title, textLeft, top + 24f * density, titlePaint)
-        canvas.drawText(subtitle, textLeft, top + 43f * density, subtitlePaint)
+        val textTop = top + (pillHeight - titleHeight - subtitleHeight - 2f * density) / 2f
+        canvas.drawText(title, textLeft, textTop - titleMetrics.ascent, titlePaint)
+        canvas.drawText(subtitle, textLeft,
+            textTop + titleHeight + 2f * density - subtitleMetrics.ascent, subtitlePaint)
         canvas.restore()
         return true
     }
