@@ -1544,6 +1544,9 @@ class TouchInputHandler(private val game: Game) {
     fun setTouchMode(enableRelativeTouch: Boolean) {
         if (ds5Route != Ds5Route.NONE) {
             cancelScreenDs5TouchpadGesture()
+        } else {
+            // A completed first tap can still be waiting for its second contact.
+            screenDs5ClickGestureDetector.cancel()
         }
         for (i in touchContextMap.indices) {
             if (enableRelativeTouch) {

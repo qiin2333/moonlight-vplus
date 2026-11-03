@@ -2,6 +2,7 @@ package com.limelight.binding.input.touchpad
 
 import android.view.ViewGroup
 import com.limelight.Game
+import com.limelight.LimeLog
 import com.limelight.ui.TouchpadZoneOverlayView
 
 /**
@@ -61,7 +62,10 @@ class ScreenDs5Touchpad(private val game: Game) {
         } else {
             detach()
         }
-        game.controllerHandler.setScreenDs5TouchpadEnabled(enabled)
+        val result = game.controllerHandler.setScreenDs5TouchpadEnabled(enabled)
+        if (result != 0) {
+            LimeLog.warning("Screen DS5 touchpad controller update failed: enabled=$enabled, result=$result")
+        }
     }
 
     /** Toggle the pad layer for hotkeys and quick actions; returns the new state. */
