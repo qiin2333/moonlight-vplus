@@ -637,6 +637,14 @@ class MicrophoneCapture internal constructor(
         try {
             check(record.state == AudioRecord.STATE_INITIALIZED) { "AudioRecord initialization failed" }
             check(configure(record)) { "Microphone input preference rejected" }
+            val preferred = if (Build.VERSION.SDK_INT >= 23) {
+                try { record.preferredDevice } catch (_: RuntimeException) { null }
+            } else null
+            val preferredDescription = if (Build.VERSION.SDK_INT >= 23) {
+                "type=${preferred?.type}, id=${preferred?.id}"
+            } else "unsupported"
+            LimeLog.info("Microphone recorder created: source=$audioSource, sampleRate=$captureSampleRate, " +
+                "preferred=$preferredDescription")
             if (Build.VERSION.SDK_INT >= 29) {
                 unregisterRecordingCallback = RecordingState.observe(record) { routeRefreshRequested.set(true) }
             }

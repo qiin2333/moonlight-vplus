@@ -98,11 +98,12 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
                 }
                 val connected = audio.mode == AudioManager.MODE_IN_COMMUNICATION &&
                     (if (Build.VERSION.SDK_INT >= 31)
-                        Api31.isSelected(audio, device.id) &&
-                            scoAudioConfirmed(device.type, device.address)
+                        Api31.isSelected(audio, device.id)
                     else legacyConnected)
                 if (connected) {
-                    // The recording input is checked on the actual AudioRecord after start.
+                    // On API 31+, the actual AudioRecord input is the authoritative HFP
+                    // confirmation. Some OEMs update the communication route before their
+                    // Bluetooth profile proxy reports SCO audio connected.
                     if (!completed) finish(true)
                 } else if (active) {
                     clearOwnedRoute()
