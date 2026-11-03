@@ -1208,7 +1208,6 @@ class TouchInputHandler(private val game: Game) {
                 }
                 if (TouchpadZoneGeometry.hitTest(zone, position[0], position[1])) {
                     ds5Route = Ds5Route.PAD
-                    LimeLog.info("ScreenDs5 pad: gesture owned at %.2f,%.2f".format(position[0], position[1]))
                 } else {
                     applyScreenDs5ClickAction(view ?: game.streamView, screenDs5ClickGestureDetector.cancel())
                 }

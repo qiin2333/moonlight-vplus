@@ -16,6 +16,7 @@ import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.input.haptics.Ds5SimulationMode
+import com.limelight.binding.input.touchpad.TouchpadZoneGeometry
 import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
 import kotlin.math.max
@@ -192,7 +193,7 @@ class PreferenceConfiguration {
      * the stream content: touches inside it reach the pad and the rest of the screen
      * stays regular multi-touch.
      */
-    var screenDs5TouchpadZoneRect = DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT
+    var screenDs5TouchpadZoneRect = TouchpadZoneGeometry.DEFAULT_ZONE_RECT
     /** Ask the host to auto-invoke its touch keyboard when a text field gains focus (Sunshine extension). */
     var touchKeyboardAutoInvoke = true
     /** Auto-open the local IME on API 33+ when the host reports a trusted editable activation. */
@@ -933,8 +934,6 @@ class PreferenceConfiguration {
         const val DEFAULT_AUDIO_VIBRATION_MODE = "auto"
         const val DEFAULT_AUDIO_VIBRATION_SCENE = 0 // Game/Movie
         private const val DEFAULT_FLIP_FACE_BUTTONS = false
-        /** Bottom-centered strip sized after a thumb sweep; left,top,right,bottom normalized. */
-        const val DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT = "0.18,0.74,0.82,0.94"
         private const val DEFAULT_AUDIO_CONFIG = "2" // Stereo
         private const val DEFAULT_LATENCY_TOAST = false
         private const val DEFAULT_ENABLE_STUN = false
@@ -1647,8 +1646,8 @@ class PreferenceConfiguration {
             config.screenDs5SingleTapToClick = prefs.getBoolean(SCREEN_DS5_SINGLE_TAP_TO_CLICK_PREF_STRING, false)
             config.screenDs5TouchpadZoneRect = prefs.getString(
                 SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING,
-                DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT
-            ) ?: DEFAULT_SCREEN_DS5_TOUCHPAD_ZONE_RECT
+                TouchpadZoneGeometry.DEFAULT_ZONE_RECT
+            ) ?: TouchpadZoneGeometry.DEFAULT_ZONE_RECT
             config.touchKeyboardAutoInvoke = prefs.getBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, true)
             config.remoteImeAutoShow = prefs.getBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, true)
             config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)

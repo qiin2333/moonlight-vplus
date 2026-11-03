@@ -2,8 +2,6 @@ package com.limelight.binding.input.touchpad
 
 import android.view.ViewGroup
 import com.limelight.Game
-import com.limelight.LimeLog
-import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.ui.TouchpadZoneOverlayView
 
 /**
@@ -20,14 +18,14 @@ class ScreenDs5Touchpad(private val game: Game) {
     private var pendingZoneReveal = false
     private var container: ViewGroup? = null
 
-    val enabled: Boolean
+    private val enabled: Boolean
         get() = game.prefConfig.screenDs5Touchpad
 
     /** Attach the zone overlay during stream setup when the pad layer is enabled. */
     fun attachIfEnabled(container: ViewGroup) {
         this.container = container
         if (enabled) {
-            this.container?.let { attach(it) }
+            attach(container)
         }
     }
 
@@ -58,7 +56,7 @@ class ScreenDs5Touchpad(private val game: Game) {
             container?.let { attach(it) }
             // Show where the pad surface is right after enabling. Also deferred:
             // the menu covering this call hides the outline behind it.
-            markPendingZoneReveal()
+            pendingZoneReveal = true
             overlay?.showZoneReveal()
         } else {
             detach()
@@ -96,17 +94,8 @@ class ScreenDs5Touchpad(private val game: Game) {
         game.prefConfig.writePreferences(game)
     }
 
-    /**
-     * A zone switch made while the game menu is open cannot be seen (the menu covers
-     * the overlay and the reveal window expires behind it), so queue the reveal for
-     * when the menu closes.
-     */
-    fun markPendingZoneReveal() {
-        pendingZoneReveal = true
-    }
-
     /** Show the zone outline while the pad layer is enabled. */
-    fun revealIfEnabled() {
+    private fun revealIfEnabled() {
         if (enabled) {
             overlay?.showZoneReveal()
         }
@@ -120,12 +109,15 @@ class ScreenDs5Touchpad(private val game: Game) {
         }
     }
 
-    private fun attach(container: ViewGroup?) {
-        if (overlay != null || container == null) return
+    private fun attach(container: ViewGroup) {
+        if (overlay != null) return
         // Always map against the phone's own stream view: the overlay lives in the
         // phone window, so an external-display activeStreamView would misplace it.
         val view = TouchpadZoneOverlayView(game) {
             game.streamView
+        }.apply {
+            setSingleTapToClick(game.prefConfig.screenDs5SingleTapToClick)
+            setZoneRect(TouchpadZoneGeometry.parseZoneRect(game.prefConfig.screenDs5TouchpadZoneRect))
         }
         container.addView(
             view,
@@ -134,10 +126,7 @@ class ScreenDs5Touchpad(private val game: Game) {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             ),
         )
-        // Assign before refreshing: refresh reads the field, so calling it inside
-        // an .also{} on the assignment would see null and silently no-op.
         overlay = view
-        refreshZoneUi()
     }
 
     private fun detach() {
@@ -146,26 +135,8 @@ class ScreenDs5Touchpad(private val game: Game) {
         overlay = null
     }
 
-    private fun refreshZoneUi() {
-        val view = overlay ?: return
-        view.setSingleTapToClick(game.prefConfig.screenDs5SingleTapToClick)
-        view.setZoneRect(
-            if (enabled) {
-                TouchpadZoneGeometry.parseZoneRect(game.prefConfig.screenDs5TouchpadZoneRect)
-            } else {
-                null
-            }
-        )
-        LimeLog.info("TouchpadZoneUi: layer attached enabled=$enabled" +
-            " rect=${game.prefConfig.screenDs5TouchpadZoneRect}")
-    }
-
     /** Drop any in-flight pad gesture and clear pad state on the host. */
     fun cancelGesture() {
         game.touchInputHandler.cancelScreenDs5TouchpadGesture()
-        game.conn?.sendControllerTouchEvent(
-            0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f
-        )
-        overlay?.cancelAllContacts()
     }
 }

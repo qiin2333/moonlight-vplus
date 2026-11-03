@@ -2,8 +2,6 @@ package com.limelight.binding.input.touchpad
 
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Geometry of a reusable screen touchpad surface. All rects are normalized to the
@@ -23,8 +21,6 @@ object TouchpadZoneGeometry {
     ) {
         val width: Float get() = right - left
         val height: Float get() = bottom - top
-        val centerX: Float get() = (left + right) / 2f
-        val centerY: Float get() = (top + bottom) / 2f
 
         fun contains(x: Float, y: Float): Boolean = x in left..right && y in top..bottom
     }
@@ -113,6 +109,7 @@ object TouchpadZoneGeometry {
         return NormalizedRect(l, t, r, b)
     }
 
+    /** Bottom-centered strip; left,top,right,bottom normalized to the stream content. */
     const val DEFAULT_ZONE_RECT = "0.18,0.74,0.82,0.94"
     const val MIN_ZONE_WIDTH = 0.12f
     const val MIN_ZONE_HEIGHT = 0.06f

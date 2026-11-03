@@ -40,14 +40,9 @@ class TouchpadZoneOverlayView(
     private val density = resources.displayMetrics.density
     private val contacts = LinkedHashMap<Int, Contact>(2)
 
-    private val contactFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        style = Paint.Style.FILL
-    }
+    private val contactFillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val contactStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
         style = Paint.Style.STROKE
-        strokeWidth = 1f * density
     }
     private val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.game_menu_card_background)
@@ -68,9 +63,7 @@ class TouchpadZoneOverlayView(
         strokeWidth = 1.5f * density
     }
     private val zoneOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
         style = Paint.Style.STROKE
-        strokeWidth = 1f * density
     }
     // A narrow, translucent backing keeps the fine border visible on bright content.
     private val zoneOutlineInkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -143,23 +136,18 @@ class TouchpadZoneOverlayView(
 
     fun updateContact(eventType: Byte, pointerId: Int, normalizedX: Float, normalizedY: Float) {
         val now = SystemClock.uptimeMillis()
-        when (eventType) {
+        val releasedAt = when (eventType) {
             MoonBridge.LI_TOUCH_EVENT_DOWN,
-            MoonBridge.LI_TOUCH_EVENT_MOVE -> {
-                lastContactAt = now
-                val contact = contacts.getOrPut(pointerId) { Contact(normalizedX, normalizedY) }
-                contact.x = normalizedX
-                contact.y = normalizedY
-                contact.releasedAt = 0L
-            }
+            MoonBridge.LI_TOUCH_EVENT_MOVE -> 0L
             MoonBridge.LI_TOUCH_EVENT_UP,
-            MoonBridge.LI_TOUCH_EVENT_CANCEL -> {
-                lastContactAt = now
-                val contact = contacts.getOrPut(pointerId) { Contact(normalizedX, normalizedY) }
-                contact.x = normalizedX
-                contact.y = normalizedY
-                contact.releasedAt = now
-            }
+            MoonBridge.LI_TOUCH_EVENT_CANCEL -> now
+            else -> return
+        }
+        lastContactAt = now
+        contacts.getOrPut(pointerId) { Contact(normalizedX, normalizedY) }.apply {
+            x = normalizedX
+            y = normalizedY
+            this.releasedAt = releasedAt
         }
         postInvalidateOnAnimation()
     }
@@ -256,9 +244,9 @@ class TouchpadZoneOverlayView(
     private fun drawContacts(canvas: Canvas, now: Long, accent: Int): Boolean {
         val radius = (if (touchpadPressed) 11f else 9f) * density
         var animating = false
-        val iterator = contacts.iterator()
+        val iterator = contacts.values.iterator()
         while (iterator.hasNext()) {
-            val (_, contact) = iterator.next()
+            val contact = iterator.next()
             val alpha = if (contact.releasedAt == 0L) {
                 1f
             } else {
@@ -280,9 +268,8 @@ class TouchpadZoneOverlayView(
             contactStrokePaint.strokeWidth = (if (touchpadPressed) 1.4f else 1f) * density
             canvas.drawCircle(x, y, radius, contactFillPaint)
             canvas.drawCircle(x, y, radius, contactStrokePaint)
-            canvas.drawCircle(x, y, 2f * density, contactFillPaint.apply {
-                this.alpha = (190 * alpha).toInt()
-            })
+            contactFillPaint.alpha = (190 * alpha).toInt()
+            canvas.drawCircle(x, y, 2f * density, contactFillPaint)
         }
         return animating
     }

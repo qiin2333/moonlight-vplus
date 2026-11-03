@@ -1601,7 +1601,6 @@
     <string name="toast_crown_not_enabled">Crown отключён</string>
     <string name="game_menu_toggle_touch">Сенсорный ввод</string>
     <string name="ds5_touchpad_active_title">Тачпад DS5 активен</string>
-    <string name="ds5_touchpad_active_subtitle">Вести — сдвиг · Тап — щелчок</string>
     <string name="toast_touch_enabled">Касания включены</string>
     <string name="toast_touch_disabled">Касания отключены</string>
     <string name="toast_cannot_access_controller">Нет доступа к геймпаду</string>

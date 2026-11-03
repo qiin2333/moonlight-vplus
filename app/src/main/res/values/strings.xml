@@ -1879,7 +1879,6 @@ Tap again to replace it.</string>
     <string name="toast_crown_not_enabled">Crown is off</string>
     <string name="game_menu_toggle_touch">Touch Input</string>
     <string name="ds5_touchpad_active_title">DS5 touchpad active</string>
-    <string name="ds5_touchpad_active_subtitle">Touch to move · Tap to click</string>
     <string name="ds5_touchpad_active_subtitle_zone">Double-tap to click · Hold the second tap to hold</string>
     <string name="ds5_touchpad_active_subtitle_single_tap">Tap to click · Drag the zone edge to resize</string>
     <string name="title_ds5_single_tap_to_click">DS5 single-tap click (legacy)</string>

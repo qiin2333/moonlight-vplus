@@ -1592,7 +1592,6 @@
     <string name="toast_crown_not_enabled">王冠未启用</string>
     <string name="game_menu_toggle_touch">触控输入</string>
     <string name="ds5_touchpad_active_title">DS5 触控板已激活</string>
-    <string name="ds5_touchpad_active_subtitle">触摸移动 · 轻点即可点击</string>
     <string name="ds5_touchpad_active_subtitle_zone">双击点击 · 第二下按住可长按</string>
     <string name="ds5_touchpad_active_subtitle_single_tap">轻点点击 · 拖动分区边缘调整大小</string>
     <string name="title_ds5_single_tap_to_click">DS5 单击点击（兼容）</string>
