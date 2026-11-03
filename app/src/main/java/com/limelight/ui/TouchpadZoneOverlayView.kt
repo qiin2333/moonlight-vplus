@@ -19,8 +19,8 @@ import kotlin.math.max
 
 /**
  * Reusable overlay for a screen touchpad surface: draws the zone outline, pad
- * contact dots and the activation hint. The zone stays visible while idle so the
- * surface is always locatable, and brightens on contact, reveal and resize.
+ * contact dots and the activation hint. Idle is fully transparent; contact,
+ * explicit reveal and resizing make the surface visible temporarily.
  * Non-interactive — gesture routing lives in the caller (TouchInputHandler), which
  * pushes state in through the setters. Coordinates are normalized to the stream
  * content; [coordinateViewProvider] must return the view holding that content so
@@ -102,12 +102,15 @@ class TouchpadZoneOverlayView(
 
     /**
      * Draw the zone outline prominently for a few seconds so the user can see where
-     * the pad surface is right after enabling or resizing it; idle stays calm after.
+     * the pad surface is right after enabling or resizing it; idle hides it afterward.
      */
     fun showZoneReveal() {
         zoneRevealUntil = SystemClock.uptimeMillis() + ZONE_REVEAL_MS
         postInvalidateOnAnimation()
     }
+
+    /** Edge resizing is available only during an explicit zone reveal. */
+    fun isZoneRevealActive(): Boolean = SystemClock.uptimeMillis() < zoneRevealUntil
 
     /** Show zone chrome for the given zone; pass null when the pad is disabled. */
     fun setZoneRect(rect: TouchpadZoneGeometry.NormalizedRect?) {
@@ -189,7 +192,7 @@ class TouchpadZoneOverlayView(
     }
 
     /**
-     * Idle chrome stays neutral and quiet. Touch reveals the surface, while an
+     * Idle chrome is fully hidden. Touch reveals the surface, while an
      * actual button press or resize uses the same accent as the rest of the app.
      */
     private fun drawZoneChrome(canvas: Canvas, now: Long, accent: Int): Boolean {
@@ -203,15 +206,16 @@ class TouchpadZoneOverlayView(
 
         val contactActive = contacts.values.any { it.releasedAt == 0L }
         val contactFade = if (lastContactAt == 0L) 0f else
-            (1f - (now - lastContactAt).toFloat() / ZONE_ACTIVE_MS).coerceIn(0f, 1f)
+            (1f - (now - lastContactAt).toFloat() / CONTACT_FADE_MS).coerceIn(0f, 1f)
         val revealing = now < zoneRevealUntil
-        val revealFade = ((zoneRevealUntil - now).toFloat() / ZONE_ACTIVE_MS).coerceIn(0f, 1f)
+        val revealFade = ((zoneRevealUntil - now).toFloat() / CONTACT_FADE_MS).coerceIn(0f, 1f)
         val emphasis = if (resizing || touchpadPressed || contactActive) 1f
             else max(contactFade, revealFade)
+        if (emphasis <= 0f) return false
         val corner = 12f * density
 
         zoneFillPaint.color = Color.BLACK
-        zoneFillPaint.alpha = (8 + 8 * emphasis).toInt()
+        zoneFillPaint.alpha = (16 * emphasis).toInt()
         canvas.drawRoundRect(zoneBounds, corner, corner, zoneFillPaint)
         if (touchpadPressed) {
             zoneFillPaint.color = accent
@@ -219,12 +223,9 @@ class TouchpadZoneOverlayView(
             canvas.drawRoundRect(zoneBounds, corner, corner, zoneFillPaint)
         }
         zoneOutlinePaint.color = if (touchpadPressed || resizing) accent else Color.WHITE
-        zoneOutlinePaint.alpha = when {
-            resizing || touchpadPressed -> 220
-            else -> (82 + 90 * emphasis).toInt()
-        }
+        zoneOutlinePaint.alpha = ((if (resizing || touchpadPressed) 220 else 172) * emphasis).toInt()
         zoneOutlinePaint.strokeWidth = (if (resizing || touchpadPressed) 1.5f else 1f) * density
-        zoneOutlineInkPaint.alpha = (55 + 30 * emphasis).toInt()
+        zoneOutlineInkPaint.alpha = (85 * emphasis).toInt()
         zoneOutlineInkPaint.strokeWidth = zoneOutlinePaint.strokeWidth + 1.25f * density
         canvas.drawRoundRect(zoneBounds, corner, corner, zoneOutlineInkPaint)
         canvas.drawRoundRect(zoneBounds, corner, corner, zoneOutlinePaint)
@@ -347,10 +348,9 @@ class TouchpadZoneOverlayView(
     )
 
     private companion object {
-        const val CONTACT_FADE_MS = 150f
+        const val CONTACT_FADE_MS = 250f
         const val INTRO_DURATION_MS = 2600L
         const val INTRO_FADE_MS = 240L
-        const val ZONE_ACTIVE_MS = 600L
         const val ZONE_REVEAL_MS = 5000L
     }
 }

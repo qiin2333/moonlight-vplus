@@ -1175,7 +1175,7 @@ class TouchInputHandler(private val game: Game) {
      * Decide gesture ownership for the screen DS5 pad. The first finger decides for the
      * whole gesture (until every finger lifts), so pad contacts, zone resizing and the
      * surrounding multi-touch never split mid-gesture:
-     * - on the zone borders -> resize: the flagged borders follow the finger
+     * - on explicitly revealed zone borders -> resize: flagged borders follow the finger
      * - inside the zone -> pad contacts
      * - outside -> falls through to the selected touch mode pipeline
      */
@@ -1193,10 +1193,12 @@ class TouchInputHandler(private val game: Game) {
                 val zone = TouchpadZoneGeometry.parseZoneRect(
                     game.prefConfig.screenDs5TouchpadZoneRect
                 )
-                val edges = TouchpadZoneGeometry.edgeHitTest(
-                    zone, position[0], position[1],
-                    screenDs5ResizeBand(view, 0, zone), screenDs5ResizeBand(view, 1, zone),
-                )
+                val edges = if (game.screenDs5Touchpad.overlay?.isZoneRevealActive() == true) {
+                    TouchpadZoneGeometry.edgeHitTest(
+                        zone, position[0], position[1],
+                        screenDs5ResizeBand(view, 0, zone), screenDs5ResizeBand(view, 1, zone),
+                    )
+                } else null
                 if (edges != null) {
                     applyScreenDs5ClickAction(view ?: game.streamView, screenDs5ClickGestureDetector.cancel())
                     ds5Route = Ds5Route.RESIZE

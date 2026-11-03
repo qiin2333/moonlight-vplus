@@ -44,12 +44,16 @@ class ScreenDs5Touchpad(private val game: Game) {
     /**
      * Toggle the pad layer at runtime: persist the preference, attach/detach the
      * overlay, and (un)declare controller 0 on the host. Re-selecting the same mode
-     * retries a pending host update without rebuilding the surface.
+     * reveals the zone again and retries a pending host update without rebuilding it.
      */
     fun setEnabled(enabled: Boolean) {
         if (enabled && game.screenDs5TouchpadHostSupport == Game.ScreenDs5HostSupport.UNSUPPORTED) return
         if (game.prefConfig.screenDs5Touchpad == enabled) {
             if (hostUpdatePending) updateHost()
+            if (enabled) {
+                pendingZoneReveal = true
+                revealIfEnabled()
+            }
             return
         }
         if (enabled) rememberTouchMode() else activationFallback = null

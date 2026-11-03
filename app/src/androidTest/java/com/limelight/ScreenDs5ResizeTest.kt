@@ -87,6 +87,17 @@ class ScreenDs5ResizeTest {
                     overlay.draw(Canvas(it))
                 }
 
+                val hidden = render()
+                send(MotionEvent.ACTION_DOWN, zone.top * 1000f)
+                send(MotionEvent.ACTION_MOVE, (zone.top - 0.1f) * 1000f)
+                val hiddenDrag = render()
+                assertTrue("Hidden edges must not start resizing", hidden.sameAs(hiddenDrag))
+                send(MotionEvent.ACTION_UP, (zone.top - 0.1f) * 1000f)
+                assertEquals(savedZone, game.prefConfig.screenDs5TouchpadZoneRect)
+                hidden.recycle()
+                hiddenDrag.recycle()
+
+                overlay.showZoneReveal()
                 val before = render()
                 send(MotionEvent.ACTION_DOWN, zone.top * 1000f)
                 send(MotionEvent.ACTION_MOVE, (zone.top - 0.1f) * 1000f)
