@@ -851,20 +851,11 @@ class TouchInputHandler(private val game: Game) {
         val activeStreamView = game.activeStreamView ?: return floatArrayOf(0f, 0f)
 
         if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
-            val touchWidth: Float
-            val touchHeight: Float
-            if (view != null && view.width > 0 && view.height > 0) {
-                touchWidth = view.width.toFloat()
-                touchHeight = view.height.toFloat()
-            } else {
-                val size = Point()
-                game.windowManager.defaultDisplay.getRealSize(size)
-                touchWidth = size.x.toFloat()
-                touchHeight = size.y.toFloat()
-            }
+            val size = getExternalDisplayTouchSize(view)
+            if (size.x <= 0 || size.y <= 0) return floatArrayOf(0f, 0f)
             return floatArrayOf(
-                (rawX / touchWidth).coerceIn(0f, 1f),
-                (rawY / touchHeight).coerceIn(0f, 1f)
+                (rawX / size.x).coerceIn(0f, 1f),
+                (rawY / size.y).coerceIn(0f, 1f)
             )
         }
 
@@ -1160,13 +1151,24 @@ class TouchInputHandler(private val game: Game) {
     private var ds5ResizePointerId = MotionEvent.INVALID_POINTER_ID
     private var ds5ResizeWorkingRect: TouchpadZoneGeometry.NormalizedRect? = null
 
+    /** Phone input dimensions shared by external-display touch coordinates and edge bands. */
+    private fun getExternalDisplayTouchSize(view: View?): Point {
+        if (view != null && view.width > 0 && view.height > 0) return Point(view.width, view.height)
+        return Point().also { game.windowManager.defaultDisplay.getRealSize(it) }
+    }
+
     /** Half-width of the edge resize band, in content-normalized units. Capped at a
      *  quarter of the zone dimension so the interior stays usable as a pad. */
     private fun screenDs5ResizeBand(view: View?, axis: Int, zone: TouchpadZoneGeometry.NormalizedRect): Float {
-        val content = game.activeStreamView ?: view ?: return 0f
-        if (content.width <= 0 || content.height <= 0) return 0f
+        val size = if (game.externalDisplayManager?.isUsingExternalDisplay() == true) {
+            getExternalDisplayTouchSize(view)
+        } else {
+            val content = game.activeStreamView ?: view ?: return 0f
+            Point(content.width, content.height)
+        }
+        if (size.x <= 0 || size.y <= 0) return 0f
         val bandPx = SCREEN_DS5_RESIZE_BAND_DP * game.resources.displayMetrics.density
-        val bandNormalized = if (axis == 0) bandPx / content.width else bandPx / content.height
+        val bandNormalized = if (axis == 0) bandPx / size.x else bandPx / size.y
         val zoneDimension = if (axis == 0) zone.width else zone.height
         return bandNormalized.coerceAtMost(zoneDimension * RESIZE_BAND_ZONE_FRACTION)
     }

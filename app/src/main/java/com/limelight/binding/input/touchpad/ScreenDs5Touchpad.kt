@@ -18,6 +18,7 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     private var pendingZoneReveal = false
     private var container: ViewGroup? = null
+    private var pendingHostUpdate: Runnable? = null
 
     private val enabled: Boolean
         get() = game.prefConfig.screenDs5Touchpad
@@ -38,10 +39,14 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     /**
      * Toggle the pad layer at runtime: persist the preference, attach/detach the
-     * overlay, and (un)declare controller 0 on the host. No-op when already active.
+     * overlay, and (un)declare controller 0 on the host. Re-selecting the same mode
+     * retries a pending host update without rebuilding the surface.
      */
     fun setEnabled(enabled: Boolean) {
-        if (game.prefConfig.screenDs5Touchpad == enabled) return
+        if (game.prefConfig.screenDs5Touchpad == enabled) {
+            if (pendingHostUpdate != null) updateHost()
+            return
+        }
         game.prefConfig.screenDs5Touchpad = enabled
         if (enabled) {
             // The area outside the zone is plain multi-touch: normalize the touch
@@ -62,10 +67,7 @@ class ScreenDs5Touchpad(private val game: Game) {
         } else {
             detach()
         }
-        val result = game.controllerHandler.setScreenDs5TouchpadEnabled(enabled)
-        if (result != 0) {
-            LimeLog.warning("Screen DS5 touchpad controller update failed: enabled=$enabled, result=$result")
-        }
+        updateHost()
     }
 
     /** Toggle the pad layer for hotkeys and quick actions; returns the new state. */
@@ -86,9 +88,38 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     /** Re-declare controller 0 as DualSense after host negotiations settle. */
     fun redeclareOnHost() {
-        if (enabled) {
-            game.controllerHandler.setScreenDs5TouchpadEnabled(true)
+        if (enabled || pendingHostUpdate != null) updateHost()
+    }
+
+    private fun updateHost() {
+        cancelPendingHostUpdate()
+        val controller = game.controllerHandler
+        var attempts = 0
+        val update = object : Runnable {
+            override fun run() {
+                if (pendingHostUpdate !== this || game.controllerHandler !== controller ||
+                    !game.connected || game.isFinishing || game.isDestroyed
+                ) return
+                val result = controller.setScreenDs5TouchpadEnabled(enabled)
+                if (result == 0) {
+                    pendingHostUpdate = null
+                    return
+                }
+                attempts++
+                LimeLog.warning("Screen DS5 touchpad controller update failed: enabled=$enabled, result=$result, attempt=$attempts")
+                if (attempts < 3) game.streamView.postDelayed(this, 150L)
+                // Keep the latest intent pending after exhaustion, for an explicit
+                // retry or the next host-ready callback; never spin indefinitely.
+            }
         }
+        pendingHostUpdate = update
+        update.run()
+    }
+
+    /** Cancel the old request before another mode change or stream teardown. */
+    fun cancelPendingHostUpdate() {
+        pendingHostUpdate?.let { game.streamView.removeCallbacks(it) }
+        pendingHostUpdate = null
     }
 
     /** Persist a zone rect (edge-resize lift). */
