@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Bawaan sistem</string>
+    <string name="mic_input_builtin">Mikrofon bawaan</string>
+    <string name="mic_input_wired">Headset berkabel</string>
+    <string name="mic_input_bluetooth">Mikrofon Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Mikrofon Bluetooth (izin diperlukan)</string>
+    <string name="mic_input_usb">Mikrofon USB</string>
+    <string name="mic_input_microphone">Mikrofon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Merekam dari: %1$s</string>
+    <string name="mic_input_unavailable">Perangkat yang dipilih tidak tersedia.</string>
+    <string name="mic_input_route_pending">Menunggu rute input audio</string>
+    <string name="mic_input_failed">Tidak dapat memilih mikrofon ini. Coba lagi.</string>
+    <string name="mic_input_bluetooth_quality">Menggunakan mikrofon Bluetooth dapat mengubah rute output komunikasi dan menurunkan kualitas pemutaran.</string>
+    <string name="mic_input_system_silenced">Mikrofon dibisukan oleh Android</string>
+    <string name="title_mic_test">Uji mikrofon</string>
+    <string name="summary_mic_test">Menangkap audio mikrofon lokal dan menampilkan bentuk gelombang tanpa memulai streaming.</string>
+    <string name="title_mic_test_devices">Perangkat input</string>
+    <string name="mic_test_start">Mulai uji</string>
+    <string name="mic_test_stop">Hentikan uji</string>
+    <string name="mic_test_waveform">Bentuk gelombang lokal</string>
+    <string name="mic_test_idle">Pilih input dan mulai uji.</string>
+    <string name="mic_test_source">Sumber audio</string>
+    <string name="mic_test_route">Rute aktual</string>
+    <string name="mic_test_rms">Level RMS</string>
+    <string name="mic_test_peak">Level puncak</string>
+    <string name="mic_test_record">Rekam</string>
+    <string name="mic_test_recording">Merekam %1$d/15 dtk</string>
+    <string name="mic_test_stop_recording">Hentikan rekaman</string>
+    <string name="mic_test_play">Putar</string>
+    <string name="mic_test_playing">Memutar</string>
+    <string name="mic_test_preferred_route">Input pilihan</string>
+    <string name="mic_test_recording_route">Konfigurasi rekaman</string>
+    <string name="mic_test_display_gain">Gain tampilan: %1$s</string>
+    <string name="mic_test_selected_input">Input yang dipilih</string>
+    <string name="mic_test_bound_input">Input terikat</string>
+    <string name="mic_test_communication_route">Rute komunikasi</string>
+    <string name="mic_test_format">Format tangkapan</string>
+    <string name="mic_test_buffer">Buffer audio</string>
+    <string name="mic_test_session">Sesi audio</string>
+    <string name="mic_test_error_permission">Izin mikrofon diperlukan.</string>
+    <string name="mic_test_error_route_lost">Rute mikrofon Bluetooth terputus.</string>
+    <string name="mic_test_error_route_activation">Tidak dapat mengaktifkan rute mikrofon yang dipilih.</string>
+    <string name="mic_test_error_start">Tidak dapat memulai uji mikrofon.</string>
+    <string name="mic_test_error_playback">Tidak dapat membuat pemutaran audio.</string>
+    <string name="mic_test_error_playback_init">Gagal menginisialisasi pemutaran audio.</string>
+    <string name="mic_test_error_read">Pengambilan mikrofon gagal.</string>
+    <string name="mic_test_error_read_code">Pengambilan mikrofon gagal (%1$d).</string>
+</resources>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Mặc định hệ thống</string>
+    <string name="mic_input_builtin">Micrô tích hợp</string>
+    <string name="mic_input_wired">Tai nghe có dây</string>
+    <string name="mic_input_bluetooth">Micrô Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Micrô Bluetooth (cần quyền)</string>
+    <string name="mic_input_usb">Micrô USB</string>
+    <string name="mic_input_microphone">Micrô</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Đang ghi từ: %1$s</string>
+    <string name="mic_input_unavailable">Thiết bị đã chọn không khả dụng.</string>
+    <string name="mic_input_route_pending">Đang chờ tuyến đầu vào âm thanh</string>
+    <string name="mic_input_failed">Không thể chọn micrô này. Hãy thử lại.</string>
+    <string name="mic_input_bluetooth_quality">Sử dụng micrô Bluetooth có thể thay đổi tuyến đầu ra liên lạc và giảm chất lượng phát.</string>
+    <string name="mic_input_system_silenced">Android đã tắt tiếng micrô</string>
+    <string name="title_mic_test">Kiểm tra micrô</string>
+    <string name="summary_mic_test">Thu âm thanh từ micrô cục bộ và hiển thị dạng sóng mà không bắt đầu truyền.</string>
+    <string name="title_mic_test_devices">Thiết bị đầu vào</string>
+    <string name="mic_test_start">Bắt đầu kiểm tra</string>
+    <string name="mic_test_stop">Dừng kiểm tra</string>
+    <string name="mic_test_waveform">Dạng sóng cục bộ</string>
+    <string name="mic_test_idle">Chọn đầu vào và bắt đầu kiểm tra.</string>
+    <string name="mic_test_source">Nguồn âm thanh</string>
+    <string name="mic_test_route">Tuyến thực tế</string>
+    <string name="mic_test_rms">Mức RMS</string>
+    <string name="mic_test_peak">Mức đỉnh</string>
+    <string name="mic_test_record">Ghi âm</string>
+    <string name="mic_test_recording">Đang ghi %1$d/15 giây</string>
+    <string name="mic_test_stop_recording">Dừng ghi âm</string>
+    <string name="mic_test_play">Phát</string>
+    <string name="mic_test_playing">Đang phát</string>
+    <string name="mic_test_preferred_route">Đầu vào ưu tiên</string>
+    <string name="mic_test_recording_route">Cấu hình ghi âm</string>
+    <string name="mic_test_display_gain">Độ khuếch đại hiển thị: %1$s</string>
+    <string name="mic_test_selected_input">Đầu vào đã chọn</string>
+    <string name="mic_test_bound_input">Đầu vào được gán</string>
+    <string name="mic_test_communication_route">Tuyến liên lạc</string>
+    <string name="mic_test_format">Định dạng thu</string>
+    <string name="mic_test_buffer">Bộ đệm âm thanh</string>
+    <string name="mic_test_session">Phiên âm thanh</string>
+    <string name="mic_test_error_permission">Cần có quyền sử dụng micrô.</string>
+    <string name="mic_test_error_route_lost">Đã mất tuyến micrô Bluetooth.</string>
+    <string name="mic_test_error_route_activation">Không thể bật tuyến micrô đã chọn.</string>
+    <string name="mic_test_error_start">Không thể bắt đầu kiểm tra micrô.</string>
+    <string name="mic_test_error_playback">Không thể tạo phát âm thanh.</string>
+    <string name="mic_test_error_playback_init">Không thể khởi tạo phát âm thanh.</string>
+    <string name="mic_test_error_read">Thu âm từ micrô không thành công.</string>
+    <string name="mic_test_error_read_code">Thu âm từ micrô không thành công (%1$d).</string>
+</resources>
