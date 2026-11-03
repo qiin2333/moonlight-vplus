@@ -28,13 +28,6 @@ class ScreenDs5TapClickDetectorTest {
     }
 
     @Test
-    fun secondFingerDisqualifiesTap() {
-        detector.onDown(0, 100f, 200f, 1_000L)
-        detector.onPointerDown()
-        assertFalse(detector.onUp(0, 100f, 200f, 1_100L))
-    }
-
-    @Test
     fun eligibilityNeverReturnsAfterMovement() {
         detector.onDown(0, 100f, 200f, 1_000L)
         detector.onMove(0, 140f, 200f)

@@ -35,8 +35,6 @@ object TouchpadZoneGeometry {
         val any: Boolean get() = left || top || right || bottom
     }
 
-    fun defaultZoneRect(): NormalizedRect = parseZoneRect(DEFAULT_ZONE_RECT)
-
     /**
      * Parse a persisted "left,top,right,bottom" string. Values outside 0..1, a
      * degenerate rect, or unparsable input fall back to the default zone.

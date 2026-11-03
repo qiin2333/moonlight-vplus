@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TouchpadZoneGeometryTest {
+    private val defaultZone = TouchpadZoneGeometry.NormalizedRect(0.18f, 0.74f, 0.82f, 0.94f)
 
     @Test
     fun parseZoneRectReadsFourCommaSeparatedValues() {
@@ -21,7 +22,7 @@ class TouchpadZoneGeometryTest {
     fun parseZoneRectFallsBackToDefaultOnGarbage() {
         for (raw in listOf(null, "", "abc", "1,2", "0.1,0.2,0.9", "a,b,c,d")) {
             assertEquals(
-                TouchpadZoneGeometry.defaultZoneRect(),
+                defaultZone,
                 TouchpadZoneGeometry.parseZoneRect(raw)
             )
         }
@@ -31,11 +32,11 @@ class TouchpadZoneGeometryTest {
     fun parseZoneRectFallsBackToDefaultOnDegenerateRect() {
         // Zero-width and inverted rects are invalid, not clampable.
         assertEquals(
-            TouchpadZoneGeometry.defaultZoneRect(),
+            defaultZone,
             TouchpadZoneGeometry.parseZoneRect("0.5,0.5,0.5,0.9")
         )
         assertEquals(
-            TouchpadZoneGeometry.defaultZoneRect(),
+            defaultZone,
             TouchpadZoneGeometry.parseZoneRect("0.8,0.9,0.2,0.5")
         )
     }
@@ -77,7 +78,7 @@ class TouchpadZoneGeometryTest {
         val rounded = TouchpadZoneGeometry.NormalizedRect(0.3f, 0.6f, 0.4199f, 0.6599f)
         assertEquals(rounded, TouchpadZoneGeometry.parseZoneRect("0.3000,0.6000,0.4199,0.6599"))
         for (raw in listOf("0.3,0.6,0.4198,0.8", "0.3,0.6,0.8,0.6598")) {
-            assertEquals(TouchpadZoneGeometry.defaultZoneRect(), TouchpadZoneGeometry.parseZoneRect(raw))
+            assertEquals(defaultZone, TouchpadZoneGeometry.parseZoneRect(raw))
         }
     }
 
@@ -90,7 +91,7 @@ class TouchpadZoneGeometryTest {
 
     @Test
     fun hitTestOnlyAcceptsPointsInsideTheZone() {
-        val zone = TouchpadZoneGeometry.defaultZoneRect()
+        val zone = defaultZone
         assertTrue(TouchpadZoneGeometry.hitTest(zone, 0.5f, 0.8f))
         assertFalse(TouchpadZoneGeometry.hitTest(zone, 0.5f, 0.1f))
         assertFalse(TouchpadZoneGeometry.hitTest(zone, 0.05f, 0.8f))
