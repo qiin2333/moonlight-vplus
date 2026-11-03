@@ -34,7 +34,7 @@ class ScreenDs5ResizeTest {
     )
 
     @Test
-    fun canceledResizeRestoresTheSavedOutlineWithoutChangingTheZone() {
+    fun screenTouchRevealsOutlineAndCanceledResizeRestoresTheSavedZone() {
         rule.scenario.onActivity { activity ->
             for (savedZone in listOf("0.18,0.74,0.82,0.94", "0.25,0.50,0.75,0.85")) {
                 // Exercise the production handler and overlay without starting a stream
@@ -60,7 +60,7 @@ class ScreenDs5ResizeTest {
                 val zone = TouchpadZoneGeometry.parseZoneRect(savedZone)
                 val downTime = SystemClock.uptimeMillis()
 
-                fun send(action: Int, y: Float) {
+                fun send(action: Int, y: Float, ownedByPad: Boolean = true) {
                     val properties = arrayOf(MotionEvent.PointerProperties().apply {
                         id = 0
                         toolType = MotionEvent.TOOL_TYPE_FINGER
@@ -77,7 +77,8 @@ class ScreenDs5ResizeTest {
                         InputDevice.SOURCE_TOUCHSCREEN, 0,
                     )
                     try {
-                        assertTrue(handler.handleMotionEvent(stream, event))
+                        game.screenDs5Touchpad.onScreenTouchEvent(event)
+                        assertEquals(ownedByPad, handler.handleMotionEvent(stream, event))
                     } finally {
                         event.recycle()
                     }
@@ -87,6 +88,30 @@ class ScreenDs5ResizeTest {
                     overlay.draw(Canvas(it))
                 }
 
+                val idle = render()
+                send(MotionEvent.ACTION_DOWN, 100f, ownedByPad = false)
+                val outsideTouch = render()
+                assertFalse("Touch outside the pad must reveal its outline", idle.sameAs(outsideTouch))
+                send(MotionEvent.ACTION_UP, 100f, ownedByPad = false)
+                SystemClock.sleep(300)
+                val hidden = render()
+                assertTrue("The last lift must hide the outline", idle.sameAs(hidden))
+                send(MotionEvent.ACTION_DOWN, zone.top * 1000f)
+                val revealedByTouch = render()
+                assertFalse("Touch must reveal the hidden outline", hidden.sameAs(revealedByTouch))
+                send(MotionEvent.ACTION_MOVE, (zone.top - 0.1f) * 1000f)
+                val hiddenDrag = render()
+                assertTrue("Hidden edges must not start resizing", revealedByTouch.sameAs(hiddenDrag))
+                send(MotionEvent.ACTION_UP, (zone.top - 0.1f) * 1000f)
+                assertEquals(savedZone, game.prefConfig.screenDs5TouchpadZoneRect)
+                assertTrue("A recently revealed border can start resizing", overlay.canStartResize())
+                idle.recycle()
+                outsideTouch.recycle()
+                hidden.recycle()
+                revealedByTouch.recycle()
+                hiddenDrag.recycle()
+
+                overlay.showZoneReveal()
                 val before = render()
                 send(MotionEvent.ACTION_DOWN, zone.top * 1000f)
                 send(MotionEvent.ACTION_MOVE, (zone.top - 0.1f) * 1000f)

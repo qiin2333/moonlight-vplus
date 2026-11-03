@@ -1,5 +1,7 @@
 package com.limelight.binding.input.touchpad
 
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.ViewGroup
 import com.limelight.Game
 import com.limelight.LimeLog
@@ -81,6 +83,15 @@ class ScreenDs5Touchpad(private val game: Game) {
     fun toggle(): Boolean {
         setEnabled(!enabled)
         return enabled
+    }
+
+    /** Observe screen touches without changing their input ownership. */
+    fun onScreenTouchEvent(event: MotionEvent) {
+        if (!enabled || !event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)) return
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> overlay?.setScreenTouchActive(true)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> overlay?.setScreenTouchActive(false)
+        }
     }
 
     private fun rememberTouchMode() {

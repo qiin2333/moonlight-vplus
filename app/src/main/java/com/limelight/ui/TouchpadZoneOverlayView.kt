@@ -19,8 +19,8 @@ import kotlin.math.max
 
 /**
  * Reusable overlay for a screen touchpad surface: draws the zone outline, pad
- * contact dots and the activation hint. The zone stays visible while idle so the
- * surface is always locatable, and brightens on contact, reveal and resize.
+ * contact dots and the activation hint. Idle is fully transparent; screen interaction,
+ * explicit reveal and resizing make the surface visible temporarily.
  * Non-interactive — gesture routing lives in the caller (TouchInputHandler), which
  * pushes state in through the setters. Coordinates are normalized to the stream
  * content; [coordinateViewProvider] must return the view holding that content so
@@ -81,10 +81,11 @@ class TouchpadZoneOverlayView(
     private var touchpadPressed = false
     private var singleTapToClick = false
     private var resizing = false
+    private var screenTouchActive = false
 
     /** Zone surface in stream-normalized coordinates; null when the pad is off. */
     private var zoneRect: TouchpadZoneGeometry.NormalizedRect? = null
-    private var lastContactAt = 0L
+    private var lastInteractionAt = 0L
     private var zoneRevealUntil = 0L
     private val scratchPoint = FloatArray(2)
 
@@ -102,11 +103,28 @@ class TouchpadZoneOverlayView(
 
     /**
      * Draw the zone outline prominently for a few seconds so the user can see where
-     * the pad surface is right after enabling or resizing it; idle stays calm after.
+     * the pad surface is right after enabling or resizing it; idle hides it afterward.
      */
     fun showZoneReveal() {
         zoneRevealUntil = SystemClock.uptimeMillis() + ZONE_REVEAL_MS
         postInvalidateOnAnimation()
+    }
+
+    /** Check before routing DOWN: this touch must not reveal its own resize target. */
+    fun canStartResize(): Boolean = zoneRect != null && zoneFade(SystemClock.uptimeMillis()) > 0f
+
+    fun setScreenTouchActive(active: Boolean) {
+        if (screenTouchActive == active) return
+        screenTouchActive = active
+        if (!active) lastInteractionAt = SystemClock.uptimeMillis()
+        postInvalidateOnAnimation()
+    }
+
+    private fun zoneFade(now: Long): Float {
+        val interactionFade = if (lastInteractionAt == 0L) 0f else
+            (1f - (now - lastInteractionAt).toFloat() / CONTACT_FADE_MS).coerceIn(0f, 1f)
+        val revealFade = ((zoneRevealUntil - now).toFloat() / CONTACT_FADE_MS).coerceIn(0f, 1f)
+        return max(interactionFade, revealFade)
     }
 
     /** Show zone chrome for the given zone; pass null when the pad is disabled. */
@@ -143,7 +161,7 @@ class TouchpadZoneOverlayView(
             MoonBridge.LI_TOUCH_EVENT_CANCEL -> now
             else -> return
         }
-        lastContactAt = now
+        lastInteractionAt = now
         contacts.getOrPut(pointerId) { Contact(normalizedX, normalizedY) }.apply {
             x = normalizedX
             y = normalizedY
@@ -154,7 +172,8 @@ class TouchpadZoneOverlayView(
 
     fun cancelAllContacts() {
         val now = SystemClock.uptimeMillis()
-        if (contacts.values.any { it.releasedAt == 0L }) lastContactAt = now
+        if (screenTouchActive || contacts.values.any { it.releasedAt == 0L }) lastInteractionAt = now
+        screenTouchActive = false
         contacts.values.forEach { it.releasedAt = now }
         postInvalidateOnAnimation()
     }
@@ -189,7 +208,7 @@ class TouchpadZoneOverlayView(
     }
 
     /**
-     * Idle chrome stays neutral and quiet. Touch reveals the surface, while an
+     * Idle chrome is fully hidden. Touch reveals the surface, while an
      * actual button press or resize uses the same accent as the rest of the app.
      */
     private fun drawZoneChrome(canvas: Canvas, now: Long, accent: Int): Boolean {
@@ -201,17 +220,13 @@ class TouchpadZoneOverlayView(
         zoneBounds.right = scratchPoint[0]
         zoneBounds.bottom = scratchPoint[1]
 
-        val contactActive = contacts.values.any { it.releasedAt == 0L }
-        val contactFade = if (lastContactAt == 0L) 0f else
-            (1f - (now - lastContactAt).toFloat() / ZONE_ACTIVE_MS).coerceIn(0f, 1f)
-        val revealing = now < zoneRevealUntil
-        val revealFade = ((zoneRevealUntil - now).toFloat() / ZONE_ACTIVE_MS).coerceIn(0f, 1f)
-        val emphasis = if (resizing || touchpadPressed || contactActive) 1f
-            else max(contactFade, revealFade)
+        val active = screenTouchActive || resizing || touchpadPressed || contacts.values.any { it.releasedAt == 0L }
+        val emphasis = if (active) 1f else zoneFade(now)
+        if (emphasis <= 0f) return false
         val corner = 12f * density
 
         zoneFillPaint.color = Color.BLACK
-        zoneFillPaint.alpha = (8 + 8 * emphasis).toInt()
+        zoneFillPaint.alpha = (16 * emphasis).toInt()
         canvas.drawRoundRect(zoneBounds, corner, corner, zoneFillPaint)
         if (touchpadPressed) {
             zoneFillPaint.color = accent
@@ -219,12 +234,9 @@ class TouchpadZoneOverlayView(
             canvas.drawRoundRect(zoneBounds, corner, corner, zoneFillPaint)
         }
         zoneOutlinePaint.color = if (touchpadPressed || resizing) accent else Color.WHITE
-        zoneOutlinePaint.alpha = when {
-            resizing || touchpadPressed -> 220
-            else -> (82 + 90 * emphasis).toInt()
-        }
+        zoneOutlinePaint.alpha = ((if (resizing || touchpadPressed) 220 else 172) * emphasis).toInt()
         zoneOutlinePaint.strokeWidth = (if (resizing || touchpadPressed) 1.5f else 1f) * density
-        zoneOutlineInkPaint.alpha = (55 + 30 * emphasis).toInt()
+        zoneOutlineInkPaint.alpha = (85 * emphasis).toInt()
         zoneOutlineInkPaint.strokeWidth = zoneOutlinePaint.strokeWidth + 1.25f * density
         canvas.drawRoundRect(zoneBounds, corner, corner, zoneOutlineInkPaint)
         canvas.drawRoundRect(zoneBounds, corner, corner, zoneOutlinePaint)
@@ -238,7 +250,7 @@ class TouchpadZoneOverlayView(
             canvas.drawLine(zoneBounds.left, cy - handle, zoneBounds.left, cy + handle, resizeHandlePaint)
             canvas.drawLine(zoneBounds.right, cy - handle, zoneBounds.right, cy + handle, resizeHandlePaint)
         }
-        return (!contactActive && contactFade > 0f) || revealing
+        return !active && emphasis > 0f
     }
 
     private fun drawContacts(canvas: Canvas, now: Long, accent: Int): Boolean {
@@ -347,10 +359,9 @@ class TouchpadZoneOverlayView(
     )
 
     private companion object {
-        const val CONTACT_FADE_MS = 150f
+        const val CONTACT_FADE_MS = 250f
         const val INTRO_DURATION_MS = 2600L
         const val INTRO_FADE_MS = 240L
-        const val ZONE_ACTIVE_MS = 600L
         const val ZONE_REVEAL_MS = 5000L
     }
 }
