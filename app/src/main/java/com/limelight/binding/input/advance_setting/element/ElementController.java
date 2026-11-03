@@ -79,6 +79,7 @@ public class ElementController {
     private static final String SPECIAL_KEY_OPEN_GAME_MENU = "OGM";
     private static final String SPECIAL_KEY_EDIT_MODE_SWITCH = "EMS"; // 编辑模式
     private static final String SPECIAL_KEY_MOUSE_MOVE_ONLY = "MMO"; // 仅鼠标移动
+    private static final String SPECIAL_KEY_DS5_TOUCHPAD_CYCLE = "DSC"; // DS5 触摸板 开/关
 
 
 
@@ -1507,6 +1508,23 @@ public class ElementController {
             return switchMouseMode(true, false, context.getString(R.string.touch_mode_trackpad));
         } else if (key.equals(SPECIAL_KEY_MULTI_TOUCH_MODE)) {
             return switchMouseMode(false, true, context.getString(R.string.touch_mode_multitouch));
+        } else if (key.equals(SPECIAL_KEY_DS5_TOUCHPAD_CYCLE)) {
+            return new SendEventHandler() {
+                @Override
+                public void sendEvent(boolean down) {
+                    if (down) {
+                        boolean enabled = game.getScreenDs5Touchpad().toggle();
+                        int toastRes = enabled ? R.string.toast_ds5_touchpad_on
+                            : R.string.toast_ds5_touchpad_off;
+                        showToast(context.getString(toastRes));
+                    }
+                }
+
+                @Override
+                public void sendEvent(int analog1, int analog2) {
+
+                }
+            };
         } else if (key.equals(SPECIAL_KEY_PC_KEYBOARD_SWITCH)) {
             return new SendEventHandler() {
                 @Override

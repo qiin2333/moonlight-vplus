@@ -94,6 +94,7 @@ object StreamActionRegistry {
         "toggle_controller",
         "toggle_perf",
         "toggle_remote_mouse",
+        "ds5_touchpad",
         "unlock_host"
     )
 
@@ -129,6 +130,9 @@ object StreamActionRegistry {
         "toggle_perf" to StreamAction("toggle_perf", "Perf", R.drawable.ic_performance_cute, 0, R.string.quick_btn_perf),
         "toggle_remote_mouse" to StreamAction(
             "toggle_remote_mouse", "Mouse", R.drawable.ic_mouse_cute, 0, R.string.quick_btn_remote_mouse
+        ),
+        "ds5_touchpad" to StreamAction(
+            "ds5_touchpad", "DS5", 0, labelRes = R.string.quick_btn_ds5_touchpad, iconText = "DS5"
         ),
         "unlock_host" to StreamAction(
             "unlock_host", "Unlock", R.drawable.ic_btn_unlock,
@@ -243,6 +247,13 @@ class StreamActionExecutor(
             }
             "unlock_host" -> {
                 game.startHostUnlock()
+                true
+            }
+            "ds5_touchpad" -> {
+                val enabled = game.screenDs5Touchpad.toggle()
+                val toastRes = if (enabled) R.string.toast_ds5_touchpad_on
+                else R.string.toast_ds5_touchpad_off
+                Toast.makeText(game, toastRes, Toast.LENGTH_SHORT).show()
                 true
             }
             else -> executeCustomAction(actionId)

@@ -16,6 +16,7 @@ import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.input.haptics.Ds5SimulationMode
+import com.limelight.binding.input.touchpad.TouchpadZoneGeometry
 import com.limelight.binding.video.DecoderInputBufferMode
 import com.limelight.nvstream.jni.MoonBridge
 import kotlin.math.max
@@ -185,6 +186,14 @@ class PreferenceConfiguration {
     var touchscreenTrackpad = false
     /** Use the device touchscreen as the touchpad of a virtual DualSense controller. */
     var screenDs5Touchpad = false
+    /** Legacy tap-to-click; standard mode uses double-tap, holding the second contact to hold. */
+    var screenDs5SingleTapToClick = false
+    /**
+     * Touchable rect of the screen DS5 pad, as "left,top,right,bottom" normalized to
+     * the stream content: touches inside it reach the pad and the rest of the screen
+     * stays regular multi-touch.
+     */
+    var screenDs5TouchpadZoneRect = TouchpadZoneGeometry.DEFAULT_ZONE_RECT
     /** Ask the host to auto-invoke its touch keyboard when a text field gains focus (Sunshine extension). */
     var touchKeyboardAutoInvoke = true
     /** Auto-open the local IME on API 33+ when the host reports a trusted editable activation. */
@@ -390,6 +399,8 @@ class PreferenceConfiguration {
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
                 .putString(MOUSE_AXIS_CORRECTION_PREF_STRING, mouseAxisCorrection.preferenceValue)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
+                .putBoolean(SCREEN_DS5_SINGLE_TAP_TO_CLICK_PREF_STRING, screenDs5SingleTapToClick)
+                .putString(SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING, screenDs5TouchpadZoneRect)
                 .putBoolean(FORCE_MTK_MAX_OPERATING_RATE_PREF_STRING, forceMtkMaxOperatingRate)
                 .putString(
                     HEVC_LOW_LATENCY_MODE_PREF_STRING,
@@ -790,6 +801,8 @@ class PreferenceConfiguration {
         const val TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING = "checkbox_touch_keyboard_auto_invoke"
         const val REMOTE_IME_AUTO_SHOW_PREF_STRING = "checkbox_remote_ime_auto_show"
         const val SCREEN_DS5_TOUCHPAD_PREF_STRING = "checkbox_screen_ds5_touchpad"
+        const val SCREEN_DS5_SINGLE_TAP_TO_CLICK_PREF_STRING = "checkbox_screen_ds5_single_tap_to_click"
+        const val SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING = "string_screen_ds5_touchpad_zone_rect"
         const val ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer"
         const val NATIVE_MOUSE_MODE_PRESET_PREF_STRING = "list_native_mouse_mode_preset"
         const val ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch"
@@ -1630,6 +1643,11 @@ class PreferenceConfiguration {
             config.touchscreenTrackpad = touchModeState.touchscreenTrackpad
             config.enableNativeMousePointer = touchModeState.nativeMousePointer
             config.screenDs5Touchpad = touchModeState.screenDs5Touchpad
+            config.screenDs5SingleTapToClick = prefs.getBoolean(SCREEN_DS5_SINGLE_TAP_TO_CLICK_PREF_STRING, false)
+            config.screenDs5TouchpadZoneRect = prefs.getString(
+                SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING,
+                TouchpadZoneGeometry.DEFAULT_ZONE_RECT
+            ) ?: TouchpadZoneGeometry.DEFAULT_ZONE_RECT
             config.touchKeyboardAutoInvoke = prefs.getBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, true)
             config.remoteImeAutoShow = prefs.getBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, true)
             config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)

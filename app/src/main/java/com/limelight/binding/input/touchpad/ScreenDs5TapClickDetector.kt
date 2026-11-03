@@ -28,11 +28,6 @@ internal class ScreenDs5TapClickDetector(
         tapEligible = true
     }
 
-    /** A second finger landing disqualifies the whole gesture. */
-    fun onPointerDown() {
-        tapEligible = false
-    }
-
     fun onMove(pointerId: Int, x: Float, y: Float) {
         if (pointerId != this.pointerId) return
         if (exceedsMovement(x, y)) tapEligible = false

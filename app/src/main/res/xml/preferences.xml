@@ -813,6 +813,11 @@
                     android:summary="@string/summary_checkbox_touchscreen_trackpad"
                     android:defaultValue="true" />
                 <CheckBoxPreference
+                    android:key="checkbox_screen_ds5_single_tap_to_click"
+                    android:title="@string/title_ds5_single_tap_to_click"
+                    android:summary="@string/summary_ds5_single_tap_to_click"
+                    android:defaultValue="false" />
+                <CheckBoxPreference
                     android:key="pref_enable_double_click_drag"
                     android:title="@string/title_enable_double_click_drag"
                     android:summary="@string/summary_enable_double_click_drag"
