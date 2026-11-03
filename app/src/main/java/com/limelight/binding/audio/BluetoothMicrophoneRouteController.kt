@@ -132,6 +132,12 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
             // HFP is required only for classic Bluetooth SCO. LE Audio uses the
             // communication route directly and has no HFP proxy to query.
             if (device.type == 7) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) !=
+                    android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    finish(false)
+                    return
+                }
                 legacyAudioState = LegacyBluetoothAudioState(worker).also { it.open(context) }
             }
             unregister = if (Build.VERSION.SDK_INT >= 31) {
@@ -220,32 +226,7 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
 
     private fun awaitReleased(isCurrent: () -> Boolean, complete: (Boolean) -> Unit) {
         if (Build.VERSION.SDK_INT >= 31) {
-            val startedAt = SystemClock.elapsedRealtime()
-            val poll = object : Runnable {
-                override fun run() {
-                    if (!isCurrent()) return
-                    val released = try {
-                        // Android reports the default A2DP output as the active communication
-                        // device after clearCommunicationDevice(). It is not evidence that our
-                        // explicit Bluetooth microphone route is still owned.
-                        audio.mode == AudioManager.MODE_NORMAL
-                    } catch (_: RuntimeException) {
-                        false
-                    }
-                    if (released) {
-                        drainTask = null
-                        complete(true)
-                    } else if (SystemClock.elapsedRealtime() - startedAt >= MODERN_RELEASE_TIMEOUT_MS) {
-                        drainTask = null
-                        LimeLog.warning("Bluetooth communication route release timed out")
-                        complete(false)
-                    } else {
-                        worker.postDelayed(this, MODERN_RELEASE_POLL_MS)
-                    }
-                }
-            }
-            drainTask = poll
-            worker.post(poll)
+            if (isCurrent()) complete(true)
             return
         }
         legacyDrain.restartIfExpired(SystemClock.elapsedRealtime())
@@ -358,8 +339,6 @@ internal class BluetoothMicrophoneRouteController(context: Context) {
 
         // setCommunicationDevice responds immediately, long before the SCO link carries audio.
         private const val SCO_NUDGE_DELAY_MS = 1200L
-        private const val MODERN_RELEASE_POLL_MS = 50L
-        private const val MODERN_RELEASE_TIMEOUT_MS = 1500L
 
         fun choices(context: Context): List<MicrophoneInputDevice> = try {
             val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

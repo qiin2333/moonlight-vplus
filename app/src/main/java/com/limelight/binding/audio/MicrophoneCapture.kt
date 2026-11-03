@@ -88,6 +88,7 @@ class MicrophoneCapture internal constructor(
     private var lastPcmRouteId: Int? = null
     @Volatile private var acceptingInput = false
     @Volatile private var activeContract: MicrophoneInputContract? = null
+    @Volatile private var activeCaptureInput: MicrophoneCaptureInput? = null
     @Volatile private var observedInput = MicrophoneObservedInput(null, null)
     private var initialReported = false
     private var startupStage: MicrophoneRouteStage? = null
@@ -112,6 +113,7 @@ class MicrophoneCapture internal constructor(
         var previousCaptureSampleRate: Int? = null,
         val captureInput: MicrophoneCaptureInput,
         val contract: MicrophoneInputContract,
+        var previousCaptureInput: MicrophoneCaptureInput? = null,
         var previousContract: MicrophoneInputContract? = null,
         val initial: Boolean = false
     )
@@ -255,6 +257,7 @@ class MicrophoneCapture internal constructor(
                         if (pending == null && activeContract != null &&
                             !activeContract!!.matches(observedInput)) {
                             activeContract = null
+                            activeCaptureInput = null
                             frameBufferPos = 0
                             onInputLost()
                         }
@@ -299,6 +302,7 @@ class MicrophoneCapture internal constructor(
                     acceptingInput = false
                     cachedRoutedId = null
                     activeContract = null
+                    activeCaptureInput = null
                     startupStage?.cancel()
                     val pending = inputSwitch.getAndSet(null)
                     pending?.stage?.cancel()
@@ -441,7 +445,10 @@ class MicrophoneCapture internal constructor(
     @RequiresPermission(android.Manifest.permission.RECORD_AUDIO)
     private fun prepareInputSwitch(pending: InputSwitch): Boolean = routeLock.withLock {
         if (!running.get() || inputSwitch.get() !== pending) return false
-        if (pending.previousContract == null) pending.previousContract = activeContract
+        if (pending.previousContract == null) {
+            pending.previousContract = activeContract
+            pending.previousCaptureInput = activeCaptureInput
+        }
         val restore = pending.restore ?: try {
             val record = checkNotNull(audioRecord)
             if (Build.VERSION.SDK_INT >= 23) InputRouting.snapshot(record)
@@ -574,6 +581,9 @@ class MicrophoneCapture internal constructor(
             LimeLog.info("Microphone input switch completed; success=$success")
             val contract = if (success) pending.contract else pending.previousContract
             activeContract = contract?.takeIf { it.matches(observedInput) }
+            activeCaptureInput = activeContract?.let {
+                if (success) pending.captureInput else pending.previousCaptureInput
+            }
             frameBufferPos = 0
             val active = activeContract?.let { MicrophoneActiveInput(it.choice, observedInput) }
             pending.complete(when {
@@ -601,7 +611,8 @@ class MicrophoneCapture internal constructor(
                 if (!running.get() || inputSwitch.get() !== pending) return false
                 if (recreate) {
                     if (!recreateRecord(apply, pending.previousAudioSource ?: audioSource,
-                            pending.captureInput, pending.previousCaptureSampleRate ?: captureSampleRate)) return false
+                            pending.previousCaptureInput,
+                            pending.previousCaptureSampleRate ?: captureSampleRate)) return false
                 } else {
                     val accepted = try { apply(audioRecord!!) } catch (_: RuntimeException) { false }
                     LimeLog.info("Microphone previous route requested on existing recorder; accepted=$accepted")
