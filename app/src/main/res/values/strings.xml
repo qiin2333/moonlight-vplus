@@ -1165,7 +1165,7 @@
     <string name="game_menu_touch_mode_native_mouse_summary">For Bluetooth, USB mice, and keyboard touchpads</string>
     <string name="game_menu_touch_mode_ds5">DS5 touchpad</string>
     <string name="game_menu_touch_mode_ds5_short">DS5</string>
-    <string name="game_menu_touch_mode_ds5_summary">A screen zone acts as the DualSense pad while the rest stays multi-touch; tap or firm press to click, hold the zone edge to resize</string>
+    <string name="game_menu_touch_mode_ds5_summary">A zone acts as the DualSense pad while the rest stays multi-touch. Double-tap to click; hold the second tap to hold the button. Firm press also clicks; drag edges to resize.</string>
     <string name="game_menu_touch_mode_primary_group">Primary input mode (choose one)</string>
     <string name="game_menu_touch_mode_compatible_group">Compatible options</string>
     <string name="game_menu_touch_pointer_speed">Pointer-zone speed</string>
@@ -1880,7 +1880,10 @@ Tap again to replace it.</string>
     <string name="game_menu_toggle_touch">Touch Input</string>
     <string name="ds5_touchpad_active_title">DS5 touchpad active</string>
     <string name="ds5_touchpad_active_subtitle">Touch to move · Tap to click</string>
-    <string name="ds5_touchpad_active_subtitle_zone">Zone is the pad · Hold its edge to resize</string>
+    <string name="ds5_touchpad_active_subtitle_zone">Double-tap to click · Hold the second tap to hold</string>
+    <string name="ds5_touchpad_active_subtitle_single_tap">Tap to click · Drag the zone edge to resize</string>
+    <string name="title_ds5_single_tap_to_click">DS5 single-tap click (legacy)</string>
+    <string name="summary_ds5_single_tap_to_click">Off: double-tap to click, holding the second tap holds the button. On: a single tap clicks. Firm press works in either mode.</string>
     <string name="toast_ds5_touchpad_on">DS5 touchpad on</string>
     <string name="toast_ds5_touchpad_off">DS5 touchpad off</string>
     <string name="toast_touch_enabled">Touch enabled</string>

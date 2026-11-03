@@ -77,6 +77,7 @@ class TouchpadZoneOverlayView(
 
     private var introStartedAt = 0L
     private var touchpadPressed = false
+    private var singleTapToClick = false
     private var resizing = false
 
     /** Zone surface in stream-normalized coordinates; null when the pad is off. */
@@ -117,6 +118,11 @@ class TouchpadZoneOverlayView(
         if (touchpadPressed == pressed) return
         touchpadPressed = pressed
         postInvalidateOnAnimation()
+    }
+
+    fun setSingleTapToClick(enabled: Boolean) {
+        singleTapToClick = enabled
+        invalidate()
     }
 
     /** Emphasize the outline while the user is resizing the zone. */
@@ -273,7 +279,10 @@ class TouchpadZoneOverlayView(
         }.coerceIn(0f, 1f)
 
         val title = resources.getString(R.string.ds5_touchpad_active_title)
-        val subtitle = resources.getString(R.string.ds5_touchpad_active_subtitle_zone)
+        val subtitle = resources.getString(
+            if (singleTapToClick) R.string.ds5_touchpad_active_subtitle_single_tap
+            else R.string.ds5_touchpad_active_subtitle_zone
+        )
         val horizontalPadding = 18f * density
         val iconWidth = 30f * density
         val iconGap = 12f * density

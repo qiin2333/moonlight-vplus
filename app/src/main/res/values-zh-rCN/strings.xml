@@ -950,7 +950,7 @@
     <string name="game_menu_touch_mode_native_mouse_summary">适合蓝牙、USB 鼠标和键盘触摸板</string>
     <string name="game_menu_touch_mode_ds5">DS5 触控板</string>
     <string name="game_menu_touch_mode_ds5_short">DS5</string>
-    <string name="game_menu_touch_mode_ds5_summary">屏幕分区作为 DualSense 触控板，其余区域正常多点触控：轻点/用力按压点击，按住分区边缘调整大小</string>
+    <string name="game_menu_touch_mode_ds5_summary">分区内为 DualSense 触控板，其余区域正常多点触控。双击点击，第二下按住可长按；也可用力按压点击，拖动边缘调整大小。</string>
     <string name="game_menu_touch_mode_primary_group">主要输入模式（单选）</string>
     <string name="game_menu_touch_mode_compatible_group">辅助选项（可共存）</string>
     <string name="game_menu_touch_pointer_speed">指针区速度</string>
@@ -1593,7 +1593,10 @@
     <string name="game_menu_toggle_touch">触控输入</string>
     <string name="ds5_touchpad_active_title">DS5 触控板已激活</string>
     <string name="ds5_touchpad_active_subtitle">触摸移动 · 轻点即可点击</string>
-    <string name="ds5_touchpad_active_subtitle_zone">分区即触摸板 · 按住分区边缘调整大小</string>
+    <string name="ds5_touchpad_active_subtitle_zone">双击点击 · 第二下按住可长按</string>
+    <string name="ds5_touchpad_active_subtitle_single_tap">轻点点击 · 拖动分区边缘调整大小</string>
+    <string name="title_ds5_single_tap_to_click">DS5 单击点击（兼容）</string>
+    <string name="summary_ds5_single_tap_to_click">关闭：双击点击，第二下按住可长按；开启：恢复单击点击。两种方式均支持用力按压。</string>
     <string name="toast_ds5_touchpad_on">DS5 触摸板已开启</string>
     <string name="toast_ds5_touchpad_off">DS5 触摸板已关闭</string>
     <string name="toast_touch_enabled">触控已开启</string>

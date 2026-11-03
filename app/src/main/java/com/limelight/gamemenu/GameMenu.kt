@@ -645,6 +645,28 @@ class GameMenu(
             )
         }
 
+        if (game.prefConfig.screenDs5Touchpad) {
+            val toggleSingleTap = Runnable {
+                game.screenDs5Touchpad.setSingleTapToClick(!game.prefConfig.screenDs5SingleTapToClick)
+            }
+            touchModeOptionsList.add(
+                MenuOption(
+                    label = getString(R.string.title_ds5_single_tap_to_click),
+                    isWithGameFocus = false,
+                    runnable = toggleSingleTap,
+                    iconKey = null,
+                    isShowIcon = false,
+                    isKeepDialog = true,
+                    subtitle = getString(R.string.summary_ds5_single_tap_to_click),
+                    inlineControl = InlineControl.Toggle(
+                        checked = game.prefConfig.screenDs5SingleTapToClick,
+                        toggleAction = toggleSingleTap,
+                    ),
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION,
+                )
+            )
+        }
+
         //触控板双击功能
         if (isTouchscreenTrackpad) {
             touchModeOptionsList.add(
@@ -1139,6 +1161,9 @@ class GameMenu(
         superOptions: Array<MenuOption>,
         pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD
     ) {
+        if (game.prefConfig.screenDs5Touchpad) {
+            game.screenDs5Touchpad.cancelGesture()
+        }
         lateinit var dialog: ComponentDialog
 
         val state = mutableStateOf(

@@ -73,6 +73,15 @@ class ScreenDs5Touchpad(private val game: Game) {
         return next
     }
 
+    fun setSingleTapToClick(enabled: Boolean) {
+        if (game.prefConfig.screenDs5SingleTapToClick == enabled) return
+        cancelGesture()
+        game.prefConfig.screenDs5SingleTapToClick = enabled
+        game.prefConfig.writePreferences(game)
+        overlay?.setSingleTapToClick(enabled)
+        overlay?.showActivatedHint()
+    }
+
     /** Re-declare controller 0 as DualSense after host negotiations settle. */
     fun redeclareOnHost() {
         if (enabled) {
@@ -139,6 +148,7 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     private fun refreshZoneUi() {
         val view = overlay ?: return
+        view.setSingleTapToClick(game.prefConfig.screenDs5SingleTapToClick)
         view.setZoneRect(
             if (enabled) {
                 TouchpadZoneGeometry.parseZoneRect(game.prefConfig.screenDs5TouchpadZoneRect)
