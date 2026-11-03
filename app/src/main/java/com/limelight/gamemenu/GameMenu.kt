@@ -877,9 +877,6 @@ class GameMenu(
                         // setEnabled normalizes the touch mode (zone interior is the
                         // pad, the rest is plain multi-touch) and persists it.
                         game.screenDs5Touchpad.setEnabled(true)
-                        // Mirror the touch-mode state into the virtual-key config store.
-                        updateEnhancedTouchSetting(true)
-                        updateTouchModeSetting(false)
                         touchPointerSensitivityController.refreshApplicability()
                         touchpadSensitivityController.refresh()
                     },

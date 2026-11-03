@@ -290,6 +290,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     fun setScreenDs5TouchpadHostSupport(supported: Boolean) {
         screenDs5TouchpadHostSupport =
             if (supported) ScreenDs5HostSupport.SUPPORTED else ScreenDs5HostSupport.UNSUPPORTED
+        screenDs5Touchpad.onHostSupportKnown(supported)
     }
 
     private var externalStreamView: StreamView? = null

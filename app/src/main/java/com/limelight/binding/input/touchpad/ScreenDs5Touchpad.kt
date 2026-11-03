@@ -1,8 +1,11 @@
 package com.limelight.binding.input.touchpad
 
+import android.content.ContentValues
 import android.view.ViewGroup
 import com.limelight.Game
 import com.limelight.LimeLog
+import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.preferences.TouchModePreferenceState
 import com.limelight.ui.TouchpadZoneOverlayView
 
 /**
@@ -19,6 +22,7 @@ class ScreenDs5Touchpad(private val game: Game) {
     private var pendingZoneReveal = false
     private var container: ViewGroup? = null
     private var pendingHostUpdate: Runnable? = null
+    private var activationFallback: TouchModePreferenceState? = null
 
     private val enabled: Boolean
         get() = game.prefConfig.screenDs5Touchpad
@@ -27,12 +31,14 @@ class ScreenDs5Touchpad(private val game: Game) {
     fun attachIfEnabled(container: ViewGroup) {
         this.container = container
         if (enabled) {
+            rememberTouchMode()
             attach(container)
         }
     }
 
     /** Activation hint plus a zone reveal on stream start. */
     fun onStreamStarted() {
+        if (enabled) rememberTouchMode()
         overlay?.showActivatedHint()
         revealIfEnabled()
     }
@@ -43,10 +49,12 @@ class ScreenDs5Touchpad(private val game: Game) {
      * retries a pending host update without rebuilding the surface.
      */
     fun setEnabled(enabled: Boolean) {
+        if (enabled && game.screenDs5TouchpadHostSupport == Game.ScreenDs5HostSupport.UNSUPPORTED) return
         if (game.prefConfig.screenDs5Touchpad == enabled) {
             if (pendingHostUpdate != null) updateHost()
             return
         }
+        if (enabled) rememberTouchMode() else activationFallback = null
         game.prefConfig.screenDs5Touchpad = enabled
         if (enabled) {
             // The area outside the zone is plain multi-touch: normalize the touch
@@ -57,6 +65,7 @@ class ScreenDs5Touchpad(private val game: Game) {
             game.setTouchMode(false)
         }
         game.prefConfig.writePreferences(game)
+        syncTouchModeConfig()
         game.touchInputHandler.cancelScreenDs5TouchpadGesture()
         if (enabled) {
             container?.let { attach(it) }
@@ -65,6 +74,7 @@ class ScreenDs5Touchpad(private val game: Game) {
             pendingZoneReveal = true
             overlay?.showZoneReveal()
         } else {
+            pendingZoneReveal = false
             detach()
         }
         updateHost()
@@ -72,9 +82,42 @@ class ScreenDs5Touchpad(private val game: Game) {
 
     /** Toggle the pad layer for hotkeys and quick actions; returns the new state. */
     fun toggle(): Boolean {
-        val next = !enabled
-        setEnabled(next)
-        return next
+        setEnabled(!enabled)
+        return enabled
+    }
+
+    private fun rememberTouchMode() {
+        if (activationFallback == null) {
+            activationFallback = TouchModePreferenceState(
+                game.prefConfig.enableEnhancedTouch,
+                game.prefConfig.touchscreenTrackpad,
+                game.prefConfig.enableNativeMousePointer,
+                screenDs5Touchpad = false,
+            )
+        }
+    }
+
+    /** A rejected probe restores the ordinary touch mode that activation replaced. */
+    fun onHostSupportKnown(supported: Boolean) {
+        val fallback = activationFallback
+        activationFallback = null
+        if (supported || !enabled) return
+        if (fallback != null) {
+            game.setEnhancedTouch(fallback.enhancedTouch)
+            game.setTouchMode(fallback.touchscreenTrackpad)
+            game.enableNativeMousePointer(fallback.nativeMousePointer)
+        }
+        setEnabled(false)
+    }
+
+    private fun syncTouchModeConfig() {
+        val manager = game.controllerManager ?: return
+        val configId = manager.pageConfigController?.currentConfigId ?: return
+        val values = ContentValues().apply {
+            put(PageConfigController.COLUMN_BOOLEAN_TOUCH_MODE, game.prefConfig.touchscreenTrackpad.toString())
+            put(PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH, game.prefConfig.enableEnhancedTouch.toString())
+        }
+        manager.superConfigDatabaseHelper?.updateConfig(configId, values)
     }
 
     fun setSingleTapToClick(enabled: Boolean) {

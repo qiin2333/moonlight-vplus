@@ -487,7 +487,7 @@ class TouchInputHandler(private val game: Game) {
 
                 when (ds5Route) {
                     Ds5Route.PAD -> {
-                        val handled = trySendScreenDs5TouchpadEvent(view, event)
+                        trySendScreenDs5TouchpadEvent(view, event)
                         // Deliver the final UP/CANCEL to the pad first, then release
                         // the route so the last contact and tap-click still land.
                         if (event.actionMasked == MotionEvent.ACTION_UP ||
@@ -495,9 +495,7 @@ class TouchInputHandler(private val game: Game) {
                         ) {
                             ds5Route = Ds5Route.NONE
                         }
-                        if (handled) {
-                            return true
-                        }
+                        return true
                     }
                     Ds5Route.RESIZE -> {
                         handleScreenDs5Resize(view, event)
