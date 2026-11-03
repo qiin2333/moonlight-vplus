@@ -1156,4 +1156,6 @@
     <string name="host_unlock_still_locked_message">PIN 可能不正確，或鎖定畫面目前不是 PIN 輸入。要重新設定 PIN 嗎？</string>
     <string name="host_unlock_reset_pin">重新設定</string>
     <string name="host_unlock_close">關閉</string>
+    <string name="title_ds5_single_tap_to_click">DS5 單擊點擊（相容）</string>
+    <string name="summary_ds5_single_tap_to_click">關閉：點兩下即可點擊，第二下按住可長按；開啟：恢復單擊點擊。兩種方式均支援用力按壓。</string>
 </resources>
