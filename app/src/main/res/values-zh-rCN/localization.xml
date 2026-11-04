@@ -55,6 +55,7 @@
     <string name="direction_down">下</string>
     <string name="editor_title">标题：</string>
     <string name="pc_icon_description">电脑图标</string>
+    <string name="pc_name_foundation_sunshine_description">%1$s，已配套 Foundation Sunshine</string>
     <string name="pc_status_description">电脑状态</string>
     <string name="loading_description">加载中</string>
     <string name="root_mouse_unavailable">设备未取得 root 权限，无法捕获鼠标</string>

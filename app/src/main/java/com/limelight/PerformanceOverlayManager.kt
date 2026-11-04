@@ -5,11 +5,8 @@ import android.app.Activity
 import android.content.res.ColorStateList
 import android.content.SharedPreferences
 import android.content.res.Configuration
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -18,7 +15,6 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.format.DateFormat
 import android.text.style.ForegroundColorSpan
-import android.text.style.ImageSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.text.style.TypefaceSpan
@@ -43,6 +39,7 @@ import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.ui.CenterAlignedImageSpan
 import com.limelight.ui.StreamView
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.BandwidthMeter
@@ -1526,34 +1523,5 @@ class PerformanceOverlayManager(
             "vp9" to DecoderTypeInfo("VP9", "VP9"),
             "vp8" to DecoderTypeInfo("VP8", "VP8")
         )
-    }
-}
-
-/**
- * 居中对齐的 ImageSpan：基于字体度量将图标垂直居中到文字中线，
- * 解决默认 ALIGN_BOTTOM/ALIGN_BASELINE 偏低、与中文字符不齐的问题。
- */
-private class CenterAlignedImageSpan(drawable: Drawable) : ImageSpan(drawable, ALIGN_BASELINE) {
-
-    override fun draw(
-        canvas: Canvas,
-        text: CharSequence?,
-        start: Int,
-        end: Int,
-        x: Float,
-        top: Int,
-        y: Int,
-        bottom: Int,
-        paint: Paint
-    ) {
-        val d = drawable
-        val fm = paint.fontMetricsInt
-        // 文本内容垂直中线（不含 leading）
-        val textCenter = y + (fm.descent + fm.ascent) / 2
-        val transY = textCenter - d.bounds.height() / 2
-        canvas.save()
-        canvas.translate(x, transY.toFloat())
-        d.draw(canvas)
-        canvas.restore()
     }
 }

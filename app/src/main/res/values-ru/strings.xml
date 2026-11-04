@@ -1919,7 +1919,7 @@
     <string name="appview_guide_resume_title">Быстрый возврат в игру</string>
     <string name="appview_guide_resume_body">Во время сеанса нажмите название ПК и приложения, чтобы сразу вернуться к трансляции.</string>
     <string name="network_quality_test_title">Качество трансляции</string>
-    <string name="network_quality_card_summary">%1$.0f мс · %2$.0f Мбит/с</string>
+    <string name="network_quality_card_summary">%1$.0f мс %2$.0f Мбит/с</string>
     <string name="network_quality_menu_summary">%1$s · %2$s</string>
     <string name="network_quality_measuring_response">Замер времени отклика</string>
     <string name="network_quality_measuring_bandwidth">Замер стабильной скорости</string>

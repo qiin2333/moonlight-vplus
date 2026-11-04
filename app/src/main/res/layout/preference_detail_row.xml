@@ -9,12 +9,11 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="76dp"
+        android:minHeight="?android:attr/listPreferredItemHeightSmall"
         android:gravity="center_vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="16dp">
+        android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+        android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+        android:baselineAligned="false">
 
         <include layout="@layout/image_frame" />
 
@@ -22,24 +21,27 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingTop="@dimen/settings_preference_item_vertical_padding"
+            android:paddingBottom="@dimen/settings_preference_item_vertical_padding">
 
             <TextView
                 android:id="@android:id/title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
+                android:textAppearance="?android:attr/textAppearanceListItem"
                 android:textColor="@color/settings_preference_title_text"
-                android:textSize="15sp"
                 android:shadowRadius="0" />
 
             <TextView
                 android:id="@android:id/summary"
+                style="@style/PreferenceSummaryTextStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_gravity="start"
+                android:textAlignment="viewStart"
                 android:textColor="@color/settings_preference_summary_text"
-                android:textSize="12sp"
+                android:maxLines="10"
                 android:shadowRadius="0" />
         </LinearLayout>
 

@@ -11,6 +11,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -380,7 +382,9 @@ private fun DisplaySelectionRows(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         rows.forEach { row ->
-            Row(
+            ExpressiveSegmentRow(
+                columns = columns,
+                selectedIndex = row.indexOfFirst { it.id == selectedDisplayId },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min)
@@ -391,8 +395,7 @@ private fun DisplaySelectionRows(
                         )
                     )
                     .padding(2.dp)
-                    .selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                    .selectableGroup()
             ) {
                 row.forEach { option ->
                     SegmentButton(
@@ -496,7 +499,9 @@ private fun BackgroundModeSegmentedControl(
         )
     )
 
-    Row(
+    ExpressiveSegmentRow(
+        columns = options.size,
+        selectedIndex = options.indexOfFirst { it.first == selectedMode },
         modifier = Modifier
             .fillMaxWidth()
             .height(36.dp)
@@ -507,9 +512,7 @@ private fun BackgroundModeSegmentedControl(
                 )
             )
             .padding(2.dp)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(1.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .selectableGroup()
     ) {
         options.forEach { (mode, label, icon) ->
             SegmentButton(
@@ -536,25 +539,30 @@ private fun SegmentButton(
 ) {
     val view = LocalView.current
     val shape = AppShapes.small
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
     Box(
         modifier = modifier
             .fillMaxHeight()
             .heightIn(min = if (verticalIcon) 50.dp else if (maxLines > 1) 42.dp else 36.dp)
             .clip(shape)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                else Color.Transparent
+            .then(
+                if (focused && enabled) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
+                else Modifier
             )
             .selectable(
                 selected = selected,
                 enabled = enabled,
                 role = Role.RadioButton,
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = {
                     view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     onClick()
                 }
             )
-            .padding(horizontal = 5.dp, vertical = 2.dp),
+            .padding(horizontal = 5.dp, vertical = 2.dp)
+            .expressivePressFeedback(interactionSource, enabled),
         contentAlignment = Alignment.Center
     ) {
         val contentColor = if (!enabled) {
@@ -715,13 +723,13 @@ internal fun ScreenCombinationSegmentedControl(
         verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         rows.forEach { row ->
-            Row(
+            ExpressiveSegmentRow(
+                columns = 3,
+                selectedIndex = row.indexOfFirst { it.value == selectedMode },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
-                    .selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(1.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .selectableGroup()
             ) {
                 row.forEach { option ->
                     SegmentButton(

@@ -256,6 +256,7 @@ dependencies {
     implementation libs.jmdns
     implementation libs.shield.controller
     implementation libs.appcompat
+    implementation libs.dynamicanimation
     implementation libs.core.splashscreen
     implementation libs.preference
     implementation libs.keyboard.header
