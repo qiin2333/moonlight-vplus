@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.ColorFilter
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PixelFormat
@@ -57,6 +59,7 @@ internal class PixelMapBackgroundDrawable(context: Context) : Drawable() {
         private const val COLS = 28
         private const val ROWS = 42
         private const val CELL = 14
+        private const val GLYPH_SATURATION = 0.6f
         private val tiles = HashMap<Int, Bitmap>(2)
         // Original terrain opacity multiplied by the HarmonyOS decoration layer's 0.55 opacity.
         private val colors = intArrayOf(0x778FCB6B, 0x77E5C76B, 0x7EA8744A, 0x775BA8D8, 0x70DC6E96, 0x779C6BC6)
@@ -86,6 +89,8 @@ internal class PixelMapBackgroundDrawable(context: Context) : Drawable() {
                     typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
                     textSize = 12f
                     textAlign = Paint.Align.CENTER
+                    // Bake the softer palette into the cached tile once.
+                    colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(GLYPH_SATURATION) })
                 }
                 val baseline = CELL / 2f - (text.ascent() + text.descent()) / 2f
                 val chars = CharArray(1)
