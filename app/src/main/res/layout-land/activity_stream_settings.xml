@@ -91,6 +91,9 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="@drawable/settings_search_bar_background"
+                    android:focusable="true"
+                    android:focusableInTouchMode="false"
+                    android:nextFocusRight="@id/settings_search_close"
                     android:paddingStart="10dp"
                     android:paddingEnd="4dp">
 
@@ -116,6 +119,8 @@
                         android:inputType="text"
                         android:singleLine="true"
                         android:maxLines="1"
+                        android:focusable="false"
+                        android:focusableInTouchMode="false"
                         android:importantForAutofill="no" />
 
                     <ImageView
@@ -125,7 +130,11 @@
                         android:src="@drawable/ic_close_stylish"
                         android:scaleType="center"
                         android:padding="5dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:background="@drawable/settings_search_close_background"
+                        android:focusable="true"
+                        android:focusableInTouchMode="false"
+                        android:nextFocusLeft="@id/settings_search_bar"
+                        android:nextFocusUp="@id/settings_back"
                         android:contentDescription="@string/settings_search_clear" />
 
                 </LinearLayout>
