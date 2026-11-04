@@ -339,6 +339,7 @@ class PcGridAdapter(
         overlayView.visibility = View.GONE
 
         txtView.text = context.getString(R.string.title_add_pc)
+        txtView.contentDescription = null
         txtView.alpha = 0.7f
         txtView.setTextColor(PcCardDecor.textColor(context))
     }
@@ -365,7 +366,8 @@ class PcGridAdapter(
         updateSpinner(spinnerView as ImageView, isUnknown || isLoadingBoxArt)
 
         val displayName = SpannableStringBuilder(details.name)
-        if (isOnline && details.sunshineVersion?.endsWith("杂鱼") == true) {
+        val hasFoundationBadge = isOnline && details.sunshineVersion?.endsWith("杂鱼") == true
+        if (hasFoundationBadge) {
             val badge = AppCompatResources.getDrawable(context, R.drawable.ic_foundation_verified)!!.mutate()
             badge.setTint(UiHelper.accentColor(context))
             val size = txtView.textSize.toInt().coerceAtLeast(1)
@@ -377,6 +379,9 @@ class PcGridAdapter(
             )
         }
         txtView.text = displayName
+        txtView.contentDescription = if (hasFoundationBadge) {
+            context.getString(R.string.pc_name_foundation_sunshine_description, details.name)
+        } else null
         txtView.alpha = if (isOffline) 0.5f else 1.0f
         txtView.setTextColor(PcCardDecor.textColor(context, disabled = isOffline))
 

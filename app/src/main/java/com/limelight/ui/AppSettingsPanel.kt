@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -539,11 +540,16 @@ private fun SegmentButton(
     val view = LocalView.current
     val shape = AppShapes.small
     val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
     Box(
         modifier = modifier
             .fillMaxHeight()
             .heightIn(min = if (verticalIcon) 50.dp else if (maxLines > 1) 42.dp else 36.dp)
             .clip(shape)
+            .then(
+                if (focused && enabled) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
+                else Modifier
+            )
             .selectable(
                 selected = selected,
                 enabled = enabled,

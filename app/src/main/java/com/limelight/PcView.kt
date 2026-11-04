@@ -1298,12 +1298,21 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     // Image Save Methods
 
     private fun saveImageWithPermissionCheck() {
+        val resolved = BackgroundSource.resolveCurrentTarget(
+            this,
+            resources.configuration.orientation
+        )
+        if (resolved.target == null || backgroundImageView?.drawable == null || displayedBackgroundKey != resolved.cacheKey) {
+            showToast(getString(R.string.image_not_loaded_please_retry))
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
             showToast(getString(R.string.storage_permission_required))
             requestStoragePermission()
             return
         }
-        saveImage()
+        showToast(getString(R.string.downloading_image_please_wait))
+        saveResolvedBackground(resolved)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -1315,20 +1324,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         } catch (e: Exception) {
             startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         }
-    }
-
-    private fun saveImage() {
-        val resolved = BackgroundSource.resolveCurrentTarget(
-            this,
-            resources.configuration.orientation
-        )
-        if (resolved.target == null || backgroundImageView?.drawable == null || displayedBackgroundKey != resolved.cacheKey) {
-            showToast(getString(R.string.image_not_loaded_please_retry))
-            return
-        }
-
-        showToast(getString(R.string.downloading_image_please_wait))
-        saveResolvedBackground(resolved)
     }
 
     /**

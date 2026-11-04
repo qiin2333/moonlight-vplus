@@ -89,16 +89,19 @@ class AdapterRecyclerBridge(
                 val adapterPosition = holder.bindingAdapterPosition
                 if (adapterPosition == RecyclerView.NO_POSITION) return@setOnKeyListener false
 
-                // Custom confirm handlers consume the key before View updates its pressed state.
-                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                    holder.container.isPressed = event.action == KeyEvent.ACTION_DOWN && !event.isCanceled
-                }
+                val isConfirmKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_BUTTON_A
                 onItemKeyListener?.let {
-                    return@setOnKeyListener it.onItemKey(adapterPosition, baseAdapter.getItem(adapterPosition), keyCode, event)
+                    val handled = it.onItemKey(adapterPosition, baseAdapter.getItem(adapterPosition), keyCode, event)
+                    // Unconsumed events must keep View's default pressed-state and click handling.
+                    if (handled && isConfirmKey) {
+                        holder.container.isPressed = event.action == KeyEvent.ACTION_DOWN && !event.isCanceled
+                    }
+                    return@setOnKeyListener handled
                 }
 
                 // 适配器内部处理A键长按检测
-                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                if (isConfirmKey) {
+                    holder.container.isPressed = event.action == KeyEvent.ACTION_DOWN && !event.isCanceled
                     when (event.action) {
                         KeyEvent.ACTION_DOWN -> {
                             aKeyDownTime = System.currentTimeMillis()
@@ -115,7 +118,7 @@ class AdapterRecyclerBridge(
                             val pressDuration = System.currentTimeMillis() - aKeyDownTime
                             longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                             longPressRunnable = null
-                            if (pressDuration < LONG_PRESS_DURATION && adapterPosition != RecyclerView.NO_POSITION) {
+                            if (!event.isCanceled && pressDuration < LONG_PRESS_DURATION && adapterPosition != RecyclerView.NO_POSITION) {
                                 onItemClickListener?.onItemClick(adapterPosition, baseAdapter.getItem(adapterPosition))
                             }
                             return@setOnKeyListener true
