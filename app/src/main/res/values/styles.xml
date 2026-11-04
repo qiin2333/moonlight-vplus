@@ -270,6 +270,7 @@
 
     <style name="PreferenceTitleWithShadow" parent="PreferenceTextWithShadow">
         <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/settings_preference_title_text</item>
     </style>
@@ -400,8 +401,8 @@
 
     <!-- 通用弹窗动画 -->
     <style name="AppDialogAnimation">
-        <item name="android:windowEnterAnimation">@anim/game_menu_dialog_enter</item>
-        <item name="android:windowExitAnimation">@anim/game_menu_dialog_exit</item>
+        <item name="android:windowEnterAnimation">@anim/app_dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/app_dialog_exit</item>
     </style>
 
     <!-- 通用对话框标题样式 -->
@@ -426,7 +427,7 @@
         <item name="android:paddingBottom">8dp</item>
         <item name="android:minHeight">40dp</item>
         <item name="android:gravity">center</item>
-        <item name="android:stateListAnimator">@null</item>
+        <item name="android:stateListAnimator">@animator/expressive_item_state</item>
         <item name="android:elevation">0dp</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
@@ -488,6 +489,15 @@
         <item name="android:textColor">?attr/appAccent</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="PcHostNameText">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+        <item name="android:shadowRadius">0</item>
     </style>
 
     <style name="AppListTitle">

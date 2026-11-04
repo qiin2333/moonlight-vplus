@@ -2128,7 +2128,7 @@
     <string name="appview_guide_resume_body">已有会话时，点一下电脑名和应用名就能直接回到串流。别再绕远路啦。</string>
     <!-- Foundation Sunshine 启动前网络探测 -->
     <string name="network_quality_test_title">串流质量检测</string>
-    <string name="network_quality_card_summary">%1$.0f ms · %2$.0f Mbps</string>
+    <string name="network_quality_card_summary">%1$.0f ms %2$.0f Mbps</string>
     <string name="network_quality_menu_summary">%1$s · %2$s</string>
     <string name="network_quality_measuring_response">正在测量响应延迟</string>
     <string name="network_quality_measuring_bandwidth">正在测量稳定带宽</string>

@@ -1,6 +1,7 @@
 package com.limelight.utils
 
 import android.app.Dialog
+import android.animation.AnimatorInflater
 import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
@@ -77,7 +78,10 @@ object AppDialogStyler {
             DialogInterface.BUTTON_NEGATIVE,
             DialogInterface.BUTTON_NEUTRAL
         ).forEach { buttonId ->
-            buttonTextColors?.let { findButton(dialog, buttonId)?.setTextColor(it) }
+            findButton(dialog, buttonId)?.let { button ->
+                buttonTextColors?.let(button::setTextColor)
+                installItemFeedback(button, context)
+            }
         }
     }
 
@@ -194,6 +198,7 @@ object AppDialogStyler {
 
     private fun styleListRow(row: View, context: Context) {
         row.setBackgroundResource(R.drawable.app_dialog_list_item_bg)
+        installItemFeedback(row, context)
         val textView = when (row) {
             is TextView -> row
             else -> row.findViewById<TextView>(android.R.id.text1)
@@ -213,5 +218,11 @@ object AppDialogStyler {
     private fun dpToPx(context: Context, value: Int): Int {
         val density = context.resources.displayMetrics.density
         return (value * density + 0.5f).toInt()
+    }
+
+    private fun installItemFeedback(view: View, context: Context) {
+        if (view.getTag(R.id.expressive_item_feedback) == true) return
+        view.setTag(R.id.expressive_item_feedback, true)
+        view.stateListAnimator = AnimatorInflater.loadStateListAnimator(context, R.animator.expressive_item_state)
     }
 }

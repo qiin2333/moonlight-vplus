@@ -17,6 +17,7 @@ import android.widget.FrameLayout
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -83,6 +84,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
+import com.limelight.ui.expressivePressFeedback
 import com.limelight.ui.theme.AppShapes
 import com.limelight.ui.theme.AppOverlayWidths
 import kotlinx.coroutines.flow.first
@@ -646,11 +648,17 @@ object AppActionSheet {
         compact: Boolean = false
     ) {
         var focused by remember { mutableStateOf(false) }
+        var confirmPressed by remember { mutableStateOf(false) }
+        val interactionSource = remember { MutableInteractionSource() }
         val shape = AppShapes.medium
         Box(
             modifier = modifier
-                .onFocusChanged { focused = it.isFocused }
+                .onFocusChanged {
+                    focused = it.isFocused
+                    if (!it.isFocused) confirmPressed = false
+                }
                 .heightIn(min = if (compact) 32.dp else 42.dp)
+                .expressivePressFeedback(interactionSource, enabled, confirmPressed = confirmPressed)
                 .clip(shape)
                 .then(
                     when {
@@ -673,13 +681,19 @@ object AppActionSheet {
                 .onPreviewKeyEvent { event ->
                     val nativeEvent = event.nativeKeyEvent
                     if (enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                        confirmPressed = nativeEvent.action == KeyEvent.ACTION_DOWN && !nativeEvent.isCanceled
                         if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) onClick()
                         true
                     } else {
                         false
                     }
                 }
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    enabled = enabled,
+                    onClick = onClick
+                )
                 .padding(
                     horizontal = if (compact) 10.dp else 14.dp,
                     vertical = if (compact) 6.dp else 10.dp
@@ -750,6 +764,8 @@ object AppActionSheet {
         val rowShape = AppShapes.medium
         val emphasizedColor = if (action.emphasized && action.enabled) MaterialTheme.colorScheme.primary else null
         var focused by remember(action.id) { mutableStateOf(false) }
+        var confirmPressed by remember(action.id) { mutableStateOf(false) }
+        val interactionSource = remember(action.id) { MutableInteractionSource() }
         val activate = { if (action.enabled) onAction(action) }
         Column {
             if (action.sectionStart) {
@@ -763,7 +779,14 @@ object AppActionSheet {
                 modifier = modifier
                     .fillMaxWidth()
                     .heightIn(min = 44.dp)
-                    .onFocusChanged { focused = it.isFocused }
+                    .expressivePressFeedback(
+                        interactionSource, action.enabled,
+                        pressedScale = 0.985f, focusedScale = 1f, confirmPressed = confirmPressed
+                    )
+                    .onFocusChanged {
+                        focused = it.isFocused
+                        if (!it.isFocused) confirmPressed = false
+                    }
                     .clip(rowShape)
                     .then(
                         if (focused) Modifier.background(appAccentSoftColor())
@@ -779,6 +802,7 @@ object AppActionSheet {
                     .onPreviewKeyEvent { event ->
                         val nativeEvent = event.nativeKeyEvent
                         if (action.enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                            confirmPressed = nativeEvent.action == KeyEvent.ACTION_DOWN && !nativeEvent.isCanceled
                             if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) activate()
                             true
                         } else {
@@ -787,18 +811,24 @@ object AppActionSheet {
                     }
                     .then(when {
                         action.toggle -> Modifier.toggleable(
+                            interactionSource = interactionSource, indication = LocalIndication.current,
                             value = action.checked == true, enabled = action.enabled,
                             role = Role.Switch, onValueChange = { activate() }
                         )
                         multiChoice && action.checked != null -> Modifier.toggleable(
+                            interactionSource = interactionSource, indication = LocalIndication.current,
                             value = action.checked, enabled = action.enabled,
                             role = Role.Checkbox, onValueChange = { activate() }
                         )
                         singleChoice && action.checked != null -> Modifier.selectable(
+                            interactionSource = interactionSource, indication = LocalIndication.current,
                             selected = action.checked, enabled = action.enabled,
                             role = Role.RadioButton, onClick = activate
                         )
-                        else -> Modifier.clickable(enabled = action.enabled, onClick = activate)
+                        else -> Modifier.clickable(
+                            interactionSource = interactionSource, indication = LocalIndication.current,
+                            enabled = action.enabled, onClick = activate
+                        )
                     })
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically

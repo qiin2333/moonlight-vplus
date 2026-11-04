@@ -8,6 +8,8 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -16,6 +18,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.preference.PreferenceManager
 
 import com.limelight.utils.AppTheme
@@ -23,6 +26,7 @@ import com.limelight.utils.UiHelper
 import com.limelight.LimeLog
 import com.limelight.PcView
 import com.limelight.R
+import com.limelight.ui.CenterAlignedImageSpan
 import com.limelight.networkquality.StreamNetworkQualityStore
 import com.limelight.networkquality.supportsNetworkQualityProbe
 import com.limelight.nvstream.http.ComputerDetails
@@ -360,9 +364,17 @@ class PcGridAdapter(
         val isLoadingBoxArt = details.uuid != null && details.uuid in loadingUuids
         updateSpinner(spinnerView as ImageView, isUnknown || isLoadingBoxArt)
 
-        var displayName = details.name
-        if (isOnline && details.sunshineVersion != null && details.sunshineVersion?.endsWith("杂鱼") == true) {
-            displayName += "⚡"
+        val displayName = SpannableStringBuilder(details.name)
+        if (isOnline && details.sunshineVersion?.endsWith("杂鱼") == true) {
+            val badge = AppCompatResources.getDrawable(context, R.drawable.ic_foundation_verified)!!.mutate()
+            badge.setTint(UiHelper.accentColor(context))
+            val size = txtView.textSize.toInt().coerceAtLeast(1)
+            badge.setBounds(0, 0, size, size)
+            displayName.append('\u00a0').append('\uFFFC')
+            displayName.setSpan(
+                CenterAlignedImageSpan(badge),
+                displayName.length - 1, displayName.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
         }
         txtView.text = displayName
         txtView.alpha = if (isOffline) 0.5f else 1.0f

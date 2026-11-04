@@ -89,6 +89,10 @@ class AdapterRecyclerBridge(
                 val adapterPosition = holder.bindingAdapterPosition
                 if (adapterPosition == RecyclerView.NO_POSITION) return@setOnKeyListener false
 
+                // Custom confirm handlers consume the key before View updates its pressed state.
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                    holder.container.isPressed = event.action == KeyEvent.ACTION_DOWN && !event.isCanceled
+                }
                 onItemKeyListener?.let {
                     return@setOnKeyListener it.onItemKey(adapterPosition, baseAdapter.getItem(adapterPosition), keyCode, event)
                 }
@@ -133,6 +137,12 @@ class AdapterRecyclerBridge(
     }
 
     override fun getItemCount(): Int = baseAdapter?.count ?: 0
+
+    override fun onViewDetachedFromWindow(holder: VH) {
+        holder.container.isPressed = false
+        holder.container.jumpDrawablesToCurrentState()
+        super.onViewDetachedFromWindow(holder)
+    }
 
     override fun getItemId(position: Int): Long {
         return baseAdapter?.getItemId(position) ?: RecyclerView.NO_ID
