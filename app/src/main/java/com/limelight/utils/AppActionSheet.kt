@@ -83,6 +83,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.limelight.R
+import com.limelight.ui.ExpressiveMotion
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.expressivePressFeedback
 import com.limelight.ui.theme.AppShapes
@@ -645,7 +646,7 @@ object AppActionSheet {
         enabled: Boolean,
         onFocused: (Boolean) -> Unit,
         onClick: () -> Unit,
-        pressedScale: Float = 0.96f,
+        pressedScale: Float = ExpressiveMotion.PRESS_SCALE,
         focusedScale: Float = 1.02f
     ): Modifier {
         var confirmPressed by remember(interactionSource, enabled) { mutableStateOf(false) }

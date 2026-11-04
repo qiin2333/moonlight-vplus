@@ -13,6 +13,8 @@ internal object ExpressiveMotion {
     const val STIFFNESS = 800f
     const val RELEASE_DAMPING = 0.65f
     const val PRESS_DAMPING = 1f
+    const val PRESS_SCALE = 0.97f
+    const val BUTTON_RELEASE_DAMPING = 0.8f
 
     fun enabled(context: Context): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         ValueAnimator.areAnimatorsEnabled()

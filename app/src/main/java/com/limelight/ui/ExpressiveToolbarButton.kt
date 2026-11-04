@@ -17,10 +17,8 @@ class ExpressiveToolbarButton @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = android.R.attr.imageButtonStyle
 ) : AppCompatImageButton(context, attrs, defStyleAttr) {
-    private var artworkScaleX = 1f
-    private var artworkScaleY = 1f
-    private var horizontalSpring: SpringAnimation? = null
-    private var verticalSpring: SpringAnimation? = null
+    private var artworkScale = 1f
+    private var artworkSpring: SpringAnimation? = null
     private val focusPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f * resources.displayMetrics.density
@@ -28,13 +26,10 @@ class ExpressiveToolbarButton @JvmOverloads constructor(
 
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) defaultFocusHighlightEnabled = false
-        horizontalSpring = spring { artworkScaleX = it }
-        verticalSpring = spring { artworkScaleY = it }
-    }
-
-    private fun spring(update: (Float) -> Unit) = ExpressiveMotion.spring(1f) {
-        update(it)
-        invalidate()
+        artworkSpring = ExpressiveMotion.spring(1f) {
+            artworkScale = it
+            invalidate()
+        }
     }
 
     override fun drawableStateChanged() {
@@ -48,7 +43,7 @@ class ExpressiveToolbarButton @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
-        settle(1f, 1f)
+        settle(1f)
         super.onDetachedFromWindow()
     }
 
@@ -63,34 +58,30 @@ class ExpressiveToolbarButton @JvmOverloads constructor(
     }
 
     private fun updateMotion(immediate: Boolean = false) {
-        val xSpring = horizontalSpring ?: return
-        val ySpring = verticalSpring ?: return
+        val motion = artworkSpring ?: return
         val active = isEnabled && hasWindowFocus() && windowVisibility == View.VISIBLE
         val focused = active && isFocused && !isInTouchMode
         val base = if (focused) 1.08f else 1f
         val pressed = active && isPressed
-        val targetX = base * if (pressed) 1.04f else 1f
-        val targetY = base * if (pressed) 0.90f else 1f
+        val target = base * if (pressed) ExpressiveMotion.PRESS_SCALE else 1f
         if (immediate || !isAttachedToWindow || !ExpressiveMotion.enabled(context)) {
             // Reduced motion keeps a small, static press cue and the focus ring.
-            settle(if (pressed) base * 0.96f else base, if (pressed) base * 0.96f else base)
+            settle(target)
             return
         }
-        val damping = if (pressed) ExpressiveMotion.PRESS_DAMPING else ExpressiveMotion.RELEASE_DAMPING
-        xSpring.spring!!.dampingRatio = damping
-        ySpring.spring!!.dampingRatio = damping
-        // Retarget running springs without losing their velocity during rapid input.
-        xSpring.animateToFinalPosition(targetX)
-        ySpring.animateToFinalPosition(targetY)
+        motion.spring!!.dampingRatio = if (pressed) {
+            ExpressiveMotion.PRESS_DAMPING
+        } else {
+            ExpressiveMotion.BUTTON_RELEASE_DAMPING
+        }
+        // One spring keeps both axes identical, including during rapid input.
+        motion.animateToFinalPosition(target)
     }
 
-    private fun settle(x: Float, y: Float) {
-        horizontalSpring?.cancel()
-        verticalSpring?.cancel()
-        horizontalSpring?.setStartValue(x)
-        verticalSpring?.setStartValue(y)
-        artworkScaleX = x
-        artworkScaleY = y
+    private fun settle(scale: Float) {
+        artworkSpring?.cancel()
+        artworkSpring?.setStartValue(scale)
+        artworkScale = scale
         invalidate()
     }
 
@@ -98,7 +89,7 @@ class ExpressiveToolbarButton @JvmOverloads constructor(
         val cx = paddingLeft + (width - paddingLeft - paddingRight) / 2f
         val cy = paddingTop + (height - paddingTop - paddingBottom) / 2f
         val saved = canvas.save()
-        canvas.scale(artworkScaleX, artworkScaleY, cx, cy)
+        canvas.scale(artworkScale, artworkScale, cx, cy)
         if (isEnabled && isFocused && !isInTouchMode && hasWindowFocus()) {
             focusPaint.color = UiHelper.accentColor(context)
             val radius = minOf(width - paddingLeft - paddingRight, height - paddingTop - paddingBottom) * 0.47f

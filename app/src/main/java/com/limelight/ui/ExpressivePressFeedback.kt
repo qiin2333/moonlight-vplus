@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 internal fun Modifier.expressivePressFeedback(
     source: MutableInteractionSource,
     enabled: Boolean,
-    pressedScale: Float = 0.96f,
+    pressedScale: Float = ExpressiveMotion.PRESS_SCALE,
     focusedScale: Float = 1.02f,
     confirmPressed: Boolean = false
 ): Modifier {
@@ -30,7 +30,7 @@ internal fun Modifier.expressivePressFeedback(
             else -> 1f
         },
         animationSpec = spring(
-            dampingRatio = if (pressed) ExpressiveMotion.PRESS_DAMPING else ExpressiveMotion.RELEASE_DAMPING,
+            dampingRatio = if (pressed) ExpressiveMotion.PRESS_DAMPING else ExpressiveMotion.BUTTON_RELEASE_DAMPING,
             stiffness = ExpressiveMotion.STIFFNESS
         ),
         label = "control-press"
