@@ -287,8 +287,13 @@ class StreamSettings : ThemedAppCompatActivity() {
         // 初始化抽屉菜单
         initDrawerMenu()
         savedInstanceState?.let { state ->
-            searchInput?.setText(state.getString(KEY_SEARCH_QUERY).orEmpty())
-            if (state.getBoolean(KEY_SEARCH_VISIBLE)) {
+            val restoredQuery = state.getString(KEY_SEARCH_QUERY).orEmpty()
+            searchInput?.setText(restoredQuery)
+            // 横屏的搜索栏常驻，不参与展开状态；竖屏重建时连查询一起还原成展开态，
+            // 否则用户会看到被过滤的列表却找不到搜索框。
+            val restoreExpanded = searchToggle != null &&
+                (state.getBoolean(KEY_SEARCH_VISIBLE) || restoredQuery.isNotBlank())
+            if (restoreExpanded) {
                 searchBar?.visibility = View.VISIBLE
                 searchToggle?.visibility = View.GONE
                 menuToggleView?.visibility = View.GONE
