@@ -918,7 +918,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             drawerLayout?.closeDrawer(drawerMenu, false)
         }
 
-        menuToggle?.visibility = View.VISIBLE
+        // 搜索栏展开时菜单按钮必须保持隐藏：它会被搜索栏盖住，但仍留在焦点链和无障碍树里
+        menuToggle?.visibility = if (searchBarExpanded) View.GONE else View.VISIBLE
     }
 
     override fun onAttachedToWindow() {
