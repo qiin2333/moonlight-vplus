@@ -2322,6 +2322,9 @@
     <string name="display_native_resolution_description">跟随目标显示器 · %1$s</string>
     <string name="display_choice_unavailable">此设备暂不支持</string>
     <string name="display_custom_resolution_action">管理分辨率…</string>
+    <string name="display_custom_frame_rate_action">管理帧率…</string>
+    <string name="title_custom_frame_rates">帧率列表</string>
+    <string name="custom_frame_rate_hint">关闭不需要的帧率，它们将不再出现在帧率选项中。当前正在使用的帧率在你切换到其他帧率之前仍会保留。</string>
     <string name="title_float_ball_settings">悬浮球</string>
     <string name="float_ball_appearance">悬浮显示</string>
     <string name="float_ball_gestures">手势操作</string>

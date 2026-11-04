@@ -2113,6 +2113,9 @@
     <string name="diag_hdr_brightness_host_fallback">Яркость не передаётся; ПК выбирает резервное значение</string>
     <string name="display_choice_unavailable">Недоступно на этом устройстве</string>
     <string name="display_custom_resolution_action">Управление разрешениями…</string>
+    <string name="display_custom_frame_rate_action">Управление частотой кадров…</string>
+    <string name="title_custom_frame_rates">Список частот кадров</string>
+    <string name="custom_frame_rate_hint">Отключите ненужные частоты кадров, и они пропадут из выбора. Используемая сейчас частота остаётся доступной, пока вы не выберете другую.</string>
     <string name="display_native_resolution_description">По целевому экрану · %1$s</string>
     <string name="fec_mode_automatic">Автоматически</string>
     <string name="fec_mode_fixed">Фиксированный процент</string>
