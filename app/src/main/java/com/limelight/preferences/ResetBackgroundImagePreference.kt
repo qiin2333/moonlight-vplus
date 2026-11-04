@@ -12,7 +12,7 @@ import java.io.File
 
 /**
  * 重置背景图片偏好设置类
- * 清除所有背景图片相关配置，恢复到默认的API图片
+ * 清除自定义背景配置，恢复默认的 V/+ 草地图案。
  */
 class ResetBackgroundImagePreference : Preference {
 

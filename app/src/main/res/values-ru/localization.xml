@@ -55,6 +55,7 @@
     <string name="direction_down">ВНИЗ</string>
     <string name="editor_title">Заголовок:</string>
     <string name="pc_icon_description">Значок ПК</string>
+    <string name="pc_name_foundation_sunshine_description">%1$s, в комплекте с Foundation Sunshine</string>
     <string name="pc_status_description">Состояние ПК</string>
     <string name="loading_description">Загрузка</string>
     <string name="root_mouse_unavailable">Нет root-доступа: захват мыши недоступен</string>

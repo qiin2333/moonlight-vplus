@@ -55,6 +55,7 @@
     <string name="direction_down">DOWN</string>
     <string name="editor_title">Title:</string>
     <string name="pc_icon_description">PC Icon</string>
+    <string name="pc_name_foundation_sunshine_description">%1$s, paired with Foundation Sunshine</string>
     <string name="pc_status_description">Status Overlay</string>
     <string name="loading_description">Loading</string>
     <string name="root_mouse_unavailable">This device is not rooted - Mouse capture is unavailable</string>

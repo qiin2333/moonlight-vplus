@@ -38,7 +38,7 @@
         android:layout_height="@dimen/activity_safearea_top"
         android:layout_alignParentTop="true" />
 
-    <ImageButton
+    <com.limelight.ui.ExpressiveToolbarButton
         android:id="@+id/settingsButton"
         android:layout_width="@dimen/pc_toolbar_button_size"
         android:layout_height="@dimen/pc_toolbar_button_size"
@@ -47,11 +47,10 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_below="@+id/topSafeArea"
-        android:src="@drawable/ic_settings"
         android:preferKeepClear="true"
         style="?android:attr/borderlessButtonStyle"/>
 
-    <ImageButton
+    <com.limelight.ui.ExpressiveToolbarButton
         android:id="@+id/aboutButton"
         android:layout_width="@dimen/pc_toolbar_button_size"
         android:layout_height="@dimen/pc_toolbar_button_size"
@@ -64,7 +63,7 @@
         android:preferKeepClear="true"
         style="?android:attr/borderlessButtonStyle"/>
 
-    <ImageButton
+    <com.limelight.ui.ExpressiveToolbarButton
         android:id="@+id/easyTierControlButton"
         android:layout_width="@dimen/pc_toolbar_button_size"
         android:layout_height="@dimen/pc_toolbar_button_size"
@@ -76,7 +75,7 @@
         android:src="@drawable/ic_network_control"
         style="?android:attr/borderlessButtonStyle"/>
     
-    <ImageButton
+    <com.limelight.ui.ExpressiveToolbarButton
         android:id="@+id/pcToolbarMenuButton"
         android:layout_width="@dimen/pc_toolbar_button_size"
         android:layout_height="@dimen/pc_toolbar_button_size"
@@ -87,6 +86,7 @@
         android:layout_alignParentRight="true"
         android:contentDescription="@string/pcview_toolbar_menu"
         android:src="@drawable/ic_more_vert"
+        android:tint="@color/ui_shell_text_primary"
         android:preferKeepClear="true"
         style="?android:attr/borderlessButtonStyle"/>
 

@@ -175,7 +175,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
     }
 
     private fun cardBackground(context: Context, top: Boolean, bottom: Boolean): StateListDrawable {
-        val radius = context.resources.getDimension(R.dimen.corner_radius_extra_large)
+        val radius = context.resources.getDimension(R.dimen.corner_radius_medium)
         val radii = floatArrayOf(if (top) radius else 0f, if (top) radius else 0f,
             if (top) radius else 0f, if (top) radius else 0f,
             if (bottom) radius else 0f, if (bottom) radius else 0f,
