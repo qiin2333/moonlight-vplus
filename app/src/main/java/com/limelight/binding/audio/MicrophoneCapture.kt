@@ -67,6 +67,7 @@ class MicrophoneCapture internal constructor(
     private var captureSampleRate = MicrophoneConfig.SAMPLE_RATE
     private var sampleRateConverter: Pcm16SampleRateConverter? = null
     private var audioSource = MediaRecorder.AudioSource.MIC
+    private val bluetoothCommunicationKeepalive = BluetoothCommunicationKeepalive()
 
     private var echoCanceler: AcousticEchoCanceler? = null
     private var gainControl: AutomaticGainControl? = null
@@ -173,6 +174,7 @@ class MicrophoneCapture internal constructor(
                                         !requiresRecordingBinding(initialInput)) {
                                         "Initial microphone recording input was not retained"
                                     }
+                                    startBluetoothCommunicationKeepalive(initialInput.choice)
                                     bindConfiguredCommunicationInput(initialInput)
                                 }
                             }
@@ -534,6 +536,7 @@ class MicrophoneCapture internal constructor(
             !requiresRecordingBinding(captureInput)) {
             "Microphone recording input was not retained after recreation"
         }
+        startBluetoothCommunicationKeepalive(captureInput?.choice)
         captureInput?.let(::bindConfiguredCommunicationInput)
         frameBufferPos = 0
         lastPcmRouteId = null
@@ -557,6 +560,14 @@ class MicrophoneCapture internal constructor(
 
     private fun requiresRecordingBinding(input: MicrophoneCaptureInput?): Boolean =
         input?.choice?.communication == true && requiresBluetoothRecordingBinding(input.choice.type)
+
+    private fun startBluetoothCommunicationKeepalive(input: MicrophoneInputDevice?) {
+        if (input?.communication == true && input.type == 7) {
+            bluetoothCommunicationKeepalive.start(captureSampleRate)
+        } else {
+            bluetoothCommunicationKeepalive.stop()
+        }
+    }
 
     private fun configureCaptureFormat(input: MicrophoneInputDevice?, sampleRate: Int = microphoneCaptureSampleRate(input)) {
         captureSampleRate = sampleRate
@@ -861,6 +872,7 @@ class MicrophoneCapture internal constructor(
     }
 
     private fun release() = routeLock.withLock {
+        bluetoothCommunicationKeepalive.stop()
         unregisterRoutingCallback?.invoke()
         unregisterRoutingCallback = null
         unregisterRecordingCallback?.invoke()
