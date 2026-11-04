@@ -12,6 +12,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -36,7 +37,6 @@ import android.view.MotionEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -292,6 +292,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 searchBar?.visibility = View.VISIBLE
                 searchToggle?.visibility = View.GONE
                 menuToggleView?.visibility = View.GONE
+                // 焦点目标和可见性必须同源，否则重建后列表“向上”会指向隐藏的控件
+                searchBarExpanded = true
             }
         }
 
@@ -389,21 +391,25 @@ class StreamSettings : ThemedAppCompatActivity() {
     /** 搜索框的底色、描边、图标和文字都在创建时解析，深浅切换时按当前主题重设。 */
     private fun applySearchBarTheme() {
         val searchBar = findViewById<View>(R.id.settings_search_bar) ?: return
-        val background = GradientDrawable().apply {
+
+        // 焦点态写在背景 selector 里：未聚焦 1dp、聚焦 2dp，和返回/菜单按钮共用一套“描边=焦点”的语汇
+        fun barBackground(focused: Boolean) = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = resources.getDimension(R.dimen.corner_radius_extra_large)
             setColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_surface_elevated))
+            val widthDp = if (focused) 2f else 1f
             setStroke(
-                (resources.displayMetrics.density).toInt().coerceAtLeast(1),
+                (widthDp * resources.displayMetrics.density).toInt().coerceAtLeast(1),
                 UiHelper.accentFocusColor(this@StreamSettings)
             )
         }
-        searchBar.background = background
-        searchBar.outlineProvider = ViewOutlineProvider.BACKGROUND
-        searchBar.clipToOutline = true
+        searchBar.background = StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), barBackground(focused = true))
+            addState(intArrayOf(), barBackground(focused = false))
+        }
         val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
         searchBar.findViewById<ImageView>(R.id.settings_search_icon)?.imageTintList = accent
-        findViewById<ImageView>(R.id.settings_search_close)?.imageTintList = accent
+        searchBar.findViewById<ImageView>(R.id.settings_search_close)?.imageTintList = accent
         searchBar.findViewById<TextView>(R.id.settings_search_input)?.apply {
             setTextColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_primary))
             setHintTextColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_text_secondary))
@@ -474,7 +480,15 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         if (searchBar == null || searchInput == null) return
 
-        searchToggle?.setOnClickListener { showSearchBar(enterInput = !searchToggle!!.isFocused) }
+        // 触摸点搜索按钮：展开后直接进输入；手柄确认键走 key 监听，先落到整条搜索栏上
+        searchToggle?.setOnClickListener { showSearchBar(enterInput = true) }
+        searchToggle?.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_UP || !isSearchConfirmKey(keyCode)) {
+                return@setOnKeyListener false
+            }
+            showSearchBar(enterInput = false)
+            true
+        }
         closeBtn?.setOnClickListener {
             if (searchToggle == null) {
                 clearSearchQuery()
@@ -483,34 +497,17 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            searchBar?.defaultFocusHighlightEnabled = false
-            closeBtn?.defaultFocusHighlightEnabled = false
-        }
-        val searchIcon = searchBar?.findViewById<View>(R.id.settings_search_icon)
+        // 整条搜索栏就是手柄焦点：确认键进输入，左右键到关闭按钮，其余方向回列表
         searchBar?.setOnClickListener { enterSearchInput() }
-        searchInput?.setOnClickListener { enterSearchInput() }
-        searchIcon?.setOnFocusChangeListener { _, hasFocus -> updateSearchBarHighlight(hasFocus) }
-        closeBtn?.setOnFocusChangeListener { view, hasFocus -> updateCloseHighlight(view, hasFocus) }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            findViewById<View>(R.id.settings_back)?.foreground = null
-        }
-        findViewById<View>(R.id.settings_back)?.setOnKeyListener { _, keyCode, event ->
-            moveRightToPreferenceList(keyCode, event)
-        }
-        closeBtn?.setOnKeyListener { _, keyCode, event ->
-            moveRightToPreferenceList(keyCode, event)
-        }
-        searchIcon?.setOnKeyListener { _, keyCode, event ->
-            if (event.action != KeyEvent.ACTION_UP) return@setOnKeyListener false
-            if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER &&
-                keyCode != KeyEvent.KEYCODE_ENTER &&
-                keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER &&
-                keyCode != KeyEvent.KEYCODE_BUTTON_A
-            ) return@setOnKeyListener false
+        searchBar?.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_UP || !isSearchConfirmKey(keyCode)) {
+                return@setOnKeyListener false
+            }
             enterSearchInput()
             true
         }
+        searchInput?.setOnClickListener { enterSearchInput() }
+        searchInput?.showSoftInputOnFocus = false
         searchInput?.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) leaveSearchInput()
         }
@@ -526,9 +523,6 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private var searchBarExpanded = false
-
-    private val isSearchBarVisible: Boolean
-        get() = searchToggle != null && searchBar?.visibility == View.VISIBLE
 
     private fun fadeIn(v: View?) {
         v ?: return
@@ -551,51 +545,24 @@ class StreamSettings : ThemedAppCompatActivity() {
         if (enterInput) {
             searchBar?.post { enterSearchInput() }
         } else {
-            searchBar?.findViewById<View>(R.id.settings_search_icon)?.requestFocus()
+            // 手柄展开时不弹键盘：焦点落在整条搜索栏上，再按一次确认键才进输入
+            searchBar?.requestFocus()
         }
     }
 
-    private fun moveRightToPreferenceList(keyCode: Int, event: KeyEvent): Boolean {
-        if (event.action != KeyEvent.ACTION_DOWN || keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false
-        val fragment = supportFragmentManager
-            .findFragmentById(R.id.preference_container) as? SettingsFragment
-        val list = fragment?.listView ?: return false
-        if (list.focusedChild?.requestFocus() == true) return true
-        for (index in 0 until list.childCount) {
-            val child = list.getChildAt(index)
-            if (child.isShown && child.isFocusable && child.requestFocus()) return true
-        }
-        return list.requestFocus()
-    }
-
-    private fun updateSearchBarHighlight(focused: Boolean) {
-        val bar = searchBar ?: return
-        val background = (bar.background?.mutate() as? GradientDrawable) ?: return
-        val width = if (focused) 2f else 1f
-        background.setStroke(
-            (width * resources.displayMetrics.density).toInt().coerceAtLeast(1),
-            UiHelper.accentFocusColor(this)
-        )
-    }
-
-    private fun updateCloseHighlight(view: View, focused: Boolean) {
-        val highlight = if (!focused) null else GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setStroke((2f * resources.displayMetrics.density).toInt(), UiHelper.accentFocusColor(this@StreamSettings))
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            view.foreground = highlight
-        } else {
-            view.background = highlight
-        }
+    private fun isSearchConfirmKey(keyCode: Int): Boolean {
+        return keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+            keyCode == KeyEvent.KEYCODE_BUTTON_A
     }
 
     private fun enterSearchInput() {
         val input = searchInput ?: return
+        // 只有真正要打字时才让输入框可聚焦，这样手柄在搜索栏上时不会被输入框抢走焦点
         input.isFocusable = true
         input.isFocusableInTouchMode = true
-        searchToggle?.isEnabled = false
-        searchToggle?.alpha = 0.38f
+        input.showSoftInputOnFocus = true
         input.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         input.post { imm?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT) }
@@ -603,52 +570,47 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     private fun leaveSearchInput() {
         val input = searchInput ?: return
+        input.showSoftInputOnFocus = false
         input.isFocusable = false
         input.isFocusableInTouchMode = false
-        searchToggle?.isEnabled = true
-        searchToggle?.alpha = 1f
-        val icon = searchBar?.findViewById<View>(R.id.settings_search_icon)
-        updateSearchBarHighlight(icon?.isFocused == true)
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(input.windowToken, 0)
     }
 
     private fun hideSearchBar() {
-        val focusInsideSearch = searchBar?.findFocus() != null
+        val focusInsideBar = searchBar?.hasFocus() == true
         searchBarExpanded = false
+        // 收起时无条件复位输入态，不依赖输入框的 onFocusChange 回调
+        searchInput?.clearFocus()
+        searchBar?.clearFocus()
         clearSearchQuery()
         fadeOut(searchBar)
         fadeIn(searchToggle)
         fadeIn(menuToggleView)
         updateSearchFocusRoutes()
-        if (focusInsideSearch) searchToggle?.requestFocus()
+        if (focusInsideBar) searchToggle?.requestFocus()
     }
 
+    /** 收起时焦点目标是搜索按钮，展开（或横屏常驻）时是搜索栏本身。 */
     private fun searchFocusTargetId(): Int {
-        return if (searchBarExpanded) R.id.settings_search_icon else R.id.settings_search_toggle
+        return if (searchBarExpanded || searchToggle == null) {
+            R.id.settings_search_bar
+        } else {
+            R.id.settings_search_toggle
+        }
     }
 
-    private fun routePreferenceFocus(view: View, targetId: Int, portrait: Boolean) {
-        val target = generateSequence(view) { current ->
-            if (current.isFocusable || current !is ViewGroup || current.childCount == 0) null
-            else current.getChildAt(0)
-        }.firstOrNull { it.isFocusable } ?: return
-        if (portrait) target.nextFocusUpId = targetId else target.nextFocusLeftId = targetId
-    }
-
+    /**
+     * 只维护“分类第一项向上回到搜索”这一条边界路径。
+     * 设置列表里的上下/左右都交给默认的几何寻焦，避免抢掉行内控件的方向键语义。
+     */
     private fun updateSearchFocusRoutes() {
-        if (searchToggle == null) return
         val targetId = searchFocusTargetId()
-        categoryList?.let { list ->
-            for (index in 0 until list.childCount) {
-                list.getChildAt(index).findViewById<View>(R.id.category_item_root)?.nextFocusUpId = targetId
-            }
-        }
-        val preferences = supportFragmentManager
-            .findFragmentById(R.id.preference_container) as? SettingsFragment
-        preferences?.listView?.let { list ->
-            for (index in 0 until list.childCount) {
-                routePreferenceFocus(list.getChildAt(index), targetId, portrait = true)
-            }
-        }
+        val firstCategory = categoryList
+            ?.findViewHolderForAdapterPosition(0)
+            ?.itemView
+            ?.findViewById<View>(R.id.category_item_root)
+        firstCategory?.nextFocusUpId = targetId
     }
 
     private fun clearSearchQuery() {
@@ -1120,7 +1082,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         // 保存选中的分类索引，用于屏幕旋转后恢复
         outState.putInt(KEY_SELECTED_CATEGORY, selectedCategoryIndex)
         outState.putString(KEY_SEARCH_QUERY, searchInput?.text?.toString())
-        outState.putBoolean(KEY_SEARCH_VISIBLE, isSearchBarVisible)
+        outState.putBoolean(KEY_SEARCH_VISIBLE, searchBarExpanded)
     }
 
     override fun onDestroy() {
@@ -1142,12 +1104,12 @@ class StreamSettings : ThemedAppCompatActivity() {
     private fun handleSettingsBack() {
         if ((supportFragmentManager.findFragmentById(R.id.preference_container) as? SettingsFragment)
                 ?.closeSettingsScreen() == true) return
-        // 搜索栏可见时，优先关闭搜索而不是退出
-        if (isSearchBarVisible) {
+        // 搜索栏展开时，优先关闭搜索而不是退出
+        if (searchBarExpanded) {
             hideSearchBar()
             return
         }
-        // 横屏常驻搜索框没有展开按钮，isSearchBarVisible 恒 false；
+        // 横屏常驻搜索框没有展开态，searchBarExpanded 恒 false；
         // 有查询内容时返回先清搜索再退出，与竖屏行为一致
         if (!searchInput?.text?.toString().isNullOrBlank()) {
             clearSearchQuery()
@@ -1707,7 +1669,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 val recyclerView = listView
                 if (recyclerView != null) {
                     setupScrollListener(recyclerView, settingsActivity)
-                    routePreferenceFocusToSearch(recyclerView, settingsActivity)
                 }
             }
             val pendingKey = savedInstanceState?.getString(MULTI_CHOICE_KEY)
@@ -2714,24 +2675,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         /**
          * 设置滚动监听
          */
-        private fun routePreferenceFocusToSearch(
-            recyclerView: RecyclerView,
-            settingsActivity: StreamSettings
-        ) {
-            fun route(view: View) {
-                val portrait = settingsActivity.searchToggle != null
-                val targetId = if (portrait) settingsActivity.searchFocusTargetId() else R.id.settings_search_icon
-                settingsActivity.routePreferenceFocus(view, targetId, portrait)
-            }
-            recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
-                override fun onChildViewAttachedToWindow(view: View) = route(view)
-                override fun onChildViewDetachedFromWindow(view: View) = Unit
-            })
-            for (index in 0 until recyclerView.childCount) {
-                route(recyclerView.getChildAt(index))
-            }
-        }
-
         private fun setupScrollListener(recyclerView: RecyclerView, settingsActivity: StreamSettings) {
             observeCategoryPositions(recyclerView)
 
