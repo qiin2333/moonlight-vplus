@@ -638,6 +638,36 @@ object AppActionSheet {
         }
     }
 
+    /** Shared A-button feedback; clickable/selectable still own touch and keyboard input. */
+    @Composable
+    private fun Modifier.actionSheetPressFeedback(
+        interactionSource: MutableInteractionSource,
+        enabled: Boolean,
+        onFocused: (Boolean) -> Unit,
+        onClick: () -> Unit,
+        pressedScale: Float = 0.96f,
+        focusedScale: Float = 1.02f
+    ): Modifier {
+        var confirmPressed by remember(interactionSource, enabled) { mutableStateOf(false) }
+        return expressivePressFeedback(
+            interactionSource, enabled, pressedScale, focusedScale, confirmPressed
+        )
+            .onFocusChanged {
+                onFocused(it.isFocused)
+                if (!it.isFocused) confirmPressed = false
+            }
+            .onPreviewKeyEvent { event ->
+                val nativeEvent = event.nativeKeyEvent
+                if (enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
+                    confirmPressed = nativeEvent.action == KeyEvent.ACTION_DOWN && !nativeEvent.isCanceled
+                    if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) onClick()
+                    true
+                } else {
+                    false
+                }
+            }
+    }
+
     @Composable
     internal fun ActionSheetFooterAction(
         label: String,
@@ -648,17 +678,15 @@ object AppActionSheet {
         compact: Boolean = false
     ) {
         var focused by remember { mutableStateOf(false) }
-        var confirmPressed by remember { mutableStateOf(false) }
         val interactionSource = remember { MutableInteractionSource() }
         val shape = AppShapes.medium
         Box(
             modifier = modifier
-                .onFocusChanged {
-                    focused = it.isFocused
-                    if (!it.isFocused) confirmPressed = false
-                }
                 .heightIn(min = if (compact) 32.dp else 42.dp)
-                .expressivePressFeedback(interactionSource, enabled, confirmPressed = confirmPressed)
+                .actionSheetPressFeedback(
+                    interactionSource, enabled,
+                    onFocused = { focused = it }, onClick = onClick
+                )
                 .clip(shape)
                 .then(
                     when {
@@ -678,16 +706,6 @@ object AppActionSheet {
                         Modifier
                     }
                 )
-                .onPreviewKeyEvent { event ->
-                    val nativeEvent = event.nativeKeyEvent
-                    if (enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                        confirmPressed = nativeEvent.action == KeyEvent.ACTION_DOWN && !nativeEvent.isCanceled
-                        if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) onClick()
-                        true
-                    } else {
-                        false
-                    }
-                }
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current,
@@ -764,7 +782,6 @@ object AppActionSheet {
         val rowShape = AppShapes.medium
         val emphasizedColor = if (action.emphasized && action.enabled) MaterialTheme.colorScheme.primary else null
         var focused by remember(action.id) { mutableStateOf(false) }
-        var confirmPressed by remember(action.id) { mutableStateOf(false) }
         val interactionSource = remember(action.id) { MutableInteractionSource() }
         val activate = { if (action.enabled) onAction(action) }
         Column {
@@ -779,14 +796,11 @@ object AppActionSheet {
                 modifier = modifier
                     .fillMaxWidth()
                     .heightIn(min = 44.dp)
-                    .expressivePressFeedback(
+                    .actionSheetPressFeedback(
                         interactionSource, action.enabled,
-                        pressedScale = 0.985f, focusedScale = 1f, confirmPressed = confirmPressed
+                        onFocused = { focused = it }, onClick = activate,
+                        pressedScale = 0.985f, focusedScale = 1f
                     )
-                    .onFocusChanged {
-                        focused = it.isFocused
-                        if (!it.isFocused) confirmPressed = false
-                    }
                     .clip(rowShape)
                     .then(
                         if (focused) Modifier.background(appAccentSoftColor())
@@ -799,16 +813,6 @@ object AppActionSheet {
                             Modifier
                         }
                     )
-                    .onPreviewKeyEvent { event ->
-                        val nativeEvent = event.nativeKeyEvent
-                        if (action.enabled && nativeEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A) {
-                            confirmPressed = nativeEvent.action == KeyEvent.ACTION_DOWN && !nativeEvent.isCanceled
-                            if (nativeEvent.action == KeyEvent.ACTION_UP && !nativeEvent.isCanceled) activate()
-                            true
-                        } else {
-                            false
-                        }
-                    }
                     .then(when {
                         action.toggle -> Modifier.toggleable(
                             interactionSource = interactionSource, indication = LocalIndication.current,
