@@ -123,6 +123,21 @@ internal class BluetoothCommunicationKeepalive {
         }
         try { oldTrack?.stop() } catch (_: RuntimeException) { }
         oldThread?.interrupt()
-        // The writer owns release(); do not release the track from this thread.
+        if (oldThread != null && oldThread !== Thread.currentThread()) {
+            try {
+                oldThread.join(STOP_WAIT_MS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+            if (oldThread.isAlive) {
+                // The writer still owns release(); the platform did not complete
+                // the bounded shutdown window, so keep the warning visible.
+                LimeLog.warning("Bluetooth communication keepalive did not stop in time")
+            }
+        }
+    }
+
+    private companion object {
+        private const val STOP_WAIT_MS = 1000L
     }
 }
