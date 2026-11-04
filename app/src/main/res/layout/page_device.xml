@@ -129,6 +129,13 @@
                         android:tag="MMO"
                         style="@style/KeyboardKeyStyle"
                         android:text="@string/layout_page_device_text_mmo"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginVertical="5dp"
+                        android:tag="DSC"
+                        style="@style/KeyboardKeyStyle"
+                        android:text="@string/layout_page_device_text_dsc"/>
                 </LinearLayout>
             </ScrollView>
 

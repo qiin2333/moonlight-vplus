@@ -12,6 +12,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -289,11 +290,18 @@ class StreamSettings : ThemedAppCompatActivity() {
         // 初始化抽屉菜单
         initDrawerMenu()
         savedInstanceState?.let { state ->
-            searchInput?.setText(state.getString(KEY_SEARCH_QUERY).orEmpty())
-            if (state.getBoolean(KEY_SEARCH_VISIBLE)) {
+            val restoredQuery = state.getString(KEY_SEARCH_QUERY).orEmpty()
+            searchInput?.setText(restoredQuery)
+            // 横屏的搜索栏常驻，不参与展开状态；竖屏重建时连查询一起还原成展开态，
+            // 否则用户会看到被过滤的列表却找不到搜索框。
+            val restoreExpanded = searchToggle != null &&
+                (state.getBoolean(KEY_SEARCH_VISIBLE) || restoredQuery.isNotBlank())
+            if (restoreExpanded) {
                 searchBar?.visibility = View.VISIBLE
                 searchToggle?.visibility = View.GONE
                 menuToggleView?.visibility = View.GONE
+                // 焦点目标和可见性必须同源，否则重建后列表“向上”会指向隐藏的控件
+                searchBarExpanded = true
             }
         }
 
@@ -391,16 +399,22 @@ class StreamSettings : ThemedAppCompatActivity() {
     /** 搜索框的底色、描边、图标和文字都在创建时解析，深浅切换时按当前主题重设。 */
     private fun applySearchBarTheme() {
         val searchBar = findViewById<View>(R.id.settings_search_bar) ?: return
-        val background = GradientDrawable().apply {
+
+        // 焦点态写在背景 selector 里：未聚焦 1dp、聚焦 2dp，和返回/菜单按钮共用一套“描边=焦点”的语汇
+        fun barBackground(focused: Boolean) = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = resources.getDimension(R.dimen.corner_radius_extra_large)
             setColor(ContextCompat.getColor(this@StreamSettings, R.color.ui_shell_surface_elevated))
+            val widthDp = if (focused) 2f else 1f
             setStroke(
-                (resources.displayMetrics.density).toInt().coerceAtLeast(1),
+                (widthDp * resources.displayMetrics.density).toInt().coerceAtLeast(1),
                 UiHelper.accentFocusColor(this@StreamSettings)
             )
         }
-        searchBar.background = background
+        searchBar.background = StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), barBackground(focused = true))
+            addState(intArrayOf(), barBackground(focused = false))
+        }
         val accent = ColorStateList.valueOf(UiHelper.accentColor(this))
         searchBar.findViewById<ImageView>(R.id.settings_search_icon)?.imageTintList = accent
         searchBar.findViewById<ImageView>(R.id.settings_search_close)?.imageTintList = accent
@@ -474,7 +488,15 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         if (searchBar == null || searchInput == null) return
 
-        searchToggle?.setOnClickListener { showSearchBar() }
+        // 触摸点搜索按钮：展开后直接进输入；手柄确认键走 key 监听，先落到整条搜索栏上
+        searchToggle?.setOnClickListener { showSearchBar(enterInput = true) }
+        searchToggle?.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_UP || !isSearchConfirmKey(keyCode)) {
+                return@setOnKeyListener false
+            }
+            showSearchBar(enterInput = false)
+            true
+        }
         closeBtn?.setOnClickListener {
             if (searchToggle == null) {
                 clearSearchQuery()
@@ -483,6 +505,20 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
         }
 
+        // 整条搜索栏就是手柄焦点：确认键进输入，左右键到关闭按钮，其余方向回列表
+        searchBar?.setOnClickListener { enterSearchInput() }
+        searchBar?.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_UP || !isSearchConfirmKey(keyCode)) {
+                return@setOnKeyListener false
+            }
+            enterSearchInput()
+            true
+        }
+        searchInput?.setOnClickListener { enterSearchInput() }
+        searchInput?.showSoftInputOnFocus = false
+        searchInput?.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) leaveSearchInput()
+        }
         searchInput?.doAfterTextChanged { applyFilterToFragment(it?.toString().orEmpty()) }
 
         // IME 回车：仅收起键盘，保留过滤结果
@@ -494,8 +530,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
     }
 
-    private val isSearchBarVisible: Boolean
-        get() = searchToggle != null && searchBar?.visibility == View.VISIBLE
+    private var searchBarExpanded = false
 
     private fun fadeIn(v: View?) {
         v ?: return
@@ -509,20 +544,81 @@ class StreamSettings : ThemedAppCompatActivity() {
         v.animate().alpha(0f).setDuration(140L).withEndAction { v.visibility = View.GONE }.start()
     }
 
-    private fun showSearchBar() {
+    private fun showSearchBar(enterInput: Boolean = false) {
+        searchBarExpanded = true
         fadeOut(searchToggle)
         fadeOut(menuToggleView)
         fadeIn(searchBar)
-        searchInput?.requestFocus()
+        updateSearchFocusRoutes()
+        if (enterInput) {
+            searchBar?.post { enterSearchInput() }
+        } else {
+            // 手柄展开时不弹键盘：焦点落在整条搜索栏上，再按一次确认键才进输入
+            searchBar?.requestFocus()
+        }
+    }
+
+    private fun isSearchConfirmKey(keyCode: Int): Boolean {
+        return keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+            keyCode == KeyEvent.KEYCODE_BUTTON_A
+    }
+
+    private fun enterSearchInput() {
+        val input = searchInput ?: return
+        // 只有真正要打字时才让输入框可聚焦，这样手柄在搜索栏上时不会被输入框抢走焦点
+        input.isFocusable = true
+        input.isFocusableInTouchMode = true
+        input.showSoftInputOnFocus = true
+        input.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT)
+        input.post { imm?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT) }
+    }
+
+    private fun leaveSearchInput() {
+        val input = searchInput ?: return
+        input.showSoftInputOnFocus = false
+        input.isFocusable = false
+        input.isFocusableInTouchMode = false
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(input.windowToken, 0)
     }
 
     private fun hideSearchBar() {
+        val focusInsideBar = searchBar?.hasFocus() == true
+        searchBarExpanded = false
+        // 收起时无条件复位输入态，不依赖输入框的 onFocusChange 回调
+        searchInput?.clearFocus()
+        searchBar?.clearFocus()
         clearSearchQuery()
         fadeOut(searchBar)
         fadeIn(searchToggle)
         fadeIn(menuToggleView)
+        updateSearchFocusRoutes()
+        if (focusInsideBar) searchToggle?.requestFocus()
+    }
+
+    /** 收起时焦点目标是搜索按钮，展开（或横屏常驻）时是搜索栏本身。 */
+    private fun searchFocusTargetId(): Int {
+        return if (searchBarExpanded || searchToggle == null) {
+            R.id.settings_search_bar
+        } else {
+            R.id.settings_search_toggle
+        }
+    }
+
+    /**
+     * 只维护“分类第一项向上回到搜索”这一条边界路径。
+     * 设置列表里的上下/左右都交给默认的几何寻焦，避免抢掉行内控件的方向键语义。
+     */
+    private fun updateSearchFocusRoutes() {
+        val targetId = searchFocusTargetId()
+        val firstCategory = categoryList
+            ?.findViewHolderForAdapterPosition(0)
+            ?.itemView
+            ?.findViewById<View>(R.id.category_item_root)
+        firstCategory?.nextFocusUpId = targetId
     }
 
     private fun clearSearchQuery() {
@@ -655,6 +751,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             // 点击事件
             holder.root.setOnClickListener { selectCategory(holder.bindingAdapterPosition, item) }
+            holder.root.nextFocusUpId = if (position == 0) searchFocusTargetId() else View.NO_ID
 
             // 焦点变化事件（控制器支持）
             holder.root.setOnFocusChangeListener { _, hasFocus ->
@@ -824,7 +921,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             drawerLayout?.closeDrawer(drawerMenu, false)
         }
 
-        menuToggle?.visibility = View.VISIBLE
+        // 搜索栏展开时菜单按钮必须保持隐藏：它会被搜索栏盖住，但仍留在焦点链和无障碍树里
+        menuToggle?.visibility = if (searchBarExpanded) View.GONE else View.VISIBLE
     }
 
     override fun onAttachedToWindow() {
@@ -993,7 +1091,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         // 保存选中的分类索引，用于屏幕旋转后恢复
         outState.putInt(KEY_SELECTED_CATEGORY, selectedCategoryIndex)
         outState.putString(KEY_SEARCH_QUERY, searchInput?.text?.toString())
-        outState.putBoolean(KEY_SEARCH_VISIBLE, isSearchBarVisible)
+        outState.putBoolean(KEY_SEARCH_VISIBLE, searchBarExpanded)
     }
 
     override fun onDestroy() {
@@ -1015,12 +1113,12 @@ class StreamSettings : ThemedAppCompatActivity() {
     private fun handleSettingsBack() {
         if ((supportFragmentManager.findFragmentById(R.id.preference_container) as? SettingsFragment)
                 ?.closeSettingsScreen() == true) return
-        // 搜索栏可见时，优先关闭搜索而不是退出
-        if (isSearchBarVisible) {
+        // 搜索栏展开时，优先关闭搜索而不是退出
+        if (searchBarExpanded) {
             hideSearchBar()
             return
         }
-        // 横屏常驻搜索框没有展开按钮，isSearchBarVisible 恒 false；
+        // 横屏常驻搜索框没有展开态，searchBarExpanded 恒 false；
         // 有查询内容时返回先清搜索再退出，与竖屏行为一致
         if (!searchInput?.text?.toString().isNullOrBlank()) {
             clearSearchQuery()
@@ -1580,7 +1678,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 val recyclerView = listView
                 if (recyclerView != null) {
                     setupScrollListener(recyclerView, settingsActivity)
-
                 }
             }
             val pendingKey = savedInstanceState?.getString(MULTI_CHOICE_KEY)

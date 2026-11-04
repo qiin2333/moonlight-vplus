@@ -1949,11 +1949,12 @@ class ControllerHandler(
                     sentControllerArrivalMetadata[0] != null,
                 )
             ) {
-                conn.sendControllerInput(
+                val removalResult = conn.sendControllerInputChecked(
                     0,
                     ScreenDs5ControllerPolicy.withoutPrimaryController(activeMask),
                     0, 0, 0, 0, 0, 0, 0,
                 )
+                if (removalResult != 0) return removalResult
                 stateSender.reset(0)
                 motionSender.reset(0, clearDemand = true)
                 sentControllerArrivalMetadata[0] = null

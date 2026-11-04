@@ -209,7 +209,7 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             game.hideSystemUi(1000)
 
-            game.ds5TouchpadFeedbackView?.showActivatedHint()
+            game.screenDs5Touchpad.onStreamStarted()
 
             // 连接一开始就启动保活服务
             val prefs = PreferenceManager.getDefaultSharedPreferences(game)

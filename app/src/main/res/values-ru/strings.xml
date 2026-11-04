@@ -1002,7 +1002,7 @@
     <string name="game_menu_touch_mode_native_mouse_summary">Для Bluetooth/USB-мышей и тачпадов клавиатур</string>
     <string name="game_menu_touch_mode_ds5">Тачпад DS5</string>
     <string name="game_menu_touch_mode_ds5_short">DS5</string>
-    <string name="game_menu_touch_mode_ds5_summary">Экран как тачпад DualSense; касание или сильное нажатие — щелчок</string>
+    <string name="game_menu_touch_mode_ds5_summary">Область экрана работает как тачпад DualSense, а остальная часть поддерживает мультитач. Двойное касание выполняет щелчок; удерживайте второе касание для удержания кнопки. Сильное нажатие также выполняет щелчок; перетаскивайте края для изменения размера.</string>
     <string name="game_menu_touch_mode_primary_group">Основной режим (один на выбор)</string>
     <string name="game_menu_touch_mode_compatible_group">Совместимые настройки</string>
     <string name="game_menu_touch_pointer_speed">Скорость указателя</string>
@@ -1601,7 +1601,8 @@
     <string name="toast_crown_not_enabled">Crown отключён</string>
     <string name="game_menu_toggle_touch">Сенсорный ввод</string>
     <string name="ds5_touchpad_active_title">Тачпад DS5 активен</string>
-    <string name="ds5_touchpad_active_subtitle">Вести — сдвиг · Тап — щелчок</string>
+    <string name="ds5_touchpad_active_subtitle_zone">Двойное касание — щелчок · Удерживайте второе касание для удержания кнопки</string>
+    <string name="ds5_touchpad_active_subtitle_single_tap">Одно касание — щелчок · Перетаскивайте края для изменения размера</string>
     <string name="toast_touch_enabled">Касания включены</string>
     <string name="toast_touch_disabled">Касания отключены</string>
     <string name="toast_cannot_access_controller">Нет доступа к геймпаду</string>
@@ -2167,6 +2168,8 @@
     <string name="title_native_device_haptics">Нативная тактильная отдача устройства (экспериментально)</string>
     <string name="summary_native_device_haptics">Использовать доступные нативные эффекты. Некоторые устройства поддерживают только короткие удары разной силы; фон и смешанные эффекты используют прежний вывод. Возможна дополнительная задержка. Для применения переподключитесь.</string>
     <string name="summary_native_device_haptics_requires_output">Требуется эмуляция DualSense на хосте, расширенный IR, вывод на устройство или совместный вывод и сила вибрации устройства выше нуля. Для применения переподключитесь.</string>
+    <string name="title_ds5_single_tap_to_click">Щелчок одним касанием DS5 (совместимость)</string>
+    <string name="summary_ds5_single_tap_to_click">Выключено: двойное касание выполняет щелчок, удержание второго касания удерживает кнопку. Включено: одно касание выполняет щелчок. Сильное нажатие работает в обоих режимах.</string>
     <string name="title_mic_test">Тест микрофона</string>
     <string name="summary_mic_test">Захватывает звук локального микрофона и показывает его форму волны без запуска трансляции.</string>
 </resources>
