@@ -33,6 +33,9 @@ object MicrophoneConfig {
     // 音频捕获优化参数
     const val CAPTURE_BUFFER_SIZE_MS = 40 // 捕获缓冲区大小 (毫秒)
     const val CAPTURE_BUFFER_SIZE = SAMPLE_RATE * CAPTURE_BUFFER_SIZE_MS / 1000 * CHANNELS * 2 // 捕获缓冲区字节数
+
+    fun captureBufferSize(sampleRate: Int): Int =
+        sampleRate * CAPTURE_BUFFER_SIZE_MS / 1000 * CHANNELS * 2
     const val FRAME_INTERVAL_MS = 20 // 帧间隔时间 (毫秒)
     const val FRAME_INTERVAL_NS = FRAME_INTERVAL_MS * 1000000L // 帧间隔纳秒
 
@@ -43,7 +46,7 @@ object MicrophoneConfig {
     private var enableAEC = true // 启用回声消除器
     private var enableAGC = true // 启用自动增益控制
     private var enableNS = true // 启用噪声抑制
-    private var useVoiceComm = false // 使用VOICE_COMMUNICATION音频源（自动启用AEC+AGC+NS）
+    private var useVoiceComm = false
 
     // 音量增益及其平衡参数
     private var volumeProcessingEnabled = false // 音量增益及其平衡总开关
@@ -143,7 +146,7 @@ object MicrophoneConfig {
 
     /**
      * 是否使用VOICE_COMMUNICATION音频源
-     * VOICE_COMMUNICATION会自动启用系统级的AEC、AGC、NS
+     * 系统音效的实际支持与启用状态取决于设备
      */
     fun useVoiceCommunication(): Boolean {
         return useVoiceComm && !softwareVolumeProcessingActive()

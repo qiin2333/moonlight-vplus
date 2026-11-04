@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">系统默认</string>
+    <string name="mic_input_builtin">内置麦克风</string>
+    <string name="mic_input_wired">有线耳机麦克风</string>
+    <string name="mic_input_bluetooth">蓝牙麦克风</string>
+    <string name="mic_input_usb">USB麦克风</string>
+    <string name="mic_input_active">正在使用：%1$s</string>
+    <string name="mic_input_unavailable">所选设备当前不可用。</string>
+    <string name="mic_input_route_pending">正在等待音频输入路由</string>
+    <string name="mic_input_failed">无法选择此麦克风，请重试。</string>
+    <string name="mic_input_bluetooth_quality">使用蓝牙麦克风可能同步切换通信输出设备，并降低播放音质。</string>
+    <string name="mic_input_system_silenced">麦克风已被系统静音</string>
+    <string name="title_mic_test_devices">输入设备</string>
+    <string name="mic_test_start">开始测试</string>
+    <string name="mic_test_stop">停止测试</string>
+    <string name="mic_test_waveform">本地波形</string>
+    <string name="mic_test_idle">选择输入设备后开始测试。</string>
+    <string name="mic_test_source">音频源</string>
+    <string name="mic_test_route">实际路由</string>
+    <string name="mic_test_rms">RMS 音量</string>
+    <string name="mic_test_peak">峰值音量</string>
+    <string name="mic_test_record">录音</string>
+    <string name="mic_test_recording">录音中 %1$d/30 秒</string>
+    <string name="mic_test_stop_recording">结束录音</string>
+    <string name="mic_test_play">播放</string>
+    <string name="mic_test_playing">播放中</string>
+    <string name="mic_test_preferred_route">首选输入</string>
+    <string name="mic_test_recording_route">录音配置设备</string>
+    <string name="mic_test_display_gain">显示增益：%1$s</string>
+    <string name="mic_test_selected_input">选择的输入</string>
+    <string name="mic_test_bound_input">绑定的输入</string>
+    <string name="mic_test_communication_route">通信路由</string>
+    <string name="mic_test_format">采集格式</string>
+    <string name="mic_test_buffer">音频缓冲区</string>
+    <string name="mic_test_session">音频会话</string>
+</resources>

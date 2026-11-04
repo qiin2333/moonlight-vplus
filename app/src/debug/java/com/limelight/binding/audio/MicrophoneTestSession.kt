@@ -45,8 +45,8 @@ internal data class MicrophoneTestSnapshot(
 /** Captures local PCM only. It does not use an Opus encoder or a host connection. */
 internal class MicrophoneTestSession(context: android.content.Context) {
     private val appContext = context.applicationContext
-    private val devices = MicrophoneInputDeviceRepository(appContext)
-    private val bluetoothRoute = BluetoothMicrophoneRouteController(appContext)
+    private val devices = MicrophoneTestDeviceRepository(appContext)
+    private val bluetoothRoute = MicrophoneTestBluetoothRouteController(appContext)
     private val worker = HandlerThread("MicrophoneTest").apply { start() }
     private val handler = Handler(worker.looper)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -70,12 +70,12 @@ internal class MicrophoneTestSession(context: android.content.Context) {
     private var lastSnapshot = MicrophoneTestSnapshot()
     private var captureSampleRate = MicrophoneConfig.SAMPLE_RATE
 
-    fun choices(): List<MicrophoneInputDevice> = devices.choices()
+    fun choices(): List<MicrophoneTestInputDevice> = devices.choices()
 
-    fun displayNames(choices: List<MicrophoneInputDevice>): Map<String, String> =
+    fun displayNames(choices: List<MicrophoneTestInputDevice>): Map<String, String> =
         devices.displayNames(choices)
 
-    fun start(choice: MicrophoneInputDevice?, onChanged: (MicrophoneTestSnapshot) -> Unit) {
+    fun start(choice: MicrophoneTestInputDevice?, onChanged: (MicrophoneTestSnapshot) -> Unit) {
         val token = generation.incrementAndGet()
         listener = null
         stopRecorder()
@@ -226,7 +226,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         publish(lastSnapshot)
     }
 
-    private fun createRecorder(token: Long, choice: MicrophoneInputDevice?) {
+    private fun createRecorder(token: Long, choice: MicrophoneTestInputDevice?) {
         handler.post {
             if (generation.get() != token) return@post
             synchronized(recorderLock) {
@@ -246,7 +246,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                     )
                     check(minBuffer > 0) { "AudioRecord buffer unavailable" }
                     val bufferSize = maxOf(minBuffer * 2, MicrophoneConfig.CAPTURE_BUFFER_SIZE)
-                    val source = microphoneCaptureSource(choice?.communication == true, false)
+                val source = microphoneTestCaptureSource(choice?.communication == true, false)
                     val input = matchingInput(choice)
                     newRecord = AudioRecord(
                         source,
@@ -262,9 +262,9 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                     // AudioRecord input port. Keep the communication route and let the
                     // platform choose its recording endpoint instead of failing the test.
                     val key = input?.key ?: if (choice?.communication == true) {
-                        DEFAULT_MICROPHONE_INPUT
+                        MICROPHONE_TEST_DEFAULT_INPUT
                     } else {
-                        choice?.key ?: DEFAULT_MICROPHONE_INPUT
+                        choice?.key ?: MICROPHONE_TEST_DEFAULT_INPUT
                     }
                     check(devices.apply(newRecord!!, key)) {
                         "Microphone input preference rejected"
@@ -312,9 +312,9 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         }
     }
 
-    private fun matchingInput(choice: MicrophoneInputDevice?): MicrophoneInputDevice? =
+    private fun matchingInput(choice: MicrophoneTestInputDevice?): MicrophoneTestInputDevice? =
         choice?.takeIf { it.communication }?.let {
-            matchingBluetoothInput(it, devices.devices())
+            matchingMicrophoneTestBluetoothInput(it, devices.devices())
         }
 
     private fun capture(
@@ -322,8 +322,8 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         audioRecord: AudioRecord,
         source: Int,
         bufferSize: Int,
-        choice: MicrophoneInputDevice?,
-        input: MicrophoneInputDevice?,
+        choice: MicrophoneTestInputDevice?,
+        input: MicrophoneTestInputDevice?,
         sampleRate: Int
     ) {
         val thread = Thread({
@@ -335,7 +335,7 @@ internal class MicrophoneTestSession(context: android.content.Context) {
                 while (generation.get() == token && running.get()) {
                     if (choice?.communication == true && Build.VERSION.SDK_INT >= 23) {
                         val routed = try { audioRecord.routedDevice } catch (_: RuntimeException) { null }
-                        if (routed != null && isBluetoothType(routed.type)) {
+                        if (routed != null && isMicrophoneTestBluetoothType(routed.type)) {
                             bluetoothRouteObserved = true
                         } else if (bluetoothRouteObserved) {
                             publishError(
@@ -435,8 +435,8 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         waveform: List<Float>,
         rms: Float,
         peak: Float,
-        choice: MicrophoneInputDevice?,
-        input: MicrophoneInputDevice?,
+        choice: MicrophoneTestInputDevice?,
+        input: MicrophoneTestInputDevice?,
         bufferSize: Int,
         sampleRate: Int
     ) {
@@ -504,14 +504,14 @@ internal class MicrophoneTestSession(context: android.content.Context) {
         return "${name ?: type} (type=$type, id=$id${address?.let { ", address=$it" } ?: ""})"
     }
 
-    private fun formatChoice(device: MicrophoneInputDevice?): String {
+    private fun formatChoice(device: MicrophoneTestInputDevice?): String {
         if (device == null) return "None"
         return "${device.name.ifBlank { "Unknown" }} (type=${device.type}, id=${device.id}" +
             device.address.takeIf(String::isNotBlank)?.let { ", address=$it" }.orEmpty() + ")"
     }
 
-    private fun captureSampleRate(choice: MicrophoneInputDevice?): Int =
-        microphoneCaptureSampleRate(choice)
+    private fun captureSampleRate(choice: MicrophoneTestInputDevice?): Int =
+        microphoneTestCaptureSampleRate(choice)
 
     private fun waveformDisplayGain(values: List<Float>): Float {
         val peak = values.maxOfOrNull { kotlin.math.abs(it) } ?: 0f

@@ -69,8 +69,11 @@ internal fun MenuOptionColumn(
     modifier: Modifier = Modifier,
     initialFocusRequester: FocusRequester? = null,
     optionFocusModifier: Modifier = Modifier,
-    inlineControlsFocusable: Boolean = true
+    inlineControlsFocusable: Boolean = true,
+    initialFocusIconKey: String? = null
 ) {
+    val initialFocusIndex = options.indexOfFirst { it.iconKey == initialFocusIconKey }
+        .takeIf { initialFocusIconKey != null && it >= 0 } ?: 0
     Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
         options.forEachIndexed { index, option ->
             MenuOptionRow(
@@ -80,7 +83,7 @@ internal fun MenuOptionColumn(
                 onInlineToggle = onInlineToggle,
                 onSegmentClick = onSegmentClick,
                 modifier = optionFocusModifier,
-                initialFocusRequester = initialFocusRequester.takeIf { index == 0 },
+                initialFocusRequester = initialFocusRequester.takeIf { index == initialFocusIndex },
                 inlineControlsFocusable = inlineControlsFocusable
             )
         }

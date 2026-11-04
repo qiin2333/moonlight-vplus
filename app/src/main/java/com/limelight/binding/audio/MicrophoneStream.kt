@@ -7,9 +7,13 @@ import com.limelight.nvstream.jni.MoonBridge
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
-class MicrophoneStream(
-    private val conn: NvConnection
-) : MicrophoneCapture.MicrophoneDataCallback {
+class MicrophoneStream internal constructor(
+    private val conn: NvConnection,
+    private val initialInput: (Long) -> MicrophoneCaptureInput?,
+    private val onCaptureStopped: (Long) -> Unit = {},
+    private val onInitialResult: (Long, MicrophoneInputResult) -> Unit = { _, _ -> },
+    private val onInputLost: (Long) -> Unit = {}
+) {
 
     private var capture: MicrophoneCapture? = null
     private var encoder: OpusEncoder? = null
@@ -18,13 +22,15 @@ class MicrophoneStream(
     private val running = AtomicBoolean(false)
     private val micActive = AtomicBoolean(false)
     private val hostRequested = AtomicBoolean(false)
+    private val inputAllowed = AtomicBoolean(false)
+    @Volatile private var captureGeneration = 0L
     private var packetQueue = LinkedBlockingQueue<ByteArray>(MicrophoneConfig.MAX_QUEUE_SIZE)
 
     init {
         LimeLog.info("初始化麦克风流")
     }
 
-    fun start(): Boolean {
+    fun start(captureInitially: Boolean = true): Boolean {
         try {
             AudioDiagnostics.resetStatistics()
 
@@ -37,13 +43,14 @@ class MicrophoneStream(
                     }
 
                     hostRequested.set(true)
-                    return startMicrophoneCapture()
+                    running.set(true)
+                    return !captureInitially || startMicrophoneCapture()
                 } else {
                     LimeLog.info("主机未请求麦克风，将等待请求")
                     return true
                 }
             } else {
-                if (!micActive.get()) {
+                if (!micActive.get() && captureInitially) {
                     LimeLog.info("重新启动麦克风捕获")
                     return startMicrophoneCapture()
                 } else {
@@ -64,6 +71,8 @@ class MicrophoneStream(
         if (!micActive.get()) return
 
         micActive.set(false)
+        captureGeneration++
+        setInputAllowed(false)
 
         capture?.stop()
         capture = null
@@ -75,6 +84,9 @@ class MicrophoneStream(
         if (micActive.get()) return true
 
         try {
+            setInputAllowed(false)
+            val generation = ++captureGeneration
+            val input = initialInput(generation) ?: return false
             val micPort = MoonBridge.getMicPortNumber()
             if (micPort == 0) {
                 LimeLog.warning("未获取到协商的麦克风端口")
@@ -84,8 +96,19 @@ class MicrophoneStream(
 
             encoder = OpusEncoder(MicrophoneConfig.SAMPLE_RATE, MicrophoneConfig.CHANNELS, MicrophoneConfig.getOpusBitrate())
 
-            capture = MicrophoneCapture(this)
+            capture = MicrophoneCapture({ data, offset, length ->
+                onMicrophoneData(generation, data, offset, length)
+            }, input,
+                { onCaptureStopped(generation) },
+                { onInitialResult(generation, it) },
+                {
+                    setInputAllowed(false)
+                    onInputLost(generation)
+                })
+            // Publish lifecycle state before the capture worker can report its initial result.
+            micActive.set(true)
             if (!capture!!.start()) {
+                micActive.set(false)
                 LimeLog.severe("无法启动麦克风捕获")
                 cleanup()
                 return false
@@ -99,7 +122,6 @@ class MicrophoneStream(
                 }
             }
 
-            micActive.set(true)
             LimeLog.info("麦克风捕获已启动")
             return true
         } catch (e: SecurityException) {
@@ -114,8 +136,10 @@ class MicrophoneStream(
     }
 
     fun stop() {
+        captureGeneration++
         running.set(false)
         micActive.set(false)
+        setInputAllowed(false)
         hostRequested.set(false)
 
         capture?.stop()
@@ -130,6 +154,14 @@ class MicrophoneStream(
 
         cleanup()
         LimeLog.info("麦克风流已停止")
+    }
+
+    /** Prevents PCM captured during an asynchronous route change from reaching the host. */
+    internal fun setInputAllowed(allowed: Boolean): Boolean = synchronized(encoderLock) {
+        val effective = allowed && hasConfirmedInput()
+        val previous = inputAllowed.getAndSet(effective)
+        if (!effective) packetQueue.clear()
+        previous
     }
 
     fun pause() {
@@ -153,7 +185,22 @@ class MicrophoneStream(
         return false
     }
 
-    fun isRunning(): Boolean = running.get() && micActive.get()
+    fun isRunning(): Boolean = running.get() && micActive.get() && capture?.isCapturing() == true
+
+    internal fun requestInput(
+        input: MicrophoneCaptureInput,
+        complete: (MicrophoneInputResult) -> Unit
+    ): Boolean = capture?.requestInput(input, complete) == true
+
+    internal fun isInputSwitchPending(): Boolean = capture?.isInputSwitchPending() == true
+
+    internal fun hasConfirmedInput(): Boolean = isRunning() && capture?.hasConfirmedInput() == true
+
+    internal fun currentCaptureGeneration(): Long = captureGeneration
+
+    internal fun routedInputId(): Int? = capture?.routedInputId()
+
+    internal fun isSystemSilenced(): Boolean = capture?.isSystemSilenced() == true
 
     fun isInitialized(): Boolean = running.get()
 
@@ -167,23 +214,18 @@ class MicrophoneStream(
         synchronized(encoderLock) {
             encoder?.release()
             encoder = null
+            packetQueue.clear()
         }
-        packetQueue.clear()
     }
 
-    override fun onMicrophoneData(data: ByteArray, offset: Int, length: Int) {
-        if (!running.get() || !micActive.get()) return
+    private fun onMicrophoneData(generation: Long, data: ByteArray, offset: Int, length: Int) {
+        if (generation != captureGeneration || !running.get() || !micActive.get() || !inputAllowed.get()) return
 
         try {
-            var encoded: ByteArray? = null
-
             synchronized(encoderLock) {
-                if (encoder != null) {
-                    encoded = encoder!!.encode(data, offset, length)
-                }
-            }
-
-            if (encoded != null) {
+                // Check again after acquiring the lock: pause/resume may replace the encoder.
+                if (generation != captureGeneration || !running.get() || !micActive.get() || !inputAllowed.get()) return
+                val encoded = encoder?.encode(data, offset, length) ?: return
                 AudioDiagnostics.recordFrameEncoded()
 
                 val queueSize = packetQueue.size
@@ -214,7 +256,7 @@ class MicrophoneStream(
 
         while (running.get()) {
             try {
-                if (!hostRequested.get() || !micActive.get()) {
+                if (!hostRequested.get() || !micActive.get() || !inputAllowed.get()) {
                     Thread.sleep(MicrophoneConfig.SENDER_THREAD_SLEEP_MS.toLong())
                     continue
                 }
@@ -243,6 +285,7 @@ class MicrophoneStream(
                     Thread.sleep(1)
                     continue
                 }
+                if (!inputAllowed.get() || !micActive.get() || !running.get()) continue
 
                 val sendLatency = currentTime - lastSendTime
                 totalLatency += sendLatency
