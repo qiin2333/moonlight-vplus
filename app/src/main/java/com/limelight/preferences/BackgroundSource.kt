@@ -112,7 +112,8 @@ sealed class BackgroundSource(val prefValue: String) {
         // long enough to migrate existing installs, then erased.
         private const val LEGACY_KEY_TYPE = "background_image_type"
 
-        private val ALL = listOf(Auto, Pipw, Picsum, Api, Local, None)
+        // A source can initialize its superclass before its own singleton is ready.
+        private val ALL by lazy { listOf(Auto, Pipw, Picsum, Api, Local, None) }
         private var cachedResolvedTarget: ResolvedTarget? = null
         private var resolvedTargetOrientation: Int? = null
         private var resolvedTargetExtra: String? = null

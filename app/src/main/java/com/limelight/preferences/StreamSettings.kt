@@ -240,6 +240,23 @@ class StreamSettings : ThemedAppCompatActivity() {
         ).commitAllowingStateLoss()
     }
 
+    internal fun onSettingsReset() {
+        val languageChanged = UiHelper.resetLocale(this)
+        BackgroundSource.invalidateResolvedTarget()
+        sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH).setPackage(packageName))
+        AppTheme.applyStoredAppTheme(this)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && languageChanged) {
+            // Rebuild the home screen too, matching the existing legacy language-change flow.
+            startActivities(arrayOf(
+                Intent(this, PcView::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+                Intent(this, StreamSettings::class.java)
+            ))
+            finish()
+        } else {
+            recreate()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // 应用带阴影的主题
         AppTheme.applyStyle(this, R.style.PreferenceThemeWithShadow)
@@ -1197,6 +1214,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
         private val configSyncPreferenceChangeListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (SettingsResetManager.isResetting) return@OnSharedPreferenceChangeListener
                 refreshSettingsPresentation(key)
                 if (!suppressConfigSyncPreferenceChanges) {
                     handleConfigSyncPreferenceChanged(key)
@@ -2044,6 +2062,12 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
 
         private fun setupConfigSyncPreferences() {
+            findPreference<Preference>(ResetSettingsDialogFragment.TAG)?.setOnPreferenceClickListener {
+                if (parentFragmentManager.findFragmentByTag(ResetSettingsDialogFragment.TAG) == null) {
+                    ResetSettingsDialogFragment().showNow(parentFragmentManager, ResetSettingsDialogFragment.TAG)
+                }
+                true
+            }
             findPreference<Preference>("config_sync_export")?.setOnPreferenceClickListener {
                 exportConfigSyncPackage()
                 true
@@ -3076,16 +3100,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             // 添加阴影主题
             AppTheme.applyStyle(requireActivity(), R.style.PreferenceThemeWithShadow)
 
-            MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
-            initializeTouchModeDefaultsIfNeeded()
-            val bitratePrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            if (!bitratePrefs.contains(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING)) {
-                val recommended = PreferenceConfiguration.getDefaultBitrate(requireContext())
-                bitratePrefs.edit {
-                    putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING,
-                        bitratePrefs.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, recommended) == recommended)
-                }
-            }
+            PreferenceConfiguration.initializeDeviceDefaults(requireContext())
             setPreferencesFromResource(R.xml.preferences, null)
             val screen = preferenceScreen
             replaceSearchableCategories(screen)
@@ -3544,13 +3559,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .showStyled()
-        }
-
-        private fun initializeTouchModeDefaultsIfNeeded() {
-            val context = requireContext()
-            modeStore.ensureTouchDefaults(
-                context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
-            )
         }
 
         override fun onRequestPermissionsResult(

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_reset_settings">Restore default settings</string>
+    <string name="summary_reset_settings">Reset preferences and remembered stream settings. Keep paired computers, authorizations and saved custom configurations.</string>
+    <string name="message_reset_settings">Reset video, audio, input, appearance and control positions, including remembered stream settings for each game?\n\nPaired computers, authorizations and saved custom configurations will be kept. Custom configurations will be deselected, and background sync will be turned off. Defaults apply to your next stream.</string>
+    <string name="action_reset_settings">Restore defaults</string>
+    <string name="message_reset_settings_running">Restoring defaults… Waiting for any active configuration sync to finish.</string>
+    <string name="message_reset_settings_failed">Could not finish restoring defaults. Some settings may already have changed. Please try again.</string>
+    <string name="toast_reset_settings_success">Default settings restored. Background sync is off.</string>
+</resources>
