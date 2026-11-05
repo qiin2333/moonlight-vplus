@@ -147,8 +147,9 @@
             android:gravity="end"
             android:visibility="gone">
 
-            <CheckBox
-                android:id="@+id/useLastSettingsCheckbox"
+            <androidx.appcompat.widget.SwitchCompat
+                style="@style/AppSwitchWidget"
+                android:id="@+id/useLastSettingsSwitch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
@@ -157,7 +158,6 @@
                 android:textColor="@color/appview_text_secondary"
                 android:textSize="12sp"
                 android:fontFamily="sans-serif-light"
-                android:buttonTint="@color/appview_text_primary"
                 android:checked="false" />
 
             <TextView

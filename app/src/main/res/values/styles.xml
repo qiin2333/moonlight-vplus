@@ -215,14 +215,19 @@
         <item name="singleLineTitle">false</item>
         <item name="iconSpaceReserved">false</item>
     </style>
-    <!-- Both Preference classes bind their own widget ID; appearance and row-owned input are shared. -->
-    <style name="SettingsSwitchWidget">
+    <style name="AppSwitchWidget">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:singleLine">false</item>
         <item name="android:background">@null</item>
+        <item name="android:importantForAccessibility">yes</item>
+    </style>
+    <!-- Preferences own row input; standalone switches keep their normal input behavior. -->
+    <style name="SettingsSwitchWidget" parent="AppSwitchWidget">
+        <item name="android:minHeight">0dp</item>
         <item name="android:clickable">false</item>
         <item name="android:focusable">false</item>
-        <item name="android:importantForAccessibility">yes</item>
     </style>
     <style name="MyCheckBoxPreferenceCompact" parent="@style/Preference.CheckBoxPreference.Material">
         <item name="android:layout">@layout/preference_material_compact</item>

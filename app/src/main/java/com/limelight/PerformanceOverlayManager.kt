@@ -2,7 +2,6 @@ package com.limelight
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.res.ColorStateList
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Color
@@ -25,7 +24,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.widget.CheckBox
+import androidx.appcompat.widget.SwitchCompat
+import com.limelight.utils.AppSwitchStyle
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -1245,7 +1245,7 @@ class PerformanceOverlayManager(
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20f), dp(8f), dp(20f), 0)
 
-            addView(createJitterMonitorCheckboxRow(), LinearLayout.LayoutParams(
+            addView(createJitterMonitorSwitchRow(), LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ))
@@ -1269,13 +1269,16 @@ class PerformanceOverlayManager(
         }
     }
 
-    private fun createJitterMonitorCheckboxRow(): View {
-        val jitterCheckbox = CheckBox(activity).apply {
+    private fun createJitterMonitorSwitchRow(): View {
+        val jitterSwitch = SwitchCompat(activity).apply {
             isChecked = prefConfig.enableJitterMonitor
             text = ""
             minWidth = dp(48f)
             minHeight = dp(48f)
-            buttonTintList = createJitterCheckboxTint()
+            background = null
+            isClickable = false
+            isFocusable = false
+            AppSwitchStyle.apply(this)
             setOnCheckedChangeListener { _, isChecked ->
                 setJitterMonitorEnabled(isChecked)
             }
@@ -1288,7 +1291,7 @@ class PerformanceOverlayManager(
             isFocusable = true
             minimumHeight = dp(58f)
             setPadding(0, dp(4f), 0, dp(6f))
-            setOnClickListener { jitterCheckbox.isChecked = !jitterCheckbox.isChecked }
+            setOnClickListener { jitterSwitch.isChecked = !jitterSwitch.isChecked }
 
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -1308,25 +1311,8 @@ class PerformanceOverlayManager(
                 })
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-            addView(jitterCheckbox, LinearLayout.LayoutParams(dp(56f), dp(48f)))
+            addView(jitterSwitch, LinearLayout.LayoutParams(dp(56f), dp(48f)))
         }
-    }
-
-    private fun createJitterCheckboxTint(): ColorStateList {
-        val checkedState = intArrayOf(android.R.attr.state_checked)
-        val defaultState = intArrayOf()
-        val states = arrayOf(checkedState, defaultState)
-        val accent = UiHelper.accentColor(activity)
-        val secondary = ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color)
-
-        return ColorStateList(
-            states,
-            intArrayOf(accent, colorWithAlpha(secondary, 180))
-        )
-    }
-
-    private fun colorWithAlpha(color: Int, alpha: Int): Int {
-        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
     private fun setJitterMonitorEnabled(enabled: Boolean) {

@@ -7,7 +7,6 @@ import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -40,7 +39,8 @@ class Iperf3Tester(
     private lateinit var durationSeekBar: SeekBar
     private lateinit var durationValueTextView: TextView
     private lateinit var outputView: TextView
-    private lateinit var udpCheckBox: CheckBox
+    private lateinit var protocolRadioGroup: RadioGroup
+    private lateinit var udpRadioButton: RadioButton
     private lateinit var udpBandwidthLayout: LinearLayout
     private lateinit var outputScrollView: ScrollView
 
@@ -86,7 +86,8 @@ class Iperf3Tester(
         durationSeekBar = view.findViewById(R.id.seek_bar_duration)
         durationValueTextView = view.findViewById(R.id.text_view_duration_value)
         portEditText = view.findViewById(R.id.edit_text_port)
-        udpCheckBox = view.findViewById(R.id.checkbox_udp)
+        protocolRadioGroup = view.findViewById(R.id.radio_group_protocol)
+        udpRadioButton = view.findViewById(R.id.radio_iperf_udp)
         udpBandwidthLayout = view.findViewById(R.id.layout_udp_bandwidth)
         udpBandwidthEditText = view.findViewById(R.id.edit_text_udp_bandwidth)
         rawArgsInput = view.findViewById(R.id.edit_text_raw_args)
@@ -104,8 +105,8 @@ class Iperf3Tester(
         })
         durationValueTextView.text = String.format("%ds", durationSeekBar.progress)
 
-        udpCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            udpBandwidthLayout.visibility = if (isChecked) View.VISIBLE else View.GONE
+        protocolRadioGroup.setOnCheckedChangeListener { _, checkedId ->
+            udpBandwidthLayout.visibility = if (checkedId == R.id.radio_iperf_udp) View.VISIBLE else View.GONE
         }
     }
 
@@ -191,7 +192,7 @@ class Iperf3Tester(
         command.add("-t")
         command.add(durationSeekBar.progress.toString())
 
-        if (udpCheckBox.isChecked) {
+        if (udpRadioButton.isChecked) {
             command.add("-u")
             val bandwidth = udpBandwidthEditText.text.toString().trim()
             if (bandwidth.isNotEmpty()) {
@@ -261,7 +262,7 @@ class Iperf3Tester(
             val line = allOutputLines[i]
             if (!line.contains(" sec ") || !line.contains("bits/sec")) continue
 
-            if (udpCheckBox.isChecked) {
+            if (udpRadioButton.isChecked) {
                 val udpMatcher = udpPattern.matcher(line)
                 if (udpMatcher.find()) {
                     summaryResult =
@@ -338,7 +339,10 @@ class Iperf3Tester(
             }
             durationSeekBar.isEnabled = isEnabled
             portEditText.isEnabled = isEnabled
-            udpCheckBox.isEnabled = isEnabled
+            protocolRadioGroup.isEnabled = isEnabled
+            for (i in 0 until protocolRadioGroup.childCount) {
+                protocolRadioGroup.getChildAt(i).isEnabled = isEnabled
+            }
             udpBandwidthEditText.isEnabled = isEnabled
             rawArgsInput.isEnabled = isEnabled
         }

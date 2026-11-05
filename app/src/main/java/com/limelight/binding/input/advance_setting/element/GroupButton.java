@@ -14,10 +14,11 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 import android.widget.Button;
-import android.widget.CheckBox;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.content.ContextCompat;
+import com.limelight.utils.AppSwitchStyle;
 import android.widget.EditText;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -575,9 +576,9 @@ public class GroupButton extends Element {
         NumberSeekbar widthNumberSeekbar = page.findViewById(R.id.page_group_button_width);
         NumberSeekbar heightNumberSeekbar = page.findViewById(R.id.page_group_button_height);
         NumberSeekbar radiusNumberSeekbar = page.findViewById(R.id.page_group_button_radius);
-        CheckBox childPositonAttributeFollowCheckBox = page.findViewById(R.id.page_group_button_child_position_attribute_follow);
-        CheckBox childOtherAttributeFollowCheckBox = page.findViewById(R.id.page_group_button_child_other_attribute_follow);
-        CheckBox childVisibleCheckBox = page.findViewById(R.id.page_group_button_child_visible);
+        SwitchCompat childPositionAttributeFollowSwitch = page.findViewById(R.id.page_group_button_child_position_attribute_follow);
+        SwitchCompat childOtherAttributeFollowSwitch = page.findViewById(R.id.page_group_button_child_other_attribute_follow);
+        SwitchCompat childVisibleSwitch = page.findViewById(R.id.page_group_button_child_visible);
         ElementEditText textElementEditText = page.findViewById(R.id.page_group_button_text);
         NumberSeekbar thickNumberSeekbar = page.findViewById(R.id.page_group_button_thick);
         NumberSeekbar layerNumberSeekbar = page.findViewById(R.id.page_group_button_layer);
@@ -589,8 +590,12 @@ public class GroupButton extends Element {
         NumberSeekbar textSizeNumberSeekbar = page.findViewById(R.id.page_group_button_text_size);
         ElementEditText normalTextColorElementEditText = page.findViewById(R.id.page_group_button_normal_text_color);
         ElementEditText pressedTextColorElementEditText = page.findViewById(R.id.page_group_button_pressed_text_color);
-        Switch hiddenSwitch = page.findViewById(R.id.page_group_button_hidden_switch);
-        Switch movableInNormalSwitch = page.findViewById(R.id.page_group_button_movable_in_normal_switch);
+        SwitchCompat hiddenSwitch = page.findViewById(R.id.page_group_button_hidden_switch);
+        SwitchCompat movableInNormalSwitch = page.findViewById(R.id.page_group_button_movable_in_normal_switch);
+        for (SwitchCompat control : new SwitchCompat[]{childPositionAttributeFollowSwitch,
+                childOtherAttributeFollowSwitch, childVisibleSwitch, hiddenSwitch, movableInNormalSwitch}) {
+            AppSwitchStyle.apply(control, ContextCompat.getColor(page.getContext(), R.color.crown_text_secondary));
+        }
 
         // Setup listeners
         textElementEditText.setTextWithNoTextChangedCallBack(text);
@@ -599,8 +604,8 @@ public class GroupButton extends Element {
             save();
         });
 
-        childPositonAttributeFollowCheckBox.setChecked(childPositionAttributeFollow);
-        childPositonAttributeFollowCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        childPositionAttributeFollowSwitch.setChecked(childPositionAttributeFollow);
+        childPositionAttributeFollowSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             childPositionAttributeFollow = isChecked;
             if (!childPositionAttributeFollow) {
                 centralXMax = initialCentralXMax;
@@ -610,11 +615,11 @@ public class GroupButton extends Element {
             }
         });
 
-        childOtherAttributeFollowCheckBox.setChecked(childOtherAttributeFollow);
-        childOtherAttributeFollowCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> childOtherAttributeFollow = isChecked);
+        childOtherAttributeFollowSwitch.setChecked(childOtherAttributeFollow);
+        childOtherAttributeFollowSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> childOtherAttributeFollow = isChecked);
 
-        childVisibleCheckBox.setChecked(childVisibility == CHILD_VISIBLE);
-        childVisibleCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        childVisibleSwitch.setChecked(childVisibility == CHILD_VISIBLE);
+        childVisibleSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             setElementChildVisibility(isChecked ? CHILD_VISIBLE : CHILD_INVISIBLE);
             save();
         });
@@ -818,8 +823,9 @@ public class GroupButton extends Element {
             });
         });
 
-        Switch permanentIndependentSwitch = page.findViewById(R.id.page_group_button_override_parent_switch);
-        // 根据新的永久状态变量设置 Switch 的初始值
+        SwitchCompat permanentIndependentSwitch = page.findViewById(R.id.page_group_button_override_parent_switch);
+        AppSwitchStyle.apply(permanentIndependentSwitch, ContextCompat.getColor(page.getContext(), R.color.crown_text_secondary));
+        // 根据新的永久状态变量设置 SwitchCompat 的初始值
         permanentIndependentSwitch.setChecked(isPermanentlyIndependent);
         permanentIndependentSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             isPermanentlyIndependent = isChecked; // 控制新的永久状态变量

@@ -1,11 +1,7 @@
 package com.limelight.preferences
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.res.ColorStateList
 import androidx.appcompat.widget.SwitchCompat
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroup
@@ -14,7 +10,7 @@ import androidx.preference.PreferenceViewHolder
 import androidx.recyclerview.widget.RecyclerView
 import com.limelight.R
 import com.limelight.utils.AppTheme
-import com.limelight.utils.UiHelper
+import com.limelight.utils.AppSwitchStyle
 
 /** Shared switch styling and card-edge updates for both settings navigation levels. */
 @SuppressLint("RestrictedApi")
@@ -46,8 +42,8 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
         super.onBindViewHolder(holder, position)
         val palette = AppTheme.paletteContext(holder.itemView.context)
         // Both preference types keep their own binding and persistence behavior.
-        (holder.findViewById(android.R.id.checkbox) as? SwitchCompat)?.let { tintSwitch(it, palette) }
-        (holder.findViewById(androidx.preference.R.id.switchWidget) as? SwitchCompat)?.let { tintSwitch(it, palette) }
+        (holder.findViewById(android.R.id.checkbox) as? SwitchCompat)?.let(AppSwitchStyle::apply)
+        (holder.findViewById(androidx.preference.R.id.switchWidget) as? SwitchCompat)?.let(AppSwitchStyle::apply)
         if (!mainCards) return
         val preference = getItem(position) ?: return
         if (!isStandardLayoutResource(preference.layoutResource)) return
@@ -72,16 +68,6 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
         androidx.preference.R.layout.preference, androidx.preference.R.layout.preference_material,
         androidx.preference.R.layout.preference_category, androidx.preference.R.layout.preference_category_material -> true
         else -> false
-    }
-
-    /** Resolves checked, unchecked and disabled colors from the active palette for both widget IDs. */
-    private fun tintSwitch(switch: SwitchCompat, context: Context) {
-        val active = UiHelper.accentColor(context)
-        val inactive = ContextCompat.getColor(context, R.color.ui_shell_text_secondary)
-        val states = arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf(android.R.attr.state_checked), intArrayOf())
-        switch.thumbTintList = ColorStateList(states, intArrayOf(ColorUtils.setAlphaComponent(inactive, 97), active, inactive))
-        switch.trackTintList = ColorStateList(states, intArrayOf(ColorUtils.setAlphaComponent(inactive, 38),
-            ColorUtils.setAlphaComponent(active, 89), ColorUtils.setAlphaComponent(inactive, 51)))
     }
 
     /** Coalesces neighbor rebinds after hierarchy updates so changed group edges get fresh corners. */
