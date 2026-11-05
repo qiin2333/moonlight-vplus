@@ -395,6 +395,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             androidx.core.graphics.ColorUtils.setAlphaComponent(UiHelper.accentColor(this), 69))
     }
 
+    /** Refreshes settings surfaces and system icon contrast for in-place theme changes. */
     private fun applySettingsThemeSurfaces() {
         findViewById<View>(R.id.settingsBackgroundImage)?.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.settings_page_background)

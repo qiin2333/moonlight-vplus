@@ -25,6 +25,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
     private data class OriginalLayout(val layout: Int, val widget: Int)
     private val originalLayouts = IdentityHashMap<Preference, OriginalLayout>()
 
+    /** Converts standard layouts for details while saving their originals for the main page. */
     override fun getItemViewType(position: Int): Int {
         getItem(position)?.let { preference ->
             if (isStandardLayout(preference)) {
@@ -43,6 +44,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
         return super.getItemViewType(position)
     }
 
+    /** Adds detail separators and navigation without replacing preference-owned click behavior. */
     override fun onBindViewHolder(holder: PreferenceViewHolder, position: Int) {
         super.onBindViewHolder(holder, position)
         val preference = getItem(position) ?: return
@@ -103,6 +105,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
         originalLayouts.clear()
     }
 
+    /** Checks the saved layout so converted rows stay eligible when recycled or rebound. */
     private fun isStandardLayout(preference: Preference): Boolean {
         val layout = originalLayouts[preference]?.layout ?: preference.layoutResource
         return isStandardLayoutResource(layout)

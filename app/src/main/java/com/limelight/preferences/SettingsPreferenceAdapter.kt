@@ -41,6 +41,7 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
         })
     }
 
+    /** Applies shared switch colors, then decorates standard main-page rows as connected cards. */
     override fun onBindViewHolder(holder: PreferenceViewHolder, position: Int) {
         super.onBindViewHolder(holder, position)
         val palette = AppTheme.paletteContext(holder.itemView.context)
@@ -65,6 +66,7 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
             !sharesCard(if (position + 1 < itemCount) getItem(position + 1) else null))
     }
 
+    /** Leaves custom preference layouts outside automatic card decoration. */
     protected fun isStandardLayoutResource(layout: Int): Boolean = when (layout) {
         R.layout.preference_material_compact, R.layout.preference_category_material,
         androidx.preference.R.layout.preference, androidx.preference.R.layout.preference_material,
@@ -72,6 +74,7 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
         else -> false
     }
 
+    /** Resolves checked, unchecked and disabled colors from the active palette for both widget IDs. */
     private fun tintSwitch(switch: SwitchCompat, context: Context) {
         val active = UiHelper.accentColor(context)
         val inactive = ContextCompat.getColor(context, R.color.ui_shell_text_secondary)
@@ -81,6 +84,7 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
             ColorUtils.setAlphaComponent(active, 89), ColorUtils.setAlphaComponent(inactive, 51)))
     }
 
+    /** Coalesces neighbor rebinds after hierarchy updates so changed group edges get fresh corners. */
     private fun refreshEdgesAt(vararg positions: Int) {
         if (stopped) return
         val view = recycler ?: return
@@ -101,6 +105,7 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
         super.onDetachedFromRecyclerView(recyclerView)
     }
 
+    /** Cancels deferred decoration and stops notifications before the adapter leaves its page. */
     fun stopObservingChanges() {
         stopped = true
         recycler?.removeCallbacks(refreshEdges)

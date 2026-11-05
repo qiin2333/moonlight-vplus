@@ -10,6 +10,7 @@ import com.limelight.utils.UiHelper
 
 /** Shared surfaces for both levels of settings navigation. */
 internal object SettingsCardStyle {
+    /** Rounds only exposed group edges and keeps focus/press feedback over the card surface. */
     fun background(context: Context, top: Boolean, bottom: Boolean): StateListDrawable {
         val radius = context.resources.getDimension(R.dimen.corner_radius_medium)
         val radii = floatArrayOf(if (top) radius else 0f, if (top) radius else 0f,

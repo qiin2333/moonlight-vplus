@@ -45,6 +45,7 @@ internal class SettingsDetailPresentation(private val activity: Activity) {
 
     val isShowing: Boolean get() = shell != null
 
+    /** Moves the live list into a detail shell while leaving the shared background in place. */
     @Suppress("DEPRECATION")
     fun show(title: CharSequence, onBack: () -> Unit) {
         this.onBack = onBack
@@ -130,6 +131,7 @@ internal class SettingsDetailPresentation(private val activity: Activity) {
         onBack = null
     }
 
+    /** Recolors the visible shell and rows and refreshes system bars without rebuilding the list. */
     fun refreshTheme() {
         val detail = shell ?: return
         val palette = AppTheme.paletteContext(activity)

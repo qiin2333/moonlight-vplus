@@ -1,14 +1,18 @@
 package com.limelight.preferences
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.view.KeyEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
+import androidx.preference.SwitchPreferenceCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -111,6 +115,56 @@ class SettingsDetailNavigationTest {
             assertEquals("Missing or duplicated settings in ${screen.key}", leaves, actualLeaves)
             settings.press(KeyEvent.KEYCODE_BUTTON_B)
             settings.awaitScreen(null)
+        }
+    }
+
+    @Test
+    fun switchWidgetsExposeCheckedStateToAccessibilityAcrossPages() {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val service = requireNotNull(automation.serviceInfo)
+        val originalFlags = service.flags
+        service.flags = (originalFlags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS) and
+            AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS.inv()
+        automation.serviceInfo = service
+        try {
+            settings.focusPreference(AUDIO_EFFECTS_KEY)
+            assertAccessibleSwitch(android.R.id.checkbox, checked = true)
+            settings.press(KeyEvent.KEYCODE_BUTTON_A)
+            compose.waitUntil(5_000) { !preferences.getBoolean(AUDIO_EFFECTS_KEY, true) }
+            assertAccessibleSwitch(android.R.id.checkbox, checked = false)
+
+            // The real SwitchPreferenceCompat entry is capability-gated on devices without USB host.
+            // Add a non-persistent instance to exercise its binding ID on every test device.
+            val compatKey = "accessibility_test_switch"
+            settings.withFragment { fragment ->
+                val preferenceContext = requireNotNull(fragment.findPreference<Preference>(AUDIO_EFFECTS_KEY)).context
+                val switchStyle = preferenceContext.resources.getIdentifier(
+                    "MySwitchPreferenceCompact", "style", preferenceContext.packageName)
+                assertTrue("Shared switch preference style must be packaged", switchStyle != 0)
+                fragment.preferenceScreen.addPreference(SwitchPreferenceCompat(
+                    preferenceContext, null, 0, switchStyle
+                ).apply {
+                    key = compatKey
+                    title = "Accessibility switch"
+                    isPersistent = false
+                    order = Int.MIN_VALUE
+                })
+            }
+            settings.awaitReady { true }
+            settings.focusPreference(compatKey)
+            assertAccessibleSwitch(androidx.preference.R.id.switchWidget, checked = false)
+            settings.press(KeyEvent.KEYCODE_BUTTON_A)
+            assertAccessibleSwitch(androidx.preference.R.id.switchWidget, checked = true)
+
+            settings.openScreen(AUDIO_SCREEN_KEY)
+            settings.focusPreference(AUDIO_PASSTHROUGH_KEY)
+            assertAccessibleSwitch(android.R.id.checkbox, checked = false)
+            settings.press(KeyEvent.KEYCODE_BUTTON_A)
+            compose.waitUntil(5_000) { preferences.getBoolean(AUDIO_PASSTHROUGH_KEY, false) }
+            assertAccessibleSwitch(android.R.id.checkbox, checked = true)
+        } finally {
+            service.flags = originalFlags
+            automation.serviceInfo = service
         }
     }
 
@@ -257,6 +311,35 @@ class SettingsDetailNavigationTest {
         settings.awaitScreen(null)
         settings.assertFocusedPreference(GAMEPAD_SCREEN_KEY)
         assertEquals("", settings.query())
+    }
+
+    /** Reads the service-visible tree, excluding nodes hidden by importantForAccessibility. */
+    private fun assertAccessibleSwitch(widgetId: Int, checked: Boolean) {
+        val rowBounds = Rect()
+        settings.withActivity { activity ->
+            assertTrue("Focused settings row must be visible",
+                requireNotNull(activity.currentFocus).getGlobalVisibleRect(rowBounds))
+        }
+        val resourceName = context.resources.getResourceName(widgetId)
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        compose.waitUntil(5_000) {
+            val pending = java.util.ArrayDeque<AccessibilityNodeInfo>()
+            automation.rootInActiveWindow?.let(pending::add)
+            var found = false
+            while (pending.isNotEmpty()) {
+                val node = pending.removeFirst()
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+                if (node.viewIdResourceName == resourceName &&
+                    rowBounds.contains(bounds.centerX(), bounds.centerY()) && node.isCheckable &&
+                    node.isChecked == checked && node.isEnabled) {
+                    found = true
+                    break
+                }
+                for (index in 0 until node.childCount) node.getChild(index)?.let(pending::add)
+            }
+            found
+        }
     }
 
     private fun assertAudioDependencies(passthrough: Boolean) {
