@@ -21,9 +21,10 @@ internal object SettingsResetManager {
 
     /**
      * Restores managed preferences under the sync lock, then reconciles scheduling on the main thread.
+     * Calls [beforeMutation] on IO after acquiring the lock, immediately before removing overrides.
      * A failed write stops the reset and can leave some scopes already changed.
      */
-    suspend fun reset(context: Context) {
+    suspend fun reset(context: Context, beforeMutation: () -> Unit = {}) {
         check(resetting.compareAndSet(false, true)) { "A settings reset is already running" }
         val appContext = context.applicationContext
         try {
@@ -34,6 +35,7 @@ internal object SettingsResetManager {
                     // Track existing values before removing them so the next sync can export
                     // deletions too, even for preferences that have never been backed up.
                     sync.trackResettablePreferences()
+                    beforeMutation()
                     resetOverrides(
                         PreferenceManager.getDefaultSharedPreferences(appContext),
                         resourceKeys

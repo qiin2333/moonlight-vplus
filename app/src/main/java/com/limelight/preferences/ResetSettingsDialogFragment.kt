@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.limelight.R
 import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.UiHelper
 import kotlinx.coroutines.launch
 
 /** Retains an in-flight reset across rotation and prevents duplicate confirmation. */
@@ -44,7 +45,10 @@ class ResetSettingsDialogFragment : DialogFragment() {
                         host?.onSettingsReset()
                     } else if (state == SettingsResetViewModel.State.FAILED) {
                         (activity as? StreamSettings)?.let { host ->
-                            if (model.consumeFailure()) host.reloadSettings()
+                            if (model.consumeFailure()) {
+                                if (model.languageChangedByReset) UiHelper.resetLocale(host)
+                                host.reloadSettings()
+                            }
                         }
                     }
                 }

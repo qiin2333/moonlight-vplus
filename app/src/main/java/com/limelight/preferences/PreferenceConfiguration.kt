@@ -649,7 +649,7 @@ class PreferenceConfiguration {
         private const val HOST_AUDIO_PREF_STRING = "checkbox_host_audio"
         private const val DEADZONE_PREF_STRING = "seekbar_deadzone"
         private const val OSC_OPACITY_PREF_STRING = "seekbar_osc_opacity"
-        private const val LANGUAGE_PREF_STRING = "list_languages"
+        internal const val LANGUAGE_PREF_STRING = "list_languages"
         private const val SMALL_ICONS_PREF_STRING = "checkbox_small_icon_mode"
         private const val MULTI_CONTROLLER_PREF_STRING = "checkbox_multi_controller"
         private const val USB_DRIVER_PREF_SRING = "checkbox_usb_driver"

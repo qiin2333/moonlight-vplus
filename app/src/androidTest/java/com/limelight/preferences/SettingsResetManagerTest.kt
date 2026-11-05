@@ -30,13 +30,15 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class SettingsResetManagerTest {
+    /** Covers failures before and after mutation, one-shot reconciliation, and a successful retry. */
     @Test
     fun partialFailureRefreshIsConsumedOnceAndTheResetCanBeRetried() = isolated { context ->
         val defaults = PreferenceManager.getDefaultSharedPreferences(context)
         defaults.edit().putString("list_resolution", "3840x2160")
+            .putString(PreferenceConfiguration.LANGUAGE_PREF_STRING, "fr")
             .putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, "saved-authorization").commit()
         context.prefs("app_last_settings").edit().putString("host_game", "saved-settings").commit()
-        context.failNextCommitForStore = "app_last_settings"
+        context.failNextCommitForStore = "${context.packageName}_preferences"
         val application = object : Application() {
             init { attachBaseContext(context) }
             override fun getApplicationContext(): Context = context
@@ -50,17 +52,31 @@ class SettingsResetManagerTest {
                 model.reset()
             }
             runBlocking { withTimeout(5_000L) { model.state.first { it == SettingsResetViewModel.State.FAILED } } }
+            // A failure before managed settings change must leave the selected locale alone.
+            assertEquals("fr", defaults.getString(PreferenceConfiguration.LANGUAGE_PREF_STRING, null))
+            instrumentation.runOnMainSync {
+                assertFalse(model.languageChangedByReset)
+                assertTrue(model.consumeFailure())
+                context.failNextCommitForStore = "app_last_settings"
+                model.reset()
+            }
+            runBlocking { withTimeout(5_000L) { model.state.first { it == SettingsResetViewModel.State.FAILED } } }
             // The default store committed before the later store failed: the host must refresh.
             assertFalse(defaults.contains("list_resolution"))
+            assertFalse(defaults.contains(PreferenceConfiguration.LANGUAGE_PREF_STRING))
             assertEquals("saved-settings", context.prefs("app_last_settings").getString("host_game", null))
             instrumentation.runOnMainSync {
+                assertTrue(model.languageChangedByReset)
                 assertTrue(model.consumeFailure())
                 assertFalse("A restarted observer must not refresh again", model.consumeFailure())
                 assertEquals(SettingsResetViewModel.State.FAILED, model.state.value)
                 model.reset()
             }
             runBlocking { withTimeout(5_000L) { model.state.first { it == SettingsResetViewModel.State.COMPLETE } } }
-            instrumentation.runOnMainSync { assertFalse(model.consumeFailure()) }
+            instrumentation.runOnMainSync {
+                assertFalse(model.languageChangedByReset)
+                assertFalse(model.consumeFailure())
+            }
             assertEquals("saved-authorization", defaults.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null))
             assertTrue(context.prefs("app_last_settings").all.isEmpty())
             assertSyncDisabled(defaults)
@@ -69,6 +85,7 @@ class SettingsResetManagerTest {
         }
     }
 
+    /** Compares a reset with fresh device defaults while checking retained files, libraries and secrets. */
     @Test
     fun resetMatchesFreshDeviceDefaultsAndPreservesUserData() = isolated { context ->
         val defaults = PreferenceManager.getDefaultSharedPreferences(context)
@@ -125,7 +142,7 @@ class SettingsResetManagerTest {
         try {
             PreferenceConfiguration.initializeDeviceDefaults(baseline)
             val expected = PreferenceConfiguration.readPreferences(baseline)
-            runBlocking { SettingsResetManager.reset(context) }
+            runBlocking { SettingsResetManager.reset(context) {} }
             assertConfigurationEquals(expected, PreferenceConfiguration.readPreferences(context))
             val baselineDefaults = PreferenceManager.getDefaultSharedPreferences(baseline).all
             listOf("gamepad_motion_sensors_android12_opt_in_migrated",
@@ -150,7 +167,7 @@ class SettingsResetManagerTest {
             }
             assertEquals(123, context.prefs("AppTheme").getInt("derived-color", 0))
             assertFalse(context.prefs("AppTheme").contains("theme_mode"))
-            runBlocking { SettingsResetManager.reset(context) }
+            runBlocking { SettingsResetManager.reset(context) {} }
             assertConfigurationEquals(expected, PreferenceConfiguration.readPreferences(context))
             assertSyncDisabled(defaults)
         } finally {
@@ -158,6 +175,7 @@ class SettingsResetManagerTest {
         }
     }
 
+    /** A blocked reset must not enter mutation until the active sync releases the shared lock. */
     @Test
     fun resetWaitsForAnActiveSyncAndClearsItsImportedValues() = isolated { context ->
         val defaults = PreferenceManager.getDefaultSharedPreferences(context)
@@ -172,7 +190,8 @@ class SettingsResetManagerTest {
                 }
             }
             held.await()
-            val reset = async { SettingsResetManager.reset(context) }
+            var mutationStarted = false
+            val reset = async { SettingsResetManager.reset(context) { mutationStarted = true } }
             try {
                 val busy = runCatching {
                     ConfigurationSyncManager(context).withExclusiveSettingsMutation(lockTimeoutMillis = 0L) {
@@ -182,11 +201,13 @@ class SettingsResetManagerTest {
                 assertTrue("Only lock acquisition should time out", busy.exceptionOrNull() is IOException)
                 delay(150L)
                 assertFalse("Reset must wait for the sync lock", reset.isCompleted)
+                assertFalse("A busy lock must not enter the mutation phase", mutationStarted)
             } finally {
                 release.complete(Unit)
             }
             sync.join()
             reset.await()
+            assertTrue(mutationStarted)
         }
         assertEquals(1920, PreferenceConfiguration.readPreferences(context).width)
         assertSyncDisabled(defaults)
@@ -204,6 +225,7 @@ class SettingsResetManagerTest {
         }
     }
 
+    /** Retains existing sync history and verifies that later exports keep reset deletion timestamps. */
     @Test
     fun resetRetainsSyncHistoryAndRecordsDeletionsForTheNextSync() = isolated { context ->
         val last = context.prefs("app_last_settings")
@@ -218,7 +240,7 @@ class SettingsResetManagerTest {
         val oldTimestamp = state.getLong("$prefix.updatedAt", 0L)
         assertNotNull(oldHash)
         state.edit().putString("unrelated-saved-profile-history", "keep").commit()
-        runBlocking { SettingsResetManager.reset(context) }
+        runBlocking { SettingsResetManager.reset(context) {} }
         assertTrue(last.all.isEmpty())
         assertNotEquals(oldHash, state.getString("$prefix.hash", null))
         assertTrue(state.getLong("$prefix.updatedAt", 0L) > oldTimestamp)
@@ -265,6 +287,7 @@ class SettingsResetManagerTest {
         override fun getApplicationContext(): Context = this
         override fun getFilesDir(): File = directory
         override fun getDatabasePath(name: String): File = File(directory, name)
+        /** Namespaces storage and can fail one commit without touching the application's stores. */
         override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
             val isolatedName = "$namespace.$name"
             preferenceNames.add(isolatedName)
