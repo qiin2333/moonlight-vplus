@@ -10,7 +10,6 @@ import com.limelight.R
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.HostHttpResponseException
-import com.limelight.preferences.CustomFrameRatesStore
 import com.limelight.preferences.DisplayChoiceLimits
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.PreferenceConfiguration
@@ -704,8 +703,7 @@ internal class BitrateCardController(
         val frameRates = DisplayChoiceLists.frameRateValues(
             game.resources.getStringArray(R.array.fps_values).toList(),
             limits.maxRefreshRate,
-            listOf(game.prefConfig.fps.toString(), selected),
-            CustomFrameRatesStore.loadDisabled(game)
+            listOf(game.prefConfig.fps.toString(), selected)
         )
         return frameRates.map { value ->
             val emphasized = limits.exceedsRefreshRate(value)

@@ -71,27 +71,27 @@ import com.limelight.utils.appAccentColor
 import com.limelight.utils.appAccentSoftColor
 
 /**
- * 自定义帧率弹窗:列出全部候选帧率,每项一个开关,关闭即从帧率选择中隐藏。
+ * 常用帧率弹窗:列出全部候选帧率,每项一个开关,打开即加入游戏菜单的常用帧率。
  * 窗口外壳与 [CustomResolutionsDialog] 一致,但没有输入框与预设。
  */
 object CustomFrameRatesDialog {
 
     /**
      * @param frameRates 全部候选帧率(整数字符串,升序)
-     * @param initialDisabled 进入时已禁用的帧率
-     * @param onCommit 点击保存时回调最终的禁用集合;取消不会调用
+     * @param initialSelected 进入时已加入常用的帧率
+     * @param onCommit 点击保存时回调最终的常用集合;取消不会调用
      */
     fun show(
         context: Context,
         frameRates: List<String>,
-        initialDisabled: Set<String>,
+        initialSelected: Set<String>,
         onCommit: (Set<String>) -> Unit,
         onClosed: () -> Unit,
         requestInitialFocus: Boolean = false
     ): Dialog {
         val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
         var confirmedByUser = false
-        var current = initialDisabled
+        var current = initialSelected
         val controllerFocusRequest = mutableIntStateOf(0)
         val touchNavigationActive = mutableStateOf(!requestInitialFocus)
         val axisNavigation = MenuAxisNavigationState()
@@ -103,7 +103,7 @@ object CustomFrameRatesDialog {
             setContent {
                 CustomFrameRatesDialogContent(
                     frameRates = frameRates,
-                    initialDisabled = initialDisabled,
+                    initialSelected = initialSelected,
                     controllerFocusRequest = controllerFocusRequest.intValue,
                     onTouchNavigation = { touchNavigationActive.value = true },
                     onChanged = { current = it },
@@ -187,14 +187,14 @@ object CustomFrameRatesDialog {
 @Composable
 private fun CustomFrameRatesDialogContent(
     frameRates: List<String>,
-    initialDisabled: Set<String>,
+    initialSelected: Set<String>,
     controllerFocusRequest: Int,
     onTouchNavigation: () -> Unit,
     onChanged: (Set<String>) -> Unit,
     onCancel: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    var disabled by remember { mutableStateOf(initialDisabled) }
+    var selected by remember { mutableStateOf(initialSelected) }
     var handledControllerFocusRequest by remember { mutableIntStateOf(0) }
     val firstRowFocus = remember { FocusRequester() }
     var firstRowPlaced by remember { mutableStateOf(false) }
@@ -277,15 +277,15 @@ private fun CustomFrameRatesDialogContent(
                     val isFirst = fps == frameRates.first()
                     FrameRateRow(
                         fps = fps,
-                        enabled = fps !in disabled,
+                        checked = fps in selected,
                         modifier = if (isFirst) {
                             Modifier
                                 .focusRequester(firstRowFocus)
                                 .onGloballyPositioned { firstRowPlaced = true }
                         } else Modifier,
                         onToggle = {
-                            disabled = if (fps in disabled) disabled - fps else disabled + fps
-                            onChanged(disabled)
+                            selected = if (fps in selected) selected - fps else selected + fps
+                            onChanged(selected)
                         }
                     )
                 }
@@ -298,7 +298,7 @@ private fun CustomFrameRatesDialogContent(
 @Composable
 private fun FrameRateRow(
     fps: String,
-    enabled: Boolean,
+    checked: Boolean,
     modifier: Modifier,
     onToggle: () -> Unit
 ) {
@@ -335,14 +335,14 @@ private fun FrameRateRow(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = stringResource(R.string.fps_suffix_fps),
+                text = stringResource(R.string.custom_frame_rate_add_favorite),
                 color = colorResource(R.color.app_dialog_text_secondary),
                 fontSize = 11.sp
             )
         }
         // 点击由整行处理,开关本身只显示状态
         Switch(
-            checked = enabled,
+            checked = checked,
             onCheckedChange = null,
             colors = SwitchDefaults.colors(checkedTrackColor = accent)
         )

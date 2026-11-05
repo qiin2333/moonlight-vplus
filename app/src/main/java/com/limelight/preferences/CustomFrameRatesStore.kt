@@ -3,25 +3,25 @@ package com.limelight.preferences
 import android.content.Context
 
 /**
- * 被用户禁用的帧率集合的统一存储入口。
+ * 游戏菜单「常用帧率」的统一存储入口。
  *
- * 只记录「禁用」的值(整数 FPS 字符串),新增的候选帧率默认启用。
- * 设置页与 GameMenu 的候选列表都经由 [DisplayChoiceLists.frameRateValues] 过滤。
+ * 只保存整数 FPS 字符串。空集合表示尚未配置，游戏菜单按原行为展示全部帧率。
+ * 常用项只影响游戏菜单的展示，不改变当前串流帧率，也不影响设置页的完整列表。
  */
 object CustomFrameRatesStore {
     private const val PREFS_FILE = "custom_frame_rates"
-    private const val PREFS_KEY = "disabled_frame_rates"
+    private const val PREFS_KEY = "favorite_frame_rates"
 
     @Synchronized
-    fun loadDisabled(context: Context): Set<String> =
+    fun loadFavorites(context: Context): Set<String> =
         prefs(context).getStringSet(PREFS_KEY, null)
             ?.filter { it.toIntOrNull()?.let { fps -> fps > 0 } == true }
             ?.toSet()
             ?: emptySet()
 
     @Synchronized
-    fun saveDisabled(context: Context, disabled: Set<String>) {
-        prefs(context).edit().putStringSet(PREFS_KEY, HashSet(disabled)).apply()
+    fun saveFavorites(context: Context, favorites: Set<String>) {
+        prefs(context).edit().putStringSet(PREFS_KEY, HashSet(favorites)).apply()
     }
 
     private fun prefs(context: Context) =

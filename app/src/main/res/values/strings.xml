@@ -2408,9 +2408,11 @@ Tap again to replace it.</string>
     <string name="display_native_resolution_description">Follow the target display · %1$s</string>
     <string name="display_choice_unavailable">Unavailable on this device</string>
     <string name="display_custom_resolution_action">Manage resolutions…</string>
-    <string name="display_custom_frame_rate_action">Manage frame rates…</string>
-    <string name="title_custom_frame_rates">Frame rate list</string>
-    <string name="custom_frame_rate_hint">Turn off the frame rates you do not want to see. The frame rate currently in use stays available until you pick another one.</string>
+    <string name="display_custom_frame_rate_action">Edit favorite frame rates…</string>
+    <string name="title_custom_frame_rates">Favorite frame rates</string>
+    <string name="custom_frame_rate_hint">Favorites only change what the in-game menu shows. They never change the current stream frame rate, and Settings always keeps the full list.</string>
+    <string name="custom_frame_rate_add_favorite">Add to favorites</string>
+    <string name="frame_rate_show_all">All frame rates…</string>
     <string name="title_float_ball_settings">Floating ball</string>
     <string name="float_ball_appearance">Display</string>
     <string name="float_ball_gestures">Gestures</string>

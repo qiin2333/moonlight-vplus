@@ -1390,8 +1390,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             val choiceValues = DisplayChoiceLists.frameRateValues(
                 resources.getStringArray(R.array.fps_values).toList(),
                 limits.maxRefreshRate,
-                listOf(saved),
-                CustomFrameRatesStore.loadDisabled(requireContext())
+                listOf(saved)
             )
             pref.replaceChoices(
                 choiceValues.map { value ->
@@ -1409,18 +1408,21 @@ class StreamSettings : ThemedAppCompatActivity() {
         private fun openCustomFrameRatesEditor(pref: DisplayChoicePreference, restoreHardwareFocus: Boolean) {
             val context = requireContext()
             val saved = savedSelection(pref, PreferenceConfiguration.DEFAULT_FPS)
-            val disabled = CustomFrameRatesStore.loadDisabled(context)
-            // 列表含已禁用项，否则无法重新启用
+            val favorites = CustomFrameRatesStore.loadFavorites(context)
             val allFrameRates = DisplayChoiceLists.frameRateValues(
                 resources.getStringArray(R.array.fps_values).toList(),
                 displayLimits().maxRefreshRate,
-                listOf(saved) + disabled
+                listOf(saved) + favorites
             )
             customFrameRatesDialog = CustomFrameRatesDialog.show(
                 context,
                 frameRates = allFrameRates,
-                initialDisabled = disabled,
-                onCommit = { CustomFrameRatesStore.saveDisabled(context, it) },
+                initialSelected = favorites.ifEmpty { allFrameRates.toSet() },
+                onCommit = { selected ->
+                    // 全部加入常用等同于未配置，游戏菜单保持展示全部
+                    val toSave = if (allFrameRates.all { it in selected }) emptySet() else selected
+                    CustomFrameRatesStore.saveFavorites(context, toSave)
+                },
                 requestInitialFocus = restoreHardwareFocus,
                 onClosed = {
                     customFrameRatesDialog = null

@@ -49,24 +49,17 @@ internal object DisplayChoiceLists {
         return resolution.width > 0 && resolution.height > 0
     }
 
-    /**
-     * 使用整数 FPS 表示设备刷新率，59.94Hz 与 60 FPS 合并。
-     * disabledValues 中的帧率会被剔除，但 retainedValues(当前选中的旧值)始终保留。
-     */
+    /** 使用整数 FPS 表示设备刷新率，59.94Hz 与 60 FPS 合并。 */
     fun frameRateValues(
         baseValues: List<String>,
         maxRefreshRate: Float,
-        retainedValues: List<String> = emptyList(),
-        disabledValues: Set<String> = emptySet()
+        retainedValues: List<String> = emptyList()
     ): List<String> {
         val displayRate = maxRefreshRate.takeIf { it.isFinite() && it > 0f }
             ?.roundToInt()?.toString()
-        val retained = retainedValues.mapNotNull { it.toIntOrNull() }.toSet()
-        val disabled = disabledValues.mapNotNull { it.toIntOrNull() }.toSet()
         return (baseValues + retainedValues + listOfNotNull(displayRate))
             .mapNotNull { it.toIntOrNull()?.takeIf { fps -> fps > 0 } }
             .distinct()
-            .filter { it !in disabled || it in retained }
             .sorted()
             .map(Int::toString)
     }
