@@ -1412,15 +1412,15 @@ class StreamSettings : ThemedAppCompatActivity() {
             val allFrameRates = DisplayChoiceLists.frameRateValues(
                 resources.getStringArray(R.array.fps_values).toList(),
                 displayLimits().maxRefreshRate,
-                listOf(saved) + favorites
+                listOf(saved) + favorites.orEmpty()
             )
             customFrameRatesDialog = CustomFrameRatesDialog.show(
                 context,
                 frameRates = allFrameRates,
-                initialSelected = favorites.ifEmpty { allFrameRates.toSet() },
+                initialSelected = favorites ?: allFrameRates.toSet(),
                 onCommit = { selected ->
-                    // 全部加入常用等同于未配置，游戏菜单保持展示全部
-                    val toSave = if (allFrameRates.all { it in selected }) emptySet() else selected
+                    // 全部加入常用等同于未配置(清除);全不选则保存为空集合
+                    val toSave = if (allFrameRates.all { it in selected }) null else selected
                     CustomFrameRatesStore.saveFavorites(context, toSave)
                 },
                 requestInitialFocus = restoreHardwareFocus,
