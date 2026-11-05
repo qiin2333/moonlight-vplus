@@ -494,6 +494,7 @@ class ConfigurationSyncManager(private val context: Context) {
             )
     }
 
+    /** Rechecks enablement under the process lock; returns null when another mutation holds it. */
     internal fun trySynchronizeWithExternalSnapshot(): AutoSyncResult? {
         if (!isExternalSnapshotEnabled(context)) {
             return AutoSyncResult(

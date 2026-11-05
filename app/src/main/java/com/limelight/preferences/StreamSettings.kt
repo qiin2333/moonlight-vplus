@@ -3091,6 +3091,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 else SettingsPreferenceAdapter(preferenceScreen)
         }
 
+        /** Initializes device defaults and binds the preference schema while restoring navigation. */
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             val navigation = savedInstanceState ?: arguments
             activeSettingsScreenKey = navigation?.getString(DETAIL_SCREEN)
