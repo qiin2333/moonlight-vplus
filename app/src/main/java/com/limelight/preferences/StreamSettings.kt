@@ -240,6 +240,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         ).commitAllowingStateLoss()
     }
 
+    /** Reapplies presentation after reset and rebuilds the home screen for legacy locale changes. */
     internal fun onSettingsReset() {
         val languageChanged = UiHelper.resetLocale(this)
         BackgroundSource.invalidateResolvedTarget()
@@ -2061,6 +2062,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 ?: throw IOException("Unable to open output stream")
         }
 
+        /** Binds backup, sync and reset actions, then refreshes their directory and status summaries. */
         private fun setupConfigSyncPreferences() {
             findPreference<Preference>(ResetSettingsDialogFragment.TAG)?.setOnPreferenceClickListener {
                 if (parentFragmentManager.findFragmentByTag(ResetSettingsDialogFragment.TAG) == null) {

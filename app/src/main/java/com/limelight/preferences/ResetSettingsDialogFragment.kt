@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 class ResetSettingsDialogFragment : DialogFragment() {
     private lateinit var model: SettingsResetViewModel
 
+    /** Observes retained state while visible, delivering completion to the current activity instance. */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         model = ViewModelProvider(this)[SettingsResetViewModel::class.java]
@@ -55,6 +56,7 @@ class ResetSettingsDialogFragment : DialogFragment() {
             .setNegativeButton(android.R.string.cancel, null)
             .create()
 
+    /** Binds confirmation and dismissal handlers that honor the retained running state. */
     override fun onStart() {
         super.onStart()
         val alert = requireDialog() as AlertDialog

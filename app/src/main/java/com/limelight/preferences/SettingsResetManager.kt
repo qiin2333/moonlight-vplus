@@ -19,6 +19,10 @@ internal object SettingsResetManager {
     private val resetting = AtomicBoolean(false)
     val isResetting: Boolean get() = resetting.get()
 
+    /**
+     * Restores managed preferences under the sync lock, then reconciles scheduling on the main thread.
+     * A failed write stops the reset and can leave some scopes already changed.
+     */
     suspend fun reset(context: Context) {
         check(resetting.compareAndSet(false, true)) { "A settings reset is already running" }
         val appContext = context.applicationContext
@@ -55,6 +59,7 @@ internal object SettingsResetManager {
         }
     }
 
+    /** Collects persistent leaf keys from the full schema, including settings hidden on this device. */
     internal fun resourcePreferenceKeys(context: Context): Set<String> = buildSet {
         // Read the complete resource, not a screen filtered by search, mode or device capability.
         context.resources.getXml(R.xml.preferences).use { parser ->
@@ -70,6 +75,10 @@ internal object SettingsResetManager {
         }
     }
 
+    /**
+     * Removes managed overrides while retaining credentials and saved libraries, and disables sync.
+     * Commits scopes in order; a failed commit prevents later stores from being cleared.
+     */
     internal fun resetOverrides(
         defaults: SharedPreferences,
         resourceKeys: Set<String>,
@@ -92,10 +101,12 @@ internal object SettingsResetManager {
         }
     }
 
+    /** Requires durable storage before the reset can proceed to its next scope. */
     private fun commit(editor: SharedPreferences.Editor) {
         if (!editor.commit()) throw IOException("Unable to save reset settings")
     }
 
+    /** Protects credentials, sync metadata and saved background state from generic key removal. */
     private fun isPreservedDefaultKey(key: String): Boolean =
         ConfigurationSyncManager.isConfigSyncMetadataPreferenceKey(key) ||
             key.startsWith("pref_developer_features_") || key.startsWith("pref_framegen_star_") ||

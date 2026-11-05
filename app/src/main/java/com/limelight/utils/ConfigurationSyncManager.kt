@@ -1133,6 +1133,10 @@ class ConfigurationSyncManager(private val context: Context) {
         return digest.joinToString(separator = "") { "%02x".format(it) }
     }
 
+    /**
+     * Encodes allowed live and previously tracked keys, recording deletion markers and sync metadata.
+     * Unchanged values keep their timestamps; changed values and new deletions are stamped with [now].
+     */
     private fun encodePreferences(
         sectionName: String,
         prefs: SharedPreferences,

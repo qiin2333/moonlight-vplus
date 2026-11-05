@@ -15,6 +15,7 @@ internal class SettingsResetViewModel(application: Application) : AndroidViewMod
     private val mutableState = MutableStateFlow(State.CONFIRM)
     val state = mutableState.asStateFlow()
 
+    /** Starts one confirmed reset and retains its progress or result across configuration changes. */
     fun reset() {
         if (state.value == State.RUNNING || state.value == State.COMPLETE) return
         mutableState.value = State.RUNNING
