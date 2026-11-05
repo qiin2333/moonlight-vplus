@@ -1,9 +1,11 @@
 package com.limelight.preferences
 
+import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
+import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -20,12 +22,53 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class SettingsResetManagerTest {
+    @Test
+    fun partialFailureRefreshIsConsumedOnceAndTheResetCanBeRetried() = isolated { context ->
+        val defaults = PreferenceManager.getDefaultSharedPreferences(context)
+        defaults.edit().putString("list_resolution", "3840x2160")
+            .putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, "saved-authorization").commit()
+        context.prefs("app_last_settings").edit().putString("host_game", "saved-settings").commit()
+        context.failNextCommitForStore = "app_last_settings"
+        val application = object : Application() {
+            init { attachBaseContext(context) }
+            override fun getApplicationContext(): Context = context
+        }
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val model = SettingsResetViewModel(application)
+        val store = ViewModelStore().apply { put("reset", model) }
+        try {
+            instrumentation.runOnMainSync {
+                assertFalse(model.consumeFailure())
+                model.reset()
+            }
+            runBlocking { withTimeout(5_000L) { model.state.first { it == SettingsResetViewModel.State.FAILED } } }
+            // The default store committed before the later store failed: the host must refresh.
+            assertFalse(defaults.contains("list_resolution"))
+            assertEquals("saved-settings", context.prefs("app_last_settings").getString("host_game", null))
+            instrumentation.runOnMainSync {
+                assertTrue(model.consumeFailure())
+                assertFalse("A restarted observer must not refresh again", model.consumeFailure())
+                assertEquals(SettingsResetViewModel.State.FAILED, model.state.value)
+                model.reset()
+            }
+            runBlocking { withTimeout(5_000L) { model.state.first { it == SettingsResetViewModel.State.COMPLETE } } }
+            instrumentation.runOnMainSync { assertFalse(model.consumeFailure()) }
+            assertEquals("saved-authorization", defaults.getString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, null))
+            assertTrue(context.prefs("app_last_settings").all.isEmpty())
+            assertSyncDisabled(defaults)
+        } finally {
+            instrumentation.runOnMainSync { store.clear() }
+        }
+    }
+
     @Test
     fun resetMatchesFreshDeviceDefaultsAndPreservesUserData() = isolated { context ->
         val defaults = PreferenceManager.getDefaultSharedPreferences(context)
@@ -215,6 +258,7 @@ class SettingsResetManagerTest {
 
     /** Every preference and file uses a private namespace; no real pairing/profile data is touched. */
     private class IsolatedContext(base: Context) : ContextWrapper(base) {
+        var failNextCommitForStore: String? = null
         private val namespace = "settings-reset-test-${UUID.randomUUID()}"
         private val directory = File(base.cacheDir, namespace).apply { mkdirs() }
         private val preferenceNames = mutableSetOf<String>()
@@ -224,7 +268,23 @@ class SettingsResetManagerTest {
         override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
             val isolatedName = "$namespace.$name"
             preferenceNames.add(isolatedName)
-            return baseContext.getSharedPreferences(isolatedName, mode)
+            val preferences = baseContext.getSharedPreferences(isolatedName, mode)
+            if (name != failNextCommitForStore) return preferences
+            return object : SharedPreferences by preferences {
+                override fun edit(): SharedPreferences.Editor {
+                    val editor = preferences.edit()
+                    return object : SharedPreferences.Editor by editor {
+                        override fun clear(): SharedPreferences.Editor {
+                            editor.clear()
+                            return this
+                        }
+                        override fun commit(): Boolean {
+                            failNextCommitForStore = null
+                            return false
+                        }
+                    }
+                }
+            }
         }
         fun prefs(name: String): SharedPreferences = getSharedPreferences(name, Context.MODE_PRIVATE)
         fun close() {

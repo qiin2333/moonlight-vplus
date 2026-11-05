@@ -42,6 +42,10 @@ class ResetSettingsDialogFragment : DialogFragment() {
                         dismiss()
                         Toast.makeText(context, R.string.toast_reset_settings_success, Toast.LENGTH_LONG).show()
                         host?.onSettingsReset()
+                    } else if (state == SettingsResetViewModel.State.FAILED) {
+                        (activity as? StreamSettings)?.let { host ->
+                            if (model.consumeFailure()) host.reloadSettings()
+                        }
                     }
                 }
             }
