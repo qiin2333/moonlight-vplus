@@ -1412,7 +1412,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             val allFrameRates = DisplayChoiceLists.frameRateValues(
                 resources.getStringArray(R.array.fps_values).toList(),
                 displayLimits().maxRefreshRate,
-                listOf(saved) + favorites.orEmpty()
+                listOf(saved)
             )
             customFrameRatesDialog = CustomFrameRatesDialog.show(
                 context,
