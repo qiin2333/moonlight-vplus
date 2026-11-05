@@ -6,6 +6,20 @@
     android:layout_height="match_parent"
     tools:context=".preferences.StreamSettings">
 
+    <!-- Shared by the main settings page and detail pages. -->
+    <ImageView
+        android:id="@+id/settingsBackgroundImage"
+        android:background="@color/settings_page_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"/>
+
+    <View
+        android:id="@+id/settingsBackgroundOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/settings_background_overlay" />
+
     <androidx.drawerlayout.widget.DrawerLayout
         android:id="@+id/drawer_layout"
         android:layout_width="match_parent"
@@ -16,18 +30,6 @@
             android:id="@+id/stream_settings"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-
-            <ImageView
-                android:id="@+id/settingsBackgroundImage"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"/>
-
-            <View
-                android:id="@+id/settingsBackgroundOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@color/settings_background_overlay" />
 
             <!-- 设置内容区域（顶部留出菜单按钮空间） -->
             <FrameLayout

@@ -4,7 +4,7 @@
     android:id="@+id/settings_detail_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/game_menu_dialog_background">
+    android:background="@android:color/transparent">
 
     <LinearLayout
         android:layout_width="0dp"

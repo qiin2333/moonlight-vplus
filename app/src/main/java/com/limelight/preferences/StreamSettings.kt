@@ -396,6 +396,9 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     private fun applySettingsThemeSurfaces() {
+        findViewById<View>(R.id.settingsBackgroundImage)?.setBackgroundColor(
+                ContextCompat.getColor(this, R.color.settings_page_background)
+        )
         findViewById<View>(R.id.settingsBackgroundOverlay)?.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.settings_background_overlay)
         )

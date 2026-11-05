@@ -172,7 +172,7 @@
 
     <!-- StreamSettings Activity 的 AppCompat 主题（AndroidX PreferenceFragmentCompat 需要） -->
     <style name="SettingsThemeCompat" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@color/advance_setting_background</item>
+        <item name="android:windowBackground">@color/settings_page_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- 沉浸式顶栏：内容延伸到状态栏后方，由 Activity 通过 WindowCompat.setDecorFitsSystemWindows(false) 控制；
@@ -219,9 +219,10 @@
         <item name="android:layout">@layout/preference_material_compact</item>
         <item name="singleLineTitle">false</item>
         <item name="iconSpaceReserved">false</item>
-        <item name="widgetLayout">@layout/preference_widget_app_checkbox</item>
+        <item name="widgetLayout">@layout/preference_widget_app_switch</item>
     </style>
     <style name="MySwitchPreferenceCompact" parent="@style/Preference.SwitchPreferenceCompat.Material">
+        <item name="widgetLayout">@layout/preference_widget_app_switch_compat</item>
         <item name="android:layout">@layout/preference_material_compact</item>
         <item name="singleLineTitle">false</item>
         <item name="iconSpaceReserved">false</item>

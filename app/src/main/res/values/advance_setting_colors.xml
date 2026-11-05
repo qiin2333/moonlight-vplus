@@ -62,7 +62,8 @@
     <color name="ui_shell_accent">#FF6B9D</color>
     <color name="ui_shell_accent_soft">#1AFF6B9D</color>
     <color name="ui_shell_accent_focus">#33FF6B9D</color>
-    <color name="settings_background_overlay">#CCFFFFFF</color>
+    <color name="settings_page_background">#FFF6F3F6</color>
+    <color name="settings_background_overlay">#CCFAF7FA</color>
     <color name="pc_toolbar_menu_surface_start">#E8FFFFFF</color>
     <color name="pc_toolbar_menu_surface_center">#DDFCE4EC</color>
     <color name="pc_toolbar_menu_surface_end">#CFF3E5F5</color>

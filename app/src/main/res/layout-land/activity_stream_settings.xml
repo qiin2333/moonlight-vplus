@@ -7,24 +7,25 @@
     android:layout_height="match_parent"
     tools:context=".preferences.StreamSettings">
 
+    <!-- Shared by the main settings page and detail pages. -->
+    <ImageView
+        android:id="@+id/settingsBackgroundImage"
+        android:background="@color/settings_page_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"/>
+
+    <!-- 全屏半透明遮罩 -->
+    <View
+        android:id="@+id/settingsBackgroundOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/settings_background_overlay" />
+
     <FrameLayout
         android:id="@+id/settings_layout_root"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
-        <!-- 全屏背景图片 -->
-        <ImageView
-            android:id="@+id/settingsBackgroundImage"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"/>
-
-        <!-- 全屏半透明遮罩 -->
-        <View
-            android:id="@+id/settingsBackgroundOverlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/settings_background_overlay" />
 
         <!-- 内容层：菜单和设置并排 -->
         <LinearLayout
