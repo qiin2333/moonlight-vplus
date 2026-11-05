@@ -1303,6 +1303,11 @@
             android:summary="@string/summary_config_sync_background_sync"
             android:defaultValue="false"
             android:enabled="false" />
+        <Preference
+            android:key="reset_all_settings"
+            android:persistent="false"
+            android:title="@string/title_reset_settings"
+            android:summary="@string/summary_reset_settings" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_help"
         android:key="category_help"

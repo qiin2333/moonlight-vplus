@@ -12,6 +12,7 @@ import android.os.Build
 import android.view.Display
 import android.view.KeyEvent
 import androidx.preference.PreferenceManager
+import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.input.MouseAxisCorrection
 import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.input.haptics.GameRumbleMode
@@ -648,7 +649,7 @@ class PreferenceConfiguration {
         private const val HOST_AUDIO_PREF_STRING = "checkbox_host_audio"
         private const val DEADZONE_PREF_STRING = "seekbar_deadzone"
         private const val OSC_OPACITY_PREF_STRING = "seekbar_osc_opacity"
-        private const val LANGUAGE_PREF_STRING = "list_languages"
+        internal const val LANGUAGE_PREF_STRING = "list_languages"
         private const val SMALL_ICONS_PREF_STRING = "checkbox_small_icon_mode"
         private const val MULTI_CONTROLLER_PREF_STRING = "checkbox_multi_controller"
         private const val USB_DRIVER_PREF_SRING = "checkbox_usb_driver"
@@ -1289,6 +1290,62 @@ class PreferenceConfiguration {
                 else -> AnalogStickForScrolling.NONE
             }
         }
+
+        /** Shared device defaults for opening the settings screen and restoring its preferences. */
+        internal fun initializeDeviceDefaults(context: Context) {
+            // Run before XML inflation can persist generic defaults over device-specific ones.
+            readPreferences(context)
+            val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+            LegacySettingsModeStore(preferences).ensureTouchDefaults(
+                context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+            )
+            MicrophoneButtonPreferences(context).migrateLegacyVisibilityIfNeeded()
+            if (!preferences.contains(AUTO_ADJUST_BITRATE_PREF_STRING)) {
+                val recommended = getDefaultBitrate(context)
+                preferences.edit().putBoolean(
+                    AUTO_ADJUST_BITRATE_PREF_STRING,
+                    preferences.getInt(BITRATE_PREF_STRING, recommended) == recommended
+                ).apply()
+            }
+        }
+
+        /** Settings owned by this reader that have no persistent row in preferences.xml. */
+        internal val nonXmlResetPreferenceKeys = setOf(
+            GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING,
+            GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING,
+            SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING,
+            LEGACY_RES_FPS_PREF_STRING,
+            LEGACY_ENABLE_51_SURROUND_PREF_STRING,
+            BITRATE_PREF_OLD_STRING,
+            LEGACY_DISABLE_FRAME_DROP_PREF_STRING,
+            LEGACY_VIBRATE_FALLBACK_PREF_STRING,
+            ENABLE_LOCAL_CURSOR_RENDERING_PREF_STRING,
+            ENABLE_JITTER_MONITOR_STRING,
+            PERF_OVERLAY_LOCKED_STRING,
+            GAME_MENU_OPACITY_PREF_STRING,
+            ANALOG_SCROLLING_PREF_STRING,
+            CONTROLLER_MOUSE_SPEED_PREF_STRING,
+            CONTROLLER_MOUSE_DPAD_PREF_STRING,
+            SHOW_BITRATE_CARD_PREF_STRING,
+            SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING,
+            SHOW_AUDIO_HAPTICS_CARD_PREF_STRING,
+            SHOW_GYRO_CARD_PREF_STRING,
+            SHOW_QuickKeyCard,
+            SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+            GYRO_SENSITIVITY_MULTIPLIER_PREF_STRING,
+            GYRO_INVERT_X_AXIS_PREF_STRING,
+            GYRO_INVERT_Y_AXIS_PREF_STRING,
+            GYRO_ACTIVATION_KEY_CODE_PREF_STRING,
+            GYRO_TO_RIGHT_STICK_PREF_STRING,
+            GYRO_TO_MOUSE_PREF_STRING,
+            FLOAT_BALL_SWIPE_UP_ACTION_PREF_STRING,
+            FLOAT_BALL_SWIPE_DOWN_ACTION_PREF_STRING,
+            FLOAT_BALL_SWIPE_LEFT_ACTION_PREF_STRING,
+            FLOAT_BALL_SWIPE_RIGHT_ACTION_PREF_STRING,
+            AUTO_ADJUST_BITRATE_PREF_STRING,
+            UNLOCK_FPS_STRING,
+            SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING
+        )
 
         fun resetStreamingSettings(context: Context) {
             // We consider resolution, FPS, bitrate, HDR, and video format as "streaming settings" here

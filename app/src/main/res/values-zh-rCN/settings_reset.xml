@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_reset_settings">恢复默认设置</string>
+    <string name="summary_reset_settings">重置偏好和记住的串流参数，保留电脑配对、授权和已保存的自定义配置。</string>
+    <string name="message_reset_settings">恢复画面、音频、输入、外观和控件位置的默认设置，并清除各游戏记住的上次串流参数？\n\n将保留电脑配对、授权和已保存的自定义配置，取消自定义配置的当前选择，并关闭后台同步。下次串流使用默认设置。</string>
+    <string name="action_reset_settings">恢复默认</string>
+    <string name="message_reset_settings_running">正在恢复默认设置…如有配置同步正在执行，将等待其完成。</string>
+    <string name="message_reset_settings_failed">未能完成恢复默认设置，部分设置可能已更改，请重试。</string>
+    <string name="toast_reset_settings_success">已恢复默认设置，后台同步已关闭。</string>
+</resources>
