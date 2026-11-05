@@ -215,6 +215,15 @@
         <item name="singleLineTitle">false</item>
         <item name="iconSpaceReserved">false</item>
     </style>
+    <!-- Both Preference classes bind their own widget ID; appearance and row-owned input are shared. -->
+    <style name="SettingsSwitchWidget">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@null</item>
+        <item name="android:clickable">false</item>
+        <item name="android:focusable">false</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
     <style name="MyCheckBoxPreferenceCompact" parent="@style/Preference.CheckBoxPreference.Material">
         <item name="android:layout">@layout/preference_material_compact</item>
         <item name="singleLineTitle">false</item>
