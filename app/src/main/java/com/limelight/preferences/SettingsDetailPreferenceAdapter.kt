@@ -8,7 +8,6 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.preference.CheckBoxPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroup
@@ -25,6 +24,7 @@ import java.util.IdentityHashMap
 internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : SettingsPreferenceAdapter(group, mainCards = false) {
     private data class OriginalLayout(val layout: Int, val widget: Int)
     private val originalLayouts = IdentityHashMap<Preference, OriginalLayout>()
+
     override fun getItemViewType(position: Int): Int {
         getItem(position)?.let { preference ->
             if (isStandardLayout(preference)) {
@@ -34,9 +34,7 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
                 preference.layoutResource = if (preference is PreferenceCategory) {
                     R.layout.preference_detail_category
                 } else R.layout.preference_detail_row
-                if (preference is CheckBoxPreference) {
-                    preference.widgetLayoutResource = R.layout.preference_widget_app_switch
-                } else if (preference.widgetLayoutResource == R.layout.preference_widget_navigation) {
+                if (preference.widgetLayoutResource == R.layout.preference_widget_navigation) {
                     // The row already has one navigation indicator.
                     preference.widgetLayoutResource = 0
                 }
@@ -113,5 +111,4 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
     private fun sharesCard(preference: Preference, neighbor: Preference?): Boolean =
         neighbor != null && neighbor !is PreferenceCategory && isStandardLayout(neighbor) &&
             neighbor.parent === preference.parent
-
 }
