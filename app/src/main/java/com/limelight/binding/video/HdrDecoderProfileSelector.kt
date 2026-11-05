@@ -52,12 +52,11 @@ internal class HdrDecoderProfileSelector(
         "HEVC Main10",
     )
 
-    fun supportsHevcHdr10(decoderInfo: MediaCodecInfo?): Boolean = supportsStaticHdr10(
+    // Preserve static HDR10 compatibility with decoders that only advertise Main10.
+    fun supportsHevcHdr10(decoderInfo: MediaCodecInfo?): Boolean = supportsAnyProfile(
         decoderInfo,
         MIME_HEVC,
-        MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10,
-        HEVC_PROFILE_MAIN10_HDR10,
-        HEVC_PROFILE_MAIN10_HDR10_PLUS,
+        HEVC_MAIN10_PROFILES,
         "HEVC Main10/HDR10/HDR10+",
     )
 
@@ -74,12 +73,10 @@ internal class HdrDecoderProfileSelector(
         "AV1 Main10",
     )
 
-    fun supportsAv1Hdr10(decoderInfo: MediaCodecInfo?): Boolean = supportsStaticHdr10(
+    fun supportsAv1Hdr10(decoderInfo: MediaCodecInfo?): Boolean = supportsAnyProfile(
         decoderInfo,
         MIME_AV1,
-        AV1_PROFILE_MAIN10,
-        AV1_PROFILE_MAIN10_HDR10,
-        AV1_PROFILE_MAIN10_HDR10_PLUS,
+        AV1_MAIN10_PROFILES,
         "AV1 Main10/HDR10/HDR10+",
     )
 
@@ -183,34 +180,6 @@ internal class HdrDecoderProfileSelector(
         return try {
             val supported = decoderInfo.getCapabilitiesForType(mimeType).profileLevels.any {
                 it.profile in acceptedProfiles
-            }
-            if (supported) {
-                LimeLog.info("${decoderInfo.name} supports $description")
-            }
-            supported
-        } catch (e: RuntimeException) {
-            LimeLog.warning("Failed to query ${decoderInfo.name} profiles: ${e.message}")
-            false
-        }
-    }
-
-    private fun supportsStaticHdr10(
-        decoderInfo: MediaCodecInfo?,
-        mimeType: String,
-        main10Profile: Int,
-        hdr10Profile: Int,
-        hdr10PlusProfile: Int,
-        description: String,
-    ): Boolean {
-        if (decoderInfo == null) return false
-        return try {
-            val supported = decoderInfo.getCapabilitiesForType(mimeType).profileLevels.any {
-                HdrDecoderProfilePolicy.isStaticHdr10Compatible(
-                    profile = it.profile,
-                    main10Profile = main10Profile,
-                    hdr10Profile = hdr10Profile,
-                    hdr10PlusProfile = hdr10PlusProfile,
-                )
             }
             if (supported) {
                 LimeLog.info("${decoderInfo.name} supports $description")

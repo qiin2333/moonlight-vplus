@@ -2,16 +2,6 @@ package com.limelight.binding.video
 
 /** Pure policy for ordered HDR decoder profile configuration and compatibility fallback. */
 internal object HdrDecoderProfilePolicy {
-    /** Main10-only decoders are a valid compatibility path for static HDR10. */
-    fun isStaticHdr10Compatible(
-        profile: Int,
-        main10Profile: Int,
-        hdr10Profile: Int,
-        hdr10PlusProfile: Int,
-    ): Boolean = profile == main10Profile ||
-        profile == hdr10Profile ||
-        profile == hdr10PlusProfile
-
     fun buildCandidates(
         isTenBit: Boolean,
         isPqHdr: Boolean,

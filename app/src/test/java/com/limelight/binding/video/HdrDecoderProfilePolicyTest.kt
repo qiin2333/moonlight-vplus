@@ -5,26 +5,6 @@ import org.junit.Test
 
 class HdrDecoderProfilePolicyTest {
     @Test
-    fun staticHdr10AcceptsMain10AndKnownHdrProfiles() {
-        assertEquals(
-            true,
-            HdrDecoderProfilePolicy.isStaticHdr10Compatible(1, 1, 4096, 8192),
-        )
-        assertEquals(
-            true,
-            HdrDecoderProfilePolicy.isStaticHdr10Compatible(4096, 1, 4096, 8192),
-        )
-        assertEquals(
-            true,
-            HdrDecoderProfilePolicy.isStaticHdr10Compatible(8192, 1, 4096, 8192),
-        )
-        assertEquals(
-            false,
-            HdrDecoderProfilePolicy.isStaticHdr10Compatible(2, 1, 4096, 8192),
-        )
-    }
-
-    @Test
     fun hdr10PlusFallsBackToHdr10ThenAutomatic() {
         assertEquals(
             listOf<Int?>(8192, 4096, null),
