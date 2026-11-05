@@ -1140,7 +1140,7 @@ class GameMenu(
         }
         // 常用帧率只影响展示：当前值始终保留，未配置时展示全部
         val favorites = CustomFrameRatesStore.loadFavorites(game)
-        val shown = if (favorites == null) state.frameRates
+        val shown = if (favorites.isNullOrEmpty()) state.frameRates
         else state.frameRates.filter { it.value in favorites || it.selected }
         val title = getString(R.string.title_fps_list)
         if (shown.size < state.frameRates.size) {

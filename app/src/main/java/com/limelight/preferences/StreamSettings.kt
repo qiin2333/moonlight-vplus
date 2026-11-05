@@ -1417,10 +1417,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             customFrameRatesDialog = CustomFrameRatesDialog.show(
                 context,
                 frameRates = allFrameRates,
-                initialSelected = favorites ?: allFrameRates.toSet(),
+                initialSelected = favorites?.takeIf { it.isNotEmpty() } ?: allFrameRates.toSet(),
                 onCommit = { selected ->
-                    // 全部加入常用等同于未配置(清除);全不选则保存为空集合
-                    val toSave = if (allFrameRates.all { it in selected }) null else selected
+                    // 全选或全不选都等同于未配置(清除),游戏菜单展示全部
+                    val toSave = if (selected.isEmpty() || allFrameRates.all { it in selected }) null else selected
                     CustomFrameRatesStore.saveFavorites(context, toSave)
                 },
                 requestInitialFocus = restoreHardwareFocus,
