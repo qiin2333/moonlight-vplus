@@ -47,6 +47,7 @@ import java.util.Arrays
 import java.util.Base64 as JavaBase64
 import java.util.TreeSet
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -55,7 +56,6 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
 
 class ConfigurationSyncManager(private val context: Context) {
 
@@ -528,16 +528,21 @@ class ConfigurationSyncManager(private val context: Context) {
         }
     }
 
-    /** Called on IO; let an active import finish before changing the preferences it writes. */
-    internal suspend fun withExclusiveSettingsMutation(action: () -> Unit) {
-        withTimeoutOrNull(30_000L) {
-            var lock = acquireProcessSyncLock()
-            while (lock == null) {
-                delay(25L)
-                lock = acquireProcessSyncLock()
+    /** Called on IO; [lockTimeoutMillis] bounds lock acquisition, while the action runs to completion. */
+    internal suspend fun withExclusiveSettingsMutation(
+        lockTimeoutMillis: Long = 30_000L,
+        action: () -> Unit
+    ) {
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(lockTimeoutMillis)
+        var lock = acquireProcessSyncLock()
+        while (lock == null) {
+            if (System.nanoTime() - deadline >= 0L) {
+                throw IOException("Configuration sync is still busy; retry restoring defaults")
             }
-            lock.use { action() }
-        } ?: throw IOException("Configuration sync is still busy; retry restoring defaults")
+            delay(25L)
+            lock = acquireProcessSyncLock()
+        }
+        lock.use { action() }
     }
 
     /** Stamp only stores affected by reset. Do not export/import pairing or saved libraries. */

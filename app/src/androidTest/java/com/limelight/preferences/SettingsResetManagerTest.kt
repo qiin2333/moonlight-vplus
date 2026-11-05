@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
 import java.io.File
+import java.io.IOException
 import java.lang.reflect.Modifier
 import java.security.MessageDigest
 import java.util.UUID
@@ -34,6 +35,7 @@ class SettingsResetManagerTest {
             .putBoolean("checkbox_51_surround", true).putBoolean("checkbox_disable_frame_drop", true)
             .putBoolean("checkbox_vibrate_fallback", true).putBoolean("checkbox_enable_hdr", true)
             .putBoolean("checkbox_enable_mic", true).putFloat("gyro_sensitivity_multiplier", 3f)
+            .putBoolean("checkbox_show_QuickKeyCard", true)
             .putBoolean("checkbox_enable_native_mouse_pointer", true)
             .putBoolean("gamepad_motion_sensors_android12_opt_in_migrated", true)
             .putBoolean("gamepad_motion_sensors_android12_opt_in_confirmed", true)
@@ -95,6 +97,7 @@ class SettingsResetManagerTest {
             clearedStores.forEach { assertTrue("Store was not reset: $it", context.prefs(it).all.isEmpty()) }
             assertFalse(defaults.contains("current_config_id"))
             assertFalse(defaults.contains("list_resolution_fps"))
+            assertFalse(defaults.contains("checkbox_show_QuickKeyCard"))
             assertEquals(BackgroundSource.Auto, BackgroundSource.current(context))
             assertSyncDisabled(defaults)
             listOf(TouchPointerPresetPreferences.FILE_NAME, TouchpadInputPreferences.PRESETS_FILE_NAME).forEach {
@@ -128,6 +131,12 @@ class SettingsResetManagerTest {
             held.await()
             val reset = async { SettingsResetManager.reset(context) }
             try {
+                val busy = runCatching {
+                    ConfigurationSyncManager(context).withExclusiveSettingsMutation(lockTimeoutMillis = 0L) {
+                        fail("A busy lock must not run the action")
+                    }
+                }
+                assertTrue("Only lock acquisition should time out", busy.exceptionOrNull() is IOException)
                 delay(150L)
                 assertFalse("Reset must wait for the sync lock", reset.isCompleted)
             } finally {
@@ -138,6 +147,18 @@ class SettingsResetManagerTest {
         }
         assertEquals(1920, PreferenceConfiguration.readPreferences(context).width)
         assertSyncDisabled(defaults)
+    }
+
+    @Test
+    fun acquiringTheLockBeforeTheDeadlineDoesNotTimeOutTheAction() = isolated { context ->
+        runBlocking(Dispatchers.IO) {
+            var applied = false
+            ConfigurationSyncManager(context).withExclusiveSettingsMutation(lockTimeoutMillis = 10L) {
+                Thread.sleep(40L)
+                applied = true
+            }
+            assertTrue(applied)
+        }
     }
 
     @Test

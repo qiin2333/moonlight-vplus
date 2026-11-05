@@ -52,7 +52,12 @@ class SettingsResetCoverageTest {
         val source = File(main, "java/com/limelight/preferences/PreferenceConfiguration.kt").readText()
         val readerKeys = Regex("(?:const )?val\\s+(\\w+)\\s*=\\s*\"([^\"]*)\"")
             .findAll(source)
-            .filter { "PREF" in it.groupValues[1] || it.groupValues[1].endsWith("_STRING") }
+            .filter {
+                val name = it.groupValues[1]
+                val key = it.groupValues[2]
+                "PREF" in name || name.endsWith("_STRING") ||
+                    key.startsWith("checkbox_") || key.startsWith("list_") || key.startsWith("seekbar_")
+            }
             .map { it.groupValues[2] }.toSet()
         val missing = readerKeys - covered
         assertTrue("Register non-XML settings and legacy aliases for reset: $missing", missing.isEmpty())
