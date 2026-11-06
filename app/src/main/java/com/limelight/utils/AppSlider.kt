@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.limelight.R
 
-/** Common slider artwork; callers keep ranges, steps, persistence and input modifiers. */
+/** Shared artwork and key input; null keyStep leaves keys to a focusable parent. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSlider(
@@ -33,14 +33,13 @@ fun AppSlider(
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     steps: Int = 0,
-    onValueChangeFinished: (() -> Unit)? = null
+    onValueChangeFinished: (() -> Unit)? = null,
+    keyStep: Float? = (valueRange.endInclusive - valueRange.start) / (if (steps > 0) steps + 1 else 100)
 ) {
     val accent = appAccentColor()
     val inactive = colorResource(R.color.ui_shell_outline)
     val border = colorResource(R.color.ui_control_thumb_outline)
     val opacity = if (enabled) 1f else 0.38f
-    val keyStep = (valueRange.endInclusive - valueRange.start) / (if (steps > 0) steps + 1 else 100)
-    val keyDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
     val colors = SliderDefaults.colors(
         activeTrackColor = accent, inactiveTrackColor = inactive,
         disabledActiveTrackColor = accent.copy(alpha = 0.38f),
@@ -48,8 +47,8 @@ fun AppSlider(
     )
     Slider(
         value = value, onValueChange = onValueChange,
-        modifier = modifier.handleSliderDpad(value, enabled, keyStep * keyDirection,
-            valueRange, onValueChange, onValueChangeFinished),
+        modifier = if (keyStep == null) modifier else modifier.handleSliderDpad(
+            value, enabled, keyStep, valueRange, onValueChange, onValueChangeFinished),
         enabled = enabled, valueRange = valueRange, steps = steps,
         onValueChangeFinished = onValueChangeFinished, colors = colors,
         thumb = {
@@ -70,7 +69,7 @@ fun AppSlider(
     )
 }
 
-/** Keeps caller-specific steps first and commits held-key edits once on release or focus loss. */
+/** Commits held-key edits once on release or focus loss, using the owner's step. */
 @Composable
 internal fun Modifier.handleSliderDpad(
     value: Float,
@@ -81,6 +80,7 @@ internal fun Modifier.handleSliderDpad(
     onValueChangeFinished: (() -> Unit)?
 ): Modifier {
     val heldKeys = remember { mutableSetOf<Key>() }
+    val keyDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
     return onFocusChanged {
         if (!it.hasFocus && heldKeys.isNotEmpty()) {
             heldKeys.clear()
@@ -96,7 +96,7 @@ internal fun Modifier.handleSliderDpad(
         when (event.type) {
             KeyEventType.KeyDown -> {
                 heldKeys.add(event.key)
-                val adjusted = (value + direction * step).coerceIn(valueRange.start, valueRange.endInclusive)
+                val adjusted = (value + direction * keyDirection * step).coerceIn(valueRange.start, valueRange.endInclusive)
                 if (adjusted != value) onValueChange(adjusted)
                 true
             }

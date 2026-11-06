@@ -358,6 +358,7 @@ private fun SensitivityParameterControl(
     ) {
         AppSlider(
             value = parameter.percent.toFloat(),
+            keyStep = null,
             onValueChange = { value ->
                 if (parameter.onChange(value)) {
                     hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -736,6 +737,7 @@ internal fun DisplayStatusCard(
                     )
                     AppSlider(
                         value = sliderIndex,
+                        keyStep = 1f,
                         onValueChange = previewScale,
                         onValueChangeFinished = applyScale,
                         valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
@@ -751,14 +753,6 @@ internal fun DisplayStatusCard(
                                 contentDescription = scaleDescription
                                 stateDescription = scaleSummary
                             }
-                            .handleSliderDpad(
-                                value = sliderIndex,
-                                enabled = scale.available && supported.size > 1 && !scale.loading,
-                                step = 1f,
-                                valueRange = 0f..((supported.size - 1).coerceAtLeast(0).toFloat()),
-                                onValueChange = previewScale,
-                                onValueChangeFinished = applyScale
-                            )
                             .lockParentScrollDuringGesture(onSliderGesture)
                     )
                     Column(
@@ -977,6 +971,7 @@ private fun BitrateSlider(
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     AppSlider(
         value = state.progress,
+        keyStep = 1f,
         onValueChange = { value ->
             if (callbacks.onBitrateProgress(value)) {
                 hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -988,17 +983,6 @@ private fun BitrateSlider(
             .fillMaxWidth()
             .height(GameMenuSliderSpec.height)
             .gamepadFocusOutline(GameMenuControlShape)
-            .handleSliderDpad(
-                value = state.progress,
-                step = 1f,
-                valueRange = 0f..state.maxProgress.toFloat(),
-                onValueChange = { value ->
-                    if (callbacks.onBitrateProgress(value)) {
-                        hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    }
-                },
-                onValueChangeFinished = callbacks.onBitrateApply
-            )
             .lockParentScrollDuringGesture(onSliderGesture)
     )
 }
@@ -1181,6 +1165,7 @@ private fun AudioHapticsCard(
             }
             AppSlider(
                 value = state.strength.toFloat(),
+                keyStep = AudioHapticsCardController.HAPTIC_STEP.toFloat(),
                 onValueChange = { value ->
                     if (callbacks.onAudioHapticsStrength(value)) {
                         hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -1193,17 +1178,6 @@ private fun AudioHapticsCard(
                     .fillMaxWidth()
                     .height(GameMenuSliderSpec.height)
                     .gamepadFocusOutline(GameMenuControlShape)
-                    .handleSliderDpad(
-                        value = state.strength.toFloat(),
-                        step = AudioHapticsCardController.HAPTIC_STEP.toFloat(),
-                        valueRange = 0f..AudioVibrationService.MAX_STRENGTH.toFloat(),
-                        onValueChange = { value ->
-                            if (callbacks.onAudioHapticsStrength(value)) {
-                                hapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                            }
-                        },
-                        onValueChangeFinished = callbacks.onAudioHapticsStrengthFinished
-                    )
                     .lockParentScrollDuringGesture(onSliderGesture)
             )
             AudioHapticsChoiceRow(
@@ -1383,6 +1357,7 @@ private fun GyroCard(
             }
             AppSlider(
                 value = state.sensitivity,
+                keyStep = 0.1f,
                 onValueChange = callbacks.onGyroSensitivity,
                 onValueChangeFinished = callbacks.onGyroSensitivityFinished,
                 valueRange = 0.5f..10.0f,
@@ -1390,13 +1365,6 @@ private fun GyroCard(
                     .focusProperties { canFocus = true }
                     .fillMaxWidth()
                     .gamepadFocusOutline(GameMenuControlShape)
-                    .handleSliderDpad(
-                        value = state.sensitivity,
-                        step = 0.1f,
-                        valueRange = 0.5f..10.0f,
-                        onValueChange = callbacks.onGyroSensitivity,
-                        onValueChangeFinished = callbacks.onGyroSensitivityFinished
-                    )
                     .lockParentScrollDuringGesture(onSliderGesture)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.outer)) {

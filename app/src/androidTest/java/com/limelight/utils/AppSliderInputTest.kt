@@ -64,9 +64,9 @@ class AppSliderInputTest {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 Column(Modifier.width(240.dp)) {
                     AppSlider(value, { value = it }, Modifier.testTag("first"), valueRange = 0f..10f,
-                        steps = 4, onValueChangeFinished = { firstFinishes++ })
+                        keyStep = 2f, onValueChangeFinished = { firstFinishes++ })
                     AppSlider(6f, {}, Modifier.testTag("second"), valueRange = 0f..10f,
-                        steps = 4, onValueChangeFinished = { secondFinishes++ })
+                        keyStep = 2f, onValueChangeFinished = { secondFinishes++ })
                 }
             }
         }

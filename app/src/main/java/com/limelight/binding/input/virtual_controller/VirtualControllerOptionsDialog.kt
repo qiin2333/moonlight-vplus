@@ -363,6 +363,7 @@ internal class VirtualControllerOptionsDialog(
                 AppSlider(
                     modifier = Modifier.fillMaxWidth().focusProperties { canFocus = false },
                     value = value,
+                    keyStep = null,
                     onValueChange = onValueChange,
                     valueRange = valueRange,
                     steps = ((valueRange.endInclusive - valueRange.start) / step).toInt() - 1
