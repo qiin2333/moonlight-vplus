@@ -858,6 +858,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             PlatformBinding.getCryptoProvider(this), serverCert, currentTargetDisplay, displayName, forceResumeCurrentSession
         )
         val connection = conn!!
+        if (::streamConnectionListener.isInitialized) {
+            MoonBridge.detachConnectionListener(streamConnectionListener)
+        }
         // Bind lifecycle callbacks to their originating connection before they reach
         // the UI queue. A previous startup or network probe can outlive a reconnect.
         streamConnectionListener = object : NvConnectionListener by this {
@@ -2666,7 +2669,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return
         }
 
-        if (streamSession.prepareForReconnect()) {
+        if (streamSession.shouldResumeSession) {
             LimeLog.info("从后台恢复，正在快速重连...")
             Dialog.closeDialogs()
             displayedFailureDialog = false
@@ -2682,10 +2685,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 return
             }
 
-            orientationManager.connected = false
-
-            streamView.requestLayout()
-            streamView.invalidate()
+            // Keep Surface callbacks blocked until the new connection and renderer exist.
+            if (streamSession.prepareForReconnect()) {
+                orientationManager.connected = false
+                streamView.requestLayout()
+                streamView.invalidate()
+            }
         }
         finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
     }

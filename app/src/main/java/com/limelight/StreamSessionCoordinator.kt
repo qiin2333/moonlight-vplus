@@ -89,7 +89,7 @@ internal class StreamSessionCoordinator {
         return StreamStopDecision(keepAliveService)
     }
 
-    /** Consumes a pending resume before a replacement connection is prepared. */
+    /** Allows startup after the replacement connection and renderer are prepared. */
     fun prepareForReconnect(): Boolean {
         if (!shouldResumeSession) return false
         state = StreamSessionState.IDLE
