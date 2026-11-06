@@ -107,10 +107,9 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/layout_page_analog_stick_text_53e58"/>
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/page_analog_stick_move_mode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:checked="true"/>
                 </LinearLayout>
             </LinearLayout>

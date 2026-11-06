@@ -3,7 +3,7 @@
     <!-- 背景轨道 -->
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
-            <solid android:color="#E8E0E0" />
+            <solid android:color="@color/ui_shell_outline" />
             <corners android:radius="@dimen/corner_radius_extra_small" />
             <size android:height="6dp" />
         </shape>

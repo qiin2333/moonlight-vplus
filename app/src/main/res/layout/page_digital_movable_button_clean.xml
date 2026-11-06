@@ -118,10 +118,9 @@
                         android:text="@string/layout_page_digital_movable_button_text_3d9c9"
                         android:textSize="13sp"
                         android:textColor="#CCFFFFFF"/>
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/page_digital_movable_button_enable_touch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:checked="true"/>
                 </LinearLayout>
                 
@@ -139,10 +138,9 @@
                         android:text="@string/layout_page_config_text_f4b7c"
                         android:textSize="13sp"
                         android:textColor="#CCFFFFFF"/>
-                    <Switch
-                        android:id="@+id/page_digital_movable_button_trackpad_mode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
+                        android:id="@+id/page_digital_movable_button_trackpad_mode"/>
                 </LinearLayout>
             </LinearLayout>
             

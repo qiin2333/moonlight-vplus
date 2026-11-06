@@ -95,13 +95,10 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/mouse_enable_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:checked="true" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -120,13 +117,10 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/trackpad_enable_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:checked="true" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -146,25 +140,20 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/enhanced_touch_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="false"
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:checked="false" />
                 </LinearLayout>
 
-                <Switch
+                <com.limelight.utils.AppSwitchView
+                    style="@style/AppSwitchWidget"
                     android:id="@+id/apply_touchpad_sensitivity_switch"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:minHeight="48dp"
                     android:text="@string/game_menu_touchpad_sensitivity"
                     android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp"
-                    android:thumbTint="@color/crown_switch_thumb"
-                    android:trackTint="@color/crown_switch_track" />
+                    android:textSize="13sp" />
 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/mouse_sense_number_seekbar"
@@ -176,16 +165,14 @@
                     app:progress="100"
                     app:text="@string/apptext_pg_config_835d4" />
 
-                <Switch
+                <com.limelight.utils.AppSwitchView
+                    style="@style/AppSwitchWidget"
                     android:id="@+id/apply_mouse_wheel_speed_switch"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:minHeight="48dp"
                     android:text="@string/apptext_pg_config_3f729"
                     android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp"
-                    android:thumbTint="@color/crown_switch_thumb"
-                    android:trackTint="@color/crown_switch_track" />
+                    android:textSize="13sp" />
 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/mouse_wheel_speed_number_seekbar"
@@ -232,13 +219,10 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/game_vibrator_enable_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:checked="true" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -257,13 +241,10 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/button_vibrator_enable_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:checked="true" />
                 </LinearLayout>
             </LinearLayout>
 

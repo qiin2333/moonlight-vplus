@@ -13,9 +13,10 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.widget.SwitchCompat;
+import com.limelight.utils.AppSwitchStyle;
 
 import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
@@ -289,7 +290,8 @@ public class PageConfigController {
 
     private void loadMouseEnable(){
         //mouse enable
-        Switch mouseEnableSwitch = pageConfig.findViewById(R.id.mouse_enable_switch);
+        SwitchCompat mouseEnableSwitch = pageConfig.findViewById(R.id.mouse_enable_switch);
+        AppSwitchStyle.apply(mouseEnableSwitch);
         boolean mouseEnable = isTouchEnabled();
         //设置switch
         mouseEnableSwitch.setOnCheckedChangeListener(null);
@@ -312,7 +314,8 @@ public class PageConfigController {
 
     private void loadMouseMode(){
         //mouse mode
-        Switch mouseModeSwitch = pageConfig.findViewById(R.id.trackpad_enable_switch);
+        SwitchCompat mouseModeSwitch = pageConfig.findViewById(R.id.trackpad_enable_switch);
+        AppSwitchStyle.apply(mouseModeSwitch);
         boolean mouseMode = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_TOUCH_MODE, String.valueOf(true)));
         if (mouseMode) {
             enhancedTouchLayout.setVisibility(View.GONE); // 如果是触控板模式，隐藏
@@ -391,7 +394,7 @@ public class PageConfigController {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 trackingTouch = false;
-                saveAndApply(seekBar.getProgress());
+                saveAndApply(slider.getValue());
             }
         });
     }
@@ -403,7 +406,8 @@ public class PageConfigController {
     }
 
     private void bindApplySwitch(int viewId, String column, NumberSeekbar seekbar) {
-        Switch toggle = pageConfig.findViewById(viewId);
+        SwitchCompat toggle = pageConfig.findViewById(viewId);
+        AppSwitchStyle.apply(toggle);
         toggle.setOnCheckedChangeListener(null);
         toggle.setChecked(shouldApply(column));
         seekbar.setControlsEnabled(toggle.isChecked());
@@ -418,7 +422,8 @@ public class PageConfigController {
 
     private void loadGameVibrator(){
         //mouse mode
-        Switch gameVibratorSwitch = pageConfig.findViewById(R.id.game_vibrator_enable_switch);
+        SwitchCompat gameVibratorSwitch = pageConfig.findViewById(R.id.game_vibrator_enable_switch);
+        AppSwitchStyle.apply(gameVibratorSwitch);
         boolean gameVibrator = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_GAME_VIBRATOR, String.valueOf(false)));
         gameVibratorSwitch.setOnCheckedChangeListener(null);
         gameVibratorSwitch.setChecked(gameVibrator);
@@ -438,7 +443,8 @@ public class PageConfigController {
 
     private void loadButtonVibrator(){
         //mouse mode
-        Switch buttonVibratorSwitch = pageConfig.findViewById(R.id.button_vibrator_enable_switch);
+        SwitchCompat buttonVibratorSwitch = pageConfig.findViewById(R.id.button_vibrator_enable_switch);
+        AppSwitchStyle.apply(buttonVibratorSwitch);
         boolean buttonVibrator = Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(currentConfigId, COLUMN_BOOLEAN_BUTTON_VIBRATOR, String.valueOf(false)));
         buttonVibratorSwitch.setOnCheckedChangeListener(null);
         buttonVibratorSwitch.setChecked(buttonVibrator);
@@ -457,7 +463,8 @@ public class PageConfigController {
     }
 
     private void loadEnhancedTouch() {
-        Switch enhancedTouchSwitch = pageConfig.findViewById(R.id.enhanced_touch_switch);
+        SwitchCompat enhancedTouchSwitch = pageConfig.findViewById(R.id.enhanced_touch_switch);
+        AppSwitchStyle.apply(enhancedTouchSwitch);
 
         // 从数据库读取值，提供一个默认值 'false'
         String dbValue = (String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(

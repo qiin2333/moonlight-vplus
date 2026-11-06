@@ -45,6 +45,7 @@ internal class SettingsDetailPresentation(private val activity: Activity) {
 
     val isShowing: Boolean get() = shell != null
 
+    /** Moves the live list into a detail shell while leaving the shared background in place. */
     @Suppress("DEPRECATION")
     fun show(title: CharSequence, onBack: () -> Unit) {
         this.onBack = onBack
@@ -57,8 +58,10 @@ internal class SettingsDetailPresentation(private val activity: Activity) {
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
         val container = activity.findViewById<ViewGroup>(R.id.preference_container)
         val parent = container.parent as ViewGroup
-        var root: View = container
-        while (root.parent !== content && root.parent is View) root = root.parent as View
+        // Hide only the main page's controls. Its background remains underneath
+        // both pages, preserving the image crop and live background updates.
+        val root = activity.findViewById<View>(R.id.drawer_layout)
+            ?: activity.findViewById<View>(R.id.settings_layout_root)
 
         preferenceContainer = container
         originalParent = parent
@@ -128,10 +131,10 @@ internal class SettingsDetailPresentation(private val activity: Activity) {
         onBack = null
     }
 
+    /** Recolors the visible shell and rows and refreshes system bars without rebuilding the list. */
     fun refreshTheme() {
         val detail = shell ?: return
         val palette = AppTheme.paletteContext(activity)
-        detail.setBackgroundColor(ContextCompat.getColor(palette, R.color.game_menu_dialog_background))
         detail.findViewById<TextView>(R.id.settings_detail_title)
             .setTextColor(ContextCompat.getColor(palette, R.color.ui_shell_text_primary))
         detail.findViewById<ImageView>(R.id.settings_detail_back).apply {

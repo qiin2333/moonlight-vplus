@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.foundation.layout.width
+import com.limelight.utils.AppSlider
+import com.limelight.utils.AppSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -25,6 +28,8 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -59,11 +64,12 @@ class GameMenuComposeFocusTest {
     @Test
     fun cardIsSkippedAndChildControlsRemainReachable() {
         val cardFocused = AtomicBoolean(false)
+        var sliderValue by mutableFloatStateOf(0.5f)
+        var checked by mutableStateOf(false)
 
         composeTestRule.setContent {
-            val sliderValue = remember { mutableFloatStateOf(0.5f) }
-
-            Column(Modifier.fillMaxSize()) {
+            // Keep focus geometry stable in portrait and landscape windows.
+            Column(Modifier.width(360.dp).fillMaxHeight()) {
                 Box(
                     modifier = Modifier
                         .testTag("focusBeforeCard")
@@ -75,17 +81,17 @@ class GameMenuComposeFocusTest {
                     onLongClick = {},
                     modifier = Modifier.onFocusChanged { cardFocused.set(it.isFocused) }
                 ) {
-                    Slider(
-                        value = sliderValue.floatValue,
-                        onValueChange = { sliderValue.floatValue = it },
+                    AppSlider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
                         modifier = Modifier
                             .focusProperties { canFocus = true }
                             .testTag("bitrateSlider")
                             .fillMaxWidth()
                     )
-                    Switch(
-                        checked = false,
-                        onCheckedChange = {},
+                    AppSwitch(
+                        checked = checked,
+                        onCheckedChange = { checked = it },
                         modifier = Modifier
                             .focusProperties { canFocus = true }
                             .testTag("gyroSwitch")
@@ -109,11 +115,17 @@ class GameMenuComposeFocusTest {
         }
         composeTestRule.onNodeWithTag("bitrateSlider").assertIsFocused()
         assertFalse("The card container must not consume controller focus", cardFocused.get())
+        composeTestRule.onNodeWithTag("bitrateSlider").performKeyInput { pressKey(Key.DirectionRight) }
+        composeTestRule.runOnIdle { assertTrue("Right adjusts the shared slider", sliderValue > 0.5f) }
 
         composeTestRule.onNodeWithTag("bitrateSlider").performKeyInput {
             pressKey(Key.DirectionDown)
         }
         composeTestRule.onNodeWithTag("gyroSwitch").assertIsFocused()
+        composeTestRule.onNodeWithTag("gyroSwitch").performKeyInput { pressKey(Key.DirectionCenter) }
+        composeTestRule.onNodeWithTag("gyroSwitch").assertIsOn()
+        composeTestRule.onNodeWithTag("gyroSwitch").performKeyInput { pressKey(Key.DirectionCenter) }
+        composeTestRule.onNodeWithTag("gyroSwitch").assertIsOff()
 
         composeTestRule.onNodeWithTag("gyroSwitch").performKeyInput {
             pressKey(Key.DirectionDown)

@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Slider
+import com.limelight.utils.AppSlider
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -125,7 +125,7 @@ class GameMenuComposeTouchTest {
                     .height(180.dp)
                     .verticalScroll(scrollState, enabled = !sliderGestureActive)
             ) {
-                Slider(
+                AppSlider(
                     value = sliderValue,
                     onValueChange = { sliderValue = it },
                     modifier = Modifier

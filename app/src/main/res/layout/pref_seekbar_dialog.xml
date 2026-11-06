@@ -104,13 +104,10 @@
     </LinearLayout>
 
     <!-- SeekBar -->
-    <SeekBar
+    <com.limelight.utils.AppSliderView
         android:id="@+id/pref_seekbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:progressDrawable="@drawable/pref_seekbar_track"
-        android:thumb="@drawable/pref_seekbar_thumb"
-        android:splitTrack="false"
         android:paddingTop="4dp"
         android:paddingBottom="4dp"
         android:focusable="true"

@@ -1,9 +1,13 @@
 package com.limelight.preferences
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.view.KeyEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.TextView
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroup
@@ -111,6 +115,33 @@ class SettingsDetailNavigationTest {
             assertEquals("Missing or duplicated settings in ${screen.key}", leaves, actualLeaves)
             settings.press(KeyEvent.KEYCODE_BUTTON_B)
             settings.awaitScreen(null)
+        }
+    }
+
+    @Test
+    fun settingsSwitchesExposeCheckedStateToAccessibility() {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val service = requireNotNull(automation.serviceInfo)
+        val originalFlags = service.flags
+        service.flags = originalFlags and AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS.inv()
+        automation.serviceInfo = service
+        try {
+            settings.focusPreference(AUDIO_EFFECTS_KEY)
+            assertTrue(assertAccessibleSwitch(checked = true).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            compose.waitUntil(5_000) { !preferences.getBoolean(AUDIO_EFFECTS_KEY, true) }
+            assertAccessibleSwitch(checked = false)
+
+            settings.openScreen(AUDIO_SCREEN_KEY)
+            settings.focusPreference(AUDIO_PASSTHROUGH_KEY)
+            assertAccessibleSwitch(checked = false)
+            settings.press(KeyEvent.KEYCODE_BUTTON_A)
+            compose.waitUntil(5_000) { preferences.getBoolean(AUDIO_PASSTHROUGH_KEY, false) }
+            assertTrue(assertAccessibleSwitch(checked = true).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            compose.waitUntil(5_000) { !preferences.getBoolean(AUDIO_PASSTHROUGH_KEY, false) }
+            assertAccessibleSwitch(checked = false)
+        } finally {
+            service.flags = originalFlags
+            automation.serviceInfo = service
         }
     }
 
@@ -257,6 +288,39 @@ class SettingsDetailNavigationTest {
         settings.awaitScreen(null)
         settings.assertFocusedPreference(GAMEPAD_SCREEN_KEY)
         assertEquals("", settings.query())
+    }
+
+    /** Reads the service-visible tree, excluding nodes hidden by importantForAccessibility. */
+    private fun assertAccessibleSwitch(checked: Boolean): AccessibilityNodeInfo {
+        val rowBounds = Rect()
+        var title = ""
+        settings.withActivity { activity ->
+            val row = requireNotNull(activity.currentFocus)
+            title = row.findViewById<TextView>(android.R.id.title).text.toString()
+            assertTrue("Focused settings row must be visible",
+                row.getGlobalVisibleRect(rowBounds))
+            val rootLocation = IntArray(2)
+            row.rootView.getLocationOnScreen(rootLocation)
+            rowBounds.offset(rootLocation[0], rootLocation[1])
+        }
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        var switch: AccessibilityNodeInfo? = null
+        compose.waitUntil(5_000) {
+            val pending = java.util.ArrayDeque<AccessibilityNodeInfo>()
+            automation.rootInActiveWindow?.let(pending::add)
+            switch = generateSequence { pending.pollFirst() }.firstOrNull { node ->
+                for (index in 0 until node.childCount) node.getChild(index)?.let(pending::add)
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+                rowBounds.contains(bounds.centerX(), bounds.centerY()) && node.isCheckable &&
+                    node.isChecked == checked && node.isEnabled && node.isClickable
+            }
+            switch != null
+        }
+        assertTrue("The setting must have a nonblank title", title.isNotBlank())
+        return requireNotNull(switch).also {
+            assertEquals("The switch must announce its setting", title, it.contentDescription?.toString())
+        }
     }
 
     private fun assertAudioDependencies(passthrough: Boolean) {
