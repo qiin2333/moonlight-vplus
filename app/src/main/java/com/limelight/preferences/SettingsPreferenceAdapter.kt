@@ -37,14 +37,18 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
         })
     }
 
-    /** Applies shared switch colors, then decorates standard main-page rows as connected cards. */
+    /** Labels and styles switches, then decorates standard main-page rows as connected cards. */
     override fun onBindViewHolder(holder: PreferenceViewHolder, position: Int) {
         super.onBindViewHolder(holder, position)
-        // Both preference types keep their own binding and persistence behavior.
-        (holder.findViewById(android.R.id.checkbox) as? SwitchCompat)?.let(AppSwitchStyle::apply)
-        (holder.findViewById(androidx.preference.R.id.switchWidget) as? SwitchCompat)?.let(AppSwitchStyle::apply)
-        if (!mainCards) return
         val preference = getItem(position) ?: return
+        // Both preference types keep their own binding and persistence behavior.
+        for (id in listOf(android.R.id.checkbox, androidx.preference.R.id.switchWidget)) {
+            (holder.findViewById(id) as? SwitchCompat)?.let { switch ->
+                AppSwitchStyle.apply(switch)
+                switch.contentDescription = preference.title
+            }
+        }
+        if (!mainCards) return
         if (!isStandardLayout(preference)) return
         holder.isDividerAllowedAbove = false
         holder.isDividerAllowedBelow = false

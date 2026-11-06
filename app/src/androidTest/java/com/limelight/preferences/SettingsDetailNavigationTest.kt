@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import android.graphics.Rect
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.TextView
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroup
@@ -292,8 +293,10 @@ class SettingsDetailNavigationTest {
     /** Reads the service-visible tree, excluding nodes hidden by importantForAccessibility. */
     private fun assertAccessibleSwitch(checked: Boolean): AccessibilityNodeInfo {
         val rowBounds = Rect()
+        var title = ""
         settings.withActivity { activity ->
             val row = requireNotNull(activity.currentFocus)
+            title = row.findViewById<TextView>(android.R.id.title).text.toString()
             assertTrue("Focused settings row must be visible",
                 row.getGlobalVisibleRect(rowBounds))
             val rootLocation = IntArray(2)
@@ -314,7 +317,10 @@ class SettingsDetailNavigationTest {
             }
             switch != null
         }
-        return requireNotNull(switch)
+        assertTrue("The setting must have a nonblank title", title.isNotBlank())
+        return requireNotNull(switch).also {
+            assertEquals("The switch must announce its setting", title, it.contentDescription?.toString())
+        }
     }
 
     private fun assertAudioDependencies(passthrough: Boolean) {
