@@ -7,42 +7,7 @@
     android:minHeight="220dp"
     android:orientation="vertical">
 
-    <LinearLayout
-        android:id="@+id/keyboard_picker_tabs"
-        android:layout_width="match_parent"
-        android:layout_height="42dp"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/keyboard_picker_tab_main"
-            style="@style/KeyboardKeyRefined.Modifier"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/keyboard_picker_tab_selector"
-            android:contentDescription="@string/keyboard_picker_main_description"
-            android:text="@string/keyboard_picker_main" />
-
-        <TextView
-            android:id="@+id/keyboard_picker_tab_nav"
-            style="@style/KeyboardKeyRefined.Modifier"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/keyboard_picker_tab_selector"
-            android:contentDescription="@string/keyboard_picker_nav_description"
-            android:text="@string/keyboard_picker_nav" />
-
-        <TextView
-            android:id="@+id/keyboard_picker_tab_num"
-            style="@style/KeyboardKeyRefined.Modifier"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/keyboard_picker_tab_selector"
-            android:contentDescription="@string/keyboard_picker_num_description"
-            android:text="@string/keyboard_picker_num" />
-    </LinearLayout>
+    <include layout="@layout/keyboard_picker_tabs" />
 
     <FrameLayout
         android:layout_width="match_parent"

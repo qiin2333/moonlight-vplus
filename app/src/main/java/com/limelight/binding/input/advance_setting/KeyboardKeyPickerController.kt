@@ -38,7 +38,7 @@ internal class KeyboardKeyPickerController(
     private val numPage: View = root.findViewById(R.id.keyboard_picker_num)
     private val tabs = listOf(mainTab, navTab, numTab)
     private var page = Page.MAIN
-    private var directionTargets = emptyMap<Pair<Int, Int>, View>()
+    private var navigationNodes = emptyList<View>()
 
     init {
         mainTab.setOnClickListener { showPage(Page.MAIN, requestContentFocus = true) }
@@ -107,23 +107,10 @@ internal class KeyboardKeyPickerController(
             }
         }
 
-        val centers = nodes.associateWith(::centerInWindow)
-        val targets = mutableMapOf<Pair<Int, Int>, View>()
+        navigationNodes = nodes
         nodes.forEach { source ->
-            val sourcePoint = centers.getValue(source)
-            listOf(
-                KeyEvent.KEYCODE_DPAD_LEFT,
-                KeyEvent.KEYCODE_DPAD_RIGHT,
-                KeyEvent.KEYCODE_DPAD_UP,
-                KeyEvent.KEYCODE_DPAD_DOWN
-            ).forEach { keyCode ->
-                nearestDirectionalTarget(source, sourcePoint, nodes, centers, keyCode)?.let {
-                    targets[source.id to keyCode] = it
-                }
-            }
             source.setOnKeyListener(::handleNodeKey)
         }
-        directionTargets = targets
     }
 
     private fun handleNodeKey(view: View, keyCode: Int, event: KeyEvent): Boolean {
@@ -147,7 +134,12 @@ internal class KeyboardKeyPickerController(
 
         if (!isDirectionKey(keyCode)) return false
         if (event.action == KeyEvent.ACTION_DOWN) {
-            directionTargets[view.id to keyCode]?.let(::focusAndReveal)
+            // Content can move beneath the fixed device navigation, or resize
+            // when the screen rotates. Resolve against the current positions.
+            val nodes = navigationNodes.filter { it.isVisible && it.isShown }
+            val centers = nodes.associateWith(::centerInWindow)
+            nearestDirectionalTarget(view, centerInWindow(view), nodes, centers, keyCode)
+                ?.let(::focusAndReveal)
         }
         return event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
     }

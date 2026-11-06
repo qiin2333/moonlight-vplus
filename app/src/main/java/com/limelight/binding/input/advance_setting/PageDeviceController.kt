@@ -27,6 +27,7 @@ class PageDeviceController(
     private val keyboardDrawing: LinearLayout = devicePage.findViewById(R.id.keyboard_drawing)
     private val mouseDrawing: FrameLayout = devicePage.findViewById(R.id.mouse_drawing)
     private val gamepadDrawing: FrameLayout = devicePage.findViewById(R.id.gamepad_drawing)
+    private val deviceNavigation = DevicePickerNavigationController(devicePage)
     private val keyboardPickerController: KeyboardKeyPickerController
     private var deviceCallBack: DeviceCallBack? = null
     private var returnFocus: View? = null
@@ -46,6 +47,7 @@ class PageDeviceController(
         setListenersForDevice(devicePage, onClickListener)
         val externalPickerViews = mutableListOf<View>()
         collectSelectableViews(devicePage, externalPickerViews)
+        externalPickerViews += deviceNavigation.navigationViews
         keyboardPickerController = KeyboardKeyPickerController(
             root = keyboardDrawing,
             onKeySelected = { key ->
@@ -70,6 +72,7 @@ class PageDeviceController(
         keyboardDrawing.visibility = keyboardVisible
         mouseDrawing.visibility = mouseVisible
         gamepadDrawing.visibility = gamepadVisible
+        deviceNavigation.refresh()
         if (keyboardVisible == View.VISIBLE) {
             keyboardPickerController.showPage(
                 KeyboardKeyPickerController.Page.MAIN,
