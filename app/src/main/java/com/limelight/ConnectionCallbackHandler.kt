@@ -39,6 +39,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         )
 
         game.runOnUiThread {
+            game.markTerminalConnectionFailure()
             game.progressOverlay?.dismiss()
             game.progressOverlay = null
 
@@ -100,7 +101,7 @@ class ConnectionCallbackHandler(private val game: Game) {
             if (!game.displayedFailureDialog) {
                 game.displayedFailureDialog = true
                 LimeLog.severe("Connection terminated: $errorCode")
-                game.stopConnection()
+                game.stopConnection(StreamStopReason.CONNECTION_TERMINATED)
 
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
@@ -170,7 +171,14 @@ class ConnectionCallbackHandler(private val game: Game) {
     }
 
     fun connectionStarted() {
+        // Accept the callback before posting UI work. Native callbacks can arrive
+        // after stopConnection(); stale callbacks must not initialize a new session.
+        if (!game.onConnectionEstablished()) return
+
         game.runOnUiThread {
+            if (!game.connected) return@runOnUiThread
+            game.applyConnectionEstablishedUiState()
+
             // 不在此处 dismiss progressOverlay：connectionStarted 是连接级回调，
             // 视频首帧通常还没解码出来。dismiss 已交由 decoderRenderer.firstFrameCallback
             // 在首帧到达瞬间触发，避免 "loading 消失 → 黑屏 → 闪出画面" 的割裂感。
@@ -184,8 +192,6 @@ class ConnectionCallbackHandler(private val game: Game) {
                     }
                 }, 5000)
             }
-
-            game.onConnectionEstablished()
 
             // Hide the mouse cursor now after a short delay.
             val h = Handler(Looper.getMainLooper())

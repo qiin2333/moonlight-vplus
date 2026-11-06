@@ -181,6 +181,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var orientationManager: OrientationManager
     private lateinit var tombstonePrefs: SharedPreferences
 
+    private val streamSession = StreamSessionCoordinator()
     var conn: NvConnection? = null
         private set
     var progressOverlay: FullscreenProgressOverlay? = null
@@ -193,8 +194,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var clipboardSyncManager: ClipboardSyncManager? = null
 
     var displayedFailureDialog = false
-    var connected = false
-        private set
+    val connected: Boolean
+        get() = streamSession.isConnected
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
     private val usbForwardingReadyActions = mutableListOf<(UsbForwardingController) -> Unit>()
@@ -247,7 +248,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
     private var activeGameMenu: GameMenu? = null
     private var streamInForeground = false
-    private var pendingKeepAlivePreparation = false
     private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
@@ -261,7 +261,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
     private var surfaceCreated = false
-    private var attemptedConnection = false
+    private val attemptedConnection: Boolean
+        get() = streamSession.hasAttemptedConnection
     var analyticsManager: AnalyticsManager? = null
     var streamStartTime: Long = 0
     var accumulatedStreamTime: Long = 0
@@ -323,7 +324,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var lowLatencyWifiLock: WifiManager.WifiLock? = null
 
     var currentHostAddress: String? = null
-    private var shouldResumeSession = false
+    private val shouldResumeSession: Boolean
+        get() = streamSession.shouldResumeSession
     private var isExtremeResumeEnabled = false
     @Volatile private var isChangingResolution = false
     private var displaySettingsCommitted = false
@@ -1492,8 +1494,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             microphoneManager?.updateMicrophoneButtonState()
         }
 
-        if (pendingKeepAlivePreparation) {
-            pendingKeepAlivePreparation = false
+        if (streamSession.consumePendingKeepAlivePreparation()) {
             prepareKeepAliveNotification()
         }
     }
@@ -1533,7 +1534,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 if (streamInForeground) {
                     prepareKeepAliveNotification()
                 } else {
-                    pendingKeepAlivePreparation = true
+                    streamSession.deferKeepAlivePreparation()
                 }
             } else {
                 Toast.makeText(this, getString(R.string.toast_no_notification_permission), Toast.LENGTH_LONG).show()
@@ -1747,11 +1748,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         super.onUserLeaveHint()
 
         if (isResumeStreamEnabled) {
-            if (!autoEnterPip && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                shouldResumeSession = true
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                shouldResumeSession = true
-            }
+            streamSession.requestBackgroundResume(resumeEnabled = true)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
@@ -1861,7 +1858,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onDestroy() {
         destroying = true
         resolutionSwitchController.cancel()
-        if (conn != null) stopConnection()
+        if (conn != null) stopConnection(StreamStopReason.ACTIVITY_DESTROYED)
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
         if (isFinishing) {
             StreamReconnectBackdrop.clear()
@@ -2119,7 +2116,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForeground = false
         usbForwarding?.stopForeground()
 
-        if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing) {
+        if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing && connected &&
+            (isChangingResolution || streamSession.shouldKeepConnectionInBackground(
+                extremeResumeEnabled = isExtremeResumeEnabled,
+                isFinishing = isFinishing,
+                resumeEnabled = isResumeStreamEnabled,
+            ))
+        ) {
             LimeLog.info("Extreme Resume: onStop intercepted.")
             if (!isChangingResolution && isResumeStreamEnabled) {
                 showKeepAliveNotification()
@@ -2133,9 +2136,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             LimeLog.info("串流时长计时暂停，已累计: ${accumulatedStreamTime / 1000} 秒")
         }
 
-        if (!shouldResumeSession && !isFinishing) {
-            if (isResumeStreamEnabled) {
-                shouldResumeSession = true
+        if (!shouldResumeSession && !isFinishing && isResumeStreamEnabled) {
+            if (streamSession.requestBackgroundResume(resumeEnabled = true)) {
                 LimeLog.info("检测到应用进入后台（非主动退出），已标记为待恢复会话")
             }
         }
@@ -2158,15 +2160,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         val decoderMessage = getDecoderFormatLabel()
 
-        val keepAliveForBackgroundResume = StreamKeepAlivePolicy.shouldStartForResume(
+        val keepAliveForBackgroundResume = streamSession.shouldKeepAliveForBackgroundStop(
             isFinishing = isFinishing,
-            shouldResumeSession = shouldResumeSession,
-            isResumeStreamEnabled = isResumeStreamEnabled,
+            resumeEnabled = isResumeStreamEnabled,
         )
 
         if (conn != null) {
             displayedFailureDialog = true
-            stopConnection(keepAliveForBackgroundResume = keepAliveForBackgroundResume)
+            stopConnection(
+                if (keepAliveForBackgroundResume) {
+                    StreamStopReason.BACKGROUND_RESUME
+                } else {
+                    StreamStopReason.USER_REQUEST
+                }
+            )
             showLatencyToast(decoderMessage)
 
             if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
@@ -2471,29 +2478,41 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionCallbackHandler.connectionStatusUpdate(connectionStatus)
     }
 
-    /** Apply connection state here so callbacks cannot mutate Activity-owned flags. */
-    internal fun onConnectionEstablished() {
-        connected = true
+    /** Accept the native callback through the coordinator before any UI work. */
+    internal fun onConnectionEstablished(): Boolean {
+        if (!streamSession.markConnectionEstablished()) return false
+        return true
+    }
+
+    /** Apply Activity-owned UI state after the callback has been accepted. */
+    internal fun applyConnectionEstablishedUiState() {
         orientationManager.connected = true
         updatePipAutoEnter()
+    }
+
+    internal fun markTerminalConnectionFailure() {
+        streamSession.markTerminalFailure()
     }
 
     /**
      * 停止连接并清理相关资源。
      * 仅 onStop 的后台恢复路径保留保活服务，避免先停止再立即重启。
      */
-    internal fun stopConnection(keepAliveForBackgroundResume: Boolean = false) {
+    internal fun stopConnection(reason: StreamStopReason) {
         val connection = conn
         connection?.requestStop()
 
-        // 重置尝试连接标志。
-        attemptedConnection = false
+        val wasConnected = connected
+        val decision = streamSession.beginStop(
+            reason = reason,
+            isFinishing = isFinishing,
+            resumeEnabled = isResumeStreamEnabled,
+        )
 
-        if (!keepAliveForBackgroundResume) cancelKeepAliveNotification()
+        if (!decision.keepAliveService) cancelKeepAliveNotification()
         stopAudioHapticsForStream()
 
-        if (connected) {
-            connected = false
+        if (wasConnected) {
             orientationManager.connected = false
             updatePipAutoEnter()
 
@@ -2623,7 +2642,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (isExtremeResumeEnabled && connected) {
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.")
-            shouldResumeSession = false
+            streamSession.resumedWithActiveConnection()
             if (progressOverlay != null) {
                 progressOverlay?.dismiss()
                 progressOverlay = null
@@ -2636,7 +2655,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (shouldResumeSession) {
             LimeLog.info("从后台恢复，正在快速重连...")
             Dialog.closeDialogs()
-            shouldResumeSession = false
             displayedFailureDialog = false
 
             showProgressOverlay()
@@ -2650,8 +2668,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 return
             }
 
-            attemptedConnection = false
-            connected = false
+            streamSession.prepareForReconnect()
             orientationManager.connected = false
 
             streamView.requestLayout()
@@ -3024,7 +3041,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         if (!attemptedConnection) {
-            attemptedConnection = true
+            streamSession.markConnectionAttempted()
             UiHelper.notifyStreamConnecting(this)
 
             val enableSystemAudioHaptics =
@@ -3108,7 +3125,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 decoderRenderer?.prepareForStop()
                 releaseFramegenCapture()
                 if (connected) {
-                    stopConnection()
+                    stopConnection(StreamStopReason.SURFACE_DESTROYED)
                 }
             }
         } else {
@@ -3118,9 +3135,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     @SuppressLint("BatteryLife")
     fun prepareKeepAliveNotification() {
-        if (!streamInForeground || isFinishing || destroying || !connected || !isResumeStreamEnabled) {
+        if (isFinishing || destroying || streamSession.isTerminal || !isResumeStreamEnabled) {
             return
         }
+
+        if (!streamInForeground) {
+            streamSession.deferKeepAlivePreparation()
+            return
+        }
+
+        if (!connected) return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
