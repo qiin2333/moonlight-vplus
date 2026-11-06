@@ -342,6 +342,12 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
+          # Feature-branch test tags must not rewrite master's version metadata.
+          git fetch origin master
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "Release tag is outside master; skipping master version sync"
+            exit 0
+          fi
           bash .github/release/sync-released-version.sh \
             "$VERSION_NAME" \
             "$VERSION_CODE" \
