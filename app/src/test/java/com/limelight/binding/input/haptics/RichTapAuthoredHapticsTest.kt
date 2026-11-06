@@ -4,6 +4,27 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RichTapAuthoredHapticsTest {
+    @Test fun pointPreservesAnEstablishedBackgroundAfterItFallsToTheWeakestBodyLevel() {
+        var now = 0L
+        val packets = mutableListOf<IntArray>()
+        var stops = 0
+        val sink = RichTapAuthoredHaptics({ raw, _ -> packets += raw }, { stops++ }, { now }, 1, {})
+        sink.render(.03f, 0f, false) // Level 10 establishes the continuous voice.
+        now = 20
+        sink.render(.015f, .12f, false) // Level 5 plus a new point.
+        assertEquals(4096, packets.last()[8])
+        assertEquals(5, packets.last()[15])
+        assertEquals(5, packets.last()[23]) // Return to the weak background at 12 ms.
+        now = 32
+        sink.render(.015f, 0f, false)
+        assertEquals(4096, packets.last()[8])
+        assertEquals(4, packets.last()[15])
+        assertEquals(0, stops)
+        now = 40
+        sink.render(0f, 0f, false)
+        assertEquals(1, stops)
+    }
+
     @Test fun isolatedPointsRetainGradedNativeTransients() {
         val packets = mutableListOf<IntArray>()
         var now = 0L

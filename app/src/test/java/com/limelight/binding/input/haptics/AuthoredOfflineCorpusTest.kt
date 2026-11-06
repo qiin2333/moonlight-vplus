@@ -1,5 +1,9 @@
 package com.limelight.binding.input.haptics
 
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame
+import com.limelight.nvstream.Ds5HapticsIrExtendedLane
+import com.limelight.nvstream.Ds5HapticsIrFrame
+import com.limelight.nvstream.Ds5HapticsIrLane
 import java.io.File
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -57,12 +61,14 @@ class AuthoredOfflineCorpusTest {
                         GameRumbleContext(GameRumbleMode.COORDINATED, true, true), ControllerRumbleState(low, high))
                     val controller = plan.controller!!
                     val native = plan.device!!
-                    val weights = listOf(fields[1].toFloat(), fields[2].toFloat(), fields[3].toFloat(), fields[4].toFloat())
-                    val leftEnergy = weights[0] * weights[0] + weights[1] * weights[1]
-                    val rightEnergy = weights[2] * weights[2] + weights[3] * weights[3]
-                    val energy = leftEnergy + rightEnergy
-                    val frequency = if (fields.size >= 9 && energy > 0)
-                        (fields[7].toFloat() * leftEnergy + fields[8].toFloat() * rightEnergy) / (2 * energy) else 0f
+                    val frequency = if (fields.size >= 9) {
+                        val left = Ds5HapticsIrLane(0f, 0f, 0f, 0f, fields[7].toFloat())
+                        val right = Ds5HapticsIrLane(0f, 0f, 0f, 0f, fields[8].toFloat())
+                        NativeAuthoredBody.frequencyHint(Ds5HapticsIrExtendedFrame(
+                            Ds5HapticsIrFrame(0, 0, 0, timeUs, 240, left, right), 0, timeUs,
+                            Ds5HapticsIrExtendedLane(fields[1].toFloat(), fields[2].toFloat()),
+                            Ds5HapticsIrExtendedLane(fields[3].toFloat(), fields[4].toFloat()), emptyList()))
+                    } else 0f
                     val continuous = NativeAuthoredBody.fromBands(native.lowFrequency, native.highFrequency, frequency)
                     val bodyGain = sqrt(2f * (native.lowFrequency * native.lowFrequency + native.highFrequency * native.highFrequency))
                     assertTrue(controller.lowFrequency <= low)

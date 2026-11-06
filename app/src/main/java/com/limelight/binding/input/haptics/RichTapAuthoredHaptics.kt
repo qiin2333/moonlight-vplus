@@ -48,7 +48,7 @@ internal class RichTapAuthoredHaptics(
             kotlin.math.abs(requestedBody - bodyLevel) < BODY_STEP) bodyLevel
             else (requestedBody + BODY_STEP / 2) / BODY_STEP * BODY_STEP
         // Suppress a filtered point tail only when no continuous voice is established.
-        val target = if (requestedTarget <= BODY_STEP && (pointValue > 0 || now >= bodyUntil)) 0
+        val target = if (requestedTarget <= BODY_STEP && now >= bodyUntil) 0
             else requestedTarget
         val frequency = frequency(textureFrequency.advance(body.frequencyHintHz, now),
             bodyFrequency.takeIf { now < bodyUntil })

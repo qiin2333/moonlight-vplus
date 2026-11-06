@@ -10,11 +10,16 @@ SoundPool 现在调用实际素材选择/调度器，另对 Ogg 解码信号做�
 ## 最终集成：主机分层、连续渲染与频率过渡
 
 集成分支为 `codex/ds5-fidelity-integration`，基于 Android `cadb66e2d`。
-SDK 固定为 `88b4f1c`（[SDK #8](https://github.com/AlkaidLab/moonlight-audio-haptics/pull/8)），
+SDK 固定为 `f87ab5c`（[SDK #8](https://github.com/AlkaidLab/moonlight-audio-haptics/pull/8)，
+持久标签 `pins/ds5-fidelity-20261107-r2`），
 主机依赖更新见 [Sunshine #1224](https://github.com/AlkaidLab/foundation-sunshine/pull/1224)。
 以下历史候选保留诊断过程，最终行为以本节和紧接的连续渲染说明为准。
 
 - 保留三阶段主机重构及 96 组合的弱触击回归保护。
+- 后续 review 修复：持续层基线历史不再记录 pending ceiling 压低的输出，避免
+  重叠候选继承临时静音；RichTap 已建立的最低档背景不会因新短点而丢失。
+  补充非零背景、稳定区间和不对称声道回归。组件仍共用源触击的确认时限，
+  不以重启滤波半周期计时的方式延长事件新鲜度。
 - 保留客户端完整连续信息、线性短点增益、12 ms 波形保护和移除长时间背景压制。
 - 协同的 IR 输出是未经标定的双幅度 rumble API，因此将 authored 连续层交给可用的
   原生机身后端。真实控制器 PCM 波形走独立路由，并在播放时抑制普通马达写入；
@@ -34,18 +39,22 @@ SoundPool 仍使用有限素材替换，RichTap 的 HE 单位也不是标定后�
 
 | 家族 | RichTap 持续提交：前→后 | SoundPool 持续提交：前→后 |
 |---|---:|---:|
-| 高频跑步 | 59→36 | 154→157 |
-| 带噪跑步 | 505→198 | 422→394 |
+| 高频跑步 | 59→36 | 154→145 |
+| 带噪跑步 | 505→217 | 422→393 |
 | 纯扫频抽刀 | 302→216 | 160→168 |
-| 带噪抽刀 | 151→107 | 176→170 |
+| 带噪抽刀 | 151→124 | 176→166 |
 | 拍频 | 47→37 | 74→72 |
 | 背景弱触击 | 45→27 | 102→98 |
 
+前后均用生产 `frequencyHint` 处理每个声道的无效 ZCR、截断与能量加权，旧客户端
+在独立工作树重新运行同一探针；没有沿用手写加权公式的潜在差异。最终 1331 项 JVM、
+11 项 SDK CTest 与 91+61+120 段离线回归通过。
 这是每 5 ms 输入一次的离线封包探针，未模拟厂商执行时钟。SoundPool 部分家族
 提交增加，不能据此宣称整体接缝消失；频率提示平滑也会改变扫频响应速度。
 主语料和 61 段不同种子语料均保留扫频参数跨度、逐段短点和持续强度约束。
 
-当前产物位于 `build/haptics-offline/integration/{corpus,holdout,stress}`。
+最终产物位于 `build/haptics-offline/review-final/{corpus,holdout,stress}`，
+修正后的旧客户端对照位于 `build/haptics-offline/baseline-corrected/corpus`。
 用下文“运行”命令构建该 SDK 的分析器；生成主语料和 `--seeds 13 53` 的验证语料后，
 分别设置 `HAPTICS_OFFLINE_DIR` 运行 `AuthoredOfflineCorpusTest`，再执行：
 
