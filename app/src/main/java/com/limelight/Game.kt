@@ -246,6 +246,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
     private var activeGameMenu: GameMenu? = null
     private var streamInForeground = false
+    private var pendingKeepAlivePreparation = false
     private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
@@ -1489,6 +1490,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
         }
+
+        if (pendingKeepAlivePreparation) {
+            pendingKeepAlivePreparation = false
+            prepareKeepAliveNotification()
+        }
     }
 
     private val keyboardAccessibilityConnectionListener =
@@ -1523,7 +1529,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (requestCode == KEEP_ALIVE_NOTIFICATION_ID) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                StreamNotificationService.start(this, pcName, appName)
+                if (streamInForeground) {
+                    prepareKeepAliveNotification()
+                } else {
+                    pendingKeepAlivePreparation = true
+                }
             } else {
                 Toast.makeText(this, getString(R.string.toast_no_notification_permission), Toast.LENGTH_LONG).show()
             }
@@ -2147,9 +2157,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         val decoderMessage = getDecoderFormatLabel()
 
+        val keepAliveForBackgroundResume = StreamKeepAlivePolicy.shouldStartForResume(
+            isFinishing = isFinishing,
+            shouldResumeSession = shouldResumeSession,
+            isResumeStreamEnabled = isResumeStreamEnabled,
+        )
+
         if (conn != null) {
             displayedFailureDialog = true
-            connectionCallbackHandler.stopConnection()
+            connectionCallbackHandler.stopConnection(keepAliveForBackgroundResume = keepAliveForBackgroundResume)
             showLatencyToast(decoderMessage)
 
             if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
@@ -2162,12 +2178,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         reportStreamAnalytics(decoderMessage)
 
-        if (StreamKeepAlivePolicy.shouldStartForResume(
-                isFinishing = isFinishing,
-                shouldResumeSession = shouldResumeSession,
-                isResumeStreamEnabled = isResumeStreamEnabled,
-            )
-        ) {
+        if (keepAliveForBackgroundResume) {
             showKeepAliveNotification()
             LimeLog.info("应用进入后台，保持 Activity 存活以备快速恢复。连接已断开。")
         } else {
@@ -3051,7 +3062,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     @SuppressLint("BatteryLife")
-    fun showKeepAliveNotification() {
+    fun prepareKeepAliveNotification() {
+        if (!streamInForeground || isFinishing || destroying || !connected || !isResumeStreamEnabled) {
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -3096,7 +3111,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
         } catch (_: Exception) {
         }
+    }
 
+    fun showKeepAliveNotification() {
+        // POST_NOTIFICATIONS controls notification visibility, not FGS startup.
         StreamNotificationService.start(this, pcName, appName)
     }
 

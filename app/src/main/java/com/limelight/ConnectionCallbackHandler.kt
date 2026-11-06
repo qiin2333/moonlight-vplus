@@ -4,7 +4,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.preferences.MicrophoneInitialState
 import com.limelight.nvstream.http.ComputerDetails
@@ -211,10 +210,8 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             game.screenDs5Touchpad.onStreamStarted()
 
-            // 连接一开始就启动保活服务
-            val prefs = PreferenceManager.getDefaultSharedPreferences(game)
-            val isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false)
-            if (isResumeEnabled) game.showKeepAliveNotification()
+            // Ask for permissions while visible; onStop() only starts the service.
+            game.prepareKeepAliveNotification()
 
             // Cursor negotiation also updates Android views and main-thread timeout state.
             game.cursorServiceManager.onConnectionStarted()
@@ -291,15 +288,16 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     /**
      * 停止连接并清理相关资源。
+     * 仅 onStop 的后台恢复路径保留保活服务，避免先停止再立即重启。
      */
-    fun stopConnection() {
+    fun stopConnection(keepAliveForBackgroundResume: Boolean = false) {
         val connection = game.conn
         connection?.requestStop()
 
         // 重置尝试连接标志。
         game.attemptedConnection = false
 
-        game.cancelKeepAliveNotification()
+        if (!keepAliveForBackgroundResume) game.cancelKeepAliveNotification()
         game.stopAudioHapticsForStream()
 
         if (game.connecting || game.connected) {
