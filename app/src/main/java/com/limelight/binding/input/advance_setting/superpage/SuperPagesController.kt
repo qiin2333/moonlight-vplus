@@ -43,6 +43,17 @@ class SuperPagesController(
         }
         pageNull = LayoutInflater.from(context).inflate(R.layout.page_null, null) as SuperPageLayout
         pageNow = pageNull
+        superPagesBox.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if ((right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) &&
+                pageNow.parent === superPagesBox) {
+                openingPage?.endAnimator()
+                closingPage?.endAnimator()
+                pageNow.layoutParams = pageNow.layoutParams.apply {
+                    width = resolvePageWidth(pageNow, pageNow.fitToViewport)
+                }
+                pageNow.x = getVisiblePosition(pageNow).toFloat()
+            }
+        }
     }
 
     fun setPosition(position: BoxPosition) {
@@ -74,7 +85,7 @@ class SuperPagesController(
     fun returnToPreviousPage(page: SuperPageLayout) {
         if (page !== pageNow) return
         val previousPage = page.lastPage ?: return
-        openPage(previousPage, fitToViewport = false, rememberCurrentPage = false)
+        openPage(previousPage, fitToViewport = previousPage.fitToViewport, rememberCurrentPage = false)
     }
 
     private fun openPage(
@@ -99,6 +110,7 @@ class SuperPagesController(
         })
 
         openingPage = pageNew
+        pageNew.fitToViewport = fitToViewport
         val layoutParams = FrameLayout.LayoutParams(
             resolvePageWidth(openingPage!!, fitToViewport),
             ViewGroup.LayoutParams.MATCH_PARENT

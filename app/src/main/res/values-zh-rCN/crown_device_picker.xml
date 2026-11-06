@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_device_actions">操作</string>
+    <string name="crown_device_keyboard">键盘</string>
+    <string name="crown_device_mouse">鼠标</string>
+    <string name="crown_device_gamepad">手柄</string>
+</resources>
