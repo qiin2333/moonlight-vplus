@@ -29,7 +29,6 @@ import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
 import com.limelight.binding.input.advance_setting.superpage.SuperPagesController
 import java.io.File
 import java.util.Locale
-import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -103,9 +102,8 @@ class DevicePickerLayoutTest {
                     assertTrue(tabs.getLocalVisibleRect(visible))
                     assertEquals("Keyboard tabs must stay fixed while panning", tabs.width, visible.width())
                     assertTrue(page.findViewById<View>(R.id.device_nav_keyboard).isSelected)
-                    assertEquals("Keyboard pan must not move the outer device strip",
-                        page.findViewById<View>(R.id.keyboard_drawing).left,
-                        page.findViewById<HorizontalScrollView>(R.id.device_scroll).scrollX)
+                    assertEquals("Keyboard pan must keep other device pages hidden", View.GONE,
+                        page.findViewById<View>(R.id.mouse_drawing).visibility)
                 }
                 capture("$name-keyboard-scrolled")
                 activityRule.scenario.onActivity {
@@ -129,6 +127,18 @@ class DevicePickerLayoutTest {
                 assertTrue(numpad.getLocalVisibleRect(visible))
                 assertEquals("Numpad must fit without horizontal scrolling", numpad.width, visible.width())
             }
+            reveal(R.id.device_nav_actions, R.id.device_actions)
+            swipeActionsToEnd()
+            activityRule.scenario.onActivity {
+                val lastAction = page.findViewWithTag<View>("DSC")
+                val visible = Rect()
+                assertTrue(lastAction.getLocalVisibleRect(visible))
+                assertEquals("The last action must remain reachable", lastAction.height, visible.height())
+                val category = page.findViewById<View>(R.id.device_nav_actions)
+                assertTrue(category.getLocalVisibleRect(visible))
+                assertEquals("Device categories must stay fixed while scrolling actions", category.height, visible.height())
+            }
+            capture("$name-actions-bottom")
             for ((button, target, suffix) in listOf(
                 Triple(R.id.device_nav_mouse, R.id.mouse_drawing, "mouse"),
                 Triple(R.id.device_nav_gamepad, R.id.gamepad_drawing, "gamepad")
@@ -147,6 +157,18 @@ class DevicePickerLayoutTest {
                 keyboard.showPage(KeyboardKeyPickerController.Page.MAIN, requestContentFocus = false)
             }
         }
+        activityRule.scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+        waitFor {
+            val host = page.parent as View
+            host.width > host.height && !page.isLayoutRequested
+        }
+        activityRule.scenario.onActivity {
+            assertTrue("Rotation must preserve the active category",
+                page.findViewById<View>(R.id.device_nav_gamepad).isSelected)
+            assertTrue(page.findViewById<View>(R.id.gamepad_drawing).isShown)
+            assertEquals(View.GONE, page.findViewById<View>(R.id.keyboard_drawing).visibility)
+        }
+        capture("landscape-gamepad-rotated")
     }
 
     @Suppress("DEPRECATION")
@@ -168,12 +190,13 @@ class DevicePickerLayoutTest {
                 onKeySelected = {},
                 externalViews = navigation.navigationViews
             )
+            navigation.onCategoryChanged = { keyboard.refreshNavigation() }
             activity.setContentView(host)
             val pages = SuperPagesController(host, activity)
             host.doOnLayout {
                 host.post {
                     pages.openNewPage(page, fitToViewport = true)
-                    navigation.refresh()
+                    navigation.setAvailableDevices(true, true, true)
                 }
             }
         }
@@ -183,10 +206,8 @@ class DevicePickerLayoutTest {
     private fun reveal(buttonId: Int, targetId: Int) {
         activityRule.scenario.onActivity { page.findViewById<View>(buttonId).performClick() }
         waitFor {
-            val scroll = page.findViewById<HorizontalScrollView>(R.id.device_scroll)
             val target = page.findViewById<View>(targetId)
-            val maxScroll = scroll.getChildAt(0).width - scroll.width + scroll.paddingLeft + scroll.paddingRight
-            abs(scroll.scrollX - target.left.coerceAtMost(maxScroll.coerceAtLeast(0))) <= 1
+            target.isShown && target.width > 0 && !target.isLayoutRequested
         }
     }
 
@@ -194,12 +215,43 @@ class DevicePickerLayoutTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.waitForIdleSync()
         if (InstrumentationRegistry.getArguments().getString("captureDevicePicker") != "true") return
-        SystemClock.sleep(150) // Let the last rendered frame reach the display before capture.
+        // Window rotation animations run outside the app's idle queue.
+        SystemClock.sleep(750)
         val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "device-picker-qa")
         directory.mkdirs()
         val screenshot = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         File(directory, "$name.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG, 100, it) }
         screenshot.recycle()
+    }
+
+    private fun swipeActionsToEnd() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val bounds = Rect()
+        activityRule.scenario.onActivity {
+            page.findViewById<View>(R.id.device_vertical_scroll).getGlobalVisibleRect(bounds)
+        }
+        repeat(2) {
+            val downTime = SystemClock.uptimeMillis()
+            for (step in 0..21) {
+                val action = when (step) {
+                    0 -> MotionEvent.ACTION_DOWN
+                    21 -> MotionEvent.ACTION_UP
+                    else -> MotionEvent.ACTION_MOVE
+                }
+                val y = bounds.bottom - bounds.height() * (0.05f + 0.9f * step.coerceAtMost(20) / 20f)
+                val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action,
+                    bounds.exactCenterX(), y, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
+                instrumentation.sendPointerSync(event)
+                event.recycle()
+                SystemClock.sleep(16)
+            }
+        }
+        instrumentation.waitForIdleSync()
+        waitFor {
+            val lastAction = page.findViewWithTag<View>("DSC")
+            val visible = Rect()
+            lastAction.getLocalVisibleRect(visible) && visible.height() == lastAction.height
+        }
     }
 
     private fun swipeKeyboardToEnd() {

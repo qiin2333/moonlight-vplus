@@ -1,57 +1,50 @@
 package com.limelight.binding.input.advance_setting
 
 import android.view.View
-import android.widget.HorizontalScrollView
-import androidx.core.view.doOnLayout
 import com.limelight.R
 
-/** Persistent shortcuts to the device layouts in the horizontal picker. */
+/** One active category drives both content visibility and the navigation highlight. */
 internal class DevicePickerNavigationController(root: View) {
-    private val scroll: HorizontalScrollView = root.findViewById(R.id.device_scroll)
-    private val destinations = listOf(
-        R.id.device_nav_actions to R.id.device_actions,
-        R.id.device_nav_keyboard to R.id.keyboard_drawing,
-        R.id.device_nav_mouse to R.id.mouse_drawing,
-        R.id.device_nav_gamepad to R.id.gamepad_drawing
-    ).map { (buttonId, targetId) ->
-        root.findViewById<View>(buttonId) to root.findViewById<View>(targetId)
+    private enum class Category(val buttonId: Int, val contentId: Int) {
+        ACTIONS(R.id.device_nav_actions, R.id.device_actions),
+        KEYBOARD(R.id.device_nav_keyboard, R.id.keyboard_drawing),
+        MOUSE(R.id.device_nav_mouse, R.id.mouse_drawing),
+        GAMEPAD(R.id.device_nav_gamepad, R.id.gamepad_drawing)
     }
 
-    val navigationViews: List<View> = destinations.map { it.first }
-    private var selectedTarget: View? = null
+    private val buttons = Category.values().associateWith { root.findViewById<View>(it.buttonId) }
+    private val contents = Category.values().associateWith { root.findViewById<View>(it.contentId) }
+    private var availableCategories = Category.values().toSet()
+    private var selectedCategory = Category.KEYBOARD
+
+    val navigationViews: List<View> = buttons.values.toList()
+    var onCategoryChanged: (() -> Unit)? = null
 
     init {
-        destinations.forEach { (button, target) ->
-            button.setOnClickListener {
-                select(target)
-                // Positions are measured again after layout, including when a
-                // picker variant hides one of the preceding device layouts.
-                scroll.post {
-                    if (target.visibility == View.VISIBLE) {
-                        scroll.smoothScrollTo(target.left, 0)
-                    }
-                }
-            }
-        }
-        scroll.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
-            if (right - left != oldRight - oldLeft) {
-                selectedTarget?.let { target -> scroll.post { scroll.scrollTo(target.left, 0) } }
-            }
-        }
+        buttons.forEach { (category, button) -> button.setOnClickListener { select(category) } }
+        select(selectedCategory)
     }
 
-    fun refresh() {
-        destinations.forEach { (button, target) ->
-            button.visibility = if (target.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+    fun setAvailableDevices(keyboard: Boolean, mouse: Boolean, gamepad: Boolean) {
+        availableCategories = buildSet {
+            add(Category.ACTIONS)
+            if (keyboard) add(Category.KEYBOARD)
+            if (mouse) add(Category.MOUSE)
+            if (gamepad) add(Category.GAMEPAD)
         }
-        val initialTarget = destinations.drop(1).firstOrNull { it.second.visibility == View.VISIBLE }
-            ?.second ?: destinations.first().second
-        select(initialTarget)
-        scroll.doOnLayout { scroll.scrollTo(initialTarget.left, 0) }
+        buttons.forEach { (category, button) ->
+            button.visibility = if (category in availableCategories) View.VISIBLE else View.GONE
+        }
+        select(availableCategories.firstOrNull { it != Category.ACTIONS } ?: Category.ACTIONS)
     }
 
-    private fun select(target: View) {
-        selectedTarget = target
-        destinations.forEach { (button, destination) -> button.isSelected = destination === target }
+    private fun select(category: Category) {
+        if (category !in availableCategories) return
+        selectedCategory = category
+        buttons.forEach { (destination, button) -> button.isSelected = destination == selectedCategory }
+        contents.forEach { (destination, content) ->
+            content.visibility = if (destination == selectedCategory) View.VISIBLE else View.GONE
+        }
+        onCategoryChanged?.invoke()
     }
 }

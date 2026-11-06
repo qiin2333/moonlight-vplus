@@ -73,6 +73,10 @@ internal class KeyboardKeyPickerController(
         }
     }
 
+    fun refreshNavigation() {
+        root.post { rebuildNavigation() }
+    }
+
     private fun bindKeyClicks(view: View) {
         if (view is TextView && isKeyboardKey(view)) {
             view.contentDescription = view.contentDescription ?: view.text
@@ -134,8 +138,7 @@ internal class KeyboardKeyPickerController(
 
         if (!isDirectionKey(keyCode)) return false
         if (event.action == KeyEvent.ACTION_DOWN) {
-            // Content can move beneath the fixed device navigation, or resize
-            // when the screen rotates. Resolve against the current positions.
+            // Resolve against current positions after panning or resizing.
             val nodes = navigationNodes.filter { it.isVisible && it.isShown }
             val centers = nodes.associateWith(::centerInWindow)
             nearestDirectionalTarget(view, centerInWindow(view), nodes, centers, keyCode)
@@ -203,7 +206,7 @@ internal class KeyboardKeyPickerController(
     }
 
     private fun requestFirstKeyFocus() {
-        currentKeys().firstOrNull()?.let(::focusAndReveal)
+        currentKeys().firstOrNull { it.isShown }?.let(::focusAndReveal)
     }
 
     private fun focusAndReveal(view: View) {

@@ -4,7 +4,6 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -25,8 +24,6 @@ class PageDeviceController(
     private val devicePage: SuperPageLayout =
         LayoutInflater.from(context).inflate(R.layout.page_device, null) as SuperPageLayout
     private val keyboardDrawing: LinearLayout = devicePage.findViewById(R.id.keyboard_drawing)
-    private val mouseDrawing: FrameLayout = devicePage.findViewById(R.id.mouse_drawing)
-    private val gamepadDrawing: FrameLayout = devicePage.findViewById(R.id.gamepad_drawing)
     private val deviceNavigation = DevicePickerNavigationController(devicePage)
     private val keyboardPickerController: KeyboardKeyPickerController
     private var deviceCallBack: DeviceCallBack? = null
@@ -57,6 +54,7 @@ class PageDeviceController(
             externalViews = externalPickerViews,
             onDismiss = ::close
         )
+        deviceNavigation.onCategoryChanged = { keyboardPickerController.refreshNavigation() }
 
         devicePage.findViewById<View>(R.id.device_cancel).setOnClickListener {
             close()
@@ -69,10 +67,11 @@ class PageDeviceController(
     fun open(deviceCallBack: DeviceCallBack, keyboardVisible: Int, mouseVisible: Int, gamepadVisible: Int) {
         returnFocus = (context as? Game)?.currentFocus
         this.deviceCallBack = deviceCallBack
-        keyboardDrawing.visibility = keyboardVisible
-        mouseDrawing.visibility = mouseVisible
-        gamepadDrawing.visibility = gamepadVisible
-        deviceNavigation.refresh()
+        deviceNavigation.setAvailableDevices(
+            keyboardVisible == View.VISIBLE,
+            mouseVisible == View.VISIBLE,
+            gamepadVisible == View.VISIBLE
+        )
         if (keyboardVisible == View.VISIBLE) {
             keyboardPickerController.showPage(
                 KeyboardKeyPickerController.Page.MAIN,

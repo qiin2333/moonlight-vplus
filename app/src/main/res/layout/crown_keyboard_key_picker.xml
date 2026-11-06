@@ -8,7 +8,7 @@
 
     <include layout="@layout/keyboard_picker_tabs" />
 
-    <com.limelight.binding.input.advance_setting.DeviceKeyboardScrollView
+    <HorizontalScrollView
         android:id="@+id/device_keyboard_scroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -25,5 +25,5 @@
             <include android:id="@+id/keyboard_picker_nav" layout="@layout/layout_keyboard_nav" android:visibility="gone" />
             <include android:id="@+id/keyboard_picker_num" layout="@layout/layout_keyboard_numpad" android:visibility="gone" />
         </com.limelight.binding.input.advance_setting.DeviceKeyboardPagesLayout>
-    </com.limelight.binding.input.advance_setting.DeviceKeyboardScrollView>
+    </HorizontalScrollView>
 </LinearLayout>

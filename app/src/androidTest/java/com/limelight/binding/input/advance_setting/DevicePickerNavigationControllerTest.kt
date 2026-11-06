@@ -1,12 +1,18 @@
 package com.limelight.binding.input.advance_setting
 
 import android.content.Intent
+import android.graphics.Rect
 import android.net.Uri
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
+import android.widget.TextView
+import androidx.core.view.descendants
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -27,63 +33,152 @@ class DevicePickerNavigationControllerTest {
             .setData(Uri.parse("about:blank"))
     )
 
+    private lateinit var page: ViewGroup
+    private lateinit var navigation: DevicePickerNavigationController
+    private var selectedTag: String? = null
+    private var selectionCount = 0
+    private var dismissCount = 0
+    private val destinations = listOf(
+        R.id.device_nav_actions to R.id.device_actions,
+        R.id.device_nav_keyboard to R.id.keyboard_drawing,
+        R.id.device_nav_mouse to R.id.mouse_drawing,
+        R.id.device_nav_gamepad to R.id.gamepad_drawing
+    )
+
     @Test
-    fun mouseAndGamepadAreReachableFromPersistentNavigation() {
+    fun categoryButtonsShowExactlyOneContentAndMatchingHighlight() {
         installPicker()
-        for ((buttonId, targetId) in listOf(
-            R.id.device_nav_mouse to R.id.mouse_drawing,
-            R.id.device_nav_gamepad to R.id.gamepad_drawing,
-            R.id.device_nav_actions to R.id.device_actions
-        )) {
-            activityRule.scenario.onActivity { activity ->
-                val button = activity.findViewById<View>(buttonId)
-                assertTrue(button.getGlobalVisibleRect(android.graphics.Rect()))
-                button.performClick()
-            }
-            waitForDestination(targetId)
+        for (buttonId in listOf(R.id.device_nav_keyboard, R.id.device_nav_mouse,
+            R.id.device_nav_gamepad, R.id.device_nav_actions, R.id.device_nav_keyboard)) {
+            activityRule.scenario.onActivity { page.findViewById<View>(buttonId).performClick() }
+            idle()
+            assertActive(buttonId)
         }
     }
 
     @Test
-    fun hiddenLayoutsHaveNoShortcutAndDoNotOffsetOtherDestinations() {
-        installPicker(keyboardVisible = false)
-        activityRule.scenario.onActivity { activity ->
-            assertEquals(View.GONE, activity.findViewById<View>(R.id.device_nav_keyboard).visibility)
-            activity.findViewById<View>(R.id.device_nav_mouse).performClick()
+    fun availabilitySurvivesSwitchesAndCanBeUpdatedWhenReopened() {
+        installPicker()
+        activityRule.scenario.onActivity { navigation.setAvailableDevices(false, true, true) }
+        idle()
+        assertActive(R.id.device_nav_mouse)
+        activityRule.scenario.onActivity {
+            assertEquals(View.GONE, page.findViewById<View>(R.id.device_nav_keyboard).visibility)
+            page.findViewById<View>(R.id.device_nav_gamepad).performClick()
         }
-        waitForDestination(R.id.mouse_drawing)
+        idle()
+        assertActive(R.id.device_nav_gamepad)
+        activityRule.scenario.onActivity { page.findViewById<View>(R.id.device_nav_mouse).performClick() }
+        idle()
+        assertActive(R.id.device_nav_mouse)
+        activityRule.scenario.onActivity { navigation.setAvailableDevices(false, false, false) }
+        idle()
+        assertActive(R.id.device_nav_actions)
+        activityRule.scenario.onActivity { navigation.setAvailableDevices(true, true, true) }
+        idle()
+        assertActive(R.id.device_nav_keyboard)
+        activityRule.scenario.onActivity {
+            destinations.forEach { (button, _) ->
+                assertEquals(View.VISIBLE, page.findViewById<View>(button).visibility)
+            }
+        }
     }
 
-    private fun installPicker(keyboardVisible: Boolean = true) {
+    @Test
+    fun firstTouchAfterCategorySwitchSelectsMouseKeyOnce() {
+        installPicker()
+        tap { page.findViewById(R.id.device_nav_mouse) }
+        assertActive(R.id.device_nav_mouse)
+        tap { page.findViewWithTag("m1") }
+        assertEquals("m1", selectedTag)
+        assertEquals(1, selectionCount)
+    }
+
+    @Test
+    fun controllerCanEnterNewCategoriesSelectKeysAndDismiss() {
+        installPicker()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        for (button in listOf(R.id.device_nav_mouse, R.id.device_nav_gamepad)) {
+            activityRule.scenario.onActivity { assertTrue(page.findViewById<View>(button).requestFocus()) }
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+            idle()
+            assertActive(button)
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+            idle()
+            var focusedTag: String? = null
+            activityRule.scenario.onActivity { activity ->
+                val contentId = destinations.first { it.first == button }.second
+                val content = page.findViewById<ViewGroup>(contentId)
+                assertTrue("Focus must enter the selected category", content.descendants.any { it === activity.currentFocus })
+                focusedTag = activity.currentFocus?.tag as? String
+                assertTrue(focusedTag != null)
+            }
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
+            idle()
+            assertEquals(focusedTag, selectedTag)
+        }
+        assertEquals(2, selectionCount)
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_B)
+        idle()
+        assertEquals(1, dismissCount)
+    }
+
+    private fun installPicker() {
         activityRule.scenario.onActivity { activity ->
             val container = FrameLayout(activity)
-            val page = LayoutInflater.from(activity).inflate(R.layout.page_device, container, false)
-            page.findViewById<View>(R.id.keyboard_drawing).visibility =
-                if (keyboardVisible) View.VISIBLE else View.GONE
-            DevicePickerNavigationController(page).refresh()
+            page = LayoutInflater.from(activity).inflate(R.layout.page_device, container, false) as ViewGroup
+            navigation = DevicePickerNavigationController(page)
+            val keyboardRoot = page.findViewById<ViewGroup>(R.id.keyboard_drawing)
+            val externalKeys = listOf(R.id.device_actions, R.id.mouse_drawing, R.id.gamepad_drawing)
+                .flatMap { page.findViewById<ViewGroup>(it).descendants.filterIsInstance<TextView>().toList() }
+                .filter { it.tag != null }
+            externalKeys.forEach { key -> key.setOnClickListener { select(key) } }
+            val keyboard = KeyboardKeyPickerController(
+                keyboardRoot, ::select,
+                externalViews = externalKeys + navigation.navigationViews + page.findViewById<View>(R.id.device_cancel),
+                onDismiss = { dismissCount++ }
+            )
+            navigation.onCategoryChanged = { keyboard.refreshNavigation() }
             val density = activity.resources.displayMetrics.density
             container.addView(page, FrameLayout.LayoutParams(
                 (320 * density).toInt(), ViewGroup.LayoutParams.MATCH_PARENT
             ))
             activity.setContentView(container)
+            navigation.setAvailableDevices(true, true, true)
         }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        idle()
     }
 
-    private fun waitForDestination(targetId: Int) {
-        val deadline = System.currentTimeMillis() + 5_000
-        var visible = false
-        while (!visible && System.currentTimeMillis() < deadline) {
-            activityRule.scenario.onActivity { activity ->
-                val scroll = activity.findViewById<HorizontalScrollView>(R.id.device_scroll)
-                val target = activity.findViewById<View>(targetId)
-                // Each complete target fits this viewport. The last destination
-                // may clamp to the end of the strip rather than align at its start.
-                visible = target.left >= scroll.scrollX &&
-                    target.right <= scroll.scrollX + scroll.width - scroll.paddingLeft - scroll.paddingRight
-            }
-            if (!visible) Thread.sleep(25)
-        }
-        assertTrue("Destination $targetId must be visible without swiping", visible)
+    private fun select(key: TextView) {
+        selectedTag = key.tag.toString()
+        selectionCount++
     }
+
+    private fun assertActive(buttonId: Int) {
+        activityRule.scenario.onActivity {
+            destinations.forEach { (button, content) ->
+                assertEquals("Category highlight must match content", button == buttonId,
+                    page.findViewById<View>(button).isSelected)
+                assertEquals(if (button == buttonId) View.VISIBLE else View.GONE,
+                    page.findViewById<View>(content).visibility)
+            }
+        }
+    }
+
+    private fun tap(findView: () -> View) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.setInTouchMode(true)
+        val bounds = Rect()
+        activityRule.scenario.onActivity { assertTrue(findView().getGlobalVisibleRect(bounds)) }
+        val downTime = SystemClock.uptimeMillis()
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action,
+                bounds.exactCenterX(), bounds.exactCenterY(), 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
+            instrumentation.sendPointerSync(event)
+            event.recycle()
+        }
+        idle()
+    }
+
+    private fun idle() = InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 }

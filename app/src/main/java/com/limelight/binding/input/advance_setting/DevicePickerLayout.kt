@@ -15,11 +15,10 @@ class DevicePickerLayout @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : SuperPageLayout(context, attrs) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val scroll = findViewById<View>(R.id.device_scroll)
+        val scroll = findViewById<View>(R.id.device_vertical_scroll)
         val viewportWidth = (MeasureSpec.getSize(widthMeasureSpec) -
             scroll.paddingLeft - scroll.paddingRight).coerceAtLeast(1)
-        val contentTopMargin = (findViewById<View>(R.id.device_vertical_scroll)
-            .layoutParams as MarginLayoutParams).topMargin
+        val contentTopMargin = (scroll.layoutParams as MarginLayoutParams).topMargin
         val viewportHeight = (MeasureSpec.getSize(heightMeasureSpec) - contentTopMargin -
             scroll.paddingTop - scroll.paddingBottom).coerceAtLeast(1)
         val keyboard = findViewById<View>(R.id.keyboard_drawing)
@@ -43,10 +42,8 @@ class DevicePickerLayout @JvmOverloads constructor(
                 if (isNumpad) numpadWidth / 2 else (keyboardWidth / 3f).roundToInt()
         }
         findViewById<View>(R.id.device_keyboard_pages).layoutParams.width = keyboardWidth
-        findViewById<View>(R.id.device_inner_box).minimumHeight = viewportHeight
-        findViewById<View>(R.id.device_actions).layoutParams.height = viewportHeight
-        // Give each illustration a viewport of its own. Its wrap-content child
-        // remains centered at the native size instead of exposing adjacent devices.
+        findViewById<View>(R.id.device_content).minimumHeight = viewportHeight
+        // Illustrations remain centered at their native size inside the active page.
         for (id in intArrayOf(R.id.mouse_drawing, R.id.gamepad_drawing)) {
             findViewById<View>(id).layoutParams.width = viewportWidth
         }
