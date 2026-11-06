@@ -29,11 +29,13 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
                 .setSampleRate(MatCarrierPlayer.RATE).setChannelMask(AudioFormat.CHANNEL_OUT_7POINT1_SURROUND).build();
     }
     private static boolean isHdmi(AudioDeviceInfo device) {
+        if (Build.VERSION.SDK_INT < 23) return false;
         int type = device.getType();
         return type == AudioDeviceInfo.TYPE_HDMI || type == AudioDeviceInfo.TYPE_HDMI_ARC ||
                 (Build.VERSION.SDK_INT >= 31 && type == AudioDeviceInfo.TYPE_HDMI_EARC);
     }
     private static int routePriority(AudioDeviceInfo device) {
+        if (Build.VERSION.SDK_INT < 23) return 0;
         if (Build.VERSION.SDK_INT >= 31 && device.getType() == AudioDeviceInfo.TYPE_HDMI_EARC) return 3;
         return device.getType() == AudioDeviceInfo.TYPE_HDMI_ARC ? 2 : 1;
     }
@@ -82,6 +84,7 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
         if (change < 0) focusLost = true; // Do not duck/multiply a bitstream.
     };
     private void checkRoute() {
+        if (Build.VERSION.SDK_INT < 24) throw new IllegalStateException("IEC MAT needs Android 7+");
         if (focusLost) throw new IllegalStateException("MAT audio focus lost");
         long now = System.nanoTime();
         if (now < nextRouteCheck) return;
@@ -103,6 +106,7 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
         routeId = device.getId();
     }
     @Override public int write(short[] words, int offset, int count) {
+        if (Build.VERSION.SDK_INT < 23) return AudioTrack.ERROR_INVALID_OPERATION;
         checkRoute();
         return track.write(words, offset, count, AudioTrack.WRITE_NON_BLOCKING);
     }
@@ -124,7 +128,8 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
             if (track != null) {
                 try {
                     android.util.Log.i("MAT-output", diagnostics() + "; underruns=" +
-                            track.getUnderrunCount() + "; head=" + (track.getPlaybackHeadPosition() & 0xffffffffL));
+                            (Build.VERSION.SDK_INT >= 24 ? track.getUnderrunCount() : -1) +
+                            "; head=" + (track.getPlaybackHeadPosition() & 0xffffffffL));
                 } finally {
                     try { track.pause(); track.flush(); }
                     finally { track.release(); track = null; }
