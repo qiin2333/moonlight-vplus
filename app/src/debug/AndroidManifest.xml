@@ -1,13 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
-        <activity android:name="com.limelight.binding.audio.MatReplayActivity"
-            android:exported="true" android:label="MAT offline diagnostic">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity android:name="com.limelight.binding.input.haptics.AuthoredIrTestActivity"
+            android:exported="true" android:label="IR 增强触觉测试" />
+        <activity
+            android:name=".preferences.MicrophoneTestActivity"
+            android:exported="false"
+            android:theme="@style/SettingsThemeCompat"
+            android:resizeableActivity="true"
+            android:label="@string/title_mic_test" />
+        <activity android:name="com.limelight.binding.audio.MatReplayActivity" android:exported="true" android:label="MAT HDMI diagnostic" />
     </application>
 </manifest>

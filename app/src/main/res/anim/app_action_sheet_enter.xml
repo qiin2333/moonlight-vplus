@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <set xmlns:android="http://schemas.android.com/apk/res/android"
-    android:interpolator="@android:interpolator/decelerate_cubic">
+    android:shareInterpolator="false">
     <translate
         android:duration="220"
+        android:interpolator="@interpolator/expressive_settle"
         android:fromYDelta="100%p"
         android:toYDelta="0" />
     <alpha
-        android:duration="180"
+        android:duration="100"
+        android:interpolator="@android:interpolator/linear"
         android:fromAlpha="0"
         android:toAlpha="1" />
 </set>

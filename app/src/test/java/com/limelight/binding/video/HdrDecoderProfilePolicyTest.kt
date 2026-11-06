@@ -35,6 +35,21 @@ class HdrDecoderProfilePolicyTest {
     }
 
     @Test
+    fun main10OnlyKeepsTheProfileLessStaticHdr10Fallback() {
+        assertEquals(
+            listOf<Int?>(null),
+            HdrDecoderProfilePolicy.buildCandidates(
+                isTenBit = true,
+                isPqHdr = true,
+                hdr10PlusEligible = false,
+                hdr10Advertised = false,
+                hdr10PlusProfile = 8192,
+                hdr10Profile = 4096,
+            ),
+        )
+    }
+
+    @Test
     fun hlgAndEightBitKeepLegacyAutomaticProfile() {
         assertEquals(
             listOf<Int?>(null),

@@ -12,6 +12,25 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class PyrowaveDecoderSessionTest {
     @Test
+    fun requestedResizeDoesNotConfirmGeometryUntilANewFramePresents() {
+        val native = FakeNative()
+        val session = PyrowaveDecoderSession(native)
+        val frame = byteArrayOf(1)
+        assertTrue(session.create(1280, 720))
+        assertEquals(null, session.lastPresentedSize)
+        assertEquals(PyrowaveDecoderSession.SubmitResult.SUCCESS, session.submit(frame, frame.size))
+        assertEquals(1280 to 720, session.lastPresentedSize)
+        assertTrue(session.create(1920, 1080))
+        assertEquals(1280 to 720, session.lastPresentedSize)
+        native.submitResult = PyrowaveDecoderSession.NATIVE_SUBMIT_FRAME_DROPPED
+        assertEquals(PyrowaveDecoderSession.SubmitResult.FRAME_DROPPED, session.submit(frame, frame.size))
+        assertEquals(1280 to 720, session.lastPresentedSize)
+        native.submitResult = 0
+        assertEquals(PyrowaveDecoderSession.SubmitResult.SUCCESS, session.submit(frame, frame.size))
+        assertEquals(1920 to 1080, session.lastPresentedSize)
+    }
+
+    @Test
     fun createFailureDoesNotExposeAHandle() {
         val native = FakeNative(createResult = 0L)
         val failures = AtomicInteger()

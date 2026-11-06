@@ -93,7 +93,9 @@ object StreamActionRegistry {
         "toggle_keyboard",
         "toggle_controller",
         "toggle_perf",
-        "toggle_remote_mouse"
+        "toggle_remote_mouse",
+        "ds5_touchpad",
+        "unlock_host"
     )
 
     val BUILTIN = linkedMapOf(
@@ -128,6 +130,14 @@ object StreamActionRegistry {
         "toggle_perf" to StreamAction("toggle_perf", "Perf", R.drawable.ic_performance_cute, 0, R.string.quick_btn_perf),
         "toggle_remote_mouse" to StreamAction(
             "toggle_remote_mouse", "Mouse", R.drawable.ic_mouse_cute, 0, R.string.quick_btn_remote_mouse
+        ),
+        "ds5_touchpad" to StreamAction(
+            "ds5_touchpad", "DS5", 0, labelRes = R.string.quick_btn_ds5_touchpad, iconText = "DS5"
+        ),
+        "unlock_host" to StreamAction(
+            "unlock_host", "Unlock", R.drawable.ic_btn_unlock,
+            labelRes = R.string.quick_btn_unlock_host,
+            tintableIcon = true
         ),
     )
 
@@ -234,6 +244,17 @@ class StreamActionExecutor(
                     Toast.makeText(game, game.getString(R.string.toast_remote_mouse_toast), Toast.LENGTH_SHORT).show()
                 }
                 sent
+            }
+            "unlock_host" -> {
+                game.startHostUnlock()
+                true
+            }
+            "ds5_touchpad" -> {
+                val enabled = game.screenDs5Touchpad.toggle()
+                val toastRes = if (enabled) R.string.toast_ds5_touchpad_on
+                else R.string.toast_ds5_touchpad_off
+                Toast.makeText(game, toastRes, Toast.LENGTH_SHORT).show()
+                true
             }
             else -> executeCustomAction(actionId)
         }

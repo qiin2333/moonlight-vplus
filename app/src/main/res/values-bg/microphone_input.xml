@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Системен избор</string>
+    <string name="mic_input_builtin">Вграден микрофон</string>
+    <string name="mic_input_wired">Кабелни слушалки</string>
+    <string name="mic_input_bluetooth">Bluetooth микрофон</string>
+    <string name="mic_input_usb">USB микрофон</string>
+    <string name="mic_input_active">Запис от: %1$s</string>
+    <string name="mic_input_unavailable">Избраното устройство не е налично.</string>
+    <string name="mic_input_route_pending">Изчакване на аудио входа</string>
+    <string name="mic_input_failed">Микрофонът не може да бъде избран. Опитайте отново.</string>
+    <string name="mic_input_bluetooth_quality">Използването на Bluetooth микрофона може да промени изходния маршрут за комуникация и да намали качеството на възпроизвеждане.</string>
+    <string name="mic_input_system_silenced">Микрофонът е заглушен от системата</string>
+    <string name="title_mic_test_devices">Input devices</string>
+    <string name="mic_test_start">Start test</string>
+    <string name="mic_test_stop">Stop test</string>
+    <string name="mic_test_waveform">Local waveform</string>
+    <string name="mic_test_idle">Select an input and start the test.</string>
+    <string name="mic_test_source">Audio source</string>
+    <string name="mic_test_route">Actual route</string>
+    <string name="mic_test_rms">RMS level</string>
+    <string name="mic_test_peak">Peak level</string>
+    <string name="mic_test_record">Record</string>
+    <string name="mic_test_recording">Recording %1$d/15s</string>
+    <string name="mic_test_stop_recording">Stop recording</string>
+    <string name="mic_test_play">Play</string>
+    <string name="mic_test_playing">Playing</string>
+    <string name="mic_test_preferred_route">Preferred input</string>
+    <string name="mic_test_recording_route">Recording configuration</string>
+    <string name="mic_test_display_gain">Display gain: %1$s</string>
+    <string name="mic_test_selected_input">Selected input</string>
+    <string name="mic_test_bound_input">Bound input</string>
+    <string name="mic_test_communication_route">Communication route</string>
+    <string name="mic_test_format">Capture format</string>
+    <string name="mic_test_buffer">Audio buffer</string>
+    <string name="mic_test_session">Audio session</string>
+</resources>

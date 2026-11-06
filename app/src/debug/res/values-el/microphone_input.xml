@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Προεπιλογή συστήματος</string>
+    <string name="mic_input_builtin">Ενσωματωμένο μικρόφωνο</string>
+    <string name="mic_input_wired">Ενσύρματα ακουστικά</string>
+    <string name="mic_input_bluetooth">Μικρόφωνο Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Μικρόφωνο Bluetooth (απαιτείται άδεια)</string>
+    <string name="mic_input_usb">Μικρόφωνο USB</string>
+    <string name="mic_input_microphone">Μικρόφωνο</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Εγγραφή από: %1$s</string>
+    <string name="mic_input_unavailable">Η επιλεγμένη συσκευή δεν είναι διαθέσιμη.</string>
+    <string name="mic_input_route_pending">Αναμονή για τη διαδρομή εισόδου ήχου</string>
+    <string name="mic_input_failed">Δεν ήταν δυνατή η επιλογή αυτού του μικροφώνου. Δοκιμάστε ξανά.</string>
+    <string name="mic_input_bluetooth_quality">Η χρήση μικροφώνου Bluetooth μπορεί να αλλάξει τη διαδρομή επικοινωνίας και να μειώσει την ποιότητα αναπαραγωγής.</string>
+    <string name="mic_input_system_silenced">Το μικρόφωνο τέθηκε σε σίγαση από το Android</string>
+    <string name="title_mic_test">Δοκιμή μικροφώνου</string>
+    <string name="summary_mic_test">Καταγράφει τον ήχο του τοπικού μικροφώνου και εμφανίζει την κυματομορφή χωρίς έναρξη ροής.</string>
+    <string name="title_mic_test_devices">Συσκευές εισόδου</string>
+    <string name="mic_test_start">Έναρξη δοκιμής</string>
+    <string name="mic_test_stop">Διακοπή δοκιμής</string>
+    <string name="mic_test_waveform">Τοπική κυματομορφή</string>
+    <string name="mic_test_idle">Επιλέξτε είσοδο και ξεκινήστε τη δοκιμή.</string>
+    <string name="mic_test_source">Πηγή ήχου</string>
+    <string name="mic_test_route">Πραγματική διαδρομή</string>
+    <string name="mic_test_rms">Επίπεδο RMS</string>
+    <string name="mic_test_peak">Μέγιστο επίπεδο</string>
+    <string name="mic_test_record">Εγγραφή</string>
+    <string name="mic_test_recording">Εγγραφή %1$d/15 δευτ.</string>
+    <string name="mic_test_stop_recording">Διακοπή εγγραφής</string>
+    <string name="mic_test_play">Αναπαραγωγή</string>
+    <string name="mic_test_playing">Αναπαραγωγή</string>
+    <string name="mic_test_preferred_route">Προτιμώμενη είσοδος</string>
+    <string name="mic_test_recording_route">Διαμόρφωση εγγραφής</string>
+    <string name="mic_test_display_gain">Κέρδος προβολής: %1$s</string>
+    <string name="mic_test_selected_input">Επιλεγμένη είσοδος</string>
+    <string name="mic_test_bound_input">Συνδεδεμένη είσοδος</string>
+    <string name="mic_test_communication_route">Διαδρομή επικοινωνίας</string>
+    <string name="mic_test_format">Μορφή καταγραφής</string>
+    <string name="mic_test_buffer">Buffer ήχου</string>
+    <string name="mic_test_session">Συνεδρία ήχου</string>
+    <string name="mic_test_error_permission">Απαιτείται άδεια μικροφώνου.</string>
+    <string name="mic_test_error_route_lost">Η διαδρομή του μικροφώνου Bluetooth χάθηκε.</string>
+    <string name="mic_test_error_route_activation">Δεν ήταν δυνατή η ενεργοποίηση της επιλεγμένης διαδρομής μικροφώνου.</string>
+    <string name="mic_test_error_start">Δεν ήταν δυνατή η έναρξη της δοκιμής μικροφώνου.</string>
+    <string name="mic_test_error_playback">Δεν ήταν δυνατή η δημιουργία αναπαραγωγής ήχου.</string>
+    <string name="mic_test_error_playback_init">Αποτυχία αρχικοποίησης αναπαραγωγής ήχου.</string>
+    <string name="mic_test_error_read">Αποτυχία καταγραφής από το μικρόφωνο.</string>
+    <string name="mic_test_error_read_code">Αποτυχία καταγραφής από το μικρόφωνο (%1$d).</string>
+</resources>

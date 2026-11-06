@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +30,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.limelight.utils.AppSwitch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -49,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -62,11 +63,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.doOnLayout
+import com.easytier.jni.EasyTierJNI
 import com.easytier.jni.EasyTierManager
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppDialogStyler
+import dalvik.system.BaseDexClassLoader
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -151,6 +154,8 @@ class EasyTierController(
     // ==================== 主要公共方法 ====================
 
     fun showControlDialog() {
+        if (!checkNativeLibrariesAvailable()) return
+
         if (easyTierManager == null) {
             Toast.makeText(activity, R.string.easytier_manager_uninitialized, Toast.LENGTH_SHORT).show()
             return
@@ -161,6 +166,8 @@ class EasyTierController(
 
     fun handleVpnPermissionResult(resultCode: Int) {
         if (resultCode == Activity.RESULT_OK) {
+            if (!checkNativeLibrariesAvailable()) return
+
             LimeLog.info("$TAG: VPN权限已获取，启动EasyTier Manager。")
             easyTierManager?.start()
             Toast.makeText(activity, R.string.easytier_starting, Toast.LENGTH_SHORT).show()
@@ -168,6 +175,19 @@ class EasyTierController(
             LimeLog.warning("$TAG: VPN权限被拒绝。")
             Toast.makeText(activity, R.string.easytier_vpn_permission_required, Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun checkNativeLibrariesAvailable(): Boolean {
+        // Use the JNI class's loader: device ABIs may also include 64-bit ABIs when
+        // this process is 32-bit. findLibrary also handles libraries loaded from APKs.
+        val loader = EasyTierJNI::class.java.classLoader as? BaseDexClassLoader
+        if (loader?.findLibrary("easytier_android_jni") != null &&
+                loader.findLibrary("easytier_ffi") != null) {
+            return true
+        }
+
+        Toast.makeText(activity, R.string.easytier_native_libraries_unavailable, Toast.LENGTH_LONG).show()
+        return false
     }
 
     // ==================== 对话框管理 ====================
@@ -255,11 +275,11 @@ class EasyTierController(
             onAction: (EasyTierDialogAction) -> Unit
     ) {
         val accent = appAccentColor()
-        val panel = colorResource(R.color.crown_panel_background)
-        val card = colorResource(R.color.crown_section_background)
-        val input = colorResource(R.color.crown_input_background)
-        val textPrimary = colorResource(R.color.crown_text_primary)
-        val textSecondary = colorResource(R.color.crown_text_secondary)
+        val panel = colorResource(R.color.easytier_panel_background)
+        val card = colorResource(R.color.easytier_section_background)
+        val input = colorResource(R.color.easytier_input_background)
+        val textPrimary = colorResource(R.color.easytier_text_primary)
+        val textSecondary = colorResource(R.color.easytier_text_secondary)
         val initialFocusRequester = remember { FocusRequester() }
         val inputModeManager = LocalInputModeManager.current
         var initialFocusTargetLaidOut by remember { mutableStateOf(false) }
@@ -274,9 +294,12 @@ class EasyTierController(
             }
         }
 
+        // Pink accents that read fine on the dark panel lose contrast on the light one.
+        val primary = if (panel.luminance() > 0.5f) lerp(accent, Color.Black, 0.3f) else accent
+
         MaterialTheme(
                 colorScheme = darkColorScheme(
-                        primary = accent,
+                        primary = primary,
                         surface = panel,
                         onSurface = textPrimary,
                         surfaceVariant = input,
@@ -324,7 +347,7 @@ class EasyTierController(
                         TabRow(
                                 selectedTabIndex = if (state.selectedTab == EasyTierTab.STATUS) 0 else 1,
                                 containerColor = Color.Transparent,
-                                contentColor = accent
+                                contentColor = primary
                         ) {
                             Tab(
                                     selected = state.selectedTab == EasyTierTab.STATUS,
@@ -426,8 +449,8 @@ class EasyTierController(
 
     @Composable
     private fun EasyTierStatusPill(isRunning: Boolean) {
-        val accent = if (isRunning) appAccentColor() else colorResource(R.color.crown_text_secondary)
-        val textColor = colorResource(R.color.crown_text_primary)
+        val accent = if (isRunning) appAccentColor() else colorResource(R.color.easytier_text_secondary)
+        val textColor = colorResource(R.color.easytier_text_primary)
         Box(
                 modifier = Modifier
                         .background(accent.copy(alpha = if (isRunning) 0.28f else 0.16f), RoundedCornerShape(999.dp))
@@ -457,8 +480,8 @@ class EasyTierController(
                         .handleGamepadConfirm(onRefresh),
                     shape = AppShapes.medium,
                     colors = ButtonDefaults.buttonColors(
-                            containerColor = colorResource(R.color.crown_input_background),
-                            contentColor = colorResource(R.color.crown_text_primary)
+                            containerColor = colorResource(R.color.easytier_input_background),
+                            contentColor = colorResource(R.color.easytier_text_primary)
                     ),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
             ) {
@@ -469,14 +492,14 @@ class EasyTierController(
                 EasyTierInfoCard {
                     Text(
                             text = stringResource(R.string.easytier_service_not_running),
-                            color = colorResource(R.color.crown_text_primary),
+                            color = colorResource(R.color.easytier_text_primary),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                             text = stringResource(R.string.easytier_refresh_hint),
-                            color = colorResource(R.color.crown_text_secondary),
+                            color = colorResource(R.color.easytier_text_secondary),
                             fontSize = 13.sp
                     )
                 }
@@ -500,7 +523,7 @@ class EasyTierController(
                 EasyTierInfoCard {
                     Text(
                             text = stringResource(R.string.easytier_no_peers),
-                            color = colorResource(R.color.crown_text_secondary),
+                            color = colorResource(R.color.easytier_text_secondary),
                             fontSize = 13.sp
                     )
                 }
@@ -598,7 +621,7 @@ class EasyTierController(
     @Composable
     private fun EasyTierInfoCard(content: @Composable () -> Unit) {
         Card(
-                colors = CardDefaults.cardColors(containerColor = colorResource(R.color.crown_section_background)),
+                colors = CardDefaults.cardColors(containerColor = colorResource(R.color.easytier_section_background)),
                 shape = AppShapes.small,
                 modifier = Modifier.fillMaxWidth()
         ) {
@@ -612,9 +635,9 @@ class EasyTierController(
     @Composable
     private fun EasyTierPeerCard(peer: FinalPeerInfo) {
         val titleColor = if (!peer.isInSameSubnet) {
-            Color(0xFFFF7777)
+            colorResource(R.color.easytier_warning)
         } else {
-            colorResource(R.color.crown_text_primary)
+            colorResource(R.color.easytier_text_primary)
         }
         EasyTierInfoCard {
             Text(
@@ -654,14 +677,14 @@ class EasyTierController(
         ) {
             Text(
                     text = label,
-                    color = colorResource(R.color.crown_text_primary),
+                    color = colorResource(R.color.easytier_text_primary),
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.width(104.dp)
             )
             Text(
                     text = value ?: stringResource(R.string.easytier_unknown),
-                    color = colorResource(R.color.crown_text_secondary),
+                    color = colorResource(R.color.easytier_text_secondary),
                     fontSize = 12.5.sp,
                     modifier = Modifier.weight(1f)
             )
@@ -672,7 +695,7 @@ class EasyTierController(
     private fun EasyTierSectionTitle(title: String) {
         Text(
                 text = title,
-                color = colorResource(R.color.crown_text_primary),
+                color = colorResource(R.color.easytier_text_primary),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 6.dp)
@@ -706,7 +729,7 @@ class EasyTierController(
     private fun EasyTierSwitchSection(title: String) {
         Text(
                 text = title,
-                color = colorResource(R.color.crown_text_secondary),
+                color = colorResource(R.color.easytier_text_secondary),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
@@ -718,23 +741,21 @@ class EasyTierController(
         Row(
                 modifier = Modifier
                         .fillMaxWidth()
-                        .background(colorResource(R.color.crown_section_background), AppShapes.small)
+                        .background(colorResource(R.color.easytier_section_background), AppShapes.small)
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                     text = label,
-                    color = colorResource(R.color.crown_text_primary),
+                    color = colorResource(R.color.easytier_text_primary),
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(10.dp))
-            Switch(
+            AppSwitch(
                     checked = checked,
                     onCheckedChange = onCheckedChange,
-                    modifier = Modifier
-                        .size(width = 48.dp, height = 32.dp)
-                        .handleGamepadConfirm { onCheckedChange(!checked) }
+                    modifier = Modifier.handleGamepadConfirm { onCheckedChange(!checked) }
             )
         }
     }

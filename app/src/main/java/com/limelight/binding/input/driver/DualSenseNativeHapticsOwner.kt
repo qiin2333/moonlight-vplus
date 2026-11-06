@@ -10,7 +10,8 @@ import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
  */
 internal class DualSenseNativeHapticsOwner(
     private val onAvailable: (DualSenseNativeHapticsSink) -> Unit,
-    private val onGone: () -> Unit
+    private val onGone: () -> Unit,
+    private val onReleaseFailure: (Throwable) -> Unit = {}
 ) {
     private val lock = Any()
     private var sink: DualSenseNativeHapticsSink? = null
@@ -52,7 +53,9 @@ internal class DualSenseNativeHapticsOwner(
         } finally {
             val current = closeState.sink
             if (current != null) {
-                current.stopAndThen(onStopped)
+                current.stopAndThen {
+                    try { current.releaseFailure?.let(onReleaseFailure) } finally { onStopped() }
+                }
             } else {
                 onStopped()
             }

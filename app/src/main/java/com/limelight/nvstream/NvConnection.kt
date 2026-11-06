@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.Display
 
 import com.limelight.utils.NetHelper
 
@@ -19,6 +20,7 @@ import java.security.NoSuchAlgorithmException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -48,6 +50,7 @@ open class NvConnection(
     config: StreamConfiguration,
     private val cryptoProvider: LimelightCryptoProvider,
     serverCert: X509Certificate?,
+    outputDisplay: Display,
     displayName: String? = null,
     forceResumeCurrentSession: Boolean = false
 ) {
@@ -60,6 +63,9 @@ open class NvConnection(
         }
     private val context: ConnectionContext = ConnectionContext()
     private val isMonkey: Boolean = ActivityManager.isUserAMonkey()
+    @Volatile
+    private var stopped = false
+    private val connectionSlotOwned = AtomicBoolean(false)
 
     @Volatile
     var serverVersion: String? = null
@@ -76,26 +82,34 @@ open class NvConnection(
         context.riKey = generateRiAesKey()
         context.riKeyId = generateRiKeyId()
 
-        val brightnessRange = HdrCapabilityHelper.getBrightnessRangeAsInts(appContext).let {
-            if (config.hdrBrightnessOverride) {
-                HdrCapabilityHelper.applyBrightnessOverride(it, config.hdrPeakBrightnessNits)
-            } else {
-                it
-            }
-        }
-        context.minBrightness = brightnessRange[0]
-        context.maxBrightness = brightnessRange[1]
-        context.maxAverageBrightness = brightnessRange[2]
+        context.hdrBrightness = HdrCapabilityHelper.getBrightnessReport(
+            outputDisplay,
+            config.hdrPeakBrightnessNits.takeIf { config.hdrBrightnessOverride },
+        )
 
         if (config.hdrBrightnessOverride) {
+            val brightness = context.hdrBrightness
             LimeLog.info(
-                "HDR brightness override: min=${context.minBrightness}, " +
-                    "max=${context.maxBrightness}, avg=${context.maxAverageBrightness} nits"
+                "HDR brightness override: min=${brightness?.minNits}, " +
+                    "max=${brightness?.maxNits}, avg=${brightness?.maxFullFrameNits} nits"
             )
         }
     }
 
+    internal fun requestStop() {
+        stopped = true
+    }
+
+    @Synchronized
     fun stop() {
+        // Activity teardown and disconnect-and-quit can both stop this connection.
+        // A second stop must not interrupt a newer native session or release its slot.
+        requestStop()
+
+        // Claim this attempt's slot before touching the process-wide native connection.
+        // Startup failure and stop must never both release it.
+        if (!connectionSlotOwned.compareAndSet(true, false)) return
+
         MoonBridge.interruptConnection()
 
         synchronized(MoonBridge::class.java) {
@@ -112,6 +126,24 @@ open class NvConnection(
      */
     fun createNvHttp(): NvHTTP =
         NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)
+
+    /** Host display device id selected when the stream was started, if any. */
+    fun displayName(): String? = context.displayName
+
+    /** Serialize against stop and never target the process-wide native connection after losing ownership. */
+    @Synchronized
+    fun requestResolutionChange(width: Int, height: Int): Boolean = synchronized(MoonBridge::class.java) {
+        if (stopped || !connectionSlotOwned.get()) return@synchronized false
+        MoonBridge.requestResolutionChange(width, height) == 0
+    }
+
+    fun applyResolutionLocally(width: Int, height: Int) {
+        context.streamConfig.updateResolution(width, height)
+        context.negotiatedWidth = width
+        context.negotiatedHeight = height
+    }
+
+    val authoredPcmHapticsRequested: Boolean get() = context.streamConfig.authoredPcmHaptics
 
     /** 应用 ABR 调整后的码率到本地配置（不发起网络请求）。*/
     fun applyBitrateLocally(bitrateKbps: Int) {
@@ -243,17 +275,10 @@ open class NvConnection(
     }
 
     /** Start the native connection with the current negotiated session state. */
-    private fun matDumpPath(): String? {
-        if (context.streamConfig.audioCodec != MoonBridge.AUDIO_CODEC_MAT_DUMP) return null
-        val dir = java.io.File(appContext.filesDir, "mat-dumps")
-        if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Cannot create MAT dump directory")
-        val path = java.io.File(dir, "mat-${java.util.UUID.randomUUID()}.raw").absolutePath
-        LimeLog.info("MAT dump-only destination: $path")
-        return path
-    }
-
-    private fun startNativeConnection(ib: ByteBuffer): Int =
-        MoonBridge.startConnection(
+    private fun startNativeConnection(ib: ByteBuffer): Int {
+        MoonBridge.setAuthoredHapticsEnabled(context.streamConfig.authoredIrHaptics &&
+            !context.streamConfig.authoredPcmHaptics && !context.streamConfig.getControlOnly())
+        return MoonBridge.startConnection(
             context.serverAddress.address,
             context.serverAppVersion, context.serverGfeVersion, context.rtspSessionUrl,
             context.serverCodecModeSupport,
@@ -273,9 +298,9 @@ open class NvConnection(
             context.streamConfig.audioCodec,
             context.streamConfig.audioBitrate,
             context.streamConfig.authoredPcmHaptics,
-            context.streamConfig.fecPercentage,
-            matDumpPath()
+            context.streamConfig.fecPercentage
         )
+    }
 
     @Throws(XmlPullParserException::class, IOException::class, InterruptedException::class)
     private fun startApp(): Boolean {
@@ -462,6 +487,7 @@ open class NvConnection(
 
     fun start(audioRenderer: AudioRenderer, videoDecoderRenderer: VideoDecoderRenderer, connectionListener: NvConnectionListener) {
         Thread {
+            if (stopped) return@Thread
             context.connListener = connectionListener
             val appName = context.streamConfig.app.appName
             // The preflight creates and tears down the Vulkan/Surface candidate.
@@ -512,9 +538,11 @@ open class NvConnection(
             val ib = ByteBuffer.allocate(16)
             ib.putInt(context.riKeyId)
 
+            if (stopped) return@Thread
             try {
                 val waitStartTime = SystemClock.elapsedRealtime()
                 connectionAllowed.acquire()
+                connectionSlotOwned.set(true)
                 val waitMs = SystemClock.elapsedRealtime() - waitStartTime
                 if (waitMs > 10) {
                     LimeLog.info("Connection step 'connection slot wait' completed in ${waitMs}ms")
@@ -526,17 +554,22 @@ open class NvConnection(
             }
 
             synchronized(MoonBridge::class.java) {
-                MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener)
+                if (!MoonBridge.setupBridge(videoDecoderRenderer, audioRenderer, connectionListener) { stopped }) {
+                    if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
+                    return@synchronized
+                }
                 MoonBridge.setDynamicHdrNegotiation(
                     context.streamConfig.dynamicHdrCaps,
                     if (context.streamConfig.dolbyVisionDirectSurface) 1 else 0,
                     context.streamConfig.dynamicHdrPreference,
                 )
                 val ret = timeConnectionStep("native connection") {
-                    startNativeConnection(ib)
+                    // A cancelled pending start follows the normal failure/permit cleanup path.
+                    if (stopped) -1 else startNativeConnection(ib)
                 }
                 if (ret != 0) {
-                    connectionAllowed.release()
+                    MoonBridge.cleanupBridge()
+                    if (connectionSlotOwned.compareAndSet(true, false)) connectionAllowed.release()
                     return@synchronized
                 }
             }
@@ -712,6 +745,14 @@ open class NvConnection(
         }
     }
 
+    fun sendControllerMotionFrame(controller: Byte, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): Int =
+        if (!isMonkey) MoonBridge.sendControllerMotionFrame(controller, gx, gy, gz, ax, ay, az)
+        else MoonBridge.LI_ERR_UNSUPPORTED
+
+    fun stopControllerMotionEvent(controller: Byte): Int =
+        if (!isMonkey) MoonBridge.stopControllerMotionEvent(controller)
+        else MoonBridge.LI_ERR_UNSUPPORTED
+
     fun sendControllerBatteryEvent(controllerNumber: Byte, batteryState: Byte, batteryPercentage: Byte): Int =
         MoonBridge.sendControllerBatteryEvent(controllerNumber, batteryState, batteryPercentage)
 
@@ -723,8 +764,10 @@ open class NvConnection(
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun doStopAndQuit() {
-        this.stop()
         Thread {
+            // Native shutdown joins the input thread and may wait on network I/O.
+            // Complete it here before quitting the host app, away from the UI thread.
+            this.stop()
             val h: NvHTTP
             try {
                 h = NvHTTP(context.serverAddress, context.httpsPort, uniqueId, clientName, context.serverCert, cryptoProvider)

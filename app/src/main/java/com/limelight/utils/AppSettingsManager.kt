@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.view.KeyEvent
+import androidx.preference.PreferenceManager
 
 import com.limelight.R
 import com.limelight.computers.ComputerManagerService
@@ -160,6 +161,9 @@ class AppSettingsManager(private val context: Context) {
         if (settings.showBitrateCard) {
             summary.append(" | ").append(context.getString(R.string.setting_bitrate_card_enabled))
         }
+        if (settings.showDisplaySettingsCard) {
+            summary.append(" | ").append(context.getString(R.string.game_menu_display_settings))
+        }
         if (settings.showAudioHapticsCard) {
             summary.append(" | ").append(context.getString(R.string.setting_audio_haptics_card_enabled))
         }
@@ -168,6 +172,9 @@ class AppSettingsManager(private val context: Context) {
         }
         if (settings.showQuickKeyCard) {
             summary.append(" | ").append(context.getString(R.string.setting_QuickKey_card_enabled))
+        }
+        if (settings.showWaveformHapticsCard) {
+            summary.append(" | ").append(context.getString(R.string.waveform_card_title))
         }
 
         // Add time information
@@ -241,9 +248,11 @@ class AppSettingsManager(private val context: Context) {
             put("gyroToRightStick", settings.gyroToRightStick)
             put("gyroToMouse", settings.gyroToMouse)
             put("showBitrateCard", settings.showBitrateCard)
+            put("showDisplaySettingsCard", settings.showDisplaySettingsCard)
             put("showAudioHapticsCard", settings.showAudioHapticsCard)
             put("showGyroCard", settings.showGyroCard)
             put("showQuickKeyCard", settings.showQuickKeyCard)
+            put("showWaveformHapticsCard", settings.showWaveformHapticsCard)
             put("timestamp", System.currentTimeMillis())
         }
     }
@@ -260,10 +269,6 @@ class AppSettingsManager(private val context: Context) {
         settings.enablePerfOverlay = false
         settings.reverseResolution = false
         settings.rotableScreen = false
-        settings.showBitrateCard = false
-        settings.showAudioHapticsCard = false
-        settings.showGyroCard = false
-        settings.showQuickKeyCard = false
 
         // Parse resolution string format "1920x1080"
         val resolutionStr = settingsJson.optString("resolution", "1920x1080")
@@ -301,9 +306,24 @@ class AppSettingsManager(private val context: Context) {
         settings.gyroToRightStick = !settings.gyroToMouse &&
             settingsJson.optBoolean("gyroToRightStick", false)
         settings.showBitrateCard = settingsJson.optBoolean("showBitrateCard", true)
+        val globalPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        settings.showDisplaySettingsCard = settingsJson.optBoolean(
+            "showDisplaySettingsCard",
+            globalPreferences.getBoolean(
+                PreferenceConfiguration.SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING,
+                true
+            )
+        )
         settings.showAudioHapticsCard = settingsJson.optBoolean("showAudioHapticsCard", false)
         settings.showGyroCard = settingsJson.optBoolean("showGyroCard", true)
         settings.showQuickKeyCard = settingsJson.optBoolean("showQuickKeyCard", true)
+        settings.showWaveformHapticsCard = settingsJson.optBoolean(
+            "showWaveformHapticsCard",
+            globalPreferences.getBoolean(
+                PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
+                true
+            )
+        )
 
         return settings
     }
@@ -357,6 +377,11 @@ class AppSettingsManager(private val context: Context) {
 
             prefConfig.width = intent.getIntExtra(INTENT_LAST_SETTINGS_WIDTH, prefConfig.width)
             prefConfig.height = intent.getIntExtra(INTENT_LAST_SETTINGS_HEIGHT, prefConfig.height)
+            if (intent.hasExtra(INTENT_LAST_SETTINGS_WIDTH) || intent.hasExtra(INTENT_LAST_SETTINGS_HEIGHT)) {
+                // Saved per-game dimensions are explicit sizes, not a Native selection.
+                prefConfig.isNativeResolution = false
+                prefConfig.isCustomResolution = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
+            }
             prefConfig.fps = intent.getIntExtra(INTENT_LAST_SETTINGS_FPS, prefConfig.fps)
             prefConfig.bitrate = intent.getIntExtra(INTENT_LAST_SETTINGS_BITRATE, prefConfig.bitrate)
             prefConfig.resolutionScale = intent.getIntExtra(INTENT_LAST_SETTINGS_RESOLUTION_SCALE, prefConfig.resolutionScale)
@@ -381,9 +406,14 @@ class AppSettingsManager(private val context: Context) {
             prefConfig.gyroToRightStick = !prefConfig.gyroToMouse &&
                 intent.getBooleanExtra(INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK, prefConfig.gyroToRightStick)
             prefConfig.showBitrateCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, prefConfig.showBitrateCard)
+            prefConfig.showDisplaySettingsCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_DISPLAY_SETTINGS_CARD, prefConfig.showDisplaySettingsCard)
             prefConfig.showAudioHapticsCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, prefConfig.showAudioHapticsCard)
             prefConfig.showGyroCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, prefConfig.showGyroCard)
             prefConfig.showQuickKeyCard = intent.getBooleanExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, prefConfig.showQuickKeyCard)
+            prefConfig.showWaveformHapticsCard = intent.getBooleanExtra(
+                INTENT_LAST_SETTINGS_SHOW_WAVEFORM_HAPTICS_CARD,
+                prefConfig.showWaveformHapticsCard
+            )
 
             prefConfig.videoFormat = parseVideoFormat(intent.getStringExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT))
 
@@ -436,9 +466,11 @@ class AppSettingsManager(private val context: Context) {
         private const val INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK = "LastSettingsGyroToRightStick"
         private const val INTENT_LAST_SETTINGS_GYRO_TO_MOUSE = "LastSettingsGyroToMouse"
         private const val INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD = "LastSettingsShowBitrateCard"
+        private const val INTENT_LAST_SETTINGS_SHOW_DISPLAY_SETTINGS_CARD = "LastSettingsShowDisplaySettingsCard"
         private const val INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD = "LastSettingsShowAudioHapticsCard"
         private const val INTENT_LAST_SETTINGS_SHOW_GYRO_CARD = "LastSettingsShowGyroCard"
         private const val INTENT_LAST_SETTINGS_SHOW_QuickKeyCard = "LastSettingsshowQuickKeyCard"
+        private const val INTENT_LAST_SETTINGS_SHOW_WAVEFORM_HAPTICS_CARD = "LastSettingsShowWaveformHapticsCard"
 
         /**
          * Add last settings to Intent
@@ -471,9 +503,11 @@ class AppSettingsManager(private val context: Context) {
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_TO_RIGHT_STICK, lastSettings.gyroToRightStick)
             intent.putExtra(INTENT_LAST_SETTINGS_GYRO_TO_MOUSE, lastSettings.gyroToMouse)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_BITRATE_CARD, lastSettings.showBitrateCard)
+            intent.putExtra(INTENT_LAST_SETTINGS_SHOW_DISPLAY_SETTINGS_CARD, lastSettings.showDisplaySettingsCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_AUDIO_HAPTICS_CARD, lastSettings.showAudioHapticsCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_GYRO_CARD, lastSettings.showGyroCard)
             intent.putExtra(INTENT_LAST_SETTINGS_SHOW_QuickKeyCard, lastSettings.showQuickKeyCard)
+            intent.putExtra(INTENT_LAST_SETTINGS_SHOW_WAVEFORM_HAPTICS_CARD, lastSettings.showWaveformHapticsCard)
         }
     }
 }

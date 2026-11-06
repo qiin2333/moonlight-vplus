@@ -26,6 +26,8 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import com.limelight.ui.ThemedActivity
 import com.limelight.utils.AppTheme
+import com.limelight.unlock.HostUnlockCredentialStore
+import com.limelight.unlock.HostUnlockUi
 import com.limelight.binding.PlatformBinding
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import com.limelight.computers.ComputerManagerService
@@ -59,6 +61,8 @@ import com.limelight.preferences.StreamSettings
 import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.ui.FeatureGuideRegistry
+import com.limelight.ui.MoonWheelDrawable
+import com.limelight.ui.PixelMapBackgroundDrawable
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
@@ -222,10 +226,12 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         private const val NETWORK_QUALITY_ID = 18
         private const val ADD_PC_MANUALLY_ID = 19
         private const val ADD_PC_QR_SCAN_ID = 20
+        private const val AUTO_UNLOCK_ID = 21
 
     }
 
     // UI Components
+    private val hostUnlockUi by lazy { HostUnlockUi(this) }
     private var noPcFoundLayout: View? = null
     private lateinit var pcGridAdapter: PcGridAdapter
     private var pcListView: AbsListView? = null
@@ -450,6 +456,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     override fun onDestroy() {
         AboutDialogLauncher.release(this)
         UpdateManager.cleanup()
+        hostUnlockUi.release()
         super.onDestroy()
 
         uiScope.cancel()
@@ -649,6 +656,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         val easyTierButton = findViewById<ImageButton>(R.id.easyTierControlButton)
         val toolbarMenuButton = findViewById<ImageButton>(R.id.pcToolbarMenuButton)
 
+        refreshAccentTintedToolbarIcons()
         settingsButton.setOnClickListener { startActivity(Intent(this, StreamSettings::class.java)) }
 
         aboutButton?.setOnClickListener { AboutDialogLauncher.show(this) }
@@ -852,8 +860,17 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
      */
     private fun refreshAccentTintedToolbarIcons() {
         val tint = ColorStateList.valueOf(UiHelper.accentColor(this))
+        findViewById<ImageButton?>(R.id.settingsButton)?.setImageDrawable(
+            MoonWheelDrawable(
+                density = resources.displayMetrics.density,
+                graphiteColor = ContextCompat.getColor(this, R.color.ui_shell_text_primary),
+                accentColor = UiHelper.accentColor(this)
+            )
+        )
         findViewById<ImageButton?>(R.id.aboutButton)?.imageTintList = tint
         findViewById<ImageButton?>(R.id.easyTierControlButton)?.imageTintList = tint
+        findViewById<ImageButton?>(R.id.pcToolbarMenuButton)?.imageTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ui_shell_text_primary))
     }
 
     private fun getThemeModeLabel(mode: String): String {
@@ -927,8 +944,12 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         }
 
         if (target == null) {
-            // "none" or self-demoted bad state → leave the view empty.
-            backgroundImageView?.setImageDrawable(null)
+            backgroundImageView?.setImageDrawable(
+                when (source) {
+                    BackgroundSource.Auto, BackgroundSource.Api -> PixelMapBackgroundDrawable(this)
+                    else -> null
+                }
+            )
             BgAccent.clear(this)
             refreshBackgroundAccent(BgAccent.NO_BUCKET)
             return
@@ -1170,9 +1191,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     /**
      * First-launch background source picker (issue #263).
      *
-     * - TV / Leanback devices: no dialog ever. They are auto-switched to Picsum
-     *   (photography, family-friendly) silently because D-pad dialogs on a
-     *   shared TV are worse UX than picking the safe option.
+     * - TV / Leanback devices: no dialog. Keep the offline V/+ map default.
      * - Everyone else on a fresh install: one-time picker so nobody is
      *   ambushed by animé wallpapers in public / at work.
      * - Anyone who already picked, or who already saw+dismissed the dialog,
@@ -1191,7 +1210,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             return
         }
         if (BackgroundSource.isTvDevice(this)) {
-            BackgroundSource.setActive(this, BackgroundSource.Picsum)
+            BackgroundSource.setActive(this, BackgroundSource.Auto)
             return
         }
 
@@ -1279,12 +1298,21 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     // Image Save Methods
 
     private fun saveImageWithPermissionCheck() {
+        val resolved = BackgroundSource.resolveCurrentTarget(
+            this,
+            resources.configuration.orientation
+        )
+        if (resolved.target == null || backgroundImageView?.drawable == null || displayedBackgroundKey != resolved.cacheKey) {
+            showToast(getString(R.string.image_not_loaded_please_retry))
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
             showToast(getString(R.string.storage_permission_required))
             requestStoragePermission()
             return
         }
-        saveImage()
+        showToast(getString(R.string.downloading_image_please_wait))
+        saveResolvedBackground(resolved)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -1296,20 +1324,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         } catch (e: Exception) {
             startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         }
-    }
-
-    private fun saveImage() {
-        val resolved = BackgroundSource.resolveCurrentTarget(
-            this,
-            resources.configuration.orientation
-        )
-        if (resolved.target == null || backgroundImageView?.drawable == null || displayedBackgroundKey != resolved.cacheKey) {
-            showToast(getString(R.string.image_not_loaded_please_retry))
-            return
-        }
-
-        showToast(getString(R.string.downloading_image_please_wait))
-        saveResolvedBackground(resolved)
     }
 
     /**
@@ -1424,6 +1438,8 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     }
 
     override fun hearShake() {
+        // Procedural/empty backgrounds have nothing to refresh and consume no download quota.
+        if (BackgroundSource.resolveCurrentTarget(this, resources.configuration.orientation).target == null) return
         val currentTime = System.currentTimeMillis()
 
         if (currentTime - lastShakeTime < SHAKE_DEBOUNCE_INTERVAL) {
@@ -1725,6 +1741,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 .edit {
                     remove(details.uuid)
                 }
+        HostUnlockCredentialStore.remove(this, details.uuid)
 
         for (i in 0 until pcGridAdapter.rawCount) {
             val computer = pcGridAdapter.getRawItem(i)
@@ -2787,6 +2804,17 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             if (details.vddCapabilityVersion != 0) {
                 add(SECONDARY_SCREEN_ID, R.string.pcview_menu_secondary_screen)
             }
+            if (!details.nvidiaServer &&
+                HostUnlockUi.availability(this@PcView) != HostUnlockUi.Availability.UNSUPPORTED
+            ) {
+                this.add(AppActionSheet.Action(
+                    id = AUTO_UNLOCK_ID,
+                    title = getString(R.string.pcview_menu_auto_unlock),
+                    description = getString(R.string.pcview_menu_auto_unlock_summary),
+                    toggle = true,
+                    checked = HostUnlockCredentialStore.has(this@PcView, details.uuid)
+                ))
+            }
         }
 
         if (paired && details.state == ComputerDetails.State.ONLINE && details.supportsNetworkQualityProbe()) {
@@ -2940,8 +2968,36 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 showHostMoreActionSheet(details)
                 true
             }
+            AUTO_UNLOCK_ID -> {
+                toggleAutoUnlock(details)
+                true
+            }
             else -> false
         }
+    }
+
+    private fun toggleAutoUnlock(details: ComputerDetails) {
+        val hostUuid = details.uuid ?: return
+        val hostName = details.name.orEmpty()
+        if (!HostUnlockCredentialStore.has(this, hostUuid)) {
+            hostUnlockUi.showSetup(hostUuid, hostName) { pin ->
+                java.util.Arrays.fill(pin, '\u0000')
+                showToast(getString(R.string.host_unlock_enabled))
+            }
+            return
+        }
+
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
+            .setTitle(R.string.host_unlock_disable_title)
+            .setMessage(getString(R.string.host_unlock_disable_message, hostName))
+            .setPositiveButton(R.string.host_unlock_disable_confirm) { _, _ ->
+                HostUnlockCredentialStore.remove(this, hostUuid)
+                showToast(getString(R.string.host_unlock_disabled))
+            }
+            .setNegativeButton(R.string.dialog_button_cancel, null)
+            .create()
+        dialog.show()
+        AppDialogStyler.apply(dialog, this)
     }
 
     private fun runNetworkQualityTest(computer: ComputerDetails) {

@@ -85,3 +85,8 @@ tools/mock-sunshine/.generated/
 
 # Baseline profile binary artifacts
 app/nonRoot/release/baselineProfiles/
+
+!docs/resolution-hot-switch.md
+
+# Local pinned build dependencies (also used by CI)
+.deps/

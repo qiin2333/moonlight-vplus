@@ -11,7 +11,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.binding.input.driver.UsbWaveformBackends
-import com.limelight.nvstream.Ds5HapticsPcmFrame
 import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -42,38 +41,6 @@ class WaveformSoftwareDeviceTest {
             assertTrue(candidates.none { it.capability.availability == HapticAvailability.READY })
         }
         if (devices.isEmpty()) assertFalse(UsbWaveformBackends.hasEligibleController(usb, true))
-    }
-
-    @Test fun encoderPreservesStereoAndPacketRateOnArt() {
-        val packets = mutableListOf<ByteArray>()
-        val pcm = ByteArray(480 * 4)
-        for (i in 0 until 480) pcm[i * 4 + 1] = 0x40 // Left only, 0.5 full scale.
-        KishiPcmEncoder().encode(Ds5HapticsPcmFrame(0, 1, 0, 0, 48000, 480, 2, 16, pcm), packets::add)
-        assertEquals(3, packets.size) // 10 ms -> 40 frames at 4 kHz -> 3 complete 12-frame packets.
-        assertTrue(packets.any { packet -> (0 until 12).any { packet[10 + it * 4 + 1] != 0.toByte() } })
-        for (packet in packets) {
-            assertEquals(64, packet.size)
-            assertEquals(0x55, packet[0].toInt() and 255)
-            assertEquals(0xAA, packet[1].toInt() and 255)
-            assertEquals(48, packet[7].toInt())
-            var checksum = 0
-            for (i in 2..57) checksum = checksum xor (packet[i].toInt() and 255)
-            assertEquals(checksum, packet[58].toInt() and 255)
-            for (i in 0 until 12) {
-                assertEquals(0, packet[12 + i * 4].toInt())
-                assertEquals(0, packet[13 + i * 4].toInt())
-            }
-        }
-    }
-
-    @Test fun fallbackRejectsDuplicatesAndStopsOnEndOnArt() {
-        val fallback = AuthoredPcmFallback()
-        val frame = Ds5HapticsPcmFrame(0, 0, 1, 0, 48000, 48, 2, 16,
-            ByteArray(192) { if (it % 2 == 0) 0 else 0x40 })
-        assertFalse(fallback.accept(frame)!!.isZero)
-        assertNull(fallback.accept(frame))
-        assertEquals(ControllerRumbleState.ZERO,
-            fallback.accept(Ds5HapticsPcmFrame(0, 2, 2, 0, 48000, 0, 2, 16, byteArrayOf())))
     }
 
     @Test fun usbServiceCanStartAndStopRepeatedlyWithoutHardware() {

@@ -1,12 +1,22 @@
 package com.limelight.nvstream.jni;
 
 import com.limelight.nvstream.Ds5HapticsPcmFrame;
+import com.limelight.nvstream.Ds5HapticsIrFrame;
+import com.limelight.nvstream.Ds5HapticsIrLane;
+import com.limelight.nvstream.Ds5HapticsIrExtendedFrame;
+import com.limelight.nvstream.Ds5HapticsIrExtendedLane;
+import com.limelight.nvstream.Ds5HapticsIrExtendedEvent;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.RemoteTextContext;
 import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
 
 public class MoonBridge {
+    public static native long createUsbIsochronousOutput(int fd, int endpoint, int slots, int packetSize);
+    public static native int submitUsbIsochronousOutput(long handle, int slot, java.nio.ByteBuffer buffer);
+    public static native int reapUsbIsochronousOutput(long handle, int timeoutMs);
+    public static native void cancelUsbIsochronousOutput(long handle);
+    public static native int closeUsbIsochronousOutput(long handle);
     /* See documentation in Limelight.h for information about these functions and constants */
 
     public static final AudioConfiguration AUDIO_CONFIGURATION_STEREO = new AudioConfiguration(2, 0x3);
@@ -21,8 +31,7 @@ public class MoonBridge {
     public static final int AUDIO_CODEC_AC3  = 1;
     public static final int AUDIO_CODEC_EAC3 = 2;
     public static final int AUDIO_CODEC_PCM_S16 = 3;
-    public static final int AUDIO_CODEC_MAT_DUMP = 4; // Explicit dump-only RTSP profile, never AudioTrack.
-    public static final int AUDIO_CODEC_MAT_IEC61937 = 5; // Explicit finite replay, never inferred from dump support.
+    public static final int AUDIO_CODEC_MAT_LIVE = 7; // Authenticated real-time MAT.
 
     public static final int VIDEO_FORMAT_H264 = 0x0001;
     public static final int VIDEO_FORMAT_H265 = 0x0100;
@@ -227,6 +236,8 @@ public class MoonBridge {
     private static AudioRenderer audioRenderer;
     private static VideoDecoderRenderer videoRenderer;
     private static volatile NvConnectionListener connectionListener;
+    private static volatile java.util.function.BooleanSupplier connectionCancelled;
+    private static final Object connectionListenerLock = new Object();
 
     static {
         System.loadLibrary("moonlight-core");
@@ -387,93 +398,154 @@ public class MoonBridge {
     }
 
     public static void bridgeClStageStarting(int stage) {
-        if (connectionListener != null) {
-            connectionListener.stageStarting(getStageName(stage));
+        // LiStartConnection clears its interrupt flag before the first stage callback.
+        // Reapply this attempt's cancellation even if its listener was detached meanwhile.
+        java.util.function.BooleanSupplier isCancelled = connectionCancelled;
+        if (isCancelled != null && isCancelled.getAsBoolean()) {
+            interruptConnection();
+            return;
+        }
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.stageStarting(getStageName(stage));
         }
     }
 
     public static void bridgeClStageComplete(int stage) {
-        if (connectionListener != null) {
-            connectionListener.stageComplete(getStageName(stage));
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.stageComplete(getStageName(stage));
         }
     }
 
     public static void bridgeClStageFailed(int stage, int errorCode) {
-        if (connectionListener != null) {
-            connectionListener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.stageFailed(getStageName(stage), getPortFlagsFromStage(stage), errorCode);
         }
     }
 
     public static void bridgeClConnectionStarted() {
-        if (connectionListener != null) {
-            connectionListener.connectionStarted();
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.connectionStarted();
         }
     }
 
     public static void bridgeClConnectionTerminated(int errorCode) {
-        if (connectionListener != null) {
-            connectionListener.connectionTerminated(errorCode);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.connectionTerminated(errorCode);
         }
     }
 
     public static void bridgeClRumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
-        if (connectionListener != null) {
-            connectionListener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.rumble(controllerNumber, lowFreqMotor, highFreqMotor);
         }
     }
 
     public static void bridgeClConnectionStatusUpdate(int connectionStatus) {
-        if (connectionListener != null) {
-            connectionListener.connectionStatusUpdate(connectionStatus);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.connectionStatusUpdate(connectionStatus);
         }
     }
 
     public static void bridgeClSetHdrMode(boolean enabled, byte[] hdrMetadata) {
-        if (connectionListener != null) {
-            connectionListener.setHdrMode(enabled, hdrMetadata);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setHdrMode(enabled, hdrMetadata);
         }
     }
 
     public static void bridgeClRumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger) {
-        if (connectionListener != null) {
-            connectionListener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.rumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
         }
     }
 
     public static void bridgeClSetAdaptiveTriggers(short controllerNumber, byte eventFlags,
                                                    byte typeLeft, byte typeRight,
                                                    byte[] left, byte[] right) {
-        if (connectionListener != null) {
-            connectionListener.setAdaptiveTriggers(
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setAdaptiveTriggers(
                     controllerNumber, eventFlags, typeLeft, typeRight, left, right);
         }
     }
 
     public static void bridgeClSetMotionEventState(short controllerNumber, byte eventType, short sampleRateHz) {
-        if (connectionListener != null) {
-            connectionListener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setMotionEventState(controllerNumber, eventType, sampleRateHz);
         }
     }
 
     public static void bridgeClSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
-        if (connectionListener != null) {
-            connectionListener.setControllerLED(controllerNumber, r, g, b);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.setControllerLED(controllerNumber, r, g, b);
+        }
+    }
+
+    public static void bridgeClDs5HapticsState(short controllerNumber, byte[] state) {
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.ds5HapticsState(controllerNumber,
+                    new com.limelight.nvstream.Ds5HapticsState(state));
         }
     }
 
     public static void bridgeClDs5HapticsPcm(short controllerNumber, byte flags, int sequenceNumber,
                                                 long presentationTimeUs, int sampleRate, int frameCount,
                                                 byte channelCount, byte bitsPerSample, byte[] pcm) {
-        if (connectionListener != null) {
-            connectionListener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.ds5HapticsPcm(new Ds5HapticsPcmFrame(
                     controllerNumber, flags, sequenceNumber, presentationTimeUs,
                     sampleRate, frameCount, channelCount, bitsPerSample, pcm));
         }
     }
 
+    private static Ds5HapticsIrFrame authoredIrBase(short controllerNumber, byte flags, int sequence,
+            long timestampUs, int sourceFrames, float[] lanes) {
+        return new Ds5HapticsIrFrame(controllerNumber, flags & 0xff, sequence, timestampUs, sourceFrames,
+                new Ds5HapticsIrLane(lanes[0], lanes[1], lanes[2], lanes[3], lanes[4]),
+                new Ds5HapticsIrLane(lanes[5], lanes[6], lanes[7], lanes[8], lanes[9]));
+    }
+
+    public static void bridgeClDs5HapticsIr(short controllerNumber, byte flags, int sequence,
+            long timestampUs, int sourceFrames, float[] lanes) {
+        NvConnectionListener listener = connectionListener;
+        if (listener != null && lanes != null && lanes.length == 10)
+            listener.ds5HapticsIr(authoredIrBase(controllerNumber, flags, sequence, timestampUs, sourceFrames, lanes));
+    }
+
+    public static void bridgeClDs5HapticsIrExtended(short controllerNumber, byte flags, int sequence,
+            long timestampUs, int sourceFrames, float[] baseLanes, int epoch, long windowEndUs,
+            float[] continuous, int[] eventIds, long[] eventTimes, float[] eventFeatures) {
+        NvConnectionListener listener = connectionListener;
+        if (listener == null || baseLanes == null || baseLanes.length != 10 ||
+                continuous == null || continuous.length != 4 || eventIds == null || eventIds.length > 8 ||
+                eventTimes == null || eventFeatures == null || eventTimes.length != eventIds.length ||
+                eventFeatures.length != eventIds.length * 2) return;
+        java.util.ArrayList<Ds5HapticsIrExtendedEvent> events = new java.util.ArrayList<>(eventIds.length);
+        for (int i = 0; i < eventIds.length; i++)
+            events.add(new Ds5HapticsIrExtendedEvent(eventIds[i], eventTimes[i], eventFeatures[i*2],
+                    eventFeatures[i*2+1]));
+        listener.ds5HapticsIrExtended(new Ds5HapticsIrExtendedFrame(
+                authoredIrBase(controllerNumber, flags, sequence, timestampUs, sourceFrames, baseLanes),
+                epoch, windowEndUs, new Ds5HapticsIrExtendedLane(continuous[0], continuous[1]),
+                new Ds5HapticsIrExtendedLane(continuous[2], continuous[3]), events));
+    }
+
     public static void bridgeClResolutionChanged(int width, int height) {
-        if (connectionListener != null) {
-            connectionListener.onResolutionChanged(width, height);
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onResolutionChanged(width, height);
         }
     }
 
@@ -503,8 +575,9 @@ public class MoonBridge {
 
     public static void bridgeClCursorUpdate(int flags, int shapeId, int width, int height,
                                             int hotspotX, int hotspotY, byte[] bgraPixels) {
-        if (connectionListener != null) {
-            connectionListener.onCursorUpdate(flags, shapeId, width, height,
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onCursorUpdate(flags, shapeId, width, height,
                     hotspotX, hotspotY, bgraPixels);
         }
     }
@@ -518,6 +591,14 @@ public class MoonBridge {
                 values[6], values[7], values[8], values[9],
                 values[10], values[11], values[12], values[13],
                 values[14], values[15]));
+    }
+
+    /** Invoked on the control receive thread when the host reports its session lock state. */
+    public static void bridgeClHostSessionState(boolean locked) {
+        NvConnectionListener listener = connectionListener;
+        if (listener != null) {
+            listener.onHostSessionStateChanged(locked);
+        }
     }
 
     /**
@@ -545,22 +626,34 @@ public class MoonBridge {
         return sendClipboardFrameNative(frame);
     }
 
-    public static void setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer, NvConnectionListener connectionListener) {
-        MoonBridge.videoRenderer = videoRenderer;
-        MoonBridge.audioRenderer = audioRenderer;
-        MoonBridge.connectionListener = connectionListener;
+    public static boolean setupBridge(VideoDecoderRenderer videoRenderer, AudioRenderer audioRenderer,
+                                      NvConnectionListener connectionListener,
+                                      java.util.function.BooleanSupplier isCancelled) {
+        synchronized (connectionListenerLock) {
+            if (isCancelled.getAsBoolean()) return false;
+            MoonBridge.videoRenderer = videoRenderer;
+            MoonBridge.audioRenderer = audioRenderer;
+            MoonBridge.connectionCancelled = isCancelled;
+            MoonBridge.connectionListener = connectionListener;
+            return true;
+        }
     }
 
-    public static synchronized void detachConnectionListener(NvConnectionListener listener) {
-        if (MoonBridge.connectionListener == listener) {
-            MoonBridge.connectionListener = null;
+    public static void detachConnectionListener(NvConnectionListener listener) {
+        synchronized (connectionListenerLock) {
+            if (MoonBridge.connectionListener == listener) {
+                MoonBridge.connectionListener = null;
+            }
         }
     }
 
     public static void cleanupBridge() {
         MoonBridge.videoRenderer = null;
         MoonBridge.audioRenderer = null;
-        MoonBridge.connectionListener = null;
+        synchronized (connectionListenerLock) {
+            MoonBridge.connectionListener = null;
+            MoonBridge.connectionCancelled = null;
+        }
         MoonBridge.clipboardListener = null;
     }
 
@@ -574,7 +667,7 @@ public class MoonBridge {
                                               int videoCapabilities,
                                               int colorSpace, int colorRange, int hdrMode,
                                               boolean enableMic, boolean controlOnly,
-                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics, int fecPercentage, String matDumpPath);
+                                              int audioCodec, int audioBitrate, boolean authoredPcmHaptics, int fecPercentage);
 
     // Sunshine dynamic HDR negotiation result. Valid after the connection
     // callback reports the session is established (RTSP handshake complete).
@@ -631,6 +724,9 @@ public class MoonBridge {
     public static native int sendControllerTouchEvent(byte controllerNumber, byte eventType, int pointerId, float x, float y, float pressure);
 
     public static native int sendControllerMotionEvent(byte controllerNumber, byte motionType, float x, float y, float z);
+    public static native int sendControllerMotionFrame(byte controllerNumber, float gx, float gy, float gz, float ax, float ay, float az);
+    public static native int stopControllerMotionEvent(byte controllerNumber);
+    public static native int resetControllerMotionEvents(byte controllerNumber, boolean clearDemand);
 
     public static native int sendControllerBatteryEvent(byte controllerNumber, byte batteryState, byte batteryPercentage);
 
@@ -671,6 +767,9 @@ public class MoonBridge {
     /** Returns wire-level bytes received by the active video RTP stream. */
     public static native long getRtpVideoBytesReceived();
 
+    // Consumed by the next native start; coordinated/device routes accept authored IR.
+    public static native void setAuthoredHapticsEnabled(boolean enabled);
+
     public static native String getLaunchUrlQueryParameters();
 
     public static native byte guessControllerType(int vendorId, int productId);
@@ -686,6 +785,9 @@ public class MoonBridge {
 
     /** Selects host-composited or locally-rendered cursor mode for this session. */
     public static native int setCursorMode(int cursorMode);
+
+    /** Returns zero if queued. Actual application must be confirmed by video output. */
+    public static native int requestResolutionChange(int width, int height);
 
     /** @return Negotiated audio codec for the active connection (AUDIO_CODEC_OPUS/AC3/EAC3). */
     public static native int getNegotiatedAudioCodec();

@@ -6,9 +6,17 @@ import org.junit.Test
 
 class InputDeviceSensorPolicyTest {
     @Test
-    fun android12And12LNeverCreateInputDeviceSensorManager() {
-        assertFalse(InputDeviceSensorPolicy.shouldUse(sdkInt = 31, enabled = true))
-        assertFalse(InputDeviceSensorPolicy.shouldUse(sdkInt = 32, enabled = true))
+    fun preAndroid12KeepsTheHistoricalDefault() {
+        assertTrue(InputDeviceSensorPolicy.defaultEnabled(sdkInt = 30))
+        assertFalse(InputDeviceSensorPolicy.shouldUse(sdkInt = 30, enabled = true))
+    }
+
+    @Test
+    fun android12And12LAreDisabledByDefaultButCanBeExplicitlyEnabled() {
+        assertFalse(InputDeviceSensorPolicy.defaultEnabled(sdkInt = 31))
+        assertFalse(InputDeviceSensorPolicy.defaultEnabled(sdkInt = 32))
+        assertTrue(InputDeviceSensorPolicy.shouldUse(sdkInt = 31, enabled = true))
+        assertTrue(InputDeviceSensorPolicy.shouldUse(sdkInt = 32, enabled = true))
     }
 
     @Test

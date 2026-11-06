@@ -62,14 +62,6 @@
         <item>3840x2160</item>
     </string-array>
 
-    <string-array name="fps_names">
-        <item>@string/fps_30</item>
-        <item>@string/fps_60</item>
-        <item>@string/fps_90</item>
-        <item>@string/fps_120</item>
-        <item>@string/fps_144</item>
-        <item>@string/fps_165</item>
-    </string-array>
     <string-array name="fps_values" translatable="false">
         <item>30</item>
         <item>60</item>
@@ -99,7 +91,7 @@
         <item>@string/audio_codec_ac3</item>
         <item>@string/audio_codec_eac3</item>
         <item>@string/audio_codec_pcm</item>
-        <item>MAT IEC61937 — finite replay / HDMI (experimental)</item>
+        <item>@string/audio_codec_mat_live</item>
     </string-array>
     <string-array name="audio_codec_values" translatable="false">
         <item>auto</item>
@@ -107,7 +99,7 @@
         <item>ac3</item>
         <item>eac3</item>
         <item>pcm</item>
-        <item>mat_iec61937</item>
+        <item>mat_live</item>
     </string-array>
 
     <!-- Audio passthrough buffer size preset -->
@@ -176,17 +168,17 @@
 
     <string-array name="video_format_names">
         <item>@string/videoformat_auto</item>
-        <item>@string/videoformat_pyrowave</item>
         <item>@string/videoformat_av1always</item>
         <item>@string/videoformat_hevcalways</item>
         <item>@string/videoformat_h264always</item>
+        <item>@string/videoformat_pyrowave</item>
     </string-array>
     <string-array name="video_format_values" translatable="false">
         <item>auto</item>
-        <item>pyrowave</item>
         <item>forceav1</item>
         <item>forceh265</item>
         <item>neverh265</item>
+        <item>pyrowave</item>
     </string-array>
 
     <string-array name="decoder_input_buffer_mode_names">
@@ -621,6 +613,7 @@
         <item>@string/float_ball_action_open_menu</item>
         <item>@string/float_ball_action_toggle_visibility</item>
         <item>@string/float_ball_action_show_perf_overlay</item>
+        <item>@string/quick_btn_unlock_host</item>
     </string-array>
     <string-array name="float_ball_action_values" translatable="false">
         <item>none</item>
@@ -628,6 +621,7 @@
         <item>open_menu</item>
         <item>toggle_visibility</item>
         <item>show_perf_overlay</item>
+        <item>unlock_host</item>
     </string-array>
     <string-array name="float_ball_position_entries">
         <item>@string/mic_button_position_top_left</item>

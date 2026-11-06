@@ -5,7 +5,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/** Android-independent bit-exact output state machine. Never used by MAT_DUMP. */
+/** Android-independent bit-exact output state machine for complete MAT carrier cycles. */
 public final class MatCarrierPlayer implements MatCarrierConsumer, AutoCloseable {
     public static final int CYCLE_BYTES = 61440, RATE = 192000, CHANNELS = 8;
     public static final int FRAMES_PER_CYCLE = 3840;

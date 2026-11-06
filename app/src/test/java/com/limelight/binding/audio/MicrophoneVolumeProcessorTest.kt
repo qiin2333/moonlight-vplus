@@ -30,28 +30,8 @@ class MicrophoneVolumeProcessorTest {
     }
 
     @Test
-    fun fixedGainAppliesConfiguredDecibels() {
-        val pcm = pcmOf(-1000, 0, 1000)
-        val processor = MicrophoneVolumeProcessor()
-
-        processor.configure(
-            enabled = true,
-            gainEnabled = true,
-            gainDb = 6,
-            balanceEnabled = false,
-            balanceTargetPercent = 50,
-            voiceEnhancementEnabled = false
-        )
-        processor.processFrame(pcm, 0, pcm.size)
-
-        assertEquals(-1995, sampleAt(pcm, 0))
-        assertEquals(0, sampleAt(pcm, 1))
-        assertEquals(1995, sampleAt(pcm, 2))
-    }
-
-    @Test
     fun fixedGainOnlyTouchesRequestedRange() {
-        val pcm = pcmOf(123, -1000, 1000, 456)
+        val pcm = pcmOf(123, -1000, 0, 1000, 456)
         val processor = MicrophoneVolumeProcessor()
 
         processor.configure(
@@ -62,12 +42,13 @@ class MicrophoneVolumeProcessorTest {
             balanceTargetPercent = 50,
             voiceEnhancementEnabled = false
         )
-        processor.processFrame(pcm, 2, 4)
+        processor.processFrame(pcm, 2, 6)
 
         assertEquals(123, sampleAt(pcm, 0))
         assertEquals(-1995, sampleAt(pcm, 1))
-        assertEquals(1995, sampleAt(pcm, 2))
-        assertEquals(456, sampleAt(pcm, 3))
+        assertEquals(0, sampleAt(pcm, 2))
+        assertEquals(1995, sampleAt(pcm, 3))
+        assertEquals(456, sampleAt(pcm, 4))
     }
 
     @Test

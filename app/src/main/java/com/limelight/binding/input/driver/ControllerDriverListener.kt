@@ -2,6 +2,7 @@ package com.limelight.binding.input.driver
 
 import com.limelight.binding.input.haptics.DualSenseNativeHapticsSink
 import com.limelight.binding.input.haptics.HapticRouteSnapshot
+import com.limelight.nvstream.jni.MoonBridge
 
 /**
  * Transport-neutral controller events consumed by [com.limelight.binding.input.ControllerHandler].
@@ -44,6 +45,14 @@ interface ControllerDriverListener {
         y: Float,
         z: Float
     )
+
+    /** Preserves a driver's same-report six-axis sample; legacy listeners keep receiving both events. */
+    fun reportControllerMotionFrame(
+        controllerId: Int, gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float
+    ) {
+        reportControllerMotion(controllerId, MoonBridge.LI_MOTION_TYPE_GYRO, gx, gy, gz)
+        reportControllerMotion(controllerId, MoonBridge.LI_MOTION_TYPE_ACCEL, ax, ay, az)
+    }
 
     fun reportControllerBattery(
         controllerId: Int,

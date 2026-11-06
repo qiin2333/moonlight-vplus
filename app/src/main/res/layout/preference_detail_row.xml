@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/transparent"
+    android:descendantFocusability="blocksDescendants">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="?android:attr/listPreferredItemHeightSmall"
+        android:gravity="center_vertical"
+        android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+        android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+        android:baselineAligned="false">
+
+        <include layout="@layout/image_frame" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/settings_preference_item_vertical_padding"
+            android:paddingBottom="@dimen/settings_preference_item_vertical_padding">
+
+            <TextView
+                android:id="@android:id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceListItem"
+                android:textColor="@color/settings_preference_title_text"
+                android:shadowRadius="0" />
+
+            <TextView
+                android:id="@android:id/summary"
+                style="@style/PreferenceSummaryTextStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:textAlignment="viewStart"
+                android:textColor="@color/settings_preference_summary_text"
+                android:maxLines="10"
+                android:shadowRadius="0" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/settings_detail_row_chevron"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="12dp"
+            android:src="@drawable/ic_chevron_right_accent"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no" />
+
+        <FrameLayout
+            android:id="@android:id/widget_frame"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/settings_detail_row_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:alpha="0.4"
+        android:background="@color/ui_shell_outline" />
+</LinearLayout>

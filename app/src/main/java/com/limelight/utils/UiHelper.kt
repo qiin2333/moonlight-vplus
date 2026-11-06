@@ -128,6 +128,35 @@ object UiHelper {
         interruptible = false
     )
 
+    /** Remove both the legacy locale override and Android 13's system-managed app locale. */
+    fun resetLocale(activity: Activity): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val manager = activity.getSystemService(LocaleManager::class.java)
+            val changed = !manager.applicationLocales.isEmpty
+            manager.applicationLocales = LocaleList.getEmptyLocaleList()
+            return changed
+        } else {
+            val system = android.content.res.Resources.getSystem().configuration
+            val configuration = Configuration(activity.resources.configuration)
+            val changed: Boolean
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                changed = configuration.locales != system.locales
+                configuration.setLocales(system.locales)
+            } else {
+                changed = configuration.locale != system.locale
+                @Suppress("DEPRECATION")
+                configuration.locale = system.locale
+            }
+            @Suppress("DEPRECATION")
+            activity.resources.updateConfiguration(configuration, activity.resources.displayMetrics)
+            @Suppress("DEPRECATION")
+            activity.applicationContext.resources.updateConfiguration(
+                configuration, activity.applicationContext.resources.displayMetrics
+            )
+            return changed
+        }
+    }
+
     fun setLocale(activity: Activity) {
         val locale = PreferenceConfiguration.readPreferences(activity).language
         if (locale != PreferenceConfiguration.DEFAULT_LANGUAGE) {
@@ -289,34 +318,13 @@ object UiHelper {
         return getBatteryLevelFromIntent(batteryStatus) != null
     }
 
+    // BatteryManager.getIntProperty is a synchronous binder call into the health HAL
+    // and can block for seconds on some devices (ANR while holding the main thread).
+    // Always read from the sticky ACTION_BATTERY_CHANGED broadcast instead — it is the
+    // same source hasDisplayableBattery() gates on.
     fun getBatteryLevel(context: Context): Int {
-        val propertyLevel = getBatteryCapacityProperty(context)
-        if (propertyLevel != null && propertyLevel > 0) {
-            return propertyLevel
-        }
-
-        getBatteryStatusIntent(context)?.let { batteryStatus ->
-            getBatteryLevelFromIntent(batteryStatus)?.let { return it }
-        }
-
-        return propertyLevel ?: 0
-    }
-
-    private fun getBatteryCapacityProperty(context: Context): Int? {
-        return try {
-            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-            val level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-
-            if (level !in 0..100) {
-                LimeLog.warning("Invalid battery level: $level")
-                null
-            } else {
-                level
-            }
-        } catch (e: Exception) {
-            LimeLog.warning("Error getting battery level: ${e.message}")
-            null
-        }
+        val batteryStatus = getBatteryStatusIntent(context) ?: return 0
+        return getBatteryLevelFromIntent(batteryStatus) ?: 0
     }
 
     private fun getBatteryStatusIntent(context: Context): Intent? {

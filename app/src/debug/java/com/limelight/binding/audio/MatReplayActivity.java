@@ -29,13 +29,16 @@ public final class MatReplayActivity extends Activity {
                     .addCategory(Intent.CATEGORY_OPENABLE);
             try { startActivityForResult(intent, 1); }
             catch (android.content.ActivityNotFoundException e) {
-                report("This TV has no document picker. Use the standalone diagnostic APK's built-in verified clip.");
+                report("This TV has no document picker. Push the verified clip to app files/mat-fixture.raw with adb, then select Verify app-private recording.");
             }
         });
+        Button privateFile = new Button(this); privateFile.setText("Verify app-private recording (adb)");
+        privateFile.setOnClickListener(v -> verify(() -> new java.io.FileInputStream(
+                new java.io.File(getFilesDir(), "mat-fixture.raw"))));
         Button play = new Button(this); play.setText("Play verified MAT over HDMI");
         play.setOnClickListener(v -> play());
         Button stop = new Button(this); stop.setText("Stop"); stop.setOnClickListener(v -> cancel());
-        layout.addView(status); layout.addView(select); layout.addView(play); layout.addView(stop);
+        layout.addView(status); layout.addView(select); layout.addView(privateFile); layout.addView(play); layout.addView(stop);
         try {
             for (String asset : getAssets().list("")) if ("verified-mat.raw".equals(asset)) {
                 Button builtIn = new Button(this); builtIn.setText("Verify built-in 3.56s MAT recording");
@@ -46,7 +49,7 @@ public final class MatReplayActivity extends Activity {
         } catch (java.io.IOException ignored) { /* Full Moonlight builds need not bundle a recording. */ }
         setContentView(layout);
     }
-    private void report(String text) { runOnUiThread(() -> { if (!destroyed) status.setText(text); }); }
+    private void report(String text) { android.util.Log.i("MAT-diagnostic", text); runOnUiThread(() -> { if (!destroyed) status.setText(text); }); }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (request != 1 || result != RESULT_OK || data == null || data.getData() == null) return;
@@ -76,8 +79,8 @@ public final class MatReplayActivity extends Activity {
             try (MatCarrierPlayer player = new MatCarrierPlayer(sink)) {
                 player.start();
                 if (!player.awaitReady(3000)) throw new IllegalStateException("MAT output setup failed: " + player.error());
-                try (MatNativeReceiver receiver = new MatNativeReceiver(player)) {
-                    source.replay(receiver);
+                {
+                    source.replay(player);
                     if (!player.awaitCompletion(5000))
                         throw new IllegalStateException("MAT output did not complete: " + player.state() + " " + player.error());
                     if (!MatRecording.VERIFIED_SHA256.equals(player.submittedSha256()))

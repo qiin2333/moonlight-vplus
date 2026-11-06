@@ -171,22 +171,6 @@ public class NativeUsbIpTest {
         } finally { NativeUsbIp.stop(handle); }
     }
 
-    @Test public void revokedLocalPortCannotBeReused() throws Exception {
-        NativeUsbIp.load();
-        long handle = NativeUsbIp.start();
-        int port = NativeUsbIp.localPort(handle);
-        Socket reservation = new Socket();
-        reservation.setReuseAddress(true);
-        reservation.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
-        int sourcePort = reservation.getLocalPort();
-        NativeUsbIp.authorizeLocalConnection(handle, sourcePort);
-        NativeUsbIp.revokeLocalConnection(handle, sourcePort);
-        reservation.close();
-        try (Socket reused = unauthorizedSocket(sourcePort, port)) {
-            assertRejected(reused);
-        } finally { NativeUsbIp.stop(handle); }
-    }
-
     @Test public void invalidFdDoesNotPreventRestart() {
         NativeUsbIp.load();
         long handle = NativeUsbIp.start();

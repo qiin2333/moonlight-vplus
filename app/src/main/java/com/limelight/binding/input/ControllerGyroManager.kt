@@ -38,7 +38,7 @@ enum class GyroAssistantMode {
  * 陀螺仪相关功能管理器
  * 处理陀螺仪到鼠标映射、陀螺仪到右摇杆映射、传感器注册与保持激活逻辑
  *
- * 状态由主线程持有并修改；传感器/驱动回调线程只读取 @Volatile 字段。
+ * 源与监听器变更由主线程处理；最终体感效果通过控制器输入锁与切源串行化。
  */
 class ControllerGyroManager(private val handler: ControllerHandler) {
 
@@ -68,6 +68,22 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     private val controllerGyroDemand = ControllerGyroDemandState()
 
     @Volatile private var activeSource = GyroSource.NONE
+        set(value) = handler.withControllerInputLock {
+            if (field != value && (field == GyroSource.DEVICE || value == GyroSource.DEVICE)) {
+                // Invalidate the old gyro tail before the new source can submit. Accel is independent.
+                handler.motionSender.pauseGyro(0)
+                gyroMouseLastTimestamp = 0
+                gyroMouseRemainX = 0f
+                gyroMouseRemainY = 0f
+                for (context in allGyroContexts()) {
+                    if (context.controllerNumber.toInt() == 0 &&
+                        (context.gyroRightStickX.toInt() != 0 || context.gyroRightStickY.toInt() != 0)) {
+                        onGyroHoldDeactivated(context)
+                    }
+                }
+            }
+            field = value
+        }
     /** Android input device IDs whose gyro proved unusable, kept until the device disappears. */
     private val rejectedInputDeviceIds = mutableSetOf<Int>()
     /** Set when controller 0's USB driver gyro proved unusable. */
@@ -194,28 +210,29 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         get() = assistantMode == GyroAssistantMode.MOUSE
 
     fun setAssistantMode(mode: GyroAssistantMode) {
-        val previousMode = assistantMode
-        if (previousMode == GyroAssistantMode.RIGHT_STICK && mode != previousMode) {
-            // Otherwise the host keeps the last fused deflection until some other axis event.
-            flushRightStickFusion()
+        handler.withControllerInputLock {
+            val previousMode = assistantMode
+            if (previousMode == GyroAssistantMode.RIGHT_STICK && mode != previousMode) {
+                // Otherwise the host keeps the last fused deflection until some other axis event.
+                flushRightStickFusion()
+            }
+
+            beginNewSourceLifecycle()
+            // Storing the mode as two flags keeps the persisted format, but only here.
+            handler.prefConfig.gyroToMouse = mode == GyroAssistantMode.MOUSE
+            handler.prefConfig.gyroToRightStick = mode == GyroAssistantMode.RIGHT_STICK
+            updateAssistantDemand()
+            gyroMouseRemainX = 0f
+            gyroMouseRemainY = 0f
+            gyroMouseLastTimestamp = 0
+
+            if (mode == GyroAssistantMode.OFF) {
+                clearAllGyroStates()
+            } else {
+                recomputeGyroHoldForAllContexts()
+            }
         }
-
-        beginNewSourceLifecycle()
-        // Storing the mode as two flags keeps the persisted format, but only here.
-        handler.prefConfig.gyroToMouse = mode == GyroAssistantMode.MOUSE
-        handler.prefConfig.gyroToRightStick = mode == GyroAssistantMode.RIGHT_STICK
-        updateAssistantDemand()
-        gyroMouseRemainX = 0f
-        gyroMouseRemainY = 0f
-        gyroMouseLastTimestamp = 0
-
         applySource(resolveSource())
-
-        if (mode == GyroAssistantMode.OFF) {
-            clearAllGyroStates()
-        } else {
-            recomputeGyroHoldForAllContexts()
-        }
     }
 
     /** Publish physical-only right-stick state for every context that was fusing gyro. */
@@ -309,19 +326,15 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             }
 
             GyroSource.DEVICE -> {
-                // Publish before unregistering so driver callbacks racing this switch are
-                // already routed away from the controller sensor.
-                val previous = activeSource
-                activeSource = GyroSource.DEVICE
                 val result = registerDeviceGyroForDefaultContext(
                     enable = true,
                     allowWhenControllerPresent = true,
                     reportRateHz = controllerGyroDemand.effectiveReportRateHz
                 )
                 if (result == DeviceGyroRegistrationResult.APPLIED) {
+                    activeSource = GyroSource.DEVICE
                     unregisterController0InputListeners()
                 } else {
-                    activeSource = previous
                     LimeLog.warning("Device gyroscope unavailable for controller 0 ($result)")
                 }
             }
@@ -332,14 +345,12 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     private fun releaseAssistantSource() {
         val servedByDeviceGyro = activeSource == GyroSource.DEVICE
         val hostReportRateHz = controllerGyroDemand.hostReportRateHz
-        activeSource = GyroSource.NONE
-
         if (servedByDeviceGyro) {
             if (hostReportRateHz.toInt() == 0) {
+                activeSource = GyroSource.NONE
                 registerDeviceGyroForDefaultContext(false)
                 return
             }
-            activeSource = GyroSource.DEVICE
             registerDeviceGyroForDefaultContext(
                 enable = true,
                 allowWhenControllerPresent = true,
@@ -348,6 +359,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             return
         }
 
+        activeSource = GyroSource.NONE
         registerDeviceGyroForDefaultContext(false)
         handler.handleSetMotionEventState(
             0.toShort(),
@@ -360,10 +372,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     /** Drop Android InputDevice gyro listeners for controller 0, keeping their stored rate. */
     private fun unregisterController0InputListeners() {
         for (context in controller0InputContexts()) {
-            context.gyroListener?.let { listener ->
-                context.sensorManager?.unregisterListener(listener)
-                context.gyroListener = null
-            }
+            handler.unregisterMotionListener(context, MoonBridge.LI_MOTION_TYPE_GYRO)
         }
     }
 
@@ -657,7 +666,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
             val newListener = createSensorListener(
                 handler.defaultContext.controllerNumber,
                 MoonBridge.LI_MOTION_TYPE_GYRO,
-                true /* needsDeviceOrientationCorrection */
+                true /* needsDeviceOrientationCorrection */,
+                { current -> handler.defaultContext.gyroListener === current }
             )
             val registered = sensorManager.registerListener(
                 newListener, gyroSensor, 1000000 / reportRateHz
@@ -667,15 +677,16 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                 return DeviceGyroRegistrationResult.RETRYABLE_FAILURE
             }
 
+            handler.withControllerInputLock {
+                handler.defaultContext.gyroListener = newListener
+            }
             oldListener?.let { sensorManager.unregisterListener(it) }
-            handler.defaultContext.gyroListener = newListener
             handler.defaultContext.gyroReportRateHz = reportRateHz
             LimeLog.info("Gyro registered on defaultContext")
             return DeviceGyroRegistrationResult.APPLIED
         } else {
             if (handler.defaultContext.gyroListener != null && handler.defaultContext.sensorManager != null) {
-                handler.defaultContext.sensorManager!!.unregisterListener(handler.defaultContext.gyroListener)
-                handler.defaultContext.gyroListener = null
+                handler.unregisterMotionListener(handler.defaultContext, MoonBridge.LI_MOTION_TYPE_GYRO)
                 handler.defaultContext.gyroReportRateHz = 0
                 // 清除我们设置的 sensorManager，避免泄漏给右摇杆模式
                 handler.defaultContext.sensorManager = null
@@ -793,8 +804,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         for (c in handler.driverControllerContexts.values) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
-        for (i in 0 until handler.inputDeviceContexts.size()) {
-            val c = handler.inputDeviceContexts.valueAt(i)
+        for (c in handler.inputDeviceContextSnapshot) {
             if (c.controllerNumber == controllerNumber && c.gyroHoldActive) return true
         }
         return handler.defaultContext.controllerNumber == controllerNumber &&
@@ -802,39 +812,10 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
     }
 
     fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean,
-                             sourceActive: () -> Boolean = { true }): SensorEventListener {
+                             sourceActive: (SensorEventListener) -> Boolean): SensorEventListener {
         return object : SensorEventListener {
-            private val lastValues = FloatArray(3)
-
             override fun onSensorChanged(sensorEvent: SensorEvent) {
-                if (!sourceActive() || !handler.isControllerSlotEnabled(controllerNumber)) return
-                if (handler.isControllerLocallyCaptured(controllerNumber)) return
-
-                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
-                    !needsDeviceOrientationCorrection
-                ) {
-                    onControllerGyroSample(
-                        sensorEvent.values[0],
-                        sensorEvent.values[1],
-                        sensorEvent.values[2],
-                        controllerNumber,
-                        sensorEvent.timestamp
-                    )
-                }
-
-                // Android will invoke our callback any time we get a new reading,
-                // even if the values are the same as last time. Don't report a
-                // duplicate set of values to save bandwidth.
-                if (sensorEvent.values[0] == lastValues[0] &&
-                    sensorEvent.values[1] == lastValues[1] &&
-                    sensorEvent.values[2] == lastValues[2]
-                ) {
-                    return
-                } else {
-                    lastValues[0] = sensorEvent.values[0]
-                    lastValues[1] = sensorEvent.values[1]
-                    lastValues[2] = sensorEvent.values[2]
-                }
+                if (handler.stopped) return
 
                 var x = 0
                 var y = 1
@@ -863,42 +844,38 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
                     }
                 }
 
-                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
-                    // Convert from rad/s to deg/s
-                    val gx = sensorEvent.values[x] * xFactor * 57.2957795f
-                    val gy = sensorEvent.values[y] * yFactor * 57.2957795f
-                    val gz = sensorEvent.values[z] * zFactor * 57.2957795f
+                val vx = sensorEvent.values[x] * xFactor
+                val vy = sensorEvent.values[y] * yFactor
+                val vz = sensorEvent.values[z] * zFactor
+                // Conversion/display lookup stays outside the commit lock. A queued or
+                // already-running callback must still own its listener when it takes effect.
+                handler.withControllerInputLock {
+                    if (handler.stopped || !sourceActive(this) ||
+                        !handler.isControllerSlotEnabled(controllerNumber) ||
+                        handler.isControllerLocallyCaptured(controllerNumber)) return@withControllerInputLock
 
-                    if (isMouseMode && isGyroHoldActiveFor(controllerNumber)) {
-                        // 使用已经过屏幕旋转修正的轴值（rad/s）
-                        // 横屏下：gz(yaw) → mouseX，gx(pitch) → mouseY
-                        val mouseX = sensorEvent.values[z] * zFactor
-                        val mouseY = sensorEvent.values[x] * xFactor
-                        applyGyroToMouse(mouseX, mouseY, sensorEvent.timestamp)
-                        return
+                    if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
+                        if (!needsDeviceOrientationCorrection) {
+                            if (isUsingDeviceGyroFallback(controllerNumber)) return@withControllerInputLock
+                            onControllerGyroSample(vx, vy, vz, controllerNumber, sensorEvent.timestamp)
+                        }
+                        // Convert rad/s to deg/s; mouse mapping continues to use rad/s.
+                        val gx = vx * 57.2957795f
+                        val gy = vy * 57.2957795f
+                        val gz = vz * 57.2957795f
+                        if (isMouseMode && isGyroHoldActiveFor(controllerNumber)) {
+                            handler.motionSender.pauseGyro(controllerNumber)
+                            applyGyroToMouse(vz, vx, sensorEvent.timestamp)
+                        } else if (isRightStickMode && isGyroHoldActiveFor(controllerNumber)) {
+                            handler.motionSender.pauseGyro(controllerNumber)
+                            applyGyroToRightStick(controllerNumber, gz, gx)
+                        } else {
+                            handler.motionSender.submit(controllerNumber, motionType, gx, gy, gz)
+                        }
+                    } else {
+                        // Acceleration remains in m/s^2.
+                        handler.motionSender.submit(controllerNumber, motionType, vx, vy, vz)
                     }
-
-                    if (isRightStickMode && isGyroHoldActiveFor(controllerNumber)) {
-                        // Map device/controller gyro to right stick
-                        applyGyroToRightStick(controllerNumber, gz, gx)
-                        return
-                    }
-
-                    if (controllerNumber.toInt() != 0 ||
-                        controllerGyroDemand.hostReportRateHz.toInt() != 0
-                    ) {
-                        handler.conn.sendControllerMotionEvent(
-                            controllerNumber.toByte(), motionType, gx, gy, gz
-                        )
-                    }
-                } else {
-                    // Pass m/s^2 directly without conversion
-                    handler.conn.sendControllerMotionEvent(
-                        controllerNumber.toByte(), motionType,
-                        sensorEvent.values[x] * xFactor.toFloat(),
-                        sensorEvent.values[y] * yFactor.toFloat(),
-                        sensorEvent.values[z] * zFactor.toFloat()
-                    )
                 }
             }
 

@@ -30,6 +30,9 @@ interface NvConnectionListener {
     fun setControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte)
 
     fun ds5HapticsPcm(frame: Ds5HapticsPcmFrame)
+    fun ds5HapticsIr(frame: Ds5HapticsIrFrame) {}
+    fun ds5HapticsIrExtended(frame: Ds5HapticsIrExtendedFrame) {}
+    fun ds5HapticsState(controllerNumber: Short, state: Ds5HapticsState) {}
 
     fun onResolutionChanged(width: Int, height: Int)
 
@@ -44,4 +47,7 @@ interface NvConnectionListener {
     )
 
     fun onRemoteTextContext(context: RemoteTextContext)
+
+    /** Called on the control receive thread; only hosts with LI_FF_HOST_SESSION_STATE send it. */
+    fun onHostSessionStateChanged(locked: Boolean) {}
 }

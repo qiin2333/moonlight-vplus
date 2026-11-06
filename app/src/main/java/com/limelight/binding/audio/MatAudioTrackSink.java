@@ -14,7 +14,9 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
     private AudioTrack track;
     private long wraps, previousLow;
     private int routeId = -1;
-    private long nextRouteCheck;
+    private int preferredRouteId = -1;
+    private long nextRouteCheck, openedAt;
+    private String route = "unresolved";
     private boolean closed;
     private volatile String diagnostics = "not opened";
     public MatAudioTrackSink(Context context) { this.context = context.getApplicationContext(); }
@@ -26,9 +28,24 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
         return new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_IEC61937)
                 .setSampleRate(MatCarrierPlayer.RATE).setChannelMask(AudioFormat.CHANNEL_OUT_7POINT1_SURROUND).build();
     }
+    private static boolean isHdmi(AudioDeviceInfo device) {
+        int type = device.getType();
+        return type == AudioDeviceInfo.TYPE_HDMI || type == AudioDeviceInfo.TYPE_HDMI_ARC ||
+                (Build.VERSION.SDK_INT >= 31 && type == AudioDeviceInfo.TYPE_HDMI_EARC);
+    }
+    private static int routePriority(AudioDeviceInfo device) {
+        if (Build.VERSION.SDK_INT >= 31 && device.getType() == AudioDeviceInfo.TYPE_HDMI_EARC) return 3;
+        return device.getType() == AudioDeviceInfo.TYPE_HDMI_ARC ? 2 : 1;
+    }
     @Override public void start() {
         if (closed || track != null) throw new IllegalStateException("MAT sink cannot be reused");
         if (Build.VERSION.SDK_INT < 24) throw new IllegalStateException("IEC MAT needs Android 7+");
+        AudioManager manager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+        AudioDeviceInfo output = null;
+        if (manager != null) for (AudioDeviceInfo device : manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            if (isHdmi(device) && (output == null || routePriority(device) > routePriority(output))) output = device;
+        }
+        if (output == null) throw new IllegalStateException("No HDMI/ARC/eARC output exposed by Android audio policy");
         int min = AudioTrack.getMinBufferSize(MatCarrierPlayer.RATE,
                 AudioFormat.CHANNEL_OUT_7POINT1_SURROUND, AudioFormat.ENCODING_IEC61937);
         if (min <= 0) throw new IllegalStateException("192kHz/7.1/IEC61937 unsupported: " + min);
@@ -45,15 +62,17 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
         track = new AudioTrack.Builder().setAudioAttributes(attributes()).setAudioFormat(format())
                 .setTransferMode(AudioTrack.MODE_STREAM).setBufferSizeInBytes(buffer).build();
         if (track.getState() != AudioTrack.STATE_INITIALIZED) throw new IllegalStateException("IEC track not initialized");
+        if (!track.setPreferredDevice(output)) throw new IllegalStateException("HDMI preferred device rejected");
+        preferredRouteId = output.getId();
         track.pause(); track.flush();
         wraps = previousLow = 0;
-        // Focus ownership is local to this standalone replay, not the game's existing audio session.
-        AudioManager manager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+        // Loss of focus terminates bitstream output; it must never be ducked.
         focusLost = false;
         if (manager == null || manager.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            throw new IllegalStateException("MAT replay audio focus denied");
+            throw new IllegalStateException("MAT audio focus denied");
         track.play();
+        openedAt = System.nanoTime();
         diagnostics = "IEC61937 192000Hz 7.1; requestedBuffer=" + buffer +
                 "; actualBufferFrames=" + track.getBufferSizeInFrames() + "; direct=" + direct +
                 "; receiver Atmos recognition NOT verified";
@@ -69,12 +88,18 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
         nextRouteCheck = now + 50_000_000;
         AudioDeviceInfo device = track.getRoutedDevice();
         // Routing can be unknown until the first write; wait for a real route.
-        if (device == null) return;
+        if (device == null) {
+            if (now - openedAt > 500_000_000L) throw new IllegalStateException("MAT HDMI route remained unresolved");
+            return;
+        }
         int type = device.getType();
-        boolean hdmi = type == AudioDeviceInfo.TYPE_HDMI || type == AudioDeviceInfo.TYPE_HDMI_ARC ||
-                (Build.VERSION.SDK_INT >= 31 && type == AudioDeviceInfo.TYPE_HDMI_EARC);
-        if (!hdmi) throw new IllegalStateException("Refusing MAT on non-HDMI output: " + type);
+        if (!isHdmi(device)) throw new IllegalStateException("Refusing MAT on non-HDMI output: " + type);
+        if (device.getId() != preferredRouteId) throw new IllegalStateException("MAT preferred HDMI/eARC route was not honored");
         if (routeId != -1 && routeId != device.getId()) throw new IllegalStateException("MAT HDMI route changed; reconnect");
+        if (routeId == -1) {
+            route = "id=" + device.getId() + ",type=" + type + ",name=" + device.getProductName();
+            android.util.Log.i("MAT-output", "Routed " + route);
+        }
         routeId = device.getId();
     }
     @Override public int write(short[] words, int offset, int count) {
@@ -92,13 +117,22 @@ public final class MatAudioTrackSink implements MatCarrierPlayer.Sink {
         previousLow = low;
         return wraps + low;
     }
-    public String diagnostics() { return diagnostics; }
+    public String diagnostics() { return diagnostics + "; route=" + route; }
     @Override public void close() {
         closed = true;
-        if (track != null) {
-            try { track.pause(); track.flush(); } finally { track.release(); track = null; }
+        try {
+            if (track != null) {
+                try {
+                    android.util.Log.i("MAT-output", diagnostics() + "; underruns=" +
+                            track.getUnderrunCount() + "; head=" + (track.getPlaybackHeadPosition() & 0xffffffffL));
+                } finally {
+                    try { track.pause(); track.flush(); }
+                    finally { track.release(); track = null; }
+                }
+            }
+        } finally {
+            AudioManager manager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+            if (manager != null) manager.abandonAudioFocus(focusListener);
         }
-        AudioManager manager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
-        if (manager != null) manager.abandonAudioFocus(focusListener);
     }
 }

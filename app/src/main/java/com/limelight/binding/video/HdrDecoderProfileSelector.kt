@@ -38,16 +38,8 @@ internal class HdrDecoderProfileSelector(
             HEVC_PROFILE_MAIN10_HDR10,
             HEVC_PROFILE_MAIN10_HDR10_PLUS,
         )
-        private val HEVC_HDR10_PROFILES = intArrayOf(
-            HEVC_PROFILE_MAIN10_HDR10,
-            HEVC_PROFILE_MAIN10_HDR10_PLUS,
-        )
         private val AV1_MAIN10_PROFILES = intArrayOf(
             AV1_PROFILE_MAIN10,
-            AV1_PROFILE_MAIN10_HDR10,
-            AV1_PROFILE_MAIN10_HDR10_PLUS,
-        )
-        private val AV1_HDR10_PROFILES = intArrayOf(
             AV1_PROFILE_MAIN10_HDR10,
             AV1_PROFILE_MAIN10_HDR10_PLUS,
         )
@@ -60,11 +52,12 @@ internal class HdrDecoderProfileSelector(
         "HEVC Main10",
     )
 
+    // Preserve static HDR10 compatibility with decoders that only advertise Main10.
     fun supportsHevcHdr10(decoderInfo: MediaCodecInfo?): Boolean = supportsAnyProfile(
         decoderInfo,
         MIME_HEVC,
-        HEVC_HDR10_PROFILES,
-        "HEVC Main10 HDR10/HDR10+",
+        HEVC_MAIN10_PROFILES,
+        "HEVC Main10/HDR10/HDR10+",
     )
 
     fun supportsHevcHdr10Plus(decoderInfo: MediaCodecInfo?): Boolean = hasProfile(
@@ -83,8 +76,8 @@ internal class HdrDecoderProfileSelector(
     fun supportsAv1Hdr10(decoderInfo: MediaCodecInfo?): Boolean = supportsAnyProfile(
         decoderInfo,
         MIME_AV1,
-        AV1_HDR10_PROFILES,
-        "AV1 Main10 HDR10/HDR10+",
+        AV1_MAIN10_PROFILES,
+        "AV1 Main10/HDR10/HDR10+",
     )
 
     fun supportsAv1Hdr10Plus(decoderInfo: MediaCodecInfo?): Boolean = hasProfile(

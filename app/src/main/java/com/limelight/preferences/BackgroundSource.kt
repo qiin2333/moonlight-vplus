@@ -38,15 +38,14 @@ sealed class BackgroundSource(val prefValue: String) {
      *
      * - Returns a non-empty string (HTTP URL or filesystem path) when a bitmap
      *   should be fetched.
-     * - Returns `null` when no background should be shown (`None`, or a source
-     *   that is mis-configured and should degrade silently).
+     * - Returns `null` for the procedural [Auto] pattern, [None], or a source
+     *   falling back to the default. No bitmap should be fetched in those cases.
      */
     abstract fun resolveTarget(ctx: Context, orientation: Int): String?
 
-    /** Smart default: photography on every device and orientation. */
+    /** Bundled, procedural V/+ map. PcView renders it without downloading or decoding wallpaper. */
     data object Auto : BackgroundSource("auto") {
-        override fun resolveTarget(ctx: Context, orientation: Int): String? =
-            Picsum.resolveTarget(ctx, orientation)
+        override fun resolveTarget(ctx: Context, orientation: Int): String? = null
     }
 
     /** Animé (Pipw API). Preserved for users who want the legacy look. */
@@ -113,7 +112,8 @@ sealed class BackgroundSource(val prefValue: String) {
         // long enough to migrate existing installs, then erased.
         private const val LEGACY_KEY_TYPE = "background_image_type"
 
-        private val ALL = listOf(Auto, Pipw, Picsum, Api, Local, None)
+        // A source can initialize its superclass before its own singleton is ready.
+        private val ALL by lazy { listOf(Auto, Pipw, Picsum, Api, Local, None) }
         private var cachedResolvedTarget: ResolvedTarget? = null
         private var resolvedTargetOrientation: Int? = null
         private var resolvedTargetExtra: String? = null

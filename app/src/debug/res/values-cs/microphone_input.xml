@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">Výchozí systému</string>
+    <string name="mic_input_builtin">Vestavěný mikrofon</string>
+    <string name="mic_input_wired">Kabelová náhlavní souprava</string>
+    <string name="mic_input_bluetooth">Mikrofon Bluetooth</string>
+    <string name="mic_input_bluetooth_permission">Mikrofon Bluetooth (vyžaduje oprávnění)</string>
+    <string name="mic_input_usb">Mikrofon USB</string>
+    <string name="mic_input_microphone">Mikrofon</string>
+    <string name="mic_input_named_device" translatable="false">%1$s · %2$s</string>
+    <string name="mic_input_numbered_device" translatable="false">%1$s (%2$d)</string>
+    <string name="mic_input_active">Nahrávání z: %1$s</string>
+    <string name="mic_input_unavailable">Vybrané zařízení není dostupné.</string>
+    <string name="mic_input_route_pending">Čekání na trasu zvukového vstupu</string>
+    <string name="mic_input_failed">Tento mikrofon nelze vybrat. Zkuste to znovu.</string>
+    <string name="mic_input_bluetooth_quality">Mikrofon Bluetooth může změnit komunikační výstup a snížit kvalitu přehrávání.</string>
+    <string name="mic_input_system_silenced">Mikrofon ztlumen systémem Android</string>
+    <string name="title_mic_test">Test mikrofonu</string>
+    <string name="summary_mic_test">Zachytí zvuk místního mikrofonu a zobrazí jeho průběh bez spuštění streamu.</string>
+    <string name="title_mic_test_devices">Vstupní zařízení</string>
+    <string name="mic_test_start">Spustit test</string>
+    <string name="mic_test_stop">Zastavit test</string>
+    <string name="mic_test_waveform">Místní průběh</string>
+    <string name="mic_test_idle">Vyberte vstup a spusťte test.</string>
+    <string name="mic_test_source">Zdroj zvuku</string>
+    <string name="mic_test_route">Skutečná trasa</string>
+    <string name="mic_test_rms">Úroveň RMS</string>
+    <string name="mic_test_peak">Špičková úroveň</string>
+    <string name="mic_test_record">Nahrávat</string>
+    <string name="mic_test_recording">Nahrávání %1$d/15 s</string>
+    <string name="mic_test_stop_recording">Zastavit nahrávání</string>
+    <string name="mic_test_play">Přehrát</string>
+    <string name="mic_test_playing">Přehrávání</string>
+    <string name="mic_test_preferred_route">Preferovaný vstup</string>
+    <string name="mic_test_recording_route">Konfigurace nahrávání</string>
+    <string name="mic_test_display_gain">Zesílení zobrazení: %1$s</string>
+    <string name="mic_test_selected_input">Vybraný vstup</string>
+    <string name="mic_test_bound_input">Přiřazený vstup</string>
+    <string name="mic_test_communication_route">Komunikační trasa</string>
+    <string name="mic_test_format">Formát záznamu</string>
+    <string name="mic_test_buffer">Zvuková vyrovnávací paměť</string>
+    <string name="mic_test_session">Zvuková relace</string>
+    <string name="mic_test_error_permission">Je vyžadováno oprávnění k mikrofonu.</string>
+    <string name="mic_test_error_route_lost">Trasa mikrofonu Bluetooth byla ztracena.</string>
+    <string name="mic_test_error_route_activation">Vybranou trasu mikrofonu nelze aktivovat.</string>
+    <string name="mic_test_error_start">Test mikrofonu nelze spustit.</string>
+    <string name="mic_test_error_playback">Zvuk nelze přehrát.</string>
+    <string name="mic_test_error_playback_init">Inicializace přehrávání zvuku se nezdařila.</string>
+    <string name="mic_test_error_read">Zachytávání mikrofonu se nezdařilo.</string>
+    <string name="mic_test_error_read_code">Zachytávání mikrofonu se nezdařilo (%1$d).</string>
+</resources>

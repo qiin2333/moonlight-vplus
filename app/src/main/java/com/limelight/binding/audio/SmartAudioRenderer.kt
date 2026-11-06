@@ -35,18 +35,13 @@ class SmartAudioRenderer(
         bitrate: Int
     ): Int {
         onAudioPresentationClock(-1L, -1L, 0)
-        if (codec == MoonBridge.AUDIO_CODEC_MAT_IEC61937) {
+        if (codec == MoonBridge.AUDIO_CODEC_MAT_LIVE) {
             val mat = MatPassthroughRenderer(context)
             val result = mat.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
             if (result == 0) delegate = mat else mat.cleanup()
             return result
         }
-        if (codec == MoonBridge.AUDIO_CODEC_MAT_DUMP) {
-            val dump = MatDumpRenderer()
-            val result = dump.setup(audioConfiguration, sampleRate, samplesPerFrame, codec, bitrate)
-            if (result == 0) delegate = dump
-            return result
-        }
+
         // Route by negotiated codec:
         //   PCM_S16  -> PcmPassthroughRenderer (raw LPCM, lowest latency)
         //   AC3/EAC3 -> Ac3PassthroughRenderer (encoded bitstream to AVR)

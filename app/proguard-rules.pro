@@ -8,7 +8,7 @@
 -keep class com.limelight.nvstream.jni.* {*;}
 
 # Dedicated MAT JNI callback names/signatures; separate from AC3/PCM callbacks.
--keep class com.limelight.binding.audio.MatNativeReceiver { *; }
+-keep interface com.limelight.binding.audio.MatCarrierConsumer { *; }
 -keepclassmembers class * implements com.limelight.binding.audio.MatCarrierConsumer {
     public boolean offerMatCycle(byte[], int, long, long, long, long);
     public boolean endMatStream(long);

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_codec_mat_live">MAT 实时透传 — HDMI/eARC（实验）</string>
+</resources>

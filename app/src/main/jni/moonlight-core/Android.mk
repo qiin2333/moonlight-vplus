@@ -13,10 +13,6 @@ include $(CLEAR_VARS)
 LOCAL_MODULE    := moonlight-core
 
 LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
-                   moonlight-common-c/src/MatDepacketizer.c \
-                   moonlight-common-c/src/MatReceiver.c \
-                   moonlight-common-c/src/MatPlayback.c \
-                   moonlight-common-c/src/MatDumpFile.c \
                    moonlight-common-c/src/ByteBuffer.c \
                    moonlight-common-c/src/Connection.c \
                    moonlight-common-c/src/ConnectionTester.c \
@@ -27,12 +23,16 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/src/FakeCallbacks.c \
                    moonlight-common-c/src/InputStream.c \
                    moonlight-common-c/src/LinkedBlockingQueue.c \
+                   moonlight-common-c/src/MatDepacketizer.c \
+                   moonlight-common-c/src/MatLivePlayback.c \
+                   moonlight-common-c/src/MatReceiver.c \
                    moonlight-common-c/src/Misc.c \
                    moonlight-common-c/src/Platform.c \
                    moonlight-common-c/src/PlatformCrypto.c \
                    moonlight-common-c/src/PlatformSockets.c \
                    moonlight-common-c/src/PyrowaveProtocol.c \
                    moonlight-common-c/src/PyrowaveReassembly.c \
+                   moonlight-common-c/src/RecorderCallbacks.c \
                    moonlight-common-c/src/RtpAudioQueue.c \
                    moonlight-common-c/src/RtpVideoQueue.c \
                    moonlight-common-c/src/RtspConnection.c \
@@ -57,6 +57,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    moonlight-common-c/enet/win32.c \
                    simplejni.c \
                    callbacks.c \
+                   usb_isochronous.c \
                    mat_carrier_bridge.c \
                    pyrowave_decoder_bridge.cpp \
                    pyrowave_capabilities.cpp \

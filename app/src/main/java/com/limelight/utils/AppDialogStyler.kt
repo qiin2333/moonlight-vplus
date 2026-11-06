@@ -1,6 +1,7 @@
 package com.limelight.utils
 
 import android.app.Dialog
+import android.animation.AnimatorInflater
 import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
@@ -9,7 +10,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.KeyEvent
-import android.widget.CheckedTextView
+import android.widget.EditText
 import android.widget.ListView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -77,7 +78,10 @@ object AppDialogStyler {
             DialogInterface.BUTTON_NEGATIVE,
             DialogInterface.BUTTON_NEUTRAL
         ).forEach { buttonId ->
-            buttonTextColors?.let { findButton(dialog, buttonId)?.setTextColor(it) }
+            findButton(dialog, buttonId)?.let { button ->
+                buttonTextColors?.let(button::setTextColor)
+                installItemFeedback(button, context)
+            }
         }
     }
 
@@ -86,12 +90,17 @@ object AppDialogStyler {
         textView.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
     }
 
-    fun bindChoiceRow(row: View, textView: TextView, context: Context, checked: Boolean) {
-        row.isActivated = checked
-        if (textView is CheckedTextView) {
-            textView.isChecked = checked
-        }
-        tintChoiceText(textView, context)
+    /** Rounded input box shared by text-entry dialogs. */
+    fun styleTextInput(editText: EditText) {
+        val context = editText.context
+        val density = context.resources.displayMetrics.density
+        val padding = (12 * density + 0.5f).toInt()
+        editText.setTextColor(ContextCompat.getColor(context, R.color.app_dialog_text_primary))
+        editText.setHintTextColor(ContextCompat.getColor(context, R.color.app_dialog_text_secondary))
+        editText.setBackgroundResource(R.drawable.custom_resolution_input_bg)
+        editText.setPadding(padding, padding, padding, padding)
+        editText.minHeight = (48 * density + 0.5f).toInt()
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
     }
 
     fun clearTextShadows(view: View?) {
@@ -189,6 +198,7 @@ object AppDialogStyler {
 
     private fun styleListRow(row: View, context: Context) {
         row.setBackgroundResource(R.drawable.app_dialog_list_item_bg)
+        installItemFeedback(row, context)
         val textView = when (row) {
             is TextView -> row
             else -> row.findViewById<TextView>(android.R.id.text1)
@@ -208,5 +218,11 @@ object AppDialogStyler {
     private fun dpToPx(context: Context, value: Int): Int {
         val density = context.resources.displayMetrics.density
         return (value * density + 0.5f).toInt()
+    }
+
+    private fun installItemFeedback(view: View, context: Context) {
+        if (view.getTag(R.id.expressive_item_feedback) == true) return
+        view.setTag(R.id.expressive_item_feedback, true)
+        view.stateListAnimator = AnimatorInflater.loadStateListAnimator(context, R.animator.expressive_item_state)
     }
 }

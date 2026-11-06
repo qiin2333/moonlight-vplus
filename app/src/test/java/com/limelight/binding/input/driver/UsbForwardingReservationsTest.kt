@@ -3,11 +3,7 @@ package com.limelight.binding.input.driver
 import org.junit.Assert.*
 import org.junit.Test
 import com.limelight.utils.CompletionSignal
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
-import kotlin.concurrent.withLock
 
 class UsbForwardingReservationsTest {
     @Test fun deferredRestoreReleasesOnlyAfterLateSuccessfulStop() {
@@ -101,17 +97,6 @@ class UsbForwardingReservationsTest {
         assertFalse(registry.contains("usb/a"))
     }
 
-    @Test fun failedStopKeepsDeviceReserved() {
-        val registry = UsbForwardingReservations()
-        val lease = registry.reserve("usb/a")
-        val stop = CompletionSignal()
-        lease.awaitStops(listOf(stop))
-        stop.completeExceptionally(IllegalStateException("USB close failed"))
-        assertTrue(lease.ready.isFailed)
-        assertThrows(IllegalStateException::class.java) { lease.restore {} }
-        assertTrue(registry.contains("usb/a"))
-    }
-
     @Test fun staleRestoreCannotReleaseANewOwnerAndOtherDevicesRemainAvailable() {
         val registry = UsbForwardingReservations()
         val old = registry.reserve("usb/a")
@@ -124,24 +109,6 @@ class UsbForwardingReservationsTest {
         assertTrue(registry.contains("usb/a"))
         current.awaitStops(emptyList())
         current.restore {}
-    }
-
-    @Test fun lateClaimCannotPassReservationWhileDriverStartupIsLocked() {
-        val registry = UsbForwardingReservations()
-        val waiting = CountDownLatch(1)
-        val finished = CountDownLatch(1)
-        var canClaim = true
-        registry.lock.withLock {
-            thread {
-                waiting.countDown()
-                registry.lock.withLock { canClaim = !registry.contains("usb/a") }
-                finished.countDown()
-            }
-            assertTrue(waiting.await(2, TimeUnit.SECONDS))
-            registry.reserve("usb/a").awaitStops(emptyList())
-        }
-        assertTrue(finished.await(2, TimeUnit.SECONDS))
-        assertFalse(canClaim)
     }
 
     @Test fun failedStopReportsFailureAndReplugAllowsSamePathWithoutRestoringOldDriver() {

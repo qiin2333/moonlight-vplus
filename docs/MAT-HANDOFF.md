@@ -1,63 +1,114 @@
-# Experimental MAT Android handoff — 2026-10-22
+# MAT Android television acceptance
 
-Companion repositories: AlkaidLab/foundation-sunshine branch
-`codex/atmos-mat-handoff`, qiin2333/moonlight-common-c branch
-`codex/atmos-mat-transport` (PR base **mic**). Use the common-c gitlink committed
-here; do not run `git submodule update --remote`.
+PR #750 now targets authenticated **live MAT codec 7** used by merged
+[Sunshine #1177](https://github.com/AlkaidLab/foundation-sunshine/pull/1177).
+The master-pinned common-c is used unchanged. Retired codec 4/5, network dump
+and the old finite protocol are removed. Existing `mat_iec61937` preferences
+migrate to live MAT. MAT remains explicit opt-in, never the default codec.
 
-2026-10-22 upstream refresh: the shared dependency now includes mic
-`2aa14ffeb877f9093993d9c9cf3c3440e2d2220d`, pinned here as
-`773bebded05624e275106ce1fa4bb9aa32726535`. The host PR merges master
-`c211d711` and uses its PyroWave/Granite gitlinks. The new RTSP parser retains
-upstream case-folded coalescing/node ownership while preserving MAT duplicate
-ACK rejection. Fresh no-device test results and transfer evidence are recorded
-separately in the companion host's `MAT-UPSTREAM-RESULT.txt` and handoff.
+Production: authenticated common-c receiver → complete 61,440-byte cycle →
+dedicated JNI array → bounded Java player → IEC61937 / 192 kHz / 8 channels
+AudioTrack. No Opus, AC3 buffer, PCM DSP, haptics, byte swap or repacking.
+Loss, queue overflow, focus loss and HDMI route changes terminate playback;
+reconnect starts a fresh receiver/player. Seamless recovery is not implemented.
+Clean authenticated EOS drains the hardware playback head.
 
-## Implemented
+## Build the full client
 
-Codec 4 is still dump-only: an app-private unique file is published only after
-native count/SHA/EOS validation. Codec 5 is explicitly negotiated finite replay:
-common-c -> dedicated 61,440-byte JNI bridge -> `MatPlaybackSession` -> bounded
-`MatCarrierPlayer` -> independent `MatAudioTrackSink`. No AC3 16 KB callback,
-Opus decoder, PCM processing, haptics, extra byte swap or second MAT wrapper.
-
-Opt-in: enable audio passthrough, select **MAT IEC61937 — finite replay / HDMI
-(experimental)** and **disable the MAT dump checkbox**. Dump retains precedence.
-MAT is never selected automatically; unsupported tuples/routes fail explicitly.
-
-The sink requires API 24+, IEC61937, 192 kHz, 8 channels, MODE_STREAM and a
-suitable HDMI route. Short writes, queue pressure, EOS drain, cancellation and
-playback-head wrap/watchdog are handled independently from ordinary audio.
-An API capability result is not proof that a TV internal app can reach its eARC
-MAT sink. DD+ Atmos support alone does not establish MAT compatibility.
-
-## Tested without hardware
-
-Actual production JNI + Java player/session with fake final sink: all 178 cycles
-of the 3.56 s fixture, SHA256
-`79cd69e33adcd1bcffe95673564b6fc727a7aaed7370745d43ec269925a492f6`.
-Three full real-Sunshine RTSP/RTP modes, existing dump path, 15 bad negotiation
-cases, JNI/player/lifecycle regression; arm64 NDK MAT module compilation/link;
-full app Kotlin and Java compilation. **No full Moonlight APK/native application
-link, installation, AudioTrack/HAL/eARC playback or actual Atmos recognition yet.**
-
-The standalone `com.limelight.matdiagnostic` A/B APK is not a network client.
-Its source-only debug replay activity is included, but recording/APK/signing keys
-are deliberately excluded from Git. The fixture must be transferred privately.
-
-## Continue on another computer
-
-Read `docs/ATMOS-MAT-HANDOFF.md` in the companion Sunshine PR first. Its
-`spatial-object-spike/mat-android-session/verify.ps1` runs cross-repo acceptance
-when this repo is cloned at `spatial-object-spike/moonlight-vplus` under Sunshine.
-Tool paths/build caches must be adapted; this is not a clean-machine installer.
-For app compilation, set local JAVA_HOME and ANDROID_HOME, then run:
+Use a JDK supported by repository Gradle, SDK 36 and NDK 28.2.13676358.
+Configure `sdk.dir` and `audioHapticsSdkDir` in ignored `local.properties` as
+for the normal app. Synchronize submodule URLs after merging master;
+framegen changed repositories. Never use `--remote`.
 
 ```powershell
-./gradlew.bat --no-daemon -PaudioHapticsSdkDir=<Sunshine>/third-party/moonlight-audio-haptics :app:compileNonRootDebugKotlin :app:compileNonRootDebugJavaWithJavac
+git submodule sync --recursive
+git submodule update --init --recursive
+./gradlew.bat --no-daemon -PmatAcceptance :app:assembleNonRootDebug
+./gradlew.bat --no-daemon -PmatAcceptance :app:testNonRootDebugUnitTest --tests com.limelight.binding.audio.MatCarrierPlayerTest
+./tools/mat/Test-MatBridge.ps1 -JavaHome <full-JDK-with-JNI-headers>
 ```
 
-Use `--offline` only after dependencies are cached. Next: full APK/native link,
-real target TV/box -> HDMI/eARC -> MAT-capable soundbar acceptance, then live
-capture contract, loss/route recovery and measured latency. Phone-local MAT
-decoding and endpoint-independent live host integration are not established.
+`app/build/outputs/apk/nonRoot/debug/app-nonRoot-debug.apk` is the full network
+Moonlight client including native libraries. `-PmatAcceptance` isolates it as
+`com.limelight.mat_acceptance`, coexisting with normal V+. Keep APKs, recordings,
+signing material, pairing state and evidence local.
+
+## Record the topology
+
+Record TV/box model, Android build/API, soundbar model/firmware, HDMI ports,
+cables, TV digital audio/eARC settings and host/common commits. Distinguish
+**TV internal app → eARC soundbar** from **Android box → soundbar HDMI input → TV**.
+The requested acceptance target is the TV internal-app → eARC path. A box
+connected directly to a soundbar is only a comparison; it cannot pass the TV
+path. Device models/firmware still need recording on site. ARC/DD+ Atmos
+support does not establish MAT support.
+
+Requires Android 7+, an Android-exposed HDMI/ARC/eARC output and the exact
+IEC tuple. API 33+ must advertise direct bitstream support. Preferred-device
+selection prefers eARC, then ARC, then HDMI; actual routing must honor the
+selected device and is checked during writes/drain.
+An unresolved route beyond 500 ms or a non-HDMI route fails. Vendor policy may
+reject an internal-TV path even when the soundbar accepts MAT. Do not bypass
+checks or send the carrier as PCM.
+
+## A. Isolate HDMI output
+
+Privately transfer the historical verified 3.56 s recording if available. It
+is not bundled and cannot be regenerated from its hash. This optional test
+exercises Java output, not the network/native receiver. Never play generated
+carrier-shaped test data on hardware.
+
+```powershell
+./tools/mat/Invoke-MatAcceptance.ps1 -Action Install -Serial <TV-adb-serial> -Fixture <private-verified-recording.raw>
+```
+
+On TV choose **Verify app-private recording (adb)**, then **Play** with the
+remote. A document picker and optional private debug asset also work.
+Verification opens no output. Require 178 cycles, 10,936,320 submitted bytes,
+drained playhead and SHA256
+`79cd69e33adcd1bcffe95673564b6fc727a7aaed7370745d43ec269925a492f6`.
+Separately record soundbar input-format display and audible result. The short
+clip may finish before receiver lock-on; that does not establish live playback.
+Stop/background must release the track. If the historical fixture is unavailable,
+skip A and use the real native live source in B; do not substitute generated bytes.
+
+## B. Full network session
+
+1. Prepare the production Sunshine source using its current `docs/MAT-HOST.md`
+   and `tools/sonic-mat-live/README.md`: component preflight, explicit capture
+   Start, MAT enabled in Web UI. Record component hashes/status and host commit.
+   Use a supported application producing objects, not a codec 4/5 file-replay host.
+2. Open the isolated client, pair, select Audio → passthrough → enable
+   passthrough → **MAT live — HDMI/eARC (experimental)**. AudioFX, spatializer
+   and AC3 wrapping settings do not process this path.
+3. Start normal video streaming. Confirm codec 7/live profile in logs,
+   `MAT live IEC playback active`, and `MAT-output: Routed` on intended HDMI.
+   Unsupported host/source fails explicitly in strict mode. An ordinary Opus
+   stream does not count as MAT acceptance.
+4. Run 30 s first, then 10 min: record soundbar input format/Atmos indicator,
+   no crackle/dropout, static channel identity including LFE/height, dynamic
+   object motion and measured AV offset. Record expected source behavior.
+   Compare the same source with a proven local playback path where available.
+5. Test stream stop, background, capture stop, HDMI unplug/replug and three
+   fresh connections. Failures must not become noise, silent frame drops or
+   false successful EOS. Reconnect must get a fresh route/receiver/output.
+   Deliberate packet loss should fail this loss-intolerant path. Seamless
+   loss/route recovery is not claimed.
+6. Disable passthrough and confirm ordinary Opus playback still works.
+
+## Collect and decide
+
+```powershell
+./tools/mat/Invoke-MatAcceptance.ps1 -Action Collect -Serial <TV-adb-serial> -Output <new-private-directory>
+```
+
+Saves device/package metadata, audio policy, AudioFlinger and logcat. Add
+topology, source/host identity, receiver photos/video, channel/object results,
+sync measurements and verdict for each step. Logs may contain private data;
+review before sharing. Evidence JSON leaves hardware verdict pending.
+Software tests, writes, hashes and the Atmos logo individually do not establish
+correct channel/object rendering.
+
+Software results and APK hashes belong in PR validation notes. Real HDMI/HAL/eARC
+decoding remains unverified until this matrix runs on the target hardware.
+This experimental build does not claim universal Android TV MAT support.

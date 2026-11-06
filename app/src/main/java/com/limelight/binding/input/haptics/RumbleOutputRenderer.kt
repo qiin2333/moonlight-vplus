@@ -59,6 +59,8 @@ internal class RumbleOutputRenderer(
         if (active() && mixed.controllerNumber.toInt() == 0) deviceSlot.submit(mixed)
     }
 
+    fun flushDevice() { if (active()) deviceSlot.flushPending() }
+
     /** Forget dedupe history when the physical controller sink changes. */
     fun resetController(number: Short) { slots.remove(number)?.cancel() }
 

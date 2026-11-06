@@ -21,8 +21,10 @@ import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHel
 import com.limelight.binding.input.advance_setting.DirectConfigTransfer
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.preferences.BackgroundSource
+import com.limelight.preferences.CustomResolutionsStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
+import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.nvstream.http.ComputerDetails
 import org.json.JSONArray
 import org.json.JSONException
@@ -45,6 +47,7 @@ import java.util.Arrays
 import java.util.Base64 as JavaBase64
 import java.util.TreeSet
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -52,6 +55,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+import kotlinx.coroutines.delay
 
 class ConfigurationSyncManager(private val context: Context) {
 
@@ -175,29 +179,9 @@ class ConfigurationSyncManager(private val context: Context) {
 
     @Throws(JSONException::class)
     fun exportSyncPackage(): String {
-        val sections = JSONObject()
-            .put(
-                SECTION_DEFAULT_PREFERENCES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_DEFAULT_PREFERENCES,
-                        PreferenceManager.getDefaultSharedPreferences(context),
-                        PORTABLE_DEFAULT_PREF_KEYS
-                    )
-                )
-            )
-            .put(
-                SECTION_APP_LAST_SETTINGS,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_APP_LAST_SETTINGS,
-                        context.getSharedPreferences(APP_LAST_SETTINGS_PREFS, Context.MODE_PRIVATE),
-                        null
-                    )
-                )
-            )
+        // Materialize implicit defaults so restoring a fresh-install backup replaces a later list too.
+        CustomResolutionsStore.load(context)
+        val sections = encodeResettablePreferenceSections()
             .put(
                 SECTION_CUSTOM_RESOLUTIONS,
                 JSONObject().put(
@@ -221,17 +205,6 @@ class ConfigurationSyncManager(private val context: Context) {
                 )
             )
             .put(
-                SECTION_APP_VIEW_PREFERENCES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_APP_VIEW_PREFERENCES,
-                        context.getSharedPreferences(APP_VIEW_PREFS, Context.MODE_PRIVATE),
-                        APP_VIEW_PREF_KEYS
-                    )
-                )
-            )
-            .put(
                 SECTION_HIDDEN_APPS,
                 JSONObject().put(
                     KEY_VALUES,
@@ -239,17 +212,6 @@ class ConfigurationSyncManager(private val context: Context) {
                         SECTION_HIDDEN_APPS,
                         context.getSharedPreferences(HIDDEN_APPS_PREFS, Context.MODE_PRIVATE),
                         null
-                    )
-                )
-            )
-            .put(
-                SECTION_OSC_SETTINGS_BUTTON,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_OSC_SETTINGS_BUTTON,
-                        context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
-                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
                     )
                 )
             )
@@ -274,9 +236,13 @@ class ConfigurationSyncManager(private val context: Context) {
                     encodeTouchPointerPresetPreferences()
                 )
             )
+            .put(SECTION_TOUCHPAD_PRESETS, JSONObject().put(KEY_VALUES, encodePreferences(
+                SECTION_TOUCHPAD_PRESETS,
+                context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE),
+                TOUCH_POINTER_PRESET_PREF_KEYS
+            )))
             .put(SECTION_CROWN_PROFILES, exportCrownProfiles())
             .put(SECTION_PAIRING, exportPairingState())
-
         return buildSyncPackage(sections)
     }
 
@@ -323,6 +289,12 @@ class ConfigurationSyncManager(private val context: Context) {
                     PORTABLE_DEFAULT_PREF_KEYS
                 ) + countValues(
                     valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
+                    TOUCH_POINTER_PRESET_PREF_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_INPUT)),
+                    TouchpadInputPreferences.PORTABLE_KEYS
+                ) + countValues(
+                    valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS)),
                     TOUCH_POINTER_PRESET_PREF_KEYS
                 ) + countValues(
                     valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
@@ -378,7 +350,20 @@ class ConfigurationSyncManager(private val context: Context) {
                     Context.MODE_PRIVATE
                 ),
                 valuesFromSection(sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS)),
-                TOUCH_POINTER_PRESET_PREF_KEYS
+                TOUCH_POINTER_PRESET_PREF_KEYS,
+                acceptedTypes = ::presetPreferenceTypes
+            ) + applyPreferences(
+                SECTION_TOUCHPAD_INPUT,
+                context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
+                valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_INPUT)),
+                TouchpadInputPreferences.PORTABLE_KEYS,
+                acceptedTypes = { setOf(TYPE_INT, TYPE_DELETED) }
+            ) + applyPreferences(
+                SECTION_TOUCHPAD_PRESETS,
+                context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE),
+                valuesFromSection(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS)),
+                TOUCH_POINTER_PRESET_PREF_KEYS,
+                acceptedTypes = ::presetPreferenceTypes
             )
         val appLastSettingsImported = applyPreferences(
             SECTION_APP_LAST_SETTINGS,
@@ -437,6 +422,14 @@ class ConfigurationSyncManager(private val context: Context) {
         val crownResult = importCrownProfiles(sections.optJSONArray(SECTION_CROWN_PROFILES))
         val pairingResult = importPairingState(sections.optJSONObject(SECTION_PAIRING))
 
+        // Restoring an old backup can reintroduce legacy values after this device's
+        // initial migration. Normalize before refreshed preference views read them.
+        if (defaultPreferencesImported > 0) {
+            PreferenceConfiguration.migrateDisplaySelections(
+                PreferenceManager.getDefaultSharedPreferences(context)
+            )
+        }
+        CustomResolutionsStore.migrateLegacyLowResolutionPresets(context)
         if (defaultPreferencesImported > 0 || oscSettingsButtonImported > 0 || oscLayoutProfilesImported > 0) {
             context.sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH))
         }
@@ -501,6 +494,7 @@ class ConfigurationSyncManager(private val context: Context) {
             )
     }
 
+    /** Rechecks enablement under the process lock; returns null when another mutation holds it. */
     internal fun trySynchronizeWithExternalSnapshot(): AutoSyncResult? {
         if (!isExternalSnapshotEnabled(context)) {
             return AutoSyncResult(
@@ -526,8 +520,62 @@ class ConfigurationSyncManager(private val context: Context) {
         } ?: return null
 
         processLock.use {
+            // A reset may have disabled sync after the optimistic check above, while this
+            // invocation was waiting to acquire the same lock.
+            if (!isExternalSnapshotEnabled(context)) {
+                return AutoSyncResult(false, false, false, false, "")
+            }
             return synchronizeWithExternalSnapshotLocked()
         }
+    }
+
+    /** Called on IO; [lockTimeoutMillis] bounds lock acquisition, while the action runs to completion. */
+    internal suspend fun withExclusiveSettingsMutation(
+        lockTimeoutMillis: Long = 30_000L,
+        action: () -> Unit
+    ) {
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(lockTimeoutMillis)
+        var lock = acquireProcessSyncLock()
+        while (lock == null) {
+            if (System.nanoTime() - deadline >= 0L) {
+                throw IOException("Configuration sync is still busy; retry restoring defaults")
+            }
+            delay(25L)
+            lock = acquireProcessSyncLock()
+        }
+        lock.use { action() }
+    }
+
+    /** Stamp only stores affected by reset. Do not export/import pairing or saved libraries. */
+    internal fun trackResettablePreferences() {
+        val state = context.getSharedPreferences(SYNC_VALUE_STATE_PREFS, Context.MODE_PRIVATE)
+        val latest = state.all.filterKeys { it.endsWith(".updatedAt") }
+            .values.filterIsInstance<Long>().maxOrNull() ?: 0L
+        val changedAt = maxOf(System.currentTimeMillis(), latest + 1L)
+        encodeResettablePreferenceSections(changedAt)
+        // Also wait for the preceding apply() calls before reporting a durable reset.
+        if (!state.edit().commit()) throw IOException("Unable to save settings reset sync history")
+    }
+
+    /** The same settings sections are used for backups and reset deletion tracking. */
+    private fun encodeResettablePreferenceSections(now: Long = System.currentTimeMillis()): JSONObject {
+        val sections = JSONObject()
+        fun addPreferences(section: String, preferences: SharedPreferences, keys: Set<String>?) {
+            sections.put(section, JSONObject().put(KEY_VALUES, encodePreferences(section, preferences, keys, now)))
+        }
+        addPreferences(SECTION_DEFAULT_PREFERENCES,
+            PreferenceManager.getDefaultSharedPreferences(context), PORTABLE_DEFAULT_PREF_KEYS)
+        addPreferences(SECTION_APP_LAST_SETTINGS,
+            context.getSharedPreferences(APP_LAST_SETTINGS_PREFS, Context.MODE_PRIVATE), null)
+        addPreferences(SECTION_APP_VIEW_PREFERENCES,
+            context.getSharedPreferences(APP_VIEW_PREFS, Context.MODE_PRIVATE), APP_VIEW_PREF_KEYS)
+        addPreferences(SECTION_OSC_SETTINGS_BUTTON,
+            context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
+            OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS)
+        addPreferences(SECTION_TOUCHPAD_INPUT,
+            context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
+            TouchpadInputPreferences.PORTABLE_KEYS)
+        return sections
     }
 
     private fun synchronizeWithExternalSnapshotLocked(): AutoSyncResult {
@@ -1086,16 +1134,20 @@ class ConfigurationSyncManager(private val context: Context) {
         return digest.joinToString(separator = "") { "%02x".format(it) }
     }
 
+    /**
+     * Encodes allowed live and previously tracked keys, recording deletion markers and sync metadata.
+     * Unchanged values keep their timestamps; changed values and new deletions are stamped with [now].
+     */
     private fun encodePreferences(
         sectionName: String,
         prefs: SharedPreferences,
-        allowedKeys: Set<String>?
+        allowedKeys: Set<String>?,
+        now: Long = System.currentTimeMillis()
     ): JSONObject {
         val output = JSONObject()
         val currentValues = prefs.all
         val statePrefs = context.getSharedPreferences(SYNC_VALUE_STATE_PREFS, Context.MODE_PRIVATE)
         val stateEditor = statePrefs.edit()
-        val now = System.currentTimeMillis()
         val localDeviceId = deviceId()
         val trackedKeysStateKey = trackedKeysStateKey(sectionName)
         val trackedKeys = TreeSet(
@@ -1290,110 +1342,6 @@ class ConfigurationSyncManager(private val context: Context) {
         )
     }
 
-    private fun normalizedSectionsForHash(sections: JSONObject): JSONObject {
-        return JSONObject()
-            .put(
-                SECTION_DEFAULT_PREFERENCES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_DEFAULT_PREFERENCES)),
-                        null,
-                        PORTABLE_DEFAULT_PREF_KEYS
-                    )
-                )
-            )
-            .put(
-                SECTION_APP_LAST_SETTINGS,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_APP_LAST_SETTINGS)),
-                        null,
-                        null
-                    )
-                )
-            )
-            .put(
-                SECTION_CUSTOM_RESOLUTIONS,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_CUSTOM_RESOLUTIONS)),
-                        null,
-                        null
-                    )
-                )
-            )
-            .put(
-                SECTION_SCENE_CONFIGS,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_SCENE_CONFIGS)),
-                        null,
-                        null
-                    )
-                )
-            )
-            .put(
-                SECTION_APP_VIEW_PREFERENCES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_APP_VIEW_PREFERENCES)),
-                        null,
-                        APP_VIEW_PREF_KEYS
-                    )
-                )
-            )
-            .put(
-                SECTION_HIDDEN_APPS,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_HIDDEN_APPS)),
-                        null,
-                        null
-                    )
-                )
-            )
-            .put(
-                SECTION_OSC_SETTINGS_BUTTON,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_OSC_SETTINGS_BUTTON)),
-                        null,
-                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
-                    )
-                )
-            )
-            .put(
-                SECTION_OSC_LAYOUT_PROFILES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    mergeEncodedValues(
-                        valuesFromSection(sections.optJSONObject(SECTION_OSC_LAYOUT_PROFILES)),
-                        null,
-                        null
-                    )
-                )
-            )
-            .put(
-                SECTION_TOUCH_POINTER_PRESETS,
-                mergedTouchPointerPresetSectionCore(
-                    sections.optJSONObject(SECTION_TOUCH_POINTER_PRESETS),
-                    null,
-                    "hash"
-                )
-            )
-            .put(
-                SECTION_CROWN_PROFILES,
-                mergeCrownProfiles(sections.optJSONArray(SECTION_CROWN_PROFILES), null)
-            )
-    }
-
     private fun countValues(encodedValues: JSONObject?, allowedKeys: Set<String>?): Int {
         if (encodedValues == null) return 0
 
@@ -1418,79 +1366,6 @@ class ConfigurationSyncManager(private val context: Context) {
         return pairingSection.optString(KEY_PAIRING_UNIQUE_ID).isNotBlank() ||
                 pairingSection.optString(KEY_PAIRING_CLIENT_CERTIFICATE).isNotBlank() ||
                 pairingSection.optString(KEY_PAIRING_CLIENT_PRIVATE_KEY).isNotBlank()
-    }
-
-    private fun mergeEncodedValues(
-        externalValues: JSONObject?,
-        localValues: JSONObject?,
-        allowedKeys: Set<String>?
-    ): JSONObject {
-        val merged = JSONObject()
-        val keys = TreeSet<String>()
-        externalValues?.keys()?.forEach { keys.add(it) }
-        localValues?.keys()?.forEach { keys.add(it) }
-
-        for (key in keys) {
-            if (allowedKeys != null && key !in allowedKeys) continue
-
-            val externalValue = externalValues?.optJSONObject(key)
-            val localValue = localValues?.optJSONObject(key)
-            val mergedValue = mergeTypedValue(externalValue, localValue) ?: continue
-            merged.put(key, mergedValue)
-        }
-
-        return merged
-    }
-
-    private fun mergeTypedValue(externalValue: JSONObject?, localValue: JSONObject?): JSONObject? {
-        if (externalValue == null) return localValue
-        if (localValue == null) return externalValue
-
-        val externalType = externalValue.optString(KEY_TYPE)
-        val localType = localValue.optString(KEY_TYPE)
-        if (externalType == TYPE_STRING_SET && localType == TYPE_STRING_SET) {
-            val merged = typedValue(
-                    TYPE_STRING_SET,
-                    mergeStringSetValues(
-                            externalValue.optJSONArray(KEY_VALUE),
-                            localValue.optJSONArray(KEY_VALUE)
-                    )
-            )
-            val winner = chooseNewerEncodedValue(externalValue, localValue)
-            return merged
-                    .put(KEY_UPDATED_AT, maxOf(updatedAt(externalValue), updatedAt(localValue)))
-                    .put(KEY_UPDATED_BY, winner.optString(KEY_UPDATED_BY, deviceId()))
-        }
-
-        return chooseNewerEncodedValue(externalValue, localValue)
-    }
-
-    private fun mergeStringSetValues(externalValues: JSONArray?, localValues: JSONArray?): JSONArray {
-        val merged = TreeSet<String>()
-        if (externalValues != null) {
-            for (i in 0 until externalValues.length()) {
-                merged.add(externalValues.optString(i))
-            }
-        }
-        if (localValues != null) {
-            for (i in 0 until localValues.length()) {
-                merged.add(localValues.optString(i))
-            }
-        }
-        return JSONArray(merged)
-    }
-
-    private fun chooseNewerEncodedValue(externalValue: JSONObject, localValue: JSONObject): JSONObject {
-        val externalUpdatedAt = updatedAt(externalValue)
-        val localUpdatedAt = updatedAt(localValue)
-        return when {
-            externalUpdatedAt > localUpdatedAt -> externalValue
-            localUpdatedAt > externalUpdatedAt -> localValue
-            externalValue.optString(KEY_UPDATED_BY) > localValue.optString(KEY_UPDATED_BY) -> externalValue
-            externalValue.optString(KEY_UPDATED_BY) < localValue.optString(KEY_UPDATED_BY) -> localValue
-            encodedValueHash(externalValue) > encodedValueHash(localValue) -> externalValue
-            else -> localValue
-        }
     }
 
     private fun updatedAt(encodedValue: JSONObject): Long {
@@ -1523,6 +1398,12 @@ class ConfigurationSyncManager(private val context: Context) {
         }
         editor.apply()
         return applied
+    }
+
+    private fun presetPreferenceTypes(key: String): Set<String> = when (key) {
+        TouchPointerPresetPreferences.JSON_KEY -> setOf(TYPE_STRING, TYPE_DELETED)
+        TouchPointerPresetPreferences.DELETED_IDS_KEY -> setOf(TYPE_STRING_SET, TYPE_DELETED)
+        else -> emptySet()
     }
 
     private fun putTypedValue(
@@ -1635,30 +1516,6 @@ class ConfigurationSyncManager(private val context: Context) {
 
         profiles.sortWith(compareBy({ it.optString(KEY_CROWN_PROFILE_NAME) }, { it.optString(KEY_CROWN_PROFILE_ID) }))
         return JSONArray(profiles)
-    }
-
-    private fun mergeCrownProfiles(externalProfiles: JSONArray?, localProfiles: JSONArray?): JSONArray {
-        val profilesByHash = LinkedHashMap<String, JSONObject>()
-
-        fun addProfiles(profiles: JSONArray?) {
-            if (profiles == null) return
-            for (i in 0 until profiles.length()) {
-                val profile = profiles.optJSONObject(i) ?: continue
-                val payload = profile.optString("payload").takeIf { it.isNotBlank() } ?: continue
-                profilesByHash[payloadHash(payload)] = JSONObject()
-                    .put("sourceConfigId", 0L)
-                    .put("name", profile.optString("name", "default"))
-                    .put("payload", payload)
-            }
-        }
-
-        addProfiles(externalProfiles)
-        addProfiles(localProfiles)
-
-        val sortedProfiles = profilesByHash.values.sortedWith(
-            compareBy({ it.optString("name") }, { payloadHash(it.optString("payload")) })
-        )
-        return JSONArray(sortedProfiles)
     }
 
     private fun importCrownProfiles(profiles: JSONArray?): Pair<Int, Int> {
@@ -2461,6 +2318,23 @@ class ConfigurationSyncManager(private val context: Context) {
                     )
                 )
                 .put(
+                    SECTION_TOUCHPAD_INPUT,
+                    mergedPreferenceSectionCore(
+                        externalSections.optJSONObject(SECTION_TOUCHPAD_INPUT),
+                        localSections.optJSONObject(SECTION_TOUCHPAD_INPUT),
+                        TouchpadInputPreferences.PORTABLE_KEYS,
+                        metadata.deviceId
+                    )
+                )
+                .put(
+                    SECTION_TOUCHPAD_PRESETS,
+                    mergedTouchPointerPresetSectionCore(
+                        externalSections.optJSONObject(SECTION_TOUCHPAD_PRESETS),
+                        localSections.optJSONObject(SECTION_TOUCHPAD_PRESETS),
+                        metadata.deviceId
+                    )
+                )
+                .put(
                     SECTION_CROWN_PROFILES,
                     mergeCrownProfilesCore(
                         externalSections.optJSONArray(SECTION_CROWN_PROFILES),
@@ -2583,6 +2457,15 @@ class ConfigurationSyncManager(private val context: Context) {
                 .put(
                     SECTION_CROWN_PROFILES,
                     mergeCrownProfilesCore(sections.optJSONArray(SECTION_CROWN_PROFILES), null, "hash")
+                )
+                .put(
+                    SECTION_TOUCHPAD_INPUT,
+                    mergedPreferenceSectionCore(sections.optJSONObject(SECTION_TOUCHPAD_INPUT), null,
+                        TouchpadInputPreferences.PORTABLE_KEYS, "hash")
+                )
+                .put(
+                    SECTION_TOUCHPAD_PRESETS,
+                    mergedTouchPointerPresetSectionCore(sections.optJSONObject(SECTION_TOUCHPAD_PRESETS), null, "hash")
                 )
                 .put(
                     SECTION_PAIRING,
@@ -3294,6 +3177,8 @@ class ConfigurationSyncManager(private val context: Context) {
         private const val SECTION_OSC_SETTINGS_BUTTON = "oscSettingsButton"
         private const val SECTION_OSC_LAYOUT_PROFILES = "oscLayoutProfiles"
         private const val SECTION_TOUCH_POINTER_PRESETS = "touchPointerPresets"
+        private const val SECTION_TOUCHPAD_INPUT = "touchpadInput"
+        private const val SECTION_TOUCHPAD_PRESETS = "touchpadPresets"
 
         private const val TYPE_BOOLEAN = "boolean"
         private const val TYPE_DELETED = "deleted"
@@ -3398,6 +3283,8 @@ class ConfigurationSyncManager(private val context: Context) {
                 SCENE_CONFIGS_PREFS -> true
                 APP_VIEW_PREFS -> key in APP_VIEW_PREF_KEYS
                 TouchPointerPresetPreferences.FILE_NAME -> key in TOUCH_POINTER_PRESET_PREF_KEYS
+                TouchpadInputPreferences.PRESETS_FILE_NAME -> key in TOUCH_POINTER_PRESET_PREF_KEYS
+                TouchpadInputPreferences.FILE_NAME -> key in TouchpadInputPreferences.PORTABLE_KEYS
                 OscSettingsButtonStore.PREFERENCES_NAME -> key in OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
                 VirtualControllerConfigurationLoader.OSC_PREFERENCE -> true
                 else -> false
@@ -3471,9 +3358,12 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_resume_stream",
             "checkbox_rotable_screen",
             "checkbox_show_QuickKeyCard",
+            "checkbox_show_audio_haptics_card",
             "checkbox_show_bitrate_card",
+            "checkbox_show_display_settings_card",
             "checkbox_show_guide_button",
             "checkbox_show_gyro_card",
+            PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
             MicrophoneButtonPreferences.KEY_SHOW_BUTTON,
             PreferenceConfiguration.SHOW_LOW_RESOLUTION_PRESETS_PREF_STRING,
             "checkbox_show_onscreen_controls",
@@ -3565,6 +3455,8 @@ class ConfigurationSyncManager(private val context: Context) {
             HIDDEN_APPS_PREFS,
             SCENE_CONFIGS_PREFS,
             TouchPointerPresetPreferences.FILE_NAME,
+            TouchpadInputPreferences.FILE_NAME,
+            TouchpadInputPreferences.PRESETS_FILE_NAME,
             OscSettingsButtonStore.PREFERENCES_NAME,
             VirtualControllerConfigurationLoader.OSC_PREFERENCE
         )

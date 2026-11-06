@@ -1,18 +1,15 @@
 package com.limelight
 
-import android.graphics.Bitmap
 import android.app.Dialog
 import androidx.activity.ComponentActivity
 import android.view.KeyEvent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.utils.AppActionSheet
-import java.io.File
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -33,6 +30,9 @@ class UsbDevicePanelTest {
             dialog = AppActionSheet.showCustom(compose.activity) {
                 androidx.compose.material3.Text("USB panel")
             }
+        }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.runOnUiThread { dialog.window?.decorView?.hasWindowFocus() == true }
         }
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_B)
         compose.waitForIdle()
@@ -77,12 +77,6 @@ class UsbDevicePanelTest {
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BUTTON_A)
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(2, refreshes) }
-        compose.onRoot().captureToImage().asAndroidBitmap().let { bitmap ->
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            File(context.getExternalFilesDir(null) ?: context.filesDir, "usb-panel.png").outputStream().use {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-            }
-        }
         compose.onNodeWithContentDescription(label(R.string.usb_forward_close)).performClick()
         compose.runOnIdle { assertEquals(1, dismissals) }
     }

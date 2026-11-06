@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared feedback for cards, dialog buttons, and choice rows; no layout animation. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="true" android:state_pressed="true">
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="0.97"
+                android:valueType="floatType" android:duration="80" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="0.97"
+                android:valueType="floatType" android:duration="80" />
+        </set>
+    </item>
+    <item android:state_enabled="true" android:state_focused="true">
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="1.02"
+                android:valueType="floatType" android:duration="180"
+                android:interpolator="@interpolator/expressive_settle" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="1.02"
+                android:valueType="floatType" android:duration="180"
+                android:interpolator="@interpolator/expressive_settle" />
+        </set>
+    </item>
+    <item android:state_enabled="true" android:state_selected="true">
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="1.02"
+                android:valueType="floatType" android:duration="180"
+                android:interpolator="@interpolator/expressive_settle" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="1.02"
+                android:valueType="floatType" android:duration="180"
+                android:interpolator="@interpolator/expressive_settle" />
+        </set>
+    </item>
+    <item>
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="1"
+                android:valueType="floatType" android:duration="180"
+                android:interpolator="@interpolator/expressive_settle" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="1"
+                android:valueType="floatType" android:duration="180"
+                android:interpolator="@interpolator/expressive_settle" />
+        </set>
+    </item>
+</selector>

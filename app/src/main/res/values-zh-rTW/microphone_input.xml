@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_input_default">系統預設</string>
+    <string name="mic_input_builtin">內建麥克風</string>
+    <string name="mic_input_wired">有線耳機麥克風</string>
+    <string name="mic_input_bluetooth">藍牙麥克風</string>
+    <string name="mic_input_usb">USB麥克風</string>
+    <string name="mic_input_active">正在使用：%1$s</string>
+    <string name="mic_input_unavailable">所選裝置目前無法使用。</string>
+    <string name="mic_input_route_pending">正在等待音訊輸入路由</string>
+    <string name="mic_input_failed">無法選擇此麥克風，請重試。</string>
+    <string name="mic_input_bluetooth_quality">使用藍牙麥克風可能同步切換通訊輸出裝置，並降低播放音質。</string>
+    <string name="mic_input_system_silenced">麥克風已被系統靜音</string>
+    <string name="title_mic_test_devices">輸入裝置</string>
+    <string name="mic_test_start">開始測試</string>
+    <string name="mic_test_stop">停止測試</string>
+    <string name="mic_test_waveform">本機波形</string>
+    <string name="mic_test_idle">選擇輸入裝置後開始測試。</string>
+    <string name="mic_test_source">音訊來源</string>
+    <string name="mic_test_route">實際路由</string>
+    <string name="mic_test_rms">RMS 音量</string>
+    <string name="mic_test_peak">峰值音量</string>
+    <string name="mic_test_record">錄音</string>
+    <string name="mic_test_recording">錄音中 %1$d/30 秒</string>
+    <string name="mic_test_stop_recording">結束錄音</string>
+    <string name="mic_test_play">播放</string>
+    <string name="mic_test_playing">播放中</string>
+    <string name="mic_test_preferred_route">首選輸入</string>
+    <string name="mic_test_recording_route">錄音設定裝置</string>
+    <string name="mic_test_display_gain">顯示增益：%1$s</string>
+    <string name="mic_test_selected_input">選擇的輸入</string>
+    <string name="mic_test_bound_input">綁定的輸入</string>
+    <string name="mic_test_communication_route">通訊路由</string>
+    <string name="mic_test_format">擷取格式</string>
+    <string name="mic_test_buffer">音訊緩衝區</string>
+    <string name="mic_test_session">音訊工作階段</string>
+</resources>

@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.limelight.binding.input.advance_setting.element.Element
+import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.utils.MathUtils
 import org.json.JSONArray
 import org.json.JSONObject
@@ -69,7 +70,9 @@ class SuperConfigDatabaseHelperTest {
     }
 
     private fun assertRepaired(helper: SuperConfigDatabaseHelper) {
-        assertEquals(9, helper.readableDatabase.version)
+        assertEquals(10, helper.readableDatabase.version)
+        assertEquals(1L, helper.queryConfigAttribute(42, PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY, -1L))
+        assertEquals(1L, helper.queryConfigAttribute(42, PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED, -1L))
         assertEquals(listOf(42L), helper.queryAllConfigIds())
         assertEquals("saved layout", helper.queryConfigAttribute(42, "config_name", ""))
         assertEquals(73L, helper.queryConfigAttribute(42, "touch_sense", 0L))
@@ -87,7 +90,7 @@ class SuperConfigDatabaseHelperTest {
 
     @Test
     fun currentVersionRepairsMissingColumnsAndKeepsExistingValues() {
-        createLegacyDatabase(version = 9, partiallyMigrated = true)
+        createLegacyDatabase(version = 10, partiallyMigrated = true)
         SuperConfigDatabaseHelper(context).use { helper ->
             assertRepaired(helper)
             assertEquals("true", helper.queryConfigAttribute(42, "button_vibrator", "missing"))
@@ -97,7 +100,7 @@ class SuperConfigDatabaseHelperTest {
 
     @Test
     fun everyLegacyVersionRepairsSchemaWithoutLosingProfiles() {
-        for (version in 1..8) {
+        for (version in 1..9) {
             createLegacyDatabase(version)
             SuperConfigDatabaseHelper(context).use { helper ->
                 assertRepaired(helper)
@@ -143,9 +146,40 @@ class SuperConfigDatabaseHelperTest {
     fun freshDatabaseCanBeOpenedRepeatedly() {
         repeat(2) {
             SuperConfigDatabaseHelper(context).use { helper ->
-                assertEquals(9, helper.readableDatabase.version)
+                assertEquals(10, helper.readableDatabase.version)
                 assertEquals("fallback", helper.queryConfigAttribute(42, "game_vibrator", "fallback"))
                 assertEquals(emptyList<Long>(), helper.queryAllConfigIds())
+            }
+        }
+    }
+
+    @Test
+    fun newProfilesOptOutAndBothFlagsSurviveBackupImportAndElementMerge() {
+        val sensitivityKey = PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY
+        val wheelKey = PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED
+        SuperConfigDatabaseHelper(context).use { helper ->
+            helper.insertConfig(ContentValues().apply { put("config_id", 42L) })
+            assertEquals(0L, helper.queryConfigAttribute(42, sensitivityKey, -1L))
+            assertEquals(0L, helper.queryConfigAttribute(42, wheelKey, -1L))
+            for (sensitivity in 0..1) for (wheel in 0..1) {
+                helper.updateConfig(42, ContentValues().apply {
+                    put(sensitivityKey, sensitivity)
+                    put(wheelKey, wheel)
+                    put("touch_sense", 321)
+                    put("mouse_wheel_speed", 78)
+                })
+                val payload = helper.exportConfig(42)
+                val before = helper.queryAllConfigIds().toSet()
+                assertEquals(0, helper.importConfigForBackup(payload))
+                val imported = helper.queryAllConfigIds().single { it !in before }
+                assertEquals(sensitivity.toLong(), helper.queryConfigAttribute(imported, sensitivityKey, -1L))
+                assertEquals(wheel.toLong(), helper.queryConfigAttribute(imported, wheelKey, -1L))
+                assertEquals(321L, helper.queryConfigAttribute(imported, "touch_sense", -1L))
+                assertEquals(78L, helper.queryConfigAttribute(imported, "mouse_wheel_speed", -1L))
+                helper.deleteConfig(imported)
+                assertEquals(0, helper.mergeConfig(payload, 42))
+                assertEquals(sensitivity.toLong(), helper.queryConfigAttribute(42, sensitivityKey, -1L))
+                assertEquals(wheel.toLong(), helper.queryConfigAttribute(42, wheelKey, -1L))
             }
         }
     }
@@ -169,8 +203,8 @@ class SuperConfigDatabaseHelperTest {
 
             val payload = helper.exportConfig(42)
             val envelope = JSONObject(payload)
-            assertEquals(9, envelope.getInt("version"))
-            assertEquals(MathUtils.computeMD5("9" + envelope.getString("settings") + envelope.getString("elements")),
+            assertEquals(10, envelope.getInt("version"))
+            assertEquals(MathUtils.computeMD5("10" + envelope.getString("settings") + envelope.getString("elements")),
                 envelope.getString("md5"))
             assertEquals(0, helper.importConfig(payload))
             val importedId = helper.queryAllConfigIds().single { it != 42L }
@@ -263,7 +297,7 @@ class SuperConfigDatabaseHelperTest {
     @Test
     fun legacyJsonVersionsKeepTheirUpgradeDefaults() {
         SuperConfigDatabaseHelper(context).use { helper ->
-            for (version in 1..8) {
+            for (version in 1..9) {
                 val settings = JSONObject().put("config_id", 42).put("config_name", "legacy-$version").toString()
                 val elements = JSONArray().put(JSONObject()
                     .put("config_id", 42).put("element_id", 100).put("element_type", 51)
@@ -274,6 +308,8 @@ class SuperConfigDatabaseHelperTest {
                 assertEquals(0, helper.importConfig(payload))
                 val importedId = helper.queryAllConfigIds().single { it !in before }
                 assertEquals("legacy-$version", helper.queryConfigAttribute(importedId, "config_name", ""))
+                assertEquals(1L, helper.queryConfigAttribute(importedId, PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY, -1L))
+                assertEquals(1L, helper.queryConfigAttribute(importedId, PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED, -1L))
                 val elementId = helper.queryAllElementIds(importedId).single()
                 assertEquals(if (version == 1) 3L else 51L,
                     helper.queryElementAttribute(importedId, elementId, "element_type"))

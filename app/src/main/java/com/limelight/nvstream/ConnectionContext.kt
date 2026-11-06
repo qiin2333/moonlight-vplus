@@ -1,6 +1,7 @@
 package com.limelight.nvstream
 
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.utils.HdrBrightness
 import java.security.cert.X509Certificate
 import javax.crypto.SecretKey
 
@@ -32,10 +33,8 @@ class ConnectionContext {
 
     var videoCapabilities: Int = 0
 
-    // 设备亮度范围
-    var minBrightness: Int = 0
-    var maxBrightness: Int = 0
-    var maxAverageBrightness: Int = 0
+    // A missing report lets the host select its own fallback/calibration.
+    var hdrBrightness: HdrBrightness? = null
 
     // 选择的显示器名称
     var displayName: String? = null

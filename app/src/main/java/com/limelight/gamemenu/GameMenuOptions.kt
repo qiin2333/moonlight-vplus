@@ -69,8 +69,11 @@ internal fun MenuOptionColumn(
     modifier: Modifier = Modifier,
     initialFocusRequester: FocusRequester? = null,
     optionFocusModifier: Modifier = Modifier,
-    inlineControlsFocusable: Boolean = true
+    inlineControlsFocusable: Boolean = true,
+    initialFocusIconKey: String? = null
 ) {
+    val initialFocusIndex = options.indexOfFirst { it.iconKey == initialFocusIconKey }
+        .takeIf { initialFocusIconKey != null && it >= 0 } ?: 0
     Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
         options.forEachIndexed { index, option ->
             MenuOptionRow(
@@ -80,7 +83,7 @@ internal fun MenuOptionColumn(
                 onInlineToggle = onInlineToggle,
                 onSegmentClick = onSegmentClick,
                 modifier = optionFocusModifier,
-                initialFocusRequester = initialFocusRequester.takeIf { index == 0 },
+                initialFocusRequester = initialFocusRequester.takeIf { index == initialFocusIndex },
                 inlineControlsFocusable = inlineControlsFocusable
             )
         }
@@ -118,7 +121,7 @@ private fun MenuOptionRow(
         onClick()
     }
     val initialFocusModifier = initialFocusRequester?.let {
-        Modifier.focusRequester(it)
+        Modifier.focusRequester(it).then(modifier)
     } ?: Modifier
     val rowInteraction = when {
         inlineControl is GameMenu.InlineControl.Toggle &&
@@ -221,7 +224,7 @@ private fun MenuOptionRow(
                     text = it,
                     color = colorResource(R.color.game_menu_text_secondary),
                     fontSize = 11.sp,
-                    maxLines = 1,
+                    maxLines = if (option.selected || !option.showChevron) 3 else 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }

@@ -4,8 +4,8 @@
 	branch = mic
 [submodule "framegen/src/main/cpp/lsfg-vk-android"]
 	path = framegen/src/main/cpp/lsfg-vk-android
-	url = https://github.com/FrankBarretta/lsfg-vk-android.git
-	branch = release
+	url = https://github.com/AlkaidLab/lsfg-vk-android-legacy.git
+	branch = main
 [submodule "third-party/pyrowave"]
 	path = third-party/pyrowave
 	url = https://github.com/AlkaidLab/pyrowave.git

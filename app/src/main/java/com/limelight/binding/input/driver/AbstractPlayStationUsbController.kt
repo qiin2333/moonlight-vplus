@@ -273,8 +273,7 @@ abstract class AbstractPlayStationUsbController(
     }
 
     protected fun reportMotion() {
-        notifyControllerMotion(MoonBridge.LI_MOTION_TYPE_GYRO, gyroX, gyroY, gyroZ)
-        notifyControllerMotion(MoonBridge.LI_MOTION_TYPE_ACCEL, accelX, accelY, accelZ)
+        listener.reportControllerMotionFrame(deviceId, gyroX, gyroY, gyroZ, accelX, accelY, accelZ)
     }
 
     protected abstract fun handleRead(buffer: ByteBuffer): Boolean

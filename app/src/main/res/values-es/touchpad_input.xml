@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_menu_touchpad_sensitivity">Sensibilidad del panel táctil</string>
+    <string name="game_menu_touchpad_scroll_speed">Velocidad de desplazamiento con dos dedos</string>
+</resources>

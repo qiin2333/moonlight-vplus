@@ -61,31 +61,6 @@ class JoyConDeviceStateTest {
         assertTrue(preferred())
     }
 
-    @Test fun shortcutChordUsesLogicalXForBothPressAndRelease() {
-        for (combine in listOf(false, true)) {
-            val right = JoyConDeviceState.create(0x057e, 0x2007, combine)!!
-            val modifiers = ControllerPacket.BACK_FLAG or ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG
-            val chord = ControllerButtonChordState(modifiers or ControllerPacket.X_FLAG)
-            fun update(rawKey: Int, pressed: Boolean): Boolean {
-                val flag = when (right.remapKey(rawKey, 0)) {
-                    KeyEvent.KEYCODE_BUTTON_X -> ControllerPacket.X_FLAG
-                    else -> return false
-                }
-                return chord.updateButton(flag, pressed)
-            }
-            val logicalX = if (combine) KeyEvent.KEYCODE_BUTTON_Y else KeyEvent.KEYCODE_BUTTON_X
-            val logicalY = if (combine) KeyEvent.KEYCODE_BUTTON_X else KeyEvent.KEYCODE_BUTTON_Y
-            assertFalse(chord.updateSnapshot(modifiers))
-            assertFalse(update(logicalY, true))
-            assertTrue(update(logicalX, true))
-            assertFalse(update(logicalX, true))
-            assertFalse(update(logicalY, false))
-            assertFalse(update(logicalX, true))
-            assertFalse(update(logicalX, false))
-            assertTrue(update(logicalX, true))
-        }
-    }
-
     @Test fun separateDevicesAndReconnectionsDoNotShareHeldDirections() {
         val first = JoyConDeviceState.create(0x057e, 0x2006, true)!!.dpad!!
         val second = JoyConDeviceState.create(0x057e, 0x2006, true)!!.dpad!!

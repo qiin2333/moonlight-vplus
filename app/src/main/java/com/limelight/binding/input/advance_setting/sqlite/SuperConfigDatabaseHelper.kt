@@ -121,6 +121,8 @@ class SuperConfigDatabaseHelper(context: Context?) :
                 game_vibrator TEXT,
                 button_vibrator TEXT,
                 mouse_wheel_speed INTEGER,
+                ${PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY} INTEGER DEFAULT 1,
+                ${PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED} INTEGER DEFAULT 1,
                 ${PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH} TEXT DEFAULT 'false',
                 ${PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS} TEXT
             )
@@ -199,6 +201,10 @@ class SuperConfigDatabaseHelper(context: Context?) :
             }
         }
         if (version <= 8) settingsJson.addProperty(PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS, "")
+        if (version <= 9) {
+            settingsJson.addProperty(PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY, 1)
+            settingsJson.addProperty(PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED, 1)
+        }
         exportFile.settings = gson.toJson(settingsJson)
         exportFile.elements = gson.toJson(elementsJson)
         exportFile.version = DATABASE_VERSION
@@ -246,6 +252,12 @@ class SuperConfigDatabaseHelper(context: Context?) :
         }
 
     fun insertConfig(values: ContentValues) {
+        for (column in listOf(
+            PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY,
+            PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED
+        )) {
+            if (!values.containsKey(column)) values.put(column, 0)
+        }
         writableDataBase.insert("config", null, values)
         notifyConfigSyncChanged()
     }
@@ -436,12 +448,14 @@ class SuperConfigDatabaseHelper(context: Context?) :
 
     private companion object {
         const val DATABASE_NAME = "super_config.db"
-        // Keep the existing export format: this repair does not introduce new columns.
-        const val DATABASE_VERSION = 9
+        // Version 10 adds independent input-parameter application flags.
+        const val DATABASE_VERSION = 10
         val CONFIG_MIGRATION_COLUMNS = listOf(
             PageConfigController.COLUMN_BOOLEAN_GAME_VIBRATOR to "TEXT DEFAULT 'false'",
             PageConfigController.COLUMN_BOOLEAN_BUTTON_VIBRATOR to "TEXT DEFAULT 'false'",
             "mouse_wheel_speed" to "INTEGER DEFAULT 20",
+            PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY to "INTEGER DEFAULT 1",
+            PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED to "INTEGER DEFAULT 1",
             PageConfigController.COLUMN_BOOLEAN_ENHANCED_TOUCH to "TEXT DEFAULT 'false'",
             PageConfigController.COLUMN_STRING_QUICK_ACTION_IDS to "TEXT"
         )
