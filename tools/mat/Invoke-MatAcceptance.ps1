@@ -50,11 +50,20 @@ Device shell dumpsys audio | Set-Content "$out/audio.txt" -Encoding utf8
 Device shell dumpsys media.audio_policy | Set-Content "$out/audio-policy.txt" -Encoding utf8
 Device shell dumpsys media.audio_flinger | Set-Content "$out/audio-flinger.txt" -Encoding utf8
 Device logcat -d -v threadtime | Set-Content "$out/logcat.txt" -Encoding utf8
+$buildInfoPath = Join-Path $root 'build-info.json'
+if (Test-Path -LiteralPath $buildInfoPath) {
+    $sourceInfo = Get-Content -LiteralPath $buildInfoPath -Raw | ConvertFrom-Json
+    $androidCommit = $sourceInfo.androidCommit
+    $commonCommit = $sourceInfo.commonCommit
+} else {
+    $androidCommit = git -C $root rev-parse HEAD
+    $commonCommit = git -C "$root/app/src/main/jni/moonlight-core/moonlight-common-c" rev-parse HEAD
+}
 @{
     capturedAt = (Get-Date).ToUniversalTime().ToString('o')
     serial = $Serial
-    androidCommit = (git -C $root rev-parse HEAD)
-    commonCommit = (git -C "$root/app/src/main/jni/moonlight-core/moonlight-common-c" rev-parse HEAD)
+    androidCommit = $androidCommit
+    commonCommit = $commonCommit
     hardwareVerdict = 'PENDING_MANUAL_REVIEW'
     atmosRecognitionVerified = $false
     note = 'Add topology, firmware, host commit, soundbar input-format photo/video, channel/object and AV-sync observations. Logs alone do not prove Atmos decoding.'
