@@ -302,7 +302,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var floatBallHandler: FloatBallHandler
     private var hostUnlockController: HostUnlockController? = null
     private lateinit var connectionCallbackHandler: ConnectionCallbackHandler
-    private lateinit var streamConnectionListener: NvConnectionListener
+    private lateinit var streamConnectionListener: StreamConnectionListenerAdapter
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
@@ -863,22 +863,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         // Bind lifecycle callbacks to their originating connection before they reach
         // the UI queue. A previous startup or network probe can outlive a reconnect.
-        streamConnectionListener = object : NvConnectionListener by this {
-            override fun stageStarting(stage: String) = dispatchSessionCallback(connection) {
-                this@Game.stageStarting(stage)
-            }
-            override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) =
-                dispatchSessionCallback(connection) { this@Game.stageFailed(stage, portFlags, errorCode) }
-            override fun connectionStarted() = dispatchSessionCallback(connection) {
-                this@Game.connectionStarted()
-            }
-            override fun connectionTerminated(errorCode: Int) = dispatchSessionCallback(connection) {
-                this@Game.connectionTerminated(errorCode)
-            }
-            override fun connectionStatusUpdate(connectionStatus: Int) = dispatchSessionCallback(connection) {
-                this@Game.connectionStatusUpdate(connectionStatus)
-            }
-        }
+        streamConnectionListener = StreamConnectionListenerAdapter(
+            connection = connection,
+            delegate = this,
+            postToUi = { action -> runOnUiThread(action) },
+            isCurrent = ::isCurrentStream,
+        )
         orientationManager.connection = connection
         controllerHandler = ControllerHandler(
             this,
@@ -2459,14 +2449,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         return touchInputHandler.handleMotionEvent(view, event)
     }
 
-    /** Serialize lifecycle callbacks and reject work queued by an older connection. */
-    private fun dispatchSessionCallback(connection: NvConnection, action: () -> Unit) {
-        runOnUiThread {
-            if (conn === connection && !destroying && !isFinishing && streamSession.hasAttemptedConnection) {
-                action()
-            }
-        }
-    }
+    /** Returns whether callbacks from [connection] still belong to this session. */
+    private fun isCurrentStream(connection: NvConnection): Boolean =
+        conn === connection && !destroying && !isFinishing && streamSession.hasAttemptedConnection
 
     override fun stageStarting(stage: String) {
         connectionCallbackHandler.stageStarting(stage)
