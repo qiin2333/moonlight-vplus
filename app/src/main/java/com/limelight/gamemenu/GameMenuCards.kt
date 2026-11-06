@@ -689,7 +689,7 @@ internal fun DisplayStatusCard(
                 }
             }
             val applyScale = {
-                if (!scale.loading) {
+                if (!scale.loading && editing) {
                     supported.getOrNull(sliderIndex.roundToInt())?.let(callbacks.onSetDisplayScale)
                 }
                 editing = false

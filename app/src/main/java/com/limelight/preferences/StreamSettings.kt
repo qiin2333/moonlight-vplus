@@ -400,9 +400,11 @@ class StreamSettings : ThemedAppCompatActivity() {
         findViewById<View>(R.id.settingsBackgroundOverlay)?.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.settings_background_overlay)
         )
-        // 横屏侧栏背景在布局创建时解析。深浅切换不重建 Activity，需要按当前主题重设。
+        // 竖屏抽屉覆盖内容，需要比并排显示的横屏侧栏更实的底色。
         findViewById<View>(R.id.drawer_menu)?.setBackgroundColor(
-                ContextCompat.getColor(this, R.color.settings_group_surface)
+                ContextCompat.getColor(this,
+                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+                        R.color.settings_group_surface else R.color.settings_drawer_background)
         )
         findViewById<ImageView>(R.id.settings_back)?.setColorFilter(
                 ContextCompat.getColor(this, R.color.ui_shell_text_primary)
