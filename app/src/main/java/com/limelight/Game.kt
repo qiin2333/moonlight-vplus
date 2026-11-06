@@ -181,7 +181,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var orientationManager: OrientationManager
     private lateinit var tombstonePrefs: SharedPreferences
 
+    private val streamSession = StreamSessionCoordinator()
     var conn: NvConnection? = null
+        private set
     var progressOverlay: FullscreenProgressOverlay? = null
 
     // 智能码率
@@ -192,8 +194,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var clipboardSyncManager: ClipboardSyncManager? = null
 
     var displayedFailureDialog = false
-    var connecting = false
-    var connected = false
+    val connected: Boolean
+        get() = streamSession.isConnected
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
     private val usbForwardingReadyActions = mutableListOf<(UsbForwardingController) -> Unit>()
@@ -246,7 +248,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
     private var activeGameMenu: GameMenu? = null
     private var streamInForeground = false
-    private var pendingKeepAlivePreparation = false
     private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
@@ -260,7 +261,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
     private var surfaceCreated = false
-    var attemptedConnection = false
     var analyticsManager: AnalyticsManager? = null
     var streamStartTime: Long = 0
     var accumulatedStreamTime: Long = 0
@@ -301,7 +301,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var cursorServiceManager: CursorServiceManager
     lateinit var floatBallHandler: FloatBallHandler
     private var hostUnlockController: HostUnlockController? = null
-    lateinit var connectionCallbackHandler: ConnectionCallbackHandler
+    private lateinit var connectionCallbackHandler: ConnectionCallbackHandler
+    private lateinit var streamConnectionListener: NvConnectionListener
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
@@ -322,7 +323,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var lowLatencyWifiLock: WifiManager.WifiLock? = null
 
     var currentHostAddress: String? = null
-    private var shouldResumeSession = false
     private var isExtremeResumeEnabled = false
     @Volatile private var isChangingResolution = false
     private var displaySettingsCommitted = false
@@ -857,7 +857,29 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             httpsPort, uniqueId, pairName, config,
             PlatformBinding.getCryptoProvider(this), serverCert, currentTargetDisplay, displayName, forceResumeCurrentSession
         )
-        orientationManager.connection = conn
+        val connection = conn!!
+        if (::streamConnectionListener.isInitialized) {
+            MoonBridge.detachConnectionListener(streamConnectionListener)
+        }
+        // Bind lifecycle callbacks to their originating connection before they reach
+        // the UI queue. A previous startup or network probe can outlive a reconnect.
+        streamConnectionListener = object : NvConnectionListener by this {
+            override fun stageStarting(stage: String) = dispatchSessionCallback(connection) {
+                this@Game.stageStarting(stage)
+            }
+            override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) =
+                dispatchSessionCallback(connection) { this@Game.stageFailed(stage, portFlags, errorCode) }
+            override fun connectionStarted() = dispatchSessionCallback(connection) {
+                this@Game.connectionStarted()
+            }
+            override fun connectionTerminated(errorCode: Int) = dispatchSessionCallback(connection) {
+                this@Game.connectionTerminated(errorCode)
+            }
+            override fun connectionStatusUpdate(connectionStatus: Int) = dispatchSessionCallback(connection) {
+                this@Game.connectionStatusUpdate(connectionStatus)
+            }
+        }
+        orientationManager.connection = connection
         controllerHandler = ControllerHandler(
             this,
             conn!!,
@@ -1491,8 +1513,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             microphoneManager?.updateMicrophoneButtonState()
         }
 
-        if (pendingKeepAlivePreparation) {
-            pendingKeepAlivePreparation = false
+        if (streamSession.consumePendingKeepAlivePreparation()) {
             prepareKeepAliveNotification()
         }
     }
@@ -1532,7 +1553,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 if (streamInForeground) {
                     prepareKeepAliveNotification()
                 } else {
-                    pendingKeepAlivePreparation = true
+                    streamSession.deferKeepAlivePreparation()
                 }
             } else {
                 Toast.makeText(this, getString(R.string.toast_no_notification_permission), Toast.LENGTH_LONG).show()
@@ -1745,14 +1766,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
 
-        if (isResumeStreamEnabled) {
-            if (!autoEnterPip && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                shouldResumeSession = true
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                shouldResumeSession = true
-            }
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             if (autoEnterPip) {
                 try {
@@ -1860,12 +1873,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onDestroy() {
         destroying = true
         resolutionSwitchController.cancel()
-        if (conn != null) connectionCallbackHandler.stopConnection()
+        if (conn != null) stopConnection(StreamStopReason.ACTIVITY_DESTROYED)
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
         if (isFinishing) {
             StreamReconnectBackdrop.clear()
         }
-        MoonBridge.detachConnectionListener(this)
+        if (::streamConnectionListener.isInitialized) {
+            MoonBridge.detachConnectionListener(streamConnectionListener)
+        }
         if (::streamView.isInitialized) {
             streamView.setInputCallbacks(null)
         }
@@ -2118,7 +2133,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         usbForeground = false
         usbForwarding?.stopForeground()
 
-        if ((isExtremeResumeEnabled || isChangingResolution) && !isFinishing) {
+        if (!isFinishing &&
+            (isChangingResolution || streamSession.shouldKeepConnectionInBackground(
+                extremeResumeEnabled = isExtremeResumeEnabled,
+                isFinishing = isFinishing,
+                resumeEnabled = isResumeStreamEnabled,
+            ))
+        ) {
             LimeLog.info("Extreme Resume: onStop intercepted.")
             if (!isChangingResolution && isResumeStreamEnabled) {
                 showKeepAliveNotification()
@@ -2130,13 +2151,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             accumulatedStreamTime += System.currentTimeMillis() - lastActiveTime
             isStreamingActive = false
             LimeLog.info("串流时长计时暂停，已累计: ${accumulatedStreamTime / 1000} 秒")
-        }
-
-        if (!shouldResumeSession && !isFinishing) {
-            if (isResumeStreamEnabled) {
-                shouldResumeSession = true
-                LimeLog.info("检测到应用进入后台（非主动退出），已标记为待恢复会话")
-            }
         }
 
         if (progressOverlay != null) {
@@ -2157,15 +2171,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         val decoderMessage = getDecoderFormatLabel()
 
-        val keepAliveForBackgroundResume = StreamKeepAlivePolicy.shouldStartForResume(
+        val keepAliveForBackgroundResume = streamSession.shouldKeepAliveForBackgroundStop(
             isFinishing = isFinishing,
-            shouldResumeSession = shouldResumeSession,
-            isResumeStreamEnabled = isResumeStreamEnabled,
+            resumeEnabled = isResumeStreamEnabled,
         )
 
         if (conn != null) {
             displayedFailureDialog = true
-            connectionCallbackHandler.stopConnection(keepAliveForBackgroundResume = keepAliveForBackgroundResume)
+            stopConnection(
+                if (keepAliveForBackgroundResume) {
+                    StreamStopReason.BACKGROUND_RESUME
+                } else {
+                    StreamStopReason.USER_REQUEST
+                }
+            )
             showLatencyToast(decoderMessage)
 
             if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
@@ -2440,6 +2459,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         return touchInputHandler.handleMotionEvent(view, event)
     }
 
+    /** Serialize lifecycle callbacks and reject work queued by an older connection. */
+    private fun dispatchSessionCallback(connection: NvConnection, action: () -> Unit) {
+        runOnUiThread {
+            if (conn === connection && !destroying && !isFinishing && streamSession.hasAttemptedConnection) {
+                action()
+            }
+        }
+    }
+
     override fun stageStarting(stage: String) {
         connectionCallbackHandler.stageStarting(stage)
     }
@@ -2449,20 +2477,27 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
-        connectionCallbackHandler.stageFailed(stage, portFlags, errorCode)
+        runOnUiThread {
+            if (!streamSession.hasAttemptedConnection || destroying || isFinishing) return@runOnUiThread
+            val connection = conn ?: return@runOnUiThread
+            stopConnection(StreamStopReason.CONNECTION_TERMINATED)
+            Thread { connectionCallbackHandler.stageFailed(stage, portFlags, errorCode, connection) }.start()
+        }
     }
 
     override fun connectionTerminated(errorCode: Int) {
         // Decide on the same thread as frame completion; an earlier WAITING snapshot can go stale.
         runOnUiThread {
-            if (destroying || isFinishing || isChangingResolution ||
+            if (destroying || isFinishing || !streamSession.hasAttemptedConnection || isChangingResolution ||
                 resolutionSwitchController.connectionTerminated(errorCode)) return@runOnUiThread
+            val connection = conn ?: return@runOnUiThread
+            stopConnection(StreamStopReason.CONNECTION_TERMINATED)
             if (::remoteImeController.isInitialized) {
                 remoteImeController.resetSession()
             }
             usbForwarding?.stopForeground()
             // The existing termination handler probes network connectivity before displaying UI.
-            Thread { connectionCallbackHandler.connectionTerminated(errorCode) }.start()
+            Thread { connectionCallbackHandler.connectionTerminated(errorCode, connection) }.start()
         }
     }
 
@@ -2470,14 +2505,72 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionCallbackHandler.connectionStatusUpdate(connectionStatus)
     }
 
+    /** Accepted on the UI thread, together with connection resources and PiP state. */
+    private fun onConnectionEstablished(): Boolean {
+        if (!streamSession.markConnectionEstablished()) return false
+        orientationManager.connected = true
+        updatePipAutoEnter()
+        return true
+    }
+
+    /**
+     * 停止连接并清理相关资源。
+     * 后台恢复保留保活服务，Surface 销毁和 onStop 的先后顺序不影响该决定。
+     */
+    private fun stopConnection(reason: StreamStopReason) {
+        val connection = conn
+        connection?.requestStop()
+
+        val wasConnected = connected
+        val decision = streamSession.beginStop(
+            reason = reason,
+            isFinishing = isFinishing,
+            resumeEnabled = isResumeStreamEnabled,
+        )
+
+        if (!decision.keepAliveService) cancelKeepAliveNotification()
+        stopAudioHapticsForStream()
+
+        if (wasConnected) {
+            orientationManager.connected = false
+            updatePipAutoEnter()
+
+            // 停止智能码率
+            stopAdaptiveBitrate()
+
+            controllerHandler?.stop()
+
+            // 停止并释放 USB 控制器接管
+            usbDriverServiceManager?.stopAndUnbind()
+
+            // 停止麦克风流
+            microphoneManager?.stopMicrophoneStream()
+
+            // Update GameManager state to indicate we're no longer in game
+            UiHelper.notifyStreamEnded(this)
+
+            // Save current settings for this app before stopping connection
+            val uuid = computerUuid
+            if (uuid != null) {
+                appSettingsManager?.saveAppLastSettings(uuid, app, prefConfig)
+            }
+
+            // Restore host-composited cursor mode before native control-stream teardown.
+            cursorServiceManager.stopService()
+        }
+
+        // A pending startup also needs teardown, even before connectionStarted().
+        // Native shutdown remains off the UI thread.
+        if (connection != null) Thread { connection.stop() }.start()
+    }
+
     override fun connectionStarted() {
-        remoteImeController.resetSession()
-        val startedConnection = conn
-        connectionCallbackHandler.connectionStarted()
         runOnUiThread {
-            if (conn === startedConnection) withUsbForwarding { it.startForeground() }
-            if (conn === startedConnection && connected && !displayedFailureDialog &&
-                !isFinishing && !isDestroyed && !pyrowaveFallbackDialogShown &&
+            if (destroying || isFinishing || !onConnectionEstablished()) return@runOnUiThread
+            remoteImeController.resetSession()
+            connectionCallbackHandler.connectionStarted()
+            withUsbForwarding { it.startForeground() }
+            if (!displayedFailureDialog && !pyrowaveFallbackDialogShown &&
                 prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_PYROWAVE &&
                 !isPyrowaveSessionActive()
             ) {
@@ -2490,12 +2583,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     )
                 }
             }
+            screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
+            // Retries run first so pending arrivals populate the metadata cache;
+            // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
+            controllerHandler.retryPendingControllerArrivals { screenDs5Touchpad.redeclareOnHost() }
+            startClipboardSyncIfEnabled()
         }
-        screenDs5TouchpadHostSupport = ScreenDs5HostSupport.UNKNOWN
-        // Retries run first so pending arrivals populate the metadata cache;
-        // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
-        controllerHandler.retryPendingControllerArrivals { screenDs5Touchpad.redeclareOnHost() }
-        startClipboardSyncIfEnabled()
     }
 
     private fun startClipboardSyncIfEnabled() {
@@ -2567,7 +2660,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (isExtremeResumeEnabled && connected) {
             LimeLog.info("Extreme Resume: Returning to foreground with active connection.")
-            shouldResumeSession = false
             if (progressOverlay != null) {
                 progressOverlay?.dismiss()
                 progressOverlay = null
@@ -2577,10 +2669,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return
         }
 
-        if (shouldResumeSession) {
+        if (streamSession.shouldResumeSession) {
             LimeLog.info("从后台恢复，正在快速重连...")
             Dialog.closeDialogs()
-            shouldResumeSession = false
             displayedFailureDialog = false
 
             showProgressOverlay()
@@ -2594,13 +2685,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 return
             }
 
-            attemptedConnection = false
-            connecting = false
-            connected = false
-            orientationManager.connected = false
-
-            streamView.requestLayout()
-            streamView.invalidate()
+            // Keep Surface callbacks blocked until the new connection and renderer exist.
+            if (streamSession.prepareForReconnect()) {
+                orientationManager.connected = false
+                streamView.requestLayout()
+                streamView.invalidate()
+            }
         }
         finalizeVirtualControllerAfterStop(stoppedVirtualControllerVisibility)
     }
@@ -2956,20 +3046,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (!surfaceCreated) {
             throw IllegalStateException("Surface changed before creation!")
         }
+        if (destroying || isFinishing || streamSession.isTerminal || streamSession.shouldResumeSession) return
 
         val shouldPrepareFramegen =
-            !attemptedConnection || (connected && framegenCapture == null && shouldUseFramegen())
+            streamSession.canStartConnection || (connected && framegenCapture == null && shouldUseFramegen())
 
         decoderRenderer?.setRenderTarget(holder)
 
         if (shouldPrepareFramegen) {
-            prepareFramegenSurface(holder.surface, !attemptedConnection)
+            prepareFramegenSurface(holder.surface, streamSession.canStartConnection)
         } else if (framegenCapture != null) {
             configureFramegenOutputSurface(holder.surface)
         }
 
-        if (!attemptedConnection) {
-            attemptedConnection = true
+        if (streamSession.markConnectionAttempted()) {
             UiHelper.notifyStreamConnecting(this)
 
             val enableSystemAudioHaptics =
@@ -2992,7 +3082,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     )
                 }
             )
-            conn?.start(this.audioRenderer!!, decoderRenderer!!, this)
+            conn?.start(this.audioRenderer!!, decoderRenderer!!, streamConnectionListener)
 
             streamView.post { cursorServiceManager.syncCursorWithStream() }
         } else if (connected && isExtremeResumeEnabled) {
@@ -3039,8 +3129,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         decoderRenderer?.setRenderTarget(null)
         cursorServiceManager.destroyLocalCursorRenderers()
 
-        if (attemptedConnection) {
-            if (isExtremeResumeEnabled && !isFinishing) {
+        if (streamSession.hasAttemptedConnection) {
+            if (streamSession.shouldKeepConnectionInBackground(
+                    isExtremeResumeEnabled, isFinishing, isResumeStreamEnabled
+                )
+            ) {
                 val globalPrefs = PreferenceManager.getDefaultSharedPreferences(this)
                 if (!globalPrefs.getBoolean("checkbox_background_audio", false)) {
                     audioRenderer?.pauseProcessing()
@@ -3052,9 +3145,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             } else {
                 decoderRenderer?.prepareForStop()
                 releaseFramegenCapture()
-                if (connected) {
-                    connectionCallbackHandler.stopConnection()
-                }
+                // Surface destruction may precede onStop(). Preserve the same
+                // resume decision in either lifecycle order, including pending startup.
+                val resumeAfterSurfaceLoss = !streamInForeground &&
+                    streamSession.shouldKeepAliveForBackgroundStop(isFinishing, isResumeStreamEnabled)
+                stopConnection(
+                    if (resumeAfterSurfaceLoss) StreamStopReason.BACKGROUND_RESUME
+                    else StreamStopReason.SURFACE_DESTROYED
+                )
             }
         } else {
             releaseFramegenCapture()
@@ -3063,9 +3161,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     @SuppressLint("BatteryLife")
     fun prepareKeepAliveNotification() {
-        if (!streamInForeground || isFinishing || destroying || !connected || !isResumeStreamEnabled) {
+        if (isFinishing || destroying || streamSession.isTerminal || !isResumeStreamEnabled) {
             return
         }
+
+        if (!streamInForeground) {
+            streamSession.deferKeepAlivePreparation()
+            return
+        }
+
+        if (!connected) return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
