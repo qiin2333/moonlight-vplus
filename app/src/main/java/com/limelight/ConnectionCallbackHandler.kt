@@ -4,7 +4,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.preferences.MicrophoneInitialState
 import com.limelight.nvstream.http.ComputerDetails
@@ -211,11 +210,9 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             game.ds5TouchpadFeedbackView?.showActivatedHint()
 
-            // 连接一开始就启动保活服务
-            val prefs = PreferenceManager.getDefaultSharedPreferences(game)
-            val isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false)
-            if (isResumeEnabled) game.showKeepAliveNotification()
-
+            // The keep-alive service is started from Game.onStop() when the
+            // activity actually goes to the background. Starting it here would
+            // be immediately followed by stopConnection() during teardown.
             // Cursor negotiation also updates Android views and main-thread timeout state.
             game.cursorServiceManager.onConnectionStarted()
         }

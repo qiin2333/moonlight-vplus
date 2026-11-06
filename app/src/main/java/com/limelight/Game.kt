@@ -3134,6 +3134,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun cancelKeepAliveNotification() {
+        // onStop() may stop the connection and then start the keep-alive service
+        // again for a background resume. Let that pending resume reuse the same
+        // service instance instead of racing stopService() with startForegroundService().
+        if (!isFinishing && shouldResumeSession && isResumeStreamEnabled) {
+            return
+        }
         StreamNotificationService.stop(this)
     }
 
