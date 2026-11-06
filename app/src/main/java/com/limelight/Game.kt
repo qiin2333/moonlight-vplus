@@ -182,6 +182,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private lateinit var tombstonePrefs: SharedPreferences
 
     var conn: NvConnection? = null
+        private set
     var progressOverlay: FullscreenProgressOverlay? = null
 
     // 智能码率
@@ -192,8 +193,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var clipboardSyncManager: ClipboardSyncManager? = null
 
     var displayedFailureDialog = false
-    var connecting = false
     var connected = false
+        private set
     private var usbForwarding: UsbForwardingController? = null
     private var usbForwardingCreationPending = false
     private val usbForwardingReadyActions = mutableListOf<(UsbForwardingController) -> Unit>()
@@ -260,7 +261,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var pipOverlayRestoreGeneration = 0L
     private var autoEnterPip = false
     private var surfaceCreated = false
-    var attemptedConnection = false
+    private var attemptedConnection = false
     var analyticsManager: AnalyticsManager? = null
     var streamStartTime: Long = 0
     var accumulatedStreamTime: Long = 0
@@ -301,7 +302,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     lateinit var cursorServiceManager: CursorServiceManager
     lateinit var floatBallHandler: FloatBallHandler
     private var hostUnlockController: HostUnlockController? = null
-    lateinit var connectionCallbackHandler: ConnectionCallbackHandler
+    private lateinit var connectionCallbackHandler: ConnectionCallbackHandler
     lateinit var keyboardInputHandler: KeyboardInputHandler
 
     private var decoderRenderer: MediaCodecDecoderRenderer? = null
@@ -1860,7 +1861,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun onDestroy() {
         destroying = true
         resolutionSwitchController.cancel()
-        if (conn != null) connectionCallbackHandler.stopConnection()
+        if (conn != null) stopConnection()
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
         if (isFinishing) {
             StreamReconnectBackdrop.clear()
@@ -2165,7 +2166,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (conn != null) {
             displayedFailureDialog = true
-            connectionCallbackHandler.stopConnection(keepAliveForBackgroundResume = keepAliveForBackgroundResume)
+            stopConnection(keepAliveForBackgroundResume = keepAliveForBackgroundResume)
             showLatencyToast(decoderMessage)
 
             if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
@@ -2470,6 +2471,61 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionCallbackHandler.connectionStatusUpdate(connectionStatus)
     }
 
+    /** Apply connection state here so callbacks cannot mutate Activity-owned flags. */
+    internal fun onConnectionEstablished() {
+        connected = true
+        orientationManager.connected = true
+        updatePipAutoEnter()
+    }
+
+    /**
+     * 停止连接并清理相关资源。
+     * 仅 onStop 的后台恢复路径保留保活服务，避免先停止再立即重启。
+     */
+    internal fun stopConnection(keepAliveForBackgroundResume: Boolean = false) {
+        val connection = conn
+        connection?.requestStop()
+
+        // 重置尝试连接标志。
+        attemptedConnection = false
+
+        if (!keepAliveForBackgroundResume) cancelKeepAliveNotification()
+        stopAudioHapticsForStream()
+
+        if (connected) {
+            connected = false
+            orientationManager.connected = false
+            updatePipAutoEnter()
+
+            // 停止智能码率
+            stopAdaptiveBitrate()
+
+            controllerHandler?.stop()
+
+            // 停止并释放 USB 控制器接管
+            usbDriverServiceManager?.stopAndUnbind()
+
+            // 停止麦克风流
+            microphoneManager?.stopMicrophoneStream()
+
+            // Update GameManager state to indicate we're no longer in game
+            UiHelper.notifyStreamEnded(this)
+
+            // Save current settings for this app before stopping connection
+            val uuid = computerUuid
+            if (uuid != null) {
+                appSettingsManager?.saveAppLastSettings(uuid, app, prefConfig)
+            }
+
+            // Restore host-composited cursor mode before native control-stream teardown.
+            cursorServiceManager.stopService()
+        }
+
+        // A pending startup also needs teardown, even before connectionStarted().
+        // Native shutdown remains off the UI thread.
+        if (connection != null) Thread { connection.stop() }.start()
+    }
+
     override fun connectionStarted() {
         remoteImeController.resetSession()
         val startedConnection = conn
@@ -2595,7 +2651,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
 
             attemptedConnection = false
-            connecting = false
             connected = false
             orientationManager.connected = false
 
@@ -3053,7 +3108,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 decoderRenderer?.prepareForStop()
                 releaseFramegenCapture()
                 if (connected) {
-                    connectionCallbackHandler.stopConnection()
+                    stopConnection()
                 }
             }
         } else {

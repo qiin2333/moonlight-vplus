@@ -14,8 +14,8 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.UiHelper
 
 /**
- * NvConnectionListener 回调实现和连接停止逻辑。
- * 从 Game.java 提取，处理连接阶段通知、连接成功/失败/断开、网络质量更新。
+ * Handles connection notifications, errors, and network-quality presentation.
+ * Game owns connection-state changes and coordinates stopConnection() cleanup.
  */
 class ConnectionCallbackHandler(private val game: Game) {
 
@@ -100,7 +100,7 @@ class ConnectionCallbackHandler(private val game: Game) {
             if (!game.displayedFailureDialog) {
                 game.displayedFailureDialog = true
                 LimeLog.severe("Connection terminated: $errorCode")
-                stopConnection()
+                game.stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
@@ -185,10 +185,7 @@ class ConnectionCallbackHandler(private val game: Game) {
                 }, 5000)
             }
 
-            game.connected = true
-            game.orientationManager.connected = true
-            game.connecting = false
-            game.updatePipAutoEnter()
+            game.onConnectionEstablished()
 
             // Hide the mouse cursor now after a short delay.
             val h = Handler(Looper.getMainLooper())
@@ -284,57 +281,5 @@ class ConnectionCallbackHandler(private val game: Game) {
 
         // 2. 启动智能码率（如设置已开启）
         game.startAdaptiveBitrateIfEnabled()
-    }
-
-    /**
-     * 停止连接并清理相关资源。
-     * 仅 onStop 的后台恢复路径保留保活服务，避免先停止再立即重启。
-     */
-    fun stopConnection(keepAliveForBackgroundResume: Boolean = false) {
-        val connection = game.conn
-        connection?.requestStop()
-
-        // 重置尝试连接标志。
-        game.attemptedConnection = false
-
-        if (!keepAliveForBackgroundResume) game.cancelKeepAliveNotification()
-        game.stopAudioHapticsForStream()
-
-        if (game.connecting || game.connected) {
-            game.connecting = false
-            game.connected = false
-            game.orientationManager.connected = false
-            game.updatePipAutoEnter()
-
-            // 停止智能码率
-            game.stopAdaptiveBitrate()
-
-            // 停止智能码率
-            game.stopAdaptiveBitrate()
-
-            game.controllerHandler?.stop()
-
-            // 停止并释放 USB 控制器接管
-            game.usbDriverServiceManager?.stopAndUnbind()
-
-            // 停止麦克风流
-            game.microphoneManager?.stopMicrophoneStream()
-
-            // Update GameManager state to indicate we're no longer in game
-            UiHelper.notifyStreamEnded(game)
-
-            // Save current settings for this app before stopping connection
-            val uuid = game.computerUuid
-            if (uuid != null) {
-                game.appSettingsManager?.saveAppLastSettings(uuid, game.app, game.prefConfig)
-            }
-
-            // Restore host-composited cursor mode before native control-stream teardown.
-            game.cursorServiceManager.stopService()
-        }
-
-        // A pending startup also needs teardown, even before connectionStarted().
-        // Native shutdown remains off the UI thread.
-        if (connection != null) Thread { connection.stop() }.start()
     }
 }
