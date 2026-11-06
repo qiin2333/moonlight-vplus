@@ -11,7 +11,9 @@ internal interface NativeAuthoredHaptics {
     /** Rendering gains with user strength already applied; the backend may shape/quantize/limit.
      * Returns the elapsed-realtime deadline for restoring the background after a point.
      */
-    fun render(body: Float, point: Float, keepWarm: Boolean): Long?
+    fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long?
+    fun render(body: Float, point: Float, keepWarm: Boolean): Long? =
+        render(NativeAuthoredBody.fromGain(body), point, keepWarm)
     fun stop()
     fun close()
 
@@ -42,7 +44,7 @@ internal class NativeAuthoredFallback(
     override val failed get() = closed || selected.failed
     override val backendName get() = selected.backendName
 
-    override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+    override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
         if (closed) return null
         if (preferred.failed && !preferredClosed) {
             preferredClosed = true

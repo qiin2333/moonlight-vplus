@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 60
     env:
       GITHUB_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID || secrets.OAUTH_CLIENT_ID }}
-      AUDIO_HAPTICS_SDK_REF: b3f97c3bb7500ea7b1985aea568e5c7b40308d3b # post-v0.5.14 capability-aware Android renderer
+      AUDIO_HAPTICS_SDK_REF: 88b4f1ced0651f296b7d105cd158b178394bc8ef # 0.7.0 development snapshot after v0.6.0; SDK #8
       AUDIO_HAPTICS_SDK_DIR: ${{ github.workspace }}/.deps/moonlight-audio-haptics
     steps:
       - name: Checkout

@@ -120,10 +120,12 @@ internal class AuthoredIrCoordinator(
         val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) } ?: 0f
         if (output.ended) pulses.remove(number)
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
-        val pulse = transientAmplitude(pulses[number]?.first ?: 0f)
+        val pulse = motorTransientAmplitude(pulses[number]?.first ?: 0f)
         val details = native || pointOnly && supportsTick()
         val plan = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
-        val body = if (targets.hasController && targets.mode != GameRumbleMode.DEVICE) output.body else ControllerRumbleState.ZERO
+        val nativePlan = if (native) AuthoredIrAllocator.allocateNativeBody(targets, output.body) else null
+        val body = if (nativePlan != null) nativePlan.controller ?: ControllerRumbleState.ZERO
+            else if (targets.hasController && targets.mode != GameRumbleMode.DEVICE) output.body else ControllerRumbleState.ZERO
         mixer.submit(number, RumbleSource.AUTHORED_BODY, body, now, output.bodyValidUntilUs / 1000)
         val transient = if (!details && targets.mode != GameRumbleMode.DEVICE && targets.hasController)
             ControllerRumbleState(0f, pulse) else ControllerRumbleState.ZERO
@@ -132,18 +134,17 @@ internal class AuthoredIrCoordinator(
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
             if (native) {
-                val nativeBody = if (targets.mode == GameRumbleMode.COORDINATED && targets.hasController)
-                    ControllerRumbleState.ZERO else output.body
+                val nativeBody = nativePlan?.device ?: ControllerRumbleState.ZERO
                 val gain = strengthPercent().coerceIn(0, 200) / 100f
-                // Merge band energy into the carrier's peak amplitude; point strength is never
-                // reduced to the fixed-strength TICK used by the public vibrator fallback.
-                val bodyGain = sqrt(2f * (nativeBody.lowFrequency * nativeBody.lowFrequency +
-                    nativeBody.highFrequency * nativeBody.highFrequency)) * gain
-                phone.submitNativeAuthored(bodyGain,
-                    // Profile 1 carries early band-peak evidence, not the finished PCM crest.
-                    // Native playback needs its own makeup gain; otherwise rain collapses
-                    // into the bank's weakest level. The backend limits physical sample gain.
-                    transientAmplitude(eventPower) * 2f * gain,
+                phone.submitNativeAuthored(NativeAuthoredBody.fromBands(
+                    nativeBody.lowFrequency * gain, nativeBody.highFrequency * gain, output.frequencyHintHz),
+                    // Profile 1 strength is a linear local peak, not power. Preserve its
+                    // contrast: sqrt(strength) disproportionately boosted weak points,
+                    // especially when coordinated mode removed the phone's background.
+                    // Keep the old 100%-strength saturation point (2*sqrt(.09) == .6)
+                    // and the native short waveform, without adding a floor or rate gate.
+                    ControllerRumbleState.normalizeAmplitude(eventPower) / SOURCE_POINT_FULL_SCALE *
+                        NATIVE_POINT_FULL_SCALE * gain,
                     output.bodyValidUntilUs / 1000, output.event?.expiresUs?.div(1000) ?: now,
                     active = !output.ended && gain > 0)
             } else {
@@ -158,9 +159,16 @@ internal class AuthoredIrCoordinator(
         scheduleExpiry()
     }
 
-    // Match v2's perceptual makeup before 8-bit motor output is quantized.
-    private fun transientAmplitude(strength: Float): Float =
+    // Compatibility curve for ordinary motor fallback, not native waveform amplitude.
+    private fun motorTransientAmplitude(strength: Float): Float =
         sqrt(ControllerRumbleState.normalizeAmplitude(strength))
+
+    private companion object {
+        // Retain the existing native backend range; these are rendering units, not
+        // calibrated DS5 force or a minimum perceptible event threshold.
+        const val SOURCE_POINT_FULL_SCALE = .09f
+        const val NATIVE_POINT_FULL_SCALE = .6f
+    }
 
     private fun targetsFor(number: Short): GameRumbleContext = context(number).let {
         // A muted phone cannot accept the details removed from the controller signal.
@@ -214,6 +222,28 @@ internal class AuthoredIrCoordinator(
 
 /** Allocation of already-decomposed authored IR; ordinary rumble retains its own allocator. */
 internal object AuthoredIrAllocator {
+    /** This route is the uncalibrated two-amplitude rumble API, not a waveform sink.
+     * Native controller PCM playback is routed independently by AuthoredPcmOutputRouter;
+     * ControllerHapticsCoordinator suppresses motor writes while that sink owns output.
+     * No existing rumble route supplies a calibrated frequency/force transfer function.
+     * A two-motor command cannot reproduce authored carrier frequency.
+     * In native cooperation the phone owns the complete authored continuous signal.
+     * Ordinary HOST rumble still reaches the controller through its independent mixer
+     * source. Do not subtract a fictitious ERM energy contribution from the phone.
+     */
+    fun allocateNativeBody(context: GameRumbleContext, body: ControllerRumbleState): GameRumbleRoute {
+        if (context.mode == GameRumbleMode.COORDINATED && context.hasController && context.hasDevice) {
+            return GameRumbleRoute(
+                controller = ControllerRumbleState.ZERO,
+                device = body
+            )
+        }
+        return GameRumbleRoute(
+            controller = body.takeIf { context.hasController && context.mode != GameRumbleMode.DEVICE },
+            device = body.takeIf { context.hasDevice && context.mode != GameRumbleMode.CONTROLLER }
+        )
+    }
+
     fun allocate(context: GameRumbleContext, body: ControllerRumbleState, pulse: Float,
                  details: Boolean): GameRumbleRoute {
         val fallback = ControllerRumbleState(body.lowFrequency, maxOf(body.highFrequency, pulse))

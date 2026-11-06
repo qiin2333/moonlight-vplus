@@ -94,7 +94,7 @@ internal class DeviceVibrationCoordinator(
     private var detailInputAtMs = 0L
     private var detailWatchdog: Runnable? = null
     private var authoredIrOwned = false
-    private data class NativeState(val body: Float, val expiresAtMs: Long, val warmUntilMs: Long)
+    private data class NativeState(val body: NativeAuthoredBody, val expiresAtMs: Long, val warmUntilMs: Long)
     private data class NativePoint(val gain: Float, val expiresAtMs: Long)
     private var nativeState: NativeState? = null
     private var nativePoint: NativePoint? = null
@@ -110,6 +110,10 @@ internal class DeviceVibrationCoordinator(
      * Like the existing dispatcher, stalled hardware keeps the latest event rather than a backlog.
      */
     fun submitNativeAuthored(body: Float, point: Float, expiresAtMs: Long,
+                             pointExpiresAtMs: Long, active: Boolean = true) =
+        submitNativeAuthored(NativeAuthoredBody.fromGain(body), point, expiresAtMs, pointExpiresAtMs, active)
+
+    fun submitNativeAuthored(body: NativeAuthoredBody, point: Float, expiresAtMs: Long,
                              pointExpiresAtMs: Long, active: Boolean = true) {
         val command = synchronized(lock) {
             if (closed) return
@@ -125,10 +129,9 @@ internal class DeviceVibrationCoordinator(
                     clearGameRefreshLocked()
                     if (!audioOwned && !touchActive) generation++
                 }
-                val normalizedBody = ControllerRumbleState.normalizeAmplitude(body)
-                val warmUntil = if (nativeState == null || normalizedBody > 0 || point > 0 && pointExpiresAtMs >= clockMs())
+                val warmUntil = if (nativeState == null || !body.isSilent || point > 0 && pointExpiresAtMs >= clockMs())
                     clockMs() + NATIVE_IDLE_WARM_MS else nativeState!!.warmUntilMs
-                nativeState = NativeState(normalizedBody, expiresAtMs, warmUntil)
+                nativeState = NativeState(body, expiresAtMs, warmUntil)
                 if (!audioOwned && !touchActive && point > 0 && pointExpiresAtMs >= clockMs())
                     nativePoint = NativePoint(ControllerRumbleState.normalizeAmplitude(point), pointExpiresAtMs)
                 scheduleNativeStateWakeLocked()
@@ -594,7 +597,7 @@ internal class DeviceVibrationCoordinator(
     private fun dispatch(command: VibrationCommand) {
         // Admit the write under the ownership lock, then release it before entering vendor Binder.
         // Audio only writes after claimForAudio() reports that no admitted game write is in flight.
-        var nativeBody = 0f
+        var nativeBody = NativeAuthoredBody.ZERO
         var nativeEvent = 0f
         var nativeKeepWarm = false
         var switchingToNative = false
@@ -614,7 +617,7 @@ internal class DeviceVibrationCoordinator(
                     nativeResetPending = false
                     switchingToNative = !nativeOutput || resettingNative
                     nativeOutput = true
-                    nativeBody = nativeState?.body ?: 0f
+                    nativeBody = nativeState?.body ?: NativeAuthoredBody.ZERO
                     nativeKeepWarm = nativeState?.let { it.warmUntilMs > clockMs() } == true
                     nativeEvent = nativePoint?.takeIf { it.expiresAtMs >= clockMs() }?.gain ?: 0f
                     nativePoint = null

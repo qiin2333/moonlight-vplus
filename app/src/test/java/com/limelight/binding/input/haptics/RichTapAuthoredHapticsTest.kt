@@ -75,7 +75,7 @@ class RichTapAuthoredHapticsTest {
         assertEquals(0, packets.last()[17])
     }
 
-    @Test fun mixedEnvelopePreservesTheBodyAndProtectsFreshPointsFromBodyRefresh() {
+    @Test fun compactMixedPointDoesNotBlockChangingBackgroundOrReplayThePoint() {
         val packets = mutableListOf<IntArray>()
         val gains = mutableListOf<Int>()
         val updates = mutableListOf<Int>()
@@ -83,28 +83,21 @@ class RichTapAuthoredHapticsTest {
         val sink = RichTapAuthoredHaptics({ raw, gain -> packets += raw; gains += gain }, {}, { now }, 7, { updates += it })
         sink.render(.15f, 0f, false)
         now = 20
-        assertEquals(120L, sink.render(.15f, .12f, false))
-        val mixed = packets.last()
-        assertEquals(4096, mixed[8])
-        assertEquals(5, mixed[15])
-        val levels = mixed.drop(16).chunked(3).map { it[1] }
-        assertEquals(listOf(50, 60, 50, 50, 50), levels)
+        assertEquals(32L, sink.render(.15f, .12f, false))
+        assertEquals(listOf(50, 60, 50, 50, 50), packets.last().drop(16).chunked(3).map { it[1] })
+        now = 25
+        assertEquals(32L, sink.render(.21f, 0f, false))
+        assertEquals(2, packets.size) // Actual short waveform is still protected.
         now = 40
         sink.render(.21f, 0f, false)
-        assertEquals(2, packets.size)
-        assertTrue(updates.isEmpty())
-        now = 60
-        sink.render(.21f, .09f, false)
         assertEquals(3, packets.size)
-        assertEquals(75, packets.last()[20])
-        now = 160
+        assertEquals(100, packets.last()[17]) // No new zero-to-peak envelope.
+        assertTrue(gains.last() > gains.first())
+        now = 60
         sink.render(.06f, 0f, false)
-        assertEquals(4, packets.size)
-        assertTrue(gains.last() < gains.first())
-        now = 180
-        sink.render(.15f, 0f, false)
-        assertEquals(4, packets.size)
-        assertEquals(gains.first(), updates.single())
+        assertEquals(3, packets.size)
+        assertTrue(updates.single() < gains.first())
+        assertEquals(1, packets.count { it[15] == 5 })
     }
 
     @Test fun expiredCarrierStartsFreshAndSilenceResetsItsState() {
@@ -122,29 +115,45 @@ class RichTapAuthoredHapticsTest {
         assertEquals(0, packets.last()[17])
     }
 
-    @Test fun fullBackgroundReservesGradedPointHeadroomAndThenRecovers() {
+    @Test fun pointDoesNotDuckTheBackgroundForOneAndAHalfSeconds() {
         var now = 0L
         val packets = mutableListOf<IntArray>()
         val gains = mutableListOf<Int>()
         val sink = RichTapAuthoredHaptics({ raw, gain -> packets += raw; gains += gain }, {}, { now }, 1, {})
         sink.render(.3f, 0f, false)
-        val peaks = mutableListOf<Int>()
-        for (point in listOf(.12f, .3f, .6f)) {
-            now += 300
-            sink.render(.3f, point, false)
-            val levels = packets.last().drop(16).chunked(3).map { it[1] }
-            assertEquals(70, levels[0])
-            assertTrue(levels[1] > levels[0])
-            assertEquals(70, levels[2])
-            assertEquals(70, levels[3])
-            peaks += levels[1]
-        }
-        assertEquals(listOf(76, 85, 100), peaks)
-        now += 1500
+        now = 20
+        sink.render(.3f, .12f, false)
+        assertTrue(packets.last().drop(16).chunked(3).all { it[1] == 100 })
+        // Saturation may mask an added point at full scale. Do not invent a lasting
+        // background dip to make it conspicuous: fidelity takes priority over enhancement.
+        now = 40
         sink.render(.3f, 0f, false)
-        assertEquals(4, packets.last()[15])
-        assertEquals(100, packets.last()[20])
         assertEquals(255, gains.last().toInt())
+    }
+
+    @Test fun equalEnergySweepChangesFrequencyWithoutInventingShortPoints() {
+        val packets = mutableListOf<IntArray>()
+        var now = 0L
+        val sink = RichTapAuthoredHaptics({ raw, _ -> packets += raw }, {}, { now }, 1, {})
+        for (hz in listOf(90f, 150f, 210f, 320f)) {
+            sink.render(NativeAuthoredBody.fromBands(.05f, .05f, hz), 0f, false)
+            now += 20
+        }
+        assertTrue(packets.size in 3..4)
+        assertTrue(packets.last()[13] - packets.first()[13] >= 20)
+        assertTrue(packets.all { it[8] == 4096 && it[15] == 4 })
+        assertTrue(packets.zipWithNext().all { (a, b) -> b[13] > a[13] })
+        assertTrue(packets.drop(1).all { it[17] == 100 && it[18] < 0 && it[19] == 20 })
+    }
+
+    @Test fun newBackgroundDoesNotWaitForTheIsolatedPresetCleanupTail() {
+        var now = 0L
+        val packets = mutableListOf<IntArray>()
+        val sink = RichTapAuthoredHaptics({ raw, _ -> packets += raw }, {}, { now }, 1, {})
+        sink.render(0f, .12f, false)
+        now = 20
+        sink.render(.15f, 0f, false)
+        assertEquals(listOf(4097, 4096), packets.map { it[8] })
     }
 
     @Test fun parameterCarrierTracksAShortBodyPulseWithoutReplacingItsEnvelope() {

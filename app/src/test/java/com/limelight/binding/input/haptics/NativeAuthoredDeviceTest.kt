@@ -8,10 +8,12 @@ class NativeAuthoredDeviceTest {
     private class Runtime : AutoCloseable {
         var now = 0L
         val renders = mutableListOf<Pair<Float, Float>>()
+        val bodies = mutableListOf<NativeAuthoredBody>()
         val warms = mutableListOf<Boolean>()
         val ordinary = mutableListOf<Int>()
         var stops = 0
         var closes = 0
+        var nativeBackend: NativeAuthoredHaptics? = null
         private var stopIr: (() -> Unit)? = null
         private val callbacks = mutableListOf<Pair<Runnable, Long>>()
         val worker = VirtualHapticsExecutor { now * 1_000_000 }
@@ -19,27 +21,31 @@ class NativeAuthoredDeviceTest {
         val remove: (Runnable) -> Unit = { task -> callbacks.removeAll { it.first == task } }
         val sink = object : NativeAuthoredHaptics {
             override val ready = true
-            override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
-                renders += body to point
+            override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
+                bodies += body
+                renders += body.gain to point
                 warms += keepWarm
+                nativeBackend?.let { return it.render(body, point, keepWarm) }
                 return if (point > 0) now + 180 else null
             }
-            override fun stop() { stops++ }
-            override fun close() { closes++ }
+            override fun stop() { stops++; nativeBackend?.stop() }
+            override fun close() { closes++; nativeBackend?.close() }
         }
         val phone = DeviceVibrationCoordinator(post, remove, { amplitude, _ -> ordinary += amplitude },
             { ordinary += 0 }, worker, clockMs = { now },
             dispatcherClockNanos = { now * 1_000_000 }, nativeHaptics = sink)
 
         fun authored(mode: GameRumbleMode, hasController: Boolean = true,
-                     controllers: MutableList<ControllerRumbleState> = mutableListOf()): AuthoredIrCoordinator {
+                     controllers: MutableList<ControllerRumbleState> = mutableListOf(),
+                     strength: Int = 100, ordinaryHost: ControllerRumbleState? = null): AuthoredIrCoordinator {
             val mixer = ControllerHapticsMixer()
+            ordinaryHost?.let { mixer.submit(0, RumbleSource.HOST, it, now, now + 1_000) }
             val renderer = RumbleOutputRenderer(mixer, ControllerHapticsMixer(), { now }, post, remove,
                 controllerAvailable = { hasController }, controllerIntervalMs = { 20L },
                 writeController = { controllers += it.output }, writeDeviceAmplitude = {})
             return AuthoredIrCoordinator(mixer, renderer, phone,
                 context = { GameRumbleContext(mode, hasController, hasDevice = true) },
-                supportsTick = { false }, strengthPercent = { 100 }, clockMs = { now },
+                supportsTick = { false }, strengthPercent = { strength }, clockMs = { now },
                 postDelayed = post, removeCallbacks = remove, scheduleExpiry = {}).also {
                 stopIr = { it.stop(); renderer.stop() }
             }
@@ -59,11 +65,13 @@ class NativeAuthoredDeviceTest {
         override fun close() { worker.blocked = false; stopIr?.invoke(); phone.stop(); flush() }
     }
 
-    private fun frame(): Ds5HapticsIrExtendedFrame {
+    private fun frame(sequence: Int = 0, timeUs: Long = 0, point: Float = .01f,
+                      low: Float = .1f, high: Float = .2f): Ds5HapticsIrExtendedFrame {
         val lane = Ds5HapticsIrLane(.3f, .4f, 0f, .5f, 200f)
-        val body = Ds5HapticsIrExtendedLane(.1f, .2f)
-        return Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, 0, 0, 0, 240, lane, lane),
-            1, 0, body, body, listOf(Ds5HapticsIrExtendedEvent(1, 0, .01f, .004f)))
+        val body = Ds5HapticsIrExtendedLane(low, high)
+        return Ds5HapticsIrExtendedFrame(Ds5HapticsIrFrame(0, 0, sequence, timeUs, 240, lane, lane),
+            1, timeUs, body, body, if (point > 0)
+                listOf(Ds5HapticsIrExtendedEvent(sequence + 1, timeUs, point, point * .4f)) else emptyList())
     }
 
     @Test fun bodyUpdatesKeepAFreshPointAndNewPointsBypassContinuousPacing() {
@@ -170,11 +178,115 @@ class NativeAuthoredDeviceTest {
             r.flush(); r.advance(20)
             if (mode == GameRumbleMode.CONTROLLER) assertTrue(r.renders.isEmpty())
             else {
-                assertEquals(.2f, r.renders.last().second, .0001f)
+                assertEquals(.06667f, r.renders.last().second, .0001f)
                 if (mode == GameRumbleMode.COORDINATED && hasController) {
-                    assertEquals(0f, r.renders.last().first, 0f)
-                    assertTrue(controllers.last().highFrequency <= .2f)
-                } else assertEquals(.31623f, r.renders.last().first, .0001f)
+                    assertTrue(controllers.last().isZero)
+                }
+                assertEquals(.31623f, r.renders.last().first, .0001f)
+            }
+        }
+    }
+
+    @Test fun weakSourcePointsKeepTheirContrastAndStrongPointsKeepTheNativeEndpoint() {
+        val levels = mutableListOf<Int>()
+        for (point in listOf(.0045f, .009f, .018f, .045f, .09f)) Runtime().use { r ->
+            r.nativeBackend = RichTapAuthoredHaptics({ raw, _ ->
+                assertEquals(4097, raw[8]) // Still a short native event, not a body carrier.
+                levels += raw[12]
+            }, {}, { r.now }, 1, {})
+            r.authored(GameRumbleMode.COORDINATED).submit(frame(point = point, low = 0f, high = 0f))
+            r.flush(); r.advance(20)
+            assertEquals(point / .09f * .6f, r.renders.last().second, .00001f)
+        }
+        // Tenfold source contrast remains tenfold before backend quantization/clipping.
+        // The previous sqrt curve mapped the weakest value here to about level 22.
+        assertEquals(listOf(5, 10, 20, 50, 100), levels)
+    }
+
+    @Test fun denseDiscretePointsAreNotRateLimitedOrTurnedIntoControllerRumble() {
+        Runtime().use { r ->
+            val packets = mutableListOf<IntArray>()
+            val controllers = mutableListOf<ControllerRumbleState>()
+            r.nativeBackend = RichTapAuthoredHaptics({ raw, _ -> packets += raw }, {}, { r.now }, 1, {})
+            val coordinator = r.authored(GameRumbleMode.COORDINATED, controllers = controllers)
+            // 80 source points/second, alternating 10/15 ms, with silent heartbeats.
+            for (sequence in 0..100) {
+                val point = if (sequence < 100 && sequence % 5 in listOf(0, 2)) .016f else 0f
+                coordinator.submit(frame(sequence, sequence * 5_000L, point, low = 0f, high = 0f))
+                r.flush(); r.advance(5)
+            }
+            repeat(4) { r.advance(5) }
+            assertEquals(40, packets.size)
+            assertTrue(packets.all { it[8] == 4097 && it[12] in 1..99 })
+            assertTrue(controllers.all { it.isZero })
+        }
+    }
+
+    @Test fun coordinatedSwellStaysContinuousAndFineTextureDoesNotDriveTheLargeMotor() {
+        Runtime().use { r ->
+            val controllers = mutableListOf<ControllerRumbleState>()
+            val packets = mutableListOf<IntArray>()
+            val updates = mutableListOf<Int>()
+            r.nativeBackend = RichTapAuthoredHaptics({ raw, _ -> packets += raw }, {}, { r.now }, 1,
+                { updates += it })
+            val coordinator = r.authored(GameRumbleMode.COORDINATED, controllers = controllers)
+            for ((sequence, high) in listOf(.03f, .06f, .09f, .06f, .03f).withIndex()) {
+                coordinator.submit(frame(sequence, sequence * 40_000L, point = 0f, low = high / 2, high = high))
+                r.flush(); r.advance(20); r.advance(20)
+            }
+            assertTrue(r.renders.all { it.second == 0f })
+            assertTrue(r.renders.count { it.first > 0f } >= 5)
+            assertTrue(controllers.all { it.isZero })
+            assertEquals(1, packets.size) // One carrier, with gain changes instead of retriggered ticks.
+            assertEquals(4096, packets.single()[8])
+            assertTrue(updates.size >= 4)
+        }
+    }
+
+    @Test fun frequencyAndBothBandsSurviveTimelineAndLatestWinsWorker() {
+        Runtime().use { r ->
+            val coordinator = r.authored(GameRumbleMode.COORDINATED)
+            for ((sequence, hz) in listOf(100f, 180f, 300f).withIndex()) {
+                val original = frame(sequence, sequence * 40_000L, point = 0f, low = .03f, high = .05f)
+                val lane = original.base.left.copy(zeroCrossingRate = 2 * hz)
+                coordinator.submit(original.copy(base = original.base.copy(left = lane, right = lane)))
+                r.flush(); r.advance(20); r.advance(20)
+                assertEquals(.03f, r.bodies.last().lowRms, 0f)
+                assertEquals(.05f, r.bodies.last().highRms, 0f)
+                assertEquals(hz, r.bodies.last().frequencyHintHz, .001f)
+            }
+            assertTrue(r.renders.all { it.second == 0f })
+        }
+    }
+
+    @Test fun nativeTextureOwnershipDoesNotMuteIndependentHostRumble() {
+        Runtime().use { r ->
+            val controllers = mutableListOf<ControllerRumbleState>()
+            val host = ControllerRumbleState(.3f, .2f)
+            r.authored(GameRumbleMode.COORDINATED, controllers = controllers, ordinaryHost = host)
+                .submit(frame(low = .1f, high = .02f))
+            r.flush(); r.advance(20)
+            assertEquals(host, controllers.last())
+            assertEquals(.1f, r.bodies.last().lowRms, 0f)
+            assertEquals(.02f, r.bodies.last().highRms, 0f)
+            assertTrue(r.renders.last().second > 0f)
+        }
+    }
+
+    @Test fun nativeUserStrengthScalesBothLayersWithoutChangingControllerAllocation() {
+        for (strength in listOf(0, 50, 100, 200)) Runtime().use { r ->
+            val controllers = mutableListOf<ControllerRumbleState>()
+            r.authored(GameRumbleMode.COORDINATED, controllers = controllers, strength = strength)
+                .submit(frame(point = .018f, low = .2f, high = .05f))
+            r.flush(); r.advance(20)
+            if (strength == 0) {
+                assertTrue(r.renders.isEmpty())
+                assertEquals(.2f, controllers.last().lowFrequency, .0001f)
+            } else {
+                assertEquals(.291548f * strength / 100f, r.renders.last().first, .0001f)
+                assertEquals(.12f * strength / 100f, r.renders.last().second, .0001f)
+                assertEquals(0f, controllers.last().lowFrequency, 0f)
+                assertEquals(0f, controllers.last().highFrequency, 0f)
             }
         }
     }

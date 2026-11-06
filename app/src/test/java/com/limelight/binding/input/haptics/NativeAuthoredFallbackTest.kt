@@ -10,7 +10,7 @@ class NativeAuthoredFallbackTest {
             class Sink(val name: String) : NativeAuthoredHaptics {
                 override var ready = true
                 override var failed = false
-                override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+                override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
                     calls += "$name:render"
                     return null
                 }
