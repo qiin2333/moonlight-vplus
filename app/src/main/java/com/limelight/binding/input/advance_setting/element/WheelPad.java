@@ -1094,7 +1094,7 @@ public class WheelPad extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar s) {
-                setElementLayer(s.getProgress());
+                setElementLayer(layer.getValue());
                 save();
             }
         });

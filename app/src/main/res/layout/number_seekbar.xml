@@ -60,7 +60,6 @@
         android:layout_width="match_parent"
         android:layout_height="25dp"
         android:max="500"
-        android:min="1"
         android:progressBackgroundTint="@color/crown_input_border"
         android:progress="100"/>
 

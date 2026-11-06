@@ -747,7 +747,7 @@ public class GroupButton extends Element {
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
-                setElementLayer(seekBar.getProgress());
+                setElementLayer(layerNumberSeekbar.getValue());
 
                 save();
             }

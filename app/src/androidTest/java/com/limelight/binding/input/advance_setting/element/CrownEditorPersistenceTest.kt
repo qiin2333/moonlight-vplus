@@ -7,6 +7,10 @@ import android.widget.CompoundButton
 import android.widget.FrameLayout
 import android.widget.SeekBar
 import androidx.activity.ComponentActivity
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -33,6 +37,7 @@ class CrownEditorPersistenceTest {
         var database: SuperConfigDatabaseHelper? = null
         lateinit var manager: ControllerManager
         lateinit var page: SuperPageLayout
+        var before = 0
         try {
             activity.scenario.onActivity { host ->
                 // Attach a real Game context without starting a streaming connection.
@@ -52,9 +57,17 @@ class CrownEditorPersistenceTest {
                 database = manager.superConfigDatabaseHelper
                 database!!.insertConfig(ContentValues().apply { put("config_id", profile); put("config_name", "控件回归") })
                 database!!.insertElement(GroupButton.getInitialInfo().apply { put("config_id", profile); put("element_id", 1L) })
+            }
+            val context = instrumentation.targetContext
+            fun id(name: String) = context.resources.getIdentifier(name, "id", context.packageName)
+            // Page placement depends on the host viewport; wait for its first layout.
+            onView(withId(id("advance_setting_view"))).check(matches(isDisplayed()))
+            activity.scenario.onActivity {
                 manager.elementController!!.loadAllElement(profile)
                 page = (manager.elementController!!.elements.single() as GroupButton).infoPage
                 manager.elementController!!.toggleInfoPage(page)
+                // Espresso does not wait for the editor's native entrance animator.
+                page.endAnimator()
             }
             instrumentation.waitForIdleSync()
             instrumentation.setInTouchMode(false)
@@ -62,9 +75,17 @@ class CrownEditorPersistenceTest {
                 fun id(name: String) = host.resources.getIdentifier(name, "id", host.packageName)
                 page.findViewById<CompoundButton>(id("page_group_button_child_visible")).performClick()
                 val width = page.findViewById<NumberSeekbar>(id("page_group_button_width"))
-                val before = width.value
+                before = width.value
                 val slider = width.findViewById<SeekBar>(id("number_seekbar_seekbar"))
-                assertTrue("Crown slider must accept controller focus", slider.requestFocus())
+                assertTrue("Crown slider must accept controller focus: enabled=${slider.isEnabled}, " +
+                    "focusable=${slider.isFocusable}, touchMode=${slider.isInTouchMode}, " +
+                    "shown=${slider.isShown}, size=${slider.width}x${slider.height}", slider.requestFocus())
+            }
+            // Allow ScrollView to bring the newly focused slider into the viewport.
+            onView(withId(id("page_group_button_width"))).check(matches(isDisplayed()))
+            activity.scenario.onActivity {
+                val width = page.findViewById<NumberSeekbar>(id("page_group_button_width"))
+                val slider = width.findViewById<SeekBar>(id("number_seekbar_seekbar"))
                 assertTrue(slider.isFocused)
                 for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
                     slider.dispatchKeyEvent(KeyEvent(action, KeyEvent.KEYCODE_DPAD_RIGHT))

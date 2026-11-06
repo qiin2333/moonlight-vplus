@@ -394,7 +394,7 @@ public class PageConfigController {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 trackingTouch = false;
-                saveAndApply(seekBar.getProgress());
+                saveAndApply(slider.getValue());
             }
         });
     }
