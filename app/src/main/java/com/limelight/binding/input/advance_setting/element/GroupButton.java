@@ -14,12 +14,11 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 import android.widget.Button;
-import androidx.appcompat.widget.SwitchCompat;
-import androidx.core.content.ContextCompat;
-import com.limelight.utils.AppSwitchStyle;
 import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.Toast;
+import androidx.appcompat.widget.SwitchCompat;
+import com.limelight.utils.AppSwitchStyle;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -592,10 +591,9 @@ public class GroupButton extends Element {
         ElementEditText pressedTextColorElementEditText = page.findViewById(R.id.page_group_button_pressed_text_color);
         SwitchCompat hiddenSwitch = page.findViewById(R.id.page_group_button_hidden_switch);
         SwitchCompat movableInNormalSwitch = page.findViewById(R.id.page_group_button_movable_in_normal_switch);
-        int inactiveSwitchColor = ContextCompat.getColor(page.getContext(), R.color.crown_text_secondary);
         for (SwitchCompat control : new SwitchCompat[]{childPositionAttributeFollowSwitch,
                 childOtherAttributeFollowSwitch, childVisibleSwitch, hiddenSwitch, movableInNormalSwitch}) {
-            AppSwitchStyle.apply(control, inactiveSwitchColor);
+            AppSwitchStyle.apply(control);
         }
 
         // Setup listeners
@@ -825,8 +823,8 @@ public class GroupButton extends Element {
         });
 
         SwitchCompat permanentIndependentSwitch = page.findViewById(R.id.page_group_button_override_parent_switch);
-        AppSwitchStyle.apply(permanentIndependentSwitch, inactiveSwitchColor);
-        // 根据新的永久状态变量设置 SwitchCompat 的初始值
+        AppSwitchStyle.apply(permanentIndependentSwitch);
+        // 根据永久状态变量设置开关初始值
         permanentIndependentSwitch.setChecked(isPermanentlyIndependent);
         permanentIndependentSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             isPermanentlyIndependent = isChecked; // 控制新的永久状态变量

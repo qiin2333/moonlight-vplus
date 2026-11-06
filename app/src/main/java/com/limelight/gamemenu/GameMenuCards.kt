@@ -12,7 +12,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +36,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
@@ -60,11 +57,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.input.pointer.pointerInput
@@ -84,6 +76,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.limelight.utils.AppSlider
+import com.limelight.utils.handleSliderDpad
 import com.limelight.CustomKeyData
 import com.limelight.R
 import com.limelight.binding.audio.AudioVibrationService
@@ -215,48 +209,6 @@ internal fun GameMenuCard(
             content()
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CompactGameMenuSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    enabled: Boolean = true,
-    steps: Int = 0,
-    modifier: Modifier = Modifier
-) {
-    val colors = SliderDefaults.colors()
-    val interactionSource = remember { MutableInteractionSource() }
-    Slider(
-        value = value,
-        onValueChange = onValueChange,
-        onValueChangeFinished = onValueChangeFinished,
-        valueRange = valueRange,
-        steps = steps,
-        enabled = enabled,
-        colors = colors,
-        interactionSource = interactionSource,
-        thumb = {
-            SliderDefaults.Thumb(
-                interactionSource = interactionSource,
-                colors = colors,
-                thumbSize = GameMenuSliderSpec.thumbSize
-            )
-        },
-        track = { sliderState ->
-            SliderDefaults.Track(
-                sliderState = sliderState,
-                modifier = Modifier.height(GameMenuSliderSpec.trackHeight),
-                colors = colors,
-                thumbTrackGapSize = GameMenuSliderSpec.thumbTrackGap,
-                trackInsideCornerSize = GameMenuSliderSpec.trackInsideCorner
-            )
-        },
-        modifier = modifier
-    )
 }
 
 internal data class SensitivityParameter(
@@ -404,7 +356,7 @@ private fun SensitivityParameterControl(
             .focusable()
             .lockParentScrollDuringGesture(onSliderGesture)
     ) {
-        CompactGameMenuSlider(
+        AppSlider(
             value = parameter.percent.toFloat(),
             onValueChange = { value ->
                 if (parameter.onChange(value)) {
@@ -782,7 +734,7 @@ internal fun DisplayStatusCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.widthIn(max = 80.dp)
                     )
-                    CompactGameMenuSlider(
+                    AppSlider(
                         value = sliderIndex,
                         onValueChange = previewScale,
                         onValueChangeFinished = applyScale,
@@ -1023,7 +975,7 @@ private fun BitrateSlider(
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
-    CompactGameMenuSlider(
+    AppSlider(
         value = state.progress,
         onValueChange = { value ->
             if (callbacks.onBitrateProgress(value)) {
@@ -1227,7 +1179,7 @@ private fun AudioHapticsCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            CompactGameMenuSlider(
+            AppSlider(
                 value = state.strength.toFloat(),
                 onValueChange = { value ->
                     if (callbacks.onAudioHapticsStrength(value)) {
@@ -1429,7 +1381,7 @@ private fun GyroCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            Slider(
+            AppSlider(
                 value = state.sensitivity,
                 onValueChange = callbacks.onGyroSensitivity,
                 onValueChangeFinished = callbacks.onGyroSensitivityFinished,
@@ -1526,33 +1478,6 @@ internal fun Modifier.gamepadFocusOutline(shape: Shape): Modifier {
         .then(if (focused && hardwareInput) Modifier.border(2.dp, focusColor, shape) else Modifier)
 }
 
-private fun Modifier.handleSliderDpad(
-    value: Float,
-    enabled: Boolean = true,
-    step: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit
-): Modifier = onPreviewKeyEvent { event ->
-    val direction = when (event.key) {
-        Key.DirectionLeft -> -1f
-        Key.DirectionRight -> 1f
-        else -> return@onPreviewKeyEvent false
-    }
-    if (!enabled) return@onPreviewKeyEvent true
-    when (event.type) {
-        KeyEventType.KeyDown -> {
-            val adjusted = (value + direction * step).coerceIn(valueRange.start, valueRange.endInclusive)
-            if (adjusted != value) onValueChange(adjusted)
-            true
-        }
-        KeyEventType.KeyUp -> {
-            onValueChangeFinished()
-            true
-        }
-        else -> false
-    }
-}
 
 @Composable
 private fun SettingSwitchRow(

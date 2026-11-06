@@ -1,25 +1,48 @@
 package com.limelight.utils
 
-import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.View
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.limelight.R
 
-/** Shared View switch colors; callers keep ownership of row or widget input. */
+/** Game-menu switch appearance for View screens; callers retain ownership of input. */
 object AppSwitchStyle {
-    /** Applies accent states, with an optional inactive color for permanently dark editor panels. */
     @JvmStatic
-    @JvmOverloads
-    fun apply(switch: SwitchCompat, inactiveColor: Int? = null) {
+    fun apply(switch: SwitchCompat) {
         val palette = AppTheme.paletteContext(switch.context)
+        val density = switch.resources.displayMetrics.density
+        fun dp(value: Int) = (value * density + 0.5f).toInt()
         val active = UiHelper.accentColor(palette)
-        val inactive = inactiveColor ?: ContextCompat.getColor(palette, R.color.ui_shell_text_secondary)
-        val states = arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf(android.R.attr.state_checked), intArrayOf())
-        switch.thumbTintList = ColorStateList(states, intArrayOf(ColorUtils.setAlphaComponent(inactive, 97), active, inactive))
-        switch.trackTintList = ColorStateList(states, intArrayOf(ColorUtils.setAlphaComponent(inactive, 38),
-            ColorUtils.setAlphaComponent(active, 89), ColorUtils.setAlphaComponent(inactive, 51)))
+        val soft = UiHelper.accentSoftColor(palette)
+        val outline = ContextCompat.getColor(palette, R.color.game_menu_list_item_border)
+        fun track(color: Int, border: Int) = GradientDrawable().apply {
+            setSize(dp(36), dp(18))
+            cornerRadius = dp(9).toFloat()
+            setColor(color)
+            setStroke((0.75f * density).toInt().coerceAtLeast(1), border)
+        }.let { InsetDrawable(it, 0, dp(4), 0, dp(4)) }
+        switch.thumbTintList = null
+        switch.trackTintList = null
+        fun thumb(alpha: Int) = requireNotNull(ContextCompat.getDrawable(palette, R.drawable.app_switch_thumb))
+            .mutate().apply { this.alpha = alpha }
+        switch.thumbDrawable = StateListDrawable().apply {
+            addState(intArrayOf(-android.R.attr.state_enabled), thumb(97))
+            addState(intArrayOf(), thumb(255))
+        }
+        switch.trackDrawable = StateListDrawable().apply {
+            addState(intArrayOf(-android.R.attr.state_enabled), track(ColorUtils.setAlphaComponent(soft, 25), outline))
+            addState(intArrayOf(android.R.attr.state_checked), track(ColorUtils.setAlphaComponent(active, 209),
+                ColorUtils.setAlphaComponent(active, 117)))
+            addState(intArrayOf(), track(soft, outline))
+        }
+        switch.showText = false
+        switch.splitTrack = false
+        switch.thumbTextPadding = 0
+        switch.switchMinWidth = dp(36)
         switch.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
 }

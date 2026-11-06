@@ -24,8 +24,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import androidx.appcompat.widget.SwitchCompat
-import com.limelight.utils.AppSwitchStyle
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -35,6 +33,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 
+import com.limelight.utils.AppSwitchStyle
+import com.limelight.utils.AppSwitchView
 import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference
@@ -1270,7 +1270,7 @@ class PerformanceOverlayManager(
     }
 
     private fun createJitterMonitorSwitchRow(): View {
-        val jitterSwitch = SwitchCompat(activity).apply {
+        val jitterSwitch = AppSwitchView(activity).apply {
             isChecked = prefConfig.enableJitterMonitor
             text = ""
             minWidth = dp(48f)

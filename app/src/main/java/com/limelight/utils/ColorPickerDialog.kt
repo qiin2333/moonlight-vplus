@@ -201,13 +201,9 @@ class ColorPickerDialog(
             setTextColor(color(R.color.crown_text_secondary))
         })
 
-        val seekBar = SeekBar(context).apply {
+        val seekBar = AppSliderView(context).apply {
             this.max = max
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                progressTintList = android.content.res.ColorStateList.valueOf(UiHelper.accentColor(context))
-                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(color(R.color.crown_input_border))
-                thumbTintList = android.content.res.ColorStateList.valueOf(UiHelper.accentColor(context))
-            }
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(color(R.color.crown_input_border))
         }
         row.addView(seekBar, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
             leftMargin = dpToPx(8)

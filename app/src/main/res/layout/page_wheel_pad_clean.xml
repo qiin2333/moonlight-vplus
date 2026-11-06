@@ -90,10 +90,9 @@
                             android:layout_weight="1"
                             android:text="@string/layout_page_wheel_pad_text_43868"
                             android:textSize="13sp"/>
-                        <Switch
-                            android:id="@+id/page_wheel_pad_popup_at_center_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"/>
+                        <com.limelight.utils.AppSwitchView
+                            style="@style/AppSwitchWidget"
+                            android:id="@+id/page_wheel_pad_popup_at_center_switch"/>
                     </LinearLayout>
                     
                     <LinearLayout
@@ -107,10 +106,9 @@
                             android:layout_weight="1"
                             android:text="@string/layout_page_wheel_pad_text_91286"
                             android:textSize="13sp"/>
-                        <Switch
-                            android:id="@+id/page_wheel_pad_preview_group_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"/>
+                        <com.limelight.utils.AppSwitchView
+                            style="@style/AppSwitchWidget"
+                            android:id="@+id/page_wheel_pad_preview_group_switch"/>
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>

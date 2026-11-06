@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.appcompat.widget.SwitchCompat xmlns:android="http://schemas.android.com/apk/res/android"
+<com.limelight.utils.AppSwitchView xmlns:android="http://schemas.android.com/apk/res/android"
     style="@style/SettingsSwitchWidget"
     android:id="@id/switchWidget" />

@@ -3,6 +3,7 @@ package com.limelight.binding.input.advance_setting.superpage
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.KeyEvent
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
@@ -82,6 +83,27 @@ class NumberSeekbar : LinearLayout {
                 onNumberSeekbarChangeListener?.onStopTrackingTouch(seekBar)
             }
         })
+
+        // Keyboard edits share the touch and +/- controls' save lifecycle.
+        var changingWithKeys = false
+        fun finishKeyChange() {
+            if (changingWithKeys) {
+                changingWithKeys = false
+                onNumberSeekbarChangeListener?.onStopTrackingTouch(numberSeekbarSeekbar)
+            }
+        }
+        numberSeekbarSeekbar.setOnKeyListener { _, code, event ->
+            if (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                if (event.action == KeyEvent.ACTION_DOWN && numberSeekbarSeekbar.isEnabled && !changingWithKeys) {
+                    changingWithKeys = true
+                    onNumberSeekbarChangeListener?.onStartTrackingTouch(numberSeekbarSeekbar)
+                } else if (event.action == KeyEvent.ACTION_UP) {
+                    finishKeyChange()
+                }
+            }
+            false // Keep native stepping, bounds and key-repeat handling.
+        }
+        numberSeekbarSeekbar.setOnFocusChangeListener { _, focused -> if (!focused) finishKeyChange() }
 
         numberSeekbarMinus.setOnClickListener {
             val progress = numberSeekbarSeekbar.progress

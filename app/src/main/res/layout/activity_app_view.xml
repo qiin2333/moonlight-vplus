@@ -147,11 +147,9 @@
             android:gravity="end"
             android:visibility="gone">
 
-            <androidx.appcompat.widget.SwitchCompat
+            <com.limelight.utils.AppSwitchView
                 style="@style/AppSwitchWidget"
                 android:id="@+id/useLastSettingsSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:focusable="true"
                 android:text="@string/app_last_settings_use_checkbox"

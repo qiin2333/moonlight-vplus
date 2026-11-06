@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="ui_control_thumb_outline">#26585B63</color>
     <color name="advance_setting_background">#4D464A</color>
     <!-- Splash screen colors. splash_bg MUST match advance_setting_background so any
          premature theme/window swap during the launch handoff is invisible to the user. -->

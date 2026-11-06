@@ -17,8 +17,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
+import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -504,9 +504,9 @@ public class DigitalMovableButton extends Element {
         }
 
         // --- 获取所有需要的控件 ---
-        Switch joystickModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
+        SwitchCompat joystickModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_enable_touch);
         View joystickModeContainer = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_joystick_mode_container);
-        Switch trackpadModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_trackpad_mode);
+        SwitchCompat trackpadModeSwitch = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_trackpad_mode);
         View trackpadModeContainer = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_trackpad_mode_container);
         TextView valueTextView = digitalMovableButtonPage.findViewById(R.id.page_digital_movable_button_value);
 

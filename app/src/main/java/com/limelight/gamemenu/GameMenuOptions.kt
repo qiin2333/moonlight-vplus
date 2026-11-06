@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.utils.AppSwitch
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.appAccentSoftColor
 import com.limelight.utils.appAccentColor
@@ -291,9 +292,6 @@ internal fun InlineToggle(
     modifier: Modifier = Modifier,
     onToggle: (() -> Unit)? = null
 ) {
-    val accent = appAccentColor()
-    val track = if (checked) accent.copy(alpha = 0.82f) else appAccentSoftColor()
-    val outline = if (checked) accent.copy(alpha = 0.46f) else colorResource(R.color.game_menu_list_item_border)
     val interactionModifier = if (onToggle != null) {
         Modifier
             .semantics { this.contentDescription = contentDescription }
@@ -314,28 +312,7 @@ internal fun InlineToggle(
             .then(interactionModifier),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .width(44.dp)
-                .height(26.dp)
-                .clip(CircleShape)
-                .background(track)
-                .border(GameMenuDimens.surfaceStroke, outline, CircleShape)
-                .padding(3.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(20.dp)
-                    .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .border(
-                        GameMenuDimens.surfaceStroke,
-                        if (checked) accent.copy(alpha = 0.28f) else Color.White,
-                        CircleShape
-                    )
-            )
-        }
+        AppSwitch(checked = checked, onCheckedChange = null)
     }
 }
 

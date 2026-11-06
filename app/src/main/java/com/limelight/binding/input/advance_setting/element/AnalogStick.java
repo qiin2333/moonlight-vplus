@@ -19,8 +19,8 @@ import android.widget.CompoundButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
+import androidx.appcompat.widget.SwitchCompat;
 
 import com.limelight.Game;
 import com.limelight.R;
@@ -480,7 +480,7 @@ public class AnalogStick extends Element {
         NumberSeekbar radiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_radius);
         TextView middleValueTextView = analogStickPage.findViewById(R.id.page_analog_stick_middle_value);
         RadioGroup modeRadioGroup = analogStickPage.findViewById(R.id.page_analog_stick_value);
-        Switch moveModeSwitch = analogStickPage.findViewById(R.id.page_analog_stick_move_mode);
+        SwitchCompat moveModeSwitch = analogStickPage.findViewById(R.id.page_analog_stick_move_mode);
         NumberSeekbar deadZoneRadiusNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_sense);
         NumberSeekbar thickNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_thick);
         NumberSeekbar layerNumberSeekbar = analogStickPage.findViewById(R.id.page_analog_stick_layer);

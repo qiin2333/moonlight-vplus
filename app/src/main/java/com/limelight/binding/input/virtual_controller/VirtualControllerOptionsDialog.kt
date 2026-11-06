@@ -25,7 +25,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +47,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.limelight.utils.AppSlider
 import com.limelight.R
 import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.gamemenu.GameMenuDialogShell
@@ -360,7 +360,7 @@ internal class VirtualControllerOptionsDialog(
             .focusable()
         Column(modifier = modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
             Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
-                Slider(
+                AppSlider(
                     modifier = Modifier.fillMaxWidth().focusProperties { canFocus = false },
                     value = value,
                     onValueChange = onValueChange,
