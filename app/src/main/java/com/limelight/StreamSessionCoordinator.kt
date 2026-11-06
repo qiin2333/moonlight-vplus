@@ -1,6 +1,5 @@
 package com.limelight
 
-/** Lifecycle state owned by the active stream session. */
 internal enum class StreamSessionState {
     IDLE,
     CONNECTING,
@@ -9,7 +8,7 @@ internal enum class StreamSessionState {
     TERMINAL,
 }
 
-/** Why a connection is being stopped. The reason determines whether resume is valid. */
+/** Why the connection is stopping; only background resume retains the service. */
 internal enum class StreamStopReason {
     BACKGROUND_RESUME,
     CONNECTION_TERMINATED,
@@ -21,14 +20,14 @@ internal enum class StreamStopReason {
 internal data class StreamStopDecision(val keepAliveService: Boolean)
 
 /**
- * Keeps connection and background-resume state in one place.
- * This class has no Android dependencies so lifecycle ordering can be tested directly.
+ * Owns session transitions on the UI thread, independently of Android resources.
+ * Native callbacks may read connection state, but must post transitions to the UI thread.
  */
 internal class StreamSessionCoordinator {
+    @Volatile
     var state: StreamSessionState = StreamSessionState.IDLE
         private set
 
-    private var backgroundResumeRequested = false
     private var pendingKeepAlivePreparation = false
 
     val isConnected: Boolean
@@ -37,32 +36,26 @@ internal class StreamSessionCoordinator {
     val hasAttemptedConnection: Boolean
         get() = state == StreamSessionState.CONNECTING || isConnected
 
+    val canStartConnection: Boolean
+        get() = state == StreamSessionState.IDLE
+
     val shouldResumeSession: Boolean
-        get() = backgroundResumeRequested || state == StreamSessionState.BACKGROUND_RESUME_PENDING
+        get() = state == StreamSessionState.BACKGROUND_RESUME_PENDING
 
     val isTerminal: Boolean
         get() = state == StreamSessionState.TERMINAL
 
-    @Synchronized
-    fun markConnectionAttempted() {
-        if (state == StreamSessionState.IDLE) {
-            state = StreamSessionState.CONNECTING
-        }
-    }
-
-    /** Returns false for a stale callback from a stopped or terminal connection. */
-    @Synchronized
-    fun markConnectionEstablished(): Boolean {
-        if (state != StreamSessionState.CONNECTING) return false
-        state = StreamSessionState.CONNECTED
-        backgroundResumeRequested = false
+    /** Claims one startup; Surface callbacks cannot restart a stopped connection. */
+    fun markConnectionAttempted(): Boolean {
+        if (!canStartConnection) return false
+        state = StreamSessionState.CONNECTING
         return true
     }
 
-    @Synchronized
-    fun requestBackgroundResume(resumeEnabled: Boolean): Boolean {
-        if (!resumeEnabled || state == StreamSessionState.IDLE || isTerminal) return false
-        backgroundResumeRequested = true
+    /** Only the current connection's accepted callback may complete startup. */
+    fun markConnectionEstablished(): Boolean {
+        if (state != StreamSessionState.CONNECTING) return false
+        state = StreamSessionState.CONNECTED
         return true
     }
 
@@ -76,23 +69,18 @@ internal class StreamSessionCoordinator {
     fun shouldKeepAliveForBackgroundStop(
         isFinishing: Boolean,
         resumeEnabled: Boolean,
-    ): Boolean =
-        !isFinishing && resumeEnabled && shouldResumeSession && !isTerminal
+    ): Boolean = !isFinishing && resumeEnabled && !isTerminal
 
-    @Synchronized
+    /** Repeated background stops preserve pending resume; terminal stops are irreversible. */
     fun beginStop(
         reason: StreamStopReason,
         isFinishing: Boolean,
         resumeEnabled: Boolean,
     ): StreamStopDecision {
-        val keepAliveService =
-            reason == StreamStopReason.BACKGROUND_RESUME &&
-                !isFinishing &&
-                resumeEnabled &&
-                !isTerminal
+        val keepAliveService = reason == StreamStopReason.BACKGROUND_RESUME &&
+            shouldKeepAliveForBackgroundStop(isFinishing, resumeEnabled)
 
         pendingKeepAlivePreparation = false
-        backgroundResumeRequested = false
         state = if (keepAliveService) {
             StreamSessionState.BACKGROUND_RESUME_PENDING
         } else {
@@ -101,33 +89,17 @@ internal class StreamSessionCoordinator {
         return StreamStopDecision(keepAliveService)
     }
 
-    @Synchronized
+    /** Consumes a pending resume before a replacement connection is prepared. */
     fun prepareForReconnect(): Boolean {
-        if (state != StreamSessionState.BACKGROUND_RESUME_PENDING) return false
+        if (!shouldResumeSession) return false
         state = StreamSessionState.IDLE
-        backgroundResumeRequested = false
-        pendingKeepAlivePreparation = false
         return true
     }
 
-    @Synchronized
-    fun resumedWithActiveConnection() {
-        if (isConnected) backgroundResumeRequested = false
-    }
-
-    @Synchronized
-    fun markTerminalFailure() {
-        state = StreamSessionState.TERMINAL
-        backgroundResumeRequested = false
-        pendingKeepAlivePreparation = false
-    }
-
-    @Synchronized
     fun deferKeepAlivePreparation() {
         if (isConnected) pendingKeepAlivePreparation = true
     }
 
-    @Synchronized
     fun consumePendingKeepAlivePreparation(): Boolean {
         val shouldPrepare = pendingKeepAlivePreparation && isConnected
         pendingKeepAlivePreparation = false
