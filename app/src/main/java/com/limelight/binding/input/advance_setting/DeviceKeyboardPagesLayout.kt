@@ -9,10 +9,16 @@ class DeviceKeyboardPagesLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : FrameLayout(context, attrs) {
+    /** Enforce explicit canvas widths; leave standard layout widths to FrameLayout. */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         // Honor the canvas width recalculated by DevicePickerLayout, including
         // shrinking after rotation; do not reuse the previous content width.
-        val canvasWidth = MeasureSpec.makeMeasureSpec(layoutParams.width.coerceAtLeast(1), MeasureSpec.EXACTLY)
-        super.onMeasure(canvasWidth, heightMeasureSpec)
+        val canvasWidth = layoutParams?.width
+        val canvasWidthSpec = if (canvasWidth != null && canvasWidth > 0) {
+            MeasureSpec.makeMeasureSpec(canvasWidth, MeasureSpec.EXACTLY)
+        } else {
+            widthMeasureSpec
+        }
+        super.onMeasure(canvasWidthSpec, heightMeasureSpec)
     }
 }
