@@ -249,6 +249,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
     private var activeGameMenu: GameMenu? = null
     private var streamInForeground = false
+    private var pendingKeepAlivePreparation = false
     private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
@@ -1472,6 +1473,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (microphoneManager != null && micButton != null) {
             microphoneManager?.updateMicrophoneButtonState()
         }
+
+        if (pendingKeepAlivePreparation) {
+            pendingKeepAlivePreparation = false
+            prepareKeepAliveNotification()
+        }
     }
 
     private val keyboardAccessibilityConnectionListener =
@@ -1506,7 +1512,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (requestCode == KEEP_ALIVE_NOTIFICATION_ID) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                prepareKeepAliveNotification()
+                if (streamInForeground) {
+                    prepareKeepAliveNotification()
+                } else {
+                    pendingKeepAlivePreparation = true
+                }
             } else {
                 Toast.makeText(this, getString(R.string.toast_no_notification_permission), Toast.LENGTH_LONG).show()
             }
