@@ -12,10 +12,14 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.ColorUtils
 import com.limelight.R
 
 private val SwitchWidth = 36.dp
@@ -38,9 +42,10 @@ fun AppSwitch(
     val thumbOutline = colorResource(R.color.ui_control_thumb_outline)
     val travel by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
-        animationSpec = tween(durationMillis = 150),
+        animationSpec = tween(AppSwitchMotion.DurationMillis, easing = AppSwitchMotion.easing),
         label = "appSwitchTravel"
     )
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Canvas(
         modifier = modifier
             .size(SwitchWidth, SwitchHeight)
@@ -63,15 +68,15 @@ fun AppSwitch(
         drawRoundRect(
             color = when {
                 !enabled -> soft.copy(alpha = 0.10f)
-                checked -> active.copy(alpha = 0.82f)
-                else -> soft
+                else -> Color(ColorUtils.blendARGB(soft.toArgb(), active.copy(alpha = 0.82f).toArgb(), travel))
             },
             topLeft = Offset((size.width - trackW) / 2f, (size.height - trackH) / 2f),
             size = Size(trackW, trackH),
             cornerRadius = CornerRadius(trackH / 2f)
         )
         drawRoundRect(
-            color = if (checked && enabled) active.copy(alpha = 0.46f) else outline,
+            color = if (enabled) Color(ColorUtils.blendARGB(
+                outline.toArgb(), active.copy(alpha = 0.46f).toArgb(), travel)) else outline,
             topLeft = Offset((size.width - trackW) / 2f, (size.height - trackH) / 2f),
             size = Size(trackW, trackH),
             cornerRadius = CornerRadius(trackH / 2f),
@@ -79,18 +84,19 @@ fun AppSwitch(
         )
         val thumbMinX = (size.width - trackW) / 2f + thumbR
         val thumbMaxX = (size.width + trackW) / 2f - thumbR
+        val thumbX = thumbMinX + (thumbMaxX - thumbMinX) * (if (rtl) 1f - travel else travel)
         drawCircle(
             color = when {
                 !enabled -> Color.White.copy(alpha = 0.38f)
                 else -> Color.White
             },
             radius = thumbR,
-            center = Offset(thumbMinX + (thumbMaxX - thumbMinX) * travel, size.height / 2f)
+            center = Offset(thumbX, size.height / 2f)
         )
         drawCircle(
             color = if (enabled) thumbOutline else thumbOutline.copy(alpha = thumbOutline.alpha * 0.38f),
             radius = thumbR - 0.375.dp.toPx(),
-            center = Offset(thumbMinX + (thumbMaxX - thumbMinX) * travel, size.height / 2f),
+            center = Offset(thumbX, size.height / 2f),
             style = Stroke(width = 0.75.dp.toPx())
         )
     }
