@@ -41,8 +41,7 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:background="@color/settings_drawer_background_landscape"
-                android:paddingTop="@dimen/activity_safearea_top"
-                android:elevation="4dp">
+                android:paddingTop="@dimen/activity_safearea_top">
 
                 <!-- 返回贴左，品牌图标居中放大，避免返回单独占出一条空白 -->
                 <FrameLayout

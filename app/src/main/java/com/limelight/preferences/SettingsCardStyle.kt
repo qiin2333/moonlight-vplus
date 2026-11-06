@@ -23,7 +23,7 @@ internal object SettingsCardStyle {
             if (focused) setStroke((2 * context.resources.displayMetrics.density).toInt().coerceAtLeast(1),
                 UiHelper.accentFocusColor(context))
         }
-        val surface = ContextCompat.getColor(context, R.color.ui_shell_surface_elevated)
+        val surface = ContextCompat.getColor(context, R.color.settings_group_surface)
         return StateListDrawable().apply {
             addState(intArrayOf(-android.R.attr.state_enabled), shape(surface))
             addState(intArrayOf(android.R.attr.state_focused),

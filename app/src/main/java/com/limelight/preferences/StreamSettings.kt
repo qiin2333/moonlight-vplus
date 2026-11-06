@@ -14,7 +14,6 @@ import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
@@ -74,7 +73,6 @@ import androidx.recyclerview.widget.RecyclerView
 
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
-import com.bumptech.glide.load.MultiTransformation
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestOptions
@@ -124,7 +122,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import jp.wasabeef.glide.transformations.BlurTransformation
-import jp.wasabeef.glide.transformations.ColorFilterTransformation
 
 import java.io.File
 import java.io.IOException
@@ -4886,21 +4883,12 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
         val (width, height) = size
 
-        // 模糊 + theme-aware 蒙版，单次解码完成（合并到一个 Glide pipeline）
+        // Theme tint comes from the shared full-page overlay, including detail pages.
         // 强制 RGB_565：每像素 2 字节，整张图内存减半，模糊背景视觉无损
-        val filterColor = if (isNightMode()) {
-            Color.argb(120, 0, 0, 0)
-        } else {
-            Color.argb(96, 255, 255, 255)
-        }
-        val transformations = MultiTransformation<Bitmap>(
-                BlurTransformation(2, 3),
-                ColorFilterTransformation(filterColor)
-        )
         val options = RequestOptions()
                 .override(width, height)
                 .format(DecodeFormat.PREFER_RGB_565)
-                .transform(transformations)
+                .transform(BlurTransformation(2, 3))
                 .signature(ObjectKey(resolved.cacheKey))
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
 
