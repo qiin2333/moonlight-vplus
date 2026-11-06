@@ -31,7 +31,6 @@ import androidx.core.content.ContextCompat
 import com.limelight.R
 import kotlin.math.max
 import kotlin.math.min
-import com.limelight.utils.UiHelper
 
 class ColorPickerDialog(
     context: Context,

@@ -40,7 +40,7 @@
                 android:layout_width="@dimen/settings_landscape_sidebar_width"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:background="@color/settings_drawer_background_landscape"
+                android:background="@color/settings_group_surface"
                 android:paddingTop="@dimen/activity_safearea_top">
 
                 <!-- 返回贴左，品牌图标居中放大，避免返回单独占出一条空白 -->

@@ -402,7 +402,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         )
         // 横屏侧栏背景在布局创建时解析。深浅切换不重建 Activity，需要按当前主题重设。
         findViewById<View>(R.id.drawer_menu)?.setBackgroundColor(
-                ContextCompat.getColor(this, R.color.settings_drawer_background_landscape)
+                ContextCompat.getColor(this, R.color.settings_group_surface)
         )
         findViewById<ImageView>(R.id.settings_back)?.setColorFilter(
                 ContextCompat.getColor(this, R.color.ui_shell_text_primary)
