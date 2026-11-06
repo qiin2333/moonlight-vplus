@@ -40,13 +40,12 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
     /** Applies shared switch colors, then decorates standard main-page rows as connected cards. */
     override fun onBindViewHolder(holder: PreferenceViewHolder, position: Int) {
         super.onBindViewHolder(holder, position)
-        val palette = AppTheme.paletteContext(holder.itemView.context)
         // Both preference types keep their own binding and persistence behavior.
         (holder.findViewById(android.R.id.checkbox) as? SwitchCompat)?.let(AppSwitchStyle::apply)
         (holder.findViewById(androidx.preference.R.id.switchWidget) as? SwitchCompat)?.let(AppSwitchStyle::apply)
         if (!mainCards) return
         val preference = getItem(position) ?: return
-        if (!isStandardLayoutResource(preference.layoutResource)) return
+        if (!isStandardLayout(preference)) return
         holder.isDividerAllowedAbove = false
         holder.isDividerAllowedBelow = false
         val inset = holder.itemView.resources.getDimensionPixelSize(R.dimen.activity_horizontal_margin)
@@ -55,12 +54,16 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
             marginEnd = inset
         }
         if (preference is PreferenceCategory) return
-        fun sharesCard(neighbor: Preference?) = neighbor != null && neighbor !is PreferenceCategory &&
-            isStandardLayoutResource(neighbor.layoutResource) && neighbor.parent === preference.parent
-        holder.itemView.background = SettingsCardStyle.background(palette,
-            !sharesCard(if (position > 0) getItem(position - 1) else null),
-            !sharesCard(if (position + 1 < itemCount) getItem(position + 1) else null))
+        holder.itemView.background = SettingsCardStyle.background(AppTheme.paletteContext(holder.itemView.context),
+            !sharesCard(preference, if (position > 0) getItem(position - 1) else null),
+            !sharesCard(preference, if (position + 1 < itemCount) getItem(position + 1) else null))
     }
+
+    protected open fun isStandardLayout(preference: Preference): Boolean = isStandardLayoutResource(preference.layoutResource)
+
+    protected fun sharesCard(preference: Preference, neighbor: Preference?): Boolean =
+        neighbor != null && neighbor !is PreferenceCategory && isStandardLayout(neighbor) &&
+            neighbor.parent === preference.parent
 
     /** Leaves custom preference layouts outside automatic card decoration. */
     protected fun isStandardLayoutResource(layout: Int): Boolean = when (layout) {

@@ -333,15 +333,11 @@ class Iperf3Tester(
             startButton.isEnabled = isEnabled
             stopButton.isEnabled = !isEnabled
             serverInput.isEnabled = isEnabled
-            directionRadioGroup.isEnabled = isEnabled
-            for (i in 0 until directionRadioGroup.childCount) {
-                directionRadioGroup.getChildAt(i).isEnabled = isEnabled
-            }
             durationSeekBar.isEnabled = isEnabled
             portEditText.isEnabled = isEnabled
-            protocolRadioGroup.isEnabled = isEnabled
-            for (i in 0 until protocolRadioGroup.childCount) {
-                protocolRadioGroup.getChildAt(i).isEnabled = isEnabled
+            for (group in listOf(directionRadioGroup, protocolRadioGroup)) {
+                group.isEnabled = isEnabled
+                for (i in 0 until group.childCount) group.getChildAt(i).isEnabled = isEnabled
             }
             udpBandwidthEditText.isEnabled = isEnabled
             rawArgsInput.isEnabled = isEnabled

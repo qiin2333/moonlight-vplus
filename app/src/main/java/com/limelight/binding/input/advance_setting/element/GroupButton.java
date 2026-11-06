@@ -592,9 +592,10 @@ public class GroupButton extends Element {
         ElementEditText pressedTextColorElementEditText = page.findViewById(R.id.page_group_button_pressed_text_color);
         SwitchCompat hiddenSwitch = page.findViewById(R.id.page_group_button_hidden_switch);
         SwitchCompat movableInNormalSwitch = page.findViewById(R.id.page_group_button_movable_in_normal_switch);
+        int inactiveSwitchColor = ContextCompat.getColor(page.getContext(), R.color.crown_text_secondary);
         for (SwitchCompat control : new SwitchCompat[]{childPositionAttributeFollowSwitch,
                 childOtherAttributeFollowSwitch, childVisibleSwitch, hiddenSwitch, movableInNormalSwitch}) {
-            AppSwitchStyle.apply(control, ContextCompat.getColor(page.getContext(), R.color.crown_text_secondary));
+            AppSwitchStyle.apply(control, inactiveSwitchColor);
         }
 
         // Setup listeners
@@ -824,7 +825,7 @@ public class GroupButton extends Element {
         });
 
         SwitchCompat permanentIndependentSwitch = page.findViewById(R.id.page_group_button_override_parent_switch);
-        AppSwitchStyle.apply(permanentIndependentSwitch, ContextCompat.getColor(page.getContext(), R.color.crown_text_secondary));
+        AppSwitchStyle.apply(permanentIndependentSwitch, inactiveSwitchColor);
         // 根据新的永久状态变量设置 SwitchCompat 的初始值
         permanentIndependentSwitch.setChecked(isPermanentlyIndependent);
         permanentIndependentSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {

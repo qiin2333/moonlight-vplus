@@ -106,12 +106,9 @@ internal class SettingsDetailPreferenceAdapter(group: PreferenceGroup) : Setting
     }
 
     /** Checks the saved layout so converted rows stay eligible when recycled or rebound. */
-    private fun isStandardLayout(preference: Preference): Boolean {
+    override fun isStandardLayout(preference: Preference): Boolean {
         val layout = originalLayouts[preference]?.layout ?: preference.layoutResource
         return isStandardLayoutResource(layout)
     }
 
-    private fun sharesCard(preference: Preference, neighbor: Preference?): Boolean =
-        neighbor != null && neighbor !is PreferenceCategory && isStandardLayout(neighbor) &&
-            neighbor.parent === preference.parent
 }
