@@ -85,7 +85,9 @@ int main(int argc, char** argv) {
         AhAuthoredEventFrame output{};
         uint32_t produced = 0;
         if (ah_authored_events_process_i16(engine.get(), &end, &output, 1, &produced) != AH_STATUS_OUTPUT_AVAILABLE ||
-            produced != 1 || output.event_count || output.lanes[0].continuous_low || output.lanes[1].continuous_high)
+            produced != 1 || output.event_count ||
+            output.lanes[0].continuous_low || output.lanes[0].continuous_high ||
+            output.lanes[1].continuous_low || output.lanes[1].continuous_high)
             throw std::runtime_error("END did not clear state");
         return 0;
     } catch (const std::exception& error) {
