@@ -40,7 +40,7 @@ class CrownEditorPersistenceTest {
                 val game = instrumentation.newActivity(Game::class.java, host, host.window.decorView.windowToken,
                     host.application, intent, host.packageManager.getActivityInfo(intent.component!!, 0),
                     "Crown test", null, null, null) as Game
-                game.setTheme(host.resources.getIdentifier("AppTheme", "style", host.packageName))
+                game.setTheme(host.resources.getIdentifier("StreamTheme", "style", host.packageName))
                 fun id(name: String) = host.resources.getIdentifier(name, "id", host.packageName)
                 val root = FrameLayout(game).apply {
                     this.id = id("advance_setting_view")
@@ -57,13 +57,15 @@ class CrownEditorPersistenceTest {
                 manager.elementController!!.toggleInfoPage(page)
             }
             instrumentation.waitForIdleSync()
+            instrumentation.setInTouchMode(false)
             activity.scenario.onActivity { host ->
                 fun id(name: String) = host.resources.getIdentifier(name, "id", host.packageName)
                 page.findViewById<CompoundButton>(id("page_group_button_child_visible")).performClick()
                 val width = page.findViewById<NumberSeekbar>(id("page_group_button_width"))
                 val before = width.value
                 val slider = width.findViewById<SeekBar>(id("number_seekbar_seekbar"))
-                slider.requestFocus()
+                assertTrue("Crown slider must accept controller focus", slider.requestFocus())
+                assertTrue(slider.isFocused)
                 for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
                     slider.dispatchKeyEvent(KeyEvent(action, KeyEvent.KEYCODE_DPAD_RIGHT))
                 }

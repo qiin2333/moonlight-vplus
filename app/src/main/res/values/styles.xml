@@ -222,10 +222,10 @@
         <item name="android:singleLine">false</item>
         <item name="android:background">@null</item>
     </style>
-    <!-- Preferences own row input; standalone switches keep their normal input behavior. -->
+    <!-- Keep row navigation while allowing accessibility activation of the switch node. -->
     <style name="SettingsSwitchWidget" parent="AppSwitchWidget">
         <item name="android:minHeight">0dp</item>
-        <item name="android:clickable">false</item>
+        <item name="android:clickable">true</item>
         <item name="android:focusable">false</item>
     </style>
     <style name="MyCheckBoxPreferenceCompact" parent="@style/Preference.CheckBoxPreference.Material">

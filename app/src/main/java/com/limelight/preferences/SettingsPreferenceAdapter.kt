@@ -33,7 +33,7 @@ internal open class SettingsPreferenceAdapter(group: PreferenceGroup, private va
             override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) =
                 refreshEdgesAt(positionStart - 1, positionStart)
             override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) =
-                refreshEdgesAt(fromPosition - 1, fromPosition, toPosition - 1, toPosition + itemCount)
+                refreshEdgesAt(fromPosition - 1, fromPosition, toPosition - 1, toPosition, toPosition + itemCount)
         })
     }
 

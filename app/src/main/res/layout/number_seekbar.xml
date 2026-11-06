@@ -56,6 +56,7 @@
     </LinearLayout>
     <com.limelight.utils.AppSliderView
         android:id="@+id/number_seekbar_seekbar"
+        android:focusable="true"
         android:layout_width="match_parent"
         android:layout_height="25dp"
         android:max="500"

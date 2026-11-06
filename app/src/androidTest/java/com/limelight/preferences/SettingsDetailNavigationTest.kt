@@ -126,14 +126,18 @@ class SettingsDetailNavigationTest {
         automation.serviceInfo = service
         try {
             settings.focusPreference(AUDIO_EFFECTS_KEY)
-            assertAccessibleSwitch(checked = true)
+            assertTrue(assertAccessibleSwitch(checked = true).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            compose.waitUntil(5_000) { !preferences.getBoolean(AUDIO_EFFECTS_KEY, true) }
+            assertAccessibleSwitch(checked = false)
 
             settings.openScreen(AUDIO_SCREEN_KEY)
             settings.focusPreference(AUDIO_PASSTHROUGH_KEY)
             assertAccessibleSwitch(checked = false)
             settings.press(KeyEvent.KEYCODE_BUTTON_A)
             compose.waitUntil(5_000) { preferences.getBoolean(AUDIO_PASSTHROUGH_KEY, false) }
-            assertAccessibleSwitch(checked = true)
+            assertTrue(assertAccessibleSwitch(checked = true).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            compose.waitUntil(5_000) { !preferences.getBoolean(AUDIO_PASSTHROUGH_KEY, false) }
+            assertAccessibleSwitch(checked = false)
         } finally {
             service.flags = originalFlags
             automation.serviceInfo = service
@@ -286,24 +290,31 @@ class SettingsDetailNavigationTest {
     }
 
     /** Reads the service-visible tree, excluding nodes hidden by importantForAccessibility. */
-    private fun assertAccessibleSwitch(checked: Boolean) {
+    private fun assertAccessibleSwitch(checked: Boolean): AccessibilityNodeInfo {
         val rowBounds = Rect()
         settings.withActivity { activity ->
+            val row = requireNotNull(activity.currentFocus)
             assertTrue("Focused settings row must be visible",
-                requireNotNull(activity.currentFocus).getGlobalVisibleRect(rowBounds))
+                row.getGlobalVisibleRect(rowBounds))
+            val rootLocation = IntArray(2)
+            row.rootView.getLocationOnScreen(rootLocation)
+            rowBounds.offset(rootLocation[0], rootLocation[1])
         }
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        var switch: AccessibilityNodeInfo? = null
         compose.waitUntil(5_000) {
             val pending = java.util.ArrayDeque<AccessibilityNodeInfo>()
             automation.rootInActiveWindow?.let(pending::add)
-            generateSequence { pending.pollFirst() }.any { node ->
+            switch = generateSequence { pending.pollFirst() }.firstOrNull { node ->
                 for (index in 0 until node.childCount) node.getChild(index)?.let(pending::add)
                 val bounds = Rect()
                 node.getBoundsInScreen(bounds)
                 rowBounds.contains(bounds.centerX(), bounds.centerY()) && node.isCheckable &&
-                    node.isChecked == checked && node.isEnabled
+                    node.isChecked == checked && node.isEnabled && node.isClickable
             }
+            switch != null
         }
+        return requireNotNull(switch)
     }
 
     private fun assertAudioDependencies(passthrough: Boolean) {
