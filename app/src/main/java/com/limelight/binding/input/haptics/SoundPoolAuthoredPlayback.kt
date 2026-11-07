@@ -12,7 +12,9 @@ internal class SoundPoolAuthoredPlayback(
 ) {
     data class Asset(val carrierHz: Int, val body: Int, val point: Int = 0) {
         val name: String get() {
-            val suffix = if (body == 0 || carrierHz == 160) "" else "${carrierHz}_"
+            // Mixed clips share the 160 Hz bank. Keep the logical carrier for
+            // hysteresis when the latest continuous body is restored.
+            val suffix = if (point == 0 && body > 0 && carrierHz != 160) "${carrierHz}_" else ""
             return if (point == 0) "body_$suffix$body" else "mixed_$suffix${body}_$point"
         }
     }

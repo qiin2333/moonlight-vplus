@@ -17,9 +17,9 @@ def verify(reference):
     checked = set()
     for hz in (100, 160, 260):
         for body in range(17):
-            if body == 0 and hz != 160:
-                continue
             for point in range(9):
+                if hz != 160 and (body == 0 or point != 0):
+                    continue
                 suffix = "" if hz == 160 else f"{hz}_"
                 name = f"body_{suffix}{body}" if point == 0 else f"mixed_{suffix}{body}_{point}"
                 path = bank / (name + ".ogg")

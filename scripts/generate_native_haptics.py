@@ -1,10 +1,10 @@
 """Generate the optional SoundPool energy bank. Requires numpy, soundfile and mutagen.
 
 48 kHz Vorbis: silent L/R audio plus ANDROID_HAPTIC=1. Three coarse carrier
-anchors (100/160/260 Hz) follow source texture; this is not PCM passthrough or
-model-specific calibration. Mixed clips are finite 40 ms to bound stalled playback.
+anchors (100/160/260 Hz) follow source texture in pure body clips. Mixed clips
+share the 160 Hz bank and are finite 40 ms to bound stalled playback.
 Body has 16 levels, points 8. Each point is a balanced 3.125 ms cycle at 320 Hz,
-mixed with the selected background carrier in one stream. Its energy matches the former
+mixed with the 160 Hz background in one stream. Its energy matches the former
 10 ms pulse, with 1.25x makeup for the weaker handheld response at 320 Hz.
 https://source.android.com/docs/core/interaction/haptics/haptics-ux-foundation
 """
@@ -30,9 +30,9 @@ def generate(destination: Path):
         max_tail_ratio = 0.0
         for hz in (100, 160, 260):
             for body in range(17):
-                if body == 0 and hz != 160:
-                    continue
                 for point in range(9):
+                    if hz != 160 and (body == 0 or point != 0):
+                        continue
                     duration = 1.0 if point == 0 else 0.040
                     suffix = "" if hz == 160 else f"{hz}_"
                     name = f"body_{suffix}{body}" if point == 0 else f"mixed_{suffix}{body}_{point}"

@@ -59,8 +59,9 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
                     }
                 }
                 for (hz in CARRIERS) for (body in 0..BODY_LEVELS) for (point in 0..POINT_LEVELS) {
+                    if (hz != 160 && (body == 0 || point != 0)) continue
                     val name = SoundPoolAuthoredPlayback.Asset(hz, body, point).name
-                    sounds.getOrPut(name) { load(name) }
+                    sounds[name] = load(name)
                 }
                 synchronized(stateLock) { loadingFinished = true; updateReady() }
             } catch (error: Exception) {

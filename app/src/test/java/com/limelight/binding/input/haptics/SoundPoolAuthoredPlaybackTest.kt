@@ -10,6 +10,7 @@ class SoundPoolAuthoredPlaybackTest {
         val stopped = mutableListOf<Int>()
         val sink = SoundPoolAuthoredPlayback({ assets += it; assets.size }, { stopped += it }, { now })
         assertEquals(12L, sink.render(NativeAuthoredBody.fromBands(.1f, 0f, 100f), .3f, true))
+        assertEquals("mixed_4_4", assets.single().name)
         now = 5
         assertEquals(12L, sink.render(NativeAuthoredBody.fromBands(0f, .2f, 260f), 0f, true))
         assertEquals(1, assets.size)
@@ -53,7 +54,6 @@ class SoundPoolAuthoredPlaybackTest {
         assertEquals(listOf(100, 160, 260), assets.map { it.carrierHz })
         assertTrue(assets.all { it.point == 0 })
         assertEquals(1, assets.map { it.body }.distinct().size)
-        assertEquals("mixed_100_3_2", SoundPoolAuthoredPlayback.Asset(100, 3, 2).name)
         assertEquals("body_3", SoundPoolAuthoredPlayback.Asset(160, 3).name)
     }
 
