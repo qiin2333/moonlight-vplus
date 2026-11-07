@@ -24,13 +24,13 @@ class NativeAuthoredFallbackTest {
                 preferred.ready = false
                 assertFalse(sink.ready)
                 assertFalse(sink.failed)
-                sink.render(0f, .2f, true)
+                sink.render(nativeBodyWithGain(0f), .2f, true)
                 assertTrue(calls.isEmpty())
-            } else sink.render(.1f, .2f, true)
+            } else sink.render(nativeBodyWithGain(.1f), .2f, true)
             preferred.failed = true
             preferred.ready = false
             assertTrue(sink.ready)
-            sink.render(.1f, .2f, true)
+            sink.render(nativeBodyWithGain(.1f), .2f, true)
             assertTrue(calls.indexOf("preferred:close") < calls.indexOf("fallback:render"))
             fallback.failed = true
             fallback.ready = false

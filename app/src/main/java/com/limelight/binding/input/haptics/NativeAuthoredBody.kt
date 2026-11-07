@@ -18,9 +18,6 @@ internal data class NativeAuthoredBody private constructor(
 
     companion object {
         val ZERO = fromBands(0f, 0f)
-        fun fromGain(gain: Float) = fromBands(
-            ControllerRumbleState.normalizeAmplitude(gain) / sqrt(2f), 0f, 160f)
-
         fun fromBands(low: Float, high: Float, frequencyHintHz: Float = 0f): NativeAuthoredBody {
             val l = ControllerRumbleState.normalizeAmplitude(low)
             val h = ControllerRumbleState.normalizeAmplitude(high)

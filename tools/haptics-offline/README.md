@@ -10,12 +10,16 @@ SoundPool 现在调用实际素材选择/调度器，另对 Ogg 解码信号做�
 ## 最终集成：主机分层、连续渲染与频率过渡
 
 集成分支为 `codex/ds5-fidelity-integration`，基于 Android `cadb66e2d`。
-SDK 固定为 `f87ab5c`（[SDK #8](https://github.com/AlkaidLab/moonlight-audio-haptics/pull/8)，
-持久标签 `pins/ds5-fidelity-20261107-r2`），
+SDK 固定为 `e334a24`（[SDK #8](https://github.com/AlkaidLab/moonlight-audio-haptics/pull/8)，
+持久标签 `pins/ds5-fidelity-20261107-r3`），
 主机依赖更新见 [Sunshine #1224](https://github.com/AlkaidLab/foundation-sunshine/pull/1224)。
 以下历史候选保留诊断过程，最终行为以本节和紧接的连续渲染说明为准。
 
 - 保留三阶段主机重构及 96 组合的弱触击回归保护。
+- 清理未调用的滤波器重置方法，将瞬时计算值局部化；移除客户端旧标量入口，
+  测试转换留在测试源中，调试回放统一拦截结构化入口。清理后 272 段 PCM
+  以 240/137 帧块重跑，持续层和事件 CSV 与清理前逐字节一致；1331 项 JVM、
+  11 项 SDK CTest 通过，instrumentation 测试仅编译，未运行 E2E。
 - 后续 review 修复：持续层基线历史不再记录 pending ceiling 压低的输出，避免
   重叠候选继承临时静音；RichTap 已建立的最低档背景不会因新短点而丢失。
   补充非零背景、稳定区间和不对称声道回归。组件仍共用源触击的确认时限，

@@ -52,7 +52,7 @@ class NativeAuthoredDeviceTest {
         }
 
         fun submit(body: Float = .1f, point: Float = 0f) =
-            phone.submitNativeAuthored(body, point, now + 200, now + 30)
+            phone.submitNativeAuthored(nativeBodyWithGain(body), point, now + 200, now + 30)
         fun flush() {
             while (true) {
                 val index = callbacks.indexOfFirst { it.second <= now }
@@ -157,7 +157,7 @@ class NativeAuthoredDeviceTest {
 
     @Test fun silentHeartbeatsCannotKeepTheNativeTransportWarmIndefinitely() {
         Runtime().use { r ->
-            r.phone.submitNativeAuthored(0f, 0f, 0, 0, active = false); r.flush()
+            r.phone.submitNativeAuthored(NativeAuthoredBody.ZERO, 0f, 0, 0, active = false); r.flush()
             assertTrue(r.ordinary.isEmpty())
             assertTrue(r.warms.isEmpty())
             r.submit(body = 0f); r.flush()

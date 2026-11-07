@@ -89,7 +89,7 @@ class AuthoredOfflineCorpusTest {
                         // SoundPool quantization only: no claim about its waveform scheduling.
                         if ((oldGain.coerceIn(0f, 1f) / .6f * 8).roundToInt() > 0) oldSp++
                         if ((newGain.coerceIn(0f, 1f) / .6f * 8).roundToInt() > 0) newSp++
-                        before.renderer.render(0f, oldGain.coerceIn(0f, 1f), true)
+                        before.renderer.render(NativeAuthoredBody.ZERO, oldGain.coerceIn(0f, 1f), true)
                         after.renderer.render(continuous, newGain.coerceIn(0f, 1f), true)
                         soundPool.render(continuous, newGain.coerceIn(0f, 1f), true)
                     }

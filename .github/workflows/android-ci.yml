@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 60
     env:
       GITHUB_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID || secrets.OAUTH_CLIENT_ID }}
-      AUDIO_HAPTICS_SDK_REF: f87ab5cde8603dffa19b1c745fa84f452e026526 # 0.7.0 dev; durable tag pins/ds5-fidelity-20261107-r2
+      AUDIO_HAPTICS_SDK_REF: e334a247366555f067fd52d841bdc7ca858a777b # 0.7.0 dev; durable tag pins/ds5-fidelity-20261107-r3
       AUDIO_HAPTICS_SDK_DIR: ${{ github.workspace }}/.deps/moonlight-audio-haptics
     steps:
       - name: Checkout

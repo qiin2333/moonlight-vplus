@@ -109,10 +109,6 @@ internal class DeviceVibrationCoordinator(
     /** Points keep their source deadline and strength; continuous replacements are paced at 20ms.
      * Like the existing dispatcher, stalled hardware keeps the latest event rather than a backlog.
      */
-    fun submitNativeAuthored(body: Float, point: Float, expiresAtMs: Long,
-                             pointExpiresAtMs: Long, active: Boolean = true) =
-        submitNativeAuthored(NativeAuthoredBody.fromGain(body), point, expiresAtMs, pointExpiresAtMs, active)
-
     fun submitNativeAuthored(body: NativeAuthoredBody, point: Float, expiresAtMs: Long,
                              pointExpiresAtMs: Long, active: Boolean = true) {
         val command = synchronized(lock) {

@@ -12,8 +12,6 @@ internal interface NativeAuthoredHaptics {
      * Returns the elapsed-realtime deadline for restoring the background after a point.
      */
     fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long?
-    fun render(body: Float, point: Float, keepWarm: Boolean): Long? =
-        render(NativeAuthoredBody.fromGain(body), point, keepWarm)
     fun stop()
     fun close()
 
