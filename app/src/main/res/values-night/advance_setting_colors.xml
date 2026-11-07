@@ -5,7 +5,7 @@
     <color name="ui_shell_surface_elevated">#F223242B</color>
     <color name="ui_shell_surface_pressed">#3328323A</color>
     <color name="settings_drawer_background">#CC1A1A1A</color>
-    <color name="settings_drawer_background_landscape">#CC1A1A1A</color>
+    <color name="settings_group_surface">#4023242B</color>
     <color name="appview_quick_menu_background">#E61A1A1A</color>
     <color name="ui_shell_outline">#2EFFFFFF</color>
     <color name="ui_shell_outline_strong">#4DFFFFFF</color>
@@ -18,7 +18,8 @@
     <color name="ui_shell_accent">#FF8FA3</color>
     <color name="ui_shell_accent_soft">#33FF6B9D</color>
     <color name="ui_shell_accent_focus">#66FF6B9D</color>
-    <color name="settings_background_overlay">#B3333333</color>
+    <color name="settings_page_background">#FF18191F</color>
+    <color name="settings_background_overlay">#B31C1D24</color>
     <color name="pc_toolbar_menu_surface_start">#D923242B</color>
     <color name="pc_toolbar_menu_surface_center">#CC2B252E</color>
     <color name="pc_toolbar_menu_surface_end">#B81A1B21</color>

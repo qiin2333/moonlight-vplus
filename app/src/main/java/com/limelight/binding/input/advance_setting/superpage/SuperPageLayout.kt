@@ -30,6 +30,7 @@ open class SuperPageLayout : FrameLayout {
     private var disableTouch = false
     private var animator: ObjectAnimator? = null
     var lastPage: SuperPageLayout? = null
+    internal var fitToViewport = false
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)

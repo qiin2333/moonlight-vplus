@@ -326,10 +326,10 @@ class KeyboardKeyPickerControllerTest {
         val controller = AtomicReference<KeyboardKeyPickerController>()
         activityRule.scenario.onActivity { activity ->
             val container = FrameLayout(activity)
-            val page = LayoutInflater.from(activity)
-                .inflate(R.layout.page_device, container, false) as ViewGroup
-            val picker = page.findViewById<ViewGroup>(R.id.keyboard_drawing)
-            (picker.parent as ViewGroup).removeView(picker)
+            // These bounds cover the compact picker used in custom-key dialogs.
+            // Crown's picker now relies on DevicePickerLayout for its scrollable canvas.
+            val picker = LayoutInflater.from(activity)
+                .inflate(R.layout.keyboard_key_picker, container, false) as ViewGroup
             val density = activity.resources.displayMetrics.density
             container.addView(picker, FrameLayout.LayoutParams(
                 (widthDp * density).toInt(), (heightDp * density).toInt()

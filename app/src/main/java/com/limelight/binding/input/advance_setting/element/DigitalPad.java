@@ -521,7 +521,7 @@ public class DigitalPad extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                setElementLayer(seekBar.getProgress());
+                setElementLayer(layerNumberSeekbar.getValue());
                 save();
             }
         });

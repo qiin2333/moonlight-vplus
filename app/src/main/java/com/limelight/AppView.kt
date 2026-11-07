@@ -31,7 +31,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
 import android.widget.AbsListView
-import android.widget.CheckBox
+import androidx.appcompat.widget.SwitchCompat
+import com.limelight.utils.AppSwitchStyle
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -203,7 +204,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     private var appSettingsManager: AppSettingsManager? = null
     private lateinit var lastSettingsInfo: LinearLayout
     private lateinit var lastSettingsText: TextView
-    private lateinit var useLastSettingsCheckbox: CheckBox
+    private lateinit var useLastSettingsSwitch: SwitchCompat
     private lateinit var appViewTargetReminder: TextView
 
     // ==================== UI 组件 - 顶部下拉面板 & 显示器选择 ====================
@@ -307,6 +308,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        if (::useLastSettingsSwitch.isInitialized) AppSwitchStyle.apply(useLastSettingsSwitch)
         applyTitleTextResources()
         refreshTitle()
         findViewById<View>(R.id.appListText).post { refreshTitleColor() }
@@ -474,7 +476,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         appSettingsManager = AppSettingsManager(this)
         lastSettingsInfo = findViewById(R.id.lastSettingsInfo)
         lastSettingsText = findViewById(R.id.lastSettingsText)
-        useLastSettingsCheckbox = findViewById(R.id.useLastSettingsCheckbox)
+        useLastSettingsSwitch = findViewById(R.id.useLastSettingsSwitch)
+        AppSwitchStyle.apply(useLastSettingsSwitch)
         appViewTargetReminder = findViewById(R.id.appViewTargetReminder)
 
         // Initialize top dropdown panel
@@ -514,7 +517,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         refreshScreenCombinationModeFromPreferences()
 
         // Set up event listeners
-        useLastSettingsCheckbox.setOnCheckedChangeListener { _, isChecked -> appSettingsManager?.setUseLastSettingsEnabled(isChecked) }
+        useLastSettingsSwitch.setOnCheckedChangeListener { _, isChecked -> appSettingsManager?.setUseLastSettingsEnabled(isChecked) }
 
         // Initialize selection indicator animator
         val selectionIndicator = findViewById<View>(R.id.selectionIndicator)
@@ -996,10 +999,10 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             lastSettingsText.text = displayText
             lastSettingsInfo.visibility = View.VISIBLE
 
-            // 同步复选框状态(避免不必要的更新)
+            // 同步开关状态，避免不必要的更新。
             val useLastSettings = appSettingsManager?.isUseLastSettingsEnabled
-            if (useLastSettingsCheckbox.isChecked != (useLastSettings == true)) {
-                useLastSettingsCheckbox.isChecked = useLastSettings == true
+            if (useLastSettingsSwitch.isChecked != (useLastSettings == true)) {
+                useLastSettingsSwitch.isChecked = useLastSettings == true
             }
         } else {
             lastSettingsInfo.visibility = View.GONE

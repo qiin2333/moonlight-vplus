@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.preference.PreferenceManager
+import com.limelight.utils.AppSlider
 import com.limelight.R
 import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.utils.UiHelper
@@ -121,7 +121,7 @@ class ControllerMouseSettingsActivity : ThemedAppCompatActivity() {
                                         color = colors.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall,
                                     )
-                                    Slider(
+                                    AppSlider(
                                         value = speed.toFloat(),
                                         onValueChange = { speed = ((it / 10).roundToInt() * 10).coerceIn(50, 200) },
                                         onValueChangeFinished = {

@@ -40,6 +40,7 @@ class KeyboardUIControllerTouchTest {
                 }
 
                 override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+                override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
             }
             KeyboardUIController(parent, listener, activity).show()
             activity.setContentView(parent)
@@ -162,5 +163,6 @@ class KeyboardUIControllerTouchTest {
         override fun sendKeyEvent(down: Boolean, keyCode: Short) = Unit
 
         override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+        override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
     }
 }

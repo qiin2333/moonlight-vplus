@@ -69,10 +69,9 @@
                         android:text="@string/layout_page_group_button_text_b19b4"
                         android:textSize="13sp"
                         android:textColor="#CCFFFFFF"/>
-                    <Switch
-                        android:id="@+id/page_group_button_hidden_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
+                        android:id="@+id/page_group_button_hidden_switch"/>
                 </LinearLayout>
                 
                 <!-- 普通模式可移动 -->
@@ -89,10 +88,9 @@
                         android:text="@string/layout_page_group_button_text_f57fc"
                         android:textSize="13sp"
                         android:textColor="#CCFFFFFF"/>
-                    <Switch
-                        android:id="@+id/page_group_button_movable_in_normal_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
+                        android:id="@+id/page_group_button_movable_in_normal_switch"/>
                 </LinearLayout>
                 
                 <!-- 覆盖父级 -->
@@ -108,10 +106,9 @@
                         android:text="@string/layout_page_group_button_text_7bc0a"
                         android:textSize="13sp"
                         android:textColor="#CCFFFFFF"/>
-                    <Switch
-                        android:id="@+id/page_group_button_override_parent_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
+                        android:id="@+id/page_group_button_override_parent_switch"/>
                 </LinearLayout>
             </LinearLayout>
             
@@ -134,10 +131,10 @@
                     android:layout_marginBottom="10dp"/>
                 
                 <!-- 子元素可见 -->
-                <CheckBox
+                <com.limelight.utils.AppSwitchView
+                    style="@style/AppSwitchWidget"
                     android:id="@+id/page_group_button_child_visible"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:text="@string/layout_page_group_button_text_1eb1a"
                     android:textSize="13sp"
                     android:textColor="#CCFFFFFF"
@@ -169,10 +166,10 @@
                 </LinearLayout>
                 
                 <!-- 子元素位置跟随 -->
-                <CheckBox
+                <com.limelight.utils.AppSwitchView
+                    style="@style/AppSwitchWidget"
                     android:id="@+id/page_group_button_child_position_attribute_follow"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:text="@string/layout_page_group_button_text_42edc"
                     android:textSize="13sp"
                     android:textColor="#CCFFFFFF"
@@ -218,10 +215,10 @@
                     app:progress="100" />
                 
                 <!-- 子元素其他属性跟随 -->
-                <CheckBox
+                <com.limelight.utils.AppSwitchView
+                    style="@style/AppSwitchWidget"
                     android:id="@+id/page_group_button_child_other_attribute_follow"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:text="@string/layout_page_group_button_text_63921"
                     android:textSize="13sp"
                     android:textColor="#CCFFFFFF"

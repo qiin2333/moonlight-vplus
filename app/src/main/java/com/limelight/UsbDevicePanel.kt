@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.limelight.utils.AppActionSheet
+import com.limelight.utils.AppSwitch
 import com.limelight.usbip.UsbIpBackend
 
 /** One row: its own share state, its own progress, its own status line. */
@@ -222,7 +223,7 @@ private fun UsbSharingToggle(forwardingEnabled: Boolean, busy: Boolean, initialF
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val enabled = !busy || forwardingEnabled
-    Row(Modifier.fillMaxWidth().focusRequester(initialFocus)
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(initialFocus)
         .onGloballyPositioned { onPlaced() }
         .border(if (focused) 2.dp else 0.dp,
             if (focused) accent else Color.Transparent,
@@ -245,8 +246,7 @@ private fun UsbSharingToggle(forwardingEnabled: Boolean, busy: Boolean, initialF
         Text(stringResource(if (forwardingEnabled) R.string.usb_forward_on else R.string.usb_forward_off),
             style = MaterialTheme.typography.labelLarge, color = accent)
         Spacer(Modifier.width(12.dp))
-        Switch(checked = forwardingEnabled, onCheckedChange = null, enabled = enabled,
-            colors = SwitchDefaults.colors(checkedTrackColor = accent, checkedThumbColor = Color.White))
+        AppSwitch(checked = forwardingEnabled, onCheckedChange = null, enabled = enabled)
     }
 }
 
@@ -255,7 +255,7 @@ private fun UsbAutoSharingToggle(checked: Boolean, typeRule: Boolean, enabled: B
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val accent = usbPanelAccent()
-    Row(Modifier.fillMaxWidth()
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
         .border(if (focused) 2.dp else 0.dp, if (focused) accent else Color.Transparent, RoundedCornerShape(12.dp))
         .onPreviewKeyEvent { event ->
             val key = event.nativeKeyEvent
@@ -264,16 +264,16 @@ private fun UsbAutoSharingToggle(checked: Boolean, typeRule: Boolean, enabled: B
                 true
             } else false
         }
-        .toggleable(checked, interaction, null, enabled, Role.Checkbox, onChange)
+        .toggleable(checked, interaction, null, enabled, Role.Switch, onChange)
         .padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked, onCheckedChange = null, enabled = enabled)
-        Spacer(Modifier.width(8.dp))
-        Column {
+        Column(Modifier.weight(1f)) {
             Text(stringResource(R.string.usb_forward_auto_title), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface)
             if (checked && typeRule) Text(stringResource(R.string.usb_forward_auto_type_hint),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Spacer(Modifier.width(12.dp))
+        AppSwitch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 

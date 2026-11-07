@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_reset_settings">恢復預設設定</string>
+    <string name="summary_reset_settings">重設偏好與記住的串流參數，保留電腦配對、授權和已儲存的自訂設定。</string>
+    <string name="message_reset_settings">恢復畫面、音訊、輸入、外觀和控制項位置的預設設定，並清除各遊戲記住的上次串流參數？\n\n將保留電腦配對、授權和已儲存的自訂設定，取消自訂設定的目前選擇，並關閉背景同步。下次串流使用預設設定。</string>
+    <string name="action_reset_settings">恢復預設</string>
+    <string name="message_reset_settings_running">正在恢復預設設定…如有設定同步正在執行，將等待其完成。</string>
+    <string name="message_reset_settings_failed">無法完成恢復預設設定，部分設定可能已變更，請重試。</string>
+    <string name="toast_reset_settings_success">已恢復預設設定，背景同步已關閉。</string>
+</resources>

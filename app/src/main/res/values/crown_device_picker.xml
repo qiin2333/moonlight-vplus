@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_device_actions">Actions</string>
+    <string name="crown_device_keyboard">Keyboard</string>
+    <string name="crown_device_mouse">Mouse</string>
+    <string name="crown_device_gamepad">Gamepad</string>
+</resources>

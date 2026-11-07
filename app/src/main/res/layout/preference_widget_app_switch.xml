@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.limelight.utils.AppSwitchView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/SettingsSwitchWidget"
+    android:id="@android:id/checkbox" />

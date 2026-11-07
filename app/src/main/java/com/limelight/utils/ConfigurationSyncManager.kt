@@ -47,6 +47,7 @@ import java.util.Arrays
 import java.util.Base64 as JavaBase64
 import java.util.TreeSet
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -54,6 +55,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+import kotlinx.coroutines.delay
 
 class ConfigurationSyncManager(private val context: Context) {
 
@@ -179,29 +181,7 @@ class ConfigurationSyncManager(private val context: Context) {
     fun exportSyncPackage(): String {
         // Materialize implicit defaults so restoring a fresh-install backup replaces a later list too.
         CustomResolutionsStore.load(context)
-        val sections = JSONObject()
-            .put(
-                SECTION_DEFAULT_PREFERENCES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_DEFAULT_PREFERENCES,
-                        PreferenceManager.getDefaultSharedPreferences(context),
-                        PORTABLE_DEFAULT_PREF_KEYS
-                    )
-                )
-            )
-            .put(
-                SECTION_APP_LAST_SETTINGS,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_APP_LAST_SETTINGS,
-                        context.getSharedPreferences(APP_LAST_SETTINGS_PREFS, Context.MODE_PRIVATE),
-                        null
-                    )
-                )
-            )
+        val sections = encodeResettablePreferenceSections()
             .put(
                 SECTION_CUSTOM_RESOLUTIONS,
                 JSONObject().put(
@@ -225,17 +205,6 @@ class ConfigurationSyncManager(private val context: Context) {
                 )
             )
             .put(
-                SECTION_APP_VIEW_PREFERENCES,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_APP_VIEW_PREFERENCES,
-                        context.getSharedPreferences(APP_VIEW_PREFS, Context.MODE_PRIVATE),
-                        APP_VIEW_PREF_KEYS
-                    )
-                )
-            )
-            .put(
                 SECTION_HIDDEN_APPS,
                 JSONObject().put(
                     KEY_VALUES,
@@ -243,17 +212,6 @@ class ConfigurationSyncManager(private val context: Context) {
                         SECTION_HIDDEN_APPS,
                         context.getSharedPreferences(HIDDEN_APPS_PREFS, Context.MODE_PRIVATE),
                         null
-                    )
-                )
-            )
-            .put(
-                SECTION_OSC_SETTINGS_BUTTON,
-                JSONObject().put(
-                    KEY_VALUES,
-                    encodePreferences(
-                        SECTION_OSC_SETTINGS_BUTTON,
-                        context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
-                        OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS
                     )
                 )
             )
@@ -278,11 +236,6 @@ class ConfigurationSyncManager(private val context: Context) {
                     encodeTouchPointerPresetPreferences()
                 )
             )
-            .put(SECTION_TOUCHPAD_INPUT, JSONObject().put(KEY_VALUES, encodePreferences(
-                SECTION_TOUCHPAD_INPUT,
-                context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
-                TouchpadInputPreferences.PORTABLE_KEYS
-            )))
             .put(SECTION_TOUCHPAD_PRESETS, JSONObject().put(KEY_VALUES, encodePreferences(
                 SECTION_TOUCHPAD_PRESETS,
                 context.getSharedPreferences(TouchpadInputPreferences.PRESETS_FILE_NAME, Context.MODE_PRIVATE),
@@ -290,7 +243,6 @@ class ConfigurationSyncManager(private val context: Context) {
             )))
             .put(SECTION_CROWN_PROFILES, exportCrownProfiles())
             .put(SECTION_PAIRING, exportPairingState())
-
         return buildSyncPackage(sections)
     }
 
@@ -542,6 +494,7 @@ class ConfigurationSyncManager(private val context: Context) {
             )
     }
 
+    /** Rechecks enablement under the process lock; returns null when another mutation holds it. */
     internal fun trySynchronizeWithExternalSnapshot(): AutoSyncResult? {
         if (!isExternalSnapshotEnabled(context)) {
             return AutoSyncResult(
@@ -567,8 +520,62 @@ class ConfigurationSyncManager(private val context: Context) {
         } ?: return null
 
         processLock.use {
+            // A reset may have disabled sync after the optimistic check above, while this
+            // invocation was waiting to acquire the same lock.
+            if (!isExternalSnapshotEnabled(context)) {
+                return AutoSyncResult(false, false, false, false, "")
+            }
             return synchronizeWithExternalSnapshotLocked()
         }
+    }
+
+    /** Called on IO; [lockTimeoutMillis] bounds lock acquisition, while the action runs to completion. */
+    internal suspend fun withExclusiveSettingsMutation(
+        lockTimeoutMillis: Long = 30_000L,
+        action: () -> Unit
+    ) {
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(lockTimeoutMillis)
+        var lock = acquireProcessSyncLock()
+        while (lock == null) {
+            if (System.nanoTime() - deadline >= 0L) {
+                throw IOException("Configuration sync is still busy; retry restoring defaults")
+            }
+            delay(25L)
+            lock = acquireProcessSyncLock()
+        }
+        lock.use { action() }
+    }
+
+    /** Stamp only stores affected by reset. Do not export/import pairing or saved libraries. */
+    internal fun trackResettablePreferences() {
+        val state = context.getSharedPreferences(SYNC_VALUE_STATE_PREFS, Context.MODE_PRIVATE)
+        val latest = state.all.filterKeys { it.endsWith(".updatedAt") }
+            .values.filterIsInstance<Long>().maxOrNull() ?: 0L
+        val changedAt = maxOf(System.currentTimeMillis(), latest + 1L)
+        encodeResettablePreferenceSections(changedAt)
+        // Also wait for the preceding apply() calls before reporting a durable reset.
+        if (!state.edit().commit()) throw IOException("Unable to save settings reset sync history")
+    }
+
+    /** The same settings sections are used for backups and reset deletion tracking. */
+    private fun encodeResettablePreferenceSections(now: Long = System.currentTimeMillis()): JSONObject {
+        val sections = JSONObject()
+        fun addPreferences(section: String, preferences: SharedPreferences, keys: Set<String>?) {
+            sections.put(section, JSONObject().put(KEY_VALUES, encodePreferences(section, preferences, keys, now)))
+        }
+        addPreferences(SECTION_DEFAULT_PREFERENCES,
+            PreferenceManager.getDefaultSharedPreferences(context), PORTABLE_DEFAULT_PREF_KEYS)
+        addPreferences(SECTION_APP_LAST_SETTINGS,
+            context.getSharedPreferences(APP_LAST_SETTINGS_PREFS, Context.MODE_PRIVATE), null)
+        addPreferences(SECTION_APP_VIEW_PREFERENCES,
+            context.getSharedPreferences(APP_VIEW_PREFS, Context.MODE_PRIVATE), APP_VIEW_PREF_KEYS)
+        addPreferences(SECTION_OSC_SETTINGS_BUTTON,
+            context.getSharedPreferences(OscSettingsButtonStore.PREFERENCES_NAME, Context.MODE_PRIVATE),
+            OscSettingsButtonStore.PORTABLE_PREFERENCE_KEYS)
+        addPreferences(SECTION_TOUCHPAD_INPUT,
+            context.getSharedPreferences(TouchpadInputPreferences.FILE_NAME, Context.MODE_PRIVATE),
+            TouchpadInputPreferences.PORTABLE_KEYS)
+        return sections
     }
 
     private fun synchronizeWithExternalSnapshotLocked(): AutoSyncResult {
@@ -1127,16 +1134,20 @@ class ConfigurationSyncManager(private val context: Context) {
         return digest.joinToString(separator = "") { "%02x".format(it) }
     }
 
+    /**
+     * Encodes allowed live and previously tracked keys, recording deletion markers and sync metadata.
+     * Unchanged values keep their timestamps; changed values and new deletions are stamped with [now].
+     */
     private fun encodePreferences(
         sectionName: String,
         prefs: SharedPreferences,
-        allowedKeys: Set<String>?
+        allowedKeys: Set<String>?,
+        now: Long = System.currentTimeMillis()
     ): JSONObject {
         val output = JSONObject()
         val currentValues = prefs.all
         val statePrefs = context.getSharedPreferences(SYNC_VALUE_STATE_PREFS, Context.MODE_PRIVATE)
         val stateEditor = statePrefs.edit()
-        val now = System.currentTimeMillis()
         val localDeviceId = deviceId()
         val trackedKeysStateKey = trackedKeysStateKey(sectionName)
         val trackedKeys = TreeSet(

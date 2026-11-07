@@ -4,9 +4,9 @@ import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.preferences.MicrophoneInitialState
+import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.utils.Dialog
@@ -15,8 +15,8 @@ import com.limelight.utils.ShortcutHelper
 import com.limelight.utils.UiHelper
 
 /**
- * NvConnectionListener 回调实现和连接停止逻辑。
- * 从 Game.java 提取，处理连接阶段通知、连接成功/失败/断开、网络质量更新。
+ * Handles connection notifications, errors, and network-quality presentation.
+ * Game owns connection-state changes and coordinates stopConnection() cleanup.
  */
 class ConnectionCallbackHandler(private val game: Game) {
 
@@ -32,7 +32,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         // no-op
     }
 
-    fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
+    fun stageFailed(stage: String, portFlags: Int, errorCode: Int, connection: NvConnection) {
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         val portTestResult = MoonBridge.testClientConnectivity(
@@ -40,6 +40,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         )
 
         game.runOnUiThread {
+            if (game.conn !== connection || game.isFinishing || game.isDestroyed) return@runOnUiThread
             game.progressOverlay?.dismiss()
             game.progressOverlay = null
 
@@ -75,7 +76,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         }
     }
 
-    fun connectionTerminated(errorCode: Int) {
+    fun connectionTerminated(errorCode: Int, connection: NvConnection) {
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         val portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode)
@@ -84,6 +85,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         )
 
         game.runOnUiThread {
+            if (game.conn !== connection || game.isFinishing || game.isDestroyed) return@runOnUiThread
             // Let the display go to sleep now
             game.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -101,7 +103,6 @@ class ConnectionCallbackHandler(private val game: Game) {
             if (!game.displayedFailureDialog) {
                 game.displayedFailureDialog = true
                 LimeLog.severe("Connection terminated: $errorCode")
-                stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
@@ -170,6 +171,7 @@ class ConnectionCallbackHandler(private val game: Game) {
         }
     }
 
+    /** Called on the UI thread after Game accepts the current connection's startup. */
     fun connectionStarted() {
         game.runOnUiThread {
             // 不在此处 dismiss progressOverlay：connectionStarted 是连接级回调，
@@ -186,14 +188,11 @@ class ConnectionCallbackHandler(private val game: Game) {
                 }, 5000)
             }
 
-            game.connected = true
-            game.orientationManager.connected = true
-            game.connecting = false
-            game.updatePipAutoEnter()
-
             // Hide the mouse cursor now after a short delay.
             val h = Handler(Looper.getMainLooper())
+            val startedConnection = game.conn
             h.postDelayed({
+                if (game.conn !== startedConnection || !game.connected) return@postDelayed
                 if (game.prefConfig.enableNativeMousePointer) {
                     game.enableNativeMousePointer(true)
                 } else {
@@ -211,24 +210,24 @@ class ConnectionCallbackHandler(private val game: Game) {
 
             game.screenDs5Touchpad.onStreamStarted()
 
-            // 连接一开始就启动保活服务
-            val prefs = PreferenceManager.getDefaultSharedPreferences(game)
-            val isResumeEnabled = prefs.getBoolean("checkbox_resume_stream", false)
-            if (isResumeEnabled) game.showKeepAliveNotification()
+            // Ask for permissions while visible; onStop() only starts the service.
+            game.prepareKeepAliveNotification()
 
             // Cursor negotiation also updates Android views and main-thread timeout state.
             game.cursorServiceManager.onConnectionStarted()
         }
 
-        // Report this shortcut being used (off the main thread to prevent ANRs)
-        val computer = ComputerDetails()
-        computer.name = game.pcName
-        computer.uuid = game.intent.getStringExtra(Game.EXTRA_PC_UUID)
-        val shortcutHelper = ShortcutHelper(game)
-        shortcutHelper.reportComputerShortcutUsed(computer)
-        if (game.appName != null) {
-            shortcutHelper.reportGameLaunched(computer, game.app!!)
-        }
+        // Reporting shortcuts can perform binder/disk I/O; keep it off the UI thread.
+        Thread {
+            val computer = ComputerDetails()
+            computer.name = game.pcName
+            computer.uuid = game.intent.getStringExtra(Game.EXTRA_PC_UUID)
+            val shortcutHelper = ShortcutHelper(game)
+            shortcutHelper.reportComputerShortcutUsed(computer)
+            if (game.appName != null) {
+                shortcutHelper.reportGameLaunched(computer, game.app!!)
+            }
+        }.start()
 
         // Prepare the output pipeline when HDR is expected. This is intentionally separate from
         // the host setHdrMode callback so diagnostics don't claim HDR before the stream activates.
@@ -287,56 +286,5 @@ class ConnectionCallbackHandler(private val game: Game) {
 
         // 2. 启动智能码率（如设置已开启）
         game.startAdaptiveBitrateIfEnabled()
-    }
-
-    /**
-     * 停止连接并清理相关资源。
-     */
-    fun stopConnection() {
-        val connection = game.conn
-        connection?.requestStop()
-
-        // 重置尝试连接标志。
-        game.attemptedConnection = false
-
-        game.cancelKeepAliveNotification()
-        game.stopAudioHapticsForStream()
-
-        if (game.connecting || game.connected) {
-            game.connecting = false
-            game.connected = false
-            game.orientationManager.connected = false
-            game.updatePipAutoEnter()
-
-            // 停止智能码率
-            game.stopAdaptiveBitrate()
-
-            // 停止智能码率
-            game.stopAdaptiveBitrate()
-
-            game.controllerHandler?.stop()
-
-            // 停止并释放 USB 控制器接管
-            game.usbDriverServiceManager?.stopAndUnbind()
-
-            // 停止麦克风流
-            game.microphoneManager?.stopMicrophoneStream()
-
-            // Update GameManager state to indicate we're no longer in game
-            UiHelper.notifyStreamEnded(game)
-
-            // Save current settings for this app before stopping connection
-            val uuid = game.computerUuid
-            if (uuid != null) {
-                game.appSettingsManager?.saveAppLastSettings(uuid, game.app, game.prefConfig)
-            }
-
-            // Restore host-composited cursor mode before native control-stream teardown.
-            game.cursorServiceManager.stopService()
-        }
-
-        // A pending startup also needs teardown, even before connectionStarted().
-        // Native shutdown remains off the UI thread.
-        if (connection != null) Thread { connection.stop() }.start()
     }
 }

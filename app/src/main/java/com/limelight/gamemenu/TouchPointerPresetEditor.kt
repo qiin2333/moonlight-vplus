@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
+import com.limelight.utils.AppSliderView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -197,7 +198,7 @@ internal object TouchPointerPresetEditor {
                     setTextColor(secondaryTextColor)
                     gravity = Gravity.CENTER_VERTICAL or Gravity.END
                 }
-                val seekBar = SeekBar(dialogContext).apply {
+                val seekBar = AppSliderView(dialogContext).apply {
                     id = View.generateViewId()
                     max = spec.max - spec.min
                     progress = initialValue - spec.min

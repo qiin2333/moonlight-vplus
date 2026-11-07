@@ -92,7 +92,7 @@
             android:textColor="@color/app_dialog_text_secondary"
             android:textSize="14sp"
             android:layout_marginEnd="8dp"/>
-        <SeekBar
+        <com.limelight.utils.AppSliderView
             android:id="@+id/seek_bar_duration"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -100,8 +100,6 @@
             android:max="30"
             android:progress="5"
             android:min="1"
-            android:thumbTint="?attr/appAccent"
-            android:progressTint="?attr/appAccent"
             android:layout_marginEnd="8dp"/>
         <TextView
             android:id="@+id/text_view_duration_value"
@@ -114,7 +112,7 @@
             android:gravity="end"/>
     </LinearLayout>
 
-    <!-- 端口和UDP复选框  -->
+    <!-- 端口 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -141,13 +139,33 @@
             android:textCursorDrawable="@null"
             android:maxLength="5"
             android:layout_marginEnd="8dp"/>
-        <CheckBox
-            android:id="@+id/checkbox_udp"
+        <RadioGroup
+            android:id="@+id/radio_group_protocol"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="UDP"
-            android:textColor="@color/app_dialog_text_primary"
-            android:buttonTint="?attr/appAccent"/>
+            android:orientation="horizontal"
+            android:checkedButton="@+id/radio_iperf_tcp">
+            <RadioButton
+                android:id="@id/radio_iperf_tcp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:textSize="14sp"
+                android:text="TCP"
+                android:textColor="@color/app_dialog_text_primary"
+                android:button="@drawable/app_dialog_radio_button" />
+            <RadioButton
+                android:id="@+id/radio_iperf_udp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:minWidth="0dp"
+                android:textSize="14sp"
+                android:text="UDP"
+                android:textColor="@color/app_dialog_text_primary"
+                android:button="@drawable/app_dialog_radio_button" />
+        </RadioGroup>
     </LinearLayout>
 
     <!-- UDP 带宽设置  -->

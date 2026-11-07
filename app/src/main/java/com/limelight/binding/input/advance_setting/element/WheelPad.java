@@ -23,7 +23,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -735,9 +734,9 @@ public class WheelPad extends Element {
 
         // Find all views
         ElementEditText centerTextInput = wheelPadPage.findViewById(R.id.page_wheel_pad_center_text);
-        final Switch popupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_at_center_switch);
+        final SwitchCompat popupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_at_center_switch);
 
-        final Switch previewGroupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_preview_group_switch);
+        final SwitchCompat previewGroupSwitch = wheelPadPage.findViewById(R.id.page_wheel_pad_preview_group_switch);
 
         final LinearLayout popupOptionsContainer = wheelPadPage.findViewById(R.id.page_wheel_pad_popup_options_container);
 
@@ -1095,7 +1094,7 @@ public class WheelPad extends Element {
 
             @Override
             public void onStopTrackingTouch(SeekBar s) {
-                setElementLayer(s.getProgress());
+                setElementLayer(layer.getValue());
                 save();
             }
         });

@@ -128,6 +128,35 @@ object UiHelper {
         interruptible = false
     )
 
+    /** Remove both the legacy locale override and Android 13's system-managed app locale. */
+    fun resetLocale(activity: Activity): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val manager = activity.getSystemService(LocaleManager::class.java)
+            val changed = !manager.applicationLocales.isEmpty
+            manager.applicationLocales = LocaleList.getEmptyLocaleList()
+            return changed
+        } else {
+            val system = android.content.res.Resources.getSystem().configuration
+            val configuration = Configuration(activity.resources.configuration)
+            val changed: Boolean
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                changed = configuration.locales != system.locales
+                configuration.setLocales(system.locales)
+            } else {
+                changed = configuration.locale != system.locale
+                @Suppress("DEPRECATION")
+                configuration.locale = system.locale
+            }
+            @Suppress("DEPRECATION")
+            activity.resources.updateConfiguration(configuration, activity.resources.displayMetrics)
+            @Suppress("DEPRECATION")
+            activity.applicationContext.resources.updateConfiguration(
+                configuration, activity.applicationContext.resources.displayMetrics
+            )
+            return changed
+        }
+    }
+
     fun setLocale(activity: Activity) {
         val locale = PreferenceConfiguration.readPreferences(activity).language
         if (locale != PreferenceConfiguration.DEFAULT_LANGUAGE) {

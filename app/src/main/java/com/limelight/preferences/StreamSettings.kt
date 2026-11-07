@@ -14,7 +14,6 @@ import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
@@ -74,7 +73,6 @@ import androidx.recyclerview.widget.RecyclerView
 
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
-import com.bumptech.glide.load.MultiTransformation
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestOptions
@@ -124,7 +122,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import jp.wasabeef.glide.transformations.BlurTransformation
-import jp.wasabeef.glide.transformations.ColorFilterTransformation
 
 import java.io.File
 import java.io.IOException
@@ -238,6 +235,24 @@ class StreamSettings : ThemedAppCompatActivity() {
         supportFragmentManager.beginTransaction().replace(
                 R.id.preference_container, SettingsFragment().apply { arguments = navigation }
         ).commitAllowingStateLoss()
+    }
+
+    /** Reapplies presentation after reset and rebuilds the home screen for legacy locale changes. */
+    internal fun onSettingsReset() {
+        val languageChanged = UiHelper.resetLocale(this)
+        BackgroundSource.invalidateResolvedTarget()
+        sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH).setPackage(packageName))
+        AppTheme.applyStoredAppTheme(this)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && languageChanged) {
+            // Rebuild the home screen too, matching the existing legacy language-change flow.
+            startActivities(arrayOf(
+                Intent(this, PcView::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+                Intent(this, StreamSettings::class.java)
+            ))
+            finish()
+        } else {
+            recreate()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -377,13 +392,19 @@ class StreamSettings : ThemedAppCompatActivity() {
             androidx.core.graphics.ColorUtils.setAlphaComponent(UiHelper.accentColor(this), 69))
     }
 
+    /** Refreshes settings surfaces and system icon contrast for in-place theme changes. */
     private fun applySettingsThemeSurfaces() {
+        findViewById<View>(R.id.settingsBackgroundImage)?.setBackgroundColor(
+                ContextCompat.getColor(this, R.color.settings_page_background)
+        )
         findViewById<View>(R.id.settingsBackgroundOverlay)?.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.settings_background_overlay)
         )
-        // 横屏侧栏背景在布局创建时解析。深浅切换不重建 Activity，需要按当前主题重设。
+        // 竖屏抽屉覆盖内容，需要比并排显示的横屏侧栏更实的底色。
         findViewById<View>(R.id.drawer_menu)?.setBackgroundColor(
-                ContextCompat.getColor(this, R.color.settings_drawer_background_landscape)
+                ContextCompat.getColor(this,
+                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+                        R.color.settings_group_surface else R.color.settings_drawer_background)
         )
         findViewById<ImageView>(R.id.settings_back)?.setColorFilter(
                 ContextCompat.getColor(this, R.color.ui_shell_text_primary)
@@ -1197,6 +1218,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
         private val configSyncPreferenceChangeListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (SettingsResetManager.isResetting) return@OnSharedPreferenceChangeListener
                 refreshSettingsPresentation(key)
                 if (!suppressConfigSyncPreferenceChanges) {
                     handleConfigSyncPreferenceChanged(key)
@@ -2043,7 +2065,14 @@ class StreamSettings : ThemedAppCompatActivity() {
                 ?: throw IOException("Unable to open output stream")
         }
 
+        /** Binds backup, sync and reset actions, then refreshes their directory and status summaries. */
         private fun setupConfigSyncPreferences() {
+            findPreference<Preference>(ResetSettingsDialogFragment.TAG)?.setOnPreferenceClickListener {
+                if (parentFragmentManager.findFragmentByTag(ResetSettingsDialogFragment.TAG) == null) {
+                    ResetSettingsDialogFragment().showNow(parentFragmentManager, ResetSettingsDialogFragment.TAG)
+                }
+                true
+            }
             findPreference<Preference>("config_sync_export")?.setOnPreferenceClickListener {
                 exportConfigSyncPackage()
                 true
@@ -3065,6 +3094,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 else SettingsPreferenceAdapter(preferenceScreen)
         }
 
+        /** Initializes device defaults and binds the preference schema while restoring navigation. */
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             val navigation = savedInstanceState ?: arguments
             activeSettingsScreenKey = navigation?.getString(DETAIL_SCREEN)
@@ -3076,16 +3106,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             // 添加阴影主题
             AppTheme.applyStyle(requireActivity(), R.style.PreferenceThemeWithShadow)
 
-            MicrophoneButtonPreferences(requireContext()).migrateLegacyVisibilityIfNeeded()
-            initializeTouchModeDefaultsIfNeeded()
-            val bitratePrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            if (!bitratePrefs.contains(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING)) {
-                val recommended = PreferenceConfiguration.getDefaultBitrate(requireContext())
-                bitratePrefs.edit {
-                    putBoolean(PreferenceConfiguration.AUTO_ADJUST_BITRATE_PREF_STRING,
-                        bitratePrefs.getInt(PreferenceConfiguration.BITRATE_PREF_STRING, recommended) == recommended)
-                }
-            }
+            PreferenceConfiguration.initializeDeviceDefaults(requireContext())
             setPreferencesFromResource(R.xml.preferences, null)
             val screen = preferenceScreen
             replaceSearchableCategories(screen)
@@ -3544,13 +3565,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .showStyled()
-        }
-
-        private fun initializeTouchModeDefaultsIfNeeded() {
-            val context = requireContext()
-            modeStore.ensureTouchDefaults(
-                context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
-            )
         }
 
         override fun onRequestPermissionsResult(
@@ -4871,21 +4885,12 @@ class StreamSettings : ThemedAppCompatActivity() {
         }
         val (width, height) = size
 
-        // 模糊 + theme-aware 蒙版，单次解码完成（合并到一个 Glide pipeline）
+        // Theme tint comes from the shared full-page overlay, including detail pages.
         // 强制 RGB_565：每像素 2 字节，整张图内存减半，模糊背景视觉无损
-        val filterColor = if (isNightMode()) {
-            Color.argb(120, 0, 0, 0)
-        } else {
-            Color.argb(96, 255, 255, 255)
-        }
-        val transformations = MultiTransformation<Bitmap>(
-                BlurTransformation(2, 3),
-                ColorFilterTransformation(filterColor)
-        )
         val options = RequestOptions()
                 .override(width, height)
                 .format(DecodeFormat.PREFER_RGB_565)
-                .transform(transformations)
+                .transform(BlurTransformation(2, 3))
                 .signature(ObjectKey(resolved.cacheKey))
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
 

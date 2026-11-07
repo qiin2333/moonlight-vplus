@@ -46,15 +46,12 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/page_edit_drag_edit_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:checked="true"
                         android:textOff=""
-                        android:textOn=""
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:textOn="" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -73,15 +70,12 @@
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
-                    <Switch
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
                         android:id="@+id/page_edit_alignment_snap_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:checked="true"
                         android:textOff=""
-                        android:textOn=""
-                        android:thumbTint="@color/crown_switch_thumb"
-                        android:trackTint="@color/crown_switch_track" />
+                        android:textOn="" />
                 </LinearLayout>
 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar

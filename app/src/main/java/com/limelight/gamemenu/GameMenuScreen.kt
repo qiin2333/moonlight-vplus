@@ -102,7 +102,6 @@ import androidx.compose.ui.semantics.testTag as semanticsTestTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -161,10 +160,6 @@ private object GameMenuFabricSpec {
 
 internal object GameMenuSliderSpec {
     val height = 36.dp
-    val thumbSize = DpSize(width = 3.dp, height = 34.dp)
-    val trackHeight = 12.dp
-    val thumbTrackGap = 4.dp
-    val trackInsideCorner = 1.5.dp
 }
 
 private data class GameMenuPalette(
