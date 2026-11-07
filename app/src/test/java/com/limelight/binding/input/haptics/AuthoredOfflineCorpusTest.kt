@@ -22,12 +22,12 @@ class AuthoredOfflineCorpusTest {
         var bodies = 0
         var updates = 0
         var frequency = 0
-        var gain = 0
+        var active = false
         val renderer = RichTapAuthoredHaptics({ raw, _ ->
+            active = true
             if (raw[8] == 4097 || raw[8] == 4096 && raw[15] == 5) points++ else bodies++
             frequency = raw[13]
-            if (raw[8] == 4096) gain = if (raw[15] == 5) raw[23] else 100
-        }, {}, { now }, 1, { updates++ })
+        }, { active = false }, { now }, 1, { updates++ })
         fun resetCounts() { points = 0; bodies = 0; updates = 0 }
     }
 
@@ -43,9 +43,13 @@ class AuthoredOfflineCorpusTest {
             val after = Sink()
             var spNow = 0L
             val spAssets = mutableListOf<SoundPoolAuthoredPlayback.Asset>()
-            val soundPool = SoundPoolAuthoredPlayback({ spAssets += it; spAssets.size }, {}, { spNow })
+            var spCurrent: Pair<Int, SoundPoolAuthoredPlayback.Asset>? = null
+            val soundPool = SoundPoolAuthoredPlayback({ asset ->
+                spAssets += asset
+                spAssets.size.also { spCurrent = it to asset }
+            }, { id -> if (spCurrent?.first == id) spCurrent = null }, { spNow })
             val renderTrace = File(directory, "native_render.csv").bufferedWriter()
-            renderTrace.appendLine("time_us,low,high,gain,frequency_hint_hz,rt_frequency,rt_points,rt_body_starts,rt_gain_updates,sp_asset,sp_points,sp_body_starts")
+            renderTrace.appendLine("time_us,low,high,gain,frequency_hint_hz,rt_frequency,rt_points,rt_body_starts,rt_gain_updates,sp_asset,sp_points,sp_body_starts,rt_active")
             var submitted = 0
             File(directory, "client.csv").bufferedWriter().use { output ->
                 output.appendLine("time_us,old_low,old_high,new_low,new_high,new_body,old_point_gain,new_point_gain,old_points,new_points,new_body_starts,new_updates,old_sp_points,new_sp_points")
@@ -96,7 +100,8 @@ class AuthoredOfflineCorpusTest {
                     val newAssets = spAssets.drop(spStart)
                     renderTrace.appendLine(listOf(timeUs, continuous.lowRms, continuous.highRms, continuous.gain,
                         continuous.frequencyHintHz, after.frequency, after.points, after.bodies, after.updates,
-                        spAssets.lastOrNull()?.name ?: "", newAssets.count { it.point > 0 }, newAssets.count { it.point == 0 }).joinToString(","))
+                        spCurrent?.second?.name ?: "", newAssets.count { it.point > 0 }, newAssets.count { it.point == 0 },
+                        after.active).joinToString(","))
                     output.appendLine(listOf(timeUs, low, high, controller.lowFrequency, controller.highFrequency,
                         bodyGain, oldPeak, newPeak, before.points, after.points, after.bodies, after.updates, oldSp, newSp).joinToString(","))
                 }

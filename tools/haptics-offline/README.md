@@ -74,6 +74,41 @@ python tools/haptics-offline/verify_native_assets.py --reference 682a912c6
 soundfile 和 mutagen，绘图可选。459 个素材解码校验通过，孤立短点 12 ms 后的最大
 剩余能量比例为 0.0248%；素材解码为 PCM16 共约 19.4 MB，实际 SoundPool 内存另计。
 
+## 连续保真度的轻量离线参考
+
+`continuous_regression.py` 在原有事件、强度传递和命令数检查之外，增加逐段
+`fidelity` 指标。只扩展现有离线工具和测试探针，不增加运行时后端、设备配置层
+或 SDK 依赖。它是独立数值参考，不是完整移植 Android `haptics-tools`，也不是
+真实 DS5 或手机马达的响应模型。
+
+- 连续层幅度：从原始 S16LE PCM 计算 20 ms 尾随窗 RMS，乘以 √2 并取左右最大值，
+  与送入原生后端的连续 gain 比较。报告 NRMSE 和 RMS 比值；不拟合增益、不按峰值
+  归一化输入。误差包含滤波、频带组合、分解和时序差异，不能直接解释为体感损失。
+- 频率：仅在 `bass`、`draw_clean` 单载波控制组使用 Hilbert 相位导数作为参考。
+  排除低包络、相位不可靠的采样；多频、噪声和含触击语料不强行赋予单一频率。
+  此思路参考 [Android 算法说明](https://github.com/android/haptics-tools/blob/main/docs/pcm_to_pwle_conversion_algorithm.md)，
+  用已有 NumPy 独立实现整段离线计算，没有引入其归一化、点击替换或控制点重定时。
+- 分别报告源频率提示的 Hz 误差、RichTap 已提交目标的 HE 单位误差，以及 SoundPool
+  已选载频的 Hz 误差。后两者附有效输出覆盖率：停止或静音不能因缺少观测而得高分。
+  HE 不是物理 Hz，目标参数也不等于当前硬件振动；这里不模拟厂商曲线执行或相位衔接。
+
+这些新增指标先报告，不设未经验证的统一保真阈值；原有事件约束继续作为硬检查。
+主语料中，干净抽刀的连续 gain RMS 比值约 0.995，但 NRMSE 约 0.167；说明总量接近
+仍可能有包络形状和时间差异。其源频率提示平均绝对误差约 15.3 Hz。这些数值仅为
+当前软件基线，不是新的优化成绩，也不据此自动调整触击判据。
+
+重新运行 `AuthoredOfflineCorpusTest` 生成带 `rt_active` 的轨迹后，执行现有
+`continuous_regression.py --before ... --after ...` 即可得到报告。测量工具自身的
+反例检查使用：
+
+```powershell
+python -m unittest discover -s tools/haptics-offline -p test_continuous_fidelity.py -v
+```
+
+覆盖绝对强度、主动衰减/静音、扫频改成固定频率、缺失输出及噪声频率不评分等边界。
+本轮验证输出放在 `build/haptics-offline/fidelity-metrics/{corpus,holdout}`，保留之前的
+`review-final` 结果供对照；未运行 E2E。
+
 ## 连续渲染修复（集成前候选）
 
 2026-11-07，Android 改动继续位于 `codex/ds5-transient-fidelity` 独立工作树。本轮没有

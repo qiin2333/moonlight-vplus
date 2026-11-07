@@ -12,16 +12,19 @@ import math
 from pathlib import Path
 
 from corpus import rows, matching
+from continuous_fidelity import measure
 
 
 def check(before, after):
     manifest = json.loads((after / "manifest.json").read_text())
     assets = Path(__file__).resolve().parents[2] / "app/src/main/assets/haptics/native"
     groups = defaultdict(lambda: defaultdict(int))
+    fidelity = {}
     for meta in manifest["cases"]:
         name = meta["name"]
         original, current = before / name, after / name
         assert hashlib.sha256((original / "input.pcm").read_bytes()).hexdigest() == meta["pcm_sha256"], name
+        assert hashlib.sha256((current / "input.pcm").read_bytes()).hexdigest() == meta["pcm_sha256"], name
         events = rows(current / "events_240.csv")
         assert rows(original / "events_240.csv") == events, f"SDK events changed: {name}"
         frames, trace = rows(current / "frames_240.csv"), rows(current / "native_render.csv")
@@ -54,11 +57,17 @@ def check(before, after):
             assert max(frequencies) - min(frequencies) >= 10, name
             assert rt_points == sp_points == 0, name
             group["minimum_he_frequency_span"] = min(group.get("minimum_he_frequency_span", 100), max(frequencies) - min(frequencies))
+        measured = measure(current, meta, trace)
+        if measured is not None:
+            fidelity[name] = measured
     for family in ("rain", "climb"):
         assert groups[family]["richtap_points"] == groups[family]["soundpool_points"] == groups[family]["events"]
     for family in ("run_fine", "run_low", "draw_clean", "beating", "bass", "silence"):
         assert groups[family]["extra"] == 0, family
-    result = {"scope": "software commands only; no actuator response or E2E", "families": dict(groups)}
+    result = {"scope": "software commands only; no actuator response or E2E", "families": dict(groups),
+              "fidelity_reference": "report only: source 20 ms trailing RMS; single-carrier Hilbert frequency; no gain normalization; target commands, not hardware output",
+              "fidelity_reference_sha256": hashlib.sha256(Path(__file__).with_name("continuous_fidelity.py").read_bytes()).hexdigest(),
+              "fidelity": fidelity}
     (after / "continuous_regression.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, indent=2))
 
