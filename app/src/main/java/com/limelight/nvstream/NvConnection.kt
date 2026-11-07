@@ -53,7 +53,7 @@ open class NvConnection(
     outputDisplay: Display,
     displayName: String? = null,
     forceResumeCurrentSession: Boolean = false
-) {
+) : DisplayRotator {
     private val clientName: String =
         pairName.ifEmpty {
             // Settings.Global.getString can return null on some OEM ROMs.
@@ -762,6 +762,11 @@ open class NvConnection(
         }
     }
 
+    /** The host enabled client-driven resolution changes for this session; valid once connected. */
+    val supportsClientResolutionChange: Boolean
+        get() = !isMonkey &&
+            (MoonBridge.getHostFeatureFlags() and MoonBridge.LI_FF_CLIENT_RESOLUTION_CHANGE) != 0
+
     @Throws(IOException::class, XmlPullParserException::class)
     fun doStopAndQuit() {
         Thread {
@@ -867,7 +872,7 @@ open class NvConnection(
         fun onFailure(errorMessage: String)
     }
 
-    fun rotateDisplay(angle: Int, callback: DisplayRotationCallback?) {
+    final override fun rotateDisplay(angle: Int, callback: DisplayRotationCallback?) {
         Thread {
             val h: NvHTTP
             try {

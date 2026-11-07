@@ -4,9 +4,8 @@ package com.limelight
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.os.Handler
-import android.os.Looper
 import android.view.Display
+import com.limelight.nvstream.DisplayRotator
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 
@@ -25,10 +24,18 @@ class OrientationManager(
     private val originalHeight: Int,
     private val rotableScreen: Boolean,
     private val hasOnscreenControls: Boolean,
+    /** Owned by this instance alone: [cleanup] and server rotations cancel everything on it. */
+    private val scheduler: DynamicResolutionManager.Scheduler = DynamicResolutionManager.MainLooperScheduler(),
     private val displayProvider: () -> Display?,
 ) {
-    var connection: NvConnection? = null
+    var connection: DisplayRotator? = null
     var connected = false
+    /**
+     * True while client-driven dynamic resolution carries rotations: its size requests already carry
+     * the orientation, so rotate-display would only race them. Checked when rotate-display is due.
+     * Calling it records that decision for the failed-send hand-back, so call it only then.
+     */
+    var resolutionFollowsViewport: () -> Boolean = { false }
 
     /** 上次已知的旋转方向：-1=未知, 0=竖屏, 1=横屏 */
     private var lastRotation = -1
@@ -37,8 +44,9 @@ class OrientationManager(
     var isServerInitiatedRotation = false
         private set
 
-    private val handler = Handler(Looper.getMainLooper())
     private var pendingRotationRunnable: Runnable? = null
+    /** rotate-display angle left to dynamic resolution, in case it can't send it. */
+    private var rotationLeftToDynamicResolution: Int? = null
 
     companion object {
         private const val ROTATION_DEBOUNCE_MS = 3000L
@@ -85,7 +93,7 @@ class OrientationManager(
     fun onConfigurationChanged() {
         if (isServerInitiatedRotation) {
             // 服务端推送的旋转已到位，取消安全兜底定时器，立即恢复自由旋转
-            handler.removeCallbacksAndMessages(null)
+            scheduler.cancelAll()
             isServerInitiatedRotation = false
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_USER
             LimeLog.info("OrientationManager: server rotation settled, restored FULL_USER")
@@ -134,13 +142,13 @@ class OrientationManager(
      */
     fun onServerResolutionChanged(isLandscape: Boolean) {
         if (rotableScreen) {
-            handler.removeCallbacksAndMessages(null)
+            scheduler.cancelAll()
             isServerInitiatedRotation = true
             activity.requestedOrientation = if (isLandscape)
                 ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
             else
                 ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-            handler.postDelayed({
+            scheduler.postDelayed({
                 isServerInitiatedRotation = false
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_USER
             }, SERVER_ROTATION_SETTLE_MS)
@@ -155,16 +163,28 @@ class OrientationManager(
     fun reset() {
         lastRotation = -1
         isServerInitiatedRotation = false
-        pendingRotationRunnable?.let { handler.removeCallbacks(it) }
+        pendingRotationRunnable?.let { scheduler.cancel(it) }
         pendingRotationRunnable = null
+        rotationLeftToDynamicResolution = null
     }
 
     /**
      * Activity 销毁时调用，清理所有 Handler 回调。
      */
     fun cleanup() {
-        handler.removeCallbacksAndMessages(null)
+        scheduler.cancelAll()
         pendingRotationRunnable = null
+        rotationLeftToDynamicResolution = null
+    }
+
+    /** Dynamic resolution couldn't send the rotation it took over: notify the server after all. */
+    fun onRotationReturned() {
+        val angle = rotationLeftToDynamicResolution ?: return
+        rotationLeftToDynamicResolution = null
+        val conn = connection
+        if (conn == null || !connected) return
+        LimeLog.info("OrientationManager: dynamic resolution couldn't send the rotation, notifying server, angle=$angle")
+        rotateDisplay(conn, angle)
     }
 
     // ──────────────────────────────────────────────
@@ -229,22 +249,34 @@ class OrientationManager(
             else -> lastRotation = currentOrientation
         }
 
+        pendingRotationRunnable?.let { scheduler.cancel(it) }
+        rotationLeftToDynamicResolution = null
         val angle = if (isLandscape) 0 else 90
 
-        pendingRotationRunnable?.let { handler.removeCallbacks(it) }
         val runnable = Runnable {
-            LimeLog.info("handleRotationChange: notifying server, angle=$angle")
-            conn.rotateDisplay(angle, object : NvConnection.DisplayRotationCallback {
-                override fun onSuccess(angle: Int) {
-                    LimeLog.info("Display rotated to $angle degrees")
-                }
-                override fun onFailure(errorMessage: String) {
-                    LimeLog.warning("Failed to rotate display: $errorMessage")
-                }
-            })
             pendingRotationRunnable = null
+            // Decided when it fires: whether dynamic resolution can carry the rotation may have
+            // changed meanwhile (e.g. the host's first report arrived or refused its requests).
+            if (resolutionFollowsViewport()) {
+                LimeLog.info("handleRotationChange: dynamic resolution follows the rotation, skipping rotate-display")
+                rotationLeftToDynamicResolution = angle
+                return@Runnable
+            }
+            LimeLog.info("handleRotationChange: notifying server, angle=$angle")
+            rotateDisplay(conn, angle)
         }
         pendingRotationRunnable = runnable
-        handler.postDelayed(runnable, ROTATION_DEBOUNCE_MS)
+        scheduler.postDelayed(runnable, ROTATION_DEBOUNCE_MS)
+    }
+
+    private fun rotateDisplay(conn: DisplayRotator, angle: Int) {
+        conn.rotateDisplay(angle, object : NvConnection.DisplayRotationCallback {
+            override fun onSuccess(angle: Int) {
+                LimeLog.info("Display rotated to $angle degrees")
+            }
+            override fun onFailure(errorMessage: String) {
+                LimeLog.warning("Failed to rotate display: $errorMessage")
+            }
+        })
     }
 }
