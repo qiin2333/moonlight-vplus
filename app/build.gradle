@@ -180,9 +180,11 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix ".vplus_debug"
-            resValue "string", "app_label", audioHapticsAppLabel
-            resValue "string", "app_label_root", audioHapticsAppLabel
+            // Hardware acceptance builds coexist with the normal development app.
+            applicationIdSuffix project.hasProperty('matAcceptance') ? ".mat_acceptance" : ".vplus_debug"
+            def debugAppLabel = project.hasProperty('matAcceptance') ? "Moonlight MAT" : audioHapticsAppLabel
+            resValue "string", "app_label", debugAppLabel
+            resValue "string", "app_label_root", debugAppLabel
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),

@@ -58,6 +58,7 @@ LOCAL_SRC_FILES := moonlight-common-c/src/AudioStream.c \
                    simplejni.c \
                    callbacks.c \
                    usb_isochronous.c \
+                   mat_carrier_bridge.c \
                    pyrowave_decoder_bridge.cpp \
                    pyrowave_capabilities.cpp \
                    minisdl.c \
