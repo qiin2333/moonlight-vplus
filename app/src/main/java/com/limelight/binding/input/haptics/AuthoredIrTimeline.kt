@@ -10,8 +10,9 @@ import java.util.PriorityQueue
 internal class AuthoredIrTimeline {
     data class Event(val value: Ds5HapticsIrExtendedEvent, val expiresUs: Long)
     data class Output(val body: ControllerRumbleState, val event: Event?, val ended: Boolean,
-                      val reset: Boolean = false, val bodyValidUntilUs: Long = Long.MAX_VALUE)
-    private data class State(val body: ControllerRumbleState, val sourceUs: Long)
+                      val reset: Boolean = false, val bodyValidUntilUs: Long = Long.MAX_VALUE,
+                      val frequencyHintHz: Float = 0f)
+    private data class State(val body: ControllerRumbleState, val sourceUs: Long, val frequencyHintHz: Float)
     private var epoch: Int? = null
     private var sequence: Int? = null
     private var lastSourceUs: Long? = null
@@ -20,6 +21,7 @@ internal class AuthoredIrTimeline {
     private var clockWindowSourceUs = 0L
     private var clockWindowMinGapUs = 0L
     private var body = ControllerRumbleState.ZERO
+    private var frequencyHintHz = 0f
     private var expiresUs = Long.MIN_VALUE
     private var dirty = false
     private var pendingReset = false
@@ -77,7 +79,8 @@ internal class AuthoredIrTimeline {
             if (!ended) {
                 val state = State(ControllerRumbleState(
                     maxOf(normalizeAmplitude(frame.left.continuousLow), normalizeAmplitude(frame.right.continuousLow)),
-                    maxOf(normalizeAmplitude(frame.left.continuousHigh), normalizeAmplitude(frame.right.continuousHigh))), frame.windowEndUs)
+                    maxOf(normalizeAmplitude(frame.left.continuousHigh), normalizeAmplitude(frame.right.continuousHigh))),
+                    frame.windowEndUs, NativeAuthoredBody.frequencyHint(frame))
                 if (states.size == MAX_STATES) states.poll()
                 states.add(state)
                 expiresUs = mappedEnd + BODY_LEASE_US
@@ -110,6 +113,7 @@ internal class AuthoredIrTimeline {
         while (states.isNotEmpty() && states.peek()!!.sourceUs + offsetUs + PLAYOUT_LEAD_US <= nowUs) {
             val state = states.poll() ?: break
             body = state.body
+            frequencyHintHz = state.frequencyHintHz
             expiresUs = state.sourceUs + offsetUs + BODY_LEASE_US
             dirty = true
         }
@@ -129,7 +133,7 @@ internal class AuthoredIrTimeline {
         }
         if (!dirty && selected == null) return null
         dirty = false
-        return Output(body, selected, ended, pendingReset, expiresUs).also { pendingReset = false }
+        return Output(body, selected, ended, pendingReset, expiresUs, frequencyHintHz).also { pendingReset = false }
     }
 
     fun nextWakeUs(): Long? = listOfNotNull(events.peek()?.sourceTimeUs?.let { it + offsetUs + PLAYOUT_LEAD_US },

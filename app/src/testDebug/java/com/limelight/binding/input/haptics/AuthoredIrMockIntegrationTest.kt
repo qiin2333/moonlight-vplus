@@ -55,6 +55,7 @@ class AuthoredIrMockIntegrationTest {
         val controllerWrites = mutableListOf<Pair<Long, ControllerRumbleState>>()
         val controllerPeakHigh = mutableMapOf<Short, Float>()
         val nativeWrites = mutableListOf<NativeWrite>()
+        var nativeRenderer: NativeAuthoredHaptics? = null
         val deliveredIds = mutableListOf<Int>()
         var maxInbox = 0
         private val callbacks = linkedMapOf<Runnable, Long>()
@@ -71,12 +72,12 @@ class AuthoredIrMockIntegrationTest {
             clockMs = { nowMs }, dispatcherClockNanos = { nowMs * 1_000_000 },
             nativeHaptics = if (native) object : NativeAuthoredHaptics {
                 override val ready = true
-                override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
-                    nativeWrites += NativeWrite(nowMs, body, point)
-                    return null
+                override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
+                    nativeWrites += NativeWrite(nowMs, body.gain, point)
+                    return nativeRenderer?.render(body, point, keepWarm)
                 }
-                override fun stop() = Unit
-                override fun close() = Unit
+                override fun stop() { nativeRenderer?.stop() }
+                override fun close() { nativeRenderer?.close() }
             } else null)
         private fun targets(number: Short) = GameRumbleContext(mode, hasController,
             hasPhone && number.toInt() == 0)
@@ -214,7 +215,7 @@ class AuthoredIrMockIntegrationTest {
         }
     }
 
-    @Test fun coordinatedNativeMixedKeepsBodyOnControllerAndEveryPointOnPhone() {
+    @Test fun coordinatedNativeMixedKeepsTextureAndEveryPointOnPhone() {
         val frames = fixture("mixed_clean_body_0.12_separate_0")
         val expected = frames.flatMap { it.events }.map { it.eventId }.toSet().size
         val otherPlayer = frames.map { it.copy(base = it.base.copy(controllerNumber = 1)) }
@@ -222,11 +223,11 @@ class AuthoredIrMockIntegrationTest {
             runtime.replay((transport(frames) + transport(otherPlayer)).sortedBy { it.atMs })
             val bodyHigh = frames.maxOf { maxOf(it.left.continuousHigh, it.right.continuousHigh) }
             assertEquals(setOf<Short>(0, 1), runtime.controllerPeakHigh.keys)
-            assertTrue(runtime.controllerPeakHigh.getValue(0) <= bodyHigh)
+            assertEquals(0f, runtime.controllerPeakHigh.getValue(0), 0f)
             assertTrue(runtime.controllerPeakHigh.getValue(1) > bodyHigh)
             // Player two's same-numbered events and END must not drive or clear the shared phone.
             assertEquals(expected, runtime.nativeWrites.count { it.point > 0f })
-            assertTrue(runtime.nativeWrites.all { it.body == 0f })
+            assertTrue(runtime.nativeWrites.any { it.body > 0f })
             assertTrue(runtime.phoneWrites.none { it.amplitude > 0 })
             assertTrue(runtime.tickTimes.isEmpty())
             assertTrue(runtime.controllerWrites.any { it.second.highFrequency > .01f })
@@ -234,17 +235,40 @@ class AuthoredIrMockIntegrationTest {
         }
     }
 
-    @Test fun disconnectMovesBodyToPhoneAndReconnectRestoresTheSplit() {
+    @Test fun reconnectDoesNotMoveLowTextureBackToAnUncalibratedRotor() {
         val disconnected = 11_000L..11_699L
+        // Keep the host timing/events, but give this routing case a low-dominant body.
+        // Both low and high textures now stay on the native actuator across reconnects.
+        val frames = fixture("mixed_clean_body_0.12_separate_0").map {
+            it.copy(left = it.left.copy(continuousLow = it.left.continuousHigh * 2f),
+                right = it.right.copy(continuousLow = it.right.continuousHigh * 2f))
+        }
         Runtime(native = true, supportsTick = false).use { runtime ->
-            runtime.replay(transport(fixture("mixed_clean_body_0.12_separate_0")), disconnected = disconnected)
+            runtime.replay(transport(frames), disconnected = disconnected)
             assertTrue(runtime.nativeWrites.any { it.atMs in disconnected && it.body > 0 })
             assertTrue(runtime.controllerWrites.none { it.first in disconnected })
-            assertTrue(runtime.controllerWrites.any { it.first in 11_700L..11_740L && !it.second.isZero })
-            assertTrue(runtime.nativeWrites.filter { it.atMs > 11_720 }.all { it.body == 0f })
+            assertTrue(runtime.controllerWrites.all { it.second.isZero })
+            assertTrue(runtime.nativeWrites.any { it.atMs in 11_720L..12_000L && it.body > 0f })
             assertTrue(runtime.phoneWrites.none { it.amplitude > 0 })
             assertEquals(runtime.deliveredIds.size, runtime.deliveredIds.toSet().size)
             assertTrue(runtime.controllerWrites.last().second.isZero)
+        }
+    }
+
+    @Test fun nativeRainFixtureKeepsAllGradedShortEventsAfterRemovingWeakPointBoost() {
+        val frames = fixture("rain-haptics")
+        val events = frames.flatMap { it.events }.distinctBy { it.eventId }
+        Runtime(native = true, supportsTick = false).use { runtime ->
+            val packets = mutableListOf<IntArray>()
+            runtime.nativeRenderer = RichTapAuthoredHaptics({ raw, _ -> packets += raw }, {},
+                { runtime.nowMs }, 1, {})
+            runtime.replay(transport(frames))
+            assertEquals(144, events.size)
+            assertEquals(events.size, packets.size)
+            assertTrue(packets.all { it[8] == 4097 && it[12] > 0 })
+            assertTrue(packets.map { it[12] }.distinct().size > 1)
+            assertTrue(runtime.controllerWrites.all { it.second.isZero })
+            assertTrue(runtime.nativeWrites.all { it.body == 0f })
         }
     }
 

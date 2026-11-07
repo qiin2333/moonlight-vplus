@@ -9,7 +9,9 @@ import android.os.SystemClock
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.limelight.LimeLog
 import java.util.concurrent.Executors
-import kotlin.math.roundToInt
+import com.limelight.binding.input.haptics.SoundPoolAuthoredPlayback.Companion.BODY_LEVELS
+import com.limelight.binding.input.haptics.SoundPoolAuthoredPlayback.Companion.POINT_LEVELS
+import com.limelight.binding.input.haptics.SoundPoolAuthoredPlayback.Companion.CARRIERS
 
 /** Optional energy renderer, not PCM passthrough. L/R audio channels in these assets are silent.
  * Strength is encoded in the haptic samples: SoundPool.setVolume does not scale haptic channels.
@@ -25,8 +27,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     // separately so callbacks only take the short readiness-state lock.
     private val poolLock = Any()
     private val stateLock = Any()
-    private val tones = IntArray(BODY_LEVELS + 1)
-    private val mixed = Array(BODY_LEVELS + 1) { IntArray(POINT_LEVELS + 1) }
+    private val sounds = mutableMapOf<String, Int>()
     private var loaded = 0
     private var loadingFinished = false
     @Volatile private var closed = false
@@ -34,10 +35,9 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
         private set
     @Volatile override var failed = false
         private set
-    private var stream = 0
-    private var tone = -1
-    private var toneRefreshAt = 0L
-    private var pointUntil = 0L
+    private val playback = SoundPoolAuthoredPlayback(
+        play = { asset -> pool.play(sounds.getValue(asset.name), 1f, 1f, 1, 0, 1f) },
+        stopStream = pool::stop, clockMs = SystemClock::elapsedRealtime)
 
     init {
         pool.setOnLoadCompleteListener { _, _, status ->
@@ -58,9 +58,11 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
                         check(it != 0) { "SoundPool rejected $name" }
                     }
                 }
-                for (body in 0..BODY_LEVELS) tones[body] = load("body_$body")
-                for (body in 0..BODY_LEVELS) for (point in 1..POINT_LEVELS)
-                    mixed[body][point] = load("mixed_${body}_$point")
+                for (hz in CARRIERS) for (body in 0..BODY_LEVELS) for (point in 0..POINT_LEVELS) {
+                    if (hz != 160 && (body == 0 || point != 0)) continue
+                    val name = SoundPoolAuthoredPlayback.Asset(hz, body, point).name
+                    sounds[name] = load(name)
+                }
                 synchronized(stateLock) { loadingFinished = true; updateReady() }
             } catch (error: Exception) {
                 if (!closed) LimeLog.warning("Native authored haptics unavailable: ${error.message}")
@@ -70,12 +72,12 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     }
 
     private fun updateReady() {
-        ready = !closed && !failed && loadingFinished && loaded == (BODY_LEVELS + 1) * (POINT_LEVELS + 1)
+        ready = !closed && !failed && loadingFinished && loaded == sounds.size
     }
 
-    override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+    override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
         if (!ready) { stop(); return null }
-        return try { renderReady(body, point, keepWarm) } catch (error: Exception) {
+        return try { playback.render(body, point, keepWarm) } catch (error: Exception) {
             failed = true
             ready = false
             stop()
@@ -84,44 +86,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
         }
     }
 
-    private fun renderReady(body: Float, point: Float, keepWarm: Boolean): Long? {
-        val bodyLevel = level(body, BODY_LEVELS)
-        val pointLevel = level(point, POINT_LEVELS)
-        val now = SystemClock.elapsedRealtime()
-        if (pointLevel > 0) {
-            replace(mixed[bodyLevel][pointLevel])
-            tone = -1
-            pointUntil = now + POINT_HOLD_MS
-            return pointUntil
-        }
-        if (now < pointUntil) return pointUntil
-        // Zero samples keep the transport ready without driving the motor. Use the same
-        // replace path: a parallel silent stream can mask a separate haptic point.
-        if (bodyLevel == 0 && !keepWarm) stop()
-        else if (tone != bodyLevel || now >= toneRefreshAt) {
-            replace(tones[bodyLevel])
-            tone = bodyLevel
-            toneRefreshAt = now + TONE_REFRESH_MS
-        }
-        return toneRefreshAt.takeIf { stream != 0 && tone >= 0 }
-    }
-
-    private fun replace(sound: Int) {
-        // All assets are finite. Renew the one-second body before EOF, so a stalled
-        // worker cannot leave an indefinitely looping actuator after source expiry.
-        val next = pool.play(sound, 1f, 1f, 1, 0, 1f)
-        if (next == 0) throw IllegalStateException("Native authored haptics playback rejected")
-        if (stream != 0) pool.stop(stream)
-        stream = next
-    }
-
-    override fun stop() {
-        pool.autoPause()
-        stream = 0
-        tone = -1
-        toneRefreshAt = 0
-        pointUntil = 0
-    }
+    override fun stop() = playback.stop()
 
     override fun close() {
         synchronized(poolLock) {
@@ -135,16 +100,6 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     }
 
     companion object {
-        private const val BODY_LEVELS = 16
-        private const val POINT_LEVELS = 8
-        private const val MAX_GAIN = 0.6f
-        private const val POINT_HOLD_MS = 180L
-        private const val TONE_REFRESH_MS = 750L
-
-        private fun level(value: Float, levels: Int) =
-            (ControllerRumbleState.normalizeAmplitude(value) / MAX_GAIN * levels)
-                .roundToInt().coerceIn(0, levels)
-
         @ChecksSdkIntAtLeast(api = 29)
         fun supported(): Boolean = Build.VERSION.SDK_INT >= 29 && AudioManager.isHapticPlaybackSupported()
 
