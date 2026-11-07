@@ -12,13 +12,13 @@
 | `AuthoredOfflineCorpusTest` + `continuous_regression.py` | 导出真实客户端轨迹；检查固定主机事件、双频带传递、短点保留、素材及扫频跨度 |
 | `continuous_fidelity.py` + `test_continuous_fidelity.py` | 计算连续幅度/频率诊断指标；验证衰减、静音、固定载频和缺失输出不会被误判为改善 |
 | `stress.py --check` | 跨载频弱触击回归：纯音背景逐例检查召回下限和额外事件上限，噪声背景仅报告 |
-| `regression.py` | 相对原始 SDK 的事件改善预算；可用 `--host-only` 跳过客户端，`--plot` 生成可选对比图 |
+| `regression.py` | 对照原始 SDK，检查触击召回和误报预算 |
 | `verify_native_assets.py` | 解码已提交的原生素材，检查触觉声道、载频、短点形状与尾部能量 |
 
 ### 构建与生成
 
 依赖 Python 3 + NumPy、CMake/Ninja、C++17 编译器，以及项目正常的 Android SDK/JDK/Gradle
-环境。素材检查另需 `soundfile`、`mutagen`；可选绘图需 Matplotlib。以下 PowerShell 示例
+环境。素材检查另需 `soundfile` 和 `mutagen`。以下 PowerShell 示例
 使用同一套 GCC/MinGW 工具链构建 SDK 和适配器，从 Android 仓库根目录运行：
 
 ```powershell
@@ -50,8 +50,8 @@ python tools/haptics-offline/verify_native_assets.py --reference 682a912c6 --out
 
 `--rerun` 确保切换语料目录后重新执行测试；未设置 `HAPTICS_OFFLINE_DIR` 时，此可选测试
 明确标为 skipped。素材参考 `682a912c6` 是 Android 仓库中原 160 Hz 素材库的提交，需保留
-该 Git 对象。输出包括 `frames_*.csv`、`events_*.csv`、`client.csv` 和 `native_render.csv`。
-后者需由当前探针生成，包含 `rt_active`，不能直接沿用旧格式轨迹。
+该 Git 对象。输出包括 `frames_*.csv`、`events_*.csv` 和 `native_render.csv`。
+后者需由当前探针生成，包含原生后端轨迹及手柄输出幅度。
 
 修改客户端前，先用已验收版本按上述步骤生成独立的冻结目录，并记录提交和散列。
 `$Frozen` 指向该目录；它与 `$Out` 必须不同，且主机版本、语料种子相同：
@@ -71,21 +71,21 @@ foreach ($Set in @('corpus', 'holdout')) {
 ```powershell
 $Original = 'C:/path/to/original-sdk-offline-output'
 foreach ($Set in @('corpus', 'holdout')) {
-    python tools/haptics-offline/regression.py --before "$Original/$Set" --after "$Out/$Set" --host-only
+    python tools/haptics-offline/regression.py --before "$Original/$Set" --after "$Out/$Set"
     if ($LASTEXITCODE -ne 0) { throw "Host regression failed: $Set" }
 }
 python tools/haptics-offline/stress.py --before-exe "$Original/analyze_pcm.exe" --after-exe "$Out/analyze_pcm.exe" --out "$Out/stress" --check
 ```
 
 `regression.py` 固定要求带噪跑步/抽刀误报分别不超过原始基线的 30%/70%，不能用两个
-已优化候选替代这组对照。省略 `--host-only` 前须在两组输出上都运行客户端探针。
+已优化候选替代这组对照。
 `stress.py` 也可与已验收分析器比较，以进一步约束后续退化。禁止覆盖基线后再自比。
 
 ## 当前基线
 
-SDK 为 `e334a247366555f067fd52d841bdc7ca858a777b`，持久标签
-`pins/ds5-fidelity-20261107-r3`（[SDK #8](https://github.com/AlkaidLab/moonlight-audio-haptics/pull/8)）；
-客户端行为基线为 `160a799f0`，连续指标及轨迹格式由 `3dc864433` 引入。
+主机 SDK 为 `270649aaaba24c11e2f5040a8063b2fc1aa9287e`，持久标签
+`pins/ds5-fidelity-20261107-r4`（[SDK #8](https://github.com/AlkaidLab/moonlight-audio-haptics/pull/8)）。
+Android CI 的本地音频分析 SDK 使用独立的构建版本。
 主机集成见 [Sunshine #1224](https://github.com/AlkaidLab/foundation-sunshine/pull/1224)。
 
 主语料为 91 段：每段 3.2 秒、48 kHz 双声道 S16LE，种子 7/19/41，峰值
@@ -107,8 +107,8 @@ SDK 为 `e334a247366555f067fd52d841bdc7ca858a777b`，持久标签
 120 段压力语料涵盖 100/160/270/330 Hz 触击、85/260 Hz 纯音或噪声背景；96 个纯音
 组合守住原始 SDK 的召回和误报基线，其余 24 个噪声组合只报告。两种块尺寸均检查。
 
-459 个素材解码检查通过：孤立短点在 12 ms 后的最大剩余能量约 0.0248%，PCM16
-解码体积约 19.4 MB（不是 Android 实际内存）。素材生成脚本为 `scripts/generate_native_haptics.py`。
+441 个素材解码检查通过，三个载频共用一组零背景素材。孤立短点在 12 ms 后的最大
+剩余能量约 0.0248%，PCM16 解码体积约 18.6 MB。素材生成脚本为 `scripts/generate_native_haptics.py`。
 
 ### 连续指标的含义
 
@@ -130,7 +130,6 @@ SDK 为 `e334a247366555f067fd52d841bdc7ca858a777b`，持久标签
 - 合成标签表达工程意图，不是影之刃零录制、真实 DS5 波形或人类感知标注。噪声中的
   偶然匹配不等于可靠召回；当前带噪误报和弱触击漏检仍存在。
 - 探针每 5 ms 提交一次，未模拟网络、串流协议、设备工作队列、厂商时钟或马达响应。
-  `client.csv` 的旧/新短点增益是数值对照，不是两个真实历史客户端的实机比较。
 - 过零率是粗略频率提示；多频和噪声没有单一正确频率。HE 单位不是物理 Hz，已提交
   目标不等于马达当前输出。SoundPool 的量化与素材替换也不保证相位连续。
 - 命令次数、幅度平方和与总变化量不能直接换算成物理能量、摇摆或体感改善。

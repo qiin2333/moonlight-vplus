@@ -27,7 +27,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     // separately so callbacks only take the short readiness-state lock.
     private val poolLock = Any()
     private val stateLock = Any()
-    private val sounds = mutableMapOf<SoundPoolAuthoredPlayback.Asset, Int>()
+    private val sounds = mutableMapOf<String, Int>()
     private var loaded = 0
     private var loadingFinished = false
     @Volatile private var closed = false
@@ -36,7 +36,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     @Volatile override var failed = false
         private set
     private val playback = SoundPoolAuthoredPlayback(
-        play = { asset -> pool.play(sounds.getValue(asset), 1f, 1f, 1, 0, 1f) },
+        play = { asset -> pool.play(sounds.getValue(asset.name), 1f, 1f, 1, 0, 1f) },
         stopStream = pool::stop, clockMs = SystemClock::elapsedRealtime)
 
     init {
@@ -59,8 +59,8 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
                     }
                 }
                 for (hz in CARRIERS) for (body in 0..BODY_LEVELS) for (point in 0..POINT_LEVELS) {
-                    val asset = SoundPoolAuthoredPlayback.Asset(hz, body, point)
-                    sounds[asset] = load(asset.name)
+                    val name = SoundPoolAuthoredPlayback.Asset(hz, body, point).name
+                    sounds.getOrPut(name) { load(name) }
                 }
                 synchronized(stateLock) { loadingFinished = true; updateReady() }
             } catch (error: Exception) {
@@ -71,7 +71,7 @@ internal class SoundPoolAuthoredHaptics private constructor(context: Context, at
     }
 
     private fun updateReady() {
-        ready = !closed && !failed && loadingFinished && loaded == CARRIERS.size * (BODY_LEVELS + 1) * (POINT_LEVELS + 1)
+        ready = !closed && !failed && loadingFinished && loaded == sounds.size
     }
 
     override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {

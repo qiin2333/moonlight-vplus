@@ -12,7 +12,7 @@ internal class SoundPoolAuthoredPlayback(
 ) {
     data class Asset(val carrierHz: Int, val body: Int, val point: Int = 0) {
         val name: String get() {
-            val suffix = if (carrierHz == 160) "" else "${carrierHz}_"
+            val suffix = if (body == 0 || carrierHz == 160) "" else "${carrierHz}_"
             return if (point == 0) "body_$suffix$body" else "mixed_$suffix${body}_$point"
         }
     }

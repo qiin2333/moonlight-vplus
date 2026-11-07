@@ -28,16 +28,15 @@ def check(before, after):
         events = rows(current / "events_240.csv")
         assert rows(original / "events_240.csv") == events, f"SDK events changed: {name}"
         frames, trace = rows(current / "frames_240.csv"), rows(current / "native_render.csv")
-        client = rows(current / "client.csv")
-        assert len(frames) == len(trace) == len(client), name
-        for frame, rendered, command in zip(frames, trace, client):
-            assert frame["time_us"] == rendered["time_us"] == command["time_us"]
+        assert len(frames) == len(trace), name
+        for frame, rendered in zip(frames, trace):
+            assert frame["time_us"] == rendered["time_us"]
             low = max(float(frame["low_l"]), float(frame["low_r"]))
             high = max(float(frame["high_l"]), float(frame["high_r"]))
             assert abs(float(rendered["low"]) - low) < 1e-6, name
             assert abs(float(rendered["high"]) - high) < 1e-6, name
             assert abs(float(rendered["gain"]) - min(1, math.sqrt(2 * (low * low + high * high)))) < 1e-6
-            assert float(command["new_low"]) == float(command["new_high"]) == 0
+            assert float(rendered["controller_low"]) == float(rendered["controller_high"]) == 0
             if rendered["sp_asset"]:
                 assert (assets / (rendered["sp_asset"] + ".ogg")).is_file(), rendered["sp_asset"]
         rt_points = sum(int(r["rt_points"]) for r in trace)
@@ -45,7 +44,6 @@ def check(before, after):
         rt_starts = sum(int(r["rt_body_starts"]) for r in trace)
         sp_starts = sum(int(r["sp_body_starts"]) for r in trace)
         assert rt_points == len(events), name
-        assert sp_points == sum(int(r["new_sp_points"]) for r in client), name
         matched, missed, extra = matching(meta, events)
         group = groups[meta["family"]]
         for key, value in dict(cases=1, events=len(events), matched=matched, missed=missed,

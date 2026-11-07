@@ -1,7 +1,6 @@
 """Deterministic actuator PCM hypotheses, not game audio or DS5 recordings.
 
-Generate/analyze first, run the optional JVM probe, then use --report.
-Only NumPy is needed to generate; reporting additionally uses Matplotlib.
+Generation requires NumPy.
 """
 import argparse
 import concurrent.futures
@@ -171,82 +170,10 @@ def matching(meta, events):
             matched += 1
     return matched, len(remaining), len(events) - matched
 
-
-def report(args):
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    out = args.out.resolve()
-    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
-    results = []
-    for meta in manifest["cases"]:
-        directory = out / meta["name"]
-        events = rows(directory / "events_240.csv")
-        client = rows(directory / "client.csv")
-        matched, missed, extra = matching(meta, events)
-        values = {k: np.array([float(r[k]) for r in client]) for k in client[0]}
-        old_low, new_low = values["old_low"], values["new_low"]
-        power_ratio = float(np.sum(new_low ** 2) / np.sum(old_low ** 2)) if np.any(old_low) else 0
-        # Variation is a command-space metric; not mechanical wobble or physical energy.
-        variation = lambda a: float(np.abs(np.diff(a)).sum())
-        result = dict(name=meta["name"], family=meta["family"], seed=meta["seed"], peak=meta["peak"],
-                      expected=len(meta["expected_onsets_s"]), events=len(events), matched=matched,
-                      missed=missed, extra=extra, old_richtap_points=int(values["old_points"].sum()),
-                      new_richtap_points=int(values["new_points"].sum()),
-                      old_soundpool_nonzero=int(values["old_sp_points"].sum()),
-                      new_soundpool_nonzero=int(values["new_sp_points"].sum()),
-                      low_squared_ratio=power_ratio, low_variation_old=variation(old_low),
-                      low_variation_new=variation(new_low),
-                      phone_body_nonzero_fraction=float(np.mean(values["new_body"] > 0)),
-                      new_body_starts=int(values["new_body_starts"].sum()),
-                      new_gain_updates=int(values["new_updates"].sum()))
-        results.append(result)
-    with (out / "summary.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=results[0].keys())
-        writer.writeheader(); writer.writerows(results)
-    (out / "summary.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
-    selected = [f"{f}_s7_p0.06" for f in ("rain", "climb", "run_fine", "run_low", "run_noise", "draw_clean", "draw_noise", "beating")]
-    fig, axes = plt.subplots(len(selected), 3, figsize=(14, 17), constrained_layout=True)
-    for row, name in enumerate(selected):
-        directory = out / name
-        pcm = np.fromfile(directory / "input.pcm", dtype="<i2").reshape(-1, 2) / 32768
-        # 5 ms stereo RMS for plotting, not the classifier's envelope.
-        rms = np.sqrt(np.mean(pcm.reshape(-1, 240, 2) ** 2, axis=(1, 2)))
-        client = rows(directory / "client.csv")
-        x = np.array([float(r["time_us"]) / 1e6 for r in client])
-        val = lambda key: np.array([float(r[key]) for r in client])
-        ev = rows(directory / "events_240.csv")
-        axes[row, 0].plot(np.arange(len(rms)) * .005, rms, lw=1, label="PCM 5 ms RMS")
-        for event in ev:
-            axes[row, 0].axvline(int(event["source_us"]) / 1e6, color="#c34742", alpha=.35, lw=.7)
-        axes[row, 0].set_ylabel(name.split("_s")[0])
-        axes[row, 1].plot(x, val("old_low"), label="before", color="#c34742", lw=1)
-        axes[row, 1].plot(x, val("new_low"), label="after", color="#167a89", lw=1)
-        axes[row, 2].plot(x, val("new_body"), label="new continuous", color="#167a89", lw=1)
-        axes[row, 2].plot(x, val("old_point_gain"), label="old points", color="#c34742", alpha=.5, lw=.8)
-        axes[row, 2].plot(x, val("new_point_gain"), label="new points", color="#7456ad", lw=.8)
-        for ax in axes[row]:
-            ax.set_xlim(0, SECONDS); ax.grid(alpha=.2)
-    for i, title in enumerate(("Input envelope / SDK event times", "Controller low-band command", "Native rendering parameters")):
-        axes[0, i].set_title(title); axes[-1, i].set_xlabel("Source time (s)"); axes[0, i].legend(fontsize=7)
-    fig.suptitle("Synthetic actuator PCM: offline SDK + production allocator/RichTap\nRendering parameters only; no physical DS5/ERM response model", fontsize=13)
-    fig.savefig(out / "comparison.png", dpi=160)
-    fig.savefig(out / "comparison.pdf")
-    plt.close(fig)
-    print(json.dumps({"cases": len(results), "output": str(out)}, indent=2))
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--sdk", type=Path)
-    parser.add_argument("--analyzer", type=Path)
-    parser.add_argument("--report", action="store_true")
+    parser.add_argument("--sdk", type=Path, required=True)
+    parser.add_argument("--analyzer", type=Path, required=True)
     parser.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
-    args = parser.parse_args()
-    if args.report:
-        report(args)
-    else:
-        if not args.sdk or not args.analyzer:
-            parser.error("generation requires --sdk and --analyzer")
-        generate(args)
+    generate(parser.parse_args())

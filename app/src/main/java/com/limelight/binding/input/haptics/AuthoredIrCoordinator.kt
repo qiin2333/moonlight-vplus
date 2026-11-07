@@ -122,7 +122,6 @@ internal class AuthoredIrCoordinator(
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
         val pulse = motorTransientAmplitude(pulses[number]?.first ?: 0f)
         val details = native || pointOnly && supportsTick()
-        val plan = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
         val nativePlan = if (native) AuthoredIrAllocator.allocateNativeBody(targets, output.body) else null
         val body = if (nativePlan != null) nativePlan.controller ?: ControllerRumbleState.ZERO
             else if (targets.hasController && targets.mode != GameRumbleMode.DEVICE) output.body else ControllerRumbleState.ZERO
@@ -148,7 +147,8 @@ internal class AuthoredIrCoordinator(
                     output.bodyValidUntilUs / 1000, output.event?.expiresUs?.div(1000) ?: now,
                     active = !output.ended && gain > 0)
             } else {
-                val deviceBody = plan.device ?: ControllerRumbleState.ZERO
+                val deviceBody = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
+                    .device ?: ControllerRumbleState.ZERO
                 phone.submitAuthoredIrBody(deviceBody.lowFrequency.toMotorShort(), deviceBody.highFrequency.toMotorShort(),
                     strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
                 phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,

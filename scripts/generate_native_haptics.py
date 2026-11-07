@@ -30,6 +30,8 @@ def generate(destination: Path):
         max_tail_ratio = 0.0
         for hz in (100, 160, 260):
             for body in range(17):
+                if body == 0 and hz != 160:
+                    continue
                 for point in range(9):
                     duration = 1.0 if point == 0 else 0.040
                     suffix = "" if hz == 160 else f"{hz}_"

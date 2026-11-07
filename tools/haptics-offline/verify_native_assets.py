@@ -14,12 +14,16 @@ def verify(reference):
     root = Path(__file__).resolve().parents[2]
     bank = root / "app/src/main/assets/haptics/native"
     worst_tail, comparisons, frames = 0.0, [], 0
+    checked = set()
     for hz in (100, 160, 260):
         for body in range(17):
+            if body == 0 and hz != 160:
+                continue
             for point in range(9):
                 suffix = "" if hz == 160 else f"{hz}_"
                 name = f"body_{suffix}{body}" if point == 0 else f"mixed_{suffix}{body}_{point}"
                 path = bank / (name + ".ogg")
+                checked.add(path)
                 pcm, rate = sf.read(path, always_2d=True)
                 assert rate == 48000 and pcm.shape == (48000 if point == 0 else 1920, 3), name
                 assert OggVorbis(path)["ANDROID_HAPTIC"] == ["1"], name
@@ -42,7 +46,8 @@ def verify(reference):
                         ratio = float(np.linalg.norm(b) / np.linalg.norm(a))
                         assert correlation > .999 and .99 < ratio < 1.01, name
                         comparisons.append(dict(point=point, correlation=correlation, rms_ratio=ratio))
-    return dict(assets=459, worst_point_energy_after_12_ms=worst_tail,
+    assert checked == set(bank.glob("*.ogg")), "Unexpected native haptics assets"
+    return dict(assets=len(checked), worst_point_energy_after_12_ms=worst_tail,
                 decoded_pcm16_bytes=frames * 3 * 2,
                 compressed_bytes=sum(p.stat().st_size for p in bank.glob("*.ogg")),
                 reference=reference, original_point_comparisons=comparisons)
