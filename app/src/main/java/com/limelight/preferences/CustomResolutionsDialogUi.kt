@@ -102,7 +102,7 @@ internal fun ResolutionInputError.text(): String = stringResource(
     }
 )
 
-private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
+internal fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
     onPreviewKeyEvent { event ->
         val nativeEvent = event.nativeKeyEvent
         if (!isMenuConfirmKey(nativeEvent.keyCode)) {
@@ -115,7 +115,7 @@ private fun Modifier.handleGamepadConfirm(onConfirm: () -> Unit): Modifier =
 
 /** 焦点指示跟随当前输入模式：触控不显示，手柄或键盘切回后立即显示。 */
 @Composable
-private fun focusIndicationVisible(focused: Boolean): Boolean {
+internal fun focusIndicationVisible(focused: Boolean): Boolean {
     val view = LocalView.current
     val inputMode = LocalInputModeManager.current.inputMode
     return focused && (inputMode == InputMode.Keyboard || !view.isInTouchMode)
@@ -126,7 +126,7 @@ private fun focusIndicationVisible(focused: Boolean): Boolean {
  * 非高亮时用各组件自己的 fallback(如静态描边)。ResolutionRow 因带颜色动画未使用此封装。
  */
 @Composable
-private fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifier = Modifier): Modifier =
+internal fun focusHighlight(highlighted: Boolean, shape: Shape, fallback: Modifier = Modifier): Modifier =
     if (highlighted) {
         Modifier
             .background(appAccentSoftColor(), shape)
