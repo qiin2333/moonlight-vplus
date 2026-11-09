@@ -1168,15 +1168,15 @@
     <string name="suffix_seekbar_output_buffer_queue_limit">帧</string>
 
     <!-- 屏幕组合模式 -->
-    <string name="title_screen_combination_mode">主机显示器排列</string>
+    <string name="title_screen_combination_mode">屏幕组合</string>
     <string name="summary_screen_combination_mode">选择 Foundation Sunshine 如何排列或组合主机显示器，需要兼容的 Foundation Sunshine 主机。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
     <string name="screen_mode_host_default">跟随主机</string>
-    <string name="screen_mode_no_operation">无操作模式</string>
+    <string name="screen_mode_no_operation">无操作</string>
     <string name="screen_mode_auto_activate">激活模式</string>
-    <string name="screen_mode_primary_streaming">主屏串流模式</string>
-    <string name="screen_mode_secondary_streaming">副屏串流模式</string>
-    <string name="screen_mode_exclusive_streaming">仅启用指定显示器模式</string>
+    <string name="screen_mode_primary_streaming">主屏串流</string>
+    <string name="screen_mode_secondary_streaming">副屏串流</string>
+    <string name="screen_mode_exclusive_streaming">独占显示</string>
     <string name="screen_mode_host_default_desc">使用 Sunshine 主机端配置，不覆盖屏幕组合设置。</string>
     <string name="screen_mode_no_operation_desc">保持当前屏幕布局，不调整显示器拓扑。</string>
     <string name="screen_mode_auto_activate_desc">自动激活指定显示器用于串流。</string>
@@ -1284,14 +1284,7 @@
     <string name="appview_background_mode_title">背景</string>
     <string name="appview_quick_settings_title">快速设置</string>
     <string name="appview_full_settings">完整设置</string>
-    <string name="appview_screen_combination_title">屏幕组合</string>
     <string name="appview_open_screen_combination_picker">打开屏幕组合选择器</string>
-    <string name="appview_screen_mode_host_short">跟随主机</string>
-    <string name="appview_screen_mode_noop_short">无操作</string>
-    <string name="appview_screen_mode_activate_short">激活模式</string>
-    <string name="appview_screen_mode_primary_short">主屏串流</string>
-    <string name="appview_screen_mode_secondary_short">副屏串流</string>
-    <string name="appview_screen_mode_exclusive_short">独占显示</string>
     <string name="appview_display_selection_virtual">虚拟显示器</string>
     <string name="appview_background_mode_artwork">应用封面</string>
     <string name="appview_background_mode_acrylic">亚克力</string>

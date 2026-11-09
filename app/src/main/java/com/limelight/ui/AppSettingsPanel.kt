@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -337,7 +336,7 @@ fun AppSettingsPanel(
                 item(key = "screen-divider") { PanelDivider() }
                 item(key = "screen-header") {
                     SectionNavigationTitle(
-                        title = stringResource(R.string.appview_screen_combination_title),
+                        title = stringResource(R.string.title_screen_combination_mode),
                         value = selectedScreenCombinationLabel,
                         onClick = onScreenCombinationClick
                     )
@@ -690,22 +689,6 @@ private fun BackgroundModeIconView(
     }
 }
 
-@Composable
-private fun screenModeCompactLabel(option: AppScreenCombinationOption): String =
-    screenCombinationModeShortLabelRes(option.value)?.let { stringResource(it) } ?: option.label
-
-/** Compact labels shared by quick settings and title accessibility descriptions. */
-@StringRes
-internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
-    -1 -> R.string.appview_screen_mode_host_short
-    0 -> R.string.appview_screen_mode_noop_short
-    1 -> R.string.appview_screen_mode_activate_short
-    2 -> R.string.appview_screen_mode_primary_short
-    4 -> R.string.appview_screen_mode_secondary_short
-    3 -> R.string.appview_screen_mode_exclusive_short
-    else -> null
-}
-
 @DrawableRes
 internal fun screenCombinationModeIconRes(mode: Int): Int? = when (mode) {
     -1 -> R.drawable.ic_screen_mode_host
@@ -748,7 +731,7 @@ internal fun ScreenCombinationSegmentedControl(
             ) {
                 row.forEach { option ->
                     SegmentButton(
-                        label = screenModeCompactLabel(option),
+                        label = option.label,
                         selected = selectedMode == option.value,
                         icon = { tint, modifier ->
                             screenCombinationModeIconRes(option.value)?.let { iconRes ->
@@ -757,7 +740,7 @@ internal fun ScreenCombinationSegmentedControl(
                         },
                         verticalIcon = true,
                         modifier = Modifier.weight(1f),
-                        maxLines = 1,
+                        maxLines = 2,
                         onClick = { onModeSelected(option.value) }
                     )
                 }

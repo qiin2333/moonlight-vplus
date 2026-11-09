@@ -77,7 +77,6 @@ import com.limelight.ui.VIRTUAL_DISPLAY_ID
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
 import com.limelight.ui.screenCombinationModeIconRes
-import com.limelight.ui.screenCombinationModeShortLabelRes
 import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.LastSettingsSummary
 import com.limelight.utils.AppActionSheet
@@ -744,8 +743,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         }
         label.text = spannableString
         val modeLabel = mode?.let { value ->
-            screenCombinationModeShortLabelRes(value)?.let { getString(it) }
-                ?: screenCombinationOptions.firstOrNull { it.value == value }?.label
+            screenCombinationOptions.firstOrNull { it.value == value }?.label
         }
         label.contentDescription = listOfNotNull(modeLabel, text.removePrefix(prefix)).joinToString(", ")
     }
