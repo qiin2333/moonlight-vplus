@@ -2324,6 +2324,11 @@
     <string name="display_native_resolution_description">跟随目标显示器 · %1$s</string>
     <string name="display_choice_unavailable">此设备暂不支持</string>
     <string name="display_custom_resolution_action">管理分辨率…</string>
+    <string name="display_custom_frame_rate_action">编辑常用帧率…</string>
+    <string name="title_custom_frame_rates">常用帧率</string>
+    <string name="custom_frame_rate_hint">常用帧率只影响游戏菜单的展示，不会改变当前串流帧率；设置页始终保留完整列表。</string>
+    <string name="custom_frame_rate_add_favorite">加入常用</string>
+    <string name="frame_rate_show_all">全部帧率…</string>
     <string name="title_float_ball_settings">悬浮球</string>
     <string name="float_ball_appearance">悬浮显示</string>
     <string name="float_ball_gestures">手势操作</string>

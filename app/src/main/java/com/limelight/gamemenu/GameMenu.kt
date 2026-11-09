@@ -54,6 +54,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
+import com.limelight.preferences.CustomFrameRatesStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
@@ -1119,10 +1120,13 @@ class GameMenu(
     private fun showDisplayChoiceSheet(
         title: String,
         choices: List<DisplayChoice>,
+        showAllLabel: String? = null,
+        onShowAll: (() -> Unit)? = null,
         onSelected: (DisplayChoice) -> Unit
     ) {
         val availableChoices = choices.filter { it.enabled }
         if (availableChoices.isEmpty()) return
+        val showAllId = availableChoices.size
         val actions = availableChoices.mapIndexed { index, choice ->
             AppActionSheet.Action(
                 id = index,
@@ -1131,7 +1135,9 @@ class GameMenu(
                 checked = choice.selected,
                 emphasized = choice.emphasized
             )
-        }
+        } + listOfNotNull(showAllLabel?.takeIf { onShowAll != null }?.let {
+            AppActionSheet.Action(id = showAllId, title = it, sectionStart = true, opensSubmenu = true)
+        })
         registerChildDialog(
             AppActionSheet.show(
                 context = game,
@@ -1141,7 +1147,8 @@ class GameMenu(
                 initialActionId = availableChoices.indexOfFirst { it.selected }.takeIf { it >= 0 },
                 singleChoice = true,
                 onAction = { action ->
-                    availableChoices.getOrNull(action.id)?.let(onSelected)
+                    if (action.id == showAllId && onShowAll != null) onShowAll()
+                    else availableChoices.getOrNull(action.id)?.let(onSelected)
                 }
             )
         )
@@ -1167,14 +1174,28 @@ class GameMenu(
 
     private fun showFrameRateSheet() {
         val state = bitrateCardController.snapshot()
-        showDisplayChoiceSheet(
-            title = getString(R.string.title_fps_list),
-            choices = state.frameRates,
-            onSelected = {
-                bitrateCardController.stageFrameRate(it.value)
-                bitrateCardController.applyDisplayDraft()
-            }
-        )
+        val onSelected: (DisplayChoice) -> Unit = {
+            bitrateCardController.stageFrameRate(it.value)
+            bitrateCardController.applyDisplayDraft()
+        }
+        // 常用帧率只影响展示：当前值始终保留，未配置时展示全部
+        val favorites = CustomFrameRatesStore.loadFavorites(game)
+        val shown = if (favorites.isNullOrEmpty()) state.frameRates
+        else state.frameRates.filter { it.value in favorites || it.selected }
+        val title = getString(R.string.title_fps_list)
+        if (shown.size < state.frameRates.size) {
+            showDisplayChoiceSheet(
+                title = title,
+                choices = shown,
+                showAllLabel = getString(R.string.frame_rate_show_all),
+                onShowAll = {
+                    showDisplayChoiceSheet(title = title, choices = state.frameRates, onSelected = onSelected)
+                },
+                onSelected = onSelected
+            )
+        } else {
+            showDisplayChoiceSheet(title = title, choices = state.frameRates, onSelected = onSelected)
+        }
     }
 
     private fun showScreenModeSheet() {
