@@ -276,11 +276,11 @@
     <string name="summary_screen_combination_mode">Contrôle des écrans Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">S’applique au contrôle des écrans Foundation Sunshine</string>
     <string name="screen_mode_host_default">Suivre l’hôte</string>
-    <string name="screen_mode_no_operation">Mode sans opération</string>
-    <string name="screen_mode_auto_activate">Mode activation</string>
-    <string name="screen_mode_primary_streaming">Mode streaming principal</string>
-    <string name="screen_mode_secondary_streaming">Mode streaming secondaire</string>
-    <string name="screen_mode_exclusive_streaming">Mode streaming d’écran exclusif</string>
+    <string name="screen_mode_no_operation">Sans action</string>
+    <string name="screen_mode_auto_activate">Activer</string>
+    <string name="screen_mode_primary_streaming">Principal</string>
+    <string name="screen_mode_secondary_streaming">Secondaire</string>
+    <string name="screen_mode_exclusive_streaming">Exclusif</string>
     <string name="screen_mode_host_default_desc">Utilise le réglage de l’hôte Sunshine sans le remplacer.</string>
     <string name="screen_mode_no_operation_desc">Conserve la disposition actuelle des écrans.</string>
     <string name="screen_mode_auto_activate_desc">Active l’écran sélectionné pour le streaming.</string>
