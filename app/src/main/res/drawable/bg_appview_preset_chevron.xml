@@ -2,18 +2,18 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_activated="true">
         <shape android:shape="oval">
-            <solid android:color="@color/appview_preset_active_fill" />
+            <solid android:color="@color/ui_shell_accent_soft" />
             <stroke
                 android:width="1dp"
-                android:color="@color/appview_preset_active" />
+                android:color="@color/ui_shell_accent" />
         </shape>
     </item>
     <item>
         <shape android:shape="oval">
-            <solid android:color="@color/appview_preset_chip_fill" />
+            <solid android:color="@color/ui_shell_surface_pressed" />
             <stroke
                 android:width="1dp"
-                android:color="@color/appview_preset_chip_stroke" />
+                android:color="@color/ui_shell_outline" />
         </shape>
     </item>
 </selector>

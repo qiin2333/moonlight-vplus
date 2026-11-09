@@ -32,6 +32,7 @@ class LastSettingsPanel(
     private val context = root.context
     private val density = root.resources.displayMetrics.density
 
+    private val shell: View = root.findViewById(R.id.lastSettingsPill)
     private val pill: View = root.findViewById(R.id.lastSettingsPillAction)
     private val icon: ImageView = root.findViewById(R.id.lastSettingsPillIcon)
     private val title: TextView = root.findViewById(R.id.lastSettingsPillTitle)
@@ -41,11 +42,11 @@ class LastSettingsPanel(
     private val reuseSwitch: SwitchCompat = root.findViewById(R.id.lastSettingsPillSwitch)
 
     private val detail: View = root.findViewById(R.id.lastSettingsDetail)
+    private val detailTitle: TextView = root.findViewById(R.id.lastSettingsDetailTitle)
     private val detailTime: TextView = root.findViewById(R.id.lastSettingsDetailTime)
     private val detailRows: LinearLayout = root.findViewById(R.id.lastSettingsDetailRows)
 
     private var expanded = false
-    private var reuseEnabled = false
     private var suppressCallback = false
 
     init {
@@ -71,8 +72,6 @@ class LastSettingsPanel(
             if (suppressCallback) {
                 return@setOnCheckedChangeListener
             }
-            reuseEnabled = isChecked
-            applyReuseState()
             onReuseChanged(isChecked)
         }
         applyExpandedState(animate = false)
@@ -81,6 +80,7 @@ class LastSettingsPanel(
     /** 主题或屏幕方向变化后更新胶囊样式。 */
     fun applyTheme() {
         AppSwitchStyle.apply(reuseSwitch)
+        applyPanelColors()
         val configuration = root.resources.configuration
         val margin = root.resources.getDimension(R.dimen.appview_content_margin)
         val available = (configuration.screenWidthDp * density - 2 * margin).toInt()
@@ -90,6 +90,29 @@ class LastSettingsPanel(
             } else {
                 ViewGroup.LayoutParams.MATCH_PARENT
             }
+        }
+    }
+
+    private fun applyPanelColors() {
+        val primary = ContextCompat.getColor(context, R.color.ui_shell_text_primary)
+        val secondary = ContextCompat.getColor(context, R.color.ui_shell_text_secondary)
+        val outline = ContextCompat.getColor(context, R.color.ui_shell_outline)
+        shell.background = ContextCompat.getDrawable(context, R.drawable.bg_appview_preset_pill)
+        detail.background = ContextCompat.getDrawable(context, R.drawable.bg_appview_preset_detail)
+        chevron.background = ContextCompat.getDrawable(context, R.drawable.bg_appview_preset_chevron)
+        icon.setColorFilter(secondary)
+        updateChevronTint()
+        title.setTextColor(primary)
+        detailTitle.setTextColor(primary)
+        metrics.setTextColor(secondary)
+        reuseLabel.setTextColor(secondary)
+        detailTime.setTextColor(secondary)
+        root.findViewById<View>(R.id.lastSettingsPillDivider).setBackgroundColor(outline)
+        root.findViewById<View>(R.id.lastSettingsDetailDivider).setBackgroundColor(outline)
+        for (index in 0 until detailRows.childCount) {
+            val row = detailRows.getChildAt(index)
+            row.findViewById<TextView>(R.id.lastSettingsRowLabel).setTextColor(secondary)
+            row.findViewById<TextView>(R.id.lastSettingsRowValue).setTextColor(secondary)
         }
     }
 
@@ -113,7 +136,6 @@ class LastSettingsPanel(
         suppressCallback = true
         reuseSwitch.isChecked = reuse
         suppressCallback = false
-        reuseEnabled = reuse
 
         pill.contentDescription = context.getString(
             R.string.app_last_settings_pill_description,
@@ -121,7 +143,6 @@ class LastSettingsPanel(
             summary.timeLabel
         )
 
-        applyReuseState()
         setExpanded(false, animate = false)
     }
 
@@ -136,26 +157,22 @@ class LastSettingsPanel(
         }
     }
 
-    private fun applyReuseState() {
-        val dim = if (reuseEnabled) 1f else 0.55f
-        title.alpha = dim
-        metrics.alpha = dim
-        icon.alpha = dim
-        reuseLabel.alpha = if (reuseEnabled) 1f else 0.72f
-    }
-
     fun collapseDetails(): Boolean {
         if (!expanded) return false
         setExpanded(false, animate = true)
         return true
     }
 
-    private fun applyExpandedState(animate: Boolean) {
-        chevron.isActivated = expanded
+    private fun updateChevronTint() {
         chevron.setColorFilter(ContextCompat.getColor(
             context,
-            if (expanded) R.color.appview_preset_active else R.color.appview_preset_text_secondary
+            if (expanded) R.color.ui_shell_accent else R.color.ui_shell_text_secondary
         ))
+    }
+
+    private fun applyExpandedState(animate: Boolean) {
+        chevron.isActivated = expanded
+        updateChevronTint()
         val duration = if (animate) 160L else 0L
         chevron.animate()
             .rotation(if (expanded) 180f else 0f)

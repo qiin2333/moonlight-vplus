@@ -20,16 +20,4 @@
     <color name="appview_text_shadow">#80000000</color>
 
     <!-- AppView「上一次设置」预设条：始终压在封面/模糊背景上，固定使用深色玻璃 -->
-    <color name="appview_preset_fill_top">#B82E2839</color>
-    <color name="appview_preset_fill_bottom">#D61A1723</color>
-    <color name="appview_preset_stroke">#22FFFFFF</color>
-    <color name="appview_preset_divider">#1FFFFFFF</color>
-    <color name="appview_preset_text_primary">#F5FFFFFF</color>
-    <color name="appview_preset_text_secondary">#A8FFFFFF</color>
-    <color name="appview_preset_text_tertiary">#70FFFFFF</color>
-    <color name="appview_preset_icon">#8AFFFFFF</color>
-    <color name="appview_preset_chip_fill">#14FFFFFF</color>
-    <color name="appview_preset_chip_stroke">#1FFFFFFF</color>
-    <color name="appview_preset_active">#FF8DA7</color>
-    <color name="appview_preset_active_fill">#26FF8DA7</color>
 </resources>

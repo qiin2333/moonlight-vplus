@@ -33,7 +33,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:text="@string/app_last_settings_title"
-                android:textColor="@color/appview_preset_text_primary"
+                android:textColor="@color/ui_shell_text_primary"
                 android:textSize="@dimen/appview_preset_title_text_size" />
 
             <Space
@@ -47,15 +47,16 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-light"
                 android:maxLines="1"
-                android:textColor="@color/appview_preset_text_tertiary"
+                android:textColor="@color/ui_shell_text_secondary"
                 android:textSize="@dimen/appview_preset_meta_text_size" />
         </LinearLayout>
 
         <View
+            android:id="@+id/lastSettingsDetailDivider"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="10dp"
-            android:background="@color/appview_preset_divider" />
+            android:background="@color/ui_shell_outline" />
 
         <LinearLayout
             android:id="@+id/lastSettingsDetailRows"
@@ -93,7 +94,7 @@
                 android:layout_height="@dimen/appview_preset_icon_size"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_appview_preset_history"
-                app:tint="@color/appview_preset_icon" />
+                app:tint="@color/ui_shell_text_secondary" />
 
             <TextView
                 android:id="@+id/lastSettingsPillTitle"
@@ -103,15 +104,16 @@
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:text="@string/app_last_settings_title"
-                android:textColor="@color/appview_preset_text_primary"
+                android:textColor="@color/ui_shell_text_primary"
                 android:textSize="@dimen/appview_preset_title_text_size" />
 
             <View
+                android:id="@+id/lastSettingsPillDivider"
                 android:layout_width="1dp"
                 android:layout_height="16dp"
                 android:layout_marginStart="9dp"
                 android:layout_marginEnd="9dp"
-                android:background="@color/appview_preset_divider" />
+                android:background="@color/ui_shell_outline" />
 
             <TextView
                 android:id="@+id/lastSettingsPillMetrics"
@@ -121,7 +123,7 @@
                 android:ellipsize="end"
                 android:fontFamily="sans-serif"
                 android:maxLines="1"
-                android:textColor="@color/appview_preset_text_secondary"
+                android:textColor="@color/ui_shell_text_secondary"
                 android:textSize="@dimen/appview_preset_meta_text_size" />
 
             <ImageView
@@ -133,7 +135,7 @@
                 android:importantForAccessibility="no"
                 android:padding="4dp"
                 android:src="@drawable/ic_appview_preset_chevron"
-                app:tint="@color/appview_preset_text_secondary" />
+                app:tint="@color/ui_shell_text_secondary" />
         </LinearLayout>
 
         <TextView
@@ -145,7 +147,7 @@
             android:fontFamily="sans-serif"
             android:maxLines="1"
             android:text="@string/app_last_settings_reuse"
-            android:textColor="@color/appview_preset_text_secondary"
+            android:textColor="@color/ui_shell_text_secondary"
             android:textSize="@dimen/appview_preset_switch_label_text_size" />
 
         <com.limelight.utils.AppSwitchView

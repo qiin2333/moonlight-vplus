@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif"
         android:letterSpacing="0.04"
-        android:textColor="@color/appview_preset_text_tertiary"
+        android:textColor="@color/ui_shell_text_secondary"
         android:textSize="@dimen/appview_preset_detail_label_text_size" />
 
     <TextView
@@ -22,6 +22,6 @@
         android:layout_weight="1"
         android:fontFamily="sans-serif"
         android:lineSpacingExtra="2dp"
-        android:textColor="@color/appview_preset_text_secondary"
+        android:textColor="@color/ui_shell_text_secondary"
         android:textSize="@dimen/appview_preset_detail_value_text_size" />
 </LinearLayout>
