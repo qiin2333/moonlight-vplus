@@ -7984,17 +7984,6 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.app_last_settings_apply_success` appears to be unused"
-        errorLine1="    &lt;string name=&quot;app_last_settings_apply_success&quot;>Applied last settings&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="1014"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.setting_gyro_sensitivity` appears to be unused"
         errorLine1="    &lt;string name=&quot;setting_gyro_sensitivity&quot;>Gyroscope: %1$.1fx&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">

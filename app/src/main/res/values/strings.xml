@@ -1331,8 +1331,6 @@
 
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">Last Settings</string>
-    <string name="app_last_settings_none">No last settings</string>
-    <string name="app_last_settings_apply_success">Applied last settings</string>
     <string name="app_last_settings_start_with_last">Started with last settings</string>
     <string name="app_last_settings_reuse">Reuse</string>
     <string name="app_last_settings_reuse_description">Reuse last settings when launching</string>
@@ -1359,19 +1357,7 @@
     <string name="app_last_settings_card_waveform">Waveform</string>
 
     <!-- Setting detail strings -->
-    <string name="setting_resolution">Resolution: %1$dx%2$d</string>
-    <string name="setting_fps">Frame Rate: %1$dfps</string>
-    <string name="setting_bitrate">Bitrate: %1$dkbps</string>
-    <string name="setting_scale">Scale: %1$d%%</string>
-    <string name="setting_format">Video Codec: %1$s</string>
-    <string name="setting_hdr_enabled">HDR: Enabled</string>
-    <string name="setting_mic_enabled">Microphone: %1$dkbps</string>
-    <string name="setting_native_mouse_enabled">Native Mouse: Enabled</string>
     <string name="setting_gyro_sensitivity">Gyroscope: %1$.1fx</string>
-    <string name="setting_bitrate_card_enabled">Bitrate Card: Enabled</string>
-    <string name="setting_audio_haptics_card_enabled">Audio Haptics Card: Enabled</string>
-    <string name="setting_gyro_card_enabled">Gyro Card: Enabled</string>
-    <string name="setting_QuickKey_card_enabled">Special key card: Activate</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">Just now</string>

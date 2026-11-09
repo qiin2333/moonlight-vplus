@@ -39,13 +39,13 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,6 +106,13 @@ internal fun LastSettingsPanel(
                         .fillMaxWidth()
                         .background(surface, AppShapes.large)
                         .border(1.dp, outline, AppShapes.large)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent().changes.forEach { it.consume() }
+                                }
+                            }
+                        }
                         .padding(14.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -183,23 +190,24 @@ internal fun LastSettingsPanel(
                         }
                     }
                 }
-                Text(
-                    stringResource(R.string.app_last_settings_reuse),
-                    Modifier.padding(start = 8.dp, end = 5.dp).clearAndSetSemantics {},
-                    color = secondary, fontSize = 11.sp, maxLines = 1
-                )
-                Box(
+                Row(
                     Modifier
-                        .width(48.dp)
                         .fillMaxHeight()
                         .onFocusChanged { switchFocused = it.isFocused }
                         .background(if (switchFocused) accentSoft else Color.Transparent, AppShapes.small)
                         .lastSettingsController({ onReuseChanged(!reuse) }, onReturnToApp)
-                        .semantics { contentDescription = switchDescription }
-                        .toggleable(reuse, role = Role.Switch, onValueChange = onReuseChanged),
-                    contentAlignment = Alignment.Center
+                        .toggleable(reuse, role = Role.Switch, onValueChange = onReuseChanged)
+                        .clearAndSetSemantics { contentDescription = switchDescription },
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AppSwitch(checked = reuse, onCheckedChange = null)
+                    Text(
+                        stringResource(R.string.app_last_settings_reuse),
+                        Modifier.padding(start = 8.dp, end = 5.dp),
+                        color = secondary, fontSize = 11.sp, maxLines = 1
+                    )
+                    Box(Modifier.width(48.dp), contentAlignment = Alignment.Center) {
+                        AppSwitch(checked = reuse, onCheckedChange = null)
+                    }
                 }
             }
         }

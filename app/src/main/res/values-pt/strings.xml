@@ -617,23 +617,10 @@
     
     <!-- App last settings -->
     <string name="app_last_settings_title">Últimas configurações</string>
-    <string name="app_last_settings_none">Sem últimas configurações</string>
-    <string name="app_last_settings_apply_success">Últimas configurações aplicadas</string>
     <string name="app_last_settings_start_with_last">Iniciado com últimas configurações</string>
     
     <!-- Setting detail strings -->
-    <string name="setting_resolution">Resolução: %1$dx%2$d</string>
-    <string name="setting_fps">Taxa de quadros: %1$dfps</string>
-    <string name="setting_bitrate">Taxa de bits: %1$dkbps</string>
-    <string name="setting_scale">Escala: %1$d%%</string>
-    <string name="setting_format">Codec de vídeo: %1$s</string>
-    <string name="setting_hdr_enabled">HDR: Ativado</string>
-    <string name="setting_mic_enabled">Microfone: %1$dkbps</string>
-    <string name="setting_native_mouse_enabled">Rato nativo: Ativado</string>
     <string name="setting_gyro_sensitivity">Giroscópio: %1$.1fx</string>
-    <string name="setting_bitrate_card_enabled">Cartão de taxa de bits: Ativado</string>
-    <string name="setting_gyro_card_enabled">Cartão de giroscópio: Ativado</string>
-    <string name="setting_QuickKey_card_enabled">Cartão de tecla especial: Ativado</string>
     
     <!-- Time format strings -->
     <string name="time_just_now">Agora mesmo</string>
