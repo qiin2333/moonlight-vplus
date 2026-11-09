@@ -79,6 +79,7 @@ import androidx.compose.ui.semantics.contentDescription
 import kotlinx.coroutines.delay
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.core.os.ConfigurationCompat
 import com.limelight.R
 import com.limelight.ui.theme.AppCornerRadii
 import com.limelight.ui.theme.AppShapes
@@ -495,6 +496,7 @@ private fun BackgroundModeSegmentedControl(
     selectedMode: AppBackgroundMode,
     onModeSelected: (AppBackgroundMode) -> Unit
 ) {
+    val compactLabel = ConfigurationCompat.getLocales(LocalConfiguration.current)[0]?.language != "zh"
     val options = listOf(
         Triple(
             AppBackgroundMode.Artwork,
@@ -518,7 +520,10 @@ private fun BackgroundModeSegmentedControl(
         selectedIndex = options.indexOfFirst { it.first == selectedMode },
         modifier = Modifier
             .fillMaxWidth()
-            .height(36.dp)
+            .then(
+                if (compactLabel) Modifier.heightIn(min = 36.dp).height(IntrinsicSize.Min)
+                else Modifier.height(36.dp)
+            )
             .clip(AppShapes.medium)
             .background(
                 MaterialTheme.colorScheme.onSurface.copy(
@@ -534,6 +539,8 @@ private fun BackgroundModeSegmentedControl(
                 selected = mode == selectedMode,
                 icon = { tint, modifier -> BackgroundModeIconView(icon, tint, modifier) },
                 modifier = Modifier.weight(1f),
+                compactLabel = compactLabel,
+                maxLines = if (compactLabel) 2 else 1,
                 onClick = { onModeSelected(mode) }
             )
         }
@@ -549,6 +556,7 @@ private fun SegmentButton(
     verticalIcon: Boolean = false,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
+    compactLabel: Boolean = false,
     onClick: () -> Unit
 ) {
     val view = LocalView.current
@@ -558,7 +566,14 @@ private fun SegmentButton(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .heightIn(min = if (verticalIcon) 50.dp else if (maxLines > 1) 42.dp else 36.dp)
+            .heightIn(
+                min = when {
+                    verticalIcon -> 50.dp
+                    compactLabel -> 32.dp
+                    maxLines > 1 -> 42.dp
+                    else -> 36.dp
+                }
+            )
             .clip(shape)
             .then(
                 if (focused && enabled) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
@@ -590,8 +605,8 @@ private fun SegmentButton(
             Text(
                 text = label,
                 color = contentColor,
-                fontSize = if (verticalIcon) 11.sp else if (maxLines > 1) 12.sp else 13.sp,
-                lineHeight = if (verticalIcon) 13.sp else if (maxLines > 1) 16.sp else 17.sp,
+                fontSize = if (verticalIcon || compactLabel) 11.sp else if (maxLines > 1) 12.sp else 13.sp,
+                lineHeight = if (verticalIcon || compactLabel) 13.sp else if (maxLines > 1) 16.sp else 17.sp,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 maxLines = maxLines,

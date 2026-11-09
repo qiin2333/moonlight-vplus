@@ -239,11 +239,11 @@
     <string name="summary_screen_combination_mode">Ovládání displejů Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">Platí pro ovládání displejů Foundation Sunshine</string>
     <string name="screen_mode_host_default">Řídit se hostitelem</string>
-    <string name="screen_mode_no_operation">Režim bez zásahu</string>
-    <string name="screen_mode_auto_activate">Režim aktivace</string>
-    <string name="screen_mode_primary_streaming">Režim streamování z hlavního displeje</string>
-    <string name="screen_mode_secondary_streaming">Režim streamování ze sekundárního displeje</string>
-    <string name="screen_mode_exclusive_streaming">Režim exkluzivního streamování displeje</string>
+    <string name="screen_mode_no_operation">Bez zásahu</string>
+    <string name="screen_mode_auto_activate">Aktivovat</string>
+    <string name="screen_mode_primary_streaming">Hlavní</string>
+    <string name="screen_mode_secondary_streaming">Sekundární</string>
+    <string name="screen_mode_exclusive_streaming">Výhradní</string>
     <string name="screen_mode_host_default_desc">Použije nastavení hostitele Sunshine bez jeho přepsání.</string>
     <string name="screen_mode_no_operation_desc">Zachová aktuální rozložení displejů.</string>
     <string name="screen_mode_auto_activate_desc">Aktivuje vybraný displej pro streamování.</string>
