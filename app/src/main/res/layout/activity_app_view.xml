@@ -139,47 +139,8 @@
         android:orientation="vertical"
         android:gravity="end">
 
-        <!-- 上一次设置信息 -->
-        <LinearLayout
-            android:id="@+id/lastSettingsInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end"
-            android:visibility="gone">
-
-            <com.limelight.utils.AppSwitchView
-                style="@style/AppSwitchWidget"
-                android:id="@+id/useLastSettingsSwitch"
-                android:layout_marginTop="5dp"
-                android:focusable="true"
-                android:gravity="start|center_vertical"
-                android:text="@string/app_last_settings_use_checkbox"
-                android:textColor="@color/appview_text_secondary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif-light"
-                android:checked="false"
-                app:switchPadding="8dp" />
-
-            <TextView
-                android:id="@+id/lastSettingsText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="13sp"
-                android:textColor="@color/appview_text_secondary"
-                android:shadowColor="@color/appview_text_shadow"
-                android:shadowDx="1"
-                android:shadowDy="1"
-                android:shadowRadius="2"
-                android:fontFamily="sans-serif-light"
-                android:background="@drawable/settings_info_background"
-                android:padding="@dimen/appview_edge_margin"
-                android:maxLines="3"
-                android:ellipsize="end"
-                android:lineSpacingExtra="2dp"
-                android:text="@string/app_last_settings_title" />
-
-        </LinearLayout>
+        <!-- 上一次设置：收起为一行胶囊，点按展开分组详情 -->
+        <include layout="@layout/appview_last_settings" />
 
     </LinearLayout>
 

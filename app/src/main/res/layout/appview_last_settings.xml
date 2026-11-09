@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 上一次设置：竖屏形态。详情卡在胶囊上方展开，胶囊通栏。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/lastSettingsInfo"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="end"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:id="@+id/lastSettingsDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_appview_preset_detail"
+        android:orientation="vertical"
+        android:padding="@dimen/appview_preset_detail_padding"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/lastSettingsDetailTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:text="@string/app_last_settings_title"
+                android:textColor="@color/appview_preset_text_primary"
+                android:textSize="@dimen/appview_preset_title_text_size" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/lastSettingsDetailTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:maxLines="1"
+                android:textColor="@color/appview_preset_text_tertiary"
+                android:textSize="@dimen/appview_preset_meta_text_size" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="10dp"
+            android:background="@color/appview_preset_divider" />
+
+        <LinearLayout
+            android:id="@+id/lastSettingsDetailRows"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/lastSettingsDetailHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:fontFamily="sans-serif-light"
+            android:lineSpacingExtra="1dp"
+            android:textColor="@color/appview_preset_text_tertiary"
+            android:textSize="@dimen/appview_preset_meta_text_size" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/lastSettingsPill"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/appview_preset_pill_height"
+        android:addStatesFromChildren="true"
+        android:background="@drawable/bg_appview_preset_pill"
+        android:clickable="true"
+        android:clipToOutline="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/appview_preset_pill_padding_start"
+        android:paddingEnd="@dimen/appview_preset_pill_padding_end">
+
+        <ImageView
+            android:id="@+id/lastSettingsPillIcon"
+            android:layout_width="@dimen/appview_preset_icon_size"
+            android:layout_height="@dimen/appview_preset_icon_size"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_appview_preset_history"
+            app:tint="@color/appview_preset_icon" />
+
+        <TextView
+            android:id="@+id/lastSettingsPillTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:text="@string/app_last_settings_title"
+            android:textColor="@color/appview_preset_text_primary"
+            android:textSize="@dimen/appview_preset_title_text_size" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="9dp"
+            android:layout_marginEnd="9dp"
+            android:background="@color/appview_preset_divider" />
+
+        <TextView
+            android:id="@+id/lastSettingsPillMetrics"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif"
+            android:maxLines="1"
+            android:textColor="@color/appview_preset_text_secondary"
+            android:textSize="@dimen/appview_preset_meta_text_size" />
+
+        <TextView
+            android:id="@+id/lastSettingsPillMore"
+            android:layout_width="wrap_content"
+            android:layout_height="18dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_appview_preset_chip"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:minWidth="18dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:textColor="@color/appview_preset_chip_text"
+            android:textSize="@dimen/appview_preset_chip_text_size"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/lastSettingsPillChevron"
+            android:layout_width="@dimen/appview_preset_chevron_size"
+            android:layout_height="@dimen/appview_preset_chevron_size"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_appview_preset_chevron"
+            android:importantForAccessibility="no"
+            android:padding="4dp"
+            android:src="@drawable/ic_appview_preset_chevron"
+            app:tint="@color/appview_preset_text_secondary" />
+
+        <TextView
+            android:id="@+id/lastSettingsPillReuse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="5dp"
+            android:fontFamily="sans-serif"
+            android:maxLines="1"
+            android:text="@string/app_last_settings_reuse"
+            android:textColor="@color/appview_preset_text_secondary"
+            android:textSize="@dimen/appview_preset_switch_label_text_size" />
+
+        <com.limelight.utils.AppSwitchView
+            android:id="@+id/lastSettingsPillSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:contentDescription="@string/app_last_settings_reuse_description"
+            app:switchMinWidth="36dp" />
+    </LinearLayout>
+</LinearLayout>

@@ -31,8 +31,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
 import android.widget.AbsListView
-import androidx.appcompat.widget.SwitchCompat
-import com.limelight.utils.AppSwitchStyle
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -70,6 +68,7 @@ import com.limelight.ui.AppDisplayOption
 import com.limelight.ui.AppScreenCombinationOption
 import com.limelight.ui.AppSettingsPanel
 import com.limelight.ui.FeatureGuideRegistry
+import com.limelight.ui.LastSettingsPanel
 import com.limelight.ui.ScreenCombinationModePickerView
 import com.limelight.ui.ScreenCombinationModeSpan
 import com.limelight.ui.SelectionIndicatorAnimator
@@ -202,9 +201,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     // ==================== UI 组件 - 上一次设置 ====================
     private var appSettingsManager: AppSettingsManager? = null
-    private lateinit var lastSettingsInfo: LinearLayout
-    private lateinit var lastSettingsText: TextView
-    private lateinit var useLastSettingsSwitch: SwitchCompat
+    private var lastSettingsPanel: LastSettingsPanel? = null
     private lateinit var appViewTargetReminder: TextView
 
     // ==================== UI 组件 - 顶部下拉面板 & 显示器选择 ====================
@@ -308,7 +305,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (::useLastSettingsSwitch.isInitialized) AppSwitchStyle.apply(useLastSettingsSwitch)
+        lastSettingsPanel?.applyTheme()
         applyTitleTextResources()
         refreshTitle()
         findViewById<View>(R.id.appListText).post { refreshTitleColor() }
@@ -474,10 +471,9 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         // Initialize app settings manager and UI components
         appSettingsManager = AppSettingsManager(this)
-        lastSettingsInfo = findViewById(R.id.lastSettingsInfo)
-        lastSettingsText = findViewById(R.id.lastSettingsText)
-        useLastSettingsSwitch = findViewById(R.id.useLastSettingsSwitch)
-        AppSwitchStyle.apply(useLastSettingsSwitch)
+        lastSettingsPanel = LastSettingsPanel(findViewById(R.id.lastSettingsInfo)) { enabled ->
+            appSettingsManager?.setUseLastSettingsEnabled(enabled)
+        }
         appViewTargetReminder = findViewById(R.id.appViewTargetReminder)
 
         // Initialize top dropdown panel
@@ -517,7 +513,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         refreshScreenCombinationModeFromPreferences()
 
         // Set up event listeners
-        useLastSettingsSwitch.setOnCheckedChangeListener { _, isChecked -> appSettingsManager?.setUseLastSettingsEnabled(isChecked) }
+        // （「上一次设置」的开关回调在 LastSettingsPanel 内部注册）
 
         // Initialize selection indicator animator
         val selectionIndicator = findViewById<View>(R.id.selectionIndicator)
@@ -985,28 +981,19 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
      * @param app 应用对象
      */
     private fun updateLastSettingsInfo(app: AppObject) {
-        if (appSettingsManager == null || computer == null) {
-            return
-        }
+        val manager = appSettingsManager ?: return
+        val uuid = computer?.uuid ?: return
 
-        val settingsSummary = appSettingsManager?.getSettingsSummary(computer?.uuid!!, app.app)
-        val noneSettingsText = getString(R.string.app_last_settings_none)
+        val summary = manager.getLastSettingsSummary(uuid, app.app)
+        lastSettingsPanel?.bind(summary, manager.isUseLastSettingsEnabled)
+    }
 
-        val hasValidSettings = settingsSummary != null && settingsSummary != noneSettingsText
-
-        if (hasValidSettings) {
-            val displayText = getString(R.string.app_last_settings_title) + " " + settingsSummary
-            lastSettingsText.text = displayText
-            lastSettingsInfo.visibility = View.VISIBLE
-
-            // 同步开关状态，避免不必要的更新。
-            val useLastSettings = appSettingsManager?.isUseLastSettingsEnabled
-            if (useLastSettingsSwitch.isChecked != (useLastSettings == true)) {
-                useLastSettingsSwitch.isChecked = useLastSettings == true
-            }
-        } else {
-            lastSettingsInfo.visibility = View.GONE
-        }
+    /** 当前已有选中项时刷新一次，避免从串流返回后仍显示旧数值。 */
+    private fun refreshLastSettingsInfoIfPossible() {
+        val adapter = appGridAdapter ?: return
+        if (selectedPosition < 0 || selectedPosition >= adapter.count) return
+        val app = adapter.getItem(selectedPosition) as? AppObject ?: return
+        updateLastSettingsInfo(app)
     }
 
     /**
@@ -1555,6 +1542,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         managerBinder?.setForegroundComputer(uuidString)
         refreshScreenCombinationModeFromPreferences()
         startComputerUpdates()
+        // 回到前台时，上一次设置可能已经被上一局串流刷新过
+        refreshLastSettingsInfoIfPossible()
         maybeShowAppViewFeatureGuide()
 
         if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

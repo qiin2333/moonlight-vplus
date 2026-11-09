@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 焦点：2dp 主色描边 + 原有玻璃底 -->
+    <item android:state_focused="true">
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <corners android:radius="24dp" />
+                    <solid android:color="@color/ui_shell_accent" />
+                </shape>
+            </item>
+            <item
+                android:left="2dp"
+                android:top="2dp"
+                android:right="2dp"
+                android:bottom="2dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="22dp" />
+                    <gradient
+                        android:angle="270"
+                        android:startColor="@color/appview_preset_fill_top"
+                        android:endColor="@color/appview_preset_fill_bottom" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <gradient
+                android:angle="270"
+                android:startColor="@color/appview_preset_fill_top"
+                android:endColor="@color/appview_preset_fill_bottom" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/appview_preset_stroke" />
+        </shape>
+    </item>
+</selector>

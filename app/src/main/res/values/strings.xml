@@ -1335,6 +1335,34 @@
     <string name="app_last_settings_use_checkbox">Use last settings</string>
     <string name="app_last_settings_apply_success">Applied last settings</string>
     <string name="app_last_settings_start_with_last">Started with last settings</string>
+    <string name="app_last_settings_reuse">Reuse</string>
+    <string name="app_last_settings_reuse_description">Reuse last settings when launching</string>
+    <string name="app_last_settings_pill_description">Last settings, %1$s, %2$s</string>
+    <string name="app_last_settings_more">+%1$d</string>
+    <string name="app_last_settings_more_description">%1$d more settings</string>
+    <string name="app_last_settings_expand">Show details</string>
+    <string name="app_last_settings_collapse">Hide details</string>
+    <string name="app_last_settings_row_video">Video</string>
+    <string name="app_last_settings_row_encoding">Encoding</string>
+    <string name="app_last_settings_row_audio">Audio</string>
+    <string name="app_last_settings_row_input">Input</string>
+    <string name="app_last_settings_row_cards">Menu cards</string>
+    <string name="app_last_settings_hdr_on">HDR on</string>
+    <string name="app_last_settings_hdr_off">HDR off</string>
+    <string name="app_last_settings_mic_on">Mic on, %1$d kbps</string>
+    <string name="app_last_settings_mic_off">Mic off</string>
+    <string name="app_last_settings_native_mouse_on">Native mouse</string>
+    <string name="app_last_settings_native_mouse_off">System mouse</string>
+    <string name="app_last_settings_cards_none">No cards enabled</string>
+    <string name="app_last_settings_hint_on">Launching a game will reuse these settings</string>
+    <string name="app_last_settings_hint_off">Launching a game will open the stream settings first</string>
+    <string name="app_last_settings_scale">Scale %1$d%%</string>
+    <string name="app_last_settings_card_bitrate">Bitrate</string>
+    <string name="app_last_settings_card_display">Display</string>
+    <string name="app_last_settings_card_audio_haptics">Audio haptics</string>
+    <string name="app_last_settings_card_gyro">Gyro</string>
+    <string name="app_last_settings_card_quick_key">Quick keys</string>
+    <string name="app_last_settings_card_waveform">Waveform</string>
 
     <!-- Setting detail strings -->
     <string name="setting_resolution">Resolution: %1$dx%2$d</string>
