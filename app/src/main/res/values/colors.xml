@@ -18,6 +18,4 @@
     <color name="appview_text_secondary">#CCFFFFFF</color>
     <color name="screen_combination_mode_picker_background">#E61C1D22</color>
     <color name="appview_text_shadow">#80000000</color>
-
-    <!-- AppView「上一次设置」预设条：始终压在封面/模糊背景上，固定使用深色玻璃 -->
 </resources>

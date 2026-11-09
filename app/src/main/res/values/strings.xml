@@ -1332,7 +1332,6 @@
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">Last Settings</string>
     <string name="app_last_settings_none">No last settings</string>
-    <string name="app_last_settings_use_checkbox">Use last settings</string>
     <string name="app_last_settings_apply_success">Applied last settings</string>
     <string name="app_last_settings_start_with_last">Started with last settings</string>
     <string name="app_last_settings_reuse">Reuse</string>
@@ -1350,7 +1349,6 @@
     <string name="app_last_settings_mic_on">Mic on, %1$d kbps</string>
     <string name="app_last_settings_mic_off">Mic off</string>
     <string name="app_last_settings_native_mouse_on">Native mouse</string>
-    <string name="app_last_settings_native_mouse_off">System mouse</string>
     <string name="app_last_settings_cards_none">No cards enabled</string>
     <string name="app_last_settings_scale">Scale %1$d%%</string>
     <string name="app_last_settings_card_bitrate">Bitrate</string>

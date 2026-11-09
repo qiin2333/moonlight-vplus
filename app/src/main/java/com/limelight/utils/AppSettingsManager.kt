@@ -185,7 +185,7 @@ class AppSettingsManager(private val context: Context) {
         return summary.toString()
     }
 
-    fun formatTimestamp(timestamp: Long): String {
+    private fun formatTimestamp(timestamp: Long): String {
         if (timestamp == 0L) {
             return context.getString(R.string.time_unknown)
         }

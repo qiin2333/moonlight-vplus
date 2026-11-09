@@ -1131,7 +1131,6 @@
     <string name="perf_moon_date_format">d MMMM yyyy, EEEE</string>
     <string name="app_last_settings_title">Прежние настройки</string>
     <string name="app_last_settings_none">Прежних настроек нет</string>
-    <string name="app_last_settings_use_checkbox">Использовать прежние</string>
     <string name="app_last_settings_apply_success">Прежние настройки применены</string>
     <string name="app_last_settings_start_with_last">Запущено с прежними настройками</string>
     <string name="setting_resolution">Разрешение: %1$dx%2$d</string>

@@ -618,7 +618,6 @@
     <!-- App last settings -->
     <string name="app_last_settings_title">Últimas configurações</string>
     <string name="app_last_settings_none">Sem últimas configurações</string>
-    <string name="app_last_settings_use_checkbox">Usar últimas configurações</string>
     <string name="app_last_settings_apply_success">Últimas configurações aplicadas</string>
     <string name="app_last_settings_start_with_last">Iniciado com últimas configurações</string>
     
