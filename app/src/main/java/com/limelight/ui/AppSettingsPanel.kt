@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,8 +58,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -279,8 +281,7 @@ fun AppSettingsPanel(
                 .width(panelWidth.dp)
                 .heightIn(max = panelMaxHeight.dp),
             shape = TopTabPanelShape,
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
+            color = panelSurface,
             shadowElevation = 12.dp,
             border = BorderStroke(
                 1.dp,
@@ -449,9 +450,8 @@ private fun SettingsShortcut(
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            painter = painterResource(R.drawable.phc_settings),
-            contentDescription = null,
+        PanelIcon(
+            iconRes = R.drawable.phc_settings,
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -462,6 +462,21 @@ private fun SettingsShortcut(
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun PanelIcon(@DrawableRes iconRes: Int, tint: Color, modifier: Modifier) {
+    val context = LocalContext.current
+    // Some devices render Compose's vector color filter black. Tint the platform drawable directly.
+    val drawable = remember(context, iconRes, tint) {
+        requireNotNull(context.getDrawable(iconRes)).mutate().apply {
+            setTint(tint.toArgb())
+        }
+    }
+    Canvas(modifier) {
+        drawable.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+        drawIntoCanvas { drawable.draw(it.nativeCanvas) }
     }
 }
 
@@ -589,7 +604,7 @@ private fun SegmentButton(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                icon?.invoke(contentColor, Modifier.size(17.dp))
+                icon?.invoke(contentColor, Modifier.size(20.dp))
                 labelText()
             }
         } else {
@@ -737,12 +752,7 @@ internal fun ScreenCombinationSegmentedControl(
                         selected = selectedMode == option.value,
                         icon = { tint, modifier ->
                             screenCombinationModeIconRes(option.value)?.let { iconRes ->
-                                Icon(
-                                    painter = painterResource(iconRes),
-                                    contentDescription = null,
-                                    tint = tint,
-                                    modifier = modifier
-                                )
+                                PanelIcon(iconRes, tint, modifier)
                             }
                         },
                         verticalIcon = true,
