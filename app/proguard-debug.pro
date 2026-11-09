@@ -36,11 +36,14 @@
     public static final com.limelight.utils.AppSettingsManager$Companion Companion;
     public void saveAppLastSettings(java.lang.String, com.limelight.nvstream.http.NvApp, com.limelight.preferences.PreferenceConfiguration);
     public com.limelight.preferences.PreferenceConfiguration getAppLastSettings(java.lang.String, com.limelight.nvstream.http.NvApp);
-    public java.lang.String getSettingsSummary(java.lang.String, com.limelight.nvstream.http.NvApp);
+    public com.limelight.utils.LastSettingsSummary getLastSettingsSummary(java.lang.String, com.limelight.nvstream.http.NvApp);
     public boolean applyLastSettingsFromIntent(android.content.Intent, com.limelight.preferences.PreferenceConfiguration);
 }
 -keep class com.limelight.utils.AppSettingsManager$Companion {
     public void addLastSettingsToIntent(android.content.Intent, com.limelight.preferences.PreferenceConfiguration);
+}
+-keep class com.limelight.utils.LastSettingsSummary {
+    public java.util.List getRows();
 }
 -keepclassmembers class com.limelight.nvstream.http.NvApp {
     public <init>(java.lang.String, int, boolean);

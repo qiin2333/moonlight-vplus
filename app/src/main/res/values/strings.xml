@@ -693,15 +693,15 @@
     <string name="summary_checkbox_clipboard_sync_text">Forward text copied on this device to the PC and vice versa. Warning: anything you copy (including passwords and 2FA codes) will leave this device.</string>
     <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
     <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
-    <string name="title_screen_combination_mode">Host display arrangement</string>
+    <string name="title_screen_combination_mode">Screen Layout</string>
     <string name="summary_screen_combination_mode">Choose how Foundation Sunshine arranges or combines host displays. Requires a compatible Foundation Sunshine host.</string>
     <string name="screen_combination_mode_dialog_subtitle">Applies to Foundation Sunshine display control</string>
-    <string name="screen_mode_host_default">Follow host</string>
-    <string name="screen_mode_no_operation">No operation mode</string>
-    <string name="screen_mode_auto_activate">Activate mode</string>
-    <string name="screen_mode_primary_streaming">Primary streaming mode</string>
-    <string name="screen_mode_secondary_streaming">Secondary streaming mode</string>
-    <string name="screen_mode_exclusive_streaming">Exclusive display streaming mode</string>
+    <string name="screen_mode_host_default">Follow Host</string>
+    <string name="screen_mode_no_operation">No Action</string>
+    <string name="screen_mode_auto_activate">Activate</string>
+    <string name="screen_mode_primary_streaming">Primary</string>
+    <string name="screen_mode_secondary_streaming">Secondary</string>
+    <string name="screen_mode_exclusive_streaming">Exclusive</string>
     <string name="screen_mode_host_default_desc">Use the Sunshine host setting without overriding it.</string>
     <string name="screen_mode_no_operation_desc">Send no-operation mode and keep the current display layout.</string>
     <string name="screen_mode_auto_activate_desc">Activate the selected display for streaming.</string>
@@ -1331,25 +1331,33 @@
 
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">Last Settings</string>
-    <string name="app_last_settings_none">No last settings</string>
-    <string name="app_last_settings_use_checkbox">Use last settings</string>
-    <string name="app_last_settings_apply_success">Applied last settings</string>
     <string name="app_last_settings_start_with_last">Started with last settings</string>
+    <string name="app_last_settings_reuse">Reuse</string>
+    <string name="app_last_settings_reuse_description">Reuse last settings when launching</string>
+    <string name="app_last_settings_pill_description">Last settings, %1$s, %2$s</string>
+    <string name="app_last_settings_expand">Show details</string>
+    <string name="app_last_settings_collapse">Hide details</string>
+    <string name="app_last_settings_row_video">Video</string>
+    <string name="app_last_settings_row_encoding">Encoding</string>
+    <string name="app_last_settings_row_audio">Audio</string>
+    <string name="app_last_settings_row_input">Input</string>
+    <string name="app_last_settings_row_cards">Menu cards</string>
+    <string name="app_last_settings_hdr_on">HDR on</string>
+    <string name="app_last_settings_hdr_off">HDR off</string>
+    <string name="app_last_settings_mic_on">Mic on, %1$d kbps</string>
+    <string name="app_last_settings_mic_off">Mic off</string>
+    <string name="app_last_settings_native_mouse_on">Native mouse</string>
+    <string name="app_last_settings_cards_none">No cards enabled</string>
+    <string name="app_last_settings_scale">Scale %1$d%%</string>
+    <string name="app_last_settings_card_bitrate">Bitrate</string>
+    <string name="app_last_settings_card_display">Display</string>
+    <string name="app_last_settings_card_audio_haptics">Audio haptics</string>
+    <string name="app_last_settings_card_gyro">Gyro</string>
+    <string name="app_last_settings_card_quick_key">Quick keys</string>
+    <string name="app_last_settings_card_waveform">Waveform</string>
 
     <!-- Setting detail strings -->
-    <string name="setting_resolution">Resolution: %1$dx%2$d</string>
-    <string name="setting_fps">Frame Rate: %1$dfps</string>
-    <string name="setting_bitrate">Bitrate: %1$dkbps</string>
-    <string name="setting_scale">Scale: %1$d%%</string>
-    <string name="setting_format">Video Codec: %1$s</string>
-    <string name="setting_hdr_enabled">HDR: Enabled</string>
-    <string name="setting_mic_enabled">Microphone: %1$dkbps</string>
-    <string name="setting_native_mouse_enabled">Native Mouse: Enabled</string>
     <string name="setting_gyro_sensitivity">Gyroscope: %1$.1fx</string>
-    <string name="setting_bitrate_card_enabled">Bitrate Card: Enabled</string>
-    <string name="setting_audio_haptics_card_enabled">Audio Haptics Card: Enabled</string>
-    <string name="setting_gyro_card_enabled">Gyro Card: Enabled</string>
-    <string name="setting_QuickKey_card_enabled">Special key card: Activate</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">Just now</string>
@@ -1590,19 +1598,12 @@ Tap again to replace it.</string>
     <string name="appview_background_mode_title">Background</string>
     <string name="appview_quick_settings_title">Quick Settings</string>
     <string name="appview_full_settings">Full Settings</string>
-    <string name="appview_screen_combination_title">Screen Combination</string>
     <string name="appview_open_screen_combination_picker">Open screen combination picker</string>
-    <string name="appview_screen_mode_host_short">Follow Host</string>
-    <string name="appview_screen_mode_noop_short">No Action</string>
-    <string name="appview_screen_mode_activate_short">Activate</string>
-    <string name="appview_screen_mode_primary_short">Primary</string>
-    <string name="appview_screen_mode_secondary_short">Secondary</string>
-    <string name="appview_screen_mode_exclusive_short">Exclusive</string>
     <string name="appview_display_selection_virtual">Virtual</string>
     <string name="appview_background_mode_artwork">App artwork</string>
     <string name="appview_background_mode_acrylic">Acrylic</string>
     <string name="appview_background_mode_soft_color">Soft color</string>
-    <string name="appview_display_selection_title">Display Selection</string>
+    <string name="appview_display_selection_title">Displays</string>
     <string name="appview_display_selection_default">Default</string>
 
 

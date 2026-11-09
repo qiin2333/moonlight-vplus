@@ -150,7 +150,7 @@
     <string name="summary_list_audio_vibration_mode">振動の伝達方法を選択</string>
     <string name="title_list_audio_vibration_scene">シーンモード</string>
     <string name="summary_list_audio_vibration_scene">コンテンツタイプに合わせて振動パターンを最適化</string>
-    <string name="title_screen_combination_mode">ディスプレイ構成設定</string>
+    <string name="title_screen_combination_mode">画面構成</string>
     <string name="summary_screen_combination_mode">Foundation Sunshine のディスプレイ制御</string>
     <string name="screen_combination_mode_dialog_subtitle">Foundation Sunshine のディスプレイ制御に適用</string>
     <string name="screen_mode_host_default">ホストに従う</string>

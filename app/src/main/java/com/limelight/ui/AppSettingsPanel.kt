@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -15,6 +14,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,7 +33,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,8 +59,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -78,6 +81,7 @@ import androidx.compose.ui.semantics.contentDescription
 import kotlinx.coroutines.delay
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.core.os.ConfigurationCompat
 import com.limelight.R
 import com.limelight.ui.theme.AppCornerRadii
 import com.limelight.ui.theme.AppShapes
@@ -226,7 +230,7 @@ fun AppSettingsPanel(
     var hasRequestedInitialFocus by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isDarkTheme = isSystemInDarkTheme()
-    val panelSurface = colorResource(R.color.appview_quick_menu_background)
+    val panelSurface = colorResource(R.color.appview_panel_surface)
     val colorScheme = if (isDarkTheme) {
         darkColorScheme(
             primary = appAccentColor(),
@@ -279,8 +283,7 @@ fun AppSettingsPanel(
                 .width(panelWidth.dp)
                 .heightIn(max = panelMaxHeight.dp),
             shape = TopTabPanelShape,
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
+            color = panelSurface,
             shadowElevation = 12.dp,
             border = BorderStroke(
                 1.dp,
@@ -336,7 +339,7 @@ fun AppSettingsPanel(
                 item(key = "screen-divider") { PanelDivider() }
                 item(key = "screen-header") {
                     SectionNavigationTitle(
-                        title = stringResource(R.string.appview_screen_combination_title),
+                        title = stringResource(R.string.title_screen_combination_mode),
                         value = selectedScreenCombinationLabel,
                         onClick = onScreenCombinationClick
                     )
@@ -449,9 +452,8 @@ private fun SettingsShortcut(
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            painter = painterResource(R.drawable.phc_settings),
-            contentDescription = null,
+        AppViewPanelIcon(
+            iconRes = R.drawable.phc_settings,
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -462,6 +464,21 @@ private fun SettingsShortcut(
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+internal fun AppViewPanelIcon(@DrawableRes iconRes: Int, tint: Color, modifier: Modifier) {
+    val context = LocalContext.current
+    // Some devices render Compose's vector color filter black. Tint the platform drawable directly.
+    val drawable = remember(context, iconRes, tint) {
+        requireNotNull(context.getDrawable(iconRes)).mutate().apply {
+            setTint(tint.toArgb())
+        }
+    }
+    Canvas(modifier) {
+        drawable.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+        drawIntoCanvas { drawable.draw(it.nativeCanvas) }
     }
 }
 
@@ -481,6 +498,7 @@ private fun BackgroundModeSegmentedControl(
     selectedMode: AppBackgroundMode,
     onModeSelected: (AppBackgroundMode) -> Unit
 ) {
+    val compactLabel = ConfigurationCompat.getLocales(LocalConfiguration.current)[0]?.language != "zh"
     val options = listOf(
         Triple(
             AppBackgroundMode.Artwork,
@@ -504,7 +522,10 @@ private fun BackgroundModeSegmentedControl(
         selectedIndex = options.indexOfFirst { it.first == selectedMode },
         modifier = Modifier
             .fillMaxWidth()
-            .height(36.dp)
+            .then(
+                if (compactLabel) Modifier.heightIn(min = 36.dp).height(IntrinsicSize.Min)
+                else Modifier.height(36.dp)
+            )
             .clip(AppShapes.medium)
             .background(
                 MaterialTheme.colorScheme.onSurface.copy(
@@ -520,6 +541,8 @@ private fun BackgroundModeSegmentedControl(
                 selected = mode == selectedMode,
                 icon = { tint, modifier -> BackgroundModeIconView(icon, tint, modifier) },
                 modifier = Modifier.weight(1f),
+                compactLabel = compactLabel,
+                maxLines = if (compactLabel) 2 else 1,
                 onClick = { onModeSelected(mode) }
             )
         }
@@ -535,6 +558,7 @@ private fun SegmentButton(
     verticalIcon: Boolean = false,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
+    compactLabel: Boolean = false,
     onClick: () -> Unit
 ) {
     val view = LocalView.current
@@ -544,7 +568,14 @@ private fun SegmentButton(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .heightIn(min = if (verticalIcon) 50.dp else if (maxLines > 1) 42.dp else 36.dp)
+            .heightIn(
+                min = when {
+                    verticalIcon -> 50.dp
+                    compactLabel -> 32.dp
+                    maxLines > 1 -> 42.dp
+                    else -> 36.dp
+                }
+            )
             .clip(shape)
             .then(
                 if (focused && enabled) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
@@ -576,8 +607,8 @@ private fun SegmentButton(
             Text(
                 text = label,
                 color = contentColor,
-                fontSize = if (verticalIcon) 11.sp else if (maxLines > 1) 12.sp else 13.sp,
-                lineHeight = if (verticalIcon) 13.sp else if (maxLines > 1) 16.sp else 17.sp,
+                fontSize = if (verticalIcon || compactLabel) 11.sp else if (maxLines > 1) 12.sp else 13.sp,
+                lineHeight = if (verticalIcon || compactLabel) 13.sp else if (maxLines > 1) 16.sp else 17.sp,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 maxLines = maxLines,
@@ -589,7 +620,7 @@ private fun SegmentButton(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                icon?.invoke(contentColor, Modifier.size(17.dp))
+                icon?.invoke(contentColor, Modifier.size(20.dp))
                 labelText()
             }
         } else {
@@ -675,22 +706,6 @@ private fun BackgroundModeIconView(
     }
 }
 
-@Composable
-private fun screenModeCompactLabel(option: AppScreenCombinationOption): String =
-    screenCombinationModeShortLabelRes(option.value)?.let { stringResource(it) } ?: option.label
-
-/** Compact labels shared by quick settings and title accessibility descriptions. */
-@StringRes
-internal fun screenCombinationModeShortLabelRes(mode: Int): Int? = when (mode) {
-    -1 -> R.string.appview_screen_mode_host_short
-    0 -> R.string.appview_screen_mode_noop_short
-    1 -> R.string.appview_screen_mode_activate_short
-    2 -> R.string.appview_screen_mode_primary_short
-    4 -> R.string.appview_screen_mode_secondary_short
-    3 -> R.string.appview_screen_mode_exclusive_short
-    else -> null
-}
-
 @DrawableRes
 internal fun screenCombinationModeIconRes(mode: Int): Int? = when (mode) {
     -1 -> R.drawable.ic_screen_mode_host
@@ -728,26 +743,22 @@ internal fun ScreenCombinationSegmentedControl(
                 selectedIndex = row.indexOfFirst { it.value == selectedMode },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
+                    .height(IntrinsicSize.Min)
                     .selectableGroup()
             ) {
                 row.forEach { option ->
                     SegmentButton(
-                        label = screenModeCompactLabel(option),
+                        label = option.label,
                         selected = selectedMode == option.value,
                         icon = { tint, modifier ->
                             screenCombinationModeIconRes(option.value)?.let { iconRes ->
-                                Icon(
-                                    painter = painterResource(iconRes),
-                                    contentDescription = null,
-                                    tint = tint,
-                                    modifier = modifier
-                                )
+                                AppViewPanelIcon(iconRes, tint, modifier)
                             }
                         },
                         verticalIcon = true,
                         modifier = Modifier.weight(1f),
-                        maxLines = 1,
+                        maxLines = 2,
                         onClick = { onModeSelected(option.value) }
                     )
                 }
@@ -759,64 +770,62 @@ internal fun ScreenCombinationSegmentedControl(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SectionNavigationTitle(title: String, value: String, onClick: () -> Unit) {
-    val pickerContentDescription = stringResource(
-        R.string.appview_open_screen_combination_picker
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val pickerContentDescription = stringResource(R.string.appview_open_screen_combination_picker)
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = title,
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterVertically).padding(end = 8.dp),
+            color = textColor,
             fontSize = 13.sp,
             lineHeight = 17.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            fontWeight = FontWeight.Medium
         )
-        Text(
-            text = value,
-            modifier = Modifier.padding(start = 8.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(AppShapes.small)
-                .semantics {
-                    contentDescription = pickerContentDescription
-                    role = Role.Button
-                }
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.align(Alignment.CenterVertically),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val arrowColor = MaterialTheme.colorScheme.onSurfaceVariant
-            Canvas(modifier = Modifier.size(18.dp)) {
-                val strokeWidth = 1.6.dp.toPx()
-                drawLine(
-                    color = arrowColor,
-                    start = Offset(size.width * 0.36f, size.height * 0.22f),
-                    end = Offset(size.width * 0.62f, size.height * 0.5f),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color = arrowColor,
-                    start = Offset(size.width * 0.62f, size.height * 0.5f),
-                    end = Offset(size.width * 0.36f, size.height * 0.78f),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round
-                )
+            Text(
+                text = value,
+                modifier = Modifier.weight(1f, fill = false),
+                color = textColor,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(AppShapes.small)
+                    .semantics {
+                        contentDescription = pickerContentDescription
+                        role = Role.Button
+                    }
+                    .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(18.dp)) {
+                    val strokeWidth = 1.6.dp.toPx()
+                    drawLine(
+                        color = textColor,
+                        start = Offset(size.width * 0.36f, size.height * 0.22f),
+                        end = Offset(size.width * 0.62f, size.height * 0.5f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = textColor,
+                        start = Offset(size.width * 0.62f, size.height * 0.5f),
+                        end = Offset(size.width * 0.36f, size.height * 0.78f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
             }
         }
     }

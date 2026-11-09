@@ -15,6 +15,8 @@ import com.limelight.preferences.PreferenceConfiguration
 import org.json.JSONException
 import org.json.JSONObject
 
+import java.math.BigDecimal
+
 /**
  * App Settings Manager
  * Used to store and retrieve the last streaming settings for each app
@@ -77,7 +79,7 @@ class AppSettingsManager(private val context: Context) {
     /**
      * Get the timestamp of the last settings for an app
      */
-    fun getAppLastSettingsTimestamp(computerUuid: String, app: NvApp?): Long {
+    private fun getAppLastSettingsTimestamp(computerUuid: String, app: NvApp?): Long {
         if (app == null) return 0
 
         val key = generateKey(computerUuid, app.appId)
@@ -117,72 +119,6 @@ class AppSettingsManager(private val context: Context) {
         return "${computerUuid}_${appId}"
     }
 
-    /**
-     * Get settings summary information
-     */
-    fun getSettingsSummary(computerUuid: String, app: NvApp): String {
-        val settings = getAppLastSettings(computerUuid, app)
-                ?: return context.getString(R.string.app_last_settings_none)
-
-        val timestamp = getAppLastSettingsTimestamp(computerUuid, app)
-        val timeStr = formatTimestamp(timestamp)
-
-        val summary = StringBuilder()
-
-        // Basic video settings
-        summary.append(context.getString(R.string.setting_resolution, settings.width, settings.height))
-        summary.append(" | ").append(context.getString(R.string.setting_fps, settings.fps))
-        summary.append(" | ").append(context.getString(R.string.setting_bitrate, settings.bitrate))
-
-        // Resolution scale
-        if (settings.resolutionScale != 100) {
-            summary.append(" | ").append(context.getString(R.string.setting_scale, settings.resolutionScale))
-        }
-
-        // Video format
-        summary.append(" | ").append(context.getString(R.string.setting_format, settings.videoFormat.toString()))
-
-        // HDR settings
-        if (settings.enableHdr) {
-            summary.append(" | ").append(context.getString(R.string.setting_hdr_enabled))
-        }
-
-        // Microphone settings
-        if (settings.enableMic) {
-            summary.append(" | ").append(context.getString(R.string.setting_mic_enabled, settings.micBitrate))
-        }
-
-        // Native mouse pointer
-        if (settings.enableNativeMousePointer) {
-            summary.append(" | ").append(context.getString(R.string.setting_native_mouse_enabled))
-        }
-
-        // Card configuration
-        if (settings.showBitrateCard) {
-            summary.append(" | ").append(context.getString(R.string.setting_bitrate_card_enabled))
-        }
-        if (settings.showDisplaySettingsCard) {
-            summary.append(" | ").append(context.getString(R.string.game_menu_display_settings))
-        }
-        if (settings.showAudioHapticsCard) {
-            summary.append(" | ").append(context.getString(R.string.setting_audio_haptics_card_enabled))
-        }
-        if (settings.showGyroCard) {
-            summary.append(" | ").append(context.getString(R.string.setting_gyro_card_enabled))
-        }
-        if (settings.showQuickKeyCard) {
-            summary.append(" | ").append(context.getString(R.string.setting_QuickKey_card_enabled))
-        }
-        if (settings.showWaveformHapticsCard) {
-            summary.append(" | ").append(context.getString(R.string.waveform_card_title))
-        }
-
-        // Add time information
-        summary.append(" (").append(timeStr).append(")")
-
-        return summary.toString()
-    }
-
     private fun formatTimestamp(timestamp: Long): String {
         if (timestamp == 0L) {
             return context.getString(R.string.time_unknown)
@@ -197,6 +133,83 @@ class AppSettingsManager(private val context: Context) {
             diff < 86400000 -> context.getString(R.string.time_hours_ago, diff / 3600000)
             else -> context.getString(R.string.time_days_ago, diff / 86400000)
         }
+    }
+
+    /** 生成 AppView 底部「上一次设置」的胶囊摘要和分组详情。 */
+    fun getLastSettingsSummary(computerUuid: String, app: NvApp?): LastSettingsSummary? {
+        val settings = getAppLastSettings(computerUuid, app) ?: return null
+        val timeLabel = formatTimestamp(getAppLastSettingsTimestamp(computerUuid, app))
+
+        val resolution = "${settings.width}×${settings.height}"
+        val bitrateMbps = BigDecimal.valueOf(settings.bitrate.toLong(), 3)
+            .stripTrailingZeros().toPlainString()
+        val bitrateCompact = if (settings.bitrate >= 1000) "${bitrateMbps}M" else "${settings.bitrate}K"
+        val hdrLabel = context.getString(
+            if (settings.enableHdr) R.string.app_last_settings_hdr_on
+            else R.string.app_last_settings_hdr_off
+        )
+
+        val cards = enabledGameMenuCards(settings)
+
+        val rows = ArrayList<Pair<String, String>>(5)
+        rows.add(
+            context.getString(R.string.app_last_settings_row_video) to
+                    "$resolution\u2002${settings.fps} FPS\u2002$bitrateMbps Mbps"
+        )
+
+        val encodingValue = StringBuilder(videoFormatLabel(settings.videoFormat))
+                .append('\u2002').append(hdrLabel)
+        if (settings.resolutionScale != 100) {
+            encodingValue.append('\u2002')
+                    .append(context.getString(R.string.app_last_settings_scale, settings.resolutionScale))
+        }
+        rows.add(context.getString(R.string.app_last_settings_row_encoding) to encodingValue.toString())
+
+        rows.add(
+            context.getString(R.string.app_last_settings_row_audio) to
+                    if (settings.enableMic) {
+                        context.getString(R.string.app_last_settings_mic_on, settings.micBitrate)
+                    } else {
+                        context.getString(R.string.app_last_settings_mic_off)
+                    }
+        )
+
+        if (settings.enableNativeMousePointer) {
+            rows.add(
+                context.getString(R.string.app_last_settings_row_input) to
+                        context.getString(R.string.app_last_settings_native_mouse_on)
+            )
+        }
+
+        rows.add(
+            context.getString(R.string.app_last_settings_row_cards) to
+                    if (cards.isEmpty()) context.getString(R.string.app_last_settings_cards_none)
+                    else cards.joinToString("\u2002")
+        )
+
+        val metricsLine = "$resolution\u2002${settings.fps}\u2002$bitrateCompact"
+        return LastSettingsSummary(metricsLine, timeLabel, rows)
+    }
+
+    private fun videoFormatLabel(format: PreferenceConfiguration.FormatOption): String {
+        return when (format) {
+            PreferenceConfiguration.FormatOption.AUTO -> "AUTO"
+            PreferenceConfiguration.FormatOption.FORCE_PYROWAVE -> "PyroWave"
+            PreferenceConfiguration.FormatOption.FORCE_H264 -> "H.264"
+            PreferenceConfiguration.FormatOption.FORCE_HEVC -> "HEVC"
+            PreferenceConfiguration.FormatOption.FORCE_AV1 -> "AV1"
+        }
+    }
+
+    private fun enabledGameMenuCards(settings: PreferenceConfiguration): List<String> {
+        val cards = ArrayList<String>(6)
+        if (settings.showBitrateCard) cards.add(context.getString(R.string.app_last_settings_card_bitrate))
+        if (settings.showDisplaySettingsCard) cards.add(context.getString(R.string.app_last_settings_card_display))
+        if (settings.showAudioHapticsCard) cards.add(context.getString(R.string.app_last_settings_card_audio_haptics))
+        if (settings.showGyroCard) cards.add(context.getString(R.string.app_last_settings_card_gyro))
+        if (settings.showQuickKeyCard) cards.add(context.getString(R.string.app_last_settings_card_quick_key))
+        if (settings.showWaveformHapticsCard) cards.add(context.getString(R.string.app_last_settings_card_waveform))
+        return cards
     }
 
     private fun getVideoFormatPreferenceString(format: PreferenceConfiguration.FormatOption): String {
@@ -511,3 +524,16 @@ class AppSettingsManager(private val context: Context) {
         }
     }
 }
+
+/**
+ * AppView「上一次设置」胶囊的结构化摘要。
+ *
+ * @param metricsLine 胶囊上的分辨率、帧率和码率。
+ * @param timeLabel 相对时间，例如 `3 小时前`
+ * @param rows 展开后的分组行（标签 to 内容）
+ */
+data class LastSettingsSummary(
+    val metricsLine: String,
+    val timeLabel: String,
+    val rows: List<Pair<String, String>>
+)
