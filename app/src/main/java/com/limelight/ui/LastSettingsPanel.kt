@@ -1,6 +1,7 @@
 package com.limelight.ui
 
 import android.content.res.Configuration
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,17 +22,17 @@ import com.limelight.utils.LastSettingsSummary
  * 交互约定：
  *  - 胶囊本身是一个焦点（OK 展开/收起）
  *  - 开关是第二个焦点（OK 切换是否沿用）
- *  - 展开后的设置入口可独立聚焦
+ *  - 展开的详情只读
  */
 class LastSettingsPanel(
     private val root: View,
     private val onReuseChanged: (Boolean) -> Unit,
-    private val onOpenSettings: () -> Unit
+    private val onReturnToApp: () -> Unit
 ) {
     private val context = root.context
     private val density = root.resources.displayMetrics.density
 
-    private val pill: View = root.findViewById(R.id.lastSettingsPill)
+    private val pill: View = root.findViewById(R.id.lastSettingsPillAction)
     private val icon: ImageView = root.findViewById(R.id.lastSettingsPillIcon)
     private val title: TextView = root.findViewById(R.id.lastSettingsPillTitle)
     private val metrics: TextView = root.findViewById(R.id.lastSettingsPillMetrics)
@@ -42,7 +43,6 @@ class LastSettingsPanel(
     private val detail: View = root.findViewById(R.id.lastSettingsDetail)
     private val detailTime: TextView = root.findViewById(R.id.lastSettingsDetailTime)
     private val detailRows: LinearLayout = root.findViewById(R.id.lastSettingsDetailRows)
-    private val detailHint: TextView = root.findViewById(R.id.lastSettingsDetailHint)
 
     private var expanded = false
     private var reuseEnabled = false
@@ -51,10 +51,22 @@ class LastSettingsPanel(
     init {
         applyTheme()
         pill.setOnClickListener { setExpanded(!expanded, animate = true) }
-        root.findViewById<View>(R.id.lastSettingsOpenSettings).setOnClickListener {
-            setExpanded(false, animate = false)
-            onOpenSettings()
+        val controllerKeys = View.OnKeyListener { view, keyCode, event ->
+            when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    view.isPressed = event.action == KeyEvent.ACTION_DOWN && !event.isCanceled
+                    if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) view.performClick()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) onReturnToApp()
+                    true
+                }
+                else -> false
+            }
         }
+        pill.setOnKeyListener(controllerKeys)
+        reuseSwitch.setOnKeyListener(controllerKeys)
         reuseSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (suppressCallback) {
                 return@setOnCheckedChangeListener
@@ -130,10 +142,12 @@ class LastSettingsPanel(
         metrics.alpha = dim
         icon.alpha = dim
         reuseLabel.alpha = if (reuseEnabled) 1f else 0.72f
-        detailHint.setText(
-            if (reuseEnabled) R.string.app_last_settings_hint_on
-            else R.string.app_last_settings_hint_off
-        )
+    }
+
+    fun collapseDetails(): Boolean {
+        if (!expanded) return false
+        setExpanded(false, animate = true)
+        return true
     }
 
     private fun applyExpandedState(animate: Boolean) {

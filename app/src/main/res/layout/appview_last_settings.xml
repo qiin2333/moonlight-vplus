@@ -62,42 +62,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="10dp"
-            android:background="@color/appview_preset_divider" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/lastSettingsOpenSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="44dp"
-                android:gravity="center_vertical"
-                android:background="?android:attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:text="@string/app_last_settings_open_settings"
-                android:textColor="@color/appview_preset_active"
-                android:textSize="@dimen/appview_preset_detail_value_text_size" />
-
-            <TextView
-                android:id="@+id/lastSettingsDetailHint"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:textColor="@color/appview_preset_text_tertiary"
-                android:textSize="@dimen/appview_preset_meta_text_size" />
-        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -106,62 +70,71 @@
         android:layout_height="@dimen/appview_preset_pill_height"
         android:addStatesFromChildren="true"
         android:background="@drawable/bg_appview_preset_pill"
-        android:clickable="true"
         android:clipToOutline="true"
-        android:focusable="true"
-        android:foreground="?android:attr/selectableItemBackground"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="@dimen/appview_preset_pill_padding"
         android:paddingEnd="@dimen/appview_preset_pill_padding">
 
-        <ImageView
-            android:id="@+id/lastSettingsPillIcon"
-            android:layout_width="@dimen/appview_preset_icon_size"
-            android:layout_height="@dimen/appview_preset_icon_size"
-            android:importantForAccessibility="no"
-            android:src="@drawable/ic_appview_preset_history"
-            app:tint="@color/appview_preset_icon" />
-
-        <TextView
-            android:id="@+id/lastSettingsPillTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="1"
-            android:text="@string/app_last_settings_title"
-            android:textColor="@color/appview_preset_text_primary"
-            android:textSize="@dimen/appview_preset_title_text_size" />
-
-        <View
-            android:layout_width="1dp"
-            android:layout_height="16dp"
-            android:layout_marginStart="9dp"
-            android:layout_marginEnd="9dp"
-            android:background="@color/appview_preset_divider" />
-
-        <TextView
-            android:id="@+id/lastSettingsPillMetrics"
+        <LinearLayout
+            android:id="@+id/lastSettingsPillAction"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:ellipsize="end"
-            android:fontFamily="sans-serif"
-            android:maxLines="1"
-            android:textColor="@color/appview_preset_text_secondary"
-            android:textSize="@dimen/appview_preset_meta_text_size" />
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <ImageView
-            android:id="@+id/lastSettingsPillChevron"
-            android:layout_width="@dimen/appview_preset_chevron_size"
-            android:layout_height="@dimen/appview_preset_chevron_size"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/bg_appview_preset_chevron"
-            android:importantForAccessibility="no"
-            android:padding="4dp"
-            android:src="@drawable/ic_appview_preset_chevron"
-            app:tint="@color/appview_preset_text_secondary" />
+            <ImageView
+                android:id="@+id/lastSettingsPillIcon"
+                android:layout_width="@dimen/appview_preset_icon_size"
+                android:layout_height="@dimen/appview_preset_icon_size"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_appview_preset_history"
+                app:tint="@color/appview_preset_icon" />
+
+            <TextView
+                android:id="@+id/lastSettingsPillTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:text="@string/app_last_settings_title"
+                android:textColor="@color/appview_preset_text_primary"
+                android:textSize="@dimen/appview_preset_title_text_size" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="9dp"
+                android:layout_marginEnd="9dp"
+                android:background="@color/appview_preset_divider" />
+
+            <TextView
+                android:id="@+id/lastSettingsPillMetrics"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif"
+                android:maxLines="1"
+                android:textColor="@color/appview_preset_text_secondary"
+                android:textSize="@dimen/appview_preset_meta_text_size" />
+
+            <ImageView
+                android:id="@+id/lastSettingsPillChevron"
+                android:layout_width="@dimen/appview_preset_chevron_size"
+                android:layout_height="@dimen/appview_preset_chevron_size"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_appview_preset_chevron"
+                android:importantForAccessibility="no"
+                android:padding="4dp"
+                android:src="@drawable/ic_appview_preset_chevron"
+                app:tint="@color/appview_preset_text_secondary" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/lastSettingsPillReuse"
@@ -184,6 +157,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
+            android:background="?android:attr/selectableItemBackground"
             android:contentDescription="@string/app_last_settings_reuse_description"
             app:showText="false"
             app:switchMinWidth="36dp" />

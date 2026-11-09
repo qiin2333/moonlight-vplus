@@ -474,7 +474,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         lastSettingsPanel = LastSettingsPanel(
             root = findViewById(R.id.lastSettingsInfo),
             onReuseChanged = { enabled -> appSettingsManager?.setUseLastSettingsEnabled(enabled) },
-            onOpenSettings = ::openStreamSettings
+            onReturnToApp = ::focusSelectedApp
         )
         appViewTargetReminder = findViewById(R.id.appViewTargetReminder)
 
@@ -573,7 +573,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (!hasAppsForControllerFocus()) return@setOnKeyListener false
-                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedApp()
                     true
                 }
                 else -> false
@@ -595,7 +595,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (!hasAppsForControllerFocus()) return@setOnKeyListener false
-                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedAppFromTopPanel()
+                    if (event.action == KeyEvent.ACTION_DOWN) focusSelectedApp()
                     true
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -2183,7 +2183,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         return currentRecyclerView != null && (appGridAdapter?.count ?: 0) > 0
     }
 
-    private fun focusSelectedAppFromTopPanel() {
+    private fun focusSelectedApp() {
         val recyclerView = currentRecyclerView ?: return
         val itemCount = appGridAdapter?.count ?: return
         if (itemCount <= 0) return
@@ -2292,6 +2292,9 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         // 面板打开时按返回键/B键关闭面板而非退出界面
         if (isPanelOpen && keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B) {
             closeTopPanel()
+            return true
+        }
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_B && lastSettingsPanel?.collapseDetails() == true) {
             return true
         }
         return super.onKeyDown(keyCode, event)

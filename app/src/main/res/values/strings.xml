@@ -1338,7 +1338,6 @@
     <string name="app_last_settings_reuse">Reuse</string>
     <string name="app_last_settings_reuse_description">Reuse last settings when launching</string>
     <string name="app_last_settings_pill_description">Last settings, %1$s, %2$s</string>
-    <string name="app_last_settings_open_settings">Open streaming settings</string>
     <string name="app_last_settings_expand">Show details</string>
     <string name="app_last_settings_collapse">Hide details</string>
     <string name="app_last_settings_row_video">Video</string>
@@ -1353,8 +1352,6 @@
     <string name="app_last_settings_native_mouse_on">Native mouse</string>
     <string name="app_last_settings_native_mouse_off">System mouse</string>
     <string name="app_last_settings_cards_none">No cards enabled</string>
-    <string name="app_last_settings_hint_on">Launching a game will reuse these settings</string>
-    <string name="app_last_settings_hint_off">Launching a game will open the stream settings first</string>
     <string name="app_last_settings_scale">Scale %1$d%%</string>
     <string name="app_last_settings_card_bitrate">Bitrate</string>
     <string name="app_last_settings_card_display">Display</string>
