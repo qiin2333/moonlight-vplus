@@ -9,6 +9,12 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GyroAssistantMode
 import com.limelight.utils.AppActionSheet
 
+private val activationKeyLabels = mapOf(
+    ControllerHandler.GYRO_ACTIVATION_ALWAYS to R.string.gyro_activation_always,
+    KeyEvent.KEYCODE_BUTTON_L2 to R.string.gyro_activation_left_trigger,
+    KeyEvent.KEYCODE_BUTTON_R2 to R.string.gyro_activation_right_trigger
+)
+
 internal data class GyroCardState(
     val enabled: Boolean,
     val mouseMode: Boolean,
@@ -71,17 +77,12 @@ internal class GyroCardController(private val game: Game) {
     }
 
     fun showActivationKeySheet(): Dialog {
-        val choices = listOf(
-            ControllerHandler.GYRO_ACTIVATION_ALWAYS to R.string.gyro_activation_always,
-            KeyEvent.KEYCODE_BUTTON_L2 to R.string.gyro_activation_left_trigger,
-            KeyEvent.KEYCODE_BUTTON_R2 to R.string.gyro_activation_right_trigger
-        )
         val storedKey = game.prefConfig.gyroActivationKeyCode
-        val selectedKey = if (choices.any { it.first == storedKey }) storedKey else KeyEvent.KEYCODE_BUTTON_L2
+        val selectedKey = if (storedKey in activationKeyLabels) storedKey else KeyEvent.KEYCODE_BUTTON_L2
         return AppActionSheet.show(
             context = game,
             title = game.getString(R.string.gyro_activation_method),
-            actions = choices.map { (keyCode, label) ->
+            actions = activationKeyLabels.map { (keyCode, label) ->
                 AppActionSheet.Action(keyCode, game.getString(label), checked = keyCode == selectedKey)
             },
             initialActionId = selectedKey,
@@ -130,11 +131,9 @@ internal class GyroCardController(private val game: Game) {
         return GyroCardState(
             enabled = mode != GyroAssistantMode.OFF,
             mouseMode = mode == GyroAssistantMode.MOUSE,
-            activationKeyLabel = when (prefs.gyroActivationKeyCode) {
-                ControllerHandler.GYRO_ACTIVATION_ALWAYS -> game.getString(R.string.gyro_activation_always)
-                KeyEvent.KEYCODE_BUTTON_R2 -> game.getString(R.string.gyro_activation_right_trigger)
-                else -> game.getString(R.string.gyro_activation_left_trigger)
-            },
+            activationKeyLabel = game.getString(
+                activationKeyLabels[prefs.gyroActivationKeyCode] ?: R.string.gyro_activation_left_trigger
+            ),
             sensitivity = (if (prefs.gyroSensitivityMultiplier > 0) {
                 prefs.gyroSensitivityMultiplier
             } else {

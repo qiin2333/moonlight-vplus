@@ -76,7 +76,7 @@ internal fun showAppThemeSheet(context: Context, onThemeSaved: () -> Unit) {
             ) {
                 ThemeChoiceGroup(
                     R.string.theme_appearance, appearanceOptions, savedMode,
-                    initialFocusValue = savedMode, initialFocus = initialFocus
+                    initialFocus = initialFocus
                 ) { applyTheme(it, savedAccent) }
                 ThemeChoiceGroup(R.string.theme_accent_source, accentOptions, savedAccent) {
                     applyTheme(savedMode, it)
@@ -91,7 +91,6 @@ private fun ThemeChoiceGroup(
     title: Int,
     options: List<Pair<String, Int>>,
     selected: String,
-    initialFocusValue: String? = null,
     initialFocus: FocusRequester? = null,
     onSelect: (String) -> Unit
 ) {
@@ -105,7 +104,7 @@ private fun ThemeChoiceGroup(
         options.forEachIndexed { index, (value, label) ->
             AppActionSheet.ActionSheetRow(
                 action = AppActionSheet.Action(index, stringResource(label), checked = value == selected),
-                modifier = if (value == initialFocusValue && initialFocus != null) {
+                modifier = if (value == selected && initialFocus != null) {
                     Modifier.focusRequester(initialFocus)
                 } else Modifier,
                 singleChoice = true,
