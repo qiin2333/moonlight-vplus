@@ -450,7 +450,7 @@ private fun SettingsShortcut(
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        PanelIcon(
+        AppViewPanelIcon(
             iconRes = R.drawable.phc_settings,
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.primary
@@ -466,7 +466,7 @@ private fun SettingsShortcut(
 }
 
 @Composable
-private fun PanelIcon(@DrawableRes iconRes: Int, tint: Color, modifier: Modifier) {
+internal fun AppViewPanelIcon(@DrawableRes iconRes: Int, tint: Color, modifier: Modifier) {
     val context = LocalContext.current
     // Some devices render Compose's vector color filter black. Tint the platform drawable directly.
     val drawable = remember(context, iconRes, tint) {
@@ -752,7 +752,7 @@ internal fun ScreenCombinationSegmentedControl(
                         selected = selectedMode == option.value,
                         icon = { tint, modifier ->
                             screenCombinationModeIconRes(option.value)?.let { iconRes ->
-                                PanelIcon(iconRes, tint, modifier)
+                                AppViewPanelIcon(iconRes, tint, modifier)
                             }
                         },
                         verticalIcon = true,

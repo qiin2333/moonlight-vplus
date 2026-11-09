@@ -140,7 +140,11 @@
         android:gravity="end">
 
         <!-- 上一次设置：收起为一行胶囊，点按展开分组详情 -->
-        <include layout="@layout/appview_last_settings" />
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/lastSettingsInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp" />
 
     </LinearLayout>
 

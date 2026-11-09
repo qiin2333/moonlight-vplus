@@ -50,18 +50,4 @@
     <dimen name="appview_small_card_width">120dp</dimen>
     <dimen name="appview_small_card_height">160dp</dimen>
 
-    <!-- AppView「上一次设置」预设条 -->
-    <dimen name="appview_preset_pill_height">48dp</dimen>
-    <dimen name="appview_preset_landscape_width">420dp</dimen>
-    <dimen name="appview_preset_pill_radius">24dp</dimen>
-    <dimen name="appview_preset_pill_padding">16dp</dimen>
-    <dimen name="appview_preset_icon_size">15dp</dimen>
-    <dimen name="appview_preset_chevron_size">20dp</dimen>
-    <dimen name="appview_preset_detail_padding">14dp</dimen>
-    <dimen name="appview_preset_title_text_size">13sp</dimen>
-    <dimen name="appview_preset_meta_text_size">11sp</dimen>
-    <dimen name="appview_preset_switch_label_text_size">11sp</dimen>
-    <dimen name="appview_preset_detail_label_text_size">11sp</dimen>
-    <dimen name="appview_preset_detail_value_text_size">11.5sp</dimen>
-
 </resources>

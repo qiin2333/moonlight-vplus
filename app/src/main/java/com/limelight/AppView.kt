@@ -79,6 +79,7 @@ import com.limelight.ui.ViewFeatureGuideStep
 import com.limelight.ui.screenCombinationModeIconRes
 import com.limelight.ui.screenCombinationModeShortLabelRes
 import com.limelight.utils.AppSettingsManager
+import com.limelight.utils.LastSettingsSummary
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppBackgroundMode
 import com.limelight.utils.BackgroundImageManager
@@ -201,7 +202,9 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     // ==================== UI 组件 - 上一次设置 ====================
     private var appSettingsManager: AppSettingsManager? = null
-    private var lastSettingsPanel: LastSettingsPanel? = null
+    private var lastSettingsSummary by mutableStateOf<LastSettingsSummary?>(null)
+    private var lastSettingsExpanded by mutableStateOf(false)
+    private var reuseLastSettings by mutableStateOf(false)
     private lateinit var appViewTargetReminder: TextView
 
     // ==================== UI 组件 - 顶部下拉面板 & 显示器选择 ====================
@@ -305,7 +308,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        lastSettingsPanel?.applyTheme()
         applyTitleTextResources()
         refreshTitle()
         findViewById<View>(R.id.appListText).post { refreshTitleColor() }
@@ -471,11 +473,24 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         // Initialize app settings manager and UI components
         appSettingsManager = AppSettingsManager(this)
-        lastSettingsPanel = LastSettingsPanel(
-            root = findViewById(R.id.lastSettingsInfo),
-            onReuseChanged = { enabled -> appSettingsManager?.setUseLastSettingsEnabled(enabled) },
-            onReturnToApp = ::focusSelectedApp
-        )
+        findViewById<ComposeView>(R.id.lastSettingsInfo).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                lastSettingsSummary?.let { summary ->
+                    LastSettingsPanel(
+                        summary = summary,
+                        expanded = lastSettingsExpanded,
+                        reuse = reuseLastSettings,
+                        onToggleDetails = { lastSettingsExpanded = !lastSettingsExpanded },
+                        onReuseChanged = { enabled ->
+                            reuseLastSettings = enabled
+                            appSettingsManager?.setUseLastSettingsEnabled(enabled)
+                        },
+                        onReturnToApp = ::focusSelectedApp
+                    )
+                }
+            }
+        }
         appViewTargetReminder = findViewById(R.id.appViewTargetReminder)
 
         // Initialize top dropdown panel
@@ -983,8 +998,9 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         val manager = appSettingsManager ?: return
         val uuid = computer?.uuid ?: return
 
-        val summary = manager.getLastSettingsSummary(uuid, app.app)
-        lastSettingsPanel?.bind(summary, manager.isUseLastSettingsEnabled)
+        lastSettingsExpanded = false
+        lastSettingsSummary = manager.getLastSettingsSummary(uuid, app.app)
+        reuseLastSettings = manager.isUseLastSettingsEnabled
     }
 
     /** 当前已有选中项时刷新一次，避免从串流返回后仍显示旧数值。 */
@@ -2294,7 +2310,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             closeTopPanel()
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_B && lastSettingsPanel?.collapseDetails() == true) {
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_B && lastSettingsExpanded) {
+            lastSettingsExpanded = false
             return true
         }
         return super.onKeyDown(keyCode, event)

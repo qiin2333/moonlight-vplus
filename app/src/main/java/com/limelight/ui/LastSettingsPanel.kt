@@ -2,230 +2,222 @@ package com.limelight.ui
 
 import android.content.res.Configuration
 import android.view.KeyEvent
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.appcompat.widget.SwitchCompat
-import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.limelight.R
-import com.limelight.utils.AppSwitchStyle
+import com.limelight.ui.theme.AppShapes
+import com.limelight.utils.AppSwitch
 import com.limelight.utils.LastSettingsSummary
+import com.limelight.utils.appAccentColor
+import com.limelight.utils.appAccentSoftColor
 
-/**
- * AppView 底部的「上一次设置」胶囊：收起时只有一行，点按后在上方展开分组详情。
- *
- * 交互约定：
- *  - 胶囊本身是一个焦点（OK 展开/收起）
- *  - 开关是第二个焦点（OK 切换是否沿用）
- *  - 展开的详情只读
- */
-class LastSettingsPanel(
-    private val root: View,
-    private val onReuseChanged: (Boolean) -> Unit,
-    private val onReturnToApp: () -> Unit
+@Composable
+internal fun LastSettingsPanel(
+    summary: LastSettingsSummary,
+    expanded: Boolean,
+    reuse: Boolean,
+    onToggleDetails: () -> Unit,
+    onReuseChanged: (Boolean) -> Unit,
+    onReturnToApp: () -> Unit
 ) {
-    private val context = root.context
-    private val density = root.resources.displayMetrics.density
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val surface = colorResource(R.color.appview_panel_surface)
+    val primary = colorResource(R.color.ui_shell_text_primary)
+    val secondary = colorResource(R.color.ui_shell_text_secondary)
+    val outline = colorResource(R.color.ui_shell_outline)
+    val accent = appAccentColor()
+    val accentSoft = appAccentSoftColor()
+    val title = stringResource(R.string.app_last_settings_title)
+    val description = stringResource(
+        R.string.app_last_settings_pill_description, summary.metricsLine, summary.timeLabel
+    )
+    val detailsAction = stringResource(
+        if (expanded) R.string.app_last_settings_collapse else R.string.app_last_settings_expand
+    )
+    val switchDescription = stringResource(R.string.app_last_settings_reuse_description)
+    var pillFocused by remember { mutableStateOf(false) }
+    var switchFocused by remember { mutableStateOf(false) }
+    val focused = pillFocused || switchFocused
+    val rotation by animateFloatAsState(
+        if (expanded) 180f else 0f, tween(160), label = "lastSettingsChevron"
+    )
 
-    private val shell: View = root.findViewById(R.id.lastSettingsPill)
-    private val pill: View = root.findViewById(R.id.lastSettingsPillAction)
-    private val icon: ImageView = root.findViewById(R.id.lastSettingsPillIcon)
-    private val title: TextView = root.findViewById(R.id.lastSettingsPillTitle)
-    private val metrics: TextView = root.findViewById(R.id.lastSettingsPillMetrics)
-    private val chevron: ImageView = root.findViewById(R.id.lastSettingsPillChevron)
-    private val reuseLabel: TextView = root.findViewById(R.id.lastSettingsPillReuse)
-    private val reuseSwitch: SwitchCompat = root.findViewById(R.id.lastSettingsPillSwitch)
-
-    private val detail: View = root.findViewById(R.id.lastSettingsDetail)
-    private val detailTitle: TextView = root.findViewById(R.id.lastSettingsDetailTitle)
-    private val detailTime: TextView = root.findViewById(R.id.lastSettingsDetailTime)
-    private val detailRows: LinearLayout = root.findViewById(R.id.lastSettingsDetailRows)
-
-    private var expanded = false
-    private var suppressCallback = false
-
-    init {
-        applyTheme()
-        pill.setOnClickListener { setExpanded(!expanded, animate = true) }
-        val controllerKeys = View.OnKeyListener { view, keyCode, event ->
-            when (keyCode) {
-                KeyEvent.KEYCODE_BUTTON_A -> {
-                    view.isPressed = event.action == KeyEvent.ACTION_DOWN && !event.isCanceled
-                    if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) view.performClick()
-                    true
-                }
-                KeyEvent.KEYCODE_DPAD_UP -> {
-                    if (event.action == KeyEvent.ACTION_DOWN) onReturnToApp()
-                    true
-                }
-                else -> false
-            }
-        }
-        pill.setOnKeyListener(controllerKeys)
-        reuseSwitch.setOnKeyListener(controllerKeys)
-        reuseSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (suppressCallback) {
-                return@setOnCheckedChangeListener
-            }
-            onReuseChanged(isChecked)
-        }
-        applyExpandedState(animate = false)
-    }
-
-    /** 主题或屏幕方向变化后更新胶囊样式。 */
-    fun applyTheme() {
-        AppSwitchStyle.apply(reuseSwitch)
-        applyPanelColors()
-        val configuration = root.resources.configuration
-        val margin = root.resources.getDimension(R.dimen.appview_content_margin)
-        val available = (configuration.screenWidthDp * density - 2 * margin).toInt()
-        root.layoutParams = root.layoutParams.apply {
-            width = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE && available > 0) {
-                minOf(root.resources.getDimensionPixelSize(R.dimen.appview_preset_landscape_width), available)
-            } else {
-                ViewGroup.LayoutParams.MATCH_PARENT
-            }
-        }
-    }
-
-    private fun applyPanelColors() {
-        val primary = ContextCompat.getColor(context, R.color.ui_shell_text_primary)
-        val secondary = ContextCompat.getColor(context, R.color.ui_shell_text_secondary)
-        val outline = ContextCompat.getColor(context, R.color.ui_shell_outline)
-        shell.background = ContextCompat.getDrawable(context, R.drawable.bg_appview_preset_pill)
-        detail.background = ContextCompat.getDrawable(context, R.drawable.bg_appview_preset_detail)
-        chevron.background = ContextCompat.getDrawable(context, R.drawable.bg_appview_preset_chevron)
-        icon.setColorFilter(secondary)
-        updateChevronTint()
-        title.setTextColor(primary)
-        detailTitle.setTextColor(primary)
-        metrics.setTextColor(secondary)
-        reuseLabel.setTextColor(secondary)
-        detailTime.setTextColor(secondary)
-        root.findViewById<View>(R.id.lastSettingsPillDivider).setBackgroundColor(outline)
-        root.findViewById<View>(R.id.lastSettingsDetailDivider).setBackgroundColor(outline)
-        for (index in 0 until detailRows.childCount) {
-            val row = detailRows.getChildAt(index)
-            row.findViewById<TextView>(R.id.lastSettingsRowLabel).setTextColor(secondary)
-            row.findViewById<TextView>(R.id.lastSettingsRowValue).setTextColor(secondary)
-        }
-    }
-
-    /**
-     * 绑定当前选中应用的上一次设置。[summary] 为空时不展示整个模块。
-     */
-    fun bind(summary: LastSettingsSummary?, reuse: Boolean) {
-        if (summary == null) {
-            setExpanded(false, animate = false)
-            root.visibility = View.GONE
-            return
-        }
-
-        root.visibility = View.VISIBLE
-
-        metrics.text = summary.metricsLine
-        detailTime.text = summary.timeLabel
-
-        rebuildRows(summary)
-
-        suppressCallback = true
-        reuseSwitch.isChecked = reuse
-        suppressCallback = false
-
-        pill.contentDescription = context.getString(
-            R.string.app_last_settings_pill_description,
-            summary.metricsLine,
-            summary.timeLabel
-        )
-
-        setExpanded(false, animate = false)
-    }
-
-    private fun rebuildRows(summary: LastSettingsSummary) {
-        detailRows.removeAllViews()
-        val inflater = LayoutInflater.from(context)
-        summary.rows.forEach { row ->
-            val view = inflater.inflate(R.layout.appview_last_settings_row, detailRows, false)
-            view.findViewById<TextView>(R.id.lastSettingsRowLabel).text = row.first
-            view.findViewById<TextView>(R.id.lastSettingsRowValue).text = row.second
-            detailRows.addView(view)
-        }
-    }
-
-    fun collapseDetails(): Boolean {
-        if (!expanded) return false
-        setExpanded(false, animate = true)
-        return true
-    }
-
-    private fun updateChevronTint() {
-        chevron.setColorFilter(ContextCompat.getColor(
-            context,
-            if (expanded) R.color.ui_shell_accent else R.color.ui_shell_text_secondary
-        ))
-    }
-
-    private fun applyExpandedState(animate: Boolean) {
-        chevron.isActivated = expanded
-        updateChevronTint()
-        val duration = if (animate) 160L else 0L
-        chevron.animate()
-            .rotation(if (expanded) 180f else 0f)
-            .setDuration(duration)
-            .start()
-
-        if (expanded) {
-            detail.animate().cancel()
-            detail.visibility = View.VISIBLE
-            if (animate) {
-                detail.alpha = 0f
-                detail.translationY = 8f * density
-                detail.animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .setDuration(duration)
-                    .setInterpolator(DecelerateInterpolator())
-                    .start()
-            } else {
-                detail.alpha = 1f
-                detail.translationY = 0f
-            }
-        } else {
-            detail.animate().cancel()
-            if (animate && detail.visibility == View.VISIBLE) {
-                detail.animate()
-                    .alpha(0f)
-                    .translationY(8f * density)
-                    .setDuration(130L)
-                    .withEndAction {
-                        detail.visibility = View.GONE
-                        detail.alpha = 1f
-                        detail.translationY = 0f
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Column(
+            Modifier
+                .then(if (landscape) Modifier.widthIn(max = 420.dp) else Modifier)
+                .fillMaxWidth()
+        ) {
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(tween(160), expandFrom = Alignment.Bottom) + fadeIn(tween(160)),
+                exit = shrinkVertically(tween(130), shrinkTowards = Alignment.Bottom) + fadeOut(tween(130))
+            ) {
+                Column(
+                    Modifier
+                        .padding(bottom = 8.dp)
+                        .fillMaxWidth()
+                        .background(surface, AppShapes.large)
+                        .border(1.dp, outline, AppShapes.large)
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            title, Modifier.weight(1f), color = primary, fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium, maxLines = 1
+                        )
+                        Text(summary.timeLabel, color = secondary, fontSize = 11.sp, maxLines = 1)
                     }
-                    .start()
-            } else {
-                detail.visibility = View.GONE
-                detail.alpha = 1f
-                detail.translationY = 0f
+                    Spacer(Modifier.padding(top = 10.dp).fillMaxWidth().height(1.dp).background(outline))
+                    summary.rows.forEach { (label, value) ->
+                        Row(Modifier.padding(top = 7.dp).fillMaxWidth()) {
+                            Text(label, Modifier.width(60.dp), color = secondary, fontSize = 11.sp)
+                            Text(
+                                value, Modifier.weight(1f), color = secondary, fontSize = 11.5.sp,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+                }
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(CircleShape)
+                    .background(surface)
+                    .border(if (focused) 2.dp else 1.dp, if (focused) accent else outline, CircleShape)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .onFocusChanged { pillFocused = it.isFocused }
+                        .lastSettingsController(onToggleDetails, onReturnToApp)
+                        .clickable(role = Role.Button, onClick = onToggleDetails)
+                        .clearAndSetSemantics {
+                            contentDescription = description
+                            stateDescription = detailsAction
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppViewPanelIcon(R.drawable.ic_appview_preset_history, secondary, Modifier.size(15.dp))
+                        Text(
+                            title, Modifier.padding(start = 6.dp), color = primary, fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium, maxLines = 1
+                        )
+                        Spacer(Modifier.padding(horizontal = 9.dp).width(1.dp).height(16.dp).background(outline))
+                        Text(
+                            summary.metricsLine, Modifier.weight(1f), color = secondary, fontSize = 11.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                        val chevronColor = if (expanded) accent else secondary
+                        Box(
+                            Modifier
+                                .padding(start = 8.dp)
+                                .size(20.dp)
+                                .background(
+                                    if (expanded) accentSoft else colorResource(R.color.ui_shell_surface_pressed),
+                                    CircleShape
+                                )
+                                .border(1.dp, if (expanded) accent else outline, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AppViewPanelIcon(
+                                R.drawable.ic_appview_preset_chevron, chevronColor,
+                                Modifier.size(12.dp).rotate(rotation)
+                            )
+                        }
+                    }
+                }
+                Text(
+                    stringResource(R.string.app_last_settings_reuse),
+                    Modifier.padding(start = 8.dp, end = 5.dp).clearAndSetSemantics {},
+                    color = secondary, fontSize = 11.sp, maxLines = 1
+                )
+                Box(
+                    Modifier
+                        .width(48.dp)
+                        .fillMaxHeight()
+                        .onFocusChanged { switchFocused = it.isFocused }
+                        .background(if (switchFocused) accentSoft else Color.Transparent, AppShapes.small)
+                        .lastSettingsController({ onReuseChanged(!reuse) }, onReturnToApp)
+                        .semantics { contentDescription = switchDescription }
+                        .toggleable(reuse, role = Role.Switch, onValueChange = onReuseChanged),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AppSwitch(checked = reuse, onCheckedChange = null)
+                }
             }
         }
-
-        ViewCompat.setStateDescription(
-            pill,
-            context.getString(
-                if (expanded) R.string.app_last_settings_collapse else R.string.app_last_settings_expand
-            )
-        )
-    }
-
-    private fun setExpanded(expand: Boolean, animate: Boolean) {
-        if (expanded == expand) return
-        expanded = expand
-        applyExpandedState(animate)
     }
 }
+
+private fun Modifier.lastSettingsController(onClick: () -> Unit, onReturnToApp: () -> Unit): Modifier =
+    onPreviewKeyEvent { event ->
+        val key = event.nativeKeyEvent
+        when (key.keyCode) {
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if (key.action == KeyEvent.ACTION_UP && !key.isCanceled) onClick()
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                if (key.action == KeyEvent.ACTION_DOWN) onReturnToApp()
+                true
+            }
+            else -> false
+        }
+    }
