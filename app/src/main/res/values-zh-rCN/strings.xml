@@ -1090,7 +1090,7 @@
     <string name="app_last_settings_row_cards">菜单卡片</string>
     <string name="app_last_settings_hdr_on">HDR 已开启</string>
     <string name="app_last_settings_hdr_off">HDR 已关闭</string>
-    <string name="app_last_settings_mic_on">麦克风已开启 · %1$d kbps</string>
+    <string name="app_last_settings_mic_on">麦克风已开启\u2002%1$d kbps</string>
     <string name="app_last_settings_mic_off">麦克风已关闭</string>
     <string name="app_last_settings_native_mouse_on">原生鼠标</string>
     <string name="app_last_settings_native_mouse_off">系统鼠标</string>

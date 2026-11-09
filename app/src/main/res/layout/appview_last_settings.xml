@@ -112,8 +112,8 @@
         android:foreground="?android:attr/selectableItemBackground"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/appview_preset_pill_padding_start"
-        android:paddingEnd="@dimen/appview_preset_pill_padding_end">
+        android:paddingStart="@dimen/appview_preset_pill_padding"
+        android:paddingEnd="@dimen/appview_preset_pill_padding">
 
         <ImageView
             android:id="@+id/lastSettingsPillIcon"

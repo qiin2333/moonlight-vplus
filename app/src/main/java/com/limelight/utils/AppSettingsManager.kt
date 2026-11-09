@@ -221,13 +221,13 @@ class AppSettingsManager(private val context: Context) {
         val rows = ArrayList<Pair<String, String>>(5)
         rows.add(
             context.getString(R.string.app_last_settings_row_video) to
-                    "$resolution · ${settings.fps} FPS · $bitrateFull"
+                    "$resolution\u2002${settings.fps} FPS\u2002$bitrateFull"
         )
 
         val encodingValue = StringBuilder(videoFormatLabel(settings.videoFormat))
-                .append(" · ").append(hdrLabel)
+                .append('\u2002').append(hdrLabel)
         if (settings.resolutionScale != 100) {
-            encodingValue.append(" · ")
+            encodingValue.append('\u2002')
                     .append(context.getString(R.string.app_last_settings_scale, settings.resolutionScale))
         }
         rows.add(context.getString(R.string.app_last_settings_row_encoding) to encodingValue.toString())
@@ -251,10 +251,10 @@ class AppSettingsManager(private val context: Context) {
         rows.add(
             context.getString(R.string.app_last_settings_row_cards) to
                     if (cards.isEmpty()) context.getString(R.string.app_last_settings_cards_none)
-                    else cards.joinToString(" · ")
+                    else cards.joinToString("\u2002")
         )
 
-        val metricsLine = "$resolution · ${settings.fps} · ${formatBitrateCompact(settings.bitrate)}"
+        val metricsLine = "$resolution\u2002${settings.fps}\u2002${formatBitrateCompact(settings.bitrate)}"
         return LastSettingsSummary(metricsLine, timeLabel, rows)
     }
 
@@ -607,7 +607,7 @@ class AppSettingsManager(private val context: Context) {
 /**
  * AppView「上一次设置」胶囊的结构化摘要。
  *
- * @param metricsLine 胶囊上的一行数值，例如 `2376×1080 · 120 · 42M`
+ * @param metricsLine 胶囊上的分辨率、帧率和码率。
  * @param timeLabel 相对时间，例如 `3 小时前`
  * @param rows 展开后的分组行（标签 to 内容）
  */

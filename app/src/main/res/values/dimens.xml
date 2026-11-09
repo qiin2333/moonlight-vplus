@@ -54,8 +54,7 @@
     <dimen name="appview_preset_pill_height">48dp</dimen>
     <dimen name="appview_preset_landscape_width">420dp</dimen>
     <dimen name="appview_preset_pill_radius">24dp</dimen>
-    <dimen name="appview_preset_pill_padding_start">12dp</dimen>
-    <dimen name="appview_preset_pill_padding_end">6dp</dimen>
+    <dimen name="appview_preset_pill_padding">16dp</dimen>
     <dimen name="appview_preset_icon_size">15dp</dimen>
     <dimen name="appview_preset_chevron_size">20dp</dimen>
     <dimen name="appview_preset_detail_padding">14dp</dimen>
