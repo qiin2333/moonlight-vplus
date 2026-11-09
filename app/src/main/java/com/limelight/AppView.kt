@@ -471,9 +471,11 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
         // Initialize app settings manager and UI components
         appSettingsManager = AppSettingsManager(this)
-        lastSettingsPanel = LastSettingsPanel(findViewById(R.id.lastSettingsInfo)) { enabled ->
-            appSettingsManager?.setUseLastSettingsEnabled(enabled)
-        }
+        lastSettingsPanel = LastSettingsPanel(
+            root = findViewById(R.id.lastSettingsInfo),
+            onReuseChanged = { enabled -> appSettingsManager?.setUseLastSettingsEnabled(enabled) },
+            onOpenSettings = ::openStreamSettings
+        )
         appViewTargetReminder = findViewById(R.id.appViewTargetReminder)
 
         // Initialize top dropdown panel
@@ -511,9 +513,6 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             )
         }
         refreshScreenCombinationModeFromPreferences()
-
-        // Set up event listeners
-        // （「上一次设置」的开关回调在 LastSettingsPanel 内部注册）
 
         // Initialize selection indicator animator
         val selectionIndicator = findViewById<View>(R.id.selectionIndicator)

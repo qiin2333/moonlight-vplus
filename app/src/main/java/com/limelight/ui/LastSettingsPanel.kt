@@ -1,12 +1,15 @@
 package com.limelight.ui
 
+import android.content.res.Configuration
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import com.limelight.R
 import com.limelight.utils.AppSwitchStyle
@@ -18,11 +21,12 @@ import com.limelight.utils.LastSettingsSummary
  * 交互约定：
  *  - 胶囊本身是一个焦点（OK 展开/收起）
  *  - 开关是第二个焦点（OK 切换是否沿用）
- *  - 详情卡只读，不参与焦点
+ *  - 展开后的设置入口可独立聚焦
  */
 class LastSettingsPanel(
     private val root: View,
-    private val onReuseChanged: (Boolean) -> Unit
+    private val onReuseChanged: (Boolean) -> Unit,
+    private val onOpenSettings: () -> Unit
 ) {
     private val context = root.context
     private val density = root.resources.displayMetrics.density
@@ -31,7 +35,6 @@ class LastSettingsPanel(
     private val icon: ImageView = root.findViewById(R.id.lastSettingsPillIcon)
     private val title: TextView = root.findViewById(R.id.lastSettingsPillTitle)
     private val metrics: TextView = root.findViewById(R.id.lastSettingsPillMetrics)
-    private val more: TextView = root.findViewById(R.id.lastSettingsPillMore)
     private val chevron: ImageView = root.findViewById(R.id.lastSettingsPillChevron)
     private val reuseLabel: TextView = root.findViewById(R.id.lastSettingsPillReuse)
     private val reuseSwitch: SwitchCompat = root.findViewById(R.id.lastSettingsPillSwitch)
@@ -46,8 +49,12 @@ class LastSettingsPanel(
     private var suppressCallback = false
 
     init {
-        AppSwitchStyle.apply(reuseSwitch)
+        applyTheme()
         pill.setOnClickListener { setExpanded(!expanded, animate = true) }
+        root.findViewById<View>(R.id.lastSettingsOpenSettings).setOnClickListener {
+            setExpanded(false, animate = false)
+            onOpenSettings()
+        }
         reuseSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (suppressCallback) {
                 return@setOnCheckedChangeListener
@@ -59,9 +66,19 @@ class LastSettingsPanel(
         applyExpandedState(animate = false)
     }
 
-    /** 主题/横竖屏变化后重新给开关上色。 */
+    /** 主题或屏幕方向变化后更新胶囊样式。 */
     fun applyTheme() {
         AppSwitchStyle.apply(reuseSwitch)
+        val configuration = root.resources.configuration
+        val margin = root.resources.getDimension(R.dimen.appview_content_margin)
+        val available = (configuration.screenWidthDp * density - 2 * margin).toInt()
+        root.layoutParams = root.layoutParams.apply {
+            width = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE && available > 0) {
+                minOf(root.resources.getDimensionPixelSize(R.dimen.appview_preset_landscape_width), available)
+            } else {
+                ViewGroup.LayoutParams.MATCH_PARENT
+            }
+        }
     }
 
     /**
@@ -78,16 +95,6 @@ class LastSettingsPanel(
 
         metrics.text = summary.metricsLine
         detailTime.text = summary.timeLabel
-
-        if (summary.moreCount > 0) {
-            more.visibility = View.VISIBLE
-            more.text = context.getString(R.string.app_last_settings_more, summary.moreCount)
-            more.contentDescription = context.getString(
-                R.string.app_last_settings_more_description, summary.moreCount
-            )
-        } else {
-            more.visibility = View.GONE
-        }
 
         rebuildRows(summary)
 
@@ -121,7 +128,6 @@ class LastSettingsPanel(
         val dim = if (reuseEnabled) 1f else 0.55f
         title.alpha = dim
         metrics.alpha = dim
-        more.alpha = dim
         icon.alpha = dim
         reuseLabel.alpha = if (reuseEnabled) 1f else 0.72f
         detailHint.setText(
@@ -131,6 +137,11 @@ class LastSettingsPanel(
     }
 
     private fun applyExpandedState(animate: Boolean) {
+        chevron.isActivated = expanded
+        chevron.setColorFilter(ContextCompat.getColor(
+            context,
+            if (expanded) R.color.appview_preset_active else R.color.appview_preset_text_secondary
+        ))
         val duration = if (animate) 160L else 0L
         chevron.animate()
             .rotation(if (expanded) 180f else 0f)

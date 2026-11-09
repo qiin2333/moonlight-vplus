@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 上一次设置：竖屏形态。详情卡在胶囊上方展开，胶囊通栏。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/lastSettingsInfo"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginBottom="6dp"
     android:orientation="vertical"
     android:gravity="end"
     android:visibility="gone">
@@ -63,15 +63,41 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
-        <TextView
-            android:id="@+id/lastSettingsDetailHint"
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="10dp"
+            android:background="@color/appview_preset_divider" />
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:fontFamily="sans-serif-light"
-            android:lineSpacingExtra="1dp"
-            android:textColor="@color/appview_preset_text_tertiary"
-            android:textSize="@dimen/appview_preset_meta_text_size" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/lastSettingsOpenSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="44dp"
+                android:gravity="center_vertical"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:text="@string/app_last_settings_open_settings"
+                android:textColor="@color/appview_preset_active"
+                android:textSize="@dimen/appview_preset_detail_value_text_size" />
+
+            <TextView
+                android:id="@+id/lastSettingsDetailHint"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/appview_preset_text_tertiary"
+                android:textSize="@dimen/appview_preset_meta_text_size" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -83,7 +109,7 @@
         android:clickable="true"
         android:clipToOutline="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
+        android:foreground="?android:attr/selectableItemBackground"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="@dimen/appview_preset_pill_padding_start"
@@ -126,23 +152,6 @@
             android:textColor="@color/appview_preset_text_secondary"
             android:textSize="@dimen/appview_preset_meta_text_size" />
 
-        <TextView
-            android:id="@+id/lastSettingsPillMore"
-            android:layout_width="wrap_content"
-            android:layout_height="18dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/bg_appview_preset_chip"
-            android:fontFamily="sans-serif-medium"
-            android:gravity="center"
-            android:includeFontPadding="false"
-            android:maxLines="1"
-            android:minWidth="18dp"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:textColor="@color/appview_preset_chip_text"
-            android:textSize="@dimen/appview_preset_chip_text_size"
-            android:visibility="gone" />
-
         <ImageView
             android:id="@+id/lastSettingsPillChevron"
             android:layout_width="@dimen/appview_preset_chevron_size"
@@ -170,9 +179,13 @@
             android:id="@+id/lastSettingsPillSwitch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minHeight="0dp"
-            android:minWidth="0dp"
+            android:minHeight="@dimen/appview_preset_pill_height"
+            android:minWidth="48dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
             android:contentDescription="@string/app_last_settings_reuse_description"
+            app:showText="false"
             app:switchMinWidth="36dp" />
     </LinearLayout>
 </LinearLayout>

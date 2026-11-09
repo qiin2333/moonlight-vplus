@@ -1080,8 +1080,7 @@
     <string name="app_last_settings_reuse">沿用</string>
     <string name="app_last_settings_reuse_description">启动时沿用上一次设置</string>
     <string name="app_last_settings_pill_description">上一次设置，%1$s，%2$s</string>
-    <string name="app_last_settings_more">+%1$d</string>
-    <string name="app_last_settings_more_description">另有 %1$d 项设置</string>
+    <string name="app_last_settings_open_settings">打开串流设置</string>
     <string name="app_last_settings_expand">展开详情</string>
     <string name="app_last_settings_collapse">收起详情</string>
     <string name="app_last_settings_row_video">视频</string>

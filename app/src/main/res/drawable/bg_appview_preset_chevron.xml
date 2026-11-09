@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_focused="true">
+    <item android:state_activated="true">
         <shape android:shape="oval">
-            <solid android:color="@color/appview_preset_chip_fill" />
+            <solid android:color="@color/appview_preset_active_fill" />
             <stroke
-                android:width="2dp"
-                android:color="@color/ui_shell_accent" />
+                android:width="1dp"
+                android:color="@color/appview_preset_active" />
         </shape>
     </item>
     <item>

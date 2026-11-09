@@ -30,5 +30,6 @@
     <color name="appview_preset_icon">#8AFFFFFF</color>
     <color name="appview_preset_chip_fill">#14FFFFFF</color>
     <color name="appview_preset_chip_stroke">#1FFFFFFF</color>
-    <color name="appview_preset_chip_text">#CCFFFFFF</color>
+    <color name="appview_preset_active">#FF8DA7</color>
+    <color name="appview_preset_active_fill">#26FF8DA7</color>
 </resources>

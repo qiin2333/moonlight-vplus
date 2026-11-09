@@ -1338,8 +1338,7 @@
     <string name="app_last_settings_reuse">Reuse</string>
     <string name="app_last_settings_reuse_description">Reuse last settings when launching</string>
     <string name="app_last_settings_pill_description">Last settings, %1$s, %2$s</string>
-    <string name="app_last_settings_more">+%1$d</string>
-    <string name="app_last_settings_more_description">%1$d more settings</string>
+    <string name="app_last_settings_open_settings">Open streaming settings</string>
     <string name="app_last_settings_expand">Show details</string>
     <string name="app_last_settings_collapse">Hide details</string>
     <string name="app_last_settings_row_video">Video</string>

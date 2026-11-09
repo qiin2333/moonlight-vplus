@@ -52,6 +52,7 @@
 
     <!-- AppView「上一次设置」预设条 -->
     <dimen name="appview_preset_pill_height">48dp</dimen>
+    <dimen name="appview_preset_landscape_width">420dp</dimen>
     <dimen name="appview_preset_pill_radius">24dp</dimen>
     <dimen name="appview_preset_pill_padding_start">12dp</dimen>
     <dimen name="appview_preset_pill_padding_end">6dp</dimen>
@@ -60,7 +61,6 @@
     <dimen name="appview_preset_detail_padding">14dp</dimen>
     <dimen name="appview_preset_title_text_size">13sp</dimen>
     <dimen name="appview_preset_meta_text_size">11sp</dimen>
-    <dimen name="appview_preset_chip_text_size">10sp</dimen>
     <dimen name="appview_preset_switch_label_text_size">11sp</dimen>
     <dimen name="appview_preset_detail_label_text_size">11sp</dimen>
     <dimen name="appview_preset_detail_value_text_size">11.5sp</dimen>

@@ -217,11 +217,6 @@ class AppSettingsManager(private val context: Context) {
         )
 
         val cards = enabledGameMenuCards(settings)
-        val moreCount = (if (settings.enableHdr) 1 else 0) +
-                (if (settings.enableMic) 1 else 0) +
-                (if (settings.enableNativeMousePointer) 1 else 0) +
-                (if (settings.resolutionScale != 100) 1 else 0) +
-                cards.size
 
         val rows = ArrayList<Pair<String, String>>(5)
         rows.add(
@@ -260,7 +255,7 @@ class AppSettingsManager(private val context: Context) {
         )
 
         val metricsLine = "$resolution · ${settings.fps} · ${formatBitrateCompact(settings.bitrate)}"
-        return LastSettingsSummary(metricsLine, timeLabel, moreCount, rows)
+        return LastSettingsSummary(metricsLine, timeLabel, rows)
     }
 
     private fun formatBitrate(kbps: Int): String {
@@ -614,12 +609,10 @@ class AppSettingsManager(private val context: Context) {
  *
  * @param metricsLine 胶囊上的一行数值，例如 `2376×1080 · 120 · 42M`
  * @param timeLabel 相对时间，例如 `3 小时前`
- * @param moreCount 未展示在胶囊上的附加项数量（HDR/麦克风/原生鼠标/缩放/菜单卡片）
  * @param rows 展开后的分组行（标签 to 内容）
  */
 data class LastSettingsSummary(
     val metricsLine: String,
     val timeLabel: String,
-    val moreCount: Int,
     val rows: List<Pair<String, String>>
 )
