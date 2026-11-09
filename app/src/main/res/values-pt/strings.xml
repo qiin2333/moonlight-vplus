@@ -371,7 +371,7 @@
     <string name="summary_checkbox_resume_stream">Retomar automaticamente o stream ao retornar ao Moonlight do segundo plano</string>
     
     <!-- Host settings -->
-    <string name="title_screen_combination_mode">Definições de combinação de ecrãs</string>
+    <string name="title_screen_combination_mode">Combinação de ecrãs</string>
     <string name="summary_screen_combination_mode">Controlo de ecrãs do Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">Aplica-se ao controlo de ecrãs do Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir anfitrião</string>

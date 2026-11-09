@@ -1326,7 +1326,7 @@
     <string name="appview_background_mode_artwork">Обложка</string>
     <string name="appview_background_mode_acrylic">Акрил</string>
     <string name="appview_background_mode_soft_color">Мягкий цвет</string>
-    <string name="appview_display_selection_title">Выбор экрана</string>
+    <string name="appview_display_selection_title">Экраны</string>
     <string name="appview_display_selection_default">Default</string>
     <string name="layout_capability_diagnostic_text_a5e80">Возможности устройства</string>
     <string name="layout_capability_diagnostic_text_41b60">HDR · Декодер · Экран</string>

@@ -516,7 +516,7 @@
     <string name="toast_touch_mode_trackpad_on">Modo panel táctil habilitado</string>
     <string name="width_hint">ej. 1920</string>
 
-    <string name="title_screen_combination_mode">Configuración de combinación de pantallas</string>
+    <string name="title_screen_combination_mode">Combinación de pantallas</string>
     <string name="summary_screen_combination_mode">Control de pantallas de Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir host</string>

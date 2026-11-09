@@ -14,6 +14,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -741,7 +743,8 @@ internal fun ScreenCombinationSegmentedControl(
                 selectedIndex = row.indexOfFirst { it.value == selectedMode },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
+                    .height(IntrinsicSize.Min)
                     .selectableGroup()
             ) {
                 row.forEach { option ->
@@ -767,64 +770,62 @@ internal fun ScreenCombinationSegmentedControl(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SectionNavigationTitle(title: String, value: String, onClick: () -> Unit) {
-    val pickerContentDescription = stringResource(
-        R.string.appview_open_screen_combination_picker
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val pickerContentDescription = stringResource(R.string.appview_open_screen_combination_picker)
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = title,
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterVertically).padding(end = 8.dp),
+            color = textColor,
             fontSize = 13.sp,
             lineHeight = 17.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            fontWeight = FontWeight.Medium
         )
-        Text(
-            text = value,
-            modifier = Modifier.padding(start = 8.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(AppShapes.small)
-                .semantics {
-                    contentDescription = pickerContentDescription
-                    role = Role.Button
-                }
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.align(Alignment.CenterVertically),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val arrowColor = MaterialTheme.colorScheme.onSurfaceVariant
-            Canvas(modifier = Modifier.size(18.dp)) {
-                val strokeWidth = 1.6.dp.toPx()
-                drawLine(
-                    color = arrowColor,
-                    start = Offset(size.width * 0.36f, size.height * 0.22f),
-                    end = Offset(size.width * 0.62f, size.height * 0.5f),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color = arrowColor,
-                    start = Offset(size.width * 0.62f, size.height * 0.5f),
-                    end = Offset(size.width * 0.36f, size.height * 0.78f),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round
-                )
+            Text(
+                text = value,
+                modifier = Modifier.weight(1f, fill = false),
+                color = textColor,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(AppShapes.small)
+                    .semantics {
+                        contentDescription = pickerContentDescription
+                        role = Role.Button
+                    }
+                    .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(18.dp)) {
+                    val strokeWidth = 1.6.dp.toPx()
+                    drawLine(
+                        color = textColor,
+                        start = Offset(size.width * 0.36f, size.height * 0.22f),
+                        end = Offset(size.width * 0.62f, size.height * 0.5f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = textColor,
+                        start = Offset(size.width * 0.62f, size.height * 0.5f),
+                        end = Offset(size.width * 0.36f, size.height * 0.78f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
             }
         }
     }

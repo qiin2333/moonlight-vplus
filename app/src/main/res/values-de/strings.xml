@@ -262,7 +262,7 @@
     <string name="analogscroll_none">Keine (beide Sticks bewegen die Maus)</string>
     <string name="analogscroll_right">Rechter Analogstick</string>
     <string name="analogscroll_left">Linker Analogstick</string>
-    <string name="title_screen_combination_mode">Einstellungen für Displaykombination</string>
+    <string name="title_screen_combination_mode">Displaykombination</string>
     <string name="summary_screen_combination_mode">Displaysteuerung für Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">Gilt für die Displaysteuerung von Foundation Sunshine</string>
     <string name="screen_mode_host_default">Host folgen</string>

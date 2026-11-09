@@ -693,7 +693,7 @@
     <string name="summary_checkbox_clipboard_sync_text">Forward text copied on this device to the PC and vice versa. Warning: anything you copy (including passwords and 2FA codes) will leave this device.</string>
     <string name="title_checkbox_clipboard_sync_image">Sync clipboard images with PC</string>
     <string name="summary_checkbox_clipboard_sync_image">Forward images copied on this device to the PC. Large screenshots may use significant bandwidth.</string>
-    <string name="title_screen_combination_mode">Screen Combination</string>
+    <string name="title_screen_combination_mode">Screen Layout</string>
     <string name="summary_screen_combination_mode">Choose how Foundation Sunshine arranges or combines host displays. Requires a compatible Foundation Sunshine host.</string>
     <string name="screen_combination_mode_dialog_subtitle">Applies to Foundation Sunshine display control</string>
     <string name="screen_mode_host_default">Follow Host</string>
@@ -1603,7 +1603,7 @@ Tap again to replace it.</string>
     <string name="appview_background_mode_artwork">App artwork</string>
     <string name="appview_background_mode_acrylic">Acrylic</string>
     <string name="appview_background_mode_soft_color">Soft color</string>
-    <string name="appview_display_selection_title">Display Selection</string>
+    <string name="appview_display_selection_title">Displays</string>
     <string name="appview_display_selection_default">Default</string>
 
 
