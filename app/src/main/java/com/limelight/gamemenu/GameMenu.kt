@@ -1300,9 +1300,7 @@ class GameMenu(
             onGyroEnabled = gyroCardController::setEnabled,
             onGyroMouseMode = gyroCardController::setMouseMode,
             onGyroActivationKey = {
-                gyroCardController.showActivationKeyDialog { childDialog ->
-                    registerChildDialog(childDialog)
-                }
+                registerChildDialog(gyroCardController.showActivationKeySheet())
             },
             onGyroSensitivity = gyroCardController::previewSensitivity,
             onGyroSensitivityFinished = gyroCardController::persistSensitivity,

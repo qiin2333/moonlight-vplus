@@ -180,8 +180,9 @@
     <string name="title_add_pc">Добавить ПК</string>
     <string name="title_add_pc_choose">Добавить ПК</string>
     <string name="addpc_manual">Ввести IP-адрес</string>
+    <string name="addpc_manual_description">Используйте IP-адрес компьютера</string>
     <string name="addpc_qr_scan">Сканировать QR</string>
-    <string name="qr_scan_prompt">Сканируйте QR-код из веб-панели Sunshine</string>
+    <string name="qr_scan_prompt">Сканируйте QR-код из веб-панели Foundation Sunshine</string>
     <string name="qr_invalid_code">QR-код не распознан</string>
     <string name="qr_pairing">Сопряжение по QR…</string>
     <string name="qr_pair_success">Сопряжение выполнено!</string>
