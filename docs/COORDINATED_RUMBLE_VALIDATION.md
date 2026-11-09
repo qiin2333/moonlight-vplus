@@ -1,5 +1,14 @@
 # 协同振动验证：原神攀爬触击
 
+## DS5 增强 IR
+
+主机从源 PCM 提取持续层和触击。Android 通过两个频带及粗略频率提示渲染持续纹理，
+并为短点保留约 12 ms 的波形。原生协同模式由机身承担 authored 持续层，
+普通 HOST rumble 与真实控制器 PCM 各走独立通路。
+
+离线基线、命令及限制见 [DS5 离线 PCM 回归](../tools/haptics-offline/README.md)。
+实机比较可用影之刃零跑步和抽刀检查连续纹理，用雨滴和原神攀爬检查短点。
+
 ## 三模块边界
 
 生产链为 `GameRumblePipeline` 串联以下三层，Android 协调器只接入设备发现、线程、

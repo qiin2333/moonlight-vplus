@@ -720,7 +720,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             accent = true
         ) {
             popup.dismiss()
-            showThemeModeDialog()
+            showAppThemeSheet(this) { recreate() }
         }
 
         menu.measure(
@@ -826,33 +826,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         getString(if (AppTheme.getAccentMode(this) == AppTheme.ACCENT_MODE_BG)
             R.string.theme_accent_background else R.string.theme_accent_pink),
     )
-
-    private fun showThemeModeDialog() {
-        val content = layoutInflater.inflate(R.layout.dialog_app_theme, null)
-        val modeGroup = content.findViewById<android.widget.RadioGroup>(R.id.themeModeGroup)
-        val accentGroup = content.findViewById<android.widget.RadioGroup>(R.id.themeAccentGroup)
-        val modeIds = mapOf(
-            R.id.themeSystem to AppTheme.THEME_MODE_SYSTEM,
-            R.id.themeLight to AppTheme.THEME_MODE_LIGHT,
-            R.id.themeDark to AppTheme.THEME_MODE_DARK,
-        )
-        modeGroup.check(modeIds.entries.first { it.value == AppTheme.getAppThemeMode(this) }.key)
-        accentGroup.check(if (AppTheme.getAccentMode(this) == AppTheme.ACCENT_MODE_BG)
-            R.id.themeBackgroundAccent else R.id.themePinkAccent)
-        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.pcview_theme_dialog_title)
-            .setView(content)
-            .setPositiveButton(R.string.dialog_button_ok) { _, _ ->
-                AppTheme.save(this, modeIds.getValue(modeGroup.checkedRadioButtonId),
-                    if (accentGroup.checkedRadioButtonId == R.id.themeBackgroundAccent)
-                        AppTheme.ACCENT_MODE_BG else AppTheme.ACCENT_MODE_PINK)
-                recreate()
-            }
-            .setNegativeButton(R.string.dialog_button_cancel, null)
-            .create()
-        dialog.show()
-        AppDialogStyler.apply(dialog, this)
-    }
 
     /**
      * 背景换桶后重染工具栏上以 ?attr/appAccent 着色的图标。
@@ -2204,11 +2177,15 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 AppActionSheet.Action(
                     id = ADD_PC_MANUALLY_ID,
                     title = getString(R.string.addpc_manual),
+                    description = getString(R.string.addpc_manual_description),
+                    iconRes = R.drawable.ic_add_host_address,
                     opensSubmenu = true
                 ),
                 AppActionSheet.Action(
                     id = ADD_PC_QR_SCAN_ID,
                     title = getString(R.string.addpc_qr_scan),
+                    description = getString(R.string.qr_scan_prompt),
+                    iconRes = R.drawable.ic_add_host_scan,
                     opensSubmenu = true
                 )
             ),

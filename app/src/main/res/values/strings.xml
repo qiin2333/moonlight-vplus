@@ -229,8 +229,9 @@
     <string name="title_add_pc">Add PC Manually</string>
     <string name="title_add_pc_choose">Add Computer</string>
     <string name="addpc_manual">Enter IP Address</string>
+    <string name="addpc_manual_description">Use the IP address of your host computer</string>
     <string name="addpc_qr_scan">Scan QR Code</string>
-    <string name="qr_scan_prompt">Scan the QR code from Sunshine Web UI</string>
+    <string name="qr_scan_prompt">Scan the QR code from Foundation Sunshine Web UI</string>
     <string name="qr_invalid_code">Unrecognized QR code</string>
     <string name="qr_pairing">QR pairing…</string>
     <string name="qr_pair_success">Paired successfully!</string>

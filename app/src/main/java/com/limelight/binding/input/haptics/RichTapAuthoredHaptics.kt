@@ -34,62 +34,64 @@ internal class RichTapAuthoredHaptics(
     private var renewAt = 0L
     private var bodyLevel = 0
     private var parameterCarrier = false
-    private var mixedUntil = 0L
+    private var bodyFrequency = 56
+    private var attackUntil = 0L
+    private var frequencyRampUntil = 0L
+    private val textureFrequency = NativeAuthoredFrequency()
 
-    override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
+    override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
         if (!ready) return null
         val now = clockMs()
         val pointValue = level(point, .6f)
-        val requestedBody = level(body)
-        if (pointValue > 0) mixedUntil = now + MIXED_HEADROOM_MS
-        // Hysteresis keeps small analysis fluctuations from restarting the carrier.
+        val requestedBody = level(body.gain)
         val requestedTarget = if (requestedBody > 0 && now < bodyUntil &&
             kotlin.math.abs(requestedBody - bodyLevel) < BODY_STEP) bodyLevel
             else (requestedBody + BODY_STEP / 2) / BODY_STEP * BODY_STEP
-        // A single quantization step can be only a filtered impact tail. Do not
-        // start a long carrier for it or turn a dominant point into a mixed voice.
-        val target = if (requestedTarget <= BODY_STEP && (pointValue > 0 || now >= bodyUntil)) 0
-            else if (now < mixedUntil) minOf(requestedTarget, MIXED_BODY_LIMIT) else requestedTarget
-        if (pointValue == 0 && now < pointUntil) return pointUntil
+        // Suppress a filtered point tail only when no continuous voice is established.
+        val target = if (requestedTarget <= BODY_STEP && now >= bodyUntil) 0
+            else requestedTarget
+        val frequency = frequency(textureFrequency.advance(body.frequencyHintHz, now),
+            bodyFrequency.takeIf { now < bodyUntil })
         return try {
-            // Use global gain only for continuous levels. Keep points in a native
-            // envelope and protect them from intervening parameter writes.
-            if (target > 0 && pointValue == 0 &&
-                (parameterCarrier || target != bodyLevel || now >= renewAt)) {
-                return renderParameters(target, now)
-            }
-            when {
-                target > 0 -> {
-                    if (pointValue > 0) {
-                        val from = if (now < bodyUntil) bodyLevel else 0
-                        val peak = mixedPeak(target, pointValue)
-                        val curve = intArrayOf(
-                            0, minOf(from, target), 0, 2, peak, 0, 12, target, 0,
-                            BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0
-                        )
-                        active = true
-                        parameterCarrier = false
-                        play(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
-                            FREQUENCY, BODY_DURATION_MS, curve.size / 3) + curve), 255)
-                        bodyLevel = target
-                        bodyUntil = now + BODY_DURATION_MS
-                        renewAt = now + BODY_RENEW_MS
-                        pointUntil = now + MIXED_POINT_HOLD_MS
-                    }
-                    nextWake(now)
-                }
-                pointValue > 0 -> {
-                    val hadBody = now < bodyUntil
+            if (pointValue > 0) {
+                active = true
+                parameterCarrier = false
+                attackUntil = now + MIXED_ATTACK_MS
+                if (target > 0) {
+                    val from = if (now < bodyUntil) bodyLevel else target
+                    val fromFrequency = if (now < bodyUntil) bodyFrequency else frequency
+                    // Keep the short 2/12 ms attack, then immediately return to the source
+                    // background. There is no persistent ducking/headroom window.
+                    val curve = intArrayOf(
+                        0, from, fromFrequency - frequency,
+                        2, mixedPeak(target, pointValue), POINT_FREQUENCY - frequency,
+                        MIXED_ATTACK_MS.toInt(), target, 0,
+                        BODY_DURATION_MS - 2, target, 0, BODY_DURATION_MS, target, 0)
+                    play(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
+                        frequency, BODY_DURATION_MS, curve.size / 3) + curve), 255)
+                    bodyLevel = target
+                    bodyFrequency = frequency
+                    bodyUntil = now + BODY_DURATION_MS
+                    renewAt = now + BODY_RENEW_MS
+                    pointUntil = attackUntil
+                } else {
                     bodyLevel = 0
                     bodyUntil = 0
                     renewAt = 0
-                    active = true
-                    parameterCarrier = false
-                    play(pattern(intArrayOf(4097, 5, 0, 0, pointValue, FREQUENCY, 0)), 255)
-                    pointUntil = now + if (hadBody) MIXED_POINT_HOLD_MS else POINT_HOLD_MS
-                    pointUntil
+                    play(pattern(intArrayOf(4097, 5, 0, 0, pointValue, POINT_FREQUENCY, 0)), 255)
+                    // Only keep a silent heartbeat from cancelling an isolated native preset.
+                    // A new background may start after its compact attack, not after this tail.
+                    pointUntil = now + POINT_TAIL_MS
                 }
-                else -> { stop(); null }
+                pointUntil
+            } else if (now < attackUntil) {
+                attackUntil
+            } else if (target > 0) {
+                renderParameters(target, frequency, now)
+            } else if (now < pointUntil && bodyUntil == 0L) {
+                pointUntil
+            } else {
+                stop(); null
             }
         } catch (error: Exception) {
             ready = false
@@ -99,30 +101,37 @@ internal class RichTapAuthoredHaptics(
         }
     }
 
-    private fun renderParameters(target: Int, now: Long): Long {
-        if (!parameterCarrier || now >= renewAt) {
-            // A constant native carrier is started with the requested global gain;
-            // subsequent gain changes do not replace its five-second envelope.
-            // HE2 continuous events require at least four curve points.
-            val curve = intArrayOf(0, 0, 0, 2, 100, 0,
+    private fun renderParameters(target: Int, frequency: Int, now: Long): Long {
+        // Let the previous 20 ms frequency ramp reach its endpoint before replacing
+        // it. Otherwise the next curve would start at a target never yet reached.
+        // Amplitude updates and fresh points remain immediate.
+        if (!parameterCarrier || now >= renewAt ||
+            frequency != bodyFrequency && now >= frequencyRampUntil) {
+            val continuing = now < bodyUntil
+            // Frequency is expressed in HE's normalized units, not Hz. A frequency
+            // change uses a continuous curve starting at the previous frequency and
+            // nonzero level, rather than another zero-to-peak attack. The vendor's
+            // global frequency parameter has no portable Hz mapping, so leave it alone.
+            val curve = intArrayOf(0, if (continuing) 100 else 0,
+                if (continuing) bodyFrequency - frequency else 0,
+                FREQUENCY_RAMP_MS, 100, 0,
                 BODY_DURATION_MS - 2, 100, 0, BODY_DURATION_MS, 100, 0)
             active = true
             play(pattern(intArrayOf(4096, 6 + curve.size, 0, 0, 100,
-                FREQUENCY, BODY_DURATION_MS, curve.size / 3) + curve), amplitude(target))
+                frequency, BODY_DURATION_MS, curve.size / 3) + curve), amplitude(target))
             parameterCarrier = true
-            bodyLevel = target
             bodyUntil = now + BODY_DURATION_MS
             renewAt = now + BODY_RENEW_MS
+            frequencyRampUntil = now + FREQUENCY_RAMP_MS
+            bodyFrequency = frequency
         } else if (target != bodyLevel) {
             updateAmplitude(amplitude(target))
-            bodyLevel = target
         }
-        return nextWake(now)
+        bodyLevel = target
+        pointUntil = 0
+        attackUntil = 0
+        return if (frequency != bodyFrequency) minOf(renewAt, frequencyRampUntil) else renewAt
     }
-
-    private fun nextWake(now: Long): Long = minOf(renewAt,
-        pointUntil.takeIf { it > now } ?: Long.MAX_VALUE,
-        mixedUntil.takeIf { it > now } ?: Long.MAX_VALUE)
 
     private fun pattern(event: IntArray): IntArray = intArrayOf(
         2, 2, processId, (1 shl 16) or (++sequence and 65535), 0x10001, 0, 0, 1
@@ -134,21 +143,30 @@ internal class RichTapAuthoredHaptics(
         renewAt = 0
         bodyLevel = 0
         parameterCarrier = false
-        mixedUntil = 0
+        attackUntil = 0
+        frequencyRampUntil = 0
+        bodyFrequency = POINT_FREQUENCY
+        textureFrequency.reset()
         if (active) { active = false; cancel() }
     }
 
     override fun close() { ready = false; stop() }
 
     companion object {
-        private const val FREQUENCY = 56
+        private const val POINT_FREQUENCY = 56
+        private const val FREQUENCY_RAMP_MS = 20
         private const val BODY_STEP = 5
         private const val BODY_DURATION_MS = 5_000
         private const val BODY_RENEW_MS = 4_000L
-        private const val POINT_HOLD_MS = 40L
-        private const val MIXED_POINT_HOLD_MS = 100L
-        private const val MIXED_HEADROOM_MS = 1_500L
-        private const val MIXED_BODY_LIMIT = 70
+        private const val POINT_TAIL_MS = 40L
+        private const val MIXED_ATTACK_MS = 12L
+        // Conservative relative timbre mapping; these are not calibrated motor Hz.
+        // Quantize in HE units to avoid replacing a carrier for tiny ZCR variations.
+        internal fun frequency(hz: Float, previous: Int? = null): Int {
+            val value = 35f + (hz.coerceIn(100f, 260f) - 100f) * 40f / 160f
+            return if (previous != null && kotlin.math.abs(value - previous) < 5f) previous
+                else ((value / 5f).roundToInt() * 5).coerceIn(35, 75)
+        }
         // Device rendering gain, not a physical-force percentage. User strength is applied
         // upstream; use the tested HE range without changing the host's energy evidence.
         private fun level(gain: Float, fullScale: Float = .3f) =

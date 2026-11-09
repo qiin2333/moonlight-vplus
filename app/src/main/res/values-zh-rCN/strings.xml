@@ -176,8 +176,9 @@
     <string name="title_add_pc"> new\nDianLao () </string>
     <string name="title_add_pc_choose">添加电脑</string>
     <string name="addpc_manual">输入 IP 地址</string>
+    <string name="addpc_manual_description">已知主机 IP 地址时使用</string>
     <string name="addpc_qr_scan">扫描二维码</string>
-    <string name="qr_scan_prompt">扫描 Sunshine 网页界面上的二维码</string>
+    <string name="qr_scan_prompt">扫描 Foundation Sunshine 网页界面上的二维码</string>
     <string name="qr_invalid_code">无法识别的二维码</string>
     <string name="qr_pairing">二维码配对中…</string>
     <string name="qr_pair_success">配对成功！</string>

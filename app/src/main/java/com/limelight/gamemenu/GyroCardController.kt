@@ -1,13 +1,19 @@
 package com.limelight.gamemenu
 
-import android.app.AlertDialog
+import android.app.Dialog
 import android.view.KeyEvent
 import android.widget.Toast
 import com.limelight.Game
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GyroAssistantMode
-import com.limelight.utils.AppDialogStyler
+import com.limelight.utils.AppActionSheet
+
+private val activationKeyLabels = mapOf(
+    ControllerHandler.GYRO_ACTIVATION_ALWAYS to R.string.gyro_activation_always,
+    KeyEvent.KEYCODE_BUTTON_L2 to R.string.gyro_activation_left_trigger,
+    KeyEvent.KEYCODE_BUTTON_R2 to R.string.gyro_activation_right_trigger
+)
 
 internal data class GyroCardState(
     val enabled: Boolean,
@@ -70,35 +76,24 @@ internal class GyroCardController(private val game: Game) {
         emitState()
     }
 
-    fun showActivationKeyDialog(onShown: (AlertDialog) -> Unit = {}) {
-        val items = arrayOf<CharSequence>(
-            game.getString(R.string.gyro_activation_always),
-            game.getString(R.string.gyro_activation_left_trigger),
-            game.getString(R.string.gyro_activation_right_trigger)
-        )
-        val checked = when (game.prefConfig.gyroActivationKeyCode) {
-            ControllerHandler.GYRO_ACTIVATION_ALWAYS -> 0
-            KeyEvent.KEYCODE_BUTTON_R2 -> 2
-            else -> 1
-        }
-        val dialog = AlertDialog.Builder(game, R.style.AppDialogStyle)
-            .setTitle(R.string.gyro_activation_method)
-            .setSingleChoiceItems(items, checked) { choiceDialog, which ->
-                game.prefConfig.gyroActivationKeyCode = when (which) {
-                    0 -> ControllerHandler.GYRO_ACTIVATION_ALWAYS
-                    1 -> KeyEvent.KEYCODE_BUTTON_L2
-                    else -> KeyEvent.KEYCODE_BUTTON_R2
-                }
+    fun showActivationKeySheet(): Dialog {
+        val storedKey = game.prefConfig.gyroActivationKeyCode
+        val selectedKey = if (storedKey in activationKeyLabels) storedKey else KeyEvent.KEYCODE_BUTTON_L2
+        return AppActionSheet.show(
+            context = game,
+            title = game.getString(R.string.gyro_activation_method),
+            actions = activationKeyLabels.map { (keyCode, label) ->
+                AppActionSheet.Action(keyCode, game.getString(label), checked = keyCode == selectedKey)
+            },
+            initialActionId = selectedKey,
+            singleChoice = true,
+            onAction = { action ->
+                game.prefConfig.gyroActivationKeyCode = action.id
                 game.prefConfig.writePreferences(game)
-                state = state.copy(activationKeyLabel = items[which].toString())
+                state = state.copy(activationKeyLabel = action.title.toString())
                 emitState()
-                choiceDialog.dismiss()
             }
-            .setNegativeButton(R.string.dialog_button_cancel, null)
-            .create()
-        dialog.show()
-        AppDialogStyler.applySystemChoiceList(dialog, game)
-        onShown(dialog)
+        )
     }
 
     fun previewSensitivity(sensitivity: Float) {
@@ -136,11 +131,9 @@ internal class GyroCardController(private val game: Game) {
         return GyroCardState(
             enabled = mode != GyroAssistantMode.OFF,
             mouseMode = mode == GyroAssistantMode.MOUSE,
-            activationKeyLabel = when (prefs.gyroActivationKeyCode) {
-                ControllerHandler.GYRO_ACTIVATION_ALWAYS -> game.getString(R.string.gyro_activation_always)
-                KeyEvent.KEYCODE_BUTTON_R2 -> game.getString(R.string.gyro_activation_right_trigger)
-                else -> game.getString(R.string.gyro_activation_left_trigger)
-            },
+            activationKeyLabel = game.getString(
+                activationKeyLabels[prefs.gyroActivationKeyCode] ?: R.string.gyro_activation_left_trigger
+            ),
             sensitivity = (if (prefs.gyroSensitivityMultiplier > 0) {
                 prefs.gyroSensitivityMultiplier
             } else {

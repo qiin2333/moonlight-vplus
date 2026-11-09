@@ -68,8 +68,8 @@ class AuthoredIrTestActivity : Activity() {
         val native = if (Build.VERSION.SDK_INT >= 29 && intent.getBooleanExtra("native", false))
             NativeAuthoredHaptics.create(this) else null
         val nativeSink = native?.let { backend -> object : NativeAuthoredHaptics by backend {
-            override fun render(body: Float, point: Float, keepWarm: Boolean): Long? {
-                measurement?.mark(if (point > 0) "native_point" else "native_body", body, point)
+            override fun render(body: NativeAuthoredBody, point: Float, keepWarm: Boolean): Long? {
+                measurement?.mark(if (point > 0) "native_point" else "native_body", body.gain, point)
                 nativeCalls.incrementAndGet()
                 if (point > 0) nativePoints.incrementAndGet()
                 return backend.render(body, point, keepWarm)
