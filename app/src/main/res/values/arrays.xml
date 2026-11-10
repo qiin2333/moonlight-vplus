@@ -363,6 +363,19 @@
         <item>horizontal</item>
         <item>vertical</item>
     </string-array>
+
+    <string-array name="perf_overlay_style_names">
+        <item>@string/perf_overlay_style_mini</item>
+        <item>@string/perf_overlay_style_standard</item>
+        <item>@string/perf_overlay_style_detailed</item>
+        <item>@string/perf_overlay_style_classic</item>
+    </string-array>
+    <string-array name="perf_overlay_style_values" translatable="false">
+        <item>mini</item>
+        <item>standard</item>
+        <item>detailed</item>
+        <item>classic</item>
+    </string-array>
     
     <!-- Performance overlay position options - horizontal -->
     <string-array name="perf_overlay_position_horizontal_names">

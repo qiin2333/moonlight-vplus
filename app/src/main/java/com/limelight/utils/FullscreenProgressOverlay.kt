@@ -13,6 +13,9 @@ import android.widget.TextView
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
+import com.limelight.perfhud.PerfHudDensity
+import com.limelight.preferences.PreferenceConfiguration
+import androidx.preference.PreferenceManager
 import java.util.Random
 
 class FullscreenProgressOverlay(
@@ -32,6 +35,12 @@ class FullscreenProgressOverlay(
     private val backgroundMode = AppBackgroundMode.read(activity)
     private var isShowing = false
     private var reconnectBackdrop: Bitmap? = null
+
+    private fun isClassicPerfOverlay(activity: Activity): Boolean =
+        PerfHudDensity.fromPreference(
+            PreferenceManager.getDefaultSharedPreferences(activity)
+                .getString(PreferenceConfiguration.PERF_OVERLAY_STYLE_STRING, null)
+        ) == PerfHudDensity.CLASSIC
     private var posterRequestSerial = 0
     var computer: ComputerDetails? = null
 
@@ -48,7 +57,10 @@ class FullscreenProgressOverlay(
             activity.getString(R.string.tip_hdr_colors),
             activity.getString(R.string.tip_touch_modes),
             activity.getString(R.string.tip_custom_keys),
-            activity.getString(R.string.tip_performance_overlay),
+            activity.getString(
+                if (isClassicPerfOverlay(activity)) R.string.tip_performance_overlay_classic
+                else R.string.tip_performance_overlay
+            ),
             activity.getString(R.string.tip_audio_config),
             activity.getString(R.string.tip_external_display),
             activity.getString(R.string.tip_virtual_display),

@@ -1219,6 +1219,14 @@
                 android:title="@string/title_enable_perf_overlay"
                 android:summary="@string/summary_enable_perf_overlay"
                 android:defaultValue="false"/>
+            <ListPreference
+                android:key="list_perf_overlay_style"
+                android:title="@string/title_perf_overlay_style"
+                android:summary="%s"
+                android:entries="@array/perf_overlay_style_names"
+                android:entryValues="@array/perf_overlay_style_values"
+                android:defaultValue="standard"
+                android:dependency="checkbox_enable_perf_overlay" />
             <com.limelight.preferences.PerfOverlayDisplayItemsPreference
                 android:key="perf_overlay_display_items"
                 android:title="@string/title_perf_overlay_display_items"

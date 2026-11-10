@@ -461,7 +461,7 @@
     <string name="tip_hdr_colors">💡 Consejo: Ajustar la resolución puede balancear calidad y rendimiento, encontrar la configuración perfecta~</string>
     <string name="tip_home_saves">💡 Consejo: Los 5 pequeños tiburones en la página de inicio pueden guardar y cambiar rápidamente las configuraciones de transmisión~</string>
     <string name="tip_long_press_controller">💡 Consejo: Presión larga en una aplicación para elegir transmisión de pantalla virtual, ¡súper conveniente!</string>
-    <string name="tip_performance_overlay">💡 Consejo: La superposición de rendimiento puede arrastrarse a cualquier posición, doble toque para alternar entre diseños horizontal y vertical, y hacer clic en varias métricas para ver explicaciones detalladas~</string>
+    <string name="tip_performance_overlay">💡 Consejo: Toca el HUD de rendimiento para alternar entre Mini / Estándar / Detallado, doble toque para cambiar entre horizontal y vertical, mantén pulsada una métrica para ver su explicación y arrástralo a cualquier posición~</string>
     <string name="tip_touch_modes">💡 Consejo: Puedes cambiar modos de toque en el menú del juego. El toque multi-punto mejorado es adecuado para juegos móviles, el modo panel táctil es genial para trabajo de oficina. Encuentra el método de operación que mejor te convenga~</string>
     <string name="tip_virtual_display">💡 Consejo: La función de pantalla virtual puede crear espacios de pantalla independientes, especialmente adecuada para escenarios de multi-tarea, haciendo la transmisión más flexible~</string>
     <string name="tip_volume_keys">💡 Consejo: Usar WiFi de 5GHz proporciona una mejor experiencia, ¡velocidades súper rápidas~</string>

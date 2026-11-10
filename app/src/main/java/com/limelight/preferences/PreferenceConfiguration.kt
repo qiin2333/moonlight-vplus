@@ -2,6 +2,7 @@
 package com.limelight.preferences
 
 import com.limelight.nvstream.HostGamepadSelection
+import com.limelight.perfhud.PerfHudDensity
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -159,6 +160,7 @@ class PreferenceConfiguration {
     var perfOverlayOrientation: PerfOverlayOrientation = PerfOverlayOrientation.HORIZONTAL
     var perfOverlayPosition: PerfOverlayPosition = PerfOverlayPosition.TOP
     var perfOverlayClockFormat = "system_minutes"
+    var perfOverlayStyle: PerfHudDensity = PerfHudDensity.DEFAULT
     var enableSimplifyPerfOverlay = false
     var enableLatencyToast = false
     var enableStun = false
@@ -344,6 +346,7 @@ class PreferenceConfiguration {
                 .putBoolean(PERF_OVERLAY_LOCKED_STRING, perfOverlayLocked)
                 .putInt(PERF_OVERLAY_BG_OPACITY_STRING, perfOverlayBgOpacity)
                 .putString(PERF_OVERLAY_CLOCK_FORMAT_STRING, perfOverlayClockFormat)
+                .putString(PERF_OVERLAY_STYLE_STRING, perfOverlayStyle.prefValue)
                 .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
@@ -535,6 +538,7 @@ class PreferenceConfiguration {
                 .putString(PERF_OVERLAY_ORIENTATION_STRING, getPerfOverlayOrientationPreferenceString(perfOverlayOrientation))
                 .putString(PERF_OVERLAY_POSITION_STRING, getPerfOverlayPositionPreferenceString(perfOverlayPosition))
                 .putString(PERF_OVERLAY_CLOCK_FORMAT_STRING, perfOverlayClockFormat)
+                .putString(PERF_OVERLAY_STYLE_STRING, perfOverlayStyle.prefValue)
                 .apply()
             true
         } catch (e: Exception) {
@@ -576,6 +580,7 @@ class PreferenceConfiguration {
         copy.perfOverlayOrientation = this.perfOverlayOrientation
         copy.perfOverlayPosition = this.perfOverlayPosition
         copy.perfOverlayClockFormat = this.perfOverlayClockFormat
+        copy.perfOverlayStyle = this.perfOverlayStyle
         copy.reverseResolution = this.reverseResolution
         copy.rotableScreen = this.rotableScreen
         copy.screenPosition = this.screenPosition
@@ -678,6 +683,7 @@ class PreferenceConfiguration {
         const val GAME_MENU_OPACITY_PREF_STRING = "seekbar_game_menu_opacity"
         private const val PERF_OVERLAY_ORIENTATION_STRING = "list_perf_overlay_orientation"
         private const val PERF_OVERLAY_POSITION_STRING = "list_perf_overlay_position"
+        const val PERF_OVERLAY_STYLE_STRING = "list_perf_overlay_style"
         private const val BIND_ALL_USB_STRING = "checkbox_usb_bind_all"
         private const val ANALOG_SCROLLING_PREF_STRING = "analog_scrolling"
         const val CONTROLLER_MOUSE_SPEED_PREF_STRING = "controller_mouse_speed_percent"
@@ -1670,6 +1676,9 @@ class PreferenceConfiguration {
                     perfOverlayClockFormat
                 else -> DEFAULT_PERF_OVERLAY_CLOCK_FORMAT
             }
+            config.perfOverlayStyle = PerfHudDensity.fromPreference(
+                prefs.getString(PERF_OVERLAY_STYLE_STRING, PerfHudDensity.DEFAULT.prefValue)
+            )
 
             config.bindAllUsb = prefs.getBoolean(BIND_ALL_USB_STRING, DEFAULT_BIND_ALL_USB)
             config.mouseNavButtons = prefs.getBoolean(MOUSE_NAV_BUTTONS_STRING, DEFAULT_MOUSE_NAV_BUTTONS)
