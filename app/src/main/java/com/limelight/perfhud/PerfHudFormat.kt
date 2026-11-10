@@ -2,12 +2,10 @@ package com.limelight.perfhud
 
 import java.util.Locale
 
-// HUD 与说明卡片共用的数字格式。HUD 上固定用 Locale.US，保证小数点和等宽数字对齐；
-// 卡片正文可传入系统 Locale。
+// HUD 固定用 Locale.US 保证数字对齐；卡片正文可传入系统 Locale。
 
 internal fun fps0(v: Float, locale: Locale = Locale.US): String = String.format(locale, "%.0f", v)
 
-/** 还没有数据时显示 “--”。 */
 internal fun fpsText(v: Float): String = if (v > 0f) fps0(v) else "--"
 
 internal fun num0(v: Float): String = String.format(Locale.US, "%.0f", v)

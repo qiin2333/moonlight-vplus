@@ -5,14 +5,10 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 
-/** HUD 本体和说明卡片共用的小图形，只负责几何与绘制，不持有状态。 */
+/** HUD 本体和说明卡片共用的小图形。 */
 internal object PerfHudDraw {
 
-    /**
-     * 延迟链分段条：先画底轨，再按占比画出各段。
-     * @param gap 相邻段之间留的缝；为 0 时各段紧贴。
-     * @param minSeg 很小的段至少画这么宽，避免完全看不见。
-     */
+    /** 延迟链分段条；[gap] 是段间留缝，[minSeg] 让很小的段也看得见。 */
     fun chainBar(
         c: Canvas, paint: Paint, rect: RectF,
         left: Float, top: Float, width: Float, height: Float,
@@ -40,10 +36,7 @@ internal object PerfHudDraw {
         c.restore()
     }
 
-    /**
-     * 把帧率历史写成折线：最新的点贴右边，[slots] 个点铺满整个宽度。
-     * @return 折线起点的 x；点数不足两个时返回 NaN，[path] 不可用。
-     */
+    /** 帧率历史折线，最新点贴右边；返回起点 x，不足两个点时返回 NaN。 */
     fun sparkPath(
         path: Path, history: FloatRing, slots: Int,
         left: Float, top: Float, width: Float, height: Float, ceiling: Float

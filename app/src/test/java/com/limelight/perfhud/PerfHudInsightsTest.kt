@@ -1,5 +1,6 @@
 package com.limelight.perfhud
 
+import com.limelight.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -30,25 +31,25 @@ class PerfHudInsightsTest {
     @Test
     fun `fps verdict locates where frames are lost`() {
         assertNull(PerfHudInsights.fpsVerdict(snapshot(receivedFps = 0f)))
-        assertEquals(PerfHudInsights.FpsVerdict.REMOTE, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 40f, renderedFps = 40f)))
-        assertEquals(PerfHudInsights.FpsVerdict.LOCAL, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 60f, renderedFps = 45f)))
-        assertEquals(PerfHudInsights.FpsVerdict.SURPLUS, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 120f, renderedFps = 60f)))
-        assertEquals(PerfHudInsights.FpsVerdict.OK, PerfHudInsights.fpsVerdict(snapshot()))
+        assertEquals(R.string.perf_hud_fps_verdict_remote, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 40f, renderedFps = 40f)))
+        assertEquals(R.string.perf_hud_fps_verdict_local, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 60f, renderedFps = 45f)))
+        assertEquals(R.string.perf_hud_fps_verdict_surplus, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 120f, renderedFps = 60f)))
+        assertEquals(R.string.perf_hud_fps_verdict_ok, PerfHudInsights.fpsVerdict(snapshot()))
     }
 
     @Test
     fun `host shortfall wins over local rendering drop`() {
         // 主机只送了 40 帧，本机自然也只能画 40 帧：问题在上游，不该怪本机
-        assertEquals(PerfHudInsights.FpsVerdict.REMOTE, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 40f, renderedFps = 30f)))
+        assertEquals(R.string.perf_hud_fps_verdict_remote, PerfHudInsights.fpsVerdict(snapshot(receivedFps = 40f, renderedFps = 30f)))
     }
 
     @Test
-    fun `diagnosis lists issues in card order and is empty when healthy`() {
-        assertEquals(emptyList<PerfHudInsights.Issue>(), PerfHudInsights.issues(snapshot()))
+    fun `diagnosis tips follow card order and praise when healthy`() {
+        assertEquals(listOf(R.string.perf_diag_all_good), PerfHudInsights.diagnosisTips(snapshot()))
         assertEquals(
-            listOf(PerfHudInsights.Issue.FPS, PerfHudInsights.Issue.LOSS, PerfHudInsights.Issue.RTT,
-                PerfHudInsights.Issue.DECODE, PerfHudInsights.Issue.BATTERY),
-            PerfHudInsights.issues(snapshot(renderedFps = 30f, loss = 6f, rtt = 90, decodeMs = 20f, battery = 5))
+            listOf(R.string.perf_diag_tip_fps, R.string.perf_diag_tip_loss, R.string.perf_diag_tip_rtt,
+                R.string.perf_diag_tip_decode, R.string.perf_diag_tip_battery),
+            PerfHudInsights.diagnosisTips(snapshot(renderedFps = 30f, loss = 6f, rtt = 90, decodeMs = 20f, battery = 5))
         )
     }
 

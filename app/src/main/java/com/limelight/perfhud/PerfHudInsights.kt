@@ -1,48 +1,34 @@
 package com.limelight.perfhud
 
+import androidx.annotation.StringRes
+import com.limelight.R
 import java.util.Locale
 
-/**
- * 说明卡片里与界面无关的判断：帧掉在哪一段、右上角显示什么实时值、串流体检有哪些问题。
- * 只依赖 [PerfHudSnapshot]，可以直接在 JVM 单元测试里验证。
- */
+/** 说明卡片里与界面无关的判断，只依赖 [PerfHudSnapshot]，可直接做 JVM 单元测试。 */
 object PerfHudInsights {
 
-    /** 帧率卡片里“帧掉在哪一段”的结论。 */
-    enum class FpsVerdict {
-        /** 主机或网络没送够帧。 */
-        REMOTE,
-        /** 帧收到了，本机解码渲染跟不上。 */
-        LOCAL,
-        /** 主机送来的比显示的多，多余的被跳过，画面不受影响。 */
-        SURPLUS,
-        OK
-    }
-
-    /** 还没收到帧时返回 null，不下结论。 */
-    fun fpsVerdict(s: PerfHudSnapshot): FpsVerdict? = when {
+    /** 帧掉在哪一段的结论文案；还没收到帧时为 null。 */
+    @StringRes
+    fun fpsVerdict(s: PerfHudSnapshot): Int? = when {
         s.receivedFps <= 0f -> null
-        s.rxSeverity != PerfSeverity.OK -> FpsVerdict.REMOTE
-        s.fpsSeverity != PerfSeverity.OK -> FpsVerdict.LOCAL
-        s.receivedFps > s.renderedFps * SURPLUS_RATIO -> FpsVerdict.SURPLUS
-        else -> FpsVerdict.OK
+        s.rxSeverity != PerfSeverity.OK -> R.string.perf_hud_fps_verdict_remote
+        s.fpsSeverity != PerfSeverity.OK -> R.string.perf_hud_fps_verdict_local
+        // Rx 比 Rd 多出一成以上：主机多送的帧被跳过，画面不受影响
+        s.receivedFps > s.renderedFps * 1.1f -> R.string.perf_hud_fps_verdict_surplus
+        else -> R.string.perf_hud_fps_verdict_ok
     }
 
-    /** 串流体检里需要给建议的问题，按卡片上的展示顺序排列。 */
-    enum class Issue { FPS, LOSS, RTT, DECODE, BATTERY }
-
-    fun issues(s: PerfHudSnapshot): List<Issue> = buildList {
-        if (s.fpsSeverity != PerfSeverity.OK) add(Issue.FPS)
-        if (s.lossSeverity != PerfSeverity.OK) add(Issue.LOSS)
-        if (s.rttSeverity != PerfSeverity.OK) add(Issue.RTT)
-        if (s.decodeSeverity != PerfSeverity.OK) add(Issue.DECODE)
-        if (s.batterySeverity != PerfSeverity.OK) add(Issue.BATTERY)
+    /** 串流体检的建议，按卡片展示顺序；全部正常时只有一句夸奖。 */
+    fun diagnosisTips(s: PerfHudSnapshot): List<Int> = buildList {
+        if (s.fpsSeverity != PerfSeverity.OK) add(R.string.perf_diag_tip_fps)
+        if (s.lossSeverity != PerfSeverity.OK) add(R.string.perf_diag_tip_loss)
+        if (s.rttSeverity != PerfSeverity.OK) add(R.string.perf_diag_tip_rtt)
+        if (s.decodeSeverity != PerfSeverity.OK) add(R.string.perf_diag_tip_decode)
+        if (s.batterySeverity != PerfSeverity.OK) add(R.string.perf_diag_tip_battery)
+        if (isEmpty()) add(R.string.perf_diag_all_good)
     }
 
-    /**
-     * 卡片右上角的实时值。
-     * @param color 状态色或指标分类色；卡片强调色另由 appAccent 决定。
-     */
+    /** 卡片右上角的实时值；颜色是状态色或分类色，卡片强调色另由 appAccent 决定。 */
     data class LiveValue(val color: Int, val text: String? = null)
 
     fun liveValue(target: PerfHudTarget?, s: PerfHudSnapshot?, locale: Locale): LiveValue {
@@ -66,7 +52,4 @@ object PerfHudInsights {
             PerfHudTarget.MOON, PerfHudTarget.CLOCK -> LiveValue(PerfHudPalette.MOON)
         }
     }
-
-    /** Rx 比 Rd 多出这个比例以上，才算“主机多送了帧”。 */
-    private const val SURPLUS_RATIO = 1.1f
 }
