@@ -363,12 +363,15 @@ class PerfHudView @JvmOverloads constructor(
         var x = drawMoonBadge(c, padX, top, top + rowH)
         var right = x
         var first = true
+        // 当前行在 hits 里的起点：折行后要把最后一行的命中区补到底边
+        var rowHitStart = hits.size
         for (g in groups) {
             val w = groupWidth(g)
             val spacing = if (first) em * 0.6f else gap
             if (x + spacing + w > limit && !first) {
                 x = padX
                 top += rowH + rowGap
+                rowHitStart = hits.size
             } else {
                 if (!first && c != null) {
                     val mid = x + spacing / 2
@@ -378,9 +381,9 @@ class PerfHudView @JvmOverloads constructor(
                 }
                 x += spacing
             }
-            // 命中区上下各放宽到边缘，顶栏变矮后手指也好按
-            val hitTop = top - padTop
-            val hitBottom = top + rowH + padBottom
+            // 命中区：首行上沿放宽到顶边，行与行之间平分行距，最后一行在循环后补到底边
+            val hitTop = if (top == padTop) 0f else top - rowGap / 2
+            val hitBottom = top + rowH + rowGap / 2
             hit(x - gap / 2, hitTop, x + w + gap / 2, hitBottom, g.target)
             drawPieces(c, g.label, x, top, labelH, labelPaint, hitTop, hitBottom)
             drawPieces(c, g.value, x, top + labelH, valueH, valuePaint, hitTop, hitBottom)
@@ -390,6 +393,7 @@ class PerfHudView @JvmOverloads constructor(
         }
         contentW = right + padX
         contentH = top + rowH + padBottom
+        for (i in rowHitStart until hits.size) hits[i].rect.bottom = contentH
     }
 
     private sealed class Piece(val gapBefore: Float, val target: PerfHudTarget?) {
