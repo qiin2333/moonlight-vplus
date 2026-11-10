@@ -59,6 +59,7 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.input.ClipboardSyncManager
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
@@ -3661,6 +3662,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         prefConfig.perfOverlayLocked = mode == PerformanceOverlayMode.LOCKED
         performanceOverlayManager?.applyOverlayState()
         prefConfig.writePreferences(this)
+    }
+
+    val perfOverlayStyle: PerfHudDensity
+        get() = prefConfig.perfOverlayStyle
+
+    fun setPerfOverlayStyle(style: PerfHudDensity) {
+        performanceOverlayManager?.setPerfOverlayStyle(style)
     }
 
     fun toggleMicrophoneButton() {

@@ -54,6 +54,7 @@ import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
+import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.CustomFrameRatesStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
@@ -2484,6 +2485,18 @@ class GameMenu(
             inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments())
         ))
 
+        if (game.performanceOverlayMode != Game.PerformanceOverlayMode.HIDDEN) {
+            normalOptions.add(MenuOption(
+                label = getString(R.string.game_menu_perf_overlay_style).trim(),
+                isWithGameFocus = false,
+                runnable = null,
+                iconKey = "game_menu_perf_overlay_style",
+                isShowIcon = true,
+                isKeepDialog = true,
+                inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments())
+            ))
+        }
+
         if (game.prefConfig.onscreenController) {
             normalOptions.add(MenuOption(
                 label = getString(R.string.game_menu_toggle_virtual_controller).trim(),
@@ -2545,6 +2558,22 @@ class GameMenu(
         runnable = Runnable { game.setPerformanceOverlayMode(mode) }
     )
 
+    private fun buildPerfOverlayStyleSegments(): List<SegmentOption> {
+        val current = game.perfOverlayStyle
+        return listOf(
+            PerfHudDensity.MINI to R.string.perf_overlay_style_mini,
+            PerfHudDensity.STANDARD to R.string.perf_overlay_style_standard,
+            PerfHudDensity.DETAILED to R.string.perf_overlay_style_detailed,
+            PerfHudDensity.CLASSIC to R.string.perf_overlay_style_classic
+        ).map { (style, labelRes) ->
+            SegmentOption(
+                label = getString(labelRes),
+                selected = style == current,
+                runnable = Runnable { game.setPerfOverlayStyle(style) }
+            )
+        }
+    }
+
     /**
      * 构建超级菜单选项
      */
@@ -2579,6 +2608,7 @@ class GameMenu(
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,
             "game_menu_toggle_performance_overlay" to R.drawable.ic_candy_performance,
+            "game_menu_perf_overlay_style" to R.drawable.ic_candy_performance,
             "game_menu_toggle_virtual_controller" to R.drawable.ic_candy_controller,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
             "game_menu_send_keys" to R.drawable.ic_candy_send_keys,

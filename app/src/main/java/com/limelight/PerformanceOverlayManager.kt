@@ -20,16 +20,17 @@ import android.text.style.TypefaceSpan
 import android.util.DisplayMetrics
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 
@@ -37,11 +38,26 @@ import com.limelight.utils.AppSwitchStyle
 import com.limelight.utils.AppSwitchView
 import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.perfhud.LatencyChain
+import com.limelight.perfhud.PerfHudDensity
+import com.limelight.perfhud.PerfHudLayout
+import com.limelight.perfhud.PerfHudLayoutPolicy
+import com.limelight.perfhud.PerfHudPalette
+import com.limelight.perfhud.PerfHudSheet
+import com.limelight.perfhud.PerfHudSheetText
+import com.limelight.perfhud.PerfHudSnapshot
+import com.limelight.perfhud.PerfHudStrings
+import com.limelight.perfhud.PerfHudTarget
+import com.limelight.perfhud.PerfHudThresholds
+import com.limelight.perfhud.PerfHudView
+import com.limelight.perfhud.PerfHudVisibility
+import com.limelight.perfhud.PerfMood
+import com.limelight.perfhud.PerfSeverity
+import com.limelight.perfhud.SheetBlock
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.CenterAlignedImageSpan
 import com.limelight.ui.StreamView
-import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.BandwidthMeter
 import com.limelight.utils.MoonPhaseUtils
 import com.limelight.utils.UiHelper
@@ -68,6 +84,7 @@ class PerformanceOverlayManager(
     private lateinit var streamView: StreamView
 
     private val uiHandler = Handler(Looper.getMainLooper())
+    private val hudSheet by lazy { PerfHudSheet(activity) }
     private var delayedShowPending = false
     private val delayedShowRunnable = Runnable {
         delayedShowPending = false
@@ -126,6 +143,7 @@ class PerformanceOverlayManager(
 
     // 月相缓存
     private var currentMoonPhaseIcon = "🌙"
+    private var currentIsFullMoon = false
     private var lastCalculatedDay = -1
 
     // 当前性能信息缓存
@@ -141,6 +159,26 @@ class PerformanceOverlayManager(
     // 串流电量统计
     private var streamStartBatteryLevel = -1
     private var streamStartTime = -1L
+
+    // 新版 HUD
+    private var hudView: PerfHudView? = null
+    private var classicOverlayPadding: IntArray? = null
+    private var currentHudLayout: PerfHudLayout? = null
+    private var currentDockTop = -1
+    private var hudBatteryLevel = -1
+    private var hudCharging = false
+    private var hudLongPressFired = false
+    private var hudTouchX = 0f
+    private var hudTouchY = 0f
+    private val hudLongPressRunnable = Runnable { onHudLongPress() }
+    /** 按住片刻后高亮手指下的指标，提示继续按住就能看说明。 */
+    private val hudPressRunnable = Runnable {
+        val hud = hudView ?: return@Runnable
+        hud.setPressedAt(hudTouchX - hud.left, hudTouchY - hud.top)
+    }
+    private val hudAnchorListener = View.OnLayoutChangeListener     { v, l, t, r, b, oL, oT, oR, oB ->
+            onHudOverlayResized(v, l, t, r, b, oL, oT, oR, oB)
+    }
 
     /**
      * 性能项目枚举 - 统一管理所有性能指标
@@ -187,6 +225,8 @@ class PerformanceOverlayManager(
         performanceOverlayView = activity.findViewById(R.id.performanceOverlay)
         performanceClockView = activity.findViewById(R.id.perfClock)
         streamView = activity.findViewById(R.id.surfaceView)
+        hudView = activity.findViewById<PerfHudView>(R.id.perfHud)?.also { it.setStrings(buildHudStrings()) }
+        performanceOverlayView?.addOnLayoutChangeListener(hudAnchorListener)
 
         initializePerformanceItems()
         loadLayoutOrientation()
@@ -234,6 +274,7 @@ class PerformanceOverlayManager(
     fun hideOverlayImmediate() {
         cancelDelayedShow()
         stopClockUpdates()
+        hudSheet.dismiss()
         performanceOverlayView?.visibility = View.GONE
     }
 
@@ -281,6 +322,7 @@ class PerformanceOverlayManager(
     fun cancelPendingTasks() {
         cancelDelayedShow()
         stopClockUpdates()
+        hudSheet.dismiss()
     }
 
     private fun cancelDelayedShow() {
@@ -389,8 +431,12 @@ class PerformanceOverlayManager(
 
         activity.runOnUiThread {
             showOverlayIfNeeded()
-            updatePerformanceViewsWithStyledText(performanceInfo)
             updateBatteryDisplayIfNeeded()
+            if (isHudStyle()) {
+                updateHud(performanceInfo)
+            } else {
+                updatePerformanceViewsWithStyledText(performanceInfo)
+            }
         }
     }
 
@@ -408,7 +454,10 @@ class PerformanceOverlayManager(
         }
         streamStartTime = System.currentTimeMillis()
         lastBatteryUpdateTime = streamStartTime
-        activity.runOnUiThread { updateBatteryViewIfVisible() }
+        activity.runOnUiThread {
+            hudView?.clearHistory()
+            updateBatteryViewIfVisible()
+        }
     }
 
     private fun updateBatteryDisplayIfNeeded() {
@@ -420,6 +469,7 @@ class PerformanceOverlayManager(
     }
 
     private fun updateBatteryViewIfVisible() {
+        refreshHudBattery()
         val batteryView = getPerformanceItemView(PerformanceItem.BATTERY)
         if (batteryView != null && batteryView.visibility == View.VISIBLE) {
             updateBatteryText(batteryView)
@@ -448,7 +498,9 @@ class PerformanceOverlayManager(
             return currentMoonPhaseIcon
         }
 
-        currentMoonPhaseIcon = MoonPhaseUtils.getMoonPhaseIcon(MoonPhaseUtils.getCurrentMoonPhase())
+        val phase = MoonPhaseUtils.getCurrentMoonPhase()
+        currentMoonPhaseIcon = MoonPhaseUtils.getMoonPhaseIcon(phase)
+        currentIsFullMoon = MoonPhaseUtils.isFullMoon(phase, FULL_MOON_TOLERANCE)
         lastCalculatedDay = currentDay
 
         return currentMoonPhaseIcon
@@ -714,7 +766,7 @@ class PerformanceOverlayManager(
             }
         }
 
-        showInfoDialog(activity.getString(R.string.perf_battery_info_title), info.toString())
+        showInfoDialog(activity.getString(R.string.perf_battery_info_title), info.toString(), PerfHudTarget.BATTERY)
     }
 
     private fun formatDuration(seconds: Long): String {
@@ -749,6 +801,11 @@ class PerformanceOverlayManager(
     @SuppressLint("RtlHardcoded")
     private fun configurePerformanceOverlay() {
         val overlay = performanceOverlayView ?: return
+        if (isHudStyle()) {
+            configureHudOverlay(overlay)
+            return
+        }
+        restoreClassicContainer(overlay)
 
         val layoutParams = overlay.layoutParams as FrameLayout.LayoutParams
 
@@ -779,17 +836,31 @@ class PerformanceOverlayManager(
 
         configureDisplayItems()
 
+        applyFloatingPosition(layoutParams, isPortrait)
+
+        overlay.layoutParams = layoutParams
+        overlay.post { configureTextAlignment() }
+        setupPerformanceOverlayDragging()
+    }
+
+    @SuppressLint("RtlHardcoded")
+    private fun applyFloatingPosition(layoutParams: FrameLayout.LayoutParams, isPortrait: Boolean) {
         val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
 
+        // HUD 自带圆角背景，贴着屏幕边缘时圆角会被切掉，留一点安全边距；横屏顶栏则直接吸顶
+        val inset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+        val topInset = if (isStickyBar()) 0 else inset
         if (isPortrait) {
             layoutParams.gravity = Gravity.RIGHT or Gravity.TOP
-            layoutParams.leftMargin = 0
-            layoutParams.topMargin = 0
+            layoutParams.leftMargin = inset
+            layoutParams.topMargin = inset
         } else if (hasCustomPosition) {
             layoutParams.gravity = Gravity.NO_GRAVITY
             layoutParams.leftMargin = prefs.getInt("left_margin", 0)
-            layoutParams.topMargin = prefs.getInt("top_margin", 0)
+            val savedTop = prefs.getInt("top_margin", 0)
+            // 顶栏吸顶时存的是 0；换成面板等其他形态时仍留出安全边距
+            layoutParams.topMargin = if (savedTop <= inset) topInset else savedTop
         } else {
             when (prefConfig.perfOverlayPosition) {
                 PreferenceConfiguration.PerfOverlayPosition.TOP ->
@@ -805,23 +876,36 @@ class PerformanceOverlayManager(
                 PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT ->
                     layoutParams.gravity = Gravity.RIGHT or Gravity.BOTTOM
             }
-            layoutParams.leftMargin = 0
-            layoutParams.topMargin = 0
+            layoutParams.leftMargin = inset
+            layoutParams.topMargin = topInset
         }
-        layoutParams.rightMargin = 0
-        layoutParams.bottomMargin = 0
+        layoutParams.rightMargin = inset
+        layoutParams.bottomMargin = inset
+    }
 
-        overlay.layoutParams = layoutParams
-        overlay.post { configureTextAlignment() }
-        setupPerformanceOverlayDragging()
+    /** 横屏 HUD 顶栏（标准档、横排）贴屏幕上沿显示。 */
+    private fun isStickyBar(): Boolean = isHudStyle() && currentHudLayout == PerfHudLayout.BAR
+
+    /** 顶栏位于屏幕最上沿时切换成吸顶外观。 */
+    private fun refreshHudStick() {
+        val hud = hudView ?: return
+        val lp = performanceOverlayView?.layoutParams as? FrameLayout.LayoutParams ?: return
+        val vertical = lp.gravity and Gravity.VERTICAL_GRAVITY_MASK
+        val atTop = lp.gravity == Gravity.NO_GRAVITY || vertical == Gravity.TOP
+        hud.stickTop = isStickyBar() && atTop && lp.topMargin == 0
     }
 
     private fun configureDisplayItems() {
+        val hud = isHudStyle()
         for (itemInfo in performanceItems) {
             if (itemInfo.view != null) {
-                val isEnabled = PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey)
+                val isEnabled = !hud && PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey)
                 itemInfo.view.visibility = if (isEnabled) View.VISIBLE else View.GONE
             }
+        }
+        hudView?.let {
+            it.visibility = if (hud) View.VISIBLE else View.GONE
+            if (hud) it.setItemVisibility(readHudVisibility())
         }
     }
 
@@ -928,6 +1012,7 @@ class PerformanceOverlayManager(
             overlay.isLongClickable = true
 
             overlay.setOnTouchListener { v, event ->
+                if (isHudStyle()) return@setOnTouchListener handleHudTouch(v, event)
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> handleActionDown(v, event)
                     MotionEvent.ACTION_MOVE -> handleActionMove(v, event)
@@ -983,6 +1068,7 @@ class PerformanceOverlayManager(
         v.layoutParams = layoutParams
 
         configureTextAlignment()
+        refreshHudStick()
         return true
     }
 
@@ -1034,7 +1120,8 @@ class PerformanceOverlayManager(
             isDoubleClickHandled = false
             performanceOverlayView?.postDelayed({
                 if (!isDoubleClickHandled && lastClickTime > 0L) {
-                    showClickedItemInfo()
+                    lastClickTime = 0
+                    if (isHudStyle()) cycleHudDensity() else showClickedItemInfo()
                 }
             }, DOUBLE_CLICK_TIMEOUT.toLong())
         }
@@ -1131,17 +1218,7 @@ class PerformanceOverlayManager(
             moonPhaseInfo.icon, moonPhaseInfo.name, phasePercentage, daysInCycle, currentDate, moonPhaseInfo.description
         )
 
-        showMoonPhaseDialog(moonPhaseInfo.poeticTitle, moonInfo)
-    }
-
-    private fun showMoonPhaseDialog(title: String, message: String) {
-        AlertDialog.Builder(activity, R.style.AppDialogStyle)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(R.string.dialog_button_ok, null)
-            .setCancelable(true)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
+        showSheet(moonPhaseInfo.poeticTitle, PerfHudSheetText.parse(moonInfo), PerfHudTarget.MOON, icon = moonPhaseInfo.icon)
     }
 
     private fun showResolutionInfo() {
@@ -1173,12 +1250,12 @@ class PerformanceOverlayManager(
             resolutionInfo.append(activity.getString(R.string.perf_actual_refresh)).append(String.format(Locale.getDefault(), "%.2f", actualDisplayRefreshRate)).append(" Hz\n")
         }
 
-        showInfoDialog(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString())
+        showInfoDialog(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString(), PerfHudTarget.RESOLUTION)
     }
 
     private fun showDecoderInfo() {
         val fullDecoderInfo = getCurrentDecoderInfo()
-        showInfoDialog(activity.getString(R.string.perf_decoder_title), fullDecoderInfo)
+        showInfoDialog(activity.getString(R.string.perf_decoder_title), fullDecoderInfo, PerfHudTarget.DECODER)
     }
 
     private fun getCurrentDecoderInfo(): String {
@@ -1226,47 +1303,52 @@ class PerformanceOverlayManager(
         return DecoderTypeInfo(fullDecoderName, fullDecoderName)
     }
 
-    private fun showPerformanceInfo(titleResId: Int, infoResId: Int) {
-        showInfoDialog(activity.getString(titleResId), activity.getString(infoResId))
+    /** HUD 与经典样式显示的内容和阈值不同，说明文案各用各的。 */
+    private fun showPerformanceInfo(titleResId: Int, classicInfoResId: Int, hudInfoResId: Int, target: PerfHudTarget) {
+        val info = if (isHudStyle()) hudInfoResId else classicInfoResId
+        showInfoDialog(activity.getString(titleResId), activity.getString(info), target)
     }
 
     private fun showFpsInfo() {
-        AlertDialog.Builder(activity, R.style.AppDialogStyle)
-            .setTitle(R.string.perf_fps_title)
-            .setView(createFpsInfoContent())
-            .setPositiveButton(activity.getString(R.string.yes), null)
-            .setCancelable(true)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
+        val blocks = if (isHudStyle()) {
+            fpsLiveBlocks() + PerfHudSheetText.parse(activity.getString(R.string.perf_hud_fps_info))
+        } else {
+            PerfHudSheetText.parse(activity.getString(R.string.perf_fps_info))
+        }
+        showSheet(
+            activity.getString(R.string.perf_fps_title),
+            blocks,
+            PerfHudTarget.FPS,
+            header = listOf(createJitterMonitorSwitchRow())
+        )
     }
 
-    private fun createFpsInfoContent(): View {
-        return LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20f), dp(8f), dp(20f), 0)
-
-            addView(createJitterMonitorSwitchRow(), LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ))
-
-            addView(createFpsInfoScrollView(), LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ))
+    /** HUD 只显示渲染帧率，接收 / 插帧帧率和“掉在哪一段”的判断放在长按卡片里。 */
+    private fun fpsLiveBlocks(): List<SheetBlock> {
+        val s = lastHudSnapshot ?: return emptyList()
+        val locale = Locale.getDefault()
+        fun fps(v: Float) = if (v > 0f) String.format(locale, "%.0f FPS", v) else "—"
+        val rxSeverity = PerfHudThresholds.fps(s.receivedFps, s.targetFps)
+        val out = arrayListOf<SheetBlock>(
+            SheetBlock.Row(activity.getString(R.string.perf_hud_fps_row_rx), fps(s.receivedFps),
+                PerfHudPalette.severity(rxSeverity), PerfHudPalette.NET),
+            SheetBlock.Row(activity.getString(R.string.perf_hud_fps_row_rd), fps(s.renderedFps),
+                PerfHudPalette.severity(s.fpsSeverity), PerfHudPalette.RND)
+        )
+        if (s.framegenFps > 0.5f) {
+            out += SheetBlock.Row(activity.getString(R.string.perf_hud_fps_row_fg), fps(s.framegenFps),
+                PerfHudPalette.TXT, PerfHudPalette.MOON)
         }
-    }
-
-    private fun createFpsInfoScrollView(): View {
-        return ScrollView(activity).apply {
-            addView(TextView(activity).apply {
-                text = activity.getString(R.string.perf_fps_info)
-                setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                setLineSpacing(0f, 1.08f)
-                setPadding(0, dp(14f), 0, 0)
-            })
+        val verdict = when {
+            s.receivedFps <= 0f -> null
+            rxSeverity != PerfSeverity.OK -> R.string.perf_hud_fps_verdict_remote
+            s.fpsSeverity != PerfSeverity.OK -> R.string.perf_hud_fps_verdict_local
+            s.receivedFps > s.renderedFps * 1.1f -> R.string.perf_hud_fps_verdict_surplus
+            else -> R.string.perf_hud_fps_verdict_ok
         }
+        if (verdict != null) out += SheetBlock.Paragraph(activity.getString(verdict))
+        out += SheetBlock.Divider
+        return out
     }
 
     private fun createJitterMonitorSwitchRow(): View {
@@ -1297,14 +1379,14 @@ class PerformanceOverlayManager(
                 orientation = LinearLayout.VERTICAL
                 addView(TextView(activity).apply {
                     text = activity.getString(R.string.title_enable_jitter_monitor)
-                    setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_title_color))
+                    setTextColor(PerfHudPalette.TXT)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                     typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                     includeFontPadding = false
                 })
                 addView(TextView(activity).apply {
                     text = activity.getString(R.string.summary_enable_jitter_monitor)
-                    setTextColor(ContextCompat.getColor(activity, R.color.app_dialog_subtitle_color))
+                    setTextColor(PerfHudPalette.DIM)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     setLineSpacing(0f, 1.05f)
                     setPadding(0, dp(4f), dp(12f), 0)
@@ -1323,42 +1405,117 @@ class PerformanceOverlayManager(
     }
 
     private fun showPacketLossInfo() {
-        showPerformanceInfo(R.string.perf_packet_loss_title, R.string.perf_packet_loss_info)
+        showPerformanceInfo(R.string.perf_packet_loss_title, R.string.perf_packet_loss_info,
+            R.string.perf_hud_packet_loss_info, PerfHudTarget.LOSS)
     }
 
     private fun showNetworkLatencyInfo() {
-        showPerformanceInfo(R.string.perf_network_latency_title, R.string.perf_network_latency_info)
+        showPerformanceInfo(R.string.perf_network_latency_title, R.string.perf_network_latency_info,
+            R.string.perf_hud_network_latency_info, PerfHudTarget.NETWORK)
     }
 
     private fun showDecodeLatencyInfo() {
-        showPerformanceInfo(R.string.perf_decode_latency_title, R.string.perf_decode_latency_info)
+        showPerformanceInfo(R.string.perf_decode_latency_title, R.string.perf_decode_latency_info,
+            R.string.perf_hud_decode_latency_info, PerfHudTarget.DECODE)
     }
 
     private fun showHostLatencyInfo() {
-        showPerformanceInfo(R.string.perf_host_latency_title, R.string.perf_host_latency_info)
+        showPerformanceInfo(R.string.perf_host_latency_title, R.string.perf_host_latency_info,
+            R.string.perf_hud_host_latency_info, PerfHudTarget.HOST)
     }
 
     private fun showOnePercentLowInfo() {
-        showPerformanceInfo(R.string.perf_one_percent_low_title, R.string.perf_one_percent_low_info)
+        showPerformanceInfo(R.string.perf_one_percent_low_title, R.string.perf_one_percent_low_info,
+            R.string.perf_hud_one_percent_low_info, PerfHudTarget.ONE_PERCENT_LOW)
     }
 
-    private fun showInfoDialog(title: String, message: String) {
-        AlertDialog.Builder(activity, R.style.AppDialogStyle)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(activity.getString(R.string.yes), null)
-            .setCancelable(true)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
+    private fun showInfoDialog(title: String, message: String, target: PerfHudTarget? = null) {
+        showSheet(title, PerfHudSheetText.parse(message), target)
+    }
+
+    /** 所有指标说明统一走 HUD 风格卡片；标题开头的 emoji 自动拆成光圈图标。 */
+    private fun showSheet(
+        title: String,
+        blocks: List<SheetBlock>,
+        target: PerfHudTarget?,
+        icon: String? = null,
+        subtitle: String? = null,
+        header: List<View> = emptyList(),
+        extraActions: List<PerfHudSheet.Action> = emptyList()
+    ) {
+        val (titleIcon, name) = PerfHudSheetText.splitIcon(title)
+        val live = sheetLive(target)
+        hudSheet.show(
+            PerfHudSheet.Spec(
+                title = name,
+                icon = icon ?: titleIcon,
+                accent = live.accent,
+                value = live.value,
+                valueColor = live.valueColor,
+                subtitle = subtitle,
+                blocks = blocks,
+                header = header,
+                actions = extraActions + PerfHudSheet.Action(activity.getString(R.string.yes), primary = true)
+            ),
+            performanceOverlayView
+        )
+    }
+
+    private class SheetLive(val accent: Int, val value: String? = null, val valueColor: Int? = null)
+
+    /** 卡片强调色沿用 HUD 的分类色，右上角显示该指标的实时值，颜色跟随严重度。 */
+    private fun sheetLive(target: PerfHudTarget?): SheetLive {
+        val s = lastHudSnapshot
+        if (target == null || s == null) return SheetLive(PerfHudPalette.MOON)
+        val locale = Locale.getDefault()
+        fun sev(x: PerfSeverity) = PerfHudPalette.severity(x)
+        return when (target) {
+            PerfHudTarget.FPS -> SheetLive(sev(s.fpsSeverity), String.format(locale, "%.0f FPS", s.renderedFps))
+            PerfHudTarget.ONE_PERCENT_LOW -> SheetLive(
+                sev(s.onePercentLowSeverity),
+                s.onePercentLowFps.takeIf { it > 0f }?.let { String.format(locale, "%.0f FPS", it) }
+            )
+            PerfHudTarget.LATENCY -> SheetLive(PerfHudPalette.RND, String.format(locale, "≈%.0f ms", s.latency.totalMs))
+            PerfHudTarget.NETWORK -> SheetLive(PerfHudPalette.NET, "${s.rttMs} ms", sev(s.rttSeverity))
+            PerfHudTarget.DECODE -> SheetLive(PerfHudPalette.DEC, formatMs(s.latency.decodeMs), sev(s.decodeSeverity))
+            PerfHudTarget.HOST -> SheetLive(PerfHudPalette.HOST, s.latency.hostMs?.let(::formatMs))
+            PerfHudTarget.LOSS -> SheetLive(PerfHudPalette.NET, String.format(locale, "%.2f%%", s.packetLossPercent), sev(s.lossSeverity))
+            PerfHudTarget.BATTERY -> SheetLive(sev(s.batterySeverity), s.batteryLevel.takeIf { it >= 0 }?.let { "$it%" })
+            PerfHudTarget.RESOLUTION -> SheetLive(PerfHudPalette.MOON, if (s.width > 0) "${s.width}×${s.height}" else null)
+            PerfHudTarget.DECODER -> SheetLive(PerfHudPalette.DEC, s.codec.ifBlank { null })
+            PerfHudTarget.DIAGNOSIS -> SheetLive(sev(s.overallSeverity))
+            PerfHudTarget.MOON, PerfHudTarget.CLOCK -> SheetLive(PerfHudPalette.MOON)
+        }
     }
 
     private fun toggleLayoutOrientation() {
+        if (isHudStyle() && currentHudLayout == PerfHudLayout.DOCK) {
+            // 停靠卡片没有横竖之分，别偷偷改偏好，告诉用户什么时候生效
+            showHudToast(activity.getString(R.string.perf_hud_dock_orientation_hint))
+            return
+        }
         prefConfig.perfOverlayOrientation = if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL) {
             PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL
         } else {
             PreferenceConfiguration.PerfOverlayOrientation.VERTICAL
         }
         saveLayoutOrientation()
+        if (isHudStyle()) {
+            // 双击总要有可见变化：迷你/详细下横竖排不生效，所以顺带回到标准档
+            val styleForced = prefConfig.perfOverlayStyle != PerfHudDensity.STANDARD
+            if (styleForced) {
+                prefConfig.perfOverlayStyle = PerfHudDensity.STANDARD
+                prefConfig.writePreferences(activity)
+            }
+            val orientationName = activity.getString(
+                if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL)
+                    R.string.orientation_vertical else R.string.orientation_horizontal
+            )
+            val label = if (styleForced) "${styleName(PerfHudDensity.STANDARD)} / $orientationName" else orientationName
+            refreshOverlayNow()
+            showHudToast(activity.getString(R.string.perf_hud_style_changed, label))
+            return
+        }
         configurePerformanceOverlay()
     }
 
@@ -1436,15 +1593,17 @@ class PerformanceOverlayManager(
         val viewWidth = viewDimensions[0]
         val viewHeight = viewDimensions[1]
 
+        val i = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+        val t = if (isStickyBar()) 0 else i
         val (targetX, targetY) = when (position) {
-            SnapPosition.TOP_LEFT -> 0 to 0
-            SnapPosition.TOP_CENTER -> (screenWidth - viewWidth) / 2 to 0
-            SnapPosition.TOP_RIGHT -> screenWidth - viewWidth to 0
-            SnapPosition.CENTER_LEFT -> 0 to (screenHeight - viewHeight) / 2
-            SnapPosition.CENTER_RIGHT -> screenWidth - viewWidth to (screenHeight - viewHeight) / 2
-            SnapPosition.BOTTOM_LEFT -> 0 to screenHeight - viewHeight
-            SnapPosition.BOTTOM_CENTER -> (screenWidth - viewWidth) / 2 to screenHeight - viewHeight
-            SnapPosition.BOTTOM_RIGHT -> screenWidth - viewWidth to screenHeight - viewHeight
+            SnapPosition.TOP_LEFT -> i to t
+            SnapPosition.TOP_CENTER -> (screenWidth - viewWidth) / 2 to t
+            SnapPosition.TOP_RIGHT -> screenWidth - viewWidth - i to t
+            SnapPosition.CENTER_LEFT -> i to (screenHeight - viewHeight) / 2
+            SnapPosition.CENTER_RIGHT -> screenWidth - viewWidth - i to (screenHeight - viewHeight) / 2
+            SnapPosition.BOTTOM_LEFT -> i to screenHeight - viewHeight - i
+            SnapPosition.BOTTOM_CENTER -> (screenWidth - viewWidth) / 2 to screenHeight - viewHeight - i
+            SnapPosition.BOTTOM_RIGHT -> screenWidth - viewWidth - i to screenHeight - viewHeight - i
         }
 
         view.animate()
@@ -1459,6 +1618,7 @@ class PerformanceOverlayManager(
                 view.layoutParams = layoutParams
                 savePerformanceOverlayPosition(targetX, targetY)
                 configureTextAlignment()
+                refreshHudStick()
             }
             .start()
     }
@@ -1485,6 +1645,499 @@ class PerformanceOverlayManager(
         return intArrayOf(parent.width, parent.height)
     }
 
+    // ================================================================ 新版 HUD
+
+    private fun isHudStyle(): Boolean = prefConfig.perfOverlayStyle.isHud
+
+    private fun isPortrait(): Boolean =
+        activity.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
+    /** 游戏菜单里切换覆盖层样式。 */
+    fun setPerfOverlayStyle(style: PerfHudDensity) = applyStyleChange(style, announce = false)
+
+    private fun cycleHudDensity() = applyStyleChange(prefConfig.perfOverlayStyle.next(), announce = true)
+
+    private fun applyStyleChange(style: PerfHudDensity, announce: Boolean) {
+        if (prefConfig.perfOverlayStyle == style) return
+        prefConfig.perfOverlayStyle = style
+        prefConfig.writePreferences(activity)
+        refreshOverlayNow()
+        if (announce) {
+            var text = activity.getString(R.string.perf_hud_style_changed, styleName(style))
+            if (!overlayPrefs.getBoolean(KEY_HUD_LONG_PRESS_USED, false)) {
+                text += "\n" + activity.getString(R.string.perf_hud_long_press_hint)
+            }
+            showHudToast(text)
+        }
+    }
+
+    private fun styleName(style: PerfHudDensity): String = activity.getString(
+        when (style) {
+            PerfHudDensity.MINI -> R.string.perf_overlay_style_mini
+            PerfHudDensity.STANDARD -> R.string.perf_overlay_style_standard
+            PerfHudDensity.DETAILED -> R.string.perf_overlay_style_detailed
+            PerfHudDensity.CLASSIC -> R.string.perf_overlay_style_classic
+        }
+    )
+
+    /** 重新配置后立即用最近一帧数据刷新，避免切换样式后空白一秒。 */
+    private fun refreshOverlayNow() {
+        if (performanceOverlayView == null) return
+        configurePerformanceOverlay()
+        val info = currentPerformanceInfo
+        if (isHudStyle()) {
+            if (info != null) updateHud(info)
+        } else {
+            if (info != null) updatePerformanceViewsWithStyledText(info)
+            updateBatteryViewIfVisible()
+            if (requestedPerformanceOverlayVisibility == View.VISIBLE) startClockUpdates()
+        }
+    }
+
+    private fun restoreClassicContainer(overlay: LinearLayout) {
+        hudView?.visibility = View.GONE
+        currentHudLayout = null
+        currentDockTop = -1
+        classicOverlayPadding?.let { overlay.setPadding(it[0], it[1], it[2], it[3]) }
+        val lp = overlay.layoutParams as FrameLayout.LayoutParams
+        lp.width = FrameLayout.LayoutParams.WRAP_CONTENT
+    }
+
+    private fun configureHudOverlay(overlay: LinearLayout) {
+        if (classicOverlayPadding == null) {
+            classicOverlayPadding = intArrayOf(
+                overlay.paddingLeft, overlay.paddingTop, overlay.paddingRight, overlay.paddingBottom
+            )
+        }
+        overlay.setPadding(0, 0, 0, 0)
+        overlay.background = null
+        overlay.orientation = LinearLayout.VERTICAL
+        configureDisplayItems()
+        hudView?.apply {
+            setBaseTextSizePx(getAdaptiveTextSizePx(HUD_BASE_TEXT_SP))
+            setBackgroundOpacity(prefConfig.perfOverlayBgOpacity.coerceIn(0, 100) / 100f)
+        }
+        applyHudPlacement(overlay, force = true)
+        setupPerformanceOverlayDragging()
+    }
+
+    /**
+     * 决定 HUD 形态并摆放容器。竖屏且视频下方黑边放得下时停靠在视频下方（不可拖动），
+     * 否则作为浮层沿用原有的位置/吸附逻辑。每次数据刷新都会以 force=false 调用，
+     * 以便虚拟手柄显隐、旋转后视频尺寸变化时自动在停靠和浮动之间切换。
+     */
+    private fun applyHudPlacement(overlay: LinearLayout, force: Boolean) {
+        val hud = hudView ?: return
+        val density = prefConfig.perfOverlayStyle
+        val portrait = isPortrait()
+        val detailed = density == PerfHudDensity.DETAILED
+        val dockTop = if (portrait && density != PerfHudDensity.MINI) computeDockTop(overlay, hud, detailed) else -1
+        val layout = PerfHudLayoutPolicy.resolve(
+            density,
+            portrait,
+            prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL,
+            dockTop >= 0
+        )
+        if (!force && layout == currentHudLayout && (layout != PerfHudLayout.DOCK || dockTop == currentDockTop)) return
+
+        val wasDock = currentHudLayout == PerfHudLayout.DOCK
+        currentHudLayout = layout
+        currentDockTop = if (layout == PerfHudLayout.DOCK) dockTop else -1
+        hud.setHudLayout(layout, detailed)
+
+        val lp = overlay.layoutParams as FrameLayout.LayoutParams
+        val hudLp = hud.layoutParams
+        if (layout == PerfHudLayout.DOCK) {
+            val side = dp(DOCK_SIDE_MARGIN_DP)
+            lp.width = FrameLayout.LayoutParams.MATCH_PARENT
+            lp.gravity = Gravity.TOP
+            lp.leftMargin = side
+            lp.rightMargin = side
+            lp.topMargin = dockTop
+            lp.bottomMargin = 0
+            hudLp.width = LinearLayout.LayoutParams.MATCH_PARENT
+        } else {
+            lp.width = FrameLayout.LayoutParams.WRAP_CONTENT
+            hudLp.width = LinearLayout.LayoutParams.WRAP_CONTENT
+            if (force || wasDock) applyFloatingPosition(lp, portrait)
+        }
+        hud.layoutParams = hudLp
+        overlay.layoutParams = lp
+        refreshHudStick()
+    }
+
+    /** @return 停靠卡片的 topMargin；放不下或被虚拟手柄占用时返回 -1。 */
+    private fun computeDockTop(overlay: View, hud: PerfHudView, detailed: Boolean): Int {
+        if ((activity as? Game)?.isVirtualControllerVisible() == true) return -1
+        val parent = overlay.parent as? View ?: return -1
+        if (parent.width == 0 || parent.height == 0 || streamView.height == 0) return -1
+
+        val parentLoc = IntArray(2)
+        val streamLoc = IntArray(2)
+        parent.getLocationInWindow(parentLoc)
+        streamView.getLocationInWindow(streamLoc)
+        val videoBottom = streamLoc[1] - parentLoc[1] + streamView.height
+        val gap = dp(DOCK_GAP_DP)
+        val top = videoBottom + gap
+        val width = parent.width - dp(DOCK_SIDE_MARGIN_DP) * 2
+        if (width <= 0) return -1
+        // 已经停靠且宽度、档位没变时，当前高度就是答案，省掉每秒两次额外测量
+        val needed = if (currentHudLayout == PerfHudLayout.DOCK && hud.detailed == detailed && hud.width == width && hud.height > 0) {
+            hud.height
+        } else {
+            hud.measureHeightFor(PerfHudLayout.DOCK, detailed, width)
+        }
+        return if (top + needed + gap <= parent.height) top else -1
+    }
+
+    /**
+     * HUD 尺寸随样式或数值变化时：原来靠右/靠下的就保持右/下边缘不动，并始终夹在父容器内，
+     * 避免切到详细面板后半个面板跑出屏幕。
+     */
+    @Suppress("UNUSED_PARAMETER")
+    private fun onHudOverlayResized(
+        v: View, l: Int, t: Int, r: Int, b: Int, oldL: Int, oldT: Int, oldR: Int, oldB: Int
+    ) {
+        if (!isHudStyle() || currentHudLayout == PerfHudLayout.DOCK || isDraggingPerfOverlay) return
+        val newW = r - l
+        val newH = b - t
+        val oldW = oldR - oldL
+        val oldH = oldB - oldT
+        if (newW == oldW && newH == oldH) return
+        val lp = v.layoutParams as? FrameLayout.LayoutParams ?: return
+        if (lp.gravity != Gravity.NO_GRAVITY) return
+        val parent = v.parent as? View ?: return
+        val pw = parent.width
+        val ph = parent.height
+        if (pw == 0 || ph == 0) return
+
+        var left = lp.leftMargin
+        var top = lp.topMargin
+        if (oldW > 0 && oldL + oldW / 2 > pw / 2) left = oldR - newW
+        if (oldH > 0 && oldT + oldH / 2 > ph / 2) top = oldB - newH
+        left = left.coerceIn(0, maxOf(0, pw - newW))
+        top = top.coerceIn(0, maxOf(0, ph - newH))
+        if (left != lp.leftMargin || top != lp.topMargin) {
+            v.post {
+                lp.leftMargin = left
+                lp.topMargin = top
+                v.layoutParams = lp
+                // 让下次进串流时按当前尺寸恢复，而不是用旧尺寸的左上角
+                if (overlayPrefs.getBoolean("has_custom_position", false)) {
+                    savePerformanceOverlayPosition(left, top)
+                }
+            }
+        }
+    }
+
+    private fun readHudVisibility(): PerfHudVisibility {
+        fun enabled(key: String) = PerfOverlayDisplayItemsPreference.isItemEnabled(activity, key)
+        return PerfHudVisibility(
+            resolution = enabled(PerformanceItem.RESOLUTION.preferenceKey),
+            decoder = enabled(PerformanceItem.DECODER.preferenceKey),
+            fps = enabled(PerformanceItem.RENDER_FPS.preferenceKey),
+            onePercentLow = enabled(PerformanceItem.ONE_PERCENT_LOW.preferenceKey),
+            loss = enabled(PerformanceItem.PACKET_LOSS.preferenceKey),
+            network = enabled(PerformanceItem.NETWORK_LATENCY.preferenceKey),
+            decode = enabled(PerformanceItem.DECODE_LATENCY.preferenceKey),
+            host = enabled(PerformanceItem.HOST_LATENCY.preferenceKey),
+            battery = enabled(PerformanceItem.BATTERY.preferenceKey),
+            clock = enabled(PerformanceItem.CLOCK.preferenceKey)
+        ).also { hudVisibility = it }
+    }
+
+    private var hudVisibility = PerfHudVisibility()
+    private var lastHudSnapshot: PerfHudSnapshot? = null
+    private var hudHintChecked = false
+
+    private fun buildHudStrings(): PerfHudStrings {
+        fun s(id: Int) = activity.getString(id)
+        return PerfHudStrings(
+            onePercentLow = s(R.string.perf_hud_label_one_percent_low),
+            latency = s(R.string.perf_hud_label_latency),
+            latencyChain = s(R.string.perf_hud_label_latency_chain),
+            network = s(R.string.perf_hud_label_network),
+            host = s(R.string.perf_hud_label_host),
+            decode = s(R.string.perf_hud_label_decode),
+            render = s(R.string.perf_hud_label_render),
+            loss = s(R.string.perf_hud_label_loss),
+            bandwidth = s(R.string.perf_hud_label_bandwidth),
+            battery = s(R.string.perf_hud_label_battery),
+            decoder = s(R.string.perf_hud_label_decoder),
+            resolution = s(R.string.perf_hud_label_resolution),
+            clock = s(R.string.perf_hud_label_clock),
+            fpsHistory = s(R.string.perf_hud_label_fps_history),
+            drainPerHour = s(R.string.perf_hud_drain_per_hour),
+            moods = mapOf(
+                PerfMood.WARMING_UP to s(R.string.perf_hud_mood_warming_up),
+                PerfMood.SMOOTH to s(R.string.perf_hud_mood_smooth),
+                PerfMood.FULL_MOON_SMOOTH to s(R.string.perf_hud_mood_full_moon),
+                PerfMood.HOT_DECODE to s(R.string.perf_hud_mood_hot_decode),
+                PerfMood.LOSSY to s(R.string.perf_hud_mood_lossy),
+                PerfMood.FPS_DROP to s(R.string.perf_hud_mood_fps_drop),
+                PerfMood.LAGGY_NETWORK to s(R.string.perf_hud_mood_laggy),
+                PerfMood.LOW_BATTERY to s(R.string.perf_hud_mood_low_battery)
+            )
+        )
+    }
+
+    private fun refreshHudBattery() {
+        if (!hasDisplayableBattery) {
+            hudBatteryLevel = -1
+            return
+        }
+        hudBatteryLevel = UiHelper.getBatteryLevel(activity)
+        hudCharging = UiHelper.isCharging(activity)
+    }
+
+    private var hudClockFormat: SimpleDateFormat? = null
+
+    private fun hudClockFormatter(): SimpleDateFormat {
+        val pattern = clockFormat().pattern
+        hudClockFormat?.takeIf { it.toPattern() == pattern }?.let { return it }
+        return SimpleDateFormat(pattern, Locale.getDefault()).also { hudClockFormat = it }
+    }
+
+    private fun buildHudSnapshot(info: PerformanceInfo): PerfHudSnapshot {
+        val rtt = (info.rttInfo shr 32).toInt()
+        val rttVariance = info.rttInfo.toInt()
+        val pyrowave = info.pyrowaveTimingFrames > 0
+        val decodeMs = if (pyrowave) info.pyrowaveDecodeTimeMs else info.decodeTimeMs
+        val renderMs = if (pyrowave) info.pyrowavePresentTimeMs else info.renderingLatencyMs
+        val hostMs = if (info.framesWithHostProcessingLatency > 0) info.aveHostProcessingLatency else null
+        val batteryLevel = if (hasDisplayableBattery) hudBatteryLevel else -1
+        val drain = if (streamStartTime > 0) {
+            PerfHudSnapshot.drainPercentPerHour(
+                streamStartBatteryLevel, batteryLevel, System.currentTimeMillis() - streamStartTime, hudCharging
+            )
+        } else {
+            null
+        }
+        val clock = if (hudVisibility.clock) hudClockFormatter().format(Date()) else null
+        val moonIcon = getCurrentMoonPhaseIcon()
+        return PerfHudSnapshot(
+            width = info.initialWidth,
+            height = info.initialHeight,
+            targetFps = prefConfig.fps,
+            codec = getDecoderTypeInfo(info.decoder).shortName,
+            hdrLabel = info.hdrFormat.takeIf { info.isHdrActive }?.displayName,
+            decoderName = info.decoder ?: "",
+            renderedFps = info.renderedFps,
+            receivedFps = info.receivedFps,
+            framegenFps = info.framegenFps,
+            onePercentLowFps = info.onePercentLowFps,
+            packetLossPercent = info.lostFrameRate,
+            rttMs = rtt,
+            rttVarianceMs = rttVariance,
+            bandwidth = info.bandWidth ?: "N/A",
+            latency = LatencyChain.estimate(rtt, hostMs, decodeMs, renderMs),
+            batteryLevel = batteryLevel,
+            charging = hudCharging,
+            drainPercentPerHour = drain,
+            clock = clock,
+            moonIcon = moonIcon,
+            fullMoon = currentIsFullMoon
+        )
+    }
+
+    private fun updateHud(info: PerformanceInfo) {
+        val overlay = performanceOverlayView ?: return
+        val hud = hudView ?: return
+        val snapshot = buildHudSnapshot(info)
+        lastHudSnapshot = snapshot
+        hud.setSnapshot(snapshot)
+        applyHudPlacement(overlay, force = false)
+        maybeShowHudHint()
+    }
+
+    /** 第一次看到新版 HUD 时用 💡 串流小课堂 提示交互方式，只提示一次。 */
+    private fun maybeShowHudHint() {
+        if (hudHintChecked || prefConfig.perfOverlayLocked) return
+        if (performanceOverlayView?.visibility != View.VISIBLE) return
+        hudHintChecked = true
+        if (overlayPrefs.getBoolean(KEY_HUD_HINT_SHOWN, false)) return
+        overlayPrefs.edit { putBoolean(KEY_HUD_HINT_SHOWN, true) }
+        showHudToast(activity.getString(R.string.perf_hud_hint), long = true)
+    }
+
+    private fun showHudToast(text: String, long: Boolean = false) {
+        Toast.makeText(activity, text, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * HUD 触摸：单击切换信息密度、双击切换横竖排、长按查看指标说明、拖动挪位置（停靠时不可拖）。
+     * 单击/双击复用经典样式的 [handleClickEvent]，拖动和吸附复用原有逻辑。
+     */
+    private fun handleHudTouch(v: View, event: MotionEvent): Boolean {
+        val docked = currentHudLayout == PerfHudLayout.DOCK
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                hudLongPressFired = false
+                hudTouchX = event.x
+                hudTouchY = event.y
+                if (docked) {
+                    isDraggingPerfOverlay = true
+                    perfOverlayStartX = event.rawX
+                    perfOverlayStartY = event.rawY
+                    clickStartTime = System.currentTimeMillis()
+                } else {
+                    handleActionDown(v, event)
+                }
+                val longPress = ViewConfiguration.getLongPressTimeout().toLong()
+                uiHandler.postDelayed(hudPressRunnable, longPress / 3)
+                uiHandler.postDelayed(hudLongPressRunnable, longPress)
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (hudLongPressFired) return true
+                val slop = ViewConfiguration.get(activity).scaledTouchSlop
+                if (abs(event.rawX - perfOverlayStartX) > slop || abs(event.rawY - perfOverlayStartY) > slop) {
+                    uiHandler.removeCallbacks(hudLongPressRunnable)
+                    clearHudPress()
+                }
+                return if (docked) true else handleActionMove(v, event)
+            }
+            MotionEvent.ACTION_UP -> {
+                uiHandler.removeCallbacks(hudLongPressRunnable)
+                clearHudPress()
+                if (hudLongPressFired) {
+                    isDraggingPerfOverlay = false
+                    return true
+                }
+                if (docked) {
+                    isDraggingPerfOverlay = false
+                    if (isClick(event)) handleClickEvent()
+                    return true
+                }
+                return handleActionUp(v, event)
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                uiHandler.removeCallbacks(hudLongPressRunnable)
+                clearHudPress()
+                val wasDragging = isDraggingPerfOverlay
+                isDraggingPerfOverlay = false
+                applyDraggingVisualFeedback(v, false)
+                if (wasDragging && !docked && !hudLongPressFired) snapToNearestPosition(v)
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun clearHudPress() {
+        uiHandler.removeCallbacks(hudPressRunnable)
+        hudView?.clearPressed()
+    }
+
+    private fun onHudLongPress() {
+        val overlay = performanceOverlayView ?: return
+        val hud = hudView ?: return
+        hudLongPressFired = true
+        isDraggingPerfOverlay = false
+        lastClickTime = 0
+        applyDraggingVisualFeedback(overlay, false)
+        overlay.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        val target = hud.targetAt(hudTouchX - hud.left, hudTouchY - hud.top) ?: PerfHudTarget.DIAGNOSIS
+        clearHudPress()
+        overlayPrefs.edit { putBoolean(KEY_HUD_LONG_PRESS_USED, true) }
+        showHudTargetInfo(target)
+    }
+
+    private fun showHudTargetInfo(target: PerfHudTarget) {
+        when (target) {
+            PerfHudTarget.MOON, PerfHudTarget.CLOCK -> showMoonPhaseInfo()
+            PerfHudTarget.RESOLUTION -> showResolutionInfo()
+            PerfHudTarget.DECODER -> showDecoderInfo()
+            PerfHudTarget.FPS -> showFpsInfo()
+            PerfHudTarget.ONE_PERCENT_LOW -> showOnePercentLowInfo()
+            PerfHudTarget.LATENCY -> showLatencyChainInfo()
+            PerfHudTarget.NETWORK -> showNetworkLatencyInfo()
+            PerfHudTarget.DECODE -> showDecodeLatencyInfo()
+            PerfHudTarget.HOST -> showHostLatencyInfo()
+            PerfHudTarget.LOSS -> showPacketLossInfo()
+            PerfHudTarget.BATTERY -> showBatteryInfo()
+            PerfHudTarget.DIAGNOSIS -> showDiagnosisInfo()
+        }
+    }
+
+    private fun formatMs(value: Float): String = String.format(Locale.getDefault(), "%.1f ms", value)
+
+    private fun showLatencyChainInfo() {
+        val chain = lastHudSnapshot?.latency ?: run {
+            showMoonPhaseInfo()
+            return
+        }
+        val host = chain.hostMs?.let(::formatMs) ?: activity.getString(R.string.perf_latency_chain_no_host)
+        val hot = chain.decodeMs >= PerfHudThresholds.HOT_DECODE_MS
+        val decode = formatMs(chain.decodeMs) + if (hot) " 🥵" else ""
+        val content = activity.getString(
+            R.string.perf_latency_chain_content,
+            formatMs(chain.networkMs), host, decode, formatMs(chain.renderMs), formatMs(chain.totalMs)
+        )
+        // 前四行依次是网络 / 主机 / 解码 / 渲染，配上与 HUD 分段条一致的色块
+        val swatches = ArrayDeque(listOf(PerfHudPalette.NET, PerfHudPalette.HOST, PerfHudPalette.DEC, PerfHudPalette.RND))
+        val blocks = PerfHudSheetText.parse(content).map { b ->
+            if (b is SheetBlock.Row && swatches.isNotEmpty()) b.copy(swatch = swatches.removeFirst()) else b
+        }
+        val bar = PerfHudSheet.ChainBarView(activity, listOf(
+            chain.networkMs to PerfHudPalette.NET,
+            (chain.hostMs ?: 0f) to PerfHudPalette.HOST,
+            chain.decodeMs to PerfHudPalette.DEC,
+            chain.renderMs to PerfHudPalette.RND
+        ))
+        showSheet(activity.getString(R.string.perf_latency_chain_title), blocks, PerfHudTarget.LATENCY, header = listOf(bar))
+    }
+
+    /** 🍥 串流体检：逐项打勾，并给出针对性的建议。 */
+    private fun showDiagnosisInfo() {
+        val s = lastHudSnapshot ?: run {
+            showMoonPhaseInfo()
+            return
+        }
+        val locale = Locale.getDefault()
+        fun line(text: String, severity: PerfSeverity): SheetBlock =
+            PerfHudSheetText.row(text, valueColor = PerfHudPalette.severity(severity)) ?: SheetBlock.Paragraph(text)
+        val blocks = ArrayList<SheetBlock>()
+        blocks += line(activity.getString(
+            R.string.perf_diag_line_fps, String.format(locale, "%.0f", s.renderedFps), s.targetFps
+        ), s.fpsSeverity)
+        blocks += line(activity.getString(
+            R.string.perf_diag_line_loss, String.format(locale, "%.2f%%", s.packetLossPercent)
+        ), s.lossSeverity)
+        blocks += line(activity.getString(R.string.perf_diag_line_rtt, s.rttMs, s.rttVarianceMs), s.rttSeverity)
+        blocks += line(activity.getString(
+            R.string.perf_diag_line_decode, formatMs(s.latency.decodeMs) + if (s.isDecodeHot) " 🥵" else ""
+        ), s.decodeSeverity)
+        if (s.batteryLevel >= 0) {
+            blocks += line(activity.getString(R.string.perf_diag_line_battery, s.batteryLevel), s.batterySeverity)
+        }
+
+        val tips = ArrayList<String>()
+        if (s.fpsSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_fps)
+        if (s.lossSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_loss)
+        if (s.rttSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_rtt)
+        if (s.decodeSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_decode)
+        if (s.batterySeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_battery)
+        if (tips.isEmpty()) tips += activity.getString(R.string.perf_diag_all_good)
+        tips.forEach {
+            blocks += SheetBlock.Gap
+            blocks += SheetBlock.Paragraph(it)
+        }
+        blocks += SheetBlock.Tip(activity.getString(R.string.perf_diag_footer))
+
+        // 图标就是 HUD 上那枚月相徽标，光圈颜色同为整体状态；月相彩蛋从左侧按钮继续可达
+        showSheet(
+            activity.getString(R.string.perf_diag_title),
+            blocks,
+            PerfHudTarget.DIAGNOSIS,
+            icon = s.moonIcon,
+            subtitle = buildHudStrings().mood(s.mood),
+            extraActions = listOf(
+                PerfHudSheet.Action(activity.getString(R.string.perf_diag_moon_button, s.moonIcon)) { showMoonPhaseInfo() }
+            )
+        )
+    }
+
     private fun dp(value: Float): Int = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP,
         value,
@@ -1499,6 +2152,13 @@ class PerformanceOverlayManager(
         private const val CLOCK_MINUTE_MS = 60_000L
         private const val BATTERY_UPDATE_INTERVAL_MS = 15000L
         private const val OVERLAY_BACKGROUND_RGB = 0x16
+        private const val HUD_BASE_TEXT_SP = 11f
+        private const val DOCK_SIDE_MARGIN_DP = 10f
+        private const val DOCK_GAP_DP = 10f
+        private const val HUD_EDGE_INSET_DP = 8f
+        private const val FULL_MOON_TOLERANCE = 1.0 / 29.53
+        private const val KEY_HUD_HINT_SHOWN = "hud_hint_shown"
+        private const val KEY_HUD_LONG_PRESS_USED = "hud_long_press_used"
 
         private val DECODER_TYPE_MAP = mapOf(
             "avc" to DecoderTypeInfo("H.264/AVC", "AVC"),
