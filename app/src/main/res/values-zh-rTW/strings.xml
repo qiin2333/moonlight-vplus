@@ -732,8 +732,8 @@
     <string name="perf_hud_style_changed">換成「%1$s」了哦，雜魚～</string>
     <string name="perf_hud_long_press_hint">長按某個指標能看它的說明哦，雜魚～</string>
     <string name="perf_hud_hint">💡 串流小課堂：單擊切資訊密度，雙擊切橫豎，長按指標看說明，拖曳挪位置～記不住的話就是雜魚喵♡</string>
-        <string name="perf_hud_dock_orientation_hint">停在畫面下面哪來的橫豎啦，雜魚～先拖出來再雙擊♡</string>
-        <string name="tip_performance_overlay_classic">💡 串流小課堂：覆蓋層可以拖到任意位置，雙擊切換橫豎版面，點各項指標還有說明～人家這麼貼心，雜魚還不快說謝謝♡</string>
+    <string name="perf_hud_dock_orientation_hint">停在畫面下面哪來的橫豎啦，雜魚～轉到橫屏再雙擊♡</string>
+    <string name="tip_performance_overlay_classic">💡 串流小課堂：覆蓋層可以拖到任意位置，雙擊切換橫豎版面，點各項指標還有說明～人家這麼貼心，雜魚還不快說謝謝♡</string>
     <string name="perf_hud_label_latency">延遲</string>
     <string name="perf_hud_label_latency_chain">延遲鏈（估算）</string>
     <string name="perf_hud_label_network">網路</string>

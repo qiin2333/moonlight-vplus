@@ -327,7 +327,7 @@ class PerfHudView @JvmOverloads constructor(
     }
 
     /**
-     * 横屏顶栏（设计稿 L2）：月相徽标 + 若干分组，每组上面一行小标签、下面一行数值，
+     * 横屏顶栏：月相徽标 + 若干分组，每组上面一行小标签、下面一行数值，
      * 组与组之间用整高细线隔开；超宽时整组折到下一行。吸顶时（[stickTop]）只圆下面两个角。
      */
     private fun renderBar(c: Canvas?, maxW: Float) {
@@ -1046,7 +1046,7 @@ class PerfHudView @JvmOverloads constructor(
 
     /**
      * 月相状态徽标：真实月相 emoji 外套一圈状态色光圈（绿/黄/红 = 整体严重度），
-     * 取代原来的状态点；光圈也让深色背景上的新月 🌑 看得见。长按打开 🍥 串流体检。
+     * 光圈也让深色背景上的新月 🌑 看得见。长按打开 🍥 串流体检。
      */
     private fun drawMoonBadge(c: Canvas?, x: Float, top: Float, bottom: Float): Float {
         val icon = snapshot.moonIcon

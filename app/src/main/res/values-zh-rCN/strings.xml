@@ -936,8 +936,8 @@
     <string name="perf_hud_style_changed">换成「%1$s」了哦，杂鱼～</string>
     <string name="perf_hud_long_press_hint">长按某个指标能看它的说明哦，杂鱼～</string>
     <string name="perf_hud_hint">💡 串流小课堂：单击切信息密度，双击切横竖，长按指标看说明，拖动挪位置～记不住的话就是杂鱼喵♡</string>
-        <string name="perf_hud_dock_orientation_hint">停在画面下面哪来的横竖啦，杂鱼～先拖出来再双击♡</string>
-        <string name="tip_performance_overlay_classic">💡 串流小课堂：覆盖层可以拖到任意位置，双击切换横竖布局，点各项指标还有说明～人家这么贴心，杂鱼还不快说谢谢♡</string>
+    <string name="perf_hud_dock_orientation_hint">停在画面下面哪来的横竖啦，杂鱼～转到横屏再双击♡</string>
+    <string name="tip_performance_overlay_classic">💡 串流小课堂：覆盖层可以拖到任意位置，双击切换横竖布局，点各项指标还有说明～人家这么贴心，杂鱼还不快说谢谢♡</string>
     <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
     <string name="perf_hud_label_latency">延迟</string>
     <string name="perf_hud_label_latency_chain">延迟链（估算）</string>

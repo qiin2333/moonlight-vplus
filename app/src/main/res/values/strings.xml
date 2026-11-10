@@ -1151,8 +1151,8 @@
     <string name="perf_hud_style_changed">Switched to %1$s, weakling~</string>
     <string name="perf_hud_long_press_hint">Long-press a metric to see what it means, weakling~</string>
     <string name="perf_hud_hint">💡 Streaming 101: tap to change detail, double-tap to flip, long-press a metric to see what it means, drag to move~ Forget that and you\'re a weakling, meow ♡</string>
-        <string name="perf_hud_dock_orientation_hint">Docked below the video, there\'s no orientation here, weakling~ Drag it out first, then double-tap ♡</string>
-        <string name="tip_performance_overlay_classic">💡 Tip: drag the overlay anywhere, double-tap to flip between horizontal and vertical, and tap a metric for details~ I made it this easy, so say thanks, weakling ♡</string>
+    <string name="perf_hud_dock_orientation_hint">Docked below the video, there\'s no orientation here, weakling~ Turn to landscape, then double-tap ♡</string>
+    <string name="tip_performance_overlay_classic">💡 Tip: drag the overlay anywhere, double-tap to flip between horizontal and vertical, and tap a metric for details~ I made it this easy, so say thanks, weakling ♡</string>
     <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
     <string name="perf_hud_label_latency">Latency</string>
     <string name="perf_hud_label_latency_chain">Latency chain (est.)</string>

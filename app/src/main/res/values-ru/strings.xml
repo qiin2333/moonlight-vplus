@@ -2166,7 +2166,7 @@
     <string name="perf_hud_style_changed">Теперь «%1$s», слабачок~</string>
     <string name="perf_hud_long_press_hint">Зажми показатель, чтобы увидеть пояснение, слабачок~</string>
     <string name="perf_hud_hint">💡 Урок стриминга: нажатие — детализация, двойное — ориентация, долгое на показателе — пояснение, перетаскивание — перемещение~ Забудешь — значит слабачок, мяу ♡</string>
-    <string name="perf_hud_dock_orientation_hint">Под видео ориентации нет, слабачок~ Сначала вытащи, потом жми дважды ♡</string>
+    <string name="perf_hud_dock_orientation_hint">Под видео ориентации нет, слабачок~ Поверни экран горизонтально, потом жми дважды ♡</string>
     <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
     <string name="perf_hud_label_latency">Задержка</string>
     <string name="perf_hud_label_latency_chain">Цепочка задержки (оценка)</string>

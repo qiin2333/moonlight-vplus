@@ -197,7 +197,7 @@ data class PerfHudSnapshot(
     val batterySeverity get() = PerfHudThresholds.battery(batteryLevel, charging)
     val isDecodeHot get() = latency.decodeMs >= PerfHudThresholds.HOT_DECODE_MS
 
-    /** 状态点颜色：只看影响串流体验的指标，电量不参与。 */
+    /** 月相光圈颜色：只看影响串流体验的指标，电量不参与。 */
     val overallSeverity: PerfSeverity
         get() = fpsSeverity.worst(lossSeverity).worst(decodeSeverity).worst(rttSeverity)
 

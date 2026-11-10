@@ -1794,7 +1794,6 @@ class PerformanceOverlayManager(
      * HUD 尺寸随样式或数值变化时：原来靠右/靠下的就保持右/下边缘不动，并始终夹在父容器内，
      * 避免切到详细面板后半个面板跑出屏幕。
      */
-    @Suppress("UNUSED_PARAMETER")
     private fun onHudOverlayResized(
         v: View, l: Int, t: Int, r: Int, b: Int, oldL: Int, oldT: Int, oldR: Int, oldB: Int
     ) {
