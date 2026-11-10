@@ -13,6 +13,7 @@ import android.text.TextUtils
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import com.limelight.perfhud.PerfHudPalette.severity as sevColor
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
@@ -446,7 +447,7 @@ class PerfHudView @JvmOverloads constructor(
             }
             if (v.onePercentLow) {
                 val low = if (s.onePercentLowFps > 0f) fps0(s.onePercentLowFps) else "—"
-                val color = if (s.onePercentLowSeverity == PerfSeverity.OK) DIM else sevColor(s.onePercentLowSeverity)
+                val color = PerfHudPalette.quiet(s.onePercentLowSeverity)
                 addColumn(label, value, strings.onePercentLow, low, color, sp, PerfHudTarget.ONE_PERCENT_LOW)
             }
             if (v.fps) value += Piece.Spark(em * 3.2f, sp * 1.5f)
@@ -730,7 +731,7 @@ class PerfHudView @JvmOverloads constructor(
         if (c == null) return top + h
         val s = snapshot
         val bottom = top + h
-        val ceiling = max(max(s.targetFps.toFloat(), fpsHistory.max()), 1f) * 1.08f
+        val ceiling = sparkCeiling()
 
         fillPaint.color = TRACK
         rect.set(left, top, left + inner, bottom)
@@ -742,21 +743,13 @@ class PerfHudView @JvmOverloads constructor(
             strokePaint.strokeWidth = dp
             c.drawLine(left, ty, left + inner, ty, strokePaint)
         }
-        val n = fpsHistory.size
-        if (n >= 2) {
-            val step = inner / (HISTORY_SIZE - 1)
-            val startX = left + inner - step * (n - 1)
-            sparkPath.reset()
-            for (i in 0 until n) {
-                val px = startX + step * i
-                val py = bottom - h * (fpsHistory[i] / ceiling)
-                if (i == 0) sparkPath.moveTo(px, py) else sparkPath.lineTo(px, py)
-            }
+        val startX = PerfHudDraw.sparkPath(sparkPath, fpsHistory, HISTORY_SIZE, left, top, inner, h, ceiling)
+        if (!startX.isNaN()) {
             strokePaint.color = sevColor(s.fpsSeverity)
             strokePaint.strokeWidth = dp * 1.5f
             strokePaint.strokeJoin = Paint.Join.ROUND
             c.drawPath(sparkPath, strokePaint)
-            sparkPath.lineTo(startX + step * (n - 1), bottom)
+            sparkPath.lineTo(left + inner, bottom)
             sparkPath.lineTo(startX, bottom)
             sparkPath.close()
             fillPaint.color = (sevColor(s.fpsSeverity) and 0x00FFFFFF) or 0x22000000
@@ -792,48 +785,25 @@ class PerfHudView @JvmOverloads constructor(
     /** 网络 / 主机 / 解码 / 渲染 按占比拼成的分段条。 */
     private fun drawChainBar(c: Canvas?, left: Float, y: Float, w: Float, barH: Float) {
         if (c == null) return
-        fillPaint.color = TRACK
-        rect.set(left, y, left + w, y + barH)
-        c.drawRoundRect(rect, barH / 2, barH / 2, fillPaint)
-        val parts = chainParts(snapshot.latency)
-        val sum = parts.sumOf { it.second.toDouble() }.toFloat()
-        if (sum <= 0f) return
-        c.save()
-        c.clipRect(left, y, left + w, y + barH)
-        var x = left
-        for ((color, value) in parts) {
-            val segW = w * value / sum
-            if (segW <= 0f) continue
-            fillPaint.color = color
-            rect.set(x, y, x + segW, y + barH)
-            c.drawRoundRect(rect, barH / 2, barH / 2, fillPaint)
-            x += segW
-        }
-        c.restore()
+        PerfHudDraw.chainBar(c, fillPaint, rect, left, y, w, barH, snapshot.latency.segments(), TRACK)
     }
+
+    private fun sparkCeiling(): Float = max(max(snapshot.targetFps.toFloat(), fpsHistory.max()), 1f) * 1.08f
 
     /** 顶栏里的迷你帧率曲线：不画底板，只画目标线和折线。 */
     private fun drawMiniSpark(c: Canvas?, left: Float, top: Float, w: Float, h: Float) {
         if (c == null) return
         val s = snapshot
-        val n = fpsHistory.size
         val bottom = top + h
-        val ceiling = max(max(s.targetFps.toFloat(), fpsHistory.max()), 1f) * 1.08f
+        val ceiling = sparkCeiling()
         if (s.targetFps > 0) {
             val ty = bottom - h * (s.targetFps / ceiling)
             strokePaint.color = DIVIDER
             strokePaint.strokeWidth = dp
             c.drawLine(left, ty, left + w, ty, strokePaint)
         }
-        if (n < 2) return
-        val step = w / (HISTORY_SIZE - 1)
-        val startX = left + w - step * (n - 1)
-        sparkPath.reset()
-        for (i in 0 until n) {
-            val px = startX + step * i
-            val py = bottom - h * (fpsHistory[i] / ceiling)
-            if (i == 0) sparkPath.moveTo(px, py) else sparkPath.lineTo(px, py)
-        }
+        val startX = PerfHudDraw.sparkPath(sparkPath, fpsHistory, HISTORY_SIZE, left, top, w, h, ceiling)
+        if (startX.isNaN()) return
         strokePaint.color = sevColor(s.fpsSeverity)
         strokePaint.strokeWidth = dp * 1.3f
         strokePaint.strokeJoin = Paint.Join.ROUND
@@ -843,11 +813,12 @@ class PerfHudView @JvmOverloads constructor(
     private fun drawLegend(c: Canvas?, left: Float, top: Float, inner: Float): Float {
         val s = snapshot
         val chain = s.latency
+        val (net, host, dec, rnd) = chain.segments().map { it.color }
         val items = ArrayList<Triple<Int, String, PerfHudTarget>>()
-        if (visibility.network) items += Triple(NET, strings.network + " " + num1(chain.networkMs), PerfHudTarget.NETWORK)
-        if (visibility.host) items += Triple(HOST, strings.host + " " + (chain.hostMs?.let(::num1) ?: "🧋"), PerfHudTarget.HOST)
-        if (visibility.decode) items += Triple(DEC, strings.decode + " " + num1(chain.decodeMs) + if (s.isDecodeHot) " 🥵" else "", PerfHudTarget.DECODE)
-        items += Triple(RND, strings.render + " " + num1(chain.renderMs), PerfHudTarget.LATENCY)
+        if (visibility.network) items += Triple(net, strings.network + " " + num1(chain.networkMs), PerfHudTarget.NETWORK)
+        if (visibility.host) items += Triple(host, strings.host + " " + (chain.hostMs?.let(::num1) ?: "🧋"), PerfHudTarget.HOST)
+        if (visibility.decode) items += Triple(dec, strings.decode + " " + num1(chain.decodeMs) + if (s.isDecodeHot) " 🥵" else "", PerfHudTarget.DECODE)
+        items += Triple(rnd, strings.render + " " + num1(chain.renderMs), PerfHudTarget.LATENCY)
 
         val lh = lineHeight(labelPaint)
         val dotR = em * 0.22f
@@ -1122,18 +1093,10 @@ class PerfHudView @JvmOverloads constructor(
         fontFeatureSettings = "tnum"
     }
 
-    private fun chainParts(chain: LatencyChain): List<Pair<Int, Float>> = listOf(
-        NET to chain.networkMs,
-        HOST to (chain.hostMs ?: 0f),
-        DEC to chain.decodeMs,
-        RND to chain.renderMs
-    )
-
     private fun latencySeverity(s: PerfHudSnapshot) = s.rttSeverity.worst(s.decodeSeverity)
 
     /** Rx 正常时灰色退后，主机没送够帧时才变黄 / 红。 */
-    private fun rxColor(s: PerfHudSnapshot): Int =
-        PerfHudThresholds.fps(s.receivedFps, s.targetFps).let { if (it == PerfSeverity.OK) DIM else sevColor(it) }
+    private fun rxColor(s: PerfHudSnapshot): Int = PerfHudPalette.quiet(s.rxSeverity)
 
     private fun streamSummary(s: PerfHudSnapshot): String = buildString {
         if (visibility.resolution) append(resolutionText(s))
@@ -1146,20 +1109,6 @@ class PerfHudView @JvmOverloads constructor(
     private fun resolutionText(s: PerfHudSnapshot): String = buildString {
         if (s.width > 0 && s.height > 0) append(s.width).append('×').append(s.height) else append("—")
         if (!s.hdrLabel.isNullOrEmpty()) append(' ').append(s.hdrLabel)
-    }
-
-    private fun fpsText(v: Float) = if (v > 0f) fps0(v) else "--"
-    private fun fps0(v: Float) = String.format(Locale.US, "%.0f", v)
-    private fun num0(v: Float) = String.format(Locale.US, "%.0f", v)
-    private fun num1(v: Float) = String.format(Locale.US, "%.1f", v)
-    private fun ms0(v: Float) = num0(v) + " ms"
-    private fun ms1(v: Float) = num1(v) + " ms"
-    private fun pct(v: Float) = String.format(Locale.US, if (v >= 10f) "%.0f%%" else "%.1f%%", v)
-
-    private fun sevColor(s: PerfSeverity) = when (s) {
-        PerfSeverity.OK -> OK
-        PerfSeverity.WARN -> WARN
-        PerfSeverity.BAD -> BAD
     }
 
     companion object {

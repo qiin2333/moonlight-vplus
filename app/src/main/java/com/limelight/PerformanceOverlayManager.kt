@@ -40,20 +40,16 @@ import com.limelight.binding.video.PerformanceInfo
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.perfhud.LatencyChain
 import com.limelight.perfhud.PerfHudDensity
+import com.limelight.perfhud.PerfHudInfoSheets
 import com.limelight.perfhud.PerfHudLayout
 import com.limelight.perfhud.PerfHudLayoutPolicy
 import com.limelight.perfhud.PerfHudPalette
-import com.limelight.perfhud.PerfHudSheet
-import com.limelight.perfhud.PerfHudSheetText
 import com.limelight.perfhud.PerfHudSnapshot
 import com.limelight.perfhud.PerfHudStrings
 import com.limelight.perfhud.PerfHudTarget
-import com.limelight.perfhud.PerfHudThresholds
 import com.limelight.perfhud.PerfHudView
 import com.limelight.perfhud.PerfHudVisibility
 import com.limelight.perfhud.PerfMood
-import com.limelight.perfhud.PerfSeverity
-import com.limelight.perfhud.SheetBlock
 import com.limelight.preferences.PerfOverlayDisplayItemsPreference
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.CenterAlignedImageSpan
@@ -84,7 +80,16 @@ class PerformanceOverlayManager(
     private lateinit var streamView: StreamView
 
     private val uiHandler = Handler(Looper.getMainLooper())
-    private val hudSheet by lazy { PerfHudSheet(activity) }
+    private val infoSheets by lazy {
+        PerfHudInfoSheets(
+            activity,
+            snapshot = { lastHudSnapshot },
+            isHudStyle = ::isHudStyle,
+            anchor = { performanceOverlayView },
+            moodText = { buildHudStrings().mood(it) },
+            fpsHeader = ::createJitterMonitorSwitchRow
+        )
+    }
     private var delayedShowPending = false
     private val delayedShowRunnable = Runnable {
         delayedShowPending = false
@@ -260,21 +265,21 @@ class PerformanceOverlayManager(
         return when (item) {
             PerformanceItem.RESOLUTION -> Runnable { showResolutionInfo() }
             PerformanceItem.DECODER -> Runnable { showDecoderInfo() }
-            PerformanceItem.RENDER_FPS -> Runnable { showFpsInfo() }
-            PerformanceItem.PACKET_LOSS -> Runnable { showPacketLossInfo() }
-            PerformanceItem.NETWORK_LATENCY -> Runnable { showNetworkLatencyInfo() }
-            PerformanceItem.DECODE_LATENCY -> Runnable { showDecodeLatencyInfo() }
-            PerformanceItem.HOST_LATENCY -> Runnable { showHostLatencyInfo() }
+            PerformanceItem.RENDER_FPS -> Runnable { infoSheets.showFps() }
+            PerformanceItem.PACKET_LOSS -> Runnable { infoSheets.showMetric(PerfHudTarget.LOSS) }
+            PerformanceItem.NETWORK_LATENCY -> Runnable { infoSheets.showMetric(PerfHudTarget.NETWORK) }
+            PerformanceItem.DECODE_LATENCY -> Runnable { infoSheets.showMetric(PerfHudTarget.DECODE) }
+            PerformanceItem.HOST_LATENCY -> Runnable { infoSheets.showMetric(PerfHudTarget.HOST) }
             PerformanceItem.BATTERY -> Runnable { showBatteryInfo() }
-            PerformanceItem.ONE_PERCENT_LOW -> Runnable { showOnePercentLowInfo() }
-            PerformanceItem.CLOCK -> Runnable { showMoonPhaseInfo() }
+            PerformanceItem.ONE_PERCENT_LOW -> Runnable { infoSheets.showMetric(PerfHudTarget.ONE_PERCENT_LOW) }
+            PerformanceItem.CLOCK -> Runnable { infoSheets.showMoonPhase() }
         }
     }
 
     fun hideOverlayImmediate() {
         cancelDelayedShow()
         stopClockUpdates()
-        hudSheet.dismiss()
+        infoSheets.dismiss()
         performanceOverlayView?.visibility = View.GONE
     }
 
@@ -322,7 +327,7 @@ class PerformanceOverlayManager(
     fun cancelPendingTasks() {
         cancelDelayedShow()
         stopClockUpdates()
-        hudSheet.dismiss()
+        infoSheets.dismiss()
     }
 
     private fun cancelDelayedShow() {
@@ -766,7 +771,7 @@ class PerformanceOverlayManager(
             }
         }
 
-        showInfoDialog(activity.getString(R.string.perf_battery_info_title), info.toString(), PerfHudTarget.BATTERY)
+        infoSheets.showText(activity.getString(R.string.perf_battery_info_title), info.toString(), PerfHudTarget.BATTERY)
     }
 
     private fun formatDuration(seconds: Long): String {
@@ -1141,7 +1146,7 @@ class PerformanceOverlayManager(
 
         val visibleItemCount = getVisibleItemCount()
         if (visibleItemCount == 0) {
-            showMoonPhaseInfo()
+            infoSheets.showMoonPhase()
             return
         }
 
@@ -1157,7 +1162,7 @@ class PerformanceOverlayManager(
 
         val visibleItemCount = getVisibleItemCount()
         if (visibleItemCount == 0) {
-            showMoonPhaseInfo()
+            infoSheets.showMoonPhase()
             return
         }
 
@@ -1200,31 +1205,13 @@ class PerformanceOverlayManager(
                 currentIndex++
             }
         }
-        showMoonPhaseInfo()
-    }
-
-    private fun showMoonPhaseInfo() {
-        val moonPhaseInfo = MoonPhaseUtils.getCurrentMoonPhaseInfo(activity)
-        val moonPhase = MoonPhaseUtils.getCurrentMoonPhase()
-        val phasePercentage = MoonPhaseUtils.getMoonPhasePercentage(moonPhase)
-        val daysInCycle = MoonPhaseUtils.getDaysInMoonCycle(moonPhase)
-
-        val dateFormat = SimpleDateFormat(activity.getString(R.string.perf_moon_date_format), Locale.getDefault())
-        val currentDate = dateFormat.format(Calendar.getInstance(TimeZone.getDefault()).time)
-
-        val moonInfo = String.format(
-            Locale.getDefault(),
-            activity.getString(R.string.perf_moon_phase_info),
-            moonPhaseInfo.icon, moonPhaseInfo.name, phasePercentage, daysInCycle, currentDate, moonPhaseInfo.description
-        )
-
-        showSheet(moonPhaseInfo.poeticTitle, PerfHudSheetText.parse(moonInfo), PerfHudTarget.MOON, icon = moonPhaseInfo.icon)
+        infoSheets.showMoonPhase()
     }
 
     private fun showResolutionInfo() {
         val perfInfo = currentPerformanceInfo
         if (perfInfo == null) {
-            showMoonPhaseInfo()
+            infoSheets.showMoonPhase()
             return
         }
 
@@ -1250,12 +1237,12 @@ class PerformanceOverlayManager(
             resolutionInfo.append(activity.getString(R.string.perf_actual_refresh)).append(String.format(Locale.getDefault(), "%.2f", actualDisplayRefreshRate)).append(" Hz\n")
         }
 
-        showInfoDialog(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString(), PerfHudTarget.RESOLUTION)
+        infoSheets.showText(activity.getString(R.string.perf_resolution_title), resolutionInfo.toString(), PerfHudTarget.RESOLUTION)
     }
 
     private fun showDecoderInfo() {
         val fullDecoderInfo = getCurrentDecoderInfo()
-        showInfoDialog(activity.getString(R.string.perf_decoder_title), fullDecoderInfo, PerfHudTarget.DECODER)
+        infoSheets.showText(activity.getString(R.string.perf_decoder_title), fullDecoderInfo, PerfHudTarget.DECODER)
     }
 
     private fun getCurrentDecoderInfo(): String {
@@ -1301,54 +1288,6 @@ class PerformanceOverlayManager(
         }
 
         return DecoderTypeInfo(fullDecoderName, fullDecoderName)
-    }
-
-    /** HUD 与经典样式显示的内容和阈值不同，说明文案各用各的。 */
-    private fun showPerformanceInfo(titleResId: Int, classicInfoResId: Int, hudInfoResId: Int, target: PerfHudTarget) {
-        val info = if (isHudStyle()) hudInfoResId else classicInfoResId
-        showInfoDialog(activity.getString(titleResId), activity.getString(info), target)
-    }
-
-    private fun showFpsInfo() {
-        val blocks = if (isHudStyle()) {
-            fpsLiveBlocks() + PerfHudSheetText.parse(activity.getString(R.string.perf_hud_fps_info))
-        } else {
-            PerfHudSheetText.parse(activity.getString(R.string.perf_fps_info))
-        }
-        showSheet(
-            activity.getString(R.string.perf_fps_title),
-            blocks,
-            PerfHudTarget.FPS,
-            header = listOf(createJitterMonitorSwitchRow())
-        )
-    }
-
-    /** HUD 只显示渲染帧率，接收 / 插帧帧率和“掉在哪一段”的判断放在长按卡片里。 */
-    private fun fpsLiveBlocks(): List<SheetBlock> {
-        val s = lastHudSnapshot ?: return emptyList()
-        val locale = Locale.getDefault()
-        fun fps(v: Float) = if (v > 0f) String.format(locale, "%.0f FPS", v) else "—"
-        val rxSeverity = PerfHudThresholds.fps(s.receivedFps, s.targetFps)
-        val out = arrayListOf<SheetBlock>(
-            SheetBlock.Row(activity.getString(R.string.perf_hud_fps_row_rx), fps(s.receivedFps),
-                PerfHudPalette.severity(rxSeverity), PerfHudPalette.NET),
-            SheetBlock.Row(activity.getString(R.string.perf_hud_fps_row_rd), fps(s.renderedFps),
-                PerfHudPalette.severity(s.fpsSeverity), PerfHudPalette.RND)
-        )
-        if (s.framegenFps > 0.5f) {
-            out += SheetBlock.Row(activity.getString(R.string.perf_hud_fps_row_fg), fps(s.framegenFps),
-                PerfHudPalette.TXT, PerfHudPalette.MOON)
-        }
-        val verdict = when {
-            s.receivedFps <= 0f -> null
-            rxSeverity != PerfSeverity.OK -> R.string.perf_hud_fps_verdict_remote
-            s.fpsSeverity != PerfSeverity.OK -> R.string.perf_hud_fps_verdict_local
-            s.receivedFps > s.renderedFps * 1.1f -> R.string.perf_hud_fps_verdict_surplus
-            else -> R.string.perf_hud_fps_verdict_ok
-        }
-        if (verdict != null) out += SheetBlock.Paragraph(activity.getString(verdict))
-        out += SheetBlock.Divider
-        return out
     }
 
     private fun createJitterMonitorSwitchRow(): View {
@@ -1402,91 +1341,6 @@ class PerformanceOverlayManager(
         prefConfig.enableJitterMonitor = enabled
         prefConfig.writePreferences(activity)
         onJitterMonitorChanged(enabled)
-    }
-
-    private fun showPacketLossInfo() {
-        showPerformanceInfo(R.string.perf_packet_loss_title, R.string.perf_packet_loss_info,
-            R.string.perf_hud_packet_loss_info, PerfHudTarget.LOSS)
-    }
-
-    private fun showNetworkLatencyInfo() {
-        showPerformanceInfo(R.string.perf_network_latency_title, R.string.perf_network_latency_info,
-            R.string.perf_hud_network_latency_info, PerfHudTarget.NETWORK)
-    }
-
-    private fun showDecodeLatencyInfo() {
-        showPerformanceInfo(R.string.perf_decode_latency_title, R.string.perf_decode_latency_info,
-            R.string.perf_hud_decode_latency_info, PerfHudTarget.DECODE)
-    }
-
-    private fun showHostLatencyInfo() {
-        showPerformanceInfo(R.string.perf_host_latency_title, R.string.perf_host_latency_info,
-            R.string.perf_hud_host_latency_info, PerfHudTarget.HOST)
-    }
-
-    private fun showOnePercentLowInfo() {
-        showPerformanceInfo(R.string.perf_one_percent_low_title, R.string.perf_one_percent_low_info,
-            R.string.perf_hud_one_percent_low_info, PerfHudTarget.ONE_PERCENT_LOW)
-    }
-
-    private fun showInfoDialog(title: String, message: String, target: PerfHudTarget? = null) {
-        showSheet(title, PerfHudSheetText.parse(message), target)
-    }
-
-    /** 所有指标说明统一走 HUD 风格卡片；标题开头的 emoji 自动拆成光圈图标。 */
-    private fun showSheet(
-        title: String,
-        blocks: List<SheetBlock>,
-        target: PerfHudTarget?,
-        icon: String? = null,
-        subtitle: String? = null,
-        header: List<View> = emptyList(),
-        extraActions: List<PerfHudSheet.Action> = emptyList()
-    ) {
-        val (titleIcon, name) = PerfHudSheetText.splitIcon(title)
-        val live = sheetLive(target)
-        hudSheet.show(
-            PerfHudSheet.Spec(
-                title = name,
-                icon = icon ?: titleIcon,
-                accent = UiHelper.accentColor(activity),
-                value = live.value,
-                valueColor = live.valueColor ?: live.tint,
-                subtitle = subtitle,
-                blocks = blocks,
-                header = header,
-                actions = extraActions + PerfHudSheet.Action(activity.getString(R.string.yes), primary = true)
-            ),
-            performanceOverlayView
-        )
-    }
-
-    /** @param tint 实时值的默认颜色（状态色或指标分类色），[valueColor] 非空时优先用它。 */
-    private class SheetLive(val tint: Int, val value: String? = null, val valueColor: Int? = null)
-
-    /** 右上角显示该指标的实时值，颜色跟随严重度或分类色；卡片强调色另由 appAccent 决定。 */
-    private fun sheetLive(target: PerfHudTarget?): SheetLive {
-        val s = lastHudSnapshot
-        if (target == null || s == null) return SheetLive(PerfHudPalette.MOON)
-        val locale = Locale.getDefault()
-        fun sev(x: PerfSeverity) = PerfHudPalette.severity(x)
-        return when (target) {
-            PerfHudTarget.FPS -> SheetLive(sev(s.fpsSeverity), String.format(locale, "%.0f FPS", s.renderedFps))
-            PerfHudTarget.ONE_PERCENT_LOW -> SheetLive(
-                sev(s.onePercentLowSeverity),
-                s.onePercentLowFps.takeIf { it > 0f }?.let { String.format(locale, "%.0f FPS", it) }
-            )
-            PerfHudTarget.LATENCY -> SheetLive(PerfHudPalette.RND, String.format(locale, "≈%.0f ms", s.latency.totalMs))
-            PerfHudTarget.NETWORK -> SheetLive(PerfHudPalette.NET, "${s.rttMs} ms", sev(s.rttSeverity))
-            PerfHudTarget.DECODE -> SheetLive(PerfHudPalette.DEC, formatMs(s.latency.decodeMs), sev(s.decodeSeverity))
-            PerfHudTarget.HOST -> SheetLive(PerfHudPalette.HOST, s.latency.hostMs?.let(::formatMs))
-            PerfHudTarget.LOSS -> SheetLive(PerfHudPalette.NET, String.format(locale, "%.2f%%", s.packetLossPercent), sev(s.lossSeverity))
-            PerfHudTarget.BATTERY -> SheetLive(sev(s.batterySeverity), s.batteryLevel.takeIf { it >= 0 }?.let { "$it%" })
-            PerfHudTarget.RESOLUTION -> SheetLive(PerfHudPalette.MOON, if (s.width > 0) "${s.width}×${s.height}" else null)
-            PerfHudTarget.DECODER -> SheetLive(PerfHudPalette.DEC, s.codec.ifBlank { null })
-            PerfHudTarget.DIAGNOSIS -> SheetLive(sev(s.overallSeverity))
-            PerfHudTarget.MOON, PerfHudTarget.CLOCK -> SheetLive(PerfHudPalette.MOON)
-        }
     }
 
     private fun toggleLayoutOrientation() {
@@ -2045,98 +1899,13 @@ class PerformanceOverlayManager(
     }
 
     private fun showHudTargetInfo(target: PerfHudTarget) {
+        if (infoSheets.showFor(target)) return
         when (target) {
-            PerfHudTarget.MOON, PerfHudTarget.CLOCK -> showMoonPhaseInfo()
             PerfHudTarget.RESOLUTION -> showResolutionInfo()
             PerfHudTarget.DECODER -> showDecoderInfo()
-            PerfHudTarget.FPS -> showFpsInfo()
-            PerfHudTarget.ONE_PERCENT_LOW -> showOnePercentLowInfo()
-            PerfHudTarget.LATENCY -> showLatencyChainInfo()
-            PerfHudTarget.NETWORK -> showNetworkLatencyInfo()
-            PerfHudTarget.DECODE -> showDecodeLatencyInfo()
-            PerfHudTarget.HOST -> showHostLatencyInfo()
-            PerfHudTarget.LOSS -> showPacketLossInfo()
             PerfHudTarget.BATTERY -> showBatteryInfo()
-            PerfHudTarget.DIAGNOSIS -> showDiagnosisInfo()
+            else -> Unit
         }
-    }
-
-    private fun formatMs(value: Float): String = String.format(Locale.getDefault(), "%.1f ms", value)
-
-    private fun showLatencyChainInfo() {
-        val chain = lastHudSnapshot?.latency ?: run {
-            showMoonPhaseInfo()
-            return
-        }
-        val host = chain.hostMs?.let(::formatMs) ?: activity.getString(R.string.perf_latency_chain_no_host)
-        val hot = chain.decodeMs >= PerfHudThresholds.HOT_DECODE_MS
-        val decode = formatMs(chain.decodeMs) + if (hot) " 🥵" else ""
-        val content = activity.getString(
-            R.string.perf_latency_chain_content,
-            formatMs(chain.networkMs), host, decode, formatMs(chain.renderMs), formatMs(chain.totalMs)
-        )
-        // 前四行依次是网络 / 主机 / 解码 / 渲染，配上与 HUD 分段条一致的色块
-        val swatches = ArrayDeque(listOf(PerfHudPalette.NET, PerfHudPalette.HOST, PerfHudPalette.DEC, PerfHudPalette.RND))
-        val blocks = PerfHudSheetText.parse(content).map { b ->
-            if (b is SheetBlock.Row && swatches.isNotEmpty()) b.copy(swatch = swatches.removeFirst()) else b
-        }
-        val bar = PerfHudSheet.ChainBarView(activity, listOf(
-            chain.networkMs to PerfHudPalette.NET,
-            (chain.hostMs ?: 0f) to PerfHudPalette.HOST,
-            chain.decodeMs to PerfHudPalette.DEC,
-            chain.renderMs to PerfHudPalette.RND
-        ))
-        showSheet(activity.getString(R.string.perf_latency_chain_title), blocks, PerfHudTarget.LATENCY, header = listOf(bar))
-    }
-
-    /** 🍥 串流体检：逐项打勾，并给出针对性的建议。 */
-    private fun showDiagnosisInfo() {
-        val s = lastHudSnapshot ?: run {
-            showMoonPhaseInfo()
-            return
-        }
-        val locale = Locale.getDefault()
-        fun line(text: String, severity: PerfSeverity): SheetBlock =
-            PerfHudSheetText.row(text, valueColor = PerfHudPalette.severity(severity)) ?: SheetBlock.Paragraph(text)
-        val blocks = ArrayList<SheetBlock>()
-        blocks += line(activity.getString(
-            R.string.perf_diag_line_fps, String.format(locale, "%.0f", s.renderedFps), s.targetFps
-        ), s.fpsSeverity)
-        blocks += line(activity.getString(
-            R.string.perf_diag_line_loss, String.format(locale, "%.2f%%", s.packetLossPercent)
-        ), s.lossSeverity)
-        blocks += line(activity.getString(R.string.perf_diag_line_rtt, s.rttMs, s.rttVarianceMs), s.rttSeverity)
-        blocks += line(activity.getString(
-            R.string.perf_diag_line_decode, formatMs(s.latency.decodeMs) + if (s.isDecodeHot) " 🥵" else ""
-        ), s.decodeSeverity)
-        if (s.batteryLevel >= 0) {
-            blocks += line(activity.getString(R.string.perf_diag_line_battery, s.batteryLevel), s.batterySeverity)
-        }
-
-        val tips = ArrayList<String>()
-        if (s.fpsSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_fps)
-        if (s.lossSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_loss)
-        if (s.rttSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_rtt)
-        if (s.decodeSeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_decode)
-        if (s.batterySeverity != PerfSeverity.OK) tips += activity.getString(R.string.perf_diag_tip_battery)
-        if (tips.isEmpty()) tips += activity.getString(R.string.perf_diag_all_good)
-        tips.forEach {
-            blocks += SheetBlock.Gap
-            blocks += SheetBlock.Paragraph(it)
-        }
-        blocks += SheetBlock.Tip(activity.getString(R.string.perf_diag_footer))
-
-        // 图标就是 HUD 上那枚月相徽标，光圈颜色同为整体状态；月相彩蛋从左侧按钮继续可达
-        showSheet(
-            activity.getString(R.string.perf_diag_title),
-            blocks,
-            PerfHudTarget.DIAGNOSIS,
-            icon = s.moonIcon,
-            subtitle = buildHudStrings().mood(s.mood),
-            extraActions = listOf(
-                PerfHudSheet.Action(activity.getString(R.string.perf_diag_moon_button, s.moonIcon)) { showMoonPhaseInfo() }
-            )
-        )
     }
 
     private fun dp(value: Float): Int = TypedValue.applyDimension(
