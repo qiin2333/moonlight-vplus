@@ -554,7 +554,6 @@
     <string name="wheel_alignment_title">對齊方式</string>
     <string name="wheel_alignment_center">分區中線朝上</string>
     <string name="wheel_alignment_edge">分區邊線朝上</string>
-    <string name="setting_audio_haptics_card_enabled">音訊振動卡片：開啟</string>
     <string name="game_menu_tab_audio_haptics">音訊振動 Audio Haptics</string>
     <string name="game_menu_audio_haptics_reset">恢復音訊振動預設調節</string>
     <string name="game_menu_audio_haptics_pending_restart">已儲存 · 下次串流生效</string>
@@ -1096,6 +1095,11 @@
     <string name="display_native_resolution_description">跟隨目標顯示器 · %1$s</string>
     <string name="display_choice_unavailable">此裝置暫不支援</string>
     <string name="display_custom_resolution_action">管理解析度…</string>
+    <string name="display_custom_frame_rate_action">編輯常用影格率…</string>
+    <string name="title_custom_frame_rates">常用影格率</string>
+    <string name="custom_frame_rate_hint">常用影格率只影響遊戲選單的顯示，不會改變目前串流影格率；設定頁始終保留完整清單。</string>
+    <string name="custom_frame_rate_add_favorite">加入常用</string>
+    <string name="frame_rate_show_all">全部影格率…</string>
     <string name="title_float_ball_settings">懸浮球</string>
     <string name="float_ball_appearance">懸浮顯示</string>
     <string name="float_ball_gestures">手勢操作</string>

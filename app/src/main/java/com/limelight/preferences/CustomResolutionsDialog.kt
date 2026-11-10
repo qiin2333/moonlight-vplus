@@ -214,7 +214,7 @@ object CustomResolutionsDialog {
         return dialog
     }
 
-    private fun applyDialogWidth(dialog: Dialog, context: Context) {
+    internal fun applyDialogWidth(dialog: Dialog, context: Context) {
         val configuration = context.resources.configuration
         val density = context.resources.displayMetrics.density
         val maxWidthDp = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 720 else 440
@@ -285,7 +285,7 @@ object CustomResolutionsDialog {
         presets += Resolution(evenWidth, evenHeight)
     }
 
-    private fun defaultDialogAxisPairs(event: MotionEvent): List<Pair<Float, Float>> = listOf(
+    internal fun defaultDialogAxisPairs(event: MotionEvent): List<Pair<Float, Float>> = listOf(
         event.getAxisValue(MotionEvent.AXIS_HAT_X) to event.getAxisValue(MotionEvent.AXIS_HAT_Y),
         event.getAxisValue(MotionEvent.AXIS_X) to event.getAxisValue(MotionEvent.AXIS_Y),
         event.getAxisValue(MotionEvent.AXIS_Z) to event.getAxisValue(MotionEvent.AXIS_RZ)

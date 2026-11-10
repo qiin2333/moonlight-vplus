@@ -516,15 +516,15 @@
     <string name="toast_touch_mode_trackpad_on">Modo panel táctil habilitado</string>
     <string name="width_hint">ej. 1920</string>
 
-    <string name="title_screen_combination_mode">Configuración de combinación de pantallas</string>
+    <string name="title_screen_combination_mode">Combinación de pantallas</string>
     <string name="summary_screen_combination_mode">Control de pantallas de Foundation Sunshine</string>
     <string name="screen_combination_mode_dialog_subtitle">Se aplica al control de pantallas de Foundation Sunshine</string>
     <string name="screen_mode_host_default">Seguir host</string>
-    <string name="screen_mode_no_operation">Modo sin operación</string>
-    <string name="screen_mode_auto_activate">Modo de activación</string>
-    <string name="screen_mode_primary_streaming">Modo de transmisión principal</string>
-    <string name="screen_mode_secondary_streaming">Modo de transmisión secundaria</string>
-    <string name="screen_mode_exclusive_streaming">Modo de transmisión de pantalla exclusiva</string>
+    <string name="screen_mode_no_operation">Sin acción</string>
+    <string name="screen_mode_auto_activate">Activar</string>
+    <string name="screen_mode_primary_streaming">Principal</string>
+    <string name="screen_mode_secondary_streaming">Secundaria</string>
+    <string name="screen_mode_exclusive_streaming">Exclusiva</string>
     <string name="screen_mode_host_default_desc">Usa la configuración del host Sunshine sin sobrescribirla.</string>
     <string name="screen_mode_no_operation_desc">Mantiene la disposición actual de pantallas.</string>
     <string name="screen_mode_auto_activate_desc">Activa la pantalla seleccionada para transmitir.</string>

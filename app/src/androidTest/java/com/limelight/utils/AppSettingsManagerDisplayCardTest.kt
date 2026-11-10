@@ -98,11 +98,7 @@ class AppSettingsManagerDisplayCardTest {
 
             val loaded = manager.getAppLastSettings(COMPUTER_UUID, app)
             assertEquals(visible, loaded?.showWaveformHapticsCard)
-            assertEquals(
-                visible,
-                manager.getSettingsSummary(COMPUTER_UUID, app)
-                    .contains(context.getString(R.string.waveform_card_title))
-            )
+            assertEquals(visible, context.getString(R.string.app_last_settings_card_waveform) in summaryCards())
 
             val intent = Intent()
             AppSettingsManager.addLastSettingsToIntent(intent, loaded)
@@ -133,8 +129,14 @@ class AppSettingsManagerDisplayCardTest {
     }
 
     private fun assertSummaryVisibility(visible: Boolean) {
-        val displayCardLabel = context.getString(R.string.game_menu_display_settings)
-        assertEquals(visible, manager.getSettingsSummary(COMPUTER_UUID, app).contains(displayCardLabel))
+        val displayCardLabel = context.getString(R.string.app_last_settings_card_display)
+        assertEquals(visible, displayCardLabel in summaryCards())
+    }
+
+    private fun summaryCards(): List<String> {
+        val summary = requireNotNull(manager.getLastSettingsSummary(COMPUTER_UUID, app))
+        val cardsLabel = context.getString(R.string.app_last_settings_row_cards)
+        return summary.rows.first { (label, _) -> label == cardsLabel }.second.split('\u2002')
     }
 
     private fun setGlobalDisplayCardVisibility(visible: Boolean) {

@@ -48,7 +48,8 @@ internal class AuthoredHapticsRenderer {
         var peak = 0f
         var rms = 0f
         var attack = 0f
-        for (lane in arrayOf(frame.left, frame.right)) {
+        for (index in 0..1) {
+            val lane = if (index == 0) frame.left else frame.right
             val level = normalizeAmplitude(lane.rms)
             val ratio = normalizeAmplitude(lane.lowBandRatio)
             low = maxOf(low, level * sqrt(ratio))

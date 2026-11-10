@@ -1073,25 +1073,33 @@
 
     <!-- App Last Settings strings -->
     <string name="app_last_settings_title">上一次设置</string>
-    <string name="app_last_settings_none">无上一次设置</string>
-    <string name="app_last_settings_use_checkbox">使用上一次设置</string>
-    <string name="app_last_settings_apply_success">已应用上一次设置</string>
     <string name="app_last_settings_start_with_last">使用上一次设置启动</string>
+    <string name="app_last_settings_reuse">沿用</string>
+    <string name="app_last_settings_reuse_description">启动时沿用上一次设置</string>
+    <string name="app_last_settings_pill_description">上一次设置，%1$s，%2$s</string>
+    <string name="app_last_settings_expand">展开详情</string>
+    <string name="app_last_settings_collapse">收起详情</string>
+    <string name="app_last_settings_row_video">视频</string>
+    <string name="app_last_settings_row_encoding">编码</string>
+    <string name="app_last_settings_row_audio">音频</string>
+    <string name="app_last_settings_row_input">操作</string>
+    <string name="app_last_settings_row_cards">菜单卡片</string>
+    <string name="app_last_settings_hdr_on">HDR 已开启</string>
+    <string name="app_last_settings_hdr_off">HDR 已关闭</string>
+    <string name="app_last_settings_mic_on">麦克风已开启\u2002%1$d kbps</string>
+    <string name="app_last_settings_mic_off">麦克风已关闭</string>
+    <string name="app_last_settings_native_mouse_on">原生鼠标</string>
+    <string name="app_last_settings_cards_none">未开启卡片</string>
+    <string name="app_last_settings_scale">缩放 %1$d%%</string>
+    <string name="app_last_settings_card_bitrate">码率</string>
+    <string name="app_last_settings_card_display">显示设置</string>
+    <string name="app_last_settings_card_audio_haptics">音频振动</string>
+    <string name="app_last_settings_card_gyro">陀螺仪</string>
+    <string name="app_last_settings_card_quick_key">特殊按键</string>
+    <string name="app_last_settings_card_waveform">波形触感</string>
 
     <!-- Setting detail strings -->
-    <string name="setting_resolution">分辨率：%1$dx%2$d</string>
-    <string name="setting_fps">帧率：%1$dfps</string>
-    <string name="setting_bitrate">码率：%1$dkbps</string>
-    <string name="setting_scale">缩放：%1$d%%</string>
-    <string name="setting_format">视频编码：%1$s</string>
-    <string name="setting_hdr_enabled">HDR：开启</string>
-    <string name="setting_mic_enabled">麦克风：%1$dkbps</string>
-    <string name="setting_native_mouse_enabled">原生鼠标：开启</string>
     <string name="setting_gyro_sensitivity">陀螺仪：%1$.1fx</string>
-    <string name="setting_bitrate_card_enabled">码率卡片：开启</string>
-    <string name="setting_audio_haptics_card_enabled">音频振动卡片：开启</string>
-    <string name="setting_gyro_card_enabled">陀螺仪卡片：开启</string>
-    <string name="setting_QuickKey_card_enabled">特殊按键卡片：开启</string>
 
     <!-- Time format strings -->
     <string name="time_just_now">刚刚</string>
@@ -1146,15 +1154,15 @@
     <string name="suffix_seekbar_output_buffer_queue_limit">帧</string>
 
     <!-- 屏幕组合模式 -->
-    <string name="title_screen_combination_mode">主机显示器排列</string>
+    <string name="title_screen_combination_mode">屏幕组合</string>
     <string name="summary_screen_combination_mode">选择 Foundation Sunshine 如何排列或组合主机显示器，需要兼容的 Foundation Sunshine 主机。</string>
     <string name="screen_combination_mode_dialog_subtitle">Sunshine 基地适用</string>
     <string name="screen_mode_host_default">跟随主机</string>
-    <string name="screen_mode_no_operation">无操作模式</string>
+    <string name="screen_mode_no_operation">无操作</string>
     <string name="screen_mode_auto_activate">激活模式</string>
-    <string name="screen_mode_primary_streaming">主屏串流模式</string>
-    <string name="screen_mode_secondary_streaming">副屏串流模式</string>
-    <string name="screen_mode_exclusive_streaming">仅启用指定显示器模式</string>
+    <string name="screen_mode_primary_streaming">主屏串流</string>
+    <string name="screen_mode_secondary_streaming">副屏串流</string>
+    <string name="screen_mode_exclusive_streaming">独占显示</string>
     <string name="screen_mode_host_default_desc">使用 Sunshine 主机端配置，不覆盖屏幕组合设置。</string>
     <string name="screen_mode_no_operation_desc">保持当前屏幕布局，不调整显示器拓扑。</string>
     <string name="screen_mode_auto_activate_desc">自动激活指定显示器用于串流。</string>
@@ -1262,14 +1270,7 @@
     <string name="appview_background_mode_title">背景</string>
     <string name="appview_quick_settings_title">快速设置</string>
     <string name="appview_full_settings">完整设置</string>
-    <string name="appview_screen_combination_title">屏幕组合</string>
     <string name="appview_open_screen_combination_picker">打开屏幕组合选择器</string>
-    <string name="appview_screen_mode_host_short">跟随主机</string>
-    <string name="appview_screen_mode_noop_short">无操作</string>
-    <string name="appview_screen_mode_activate_short">激活模式</string>
-    <string name="appview_screen_mode_primary_short">主屏串流</string>
-    <string name="appview_screen_mode_secondary_short">副屏串流</string>
-    <string name="appview_screen_mode_exclusive_short">独占显示</string>
     <string name="appview_display_selection_virtual">虚拟显示器</string>
     <string name="appview_background_mode_artwork">应用封面</string>
     <string name="appview_background_mode_acrylic">亚克力</string>
@@ -2323,6 +2324,11 @@
     <string name="display_native_resolution_description">跟随目标显示器 · %1$s</string>
     <string name="display_choice_unavailable">此设备暂不支持</string>
     <string name="display_custom_resolution_action">管理分辨率…</string>
+    <string name="display_custom_frame_rate_action">编辑常用帧率…</string>
+    <string name="title_custom_frame_rates">常用帧率</string>
+    <string name="custom_frame_rate_hint">常用帧率只影响游戏菜单的展示，不会改变当前串流帧率；设置页始终保留完整列表。</string>
+    <string name="custom_frame_rate_add_favorite">加入常用</string>
+    <string name="frame_rate_show_all">全部帧率…</string>
     <string name="title_float_ball_settings">悬浮球</string>
     <string name="float_ball_appearance">悬浮显示</string>
     <string name="float_ball_gestures">手势操作</string>

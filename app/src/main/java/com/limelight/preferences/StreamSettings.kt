@@ -1302,6 +1302,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         private var developerForegroundPollRunning = false
         private var developerDeviceCodeDialog: AlertDialog? = null
         private var customResolutionsDialog: android.app.Dialog? = null
+        private var customFrameRatesDialog: android.app.Dialog? = null
         private var settingsChoiceDialog: android.app.Dialog? = null
         private var settingsChoiceGeneration = 0
         private var settingsChoiceViewDestroyed = false
@@ -1423,6 +1424,42 @@ class StreamSettings : ThemedAppCompatActivity() {
                 choiceValues,
                 saved
             )
+            pref.setAction(getString(R.string.display_custom_frame_rate_action))
+        }
+
+        private fun openCustomFrameRatesEditor(pref: DisplayChoicePreference, restoreHardwareFocus: Boolean) {
+            val context = requireContext()
+            val saved = savedSelection(pref, PreferenceConfiguration.DEFAULT_FPS)
+            val favorites = CustomFrameRatesStore.loadFavorites(context)
+            val allFrameRates = DisplayChoiceLists.frameRateValues(
+                resources.getStringArray(R.array.fps_values).toList(),
+                displayLimits().maxRefreshRate,
+                listOf(saved)
+            )
+            customFrameRatesDialog = CustomFrameRatesDialog.show(
+                context,
+                frameRates = allFrameRates,
+                initialSelected = favorites?.takeIf { it.isNotEmpty() } ?: allFrameRates.toSet(),
+                onCommit = { selected ->
+                    // 全选或全不选都等同于未配置(清除),游戏菜单展示全部
+                    val toSave = if (selected.isEmpty() || allFrameRates.all { it in selected }) null else selected
+                    CustomFrameRatesStore.saveFavorites(context, toSave)
+                },
+                requestInitialFocus = restoreHardwareFocus,
+                onClosed = {
+                    customFrameRatesDialog = null
+                    if (isAdded && !settingsChoiceViewDestroyed) {
+                        replaceSavedFrameRateEntries()
+                        visibilityController.refreshSearch()
+                        refreshSearchPresentation()
+                        listView?.post {
+                            if (isAdded && !settingsChoiceViewDestroyed && findAdapterPositionForPreference(pref) >= 0) {
+                                showListChoiceSheet(pref, MANAGE_DISPLAY_RESOLUTIONS_ACTION, restoreHardwareFocus)
+                            }
+                        }
+                    }
+                }
+            )
         }
 
         private fun showListChoiceSheet(
@@ -1475,7 +1512,11 @@ class StreamSettings : ThemedAppCompatActivity() {
                     onAction = { action ->
                         if (!settingsChoiceViewDestroyed) {
                             if (action.id == MANAGE_DISPLAY_RESOLUTIONS_ACTION && displayPref != null) {
-                                openCustomResolutionsEditor(displayPref, hasHardwareInput())
+                                if (pref.key == PreferenceConfiguration.FPS_PREF_STRING) {
+                                    openCustomFrameRatesEditor(displayPref, hasHardwareInput())
+                                } else {
+                                    openCustomResolutionsEditor(displayPref, hasHardwareInput())
+                                }
                             } else {
                                 values.getOrNull(action.id)?.let { value ->
                                     if (displayPref != null) {
@@ -1574,7 +1615,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             val recycler = listView ?: return
             recycler.post {
                 if (!isAdded || settingsChoiceViewDestroyed || generation != settingsChoiceGeneration ||
-                    settingsChoiceDialog != null || customResolutionsDialog != null) return@post
+                    settingsChoiceDialog != null || customResolutionsDialog != null ||
+                    customFrameRatesDialog != null) return@post
                 val position = findAdapterPositionForPreference(pref)
                 if (position < 0) return@post
                 // The row normally remains visible under the sheet; keep its scroll offset.
@@ -2765,6 +2807,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             configSyncSnapshotHandler.removeCallbacks(configSyncSnapshotRunnable)
             customResolutionsDialog?.dismiss()
             customResolutionsDialog = null
+            customFrameRatesDialog?.dismiss()
+            customFrameRatesDialog = null
             cachedDisplayLimits = null
             // 注销 adapter observer，避免泄漏
             val obs = adapterDataObserver

@@ -10,10 +10,12 @@ class RumbleOutputSlotTest {
 
     private class ManualScheduler {
         var nowMs = 0L
+        var posts = 0
         private val queue = mutableListOf<Pair<Runnable, Long>>()
         val dispatched = mutableListOf<Int>()
 
         fun post(callback: Runnable, delayMs: Long) {
+            posts++
             queue += callback to (nowMs + delayMs)
         }
 
@@ -114,6 +116,41 @@ class RumbleOutputSlotTest {
         slot.submit(Frame(5))
         scheduler.advance(33)
 
+        assertEquals(listOf(5), scheduler.dispatched)
+    }
+
+    @Test
+    fun pacedUpdatesShareOneQueuedCallback() {
+        val scheduler = ManualScheduler()
+        val slot = slot(scheduler)
+
+        slot.submit(Frame(5))
+        scheduler.advance(0)
+        val postsAfterStart = scheduler.posts
+        for (amplitude in 6..15) {
+            scheduler.advance(2)
+            slot.submit(Frame(amplitude))
+        }
+        assertEquals(postsAfterStart + 1, scheduler.posts)
+        scheduler.advance(33)
+
+        assertEquals(listOf(5, 15), scheduler.dispatched)
+    }
+
+    @Test
+    fun resubmittingTheWrittenValueSchedulesNothing() {
+        val scheduler = ManualScheduler()
+        val slot = slot(scheduler)
+
+        slot.submit(Frame(5))
+        scheduler.advance(0)
+        val postsAfterStart = scheduler.posts
+        scheduler.advance(2)
+        slot.submit(Frame(5))
+        slot.submit(Frame(5))
+
+        assertEquals(postsAfterStart, scheduler.posts)
+        scheduler.advance(100)
         assertEquals(listOf(5), scheduler.dispatched)
     }
 
