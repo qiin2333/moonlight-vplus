@@ -668,7 +668,7 @@
     <string name="title_enable_host_cadence_precise_sync">Плавность точной синхронизации</string>
     <string name="summary_enable_host_cadence_precise_sync">Уменьшает повторяющиеся микрорывки в стабильной сети, особенно при 90/120 FPS. Может добавить 1–3 мс задержки.</string>
     <string name="title_perf_overlay_orientation">Вид статистики</string>
-    <string name="summary_perf_overlay_orientation">Горизонтальная строка или вертикальный столбец.</string>
+    <string name="summary_perf_overlay_orientation">Классика: строка или столбец. HUD: только для плавающего стиля «Стандарт».</string>
     <string name="title_perf_overlay_clock_format">Формат часов</string>
     <string name="summary_perf_overlay_clock_format">Сначала включите «Часы» в показателях статистики.</string>
     <string name="perf_overlay_clock_format_system_minutes">Системный формат, часы и минуты</string>
@@ -678,7 +678,7 @@
     <string name="perf_overlay_clock_format_12_minutes">12-часовой формат, часы и минуты</string>
     <string name="perf_overlay_clock_format_12_seconds">12-часовой формат, включая секунды</string>
     <string name="title_perf_overlay_position">Положение статистики</string>
-    <string name="summary_perf_overlay_position">Строка сверху/снизу или столбец в углу экрана.</string>
+    <string name="summary_perf_overlay_position">Начальное положение до перетаскивания. Классика: сверху/снизу или в углу. В портретной ориентации HUD встаёт под видео, если хватает места.</string>
     <string name="title_perf_overlay_display_items">Показатели статистики</string>
     <string name="summary_perf_overlay_display_items">Выберите показатели видео, декодера, сети, ПК и устройства.</string>
     <string name="title_perf_overlay_bg_opacity">Непрозрачность фона статистики</string>
@@ -980,7 +980,7 @@
     <string name="tip_hdr_colors">💡 Подберите разрешение для баланса качества и производительности.</string>
     <string name="tip_touch_modes">💡 Меняйте сенсорный режим в игровом меню. Улучшенный мультитач подходит для мобильных игр, тачпад — для работы.</string>
     <string name="tip_custom_keys">💡 Добавляйте свои сочетания, например Ctrl+Shift+Esc для быстрого вызова диспетчера задач.</string>
-    <string name="tip_performance_overlay">💡 Статистику можно перетаскивать. Двойное нажатие меняет ориентацию, нажатие показателя открывает пояснение.</string>
+    <string name="tip_performance_overlay">💡 Нажми на HUD — переключишь Мини / Стандарт / Подробно, двойное нажатие меняет ориентацию, долгое на показателе открывает пояснение, а ещё его можно таскать~ Не справишься? Слабачок ♡</string>
     <string name="tip_audio_config">💡 Dolby Atmos или DTS:X дают объёмный звук. Для лучшего эффекта включите системный эквалайзер.</string>
     <string name="tip_external_display">💡 В настройках можно направить трансляцию на подключённый внешний экран.</string>
     <string name="tip_virtual_display">💡 Виртуальный экран создаёт отдельное рабочее пространство и удобен для многозадачности.</string>
@@ -2156,4 +2156,68 @@
     <string name="summary_ds5_single_tap_to_click">Выключено: двойное касание выполняет щелчок, удержание второго касания удерживает кнопку. Включено: одно касание выполняет щелчок. Сильное нажатие работает в обоих режимах.</string>
     <string name="title_mic_test">Тест микрофона</string>
     <string name="summary_mic_test">Захватывает звук локального микрофона и показывает его форму волны без запуска трансляции.</string>
+    <string name="tip_performance_overlay_classic">💡 Статистику можно перетащить куда угодно, двойное нажатие меняет ориентацию, нажатие на показатель открывает пояснение~ Я всё так упростила, скажи спасибо, слабачок ♡</string>
+    <string name="title_perf_overlay_style">Стиль статистики</string>
+    <string name="perf_overlay_style_mini">Мини</string>
+    <string name="perf_overlay_style_standard">Стандарт</string>
+    <string name="perf_overlay_style_detailed">Подробно</string>
+    <string name="perf_overlay_style_classic">Классика</string>
+    <string name="game_menu_perf_overlay_style">Стиль статистики</string>
+    <string name="perf_hud_style_changed">Теперь «%1$s», слабачок~</string>
+    <string name="perf_hud_long_press_hint">Зажми показатель, чтобы увидеть пояснение, слабачок~</string>
+    <string name="perf_hud_hint">💡 Урок стриминга: нажатие — детализация, двойное — ориентация, долгое на показателе — пояснение, перетаскивание — перемещение~ Забудешь — значит слабачок, мяу ♡</string>
+    <string name="perf_hud_dock_orientation_hint">Под видео ориентации нет, слабачок~ Поверни экран горизонтально, потом жми дважды ♡</string>
+    <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
+    <string name="perf_hud_label_latency">Задержка</string>
+    <string name="perf_hud_label_latency_chain">Цепочка задержки (оценка)</string>
+    <string name="perf_hud_label_network">Сеть</string>
+    <string name="perf_hud_label_host">ПК</string>
+    <string name="perf_hud_label_decode">Декод.</string>
+    <string name="perf_hud_label_render">Рендер</string>
+    <string name="perf_hud_label_loss">Потери</string>
+    <string name="perf_hud_label_bandwidth">Канал</string>
+    <string name="perf_hud_label_battery">Батарея</string>
+    <string name="perf_hud_label_decoder">Декодер</string>
+    <string name="perf_hud_label_resolution">Видео</string>
+    <string name="perf_hud_label_clock">Время</string>
+    <string name="perf_hud_label_fps_history">История FPS</string>
+    <string name="perf_hud_drain_per_hour">%.0f%%/ч</string>
+    <string name="perf_hud_mood_warming_up">🌙 Разогрев, подожди, слабачок~</string>
+    <string name="perf_hud_mood_smooth">Полные кадры, повезло тебе, слабачок ♡</string>
+    <string name="perf_hud_mood_full_moon">Полнолуние, полные кадры ♡</string>
+    <string name="perf_hud_mood_hot_decode">🥵 Декодер плавится, слабачок~</string>
+    <string name="perf_hud_mood_lossy">📶 Пакеты теряются, слабенькая сеть~</string>
+    <string name="perf_hud_mood_fps_drop">Кадры проседают, мяу~ слабачок</string>
+    <string name="perf_hud_mood_laggy">🐢 Задержка как у черепахи, слабачок~</string>
+    <string name="perf_hud_mood_low_battery">🔋 Почти разряжен, иди заряжайся, слабачок ♡</string>
+    <string name="perf_latency_chain_title">⛓️ Цепочка задержки (оценка)</string>
+    <string name="perf_latency_chain_content">Сеть (RTT / 2): %1$s\nОбработка на ПК: %2$s\nДекодирование: %3$s\nОтрисовка: %4$s\n────────\nИтого ≈ %5$s\n\nЭто просто сумма этапов, а не измеренная задержка «от кнопки до экрана», так что не принимай всерьёз, слабачок~ Сетевой этап — половина времени приёма-передачи.\n\n🥵 появляется, когда декодирование занимает 15 мс и больше: снизь разрешение или смени кодек.\n🧋 значит, ПК не прислал время обработки; ПК с поддержкой Ver.V+ его заполнит ♡</string>
+    <string name="perf_latency_chain_no_host">🧋 нет данных</string>
+    <string name="perf_diag_title">🍥 Осмотр трансляции</string>
+    <string name="perf_diag_line_fps">Частота кадров: %1$s / %2$d FPS</string>
+    <string name="perf_diag_line_loss">Потери пакетов: %1$s</string>
+    <string name="perf_diag_line_rtt">RTT сети: %1$d мс (±%2$d)</string>
+    <string name="perf_diag_line_decode">Декодирование: %1$s</string>
+    <string name="perf_diag_line_battery">Батарея: %1$d%%</string>
+    <string name="perf_diag_tip_fps">Кадров меньше цели, слабачок~ Снизь разрешение или частоту кадров и проверь, не проседает ли сама игра на ПК.</string>
+    <string name="perf_diag_tip_loss">Столько потерь, слабенькая сеть~ Используй Wi‑Fi 5 ГГц или кабель, подойди ближе к роутеру или снизь битрейт.</string>
+    <string name="perf_diag_tip_rtt">Задержка как у черепахи 🐢, слабачок~ Избегай 2,4 ГГц и репитеров; для удалённой игры выбери маршрут поближе.</string>
+    <string name="perf_diag_tip_decode">🥵 Декодер задыхается, слабенькое устройство~ Переключись на HEVC/AV1 или снизь разрешение и закрой фоновые приложения.</string>
+    <string name="perf_diag_tip_battery">🔋 Батарея почти на нуле, скорее покорми её зарядкой, слабачок ♡</string>
+    <string name="perf_diag_all_good">Всё в порядке, сегодня тебе повезло, слабачок. Играй спокойно (๑•̀ㅂ•́)و✧</string>
+    <string name="perf_diag_footer">💡 Урок стриминга: нажатие — детализация, двойное — ориентация, долгое на показателе — пояснение~ Не запомнишь — слабачок ♡</string>
+    <string name="perf_diag_moon_button">%1$s Луна сегодня</string>
+    <string name="perf_hud_fps_row_rx">Rx Приём</string>
+    <string name="perf_hud_fps_row_rd">Rd Отрисовка</string>
+    <string name="perf_hud_fps_row_fg">FG Генерация</string>
+    <string name="perf_hud_fps_verdict_ok">И Rx, и Rd на максимуме. Повезло тебе, слабачок ♡</string>
+    <string name="perf_hud_fps_verdict_remote">Rx не дотягивает, значит ПК или сеть присылают мало кадров. Твоё устройство тут ни при чём~</string>
+    <string name="perf_hud_fps_verdict_local">Кадры приходят, а Rd проседает, значит устройство не успевает декодировать и рисовать. Слабенькое устройство 🥵</string>
+    <string name="perf_hud_fps_verdict_surplus">ПК присылает больше кадров, чем показывается. Лишние пропускаются, картинка в порядке, не волнуйся, слабачок~</string>
+    <string name="perf_hud_fps_info" formatted="false">Группа частоты кадров на HUD — это Rd, Rx и FG. Мини-капсула и большая цифра показывают Rd, то есть кадры, реально выведенные на экран.\n\nКак читать строки выше:\n• Rx Приём: кадры, присланные ПК. Серый, когда всё в порядке, жёлтый или красный, если ПК не дотягивает\n• Rd Отрисовка: кадры, показанные после декодирования\n• FG Генерация: появляется только при включённой генерации кадров\n\nЦвета Rd от цели:\n• Зелёный: от 95%\n• Жёлтый: 80–95%\n• Красный: ниже 80%\n\n💡 Урок стриминга: низкий Rx — смотри ПК и сеть; полный Rx, но низкий Rd — локальное декодирование~</string>
+    <string name="perf_hud_network_latency_info">RTT на HUD — время пакета туда и обратно между ПК и устройством. После ± идёт разброс, чем меньше, тем стабильнее.\n\nЦвета:\n• Зелёный: до 40 мс\n• Жёлтый: 40–80 мс\n• Красный: от 80 мс, настроение сменится на 🐢\n\nКанал:\n• Показан только в подробном режиме и в закреплённой карточке\n• Текущая реальная скорость видеопотока\n\n💡 Урок стриминга: в цепочке задержки сетевой этап — половина RTT~</string>
+    <string name="perf_hud_decode_latency_info">Декод. на HUD — сколько аппаратный декодер устройства тратит на один кадр.\n\nЦвета:\n• Зелёный: быстрее одного кадра (около 8,3 мс при 120 FPS)\n• Жёлтый: дольше кадра, но меньше 15 мс, кадры начинают запаздывать\n• Красный: от 15 мс, рядом появится 🥵\n\nФакторы:\n• Разрешение и кодек, HEVC и AV1 обычно легче\n• Нагрев устройства и фоновая нагрузка\n\n💡 Урок стриминга: если декодирование меньше 10 мс, не трогай его, смотри на частоту кадров и качество~</string>
+    <string name="perf_hud_host_latency_info">ПК на HUD — время, которое ПК тратит на один кадр (захват и кодирование), по данным самого ПК.\n\nОриентиры:\n• До 5 мс: ПК отдыхает\n• 5–10 мс: норма\n• Больше 10 мс: ПК занят, проверь игру или фоновые программы\n\nЧто значит 🧋:\n• Показывается, когда ПК не прислал эти данные, так что выпей чаю с молоком\n• ПК с поддержкой Ver.V+ его заполнит ♡</string>
+    <string name="perf_hud_packet_loss_info" formatted="false">Потери на HUD — доля видеопакетов, потерянных сетью за последнее время.\n\nЦвета:\n• Зелёный: до 1%\n• Жёлтый: 1–5%, редкие артефакты или подтормаживания\n• Красный: от 5%, настроение сменится на 📶\n\nФакторы:\n• Сигнал и диапазон Wi‑Fi, 2,4 ГГц теряет больше всего\n• Производительность роутера\n• Битрейт выше, чем тянет сеть\n\n💡 Урок стриминга: долгое нажатие на луну запустит проверку стрима, и я подскажу, что чинить, слабачок ♡</string>
+    <string name="perf_hud_one_percent_low_info" formatted="false">1%L на HUD — частота самых медленных 1% кадров. Ловит микрофризы, которых не видно по среднему FPS.\n\nКак считается:\n• Записывается интервал отрисовки каждого кадра\n• Берётся 99-й перцентиль, то есть самые медленные 1%\n• Перевод в FPS: 1000 ÷ этот интервал\n\nЦвета от цели:\n• Зелёный: от 85%\n• Жёлтый: 65–85%, редкие подтормаживания\n• Красный: ниже 65%, заметные фризы\n\n💡 Урок стриминга: средний FPS полный, а 1%L низкий — обычно это скачки сети или заминки на ПК~</string>
 </resources>

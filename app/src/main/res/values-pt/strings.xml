@@ -506,7 +506,7 @@
     <string name="tip_hdr_colors">💡 Dica: Ajustar a resolução pode equilibrar qualidade e desempenho, encontre as configurações perfeitas~</string>
     <string name="tip_touch_modes">💡 Dica: Você pode trocar os modos de toque no menu do jogo. Toque multiponto aprimorado é adequado para jogos móveis, modo trackpad é ótimo para trabalho de escritório.</string>
     <string name="tip_custom_keys">💡 Dica: Você pode adicionar combinações de teclas personalizadas, como Ctrl+Shift+Esc para abrir rapidamente o Gerenciador de Tarefas~</string>
-    <string name="tip_performance_overlay">💡 Dica: O overlay de desempenho pode ser arrastado para qualquer posição, toque duplo para alternar entre layouts horizontal e vertical~</string>
+    <string name="tip_performance_overlay">💡 Dica: Toque no HUD de desempenho para alternar entre Mini / Padrão / Detalhado, toque duplo para alternar entre horizontal e vertical, mantenha pressionada uma métrica para ver a explicação e arraste para qualquer posição~</string>
     <string name="tip_audio_config">💡 Dica: Ativar Dolby Atmos ou DTS:X proporciona uma experiência de áudio mais imersiva~</string>
     <string name="tip_external_display">💡 Dica: Ao conectar um display externo, você pode escolher exibir o stream no display externo nas configurações~</string>
     <string name="tip_virtual_display">💡 Dica: A função de display virtual pode criar espaços de exibição independentes, especialmente adequada para cenários de multitarefa~</string>

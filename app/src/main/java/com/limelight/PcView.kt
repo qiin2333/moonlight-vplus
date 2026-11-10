@@ -48,6 +48,7 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.nvstream.http.PairingManager
 import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.wol.WakeOnLanSender
+import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.AddComputerManually
 import com.limelight.preferences.BackgroundSource
 import com.limelight.utils.background.PipwImages
@@ -1796,7 +1797,8 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             val perfOverlayLocked: Boolean,
             val perfOverlayBgOpacity: Int,
             val perfOverlayOrientation: PreferenceConfiguration.PerfOverlayOrientation,
-            val perfOverlayPosition: PreferenceConfiguration.PerfOverlayPosition
+            val perfOverlayPosition: PreferenceConfiguration.PerfOverlayPosition,
+            val perfOverlayStyle: PerfHudDensity
     ) {
         fun applyTo(prefs: PreferenceConfiguration): PreferenceConfiguration {
             prefs.width = width
@@ -1822,6 +1824,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             prefs.perfOverlayBgOpacity = perfOverlayBgOpacity
             prefs.perfOverlayOrientation = perfOverlayOrientation
             prefs.perfOverlayPosition = perfOverlayPosition
+            prefs.perfOverlayStyle = perfOverlayStyle
             return prefs
         }
 
@@ -1850,6 +1853,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 put("perfOverlayBgOpacity", perfOverlayBgOpacity)
                 put("perfOverlayOrientation", perfOverlayOrientation.name)
                 put("perfOverlayPosition", perfOverlayPosition.name)
+                put("perfOverlayStyle", perfOverlayStyle.prefValue)
             }
         }
 
@@ -1878,7 +1882,8 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                         perfOverlayLocked = prefs.perfOverlayLocked,
                         perfOverlayBgOpacity = prefs.perfOverlayBgOpacity,
                         perfOverlayOrientation = prefs.perfOverlayOrientation,
-                        perfOverlayPosition = prefs.perfOverlayPosition)
+                        perfOverlayPosition = prefs.perfOverlayPosition,
+                        perfOverlayStyle = prefs.perfOverlayStyle)
             }
 
             fun fromJson(json: JSONObject, fallback: PreferenceConfiguration): SceneConfiguration {
@@ -1913,7 +1918,12 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                         perfOverlayLocked = json.optBoolean("perfOverlayLocked", fallback.perfOverlayLocked),
                         perfOverlayBgOpacity = json.optInt("perfOverlayBgOpacity", fallback.perfOverlayBgOpacity),
                         perfOverlayOrientation = parseEnum(json.optString("perfOverlayOrientation", fallback.perfOverlayOrientation.name), fallback.perfOverlayOrientation),
-                        perfOverlayPosition = parseEnum(json.optString("perfOverlayPosition", fallback.perfOverlayPosition.name), fallback.perfOverlayPosition))
+                        perfOverlayPosition = parseEnum(json.optString("perfOverlayPosition", fallback.perfOverlayPosition.name), fallback.perfOverlayPosition),
+                        perfOverlayStyle = if (json.has("perfOverlayStyle")) {
+                            PerfHudDensity.fromPreference(json.optString("perfOverlayStyle"))
+                        } else {
+                            fallback.perfOverlayStyle
+                        })
             }
 
             private inline fun <reified T : Enum<T>> parseEnum(value: String, fallback: T): T {

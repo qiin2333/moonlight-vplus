@@ -375,7 +375,8 @@ class ControllerHandler(
     internal val deviceSensorManager: SensorManager?
     private val inputManager: InputManager
     internal val sceManager: SceManager
-    internal val mainThreadHandler: Handler
+    // Initialized at declaration: hapticsCoordinator below reads its looper during construction.
+    internal val mainThreadHandler = Handler(Looper.getMainLooper())
     private val backgroundHandlerThread: HandlerThread
     internal val backgroundThreadHandler: Handler
     internal val motionSender: ControllerMotionSender
@@ -430,7 +431,6 @@ class ControllerHandler(
         deviceVibrator = activityContext.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         deviceSensorManager = activityContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         inputManager = activityContext.getSystemService(Context.INPUT_SERVICE) as InputManager
-        mainThreadHandler = Handler(Looper.getMainLooper())
 
         // Create a HandlerThread to process battery state updates. These can be slow enough
         // that they lead to ANRs if we do them on the main thread.

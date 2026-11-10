@@ -201,6 +201,12 @@
             android:includeFontPadding="false"
             android:gravity="center_vertical" />
 
+        <com.limelight.perfhud.PerfHudView
+            android:id="@+id/perfHud"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <androidx.cardview.widget.CardView
