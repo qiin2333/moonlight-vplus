@@ -1,7 +1,9 @@
 package com.limelight.binding.input.haptics
 
+import android.os.Handler
 import android.os.Looper
 import android.os.Build
+import android.os.Message
 import android.os.SystemClock
 import android.view.MotionEvent
 import com.limelight.LimeLog
@@ -34,6 +36,14 @@ internal class ControllerHapticsCoordinator(
 
     private val mixer = ControllerHapticsMixer()
     private val deviceMixer = ControllerHapticsMixer()
+    // Same main looper and FIFO order, but asynchronous messages are not held behind the UI
+    // traversal sync barrier, which could otherwise consume the 20-30 ms authored playout budget.
+    private val outputHandler = Handler(handler.mainThreadHandler.looper)
+    private val postOutputDelayed: (Runnable, Long) -> Unit = { task, delayMs ->
+        outputHandler.sendMessageDelayed(
+            Message.obtain(outputHandler, task).apply { isAsynchronous = true }, delayMs)
+    }
+    private val removeOutput: (Runnable) -> Unit = outputHandler::removeCallbacks
     private val ds5HapticsBindings = ConcurrentHashMap<Int, NativeHapticsBinding>()
     private val ds5ControlStates = mutableMapOf<Short, Ds5HapticsState>()
     // Absent: no PCM yet; false: only silence observed; true: nonzero content already logged.
@@ -47,10 +57,8 @@ internal class ControllerHapticsCoordinator(
     }
     private val deviceVibrationCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         DeviceVibrationCoordinator(
-            postDelayed = { callback, delayMs ->
-                handler.mainThreadHandler.postDelayed(callback, delayMs)
-            },
-            removeCallback = handler.mainThreadHandler::removeCallbacks,
+            postDelayed = postOutputDelayed,
+            removeCallback = removeOutput,
             vibrateDevice = { amplitude, durationMs ->
                 handler.rumbleManager.vibrateSingleAmplitude(
                     amplitude = amplitude,
@@ -73,8 +81,8 @@ internal class ControllerHapticsCoordinator(
         RumbleOutputRenderer(
             controllerMixer = mixer, deviceMixer = deviceMixer,
             clockMs = SystemClock::elapsedRealtime,
-            postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
-            removeCallbacks = handler.mainThreadHandler::removeCallbacks,
+            postDelayed = postOutputDelayed,
+            removeCallbacks = removeOutput,
             controllerAvailable = ::controllerHasRumble,
             controllerIntervalMs = ::dispatchIntervalMs,
             writeController = { mixed ->
@@ -98,17 +106,15 @@ internal class ControllerHapticsCoordinator(
             renderer = renderer,
             context = ::gameRumbleContext,
             clockMs = SystemClock::elapsedRealtime,
-            postDelayed = { callback, delay -> handler.mainThreadHandler.postDelayed(callback, delay) },
-            removeCallbacks = handler.mainThreadHandler::removeCallbacks
+            postDelayed = postOutputDelayed,
+            removeCallbacks = removeOutput
         )
     }
 
     private val authoredIr by lazy {
         AuthoredIrCoordinator(mixer, renderer, deviceVibrationCoordinator, ::gameRumbleContext,
             { handler.rumbleManager.supportsDeviceTick }, { handler.prefConfig.deviceRumbleStrength },
-            SystemClock::elapsedRealtime,
-            { task, delay -> handler.mainThreadHandler.postDelayed(task, delay); Unit },
-            handler.mainThreadHandler::removeCallbacks, { scheduleNextExpiry() },
+            SystemClock::elapsedRealtime, postOutputDelayed, removeOutput, { scheduleNextExpiry() },
             { !isStoppingOrStopped() })
     }
 
@@ -129,8 +135,11 @@ internal class ControllerHapticsCoordinator(
     private var lastAudioContinuousExpiresAtMs: Long? = null
     @Volatile private var stopping = false
     @Volatile private var stopped = false
+    // Output-thread only: deadline of the queued expiryRunnable, null when none is queued.
+    private var expiryDueAtMs: Long? = null
 
     private val expiryRunnable = Runnable {
+        expiryDueAtMs = null
         if (stopped || stopping || handler.stopped) return@Runnable
         val nowMs = SystemClock.elapsedRealtime()
         mixer.pruneExpired(nowMs).forEach(renderer::queueController)
@@ -517,11 +526,11 @@ internal class ControllerHapticsCoordinator(
         // Bound the UI queue to one runnable and one latest value per player. Always send a
         // zero when direct output takes ownership so stale fallback cannot replay afterward.
         if (!dispatch) return
-        handler.mainThreadHandler.post {
+        postOutputDelayed(Runnable {
             val latest = synchronized(pendingPcm) {
                 pendingPcm.toMap().also { pendingPcm.clear(); pcmDispatchPending = false }
             }
-            if (isStoppingOrStopped()) return@post
+            if (isStoppingOrStopped()) return@Runnable
             val now = SystemClock.elapsedRealtime()
             for ((number, pending) in latest) {
                 if (!outputLifecycle.isCurrent(number, pending.generation) ||
@@ -534,7 +543,7 @@ internal class ControllerHapticsCoordinator(
                     RumbleSource.AUTHORED, plan.device ?: ControllerRumbleState.ZERO, now, pending.expiresAt))
             }
             scheduleNextExpiry(now)
-        }
+        }, 0L)
     }
 
     fun attachWaveformHapticsSink(
@@ -801,21 +810,22 @@ internal class ControllerHapticsCoordinator(
         // channel would double-drive that same actuator, so it must yield — but only while the
         // controller channel actually dispatches. An active DS5 waveform sink suppresses
         // writeController, leaving the borrowed vibrator unwritten and the device channel free.
-        val controllerChannelDispatches = ds5HapticsBindings.values.none {
-            it.controllerNumber == controllerNumber && it.sink.playbackControl?.playbackActive == true
-        }
+        // Evaluated lazily: the binding and borrower scans only matter in this one case.
         val hasDevice = controllerNumber.toInt() == 0 && deviceCapabilities.hasVibrator && !(
-            mode == GameRumbleMode.COORDINATED && hasController && controllerChannelDispatches &&
+            mode == GameRumbleMode.COORDINATED && hasController &&
+                ds5HapticsBindings.values.none {
+                    it.controllerNumber == controllerNumber && it.sink.playbackControl?.playbackActive == true
+                } &&
                 controllerBorrowsDeviceVibrator(controllerNumber)
             )
         return GameRumbleContext(mode, hasController, hasDevice, deviceCapabilities.tier)
     }
 
     private fun runOnOutputThread(action: () -> Unit) {
-        if (Looper.myLooper() == handler.mainThreadHandler.looper) {
+        if (Looper.myLooper() == outputHandler.looper) {
             action()
         } else {
-            handler.mainThreadHandler.post(action)
+            postOutputDelayed(Runnable(action), 0L)
         }
     }
 
@@ -838,19 +848,34 @@ internal class ControllerHapticsCoordinator(
     }
 
     private fun scheduleNextExpiry(nowMs: Long = SystemClock.elapsedRealtime()) {
-        handler.mainThreadHandler.removeCallbacks(expiryRunnable)
-        val nextExpiryMs = listOfNotNull(
-            mixer.nextExpiryAtMs(),
-            deviceMixer.nextExpiryAtMs()
-        ).minOrNull() ?: return
-        handler.mainThreadHandler.postDelayed(
-            expiryRunnable,
-            (nextExpiryMs - nowMs).coerceAtLeast(1L)
-        )
+        val mixerExpiry = mixer.nextExpiryAtMs()
+        val deviceExpiry = deviceMixer.nextExpiryAtMs()
+        val nextExpiryMs = when {
+            mixerExpiry == null -> deviceExpiry
+            deviceExpiry == null -> mixerExpiry
+            else -> minOf(mixerExpiry, deviceExpiry)
+        }
+        if (nextExpiryMs == null) {
+            cancelExpiry()
+            return
+        }
+        val dueAtMs = maxOf(nextExpiryMs, nowMs + 1L)
+        // Authored leases extend every frame. An earlier pending wake is harmless (it prunes
+        // nothing and reschedules), so only move the callback when the deadline gets earlier.
+        val scheduled = expiryDueAtMs
+        if (scheduled != null && scheduled <= dueAtMs) return
+        if (scheduled != null) removeOutput(expiryRunnable)
+        expiryDueAtMs = dueAtMs
+        postOutputDelayed(expiryRunnable, dueAtMs - nowMs)
+    }
+
+    private fun cancelExpiry() {
+        if (expiryDueAtMs != null) removeOutput(expiryRunnable)
+        expiryDueAtMs = null
     }
 
     private fun stopAllNow() {
-        handler.mainThreadHandler.removeCallbacks(expiryRunnable)
+        cancelExpiry()
         authoredIr.stop()
         gamePipeline.stop()
         val controllerNumbers = renderer.stop().toMutableSet()
