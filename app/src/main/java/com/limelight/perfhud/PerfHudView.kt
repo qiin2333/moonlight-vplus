@@ -151,6 +151,9 @@ class PerfHudView @JvmOverloads constructor(
     private var pressX = Float.NaN
     private var pressY = Float.NaN
 
+    /** 按住高亮用的强调色，由 Manager 传入 appAccent。 */
+    var accentColor: Int = PerfHudPalette.ACCENT_FALLBACK
+
     /** 按住 HUD 时把手指下的指标高亮出来，提示长按会打开它的说明。坐标为本 View 坐标。 */
     fun setPressedAt(x: Float, y: Float) {
         pressX = x
@@ -222,9 +225,9 @@ class PerfHudView @JvmOverloads constructor(
         rect.set(h.rect)
         rect.intersect(dp, dp, width - dp, height - dp)
         val r = em * 0.45f
-        fillPaint.color = PerfHudPalette.withAlpha(TXT, 0x22)
+        fillPaint.color = PerfHudPalette.withAlpha(accentColor, 0x2E)
         c.drawRoundRect(rect, r, r, fillPaint)
-        strokePaint.color = PerfHudPalette.withAlpha(TXT, 0x55)
+        strokePaint.color = PerfHudPalette.withAlpha(accentColor, 0xB3)
         strokePaint.strokeWidth = dp
         c.drawRoundRect(rect, r, r, strokePaint)
     }
@@ -329,49 +332,68 @@ class PerfHudView @JvmOverloads constructor(
     /**
      * 横屏顶栏：月相徽标 + 若干分组，每组上面一行小标签、下面一行数值，
      * 组与组之间用整高细线隔开；超宽时整组折到下一行。吸顶时（[stickTop]）只圆下面两个角。
+     * 顶栏压在画面上沿，字号和留白都比其他形态更紧凑。
      */
     private fun renderBar(c: Canvas?, maxW: Float) {
+        val savedLabel = labelPaint.textSize
+        val savedValue = valuePaint.textSize
+        labelPaint.textSize = em * BAR_LABEL_SCALE
+        valuePaint.textSize = em * BAR_VALUE_SCALE
+        try {
+            renderBarCompact(c, maxW)
+        } finally {
+            labelPaint.textSize = savedLabel
+            valuePaint.textSize = savedValue
+        }
+    }
+
+    private fun renderBarCompact(c: Canvas?, maxW: Float) {
         val groups = buildBarGroups()
-        val padX = em * 0.8f
-        val padY = em * 0.5f
-        val gap = em * 1.1f
+        val padX = em * 0.75f
+        val padTop = em * 0.25f
+        val padBottom = em * 0.3f
+        val gap = em * 0.9f
         val labelH = lineHeight(labelPaint)
         val valueH = lineHeight(valuePaint)
-        val innerGap = em * 0.2f
-        val rowH = labelH + innerGap + valueH
-        val rowGap = em * 0.4f
+        val rowH = labelH + valueH
+        val rowGap = em * 0.3f
         val limit = max(maxW - padX, padX + em * 4)
 
-        var top = padY
+        var top = padTop
         var x = drawMoonBadge(c, padX, top, top + rowH)
         var right = x
         var first = true
+        // 当前行在 hits 里的起点：折行后要把最后一行的命中区补到底边
+        var rowHitStart = hits.size
         for (g in groups) {
             val w = groupWidth(g)
-            val spacing = if (first) em * 0.7f else gap
+            val spacing = if (first) em * 0.6f else gap
             if (x + spacing + w > limit && !first) {
                 x = padX
                 top += rowH + rowGap
+                rowHitStart = hits.size
             } else {
                 if (!first && c != null) {
                     val mid = x + spacing / 2
                     strokePaint.color = DIVIDER
                     strokePaint.strokeWidth = dp
-                    c.drawLine(mid, top + em * 0.1f, mid, top + rowH - em * 0.1f, strokePaint)
+                    c.drawLine(mid, top + em * 0.1f, mid, top + rowH - em * 0.05f, strokePaint)
                 }
                 x += spacing
             }
-            val hitTop = top - padY / 2
-            val hitBottom = top + rowH + padY / 2
+            // 命中区：首行上沿放宽到顶边，行与行之间平分行距，最后一行在循环后补到底边
+            val hitTop = if (top == padTop) 0f else top - rowGap / 2
+            val hitBottom = top + rowH + rowGap / 2
             hit(x - gap / 2, hitTop, x + w + gap / 2, hitBottom, g.target)
             drawPieces(c, g.label, x, top, labelH, labelPaint, hitTop, hitBottom)
-            drawPieces(c, g.value, x, top + labelH + innerGap, valueH, valuePaint, hitTop, hitBottom)
+            drawPieces(c, g.value, x, top + labelH, valueH, valuePaint, hitTop, hitBottom)
             x += w
             right = max(right, x)
             first = false
         }
         contentW = right + padX
-        contentH = top + rowH + padY
+        contentH = top + rowH + padBottom
+        for (i in rowHitStart until hits.size) hits[i].rect.bottom = contentH
     }
 
     private sealed class Piece(val gapBefore: Float, val target: PerfHudTarget?) {
@@ -427,7 +449,7 @@ class PerfHudView @JvmOverloads constructor(
                 val color = if (s.onePercentLowSeverity == PerfSeverity.OK) DIM else sevColor(s.onePercentLowSeverity)
                 addColumn(label, value, strings.onePercentLow, low, color, sp, PerfHudTarget.ONE_PERCENT_LOW)
             }
-            if (v.fps) value += Piece.Spark(em * 4f, sp * 1.5f)
+            if (v.fps) value += Piece.Spark(em * 3.2f, sp * 1.5f)
             out += BarGroup(if (v.fps) PerfHudTarget.FPS else PerfHudTarget.ONE_PERCENT_LOW, label, value)
         }
         if (v.latency) {
@@ -436,7 +458,7 @@ class PerfHudView @JvmOverloads constructor(
                 Piece.Text(" ms", labelPaint, DIM)
             )
             if (s.isDecodeHot) value += Piece.Text("🥵", valuePaint, TXT, sp * 0.5f, PerfHudTarget.DECODE)
-            value += Piece.Chain(em * 6f, sp * 1.5f)
+            value += Piece.Chain(em * 4.6f, sp * 1.5f)
             out += BarGroup(PerfHudTarget.LATENCY, listOf(lbl(strings.latency)), value)
         }
         if (v.network) {
@@ -528,7 +550,7 @@ class PerfHudView @JvmOverloads constructor(
                     x += p.w
                 }
                 is Piece.Chain -> {
-                    val barH = em * 0.4f
+                    val barH = em * 0.28f
                     drawChainBar(c, x, top + (lh - barH) / 2, p.w, barH)
                     x += p.w
                 }
@@ -1147,6 +1169,9 @@ class PerfHudView @JvmOverloads constructor(
         private const val RX_LABEL = "Rx"
         private const val FG_LABEL = "FG"
         private const val PANEL_WIDTH_EM = 20f
+        /** 顶栏字号相对 em 的比例：标签 / 数值。 */
+        private const val BAR_LABEL_SCALE = 0.62f
+        private const val BAR_VALUE_SCALE = 0.92f
         private const val UNBOUNDED = 100_000f
 
         private const val BG_RGB = PerfHudPalette.BG_RGB
