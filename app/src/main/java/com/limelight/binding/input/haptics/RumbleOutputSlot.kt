@@ -15,11 +15,22 @@ internal class RumbleOutputSlot<T : Any>(
     private val dispatch: (T) -> Unit
 ) {
     private var pending: T? = null
-    private var runnable: Runnable? = null
+    private var scheduledAtMs: Long? = null
     private var lastWriteMs: Long? = null
     private var lastWritten: T? = null
+    private val runnable = Runnable {
+        scheduledAtMs = null
+        val latest = pending ?: return@Runnable
+        pending = null
+        write(latest)
+    }
 
     fun submit(value: T) {
+        if (value == lastWritten) {
+            // The pending write would be dropped by write()'s dedupe anyway.
+            cancel()
+            return
+        }
         pending = value
         // Compare with what the sink actually received, never flush an obsolete pending value
         // at its falling edge. Stops take priority; starts respect the edge floor.
@@ -29,30 +40,28 @@ internal class RumbleOutputSlot<T : Any>(
             boundary -> edgeFloorMs
             else -> pacingMs()
         }
-        runnable?.let(removeCallbacks)
+        val now = clockMs()
         val delay = lastWriteMs?.let {
-            (interval - (clockMs() - it)).coerceAtLeast(0L)
+            (interval - (now - it)).coerceAtLeast(0L)
         } ?: 0L
-        val scheduled = Runnable {
-            runnable = null
-            val latest = pending ?: return@Runnable
-            pending = null
-            write(latest)
-        }
-        runnable = scheduled
-        postDelayed(scheduled, delay)
+        val dueAtMs = now + delay
+        // Paced updates share one deadline; keep the queued callback instead of reposting it.
+        if (scheduledAtMs == dueAtMs) return
+        if (scheduledAtMs != null) removeCallbacks(runnable)
+        scheduledAtMs = dueAtMs
+        postDelayed(runnable, delay)
     }
 
     fun cancel() {
-        runnable?.let(removeCallbacks)
-        runnable = null
+        if (scheduledAtMs != null) removeCallbacks(runnable)
+        scheduledAtMs = null
         pending = null
     }
 
     /** Source ownership changes must observe the latest genuine ordinary value, even if paced. */
     fun flushPending() {
-        runnable?.let(removeCallbacks)
-        runnable = null
+        if (scheduledAtMs != null) removeCallbacks(runnable)
+        scheduledAtMs = null
         val latest = pending ?: return
         pending = null
         write(latest)

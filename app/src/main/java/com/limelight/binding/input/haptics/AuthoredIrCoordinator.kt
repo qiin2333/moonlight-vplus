@@ -32,9 +32,14 @@ internal class AuthoredIrCoordinator(
     private val legacyRenderers = mutableMapOf<Short, AuthoredHapticsRenderer>()
     private val pendingLegacy = mutableMapOf<Short, Legacy>()
     private var queued = false
+    // A zero-delay drain is already posted; further frames before it runs need no repost.
+    private var wakePosted = false
     private var stopped = false
     private var nativePhone = false
     private val drainTask = Runnable { drain() }
+    private val drainOutputs = ArrayList<Pair<Short, AuthoredIrTimeline.Output>>()
+    private val drainLegacy = ArrayList<Legacy>()
+    private val expiredPulses = ArrayList<Short>()
 
     val queuedEvents: Int get() = synchronized(lock) { timelines.values.sumOf { it.queuedEvents } }
 
@@ -56,42 +61,59 @@ internal class AuthoredIrCoordinator(
     }
 
     private fun wakeLocked() {
+        if (wakePosted) return
         removeCallbacks(drainTask)
         queued = true
+        wakePosted = true
         postDelayed(drainTask, 0)
     }
 
     private fun drain() {
-        if (stopped || !enabled()) return
+        if (stopped || !enabled()) {
+            synchronized(lock) { queued = false; wakePosted = false }
+            return
+        }
         val now = clockMs()
-        val outputs: MutableList<Pair<Short, AuthoredIrTimeline.Output>>
-        val legacy: List<Legacy>
+        val outputs = drainOutputs
+        val legacy = drainLegacy
+        outputs.clear()
+        legacy.clear()
         synchronized(lock) {
             queued = false
-            outputs = timelines.mapNotNull { (number, timeline) ->
-                timeline.poll(now * 1000)?.let { number to it }
-            }.toMutableList()
-            legacy = pendingLegacy.values.toList()
+            wakePosted = false
+            for ((number, timeline) in timelines) {
+                timeline.poll(now * 1000)?.let { outputs += number to it }
+            }
+            legacy.addAll(pendingLegacy.values)
             pendingLegacy.clear()
         }
-        pulses.toMap().forEach { (number, pulse) ->
-            if (pulse.second <= now) {
+        if (pulses.isNotEmpty()) {
+            expiredPulses.clear()
+            for ((number, pulse) in pulses) if (pulse.second <= now) expiredPulses += number
+            for (number in expiredPulses) {
                 pulses.remove(number)
                 if (outputs.none { it.first == number }) last[number]?.let {
                     outputs += number to it.copy(event = null, reset = false)
                 }
             }
         }
-        outputs.forEach { (number, output) ->
-            last[number] = output.copy(event = null, reset = false)
+        for ((number, output) in outputs) {
+            last[number] = if (output.event == null && !output.reset) output
+                else output.copy(event = null, reset = false)
             route(number, output, now)
         }
-        legacy.forEach { routeLegacy(it, now) }
+        for (pending in legacy) routeLegacy(pending, now)
+        outputs.clear()
+        legacy.clear()
         synchronized(lock) {
             if (!queued && !stopped && enabled()) {
-                val next = (timelines.values.mapNotNull { it.nextWakeUs()?.let { us -> (us + 999) / 1000 } } +
-                    pulses.values.map { it.second }).minOrNull()
-                if (next != null) {
+                var next = Long.MAX_VALUE
+                for (timeline in timelines.values) {
+                    val us = timeline.nextWakeUs()
+                    if (us != null) next = minOf(next, (us + 999) / 1000)
+                }
+                for (pulse in pulses.values) next = minOf(next, pulse.second)
+                if (next != Long.MAX_VALUE) {
                     queued = true
                     postDelayed(drainTask, (next - now).coerceAtLeast(1))
                 }
@@ -213,6 +235,7 @@ internal class AuthoredIrCoordinator(
     fun stop() {
         synchronized(lock) {
             stopped = true
+            wakePosted = false
             removeCallbacks(drainTask)
             timelines.clear(); pendingLegacy.clear(); legacyRenderers.clear()
         }
