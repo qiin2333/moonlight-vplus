@@ -1,25 +1,36 @@
 package com.limelight.perfhud
 
-/** HUD 与其弹出卡片共用的配色，保证两者是同一套视觉语言。 */
+/**
+ * HUD 与其弹出卡片共用的配色。底色、描边、文字取自应用深色外壳 ui_shell_*（values-night），
+ * 无论日夜模式都按深色绘制，保证压在视频上可读；交互强调色在运行时读取 appAccent（UiHelper.accentColor）。
+ * 绿 / 黄 / 红状态色和延迟链四段分类色是读数用的，不跟随主题。
+ */
 object PerfHudPalette {
-    const val BG_RGB = 0x0E0E10
-    const val TXT = 0xFFF2F2F5.toInt()
-    const val BODY = 0xE0F2F2F5.toInt()
-    const val DIM = 0xB3F2F2F5.toInt()
-    const val MUTE = 0x73F2F2F5
+    /** HUD 本体底色：比卡片更深，压在视频上也清晰。 */
+    const val BG_RGB = 0x16171B
+    /** 弹出卡片底色，对应 ui_shell_surface_elevated（深色）。 */
+    const val SHEET_RGB = 0x23242B
+    const val TXT = 0xFFF7F3F7.toInt()
+    const val BODY = 0xE6F7F3F7.toInt()
+    const val DIM = 0xFFC9D0D8.toInt()
+    const val MUTE = 0x99C9D0D8.toInt()
+    /** 对应 ui_shell_outline（深色）。 */
+    const val OUTLINE = 0x2EFFFFFF
     const val DIVIDER = 0x26FFFFFF
     const val HAIRLINE = 0x1AFFFFFF
     const val TRACK = 0x14FFFFFF
-    const val TILE = 0x12FFFFFF
+    const val TILE = 0x0FFFFFFF
     const val SHADOW = 0x99000000.toInt()
-    const val OK = 0xFF5BE49B.toInt()
-    const val WARN = 0xFFFFC857.toInt()
-    const val BAD = 0xFFFF6B6B.toInt()
+    const val OK = 0xFF6FD49A.toInt()
+    const val WARN = 0xFFF2C14E.toInt()
+    const val BAD = 0xFFF27166.toInt()
     const val NET = 0xFF6FA8FF.toInt()
     const val HOST = 0xFFB48CFF.toInt()
     const val DEC = 0xFF4FD1C5.toInt()
     const val RND = 0xFFF5A3C7.toInt()
     const val MOON = 0xFFEDE6C8.toInt()
+    /** 读不到主题时的强调色，等于深色 ui_shell_accent。 */
+    const val ACCENT_FALLBACK = 0xFFFF8FA3.toInt()
 
     fun severity(s: PerfSeverity): Int = when (s) {
         PerfSeverity.OK -> OK

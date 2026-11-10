@@ -151,6 +151,9 @@ class PerfHudView @JvmOverloads constructor(
     private var pressX = Float.NaN
     private var pressY = Float.NaN
 
+    /** 按住高亮用的强调色，由 Manager 传入 appAccent。 */
+    var accentColor: Int = PerfHudPalette.ACCENT_FALLBACK
+
     /** 按住 HUD 时把手指下的指标高亮出来，提示长按会打开它的说明。坐标为本 View 坐标。 */
     fun setPressedAt(x: Float, y: Float) {
         pressX = x
@@ -222,9 +225,9 @@ class PerfHudView @JvmOverloads constructor(
         rect.set(h.rect)
         rect.intersect(dp, dp, width - dp, height - dp)
         val r = em * 0.45f
-        fillPaint.color = PerfHudPalette.withAlpha(TXT, 0x22)
+        fillPaint.color = PerfHudPalette.withAlpha(accentColor, 0x2E)
         c.drawRoundRect(rect, r, r, fillPaint)
-        strokePaint.color = PerfHudPalette.withAlpha(TXT, 0x55)
+        strokePaint.color = PerfHudPalette.withAlpha(accentColor, 0xB3)
         strokePaint.strokeWidth = dp
         c.drawRoundRect(rect, r, r, strokePaint)
     }
@@ -1163,7 +1166,7 @@ class PerfHudView @JvmOverloads constructor(
         private const val FG_LABEL = "FG"
         private const val PANEL_WIDTH_EM = 20f
         /** 顶栏字号相对 em 的比例：标签 / 数值。 */
-        private const val BAR_LABEL_SCALE = 0.7f
+        private const val BAR_LABEL_SCALE = 0.62f
         private const val BAR_VALUE_SCALE = 0.92f
         private const val UNBOUNDED = 100_000f
 

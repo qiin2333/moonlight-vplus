@@ -1449,9 +1449,9 @@ class PerformanceOverlayManager(
             PerfHudSheet.Spec(
                 title = name,
                 icon = icon ?: titleIcon,
-                accent = live.accent,
+                accent = UiHelper.accentColor(activity),
                 value = live.value,
-                valueColor = live.valueColor,
+                valueColor = live.valueColor ?: live.tint,
                 subtitle = subtitle,
                 blocks = blocks,
                 header = header,
@@ -1461,9 +1461,10 @@ class PerformanceOverlayManager(
         )
     }
 
-    private class SheetLive(val accent: Int, val value: String? = null, val valueColor: Int? = null)
+    /** @param tint 实时值的默认颜色（状态色或指标分类色），[valueColor] 非空时优先用它。 */
+    private class SheetLive(val tint: Int, val value: String? = null, val valueColor: Int? = null)
 
-    /** 卡片强调色沿用 HUD 的分类色，右上角显示该指标的实时值，颜色跟随严重度。 */
+    /** 右上角显示该指标的实时值，颜色跟随严重度或分类色；卡片强调色另由 appAccent 决定。 */
     private fun sheetLive(target: PerfHudTarget?): SheetLive {
         val s = lastHudSnapshot
         if (target == null || s == null) return SheetLive(PerfHudPalette.MOON)
@@ -1716,6 +1717,7 @@ class PerformanceOverlayManager(
         hudView?.apply {
             setBaseTextSizePx(getAdaptiveTextSizePx(HUD_BASE_TEXT_SP))
             setBackgroundOpacity(prefConfig.perfOverlayBgOpacity.coerceIn(0, 100) / 100f)
+            accentColor = UiHelper.accentColor(activity)
         }
         applyHudPlacement(overlay, force = true)
         setupPerformanceOverlayDragging()

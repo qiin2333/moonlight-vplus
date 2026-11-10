@@ -37,10 +37,14 @@ class PerfHudSheet(private val activity: Activity) {
 
     class Action(val label: String, val primary: Boolean = false, val onClick: (() -> Unit)? = null)
 
+    /**
+     * @param accent 交互强调色（图标光圈、顶线、小标题、要点、提示卡、主按钮），应传入 appAccent。
+     * @param valueColor 右上角实时值的颜色，通常是状态色；为空时用 [accent]。
+     */
     class Spec(
         val title: String,
         val icon: String? = null,
-        val accent: Int = P.MOON,
+        val accent: Int = P.ACCENT_FALLBACK,
         val value: String? = null,
         val valueColor: Int? = null,
         val subtitle: String? = null,
@@ -182,9 +186,9 @@ class PerfHudSheet(private val activity: Activity) {
         val card = CardLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(P.withAlpha(P.BG_RGB, 0xF2))
+                setColor(P.withAlpha(P.SHEET_RGB, 0xF2))
                 cornerRadius = dp(20f).toFloat()
-                setStroke(dp(1f), P.DIVIDER)
+                setStroke(dp(1f), P.OUTLINE)
             }
             elevation = dp(14f).toFloat()
             outlineProvider = ViewOutlineProvider.BACKGROUND
