@@ -122,6 +122,14 @@ data class LatencyChain(
 ) {
     val totalMs: Float get() = networkMs + (hostMs ?: 0f) + decodeMs + renderMs
 
+    /** 网络 / 主机 / 解码 / 渲染 四段及其配色；HUD 分段条、图例和说明卡片共用同一顺序。主机缺失时按 0 计。 */
+    fun segments(): List<ChainSegment> = listOf(
+        ChainSegment(PerfHudPalette.NET, networkMs),
+        ChainSegment(PerfHudPalette.HOST, hostMs ?: 0f),
+        ChainSegment(PerfHudPalette.DEC, decodeMs),
+        ChainSegment(PerfHudPalette.RND, renderMs)
+    )
+
     companion object {
         fun estimate(rttMs: Int, hostMs: Float?, decodeMs: Float, renderMs: Float) = LatencyChain(
             networkMs = rttMs.coerceAtLeast(0) / 2f,
@@ -131,6 +139,9 @@ data class LatencyChain(
         )
     }
 }
+
+/** 延迟链的一段：分类色 + 毫秒数。 */
+data class ChainSegment(val color: Int, val ms: Float)
 
 /** 固定容量的浮点环形缓冲，用于 FPS 历史曲线。 */
 class FloatRing(val capacity: Int) {
@@ -190,6 +201,8 @@ data class PerfHudSnapshot(
     val fullMoon: Boolean
 ) {
     val fpsSeverity get() = PerfHudThresholds.fps(renderedFps, targetFps)
+    /** 主机送帧是否跟得上目标帧率。 */
+    val rxSeverity get() = PerfHudThresholds.fps(receivedFps, targetFps)
     val onePercentLowSeverity get() = PerfHudThresholds.onePercentLow(onePercentLowFps, targetFps)
     val lossSeverity get() = PerfHudThresholds.packetLoss(packetLossPercent)
     val decodeSeverity get() = PerfHudThresholds.decode(latency.decodeMs, targetFps)

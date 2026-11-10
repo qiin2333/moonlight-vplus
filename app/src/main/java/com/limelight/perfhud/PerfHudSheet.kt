@@ -428,7 +428,7 @@ class PerfHudSheet(private val activity: Activity) {
     }
 
     /** 延迟链分段条：按耗时比例画网络 / 主机 / 解码 / 渲染四段，配色与 HUD 一致。 */
-    class ChainBarView(context: android.content.Context, private val parts: List<Pair<Float, Int>>) : View(context) {
+    class ChainBarView(context: android.content.Context, private val segments: List<ChainSegment>) : View(context) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val rect = RectF()
         private val d = context.resources.displayMetrics.density
@@ -438,22 +438,10 @@ class PerfHudSheet(private val activity: Activity) {
         }
 
         override fun onDraw(canvas: Canvas) {
-            val total = parts.sumOf { it.first.toDouble() }.toFloat()
-            val r = height / 2f
-            paint.color = P.TRACK
-            rect.set(0f, 0f, width.toFloat(), height.toFloat())
-            canvas.drawRoundRect(rect, r, r, paint)
-            if (total <= 0f) return
-            val gap = 2 * d
-            var x = 0f
-            val visible = parts.filter { it.first > 0f }
-            visible.forEachIndexed { i, (value, color) ->
-                val w = width * value / total
-                paint.color = color
-                rect.set(x, 0f, (x + w - if (i < visible.lastIndex) gap else 0f).coerceAtLeast(x + d), height.toFloat())
-                canvas.drawRoundRect(rect, r, r, paint)
-                x += w
-            }
+            PerfHudDraw.chainBar(
+                canvas, paint, rect, 0f, 0f, width.toFloat(), height.toFloat(),
+                segments, P.TRACK, gap = 2 * d, minSeg = d
+            )
         }
     }
 

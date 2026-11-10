@@ -38,5 +38,8 @@ object PerfHudPalette {
         PerfSeverity.BAD -> BAD
     }
 
+    /** 次要指标：正常时退成灰色不抢眼，出问题才显示黄 / 红。 */
+    fun quiet(s: PerfSeverity): Int = if (s == PerfSeverity.OK) DIM else severity(s)
+
     fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha.coerceIn(0, 255) shl 24)
 }
