@@ -673,6 +673,8 @@ class StreamSettings : ThemedAppCompatActivity() {
         list.layoutManager = LinearLayoutManager(this)
         categoryAdapter = CategoryAdapter()
         list.adapter = categoryAdapter
+        // 焦点移动即切换分类：关掉变更动画，避免重绑时丢失当前焦点。
+        (list.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
         list.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         list.isFocusable = true
     }
@@ -778,6 +780,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             holder.root.setOnFocusChangeListener { _, hasFocus ->
                 val selected = holder.bindingAdapterPosition == selectedCategoryIndex
                 updateItemAppearance(holder, selected, hasFocus)
+                // 横屏常驻侧栏：上下移动焦点就直接打开该分类，不用再按 A。
+                if (hasFocus && !selected && drawerLayout == null) {
+                    selectCategory(holder.bindingAdapterPosition, item)
+                }
             }
         }
 
