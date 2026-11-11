@@ -75,7 +75,7 @@ To choose a feature by what you want to do, see the [Moonlight Dual feature guid
 
 ### Installation
 
-Download the latest APK from [Releases](https://github.com/qiin2333/moonlight-vplus/releases/latest), install it, and pair it with your host.
+Download the latest APK from [Releases](https://github.com/0x1428571429/moonlight-dual/releases/latest), install it, and pair it with your host.
 
 For the first stream, start with a conservative profile:
 
@@ -85,12 +85,12 @@ For the first stream, start with a conservative profile:
 - 10-20 Mbps bitrate
 - Host PC connected by Ethernet when possible
 
-After that is stable, raise resolution, frame rate, bitrate, HEVC / AV1, HDR, and V+ enhanced options one at a time.
+After that is stable, raise resolution, frame rate, bitrate, HEVC / AV1, HDR, and enhanced options one at a time.
 
 ### Host Choice
 
-- **Foundation Sunshine (recommended)**: the companion host for Moonlight Dual, providing standard streaming and supported V+ extensions such as microphone forwarding and host display control. Feature availability depends on the host version.
-- **Sunshine**: supports standard Moonlight streaming; some V+ extensions need Foundation Sunshine.
+- **Foundation Sunshine (recommended)**: the companion host for Moonlight Dual, providing standard streaming and supported extensions such as microphone forwarding and host display control. Feature availability depends on the host version.
+- **Sunshine**: supports standard Moonlight streaming; some extensions need Foundation Sunshine.
 - **GeForce Experience / NVIDIA GameStream**: a legacy compatibility path for existing setups. Choose Foundation Sunshine for a new installation.
 
 ### If Something Goes Wrong
@@ -105,7 +105,7 @@ Useful references:
 - [Moonlight Dual Q&A](FAQ_EN.md)
 - [Moonlight setup guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide)
 - [Moonlight troubleshooting guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting)
-- [V+ feature guide](docs/USER_GUIDE_EN.md)
+- [Feature guide](docs/USER_GUIDE_EN.md)
 - [First connection with Foundation Sunshine](docs/GETTING_STARTED_EN.md)
 - [Foundation Sunshine compatibility matrix](docs/COMPATIBILITY_EN.md)
 - [Backups and migration](docs/BACKUP_AND_MIGRATION_EN.md)
@@ -115,8 +115,8 @@ Useful references:
 Install JDK 17, Android SDK 36, Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1 first. The build also needs two Git submodules and a separate [audio-haptics SDK](https://github.com/AlkaidLab/moonlight-audio-haptics) checkout; see [CI](.github/workflows/android-ci.yml) for the pinned revision.
 
 ```bash
-git clone --recurse-submodules https://github.com/qiin2333/moonlight-vplus.git
-cd moonlight-vplus
+git clone --recurse-submodules https://github.com/0x1428571429/moonlight-dual.git
+cd moonlight-dual
 git clone https://github.com/AlkaidLab/moonlight-audio-haptics.git ../moonlight-audio-haptics
 git -C ../moonlight-audio-haptics checkout b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
 ./gradlew :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"

@@ -75,14 +75,14 @@ Moonlight Dual 在 [moonlight-android](https://github.com/moonlight-stream/moonl
 
 ### 安装
 
-从 [Releases](https://github.com/qiin2333/moonlight-vplus/releases/latest) 下载最新 APK，安装后按应用内引导完成配对即可。
+从 [Releases](https://github.com/0x1428571429/moonlight-dual/releases/latest) 下载最新 APK，安装后按应用内引导完成配对即可。
 
 首次串流建议从 1080p、60 FPS、H.264 或自动编码、关闭 HDR、10–20 Mbps 开始，主机尽量使用有线网络。确认稳定后，再逐项提高分辨率、帧率、码率并启用 HEVC / AV1、HDR 等功能。
 
 ### 选择主机端
 
-- **Foundation Sunshine（首推）**：与 Moonlight Dual 配套，提供标准串流及其支持的 V+ 扩展功能，例如麦克风重定向和主机显示控制；具体功能取决于主机端版本。
-- **Sunshine**：可用于标准 Moonlight 串流；部分 V+ 扩展功能需要 Foundation Sunshine。
+- **Foundation Sunshine（首推）**：与 Moonlight Dual 配套，提供标准串流及其支持的 扩展功能，例如麦克风重定向和主机显示控制；具体功能取决于主机端版本。
+- **Sunshine**：可用于标准 Moonlight 串流；部分 扩展功能需要 Foundation Sunshine。
 - **NVIDIA GameStream**：供仍在使用旧主机的用户尝试兼容；新安装建议选择 Foundation Sunshine。
 
 ### 遇到问题
@@ -101,8 +101,8 @@ Moonlight Dual 在 [moonlight-android](https://github.com/moonlight-stream/moonl
 先安装 JDK 17、Android SDK 36、Build Tools 36.0.0、NDK 28.2.13676358 和 CMake 3.22.1。项目还需要两个 Git 子模块及单独的 [audio-haptics SDK](https://github.com/AlkaidLab/moonlight-audio-haptics)；其版本以 [CI 配置](.github/workflows/android-ci.yml) 为准。
 
 ```bash
-git clone --recurse-submodules https://github.com/qiin2333/moonlight-vplus.git
-cd moonlight-vplus
+git clone --recurse-submodules https://github.com/0x1428571429/moonlight-dual.git
+cd moonlight-dual
 git clone https://github.com/AlkaidLab/moonlight-audio-haptics.git ../moonlight-audio-haptics
 git -C ../moonlight-audio-haptics checkout b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
 ./gradlew :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"
