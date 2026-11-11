@@ -105,7 +105,6 @@ import android.os.PowerManager
 import android.os.SystemClock
 import androidx.preference.PreferenceManager
 import android.util.Rational
-import android.hardware.display.DisplayManager
 import android.view.Display
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -929,18 +928,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (secondScreenCompanion != null) return
 
-        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
-            ?: return
-        val defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY) ?: return
-        val defaultArea = defaultDisplay.mode.physicalWidth.toLong() *
-                defaultDisplay.mode.physicalHeight
-        val companionDisplay = displayManager
-            .getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
-            .firstOrNull { display ->
-                display.displayId != Display.DEFAULT_DISPLAY &&
-                        display.isValid &&
-                        display.mode.physicalWidth.toLong() * display.mode.physicalHeight < defaultArea
-            } ?: return
+        val companionDisplay = CompanionDisplays.find(this) ?: return
 
         val companion = SecondScreenCompanion(this, companionDisplay, performanceOverlayManager)
         secondScreenCompanion = companion

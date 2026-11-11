@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  浏览态副屏：未串流时（主机列表界面）显示在第二块屏上。
+  只展示现有数据：主机列表与状态、当前串流设置摘要。固定高度，禁止滚动。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/browseRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF070C12"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/steam_brand_mark"
+            android:gravity="center"
+            android:text="V"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Moonlight V+"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:background="@drawable/companion_panel_bg"
+            android:orientation="horizontal"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/tabHosts"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/steam_section_hosts"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/browse_tab_settings"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1">
+
+        <!-- ================= 主机 ================= -->
+        <LinearLayout
+            android:id="@+id/pageHosts"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/hostList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/hostHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="6dp"
+                android:text="@string/browse_hosts_hint"
+                android:textColor="#8FA6B6"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ================= 串流设置（只读摘要） ================= -->
+        <LinearLayout
+            android:id="@+id/pageSettings"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/browse_set_resolution"
+                    android:textColor="#A9C2D2"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/setResolution"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="--"
+                    android:textColor="#F7F3F7"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/browse_set_fps"
+                    android:textColor="#A9C2D2"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/setFps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="--"
+                    android:textColor="#F7F3F7"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/companion_bitrate"
+                    android:textColor="#A9C2D2"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/setBitrate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="--"
+                    android:textColor="#F7F3F7"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/browse_set_codec"
+                    android:textColor="#A9C2D2"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/setCodec"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="--"
+                    android:textColor="#F7F3F7"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/browse_set_hdr"
+                    android:textColor="#A9C2D2"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/setHdr"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="--"
+                    android:textColor="#F7F3F7"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/browseOpenSettings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_key_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="@string/browse_open_settings"
+                android:textColor="#F7F3F7"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

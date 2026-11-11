@@ -2575,4 +2575,21 @@ Tap again to replace it.</string>
     <string name="companion_touchpad_on">Controller touchpad on</string>
     <string name="companion_touchpad_off">Controller touchpad off</string>
     <string name="companion_chain_format">Network %1$.0f · Host %2$.0f · Decode %3$.0f · Render %4$.0f</string>
+    <string name="browse_tab_settings">Stream settings</string>
+    <string name="browse_hosts_hint">Tap a host to connect · Long-press for more</string>
+    <string name="browse_hosts_empty">No hosts yet. Add one on the main screen.</string>
+    <string name="browse_hosts_more">%1$d more hosts on the main screen</string>
+    <string name="browse_paired">Paired</string>
+    <string name="browse_unpaired">Not paired</string>
+    <string name="browse_action_connect">Connect</string>
+    <string name="browse_action_pair">Pair</string>
+    <string name="browse_action_more">More</string>
+    <string name="browse_set_resolution">Resolution</string>
+    <string name="browse_set_fps">Frame rate</string>
+    <string name="browse_set_codec">Video codec</string>
+    <string name="browse_set_hdr">HDR</string>
+    <string name="browse_on">On</string>
+    <string name="browse_off">Off</string>
+    <string name="browse_codec_auto">Auto</string>
+    <string name="browse_open_settings">Open settings</string>
 </resources>

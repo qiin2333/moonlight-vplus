@@ -2496,4 +2496,21 @@
     <string name="companion_touchpad_on">手柄触控板已开启</string>
     <string name="companion_touchpad_off">手柄触控板已关闭</string>
     <string name="companion_chain_format">网络 %1$.0f · 主机 %2$.0f · 解码 %3$.0f · 渲染 %4$.0f</string>
+    <string name="browse_tab_settings">串流设置</string>
+    <string name="browse_hosts_hint">点击主机连接 · 长按更多操作</string>
+    <string name="browse_hosts_empty">还没有主机，请在主屏添加</string>
+    <string name="browse_hosts_more">主屏还有 %1$d 台主机</string>
+    <string name="browse_paired">已配对</string>
+    <string name="browse_unpaired">未配对</string>
+    <string name="browse_action_connect">连接</string>
+    <string name="browse_action_pair">配对</string>
+    <string name="browse_action_more">更多</string>
+    <string name="browse_set_resolution">分辨率</string>
+    <string name="browse_set_fps">帧率</string>
+    <string name="browse_set_codec">视频编码</string>
+    <string name="browse_set_hdr">HDR</string>
+    <string name="browse_on">开</string>
+    <string name="browse_off">关</string>
+    <string name="browse_codec_auto">自动</string>
+    <string name="browse_open_settings">打开完整设置</string>
 </resources>

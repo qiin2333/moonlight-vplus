@@ -395,6 +395,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         UiHelper.showDecoderCrashDialog(this)
         inForeground = true
         startComputerUpdates()
+        showBrowseCompanion()
 
         analyticsManager?.startUsageTracking()
         startShakeDetector()
@@ -443,6 +444,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         super.onPause()
         exitGate.cancel()
         inForeground = false
+        dismissBrowseCompanion()
         stopComputerUpdates()
 
         analyticsManager?.stopUsageTracking()
@@ -3378,22 +3380,52 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 return@setOnItemClickListener
             }
 
-            if (computer.details.state == ComputerDetails.State.UNKNOWN
-                    || computer.details.state == ComputerDetails.State.OFFLINE) {
-                showHostActionSheet(computer.details)
-            } else if (computer.details.pairState != PairState.PAIRED) {
-                doPair(computer.details)
-            } else if (computer.details.hasMultipleLanAddresses()) {
-                showAddressSelectionDialog(computer.details)
+            handleHostClick(computer.details)
+        }
+    }
+
+    /** 点击主机卡（或副屏上的主机行）：离线→操作菜单，未配对→配对，否则进入应用列表。 */
+    private fun handleHostClick(details: ComputerDetails) {
+        if (details.state == ComputerDetails.State.UNKNOWN
+                || details.state == ComputerDetails.State.OFFLINE) {
+            showHostActionSheet(details)
+        } else if (details.pairState != PairState.PAIRED) {
+            doPair(details)
+        } else if (details.hasMultipleLanAddresses()) {
+            showAddressSelectionDialog(details)
+        } else {
+            val temp = prepareComputerWithAddress(details)
+            if (temp != null) {
+                doAppList(temp, newlyPaired = false, showHiddenGames = false)
             } else {
-                val temp = prepareComputerWithAddress(computer.details)
-                if (temp != null) {
-                    doAppList(temp, newlyPaired = false, showHiddenGames = false)
-                } else {
-                    showToast(getString(R.string.error_pc_offline))
-                }
+                showToast(getString(R.string.error_pc_offline))
             }
         }
+    }
+
+    private var browseCompanion: BrowseScreenCompanion? = null
+
+    private fun showBrowseCompanion() {
+        if (browseCompanion != null) return
+        val display = CompanionDisplays.find(this) ?: return
+        browseCompanion = BrowseScreenCompanion(
+            activity = this,
+            display = display,
+            hostsProvider = {
+                (0 until pcGridAdapter.count)
+                    .mapNotNull { pcGridAdapter.getItem(it) as? ComputerObject }
+                    .filterNot { PcGridAdapter.isAddComputerCard(it) }
+                    .map { it.details }
+            },
+            onHostClick = ::handleHostClick,
+            onHostLongClick = ::showHostActionSheet,
+            onOpenSettings = { startActivity(Intent(this, StreamSettings::class.java)) }
+        ).also { it.show() }
+    }
+
+    private fun dismissBrowseCompanion() {
+        browseCompanion?.dismiss()
+        browseCompanion = null
     }
 
     private fun setupGridColumnWidth(view: View) {
