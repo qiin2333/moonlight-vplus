@@ -18,18 +18,9 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <ImageView
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@drawable/steam_brand_mark"
-            android:contentDescription="@null"
-            android:padding="6dp"
-            android:src="@drawable/dual_icon_mark" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:text="Moonlight Dual"
             android:textColor="#FFFFFFFF"
             android:textSize="20sp"

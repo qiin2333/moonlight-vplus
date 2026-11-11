@@ -802,9 +802,9 @@
     <string name="about_dialog_description">Moonlight V+ is an enhanced client built for Foundation Sunshine, delivering a smoother game-streaming experience.</string>
     <string name="about_dialog_project_info">Based on Moonlight-Android open source project, crafted by the Foundation community</string>
     <string name="about_dialog_thanks">Thank you for choosing and supporting us.</string>
-    <string name="about_dialog_bilibili_badge" translatable="false">TV</string>
-    <string name="about_dialog_bilibili_title">Moonlight V+ on Bilibili</string>
-    <string name="about_dialog_bilibili_summary">Follow for release news and feature demos</string>
+    <string name="about_dialog_bilibili_badge" translatable="false">GH</string>
+    <string name="about_dialog_bilibili_title">GitHub</string>
+    <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-vplus</string>
     <string name="about_dialog_handbook_action">Documentation</string>
     <string name="about_dialog_ecosystem_action">Ecosystem</string>
     <string name="about_dialog_open_source_action">Licenses</string>
@@ -2612,4 +2612,9 @@ Tap again to replace it.</string>
     <string name="browse_app_resume">Resume / more actions</string>
     <string name="browse_status_hosts">Hosts online %1$d/%2$d</string>
     <string name="browse_app_host">Host · %1$s</string>
+    <string name="hint_a_connect">Connect</string>
+    <string name="hint_x_add">Add host</string>
+    <string name="hint_y_more">More</string>
+    <string name="hint_start_settings">Settings</string>
+    <string name="hint_b_exit">Exit</string>
 </resources>

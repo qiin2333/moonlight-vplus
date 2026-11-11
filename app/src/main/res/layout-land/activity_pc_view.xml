@@ -46,36 +46,13 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <ImageView
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/steam_brand_mark"
-            android:contentDescription="@null"
-            android:padding="6dp"
-            android:src="@drawable/dual_icon_mark" />
-
-        <LinearLayout
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Moonlight Dual"
-                android:textColor="#FFFFFFFF"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="@string/steam_header_subtitle"
-                android:textColor="#A9C2D2"
-                android:textSize="14sp" />
-        </LinearLayout>
+            android:text="Moonlight Dual"
+            android:textColor="#FFFFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
@@ -107,6 +84,20 @@
             android:textColor="#8FA6B6"
             android:textSize="14sp" />
     </LinearLayout>
+
+    <!-- 手柄按键提示：右下角，用画出来的按键图标 -->
+    <LinearLayout
+        android:id="@+id/controllerHints"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="28dp"
+        android:layout_marginRight="28dp"
+        android:layout_marginBottom="18dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal" />
 
     <RelativeLayout
         android:id="@+id/pcFragmentContainer"

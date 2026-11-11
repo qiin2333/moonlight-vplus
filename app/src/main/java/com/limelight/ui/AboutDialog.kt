@@ -351,7 +351,7 @@ internal fun AboutDialogContent(
     onFocusChanged: (Int) -> Unit = {}
 ) {
     val focusRequesters = remember { List(8) { FocusRequester() } }
-    val targetIndex = initialFocusIndex.takeIf { it in focusRequesters.indices } ?: 6
+    val targetIndex = initialFocusIndex.takeIf { it in setOf(2, 6, 7) } ?: 6
 
     LaunchedEffect(targetIndex, focusRequestGeneration) {
         withFrameNanos { }
@@ -397,8 +397,8 @@ internal fun AboutDialogContent(
                         onBilibili = onBilibili,
                         handbookFocus = focusModifier(0, 6, 2, 0, 1),
                         ecosystemFocus = focusModifier(1, 6, 2, 0, 7),
-                        openSourceFocus = focusModifier(7, 6, 2, 1, 7),
-                        bilibiliFocus = focusModifier(2, 7, 3, 2, 2)
+                        openSourceFocus = focusModifier(7, 6, 2, 7, 7),
+                        bilibiliFocus = focusModifier(2, 7, 2, 2, 2)
                     )
                 } else {
                     Column(
@@ -462,28 +462,16 @@ internal fun AboutDialogContent(
                             modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 12.dp)
                         ) {
                             AccentTextButton(
-                                stringResource(R.string.about_dialog_handbook_action),
-                                onHandbook,
-                                modifier = Modifier.weight(1f),
-                                focusModifier = focusModifier(0, 6, 2, 0, 1)
-                            )
-                            AccentTextButton(
-                                stringResource(R.string.about_dialog_ecosystem_action),
-                                onEcosystem,
-                                modifier = Modifier.weight(1f),
-                                focusModifier = focusModifier(1, 6, 2, 0, 7)
-                            )
-                            AccentTextButton(
                                 stringResource(R.string.about_dialog_open_source_action),
                                 onOpenSource,
                                 modifier = Modifier.weight(1f),
-                                focusModifier = focusModifier(7, 6, 2, 1, 7)
+                                focusModifier = focusModifier(7, 6, 2, 7, 7)
                             )
                         }
 
                         BilibiliCard(
                             onClick = onBilibili,
-                            focusModifier = focusModifier(2, 7, 3, 2, 2)
+                            focusModifier = focusModifier(2, 7, 2, 2, 2)
                         )
                     }
                 }
@@ -494,48 +482,8 @@ internal fun AboutDialogContent(
                         .align(Alignment.TopEnd)
                         .padding(10.dp)
                         .size(36.dp)
-                        .then(focusModifier(6, 6, 1, 6, 6)),
+                        .then(focusModifier(6, 6, 7, 6, 6)),
                     contentDescription = stringResource(R.string.about_dialog_close)
-                )
-            }
-
-            // bottom external links bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colorResource(R.color.app_dialog_outline))
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colorResource(R.color.about_dialog_links_bar_surface))
-                    .padding(
-                        start = 14.dp,
-                        end = 14.dp,
-                        top = if (isLandscape) 8.dp else 12.dp,
-                        bottom = if (isLandscape) 8.dp else 12.dp
-                    )
-            ) {
-                AccentTextButton(
-                    stringResource(R.string.about_dialog_github),
-                    onGithub,
-                    modifier = Modifier.weight(1f),
-                    focusModifier = focusModifier(3, 2, 3, 3, 4)
-                )
-                AccentTextButton(
-                    stringResource(R.string.about_dialog_qq),
-                    onQq,
-                    modifier = Modifier.weight(1f),
-                    focusModifier = focusModifier(4, 2, 4, 3, 5)
-                )
-                AccentTextButton(
-                    stringResource(R.string.about_dialog_official_site),
-                    onSite,
-                    modifier = Modifier.weight(1f),
-                    focusModifier = focusModifier(5, 2, 5, 4, 5)
                 )
             }
         }
@@ -626,18 +574,6 @@ private fun LandscapeAboutContent(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp)
             ) {
-                AccentTextButton(
-                    stringResource(R.string.about_dialog_handbook_action),
-                    onHandbook,
-                    modifier = Modifier.weight(1f),
-                    focusModifier = handbookFocus
-                )
-                AccentTextButton(
-                    stringResource(R.string.about_dialog_ecosystem_action),
-                    onEcosystem,
-                    modifier = Modifier.weight(1f),
-                    focusModifier = ecosystemFocus
-                )
                 AccentTextButton(
                     stringResource(R.string.about_dialog_open_source_action),
                     onOpenSource,

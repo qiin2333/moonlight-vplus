@@ -665,8 +665,8 @@
     <string name="about_dialog_description">Moonlight V+ 是专为 Foundation Sunshine 打造的增强客户端，为您带来更流畅的游戏串流体验。</string>
     <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目，由基地社区倾力打造</string>
     <string name="about_dialog_thanks">感谢您的选择与支持。</string>
-    <string name="about_dialog_bilibili_title">Moonlight V+ 官方 B站</string>
-    <string name="about_dialog_bilibili_summary">关注账号，获取版本动态与功能演示</string>
+    <string name="about_dialog_bilibili_title">GitHub</string>
+    <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-vplus</string>
     <string name="about_dialog_handbook_action">文档手册</string>
     <string name="about_dialog_ecosystem_action">基地生态</string>
     <string name="about_dialog_open_source_action">开源许可</string>
@@ -2533,4 +2533,9 @@
     <string name="browse_app_resume">恢复串流 / 更多操作</string>
     <string name="browse_status_hosts">主机在线 %1$d/%2$d</string>
     <string name="browse_app_host">主机 · %1$s</string>
+    <string name="hint_a_connect">连接</string>
+    <string name="hint_x_add">添加主机</string>
+    <string name="hint_y_more">更多</string>
+    <string name="hint_start_settings">设置</string>
+    <string name="hint_b_exit">退出</string>
 </resources>

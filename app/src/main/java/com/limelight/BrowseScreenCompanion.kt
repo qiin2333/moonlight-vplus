@@ -275,55 +275,46 @@ class BrowseScreenCompanion(
         private fun bindMenu() {
             val page = findViewById<LinearLayout>(R.id.pageMenu)
             page.removeAllViews()
-            menuItems().chunked(2).forEach { pair ->
-                val row = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
-                    )
-                }
-                pair.forEach { item -> row.addView(createMenuButton(item)) }
-                if (pair.size == 1) row.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
-                page.addView(row)
-            }
+            menuItems().forEach { page.addView(createMenuButton(it)) }
         }
 
-        /** Large tile: blue icon, 22sp title, 15sp one-line description. Readable at arm's length on the 3.9" screen. */
+        /** Compact list row: blue icon, title, one-line description on the right. */
         private fun createMenuButton(item: MenuItem): View {
             val density = context.resources.displayMetrics.density
             fun dp(v: Int) = (v * density).toInt()
             return LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
                 setBackgroundResource(R.drawable.companion_key_bg)
                 isClickable = true
                 isFocusable = true
-                setPadding(dp(16), dp(8), dp(16), dp(8))
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
-                    setMargins(dp(4), dp(4), dp(4), dp(4))
-                }
+                setPadding(dp(16), 0, dp(16), 0)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(60)
+                ).apply { setMargins(dp(4), dp(3), dp(4), dp(3)) }
                 if (item.iconRes != 0) {
                     addView(android.widget.ImageView(context).apply {
                         setImageResource(item.iconRes)
                         setColorFilter(0xFF66C0F4.toInt())
-                    }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { bottomMargin = dp(6) })
+                    }, LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginEnd = dp(16) })
                 }
                 addView(TextView(context).apply {
                     text = item.title
                     setTextColor(0xFFF7FBFF.toInt())
-                    textSize = 22f
+                    textSize = 19f
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    maxLines = 2
+                    maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
-                })
+                }, LinearLayout.LayoutParams(-2, -2))
                 if (item.subtitle.isNotEmpty()) {
                     addView(TextView(context).apply {
                         text = item.subtitle
                         setTextColor(0xFF8FA6B6.toInt())
-                        textSize = 15f
-                        maxLines = 2
+                        textSize = 14f
+                        maxLines = 1
                         ellipsize = android.text.TextUtils.TruncateAt.END
-                    }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(4) })
+                        gravity = android.view.Gravity.END
+                    }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(16) })
                 }
                 setOnClickListener { item.action() }
             }

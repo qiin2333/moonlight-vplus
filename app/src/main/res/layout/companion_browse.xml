@@ -17,18 +17,9 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <ImageView
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@drawable/steam_brand_mark"
-            android:contentDescription="@null"
-            android:padding="6dp"
-            android:src="@drawable/dual_icon_mark" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:text="Moonlight Dual"
             android:textColor="#FFFFFFFF"
             android:textSize="20sp"
@@ -369,20 +360,11 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <TextView
+            <Space
                 android:id="@+id/browseOpenSettings"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:background="@drawable/companion_key_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="@string/browse_open_settings"
-                android:textColor="#F7F3F7"
-                android:textSize="17sp"
-                android:textStyle="bold" />
+                android:layout_weight="1" />
         </LinearLayout>
         </LinearLayout>
         <!-- ================= 菜单（原主屏左侧工具栏与「更多」菜单） ================= -->

@@ -181,7 +181,8 @@ internal fun GameMenuScreen(
     hardwareFocusRequestToken: Int,
     guideDismissController: GameMenuGuideDismissController,
     useFabricTexture: Boolean = true,
-    restoreFocusRequestToken: Int = 0
+    restoreFocusRequestToken: Int = 0,
+    fullscreen: Boolean = false
 ) {
     val palette = gameMenuPalette()
     val appContext = LocalContext.current.applicationContext
@@ -278,13 +279,14 @@ internal fun GameMenuScreen(
             GameMenuDialogShell(
                 maxMenuWidth = maxMenuWidth,
                 onDismissRequest = callbacks.onDismiss,
-                onTouchInteraction = callbacks.onTouchInteraction
+                onTouchInteraction = callbacks.onTouchInteraction,
+                fullscreen = fullscreen
             ) { wideLayout ->
                 Surface(
                     color = Color.Transparent,
-                    shape = GameMenuDialogShape,
-                    border = BorderStroke(GameMenuDimens.surfaceStroke, palette.dialogBorder),
-                    modifier = Modifier
+                    shape = if (fullscreen) androidx.compose.ui.graphics.RectangleShape else GameMenuDialogShape,
+                    border = if (fullscreen) null else BorderStroke(GameMenuDimens.surfaceStroke, palette.dialogBorder),
+                    modifier = if (fullscreen) Modifier.fillMaxSize() else Modifier
                         .fillMaxWidth()
                         .heightIn(max = maxMenuHeight)
                 ) {
@@ -437,6 +439,7 @@ internal fun GameMenuDialogShell(
     onDismissRequest: () -> Unit,
     onTouchInteraction: () -> Unit = {},
     maxMenuWidth: Dp = AppOverlayWidths.expanded,
+    fullscreen: Boolean = false,
     content: @Composable (wideLayout: Boolean) -> Unit
 ) {
     val widthFraction = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -461,7 +464,7 @@ internal fun GameMenuDialogShell(
             GameMenuDimens.compactScreenInset
         }
         // Keep the existing small-screen margins, then cap the visible panel itself.
-        val panelWidth = (maxWidth * widthFraction - (safeHorizontalPadding + horizontalInset) * 2)
+        val panelWidth = if (fullscreen) maxWidth else (maxWidth * widthFraction - (safeHorizontalPadding + horizontalInset) * 2)
             .coerceIn(0.dp, maxMenuWidth)
         val contentWidth = (panelWidth - GameMenuDimens.outer * 2).coerceAtLeast(0.dp)
         val wideLayout = contentWidth >= GAME_MENU_WIDE_LAYOUT_MIN_WIDTH_DP.dp
@@ -479,12 +482,12 @@ internal fun GameMenuDialogShell(
                 }
         )
         Box(
-            modifier = Modifier
+            modifier = (if (fullscreen) Modifier.fillMaxSize() else Modifier
                 .width(panelWidth)
                 .padding(
                     top = safeDrawingPadding.calculateTopPadding(),
                     bottom = safeDrawingPadding.calculateBottomPadding()
-                )
+                ))
                 .testTag(GAME_MENU_PANEL_TAG)
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -1218,11 +1221,11 @@ private fun GameMenuHeader(
                             Modifier
                         }
                     )
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .gamepadFocusOutline(CircleShape)
                     .clickable(onClick = callbacks.onBack)
-                    .padding(8.dp)
+                    .padding(10.dp)
             )
             Spacer(Modifier.width(GameMenuDimens.tight))
         }

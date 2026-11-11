@@ -1378,7 +1378,8 @@ class GameMenu(
                         useFabricTexture = renderingProfile.useFabricTexture,
                         hardwareFocusRequestToken = hardwareFocusRequest.intValue,
                         restoreFocusRequestToken = parentFocusRestoreRequest.intValue,
-                        guideDismissController = guideDismissController
+                        guideDismissController = guideDismissController,
+                        fullscreen = game.companionMenuDisplay() != null
                     )
                 }
             }

@@ -155,6 +155,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import android.widget.RelativeLayout
 import android.widget.Space
 import android.widget.TextView
 import android.widget.Toast
@@ -3496,11 +3497,62 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
      * 选择主机、添加主机和选择应用。没有副屏（手机、单屏）时保持原样，避免入口丢失。
      */
     private fun setMainToolbarVisible(visible: Boolean) {
-        val state = if (visible) View.VISIBLE else View.INVISIBLE
+        val state = if (visible) View.VISIBLE else View.GONE
         intArrayOf(
             R.id.settingsButton, R.id.aboutButton, R.id.easyTierControlButton,
-            R.id.pcToolbarMenuButton
+            R.id.pcToolbarMenuButton, R.id.steamRail
         ).forEach { findViewById<View?>(it)?.visibility = state }
+        // 没有左侧栏时，内容直接靠左，只留一个小边距。
+        val margin = if (visible) 24 else 28
+        val density = resources.displayMetrics.density
+        intArrayOf(R.id.steamHeader, R.id.hostSectionHeader, R.id.pcFragmentContainer).forEach { id ->
+            val v = findViewById<View?>(id) ?: return@forEach
+            val lp = v.layoutParams as? RelativeLayout.LayoutParams ?: return@forEach
+            if (!visible) {
+                lp.removeRule(RelativeLayout.END_OF)
+                lp.removeRule(RelativeLayout.RIGHT_OF)
+                lp.marginStart = (margin * density).toInt()
+                if (id == R.id.pcFragmentContainer) lp.marginStart = (12 * density).toInt()
+            }
+            v.layoutParams = lp
+        }
+        buildControllerHints()
+    }
+
+    /** 右下角的手柄按键提示：画出来的 A/B/X/Y 圆形按键 + 说明，像主机一样。 */
+    private fun buildControllerHints() {
+        val bar = findViewById<LinearLayout?>(R.id.controllerHints) ?: return
+        bar.removeAllViews()
+        val d = resources.displayMetrics.density
+        fun add(badge: String, label: String, color: Int, pill: Boolean = false) {
+            val b = TextView(this).apply {
+                text = badge
+                setTextColor(0xFFFFFFFF.toInt())
+                textSize = if (pill) 11f else 13f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                gravity = android.view.Gravity.CENTER
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    if (pill) cornerRadius = 12 * d else shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(color)
+                    setStroke((1 * d).toInt(), 0x66FFFFFF)
+                }
+                val w = if (pill) (44 * d).toInt() else (24 * d).toInt()
+                layoutParams = LinearLayout.LayoutParams(w, (24 * d).toInt())
+            }
+            val t = TextView(this).apply {
+                text = label
+                setTextColor(0xFFC8D6E0.toInt())
+                textSize = 14f
+                setPadding((6 * d).toInt(), 0, (18 * d).toInt(), 0)
+            }
+            bar.addView(b); bar.addView(t)
+        }
+        add("A", getString(R.string.hint_a_connect), 0xFF3C8D4A.toInt())
+        add("B", getString(R.string.hint_b_exit), 0xFFB5483F.toInt())
+        add("X", getString(R.string.hint_x_add), 0xFF3E6FB5.toInt())
+        add("Y", getString(R.string.hint_y_more), 0xFFC49A2E.toInt())
+        add("START", getString(R.string.hint_start_settings), 0xFF4A5A68.toInt(), pill = true)
+        (bar.getChildAt(bar.childCount - 1) as TextView).setPadding((6 * d).toInt(), 0, 0, 0)
     }
 
     private fun dismissBrowseCompanion() {
