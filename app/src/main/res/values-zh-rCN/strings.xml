@@ -663,7 +663,7 @@
 
     <!-- About dialog strings -->
     <string name="about_dialog_description">专为 Sunshine 打造的串流客户端，面向双屏掌机。</string>
-    <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目（GPLv3）</string>
+    <string name="about_dialog_project_info">基于 Moonlight V+ 与 Moonlight-Android 修改（GPLv3）</string>
     <string name="about_dialog_thanks">感谢您的选择与支持。</string>
     <string name="about_dialog_bilibili_title">GitHub</string>
     <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-dual</string>
