@@ -6,10 +6,13 @@
     android:stateListAnimator="@animator/expressive_item_state"
     android:padding="6dp"
     android:focusable="true"
-    android:focusableInTouchMode="false">
+    android:focusableInTouchMode="false"
+    android:background="@drawable/steam_focus_ring">
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardElevation="0dp"
         app:cardCornerRadius="@dimen/corner_radius_small">
         <ImageView
             android:id="@+id/grid_image"
