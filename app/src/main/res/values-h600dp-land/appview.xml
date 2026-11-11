@@ -7,4 +7,6 @@
     <dimen name="appview_large_card_width">240dp</dimen>
     <dimen name="appview_large_card_height">320dp</dimen>
     <dimen name="appview_title_text_size">30sp</dimen>
+    <dimen name="appview_small_card_width">200dp</dimen>
+    <dimen name="appview_small_card_height">266dp</dimen>
 </resources>

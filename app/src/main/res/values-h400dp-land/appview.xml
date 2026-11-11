@@ -5,4 +5,6 @@
     <dimen name="appview_large_card_padding">10dp</dimen>
     <dimen name="appview_title_text_size">24sp</dimen>
     <dimen name="appview_title_min_height">48dp</dimen>
+    <dimen name="appview_small_card_width">150dp</dimen>
+    <dimen name="appview_small_card_height">200dp</dimen>
 </resources>
