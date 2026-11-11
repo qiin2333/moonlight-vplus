@@ -2311,6 +2311,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     // ==================== 顶部面板 - 事件处理 ====================
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) CompanionDisplays.inputOnMain = true
         // 面板打开时点击外部自动关闭
         if (isPanelOpen && ev.action == android.view.MotionEvent.ACTION_DOWN) {
             val x = ev.rawX
@@ -2322,6 +2323,11 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             }
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) CompanionDisplays.inputOnMain = true
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {

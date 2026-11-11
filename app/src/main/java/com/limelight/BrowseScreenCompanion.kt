@@ -167,6 +167,7 @@ class BrowseScreenCompanion(
 
         /** 手指一碰副屏就退出手柄操作模式，否则可聚焦的控件会先吃掉第一下点击，表现为要点两下。 */
         override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+            if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) CompanionDisplays.inputOnMain = false
             if (remoteFocus && ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) toggleRemoteFocus()
             return super.dispatchTouchEvent(ev)
         }
