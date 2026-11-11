@@ -1405,7 +1405,7 @@ class GameMenu(
             setContentView(composeView)
             setCanceledOnTouchOutside(true)
             if (menuDisplay != null) {
-                window?.setType(WindowManager.LayoutParams.TYPE_PRIVATE_PRESENTATION)
+                window?.setType(WindowManager.LayoutParams.TYPE_PRESENTATION)
             }
         }
         this.activeDialog = dialog
