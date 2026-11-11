@@ -56,6 +56,18 @@
 | 搜索、收藏、游戏简介/标签 | 无 | ✂️ |
 | 「上次串流」「本次时长」统计卡 | 无 | ✂️ |
 
+## 4b. 已落地的补充（2026-11-11）
+
+| 功能 | 现有实现 | 状态 |
+| --- | --- | --- |
+| 有副屏时主屏隐藏设置工具栏，设置/关于/EasyTier/主题/恢复会话/未配对开关集中到副屏「菜单」页 | `BrowseScreenCompanion.MenuItem` | ✅ |
+| 手柄快捷键：X 添加主机、Y 主机更多、Start 设置、Select 未配对设备 | `PcView.handleGamepadShortcut` | 🟡 X 已验证 |
+| 串流中游戏菜单显示在副屏（TYPE_PRESENTATION=2037），主屏继续串流 | `Game.companionMenuDisplay` + `GameMenu` | ✅ |
+| 游戏菜单固定 Steam 深蓝配色（不跟随系统亮/暗） | `game_menu_*` 颜色资源 | ✅ |
+| 全局主题色统一为 Steam 蓝 | `appAccent` 相关资源 | ✅ |
+| 游戏菜单子对话框、副屏「菜单」页里的对话框仍弹在主屏 | — | ⬜ |
+| AppView 仍是旧样式（卡片 + 灰色操作菜单，退出串流为粉色） | — | ⬜ |
+
 ## 5. 原型中被舍弃的内容
 
 `design/steam-ui/index.html` 里的继续游玩英雄区、最近游玩横排、游戏库页、搜索框、
