@@ -34,7 +34,7 @@
 
 ## What's Different from Upstream Moonlight
 
-Moonlight V+ extends [moonlight-android](https://github.com/moonlight-stream/moonlight-android) with a wide range of enhancements while maintaining full compatibility with the upstream streaming protocol.
+Moonlight Dual extends [moonlight-android](https://github.com/moonlight-stream/moonlight-android) with a wide range of enhancements while maintaining full compatibility with the upstream streaming protocol.
 
 | Category | Feature | Description | Since |
 |----------|---------|-------------|:-----:|
@@ -62,7 +62,7 @@ Moonlight V+ extends [moonlight-android](https://github.com/moonlight-stream/moo
 | | Audio vibration | Real-time bass energy drives haptic feedback (device / gamepad / both) | `12.7.0` |
 | | | Three scene modes: Game (sustained rumble), Music (beat pulses), Auto | |
 
-To choose a feature by what you want to do, see the [Moonlight V+ feature guide](docs/VPLUS_FEATURES_EN.md): Crown profiles, Foundation Sunshine actions, displays, haptics, and frame generation.
+To choose a feature by what you want to do, see the [Moonlight Dual feature guide](docs/VPLUS_FEATURES_EN.md): Crown profiles, Foundation Sunshine actions, displays, haptics, and frame generation.
 
 ## Getting Started
 
@@ -89,7 +89,7 @@ After that is stable, raise resolution, frame rate, bitrate, HEVC / AV1, HDR, an
 
 ### Host Choice
 
-- **Foundation Sunshine (recommended)**: the companion host for Moonlight V+, providing standard streaming and supported V+ extensions such as microphone forwarding and host display control. Feature availability depends on the host version.
+- **Foundation Sunshine (recommended)**: the companion host for Moonlight Dual, providing standard streaming and supported V+ extensions such as microphone forwarding and host display control. Feature availability depends on the host version.
 - **Sunshine**: supports standard Moonlight streaming; some V+ extensions need Foundation Sunshine.
 - **GeForce Experience / NVIDIA GameStream**: a legacy compatibility path for existing setups. Choose Foundation Sunshine for a new installation.
 
@@ -102,7 +102,7 @@ After that is stable, raise resolution, frame rate, bitrate, HEVC / AV1, HDR, an
 
 Useful references:
 
-- [Moonlight V+ Q&A](FAQ_EN.md)
+- [Moonlight Dual Q&A](FAQ_EN.md)
 - [Moonlight setup guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide)
 - [Moonlight troubleshooting guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Troubleshooting)
 - [V+ feature guide](docs/USER_GUIDE_EN.md)

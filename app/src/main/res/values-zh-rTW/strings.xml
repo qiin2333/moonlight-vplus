@@ -210,7 +210,7 @@
     <string name="controller_diag_connection_wireless">藍牙／無線</string>
     <string name="controller_diag_connection_builtin">裝置內建</string>
     <string name="controller_diag_path_system">Android 系統輸入</string>
-    <string name="controller_diag_path_usb_takeover">V+ USB 接管</string>
+    <string name="controller_diag_path_usb_takeover">USB 接管</string>
     <string name="controller_diag_path_unavailable">目前無法使用</string>
     <string name="usb_shortcut_hold_hint">放開十字鍵方向立即執行；搖桿選擇後放開 Start</string>
     <string name="controller_diag_simulator_title">快捷鍵測試</string>
@@ -275,8 +275,8 @@
     <string name="controller_diag_simulator_controller">手把：%1$s</string>
     <string name="controller_diag_simulator_waiting_input">等待手把</string>
     <string name="controller_diag_simulator_current_buttons">按鍵</string>
-    <string name="controller_diag_note_usb_ready">串流時使用 V+ USB 接管。</string>
-    <string name="controller_diag_note_usb_permission">串流時使用 V+ USB 接管，可能需要 USB 權限。</string>
+    <string name="controller_diag_note_usb_ready">串流時使用 USB 接管。</string>
+    <string name="controller_diag_note_usb_permission">串流時使用 USB 接管，可能需要 USB 權限。</string>
     <string name="controller_diag_note_system_usb">串流時使用系統手把輸入。</string>
     <string name="controller_diag_note_system_wireless">串流時使用系統手把輸入。</string>
     <string name="controller_diag_note_system_builtin">使用系統手把輸入。</string>

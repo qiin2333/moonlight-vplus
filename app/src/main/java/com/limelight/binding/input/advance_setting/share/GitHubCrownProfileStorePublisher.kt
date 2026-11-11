@@ -219,7 +219,7 @@ object GitHubCrownProfileStorePublisher {
             .put(
                 "body",
                 buildString {
-                    append("Submitted from Moonlight V+.\n\n")
+                    append("Submitted from Moonlight Dual.\n\n")
                     if (request.game.isNotBlank()) append("- Game: ${request.game}\n")
                     if (request.author.isNotBlank()) append("- Author: ${request.author}\n")
                     if (request.summary.isNotBlank()) append("- Summary: ${request.summary}\n")

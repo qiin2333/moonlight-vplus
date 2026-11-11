@@ -34,7 +34,7 @@
 
 ## 与上游 Moonlight 的区别
 
-Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlight-android) 的基础上增加了大量实用功能，同时保持与原版串流协议的完全兼容。
+Moonlight Dual 在 [moonlight-android](https://github.com/moonlight-stream/moonlight-android) 的基础上增加了大量实用功能，同时保持与原版串流协议的完全兼容。
 
 | 类别 | 功能 | 说明 | 起始版本 |
 |------|------|------|:--------:|
@@ -62,7 +62,7 @@ Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlig
 | | 音频震动 | 实时低频能量驱动触觉反馈（设备 / 手柄 / 双路） | `12.7.0` |
 | | | 三种场景模式：游戏（持续低频）、音乐（节拍脉冲）、自动识别 | |
 
-想按使用场景上手？请看 [Moonlight V+ 特色功能指引](docs/VPLUS_FEATURES.md)，从王冠配置、Foundation Sunshine 联动、显示器、触觉与插帧中选择适合自己的入口。
+想按使用场景上手？请看 [Moonlight Dual 特色功能指引](docs/VPLUS_FEATURES.md)，从王冠配置、Foundation Sunshine 联动、显示器、触觉与插帧中选择适合自己的入口。
 
 ## 快速开始
 
@@ -81,7 +81,7 @@ Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlig
 
 ### 选择主机端
 
-- **Foundation Sunshine（首推）**：与 Moonlight V+ 配套，提供标准串流及其支持的 V+ 扩展功能，例如麦克风重定向和主机显示控制；具体功能取决于主机端版本。
+- **Foundation Sunshine（首推）**：与 Moonlight Dual 配套，提供标准串流及其支持的 V+ 扩展功能，例如麦克风重定向和主机显示控制；具体功能取决于主机端版本。
 - **Sunshine**：可用于标准 Moonlight 串流；部分 V+ 扩展功能需要 Foundation Sunshine。
 - **NVIDIA GameStream**：供仍在使用旧主机的用户尝试兼容；新安装建议选择 Foundation Sunshine。
 

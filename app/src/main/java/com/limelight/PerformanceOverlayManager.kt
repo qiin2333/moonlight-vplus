@@ -688,7 +688,7 @@ class PerformanceOverlayManager(
             view.text = createStyledText(R.drawable.phc_perf_monitor, latencyValue, "ms", 0xFF009688.toInt(), textSizePx = view.textSize)
         } else {
             // 空置时保持原版本的 🧋 emoji
-            view.text = createStyledText(null, "Ver.V+", "", 0xFF009688.toInt(), iconEmoji = "🧋", textSizePx = view.textSize)
+            view.text = createStyledText(null, "Dual", "", 0xFF009688.toInt(), iconEmoji = "🧋", textSizePx = view.textSize)
         }
     }
 

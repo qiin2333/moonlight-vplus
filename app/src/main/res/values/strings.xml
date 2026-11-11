@@ -420,7 +420,7 @@
     <string name="controller_diag_connection_wireless">Bluetooth/wireless</string>
     <string name="controller_diag_connection_builtin">Built-in</string>
     <string name="controller_diag_path_system">Android system input</string>
-    <string name="controller_diag_path_usb_takeover">V+ USB takeover</string>
+    <string name="controller_diag_path_usb_takeover">USB takeover</string>
     <string name="controller_diag_path_unavailable">Unavailable</string>
     <string name="usb_shortcut_hold_hint">Release a D-pad direction to run it now, or move a stick and release Start</string>
     <string name="start_hold_wheel_menu">Stream menu</string>
@@ -490,8 +490,8 @@
     <string name="controller_diag_simulator_controller">Controller: %1$s</string>
     <string name="controller_diag_simulator_waiting_input">Waiting for controller</string>
     <string name="controller_diag_simulator_current_buttons">Buttons</string>
-    <string name="controller_diag_note_usb_ready">Uses V+ USB takeover when streaming.</string>
-    <string name="controller_diag_note_usb_permission">Uses V+ USB takeover; USB permission may be required.</string>
+    <string name="controller_diag_note_usb_ready">Uses USB takeover when streaming.</string>
+    <string name="controller_diag_note_usb_permission">Uses USB takeover; USB permission may be required.</string>
     <string name="controller_diag_note_system_usb">Uses Android controller input when streaming.</string>
     <string name="controller_diag_note_system_wireless">Uses Android controller input when streaming.</string>
     <string name="controller_diag_note_system_builtin">Uses Android controller input.</string>
