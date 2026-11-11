@@ -343,7 +343,6 @@ internal fun AboutDialogContent(
     onOpenSource: () -> Unit,
     onBilibili: () -> Unit,
     onGithub: () -> Unit,
-    onQq: () -> Unit,
     onSite: () -> Unit,
     onClose: () -> Unit,
     initialFocusIndex: Int = 0,
@@ -366,7 +365,6 @@ internal fun AboutDialogContent(
                 1 -> AboutDialogTags.ECOSYSTEM
                 2 -> AboutDialogTags.BILIBILI
                 3 -> AboutDialogTags.GITHUB
-                4 -> AboutDialogTags.QQ
                 5 -> AboutDialogTags.SITE
                 7 -> AboutDialogTags.OPEN_SOURCE
                 else -> AboutDialogTags.CLOSE

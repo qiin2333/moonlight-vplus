@@ -714,7 +714,6 @@
     <string name="summary_privacy_policy">Политика конфиденциальности Moonlight</string>
     <string name="title_about_mode">О приложении</string>
     <string name="summary_about_mode">Сведения о приложении и проекте</string>
-    <string name="about_dialog_description">Moonlight V+ — расширенный клиент для Foundation Sunshine с улучшенной плавностью игровых трансляций.</string>
     <string name="about_dialog_project_info">Создан сообществом Foundation на основе открытого проекта Moonlight-Android</string>
     <string name="about_dialog_thanks">Спасибо за ваш выбор и поддержку.</string>
     <string name="about_dialog_bilibili_title">Moonlight V+ на Bilibili</string>

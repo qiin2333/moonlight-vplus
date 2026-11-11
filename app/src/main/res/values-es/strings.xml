@@ -277,7 +277,6 @@
 
     <!-- 新添加的翻译 -->
     <string name="about_dialog_close">Cerrar</string>
-    <string name="about_dialog_description">Moonlight V+ es una versión mejorada del cliente Android de Moonlight, que proporciona una mejor experiencia de transmisión con características adicionales.</string>
     <string name="about_dialog_github">GitHub</string>
     <string name="about_dialog_project_info">Basado en el proyecto Moonlight-Android, mejorado por el equipo V+</string>
     <string name="about_dialog_qq">Unirse al Grupo QQ</string>

@@ -382,7 +382,8 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingTop="6dp">
+        android:paddingTop="6dp"
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/browseHint"

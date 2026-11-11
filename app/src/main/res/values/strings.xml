@@ -799,7 +799,7 @@
     <string name="summary_about_mode">View app information and project details</string>
     
     <!-- About dialog strings -->
-    <string name="about_dialog_description">Moonlight V+ is an enhanced client built for Foundation Sunshine, delivering a smoother game-streaming experience.</string>
+    <string name="about_dialog_description">A game-streaming client for Sunshine, built for dual-screen handhelds.</string>
     <string name="about_dialog_project_info">Based on Moonlight-Android open source project, crafted by the Foundation community</string>
     <string name="about_dialog_thanks">Thank you for choosing and supporting us.</string>
     <string name="about_dialog_bilibili_badge" translatable="false">GH</string>

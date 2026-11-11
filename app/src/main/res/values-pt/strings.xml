@@ -407,7 +407,6 @@
     <!-- About -->
     <string name="title_about_mode">Sobre</string>
     <string name="summary_about_mode">Ver informações da app e detalhes do projeto</string>
-    <string name="about_dialog_description">Moonlight V+ é um cliente aprimorado construído para Foundation Sunshine, proporcionando a melhor experiência de streaming de jogos.</string>
     <string name="about_dialog_project_info">Baseado no projeto de código aberto Moonlight-Android, criado pela comunidade Foundation</string>
     <string name="about_dialog_thanks">Obrigado por escolher o Moonlight V+! Se você achar útil, por favor dê-nos uma estrela no GitHub </string>
     <string name="about_dialog_github">GitHub</string>

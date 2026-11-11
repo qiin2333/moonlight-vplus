@@ -56,7 +56,6 @@ object AboutDialogLauncher {
         "https://appgallery.huawei.com/app/detail?id=com.alkaidlab.sdream"
     private const val MOONLIGHT_MAC_URL =
         "https://github.com/skyhua0224/moonlight-macos-enhanced"
-    private const val QQ_GROUP_KEY = "LlbLDIF_YolaM4HZyLx0xAXXo04ZmoBM"
 
     private data class ActiveDialogs(
         val owner: WeakReference<Context>,
@@ -102,7 +101,6 @@ object AboutDialogLauncher {
                 },
                 onBilibili = { if (BrowserOnlyLauncher.open(context, GITHUB_URL)) d.dismiss() },
                 onGithub = { if (BrowserOnlyLauncher.open(context, GITHUB_URL)) d.dismiss() },
-                onQq = { if (openQqGroup(context)) d.dismiss() },
                 onSite = {
                     if (BrowserOnlyLauncher.open(context, officialSiteUrl(currentLocale(context)))) {
                         d.dismiss()
@@ -309,21 +307,6 @@ object AboutDialogLauncher {
         } catch (_: PackageManager.NameNotFoundException) {
             "Moonlight V+"
         }
-    }
-
-    private fun openQqGroup(context: Context): Boolean {
-        val url = Uri.Builder()
-            .scheme("https")
-            .authority("qm.qq.com")
-            .appendPath("cgi-bin")
-            .appendPath("qm")
-            .appendPath("qr")
-            .appendQueryParameter("from", "app")
-            .appendQueryParameter("p", "android")
-            .appendQueryParameter("jump_from", "webapi")
-            .appendQueryParameter("k", QQ_GROUP_KEY)
-            .build()
-        return BrowserOnlyLauncher.open(context, url.toString())
     }
 
     private fun ecosystemProjects(context: Context): List<EcosystemProject> {
