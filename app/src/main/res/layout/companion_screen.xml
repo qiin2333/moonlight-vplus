@@ -759,19 +759,19 @@
                 <TextView
                     android:id="@+id/quickEsc"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_btn_esc"
+                    android:drawableTop="@drawable/cq_esc"
                     android:text="Esc" />
 
                 <TextView
                     android:id="@+id/quickWin"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_btn_win"
+                    android:drawableTop="@drawable/cq_win"
                     android:text="Win" />
 
                 <TextView
                     android:id="@+id/quickAltTab"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_alt_tab"
+                    android:drawableTop="@drawable/cq_alt_tab"
                     android:text="Alt+Tab" />
             </LinearLayout>
 
@@ -784,19 +784,19 @@
                 <TextView
                     android:id="@+id/quickKeyboard"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_send_keys_cute"
+                    android:drawableTop="@drawable/cq_keyboard"
                     android:text="@string/companion_quick_keyboard" />
 
                 <TextView
                     android:id="@+id/quickPerf"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_performance_cute"
+                    android:drawableTop="@drawable/cq_perf"
                     android:text="@string/companion_quick_perf" />
 
                 <TextView
                     android:id="@+id/quickHdr"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_btn_hdr"
+                    android:drawableTop="@drawable/cq_hdr"
                     android:text="HDR" />
             </LinearLayout>
 
@@ -809,19 +809,19 @@
                 <TextView
                     android:id="@+id/quickMic"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_mic_gm"
+                    android:drawableTop="@drawable/cq_mic"
                     android:text="@string/companion_quick_mic" />
 
                 <TextView
                     android:id="@+id/quickController"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_controller_cute"
+                    android:drawableTop="@drawable/cq_controller"
                     android:text="@string/companion_quick_controller" />
 
                 <TextView
                     android:id="@+id/quickQuit"
                     style="@style/CompanionQuickKey"
-                    android:drawableTop="@drawable/ic_btn_quit"
+                    android:drawableTop="@drawable/cq_quit"
                     android:text="@string/companion_quick_quit" />
             </LinearLayout>
         </LinearLayout>
