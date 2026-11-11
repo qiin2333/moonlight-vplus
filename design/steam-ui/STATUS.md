@@ -29,11 +29,11 @@
 - 所有改动目前都在工作区，尚未 commit。
 - `origin` = `https://github.com/qiin2333/moonlight-vplus`。
 - 已通过 `gh repo fork qiin2333/moonlight-vplus --clone=false` 在用户账号下创建 fork：
-  `https://github.com/0x1428571429/moonlight-vplus`。
+  `https://github.com/0x1428571429/moonlight-dual`。
 - **尚未添加 `fork` remote，也尚未 push**（上一次 `git remote add` 被用户取消）。
   下一个 agent 如要继续推送：
   ```bash
-  git remote add fork https://github.com/0x1428571429/moonlight-vplus.git
+  git remote add fork https://github.com/0x1428571429/moonlight-dual.git
   git push -u fork feat/steam-ui
   ```
 - `framegen/src/main/cpp/lsfg-vk-android` 是**子模块脏状态**（`m`），与本轮无关，

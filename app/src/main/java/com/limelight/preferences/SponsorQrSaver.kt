@@ -98,7 +98,7 @@ internal class SponsorQrSaver(
     @Suppress("DEPRECATION")
     private fun writeQrToLegacyGallery(fileName: String) {
         val pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val directory = File(pictures, "Moonlight V+").apply { check(exists() || mkdirs()) }
+        val directory = File(pictures, "Moonlight Dual").apply { check(exists() || mkdirs()) }
         val file = File(directory, fileName)
         FileOutputStream(file).use { output ->
             check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))

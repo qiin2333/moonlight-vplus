@@ -766,7 +766,7 @@ class EasyTierController(
     private fun getEasyTierConfig(): String {
         val prefs = activity.getSharedPreferences(EASYTIER_PREFS, Context.MODE_PRIVATE)
         val defaultConfig = "instance_name = \"Default\"\n" +
-                "hostname = \"moonlight-V+\"\n" +
+                "hostname = \"moonlight-dual\"\n" +
                 "ipv4 = \"10.0.0.1/24\"\n" +
                 "dhcp = false\n" +
                 "listeners = [\"tcp://0.0.0.0:11010\", \"udp://0.0.0.0:11010\", \"wg://0.0.0.0:11011\"]\n" +

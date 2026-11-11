@@ -666,7 +666,7 @@
     <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目（GPLv3）</string>
     <string name="about_dialog_thanks">感谢您的选择与支持。</string>
     <string name="about_dialog_bilibili_title">GitHub</string>
-    <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-vplus</string>
+    <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-dual</string>
     <string name="about_dialog_handbook_action">文档手册</string>
     <string name="about_dialog_ecosystem_action">基地生态</string>
     <string name="about_dialog_open_source_action">开源许可</string>

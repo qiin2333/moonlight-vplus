@@ -58,7 +58,7 @@ internal object EasyTierTomlCodec {
 
     fun build(config: EasyTierConfigUiState): String {
         val sb = StringBuilder()
-        appendTomlString(sb, "hostname", "moonlight-V+")
+        appendTomlString(sb, "hostname", "moonlight-dual")
         appendTomlString(sb, "instance_name", "Default")
         sb.append("dhcp = false\n")
         appendTomlString(sb, "ipv4", "${config.ipv4.ifBlank { DEFAULT_IPV4 }}/24", writeEmpty = true)

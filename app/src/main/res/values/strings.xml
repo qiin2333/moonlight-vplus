@@ -804,7 +804,7 @@
     <string name="about_dialog_thanks">Thank you for choosing and supporting us.</string>
     <string name="about_dialog_bilibili_badge" translatable="false">GH</string>
     <string name="about_dialog_bilibili_title">GitHub</string>
-    <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-vplus</string>
+    <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-dual</string>
     <string name="about_dialog_handbook_action">Documentation</string>
     <string name="about_dialog_ecosystem_action">Ecosystem</string>
     <string name="about_dialog_open_source_action">Licenses</string>

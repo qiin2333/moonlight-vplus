@@ -44,12 +44,12 @@ object AboutDialogLauncher {
 
     private const val OFFICIAL_SITE_CN_URL = "https://www.alkaidlab.cn/"
     private const val OFFICIAL_SITE_GLOBAL_URL = "https://www.alkaidlab.com/"
-    private const val GITHUB_URL = "https://github.com/0x1428571429/moonlight-vplus"
+    private const val GITHUB_URL = "https://github.com/0x1428571429/moonlight-dual"
     private const val BILIBILI_URL = "https://space.bilibili.com/3690974838524514"
     private const val FOUNDATION_SUNSHINE_URL =
         "https://github.com/AlkaidLab/foundation-sunshine"
     private const val MOONLIGHT_PC_URL = "https://github.com/qiin2333/moonlight-qt"
-    private const val MOONLIGHT_VPLUS_URL = "https://github.com/0x1428571429/moonlight-vplus"
+    private const val MOONLIGHT_VPLUS_URL = "https://github.com/0x1428571429/moonlight-dual"
     private const val VOIDLINK_URL =
         "https://apps.apple.com/us/app/voidlink-extreme/id6755103808"
     private const val HARMONY_URL =
