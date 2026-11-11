@@ -31,8 +31,12 @@ class BrowseScreenCompanion(
     private val hostsProvider: () -> List<ComputerDetails>,
     private val onHostClick: (ComputerDetails) -> Unit,
     private val onHostLongClick: (ComputerDetails) -> Unit,
-    private val onOpenSettings: () -> Unit
+    private val onOpenSettings: () -> Unit,
+    private val menuItems: () -> List<MenuItem> = { emptyList() }
 ) {
+    /** 菜单页的一项：标题 + 动作；动作沿用 [PcView] 里原有的处理逻辑。 */
+    data class MenuItem(val title: String, val action: () -> Unit)
+
     private var presentation: BrowsePresentation? = null
 
     fun show() {
@@ -79,8 +83,8 @@ class BrowseScreenCompanion(
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
 
             setContentView(R.layout.companion_browse)
-            tabs = listOf(findViewById(R.id.tabHosts), findViewById(R.id.tabSettings))
-            pages = listOf(findViewById(R.id.pageHosts), findViewById(R.id.pageSettings))
+            tabs = listOf(findViewById(R.id.tabHosts), findViewById(R.id.tabSettings), findViewById(R.id.tabMenu))
+            pages = listOf(findViewById(R.id.pageHosts), findViewById(R.id.pageSettings), findViewById(R.id.pageMenu))
             hostList = findViewById(R.id.hostList)
             hostHint = findViewById(R.id.hostHint)
             tabs.forEachIndexed { index, tab -> tab.setOnClickListener { selectTab(index) } }
@@ -104,6 +108,40 @@ class BrowseScreenCompanion(
             pages.forEachIndexed { i, page -> page.visibility = if (i == index) View.VISIBLE else View.GONE }
             tabs.forEachIndexed { i, tab -> tab.isSelected = i == index }
             if (index == 1) bindSettingsSummary()
+            if (index == 2) bindMenu()
+        }
+
+        private fun bindMenu() {
+            val page = findViewById<LinearLayout>(R.id.pageMenu)
+            page.removeAllViews()
+            menuItems().chunked(2).forEach { pair ->
+                val row = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                    )
+                }
+                pair.forEach { item -> row.addView(createMenuButton(item)) }
+                if (pair.size == 1) row.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+                page.addView(row)
+            }
+        }
+
+        private fun createMenuButton(item: MenuItem) = TextView(context).apply {
+            text = item.title
+            setTextColor(0xFFF7F3F7.toInt())
+            textSize = 17f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = android.view.Gravity.CENTER
+            setBackgroundResource(R.drawable.companion_key_bg)
+            isClickable = true
+            isFocusable = true
+            maxLines = 2
+            setPadding(12, 8, 12, 8)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+                setMargins(5, 5, 5, 5)
+            }
+            setOnClickListener { item.action() }
         }
 
         private fun refresh() {

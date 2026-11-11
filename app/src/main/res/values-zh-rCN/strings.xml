@@ -2513,4 +2513,5 @@
     <string name="browse_off">关</string>
     <string name="browse_codec_auto">自动</string>
     <string name="browse_open_settings">打开完整设置</string>
+    <string name="browse_tab_menu">菜单</string>
 </resources>

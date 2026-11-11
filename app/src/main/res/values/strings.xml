@@ -2592,4 +2592,5 @@ Tap again to replace it.</string>
     <string name="browse_off">Off</string>
     <string name="browse_codec_auto">Auto</string>
     <string name="browse_open_settings">Open settings</string>
+    <string name="browse_tab_menu">Menu</string>
 </resources>

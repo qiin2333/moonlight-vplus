@@ -77,6 +77,20 @@
                 android:textColor="@color/companion_tab_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
+                    <TextView
+                android:id="@+id/tabMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/browse_tab_menu"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
@@ -305,5 +319,12 @@
                 android:textStyle="bold" />
         </LinearLayout>
         </LinearLayout>
+        <!-- ================= 菜单（原主屏左侧工具栏与「更多」菜单） ================= -->
+        <LinearLayout
+            android:id="@+id/pageMenu"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

@@ -3419,7 +3419,27 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             },
             onHostClick = ::handleHostClick,
             onHostLongClick = ::showHostActionSheet,
-            onOpenSettings = { startActivity(Intent(this, StreamSettings::class.java)) }
+            onOpenSettings = { startActivity(Intent(this, StreamSettings::class.java)) },
+            menuItems = {
+                // 与主屏左侧工具栏、「更多」菜单完全相同的入口，只是换到副屏上点。
+                listOf(
+                    BrowseScreenCompanion.MenuItem(getString(R.string.browse_open_settings)) {
+                        startActivity(Intent(this, StreamSettings::class.java))
+                    },
+                    BrowseScreenCompanion.MenuItem(getString(R.string.title_about_us)) { AboutDialogLauncher.show(this) },
+                    BrowseScreenCompanion.MenuItem(getString(R.string.easytier_panel_title)) { showEasyTierControlDialog() },
+                    BrowseScreenCompanion.MenuItem(getString(R.string.pcview_toolbar_restore_session)) { restoreLastSession() },
+                    BrowseScreenCompanion.MenuItem(
+                        getString(
+                            if (pcGridAdapter.isShowUnpairedDevices()) R.string.pcview_toolbar_toggle_unpaired_hide
+                            else R.string.pcview_toolbar_toggle_unpaired_show
+                        )
+                    ) { toggleUnpairedDevices() },
+                    BrowseScreenCompanion.MenuItem(getString(R.string.pcview_toolbar_theme)) {
+                        showAppThemeSheet(this) { recreate() }
+                    }
+                )
+            }
         ).also { it.show() }
     }
 
