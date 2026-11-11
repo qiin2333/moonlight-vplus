@@ -197,9 +197,9 @@ class SecondScreenCompanion(
 
         private fun bindQuickKeys() {
             fun quick(id: Int, actionId: String) {
-                findViewById<TextView>(id).setOnClickListener {
-                    actionExecutor.execute(actionId)
-                }
+                val v = findViewById<TextView>(id)
+                v.setOnClickListener { actionExecutor.execute(actionId) }
+                centerIconBlock(v)
             }
 
             quick(R.id.quickEsc, "send_esc")
@@ -212,6 +212,18 @@ class SecondScreenCompanion(
             quick(R.id.quickController, "toggle_controller")
             findViewById<TextView>(R.id.quickQuit).setOnClickListener {
                 game.disconnect()
+            }
+        }
+
+        /** 图标在上、文字在下，整体在按钮里垂直居中（TextView 默认把图标贴顶）。 */
+        private fun centerIconBlock(v: TextView) {
+            v.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+                val icon = v.compoundDrawables[1] ?: return@addOnLayoutChangeListener
+                val block = icon.intrinsicHeight + v.compoundDrawablePadding + v.lineHeight
+                val pad = ((bottom - top - block) / 2).coerceAtLeast(0)
+                if (v.paddingTop != pad || v.paddingBottom != pad) {
+                    v.setPadding(v.paddingLeft, pad, v.paddingRight, pad)
+                }
             }
         }
 
