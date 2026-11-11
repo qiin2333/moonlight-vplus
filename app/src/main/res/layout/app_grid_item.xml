@@ -7,7 +7,7 @@
     android:padding="8dp"
     android:focusable="true"
     android:focusableInTouchMode="false"
-    android:background="?android:attr/selectableItemBackground">
+    android:background="@null">
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
