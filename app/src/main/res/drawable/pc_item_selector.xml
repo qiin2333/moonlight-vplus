@@ -13,30 +13,21 @@
         </shape>
     </item>
     
-    <!-- 焦点状态 -->
+    <!-- 焦点 / 选中：与应用卡一致的亮蓝描边 -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <gradient
-                android:startColor="?attr/pcDecorSurfaceFocusedStart"
-                android:centerColor="?attr/pcDecorSurfaceFocusedCenter"
-                android:endColor="?attr/pcDecorSurfaceFocusedEnd"
-                android:angle="135" />
-            <corners android:radius="@dimen/corner_radius_large"/>
+            <corners android:radius="14dp" />
+            <stroke android:width="3dp" android:color="#FF66C0F4" />
         </shape>
     </item>
 
-    <!-- 选中状态 -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <gradient
-                android:startColor="?attr/pcDecorSurfaceFocusedStart"
-                android:centerColor="?attr/pcDecorSurfaceFocusedCenter"
-                android:endColor="?attr/pcDecorSurfaceFocusedEnd"
-                android:angle="135" />
-            <corners android:radius="@dimen/corner_radius_large"/>
+            <corners android:radius="14dp" />
+            <stroke android:width="3dp" android:color="#FF66C0F4" />
         </shape>
     </item>
-    
+
     <!-- 默认状态 -->
     <item>
         <shape android:shape="rectangle">
