@@ -759,16 +759,19 @@
                 <TextView
                     android:id="@+id/quickEsc"
                     style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_btn_esc"
                     android:text="Esc" />
 
                 <TextView
                     android:id="@+id/quickWin"
                     style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_btn_win"
                     android:text="Win" />
 
                 <TextView
                     android:id="@+id/quickAltTab"
                     style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_alt_tab"
                     android:text="Alt+Tab" />
             </LinearLayout>
 

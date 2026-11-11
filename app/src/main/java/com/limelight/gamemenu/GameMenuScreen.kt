@@ -481,6 +481,16 @@ internal fun GameMenuDialogShell(
                     semanticsTestTag = GAME_MENU_BACKDROP_TAG
                 }
         )
+        // 弹出动画：淡入 + 从下方轻轻滑入，不再是硬切。
+        val enterState = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
+        androidx.compose.animation.AnimatedVisibility(
+            visibleState = enterState,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) +
+                androidx.compose.animation.slideInVertically(
+                    androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ) { it / 10 },
+            exit = androidx.compose.animation.ExitTransition.None
+        ) {
         Box(
             modifier = (if (fullscreen) Modifier.fillMaxSize() else Modifier
                 .width(panelWidth)
@@ -498,6 +508,7 @@ internal fun GameMenuDialogShell(
                 }
         ) {
             content(wideLayout)
+        }
         }
     }
 }

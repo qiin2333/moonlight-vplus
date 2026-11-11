@@ -109,12 +109,13 @@ internal fun QuickActionRow(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .horizontalScroll(rememberScrollState()),
+        // 不再横向滑动：按钮多了就自动换行，全部一眼可见。
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(GameMenuDimens.tight),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight),
+            itemVerticalAlignment = Alignment.CenterVertically
         ) {
             actions.forEach { action ->
                 key(action.id) {
