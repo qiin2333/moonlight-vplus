@@ -35,12 +35,9 @@ object AppTheme {
         }
     }
 
-    fun getAppThemeMode(context: Context): String {
-        val storedMode = context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(APP_THEME_MODE_KEY, THEME_MODE_SYSTEM)
-            ?: THEME_MODE_SYSTEM
-        return normalizeThemeMode(storedMode)
-    }
+    /** 只保留一个主题：固定深色，不再读取用户偏好。 */
+    @Suppress("UNUSED_PARAMETER")
+    fun getAppThemeMode(context: Context): String = THEME_MODE_DARK
 
     /** Commit the two independent choices together before triggering a configuration change. */
     fun save(context: Context, mode: String, accent: String) {
@@ -109,10 +106,8 @@ object AppTheme {
     )
 
     /** 当前强调色模式：品牌粉 / 跟随首页背景。 */
-    fun getAccentMode(context: Context): String =
-        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(ACCENT_MODE_KEY, ACCENT_MODE_PINK)
-            .let { if (it == ACCENT_MODE_BG) ACCENT_MODE_BG else ACCENT_MODE_PINK }
+    @Suppress("UNUSED_PARAMETER")
+    fun getAccentMode(context: Context): String = ACCENT_MODE_PINK
 
     /** Refresh live views on a bucket change, including changes made while the page was stopped. */
     fun observeAccent(context: Context, owner: LifecycleOwner, onChanged: () -> Unit) {
