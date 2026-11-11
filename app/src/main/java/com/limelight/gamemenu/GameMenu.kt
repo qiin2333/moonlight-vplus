@@ -2127,8 +2127,16 @@ class GameMenu(
             }
             window.attributes = layoutParams
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            // 弹在副屏上时用不透明深色底，避免透出下面的伴生面板。
+            val onCompanion = layoutParams.type == 2037
+            if (onCompanion) {
+                layoutParams.alpha = 1f
+                window.attributes = layoutParams
+            }
             window.setBackgroundDrawable(
-                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+                android.graphics.drawable.ColorDrawable(
+                    if (onCompanion) 0xFF070C12.toInt() else android.graphics.Color.TRANSPARENT
+                )
             )
             window.setWindowAnimations(renderingProfile.dialogAnimationStyle)
         }
