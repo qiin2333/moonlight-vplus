@@ -14,7 +14,7 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_marginEnd="8dp"
-        android:src="@drawable/ic_super_crown" />
+        android:src="@drawable/phc_crown" />
 
     <LinearLayout
         android:layout_width="0dp"
