@@ -368,12 +368,22 @@
         </LinearLayout>
         </LinearLayout>
         <!-- ================= 菜单（原主屏左侧工具栏与「更多」菜单） ================= -->
-        <LinearLayout
+        <ScrollView
             android:id="@+id/pageMenu"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:visibility="gone" />
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/menuList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="8dp" />
+        </ScrollView>
     </FrameLayout>
 
     <!-- 常驻底栏：当前页可用的手柄按键提示 + 时间/电量/主机在线数 -->

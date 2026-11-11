@@ -194,6 +194,7 @@ class BrowseScreenCompanion(
             applyFocusMode()
             val target = when {
                 tabIndex == 0 && appContext != null -> findViewById<View>(R.id.appPanelAction)
+                tabIndex == 2 -> findViewById<LinearLayout>(R.id.menuList).getChildAt(0) ?: pages[tabIndex]
                 else -> pages[tabIndex]
             }
             target.requestFocus()
@@ -280,7 +281,7 @@ class BrowseScreenCompanion(
         }
 
         private fun bindMenu() {
-            val page = findViewById<LinearLayout>(R.id.pageMenu)
+            val page = findViewById<LinearLayout>(R.id.menuList)
             page.removeAllViews()
             menuItems().forEach { page.addView(createMenuButton(it)) }
         }
