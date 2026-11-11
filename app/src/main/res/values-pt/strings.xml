@@ -409,7 +409,7 @@
     <string name="summary_about_mode">Ver informações da app e detalhes do projeto</string>
     <string name="about_dialog_description">Moonlight V+ é um cliente aprimorado construído para Foundation Sunshine, proporcionando a melhor experiência de streaming de jogos.</string>
     <string name="about_dialog_project_info">Baseado no projeto de código aberto Moonlight-Android, criado pela comunidade Foundation</string>
-    <string name="about_dialog_thanks">Obrigado por escolher o Moonlight V+! Se você achar útil, por favor dê-nos uma estrela no GitHub ⭐</string>
+    <string name="about_dialog_thanks">Obrigado por escolher o Moonlight V+! Se você achar útil, por favor dê-nos uma estrela no GitHub </string>
     <string name="about_dialog_github">GitHub</string>
     <string name="about_dialog_qq">Entrar no grupo QQ</string>
     <string name="about_dialog_close">Fechar</string>
@@ -495,23 +495,23 @@
     <string name="summary_enable_analytics">Ajude a melhorar a app compartilhando estatísticas de uso anônimas</string>
     
     <!-- Tips -->
-    <string name="tip_esc_exit">💡 Dica: Use o botão \"Sair\" para sair rapidamente e completamente do stream, restaurando sua tela ao estado pré-stream~</string>
-    <string name="tip_double_tap_mouse">💡 Dica: mantenha premida a área vazia no topo da lista de computadores para guardar a imagem de fundo atual.</string>
-    <string name="tip_long_press_controller">💡 Dica: Pressione longamente uma app para escolher streaming com display virtual, super conveniente!</string>
-    <string name="tip_volume_keys">💡 Dica: Usar WiFi 5GHz proporciona uma experiência melhor, velocidade ultra rápida~</string>
-    <string name="tip_wallpaper_change">💡 Dica: A opção da API de papel de parede pode definir a API para fontes de papel de parede aleatórias, ou um endereço de imagem único</string>
-    <string name="tip_5ghz_wifi">💡 Dica: Usar o modo de taxa de quadros \"Equilibrado\" oferece o melhor equilíbrio entre taxa de quadros e latência, perfeito!</string>
-    <string name="tip_close_apps">💡 Dica: Ativar HDR proporciona melhor desempenho de cores e contraste.</string>
-    <string name="tip_home_saves">💡 Dica: Os 5 pequenos tubarões na página inicial podem salvar e trocar rapidamente configurações de streaming~</string>
-    <string name="tip_hdr_colors">💡 Dica: Ajustar a resolução pode equilibrar qualidade e desempenho, encontre as configurações perfeitas~</string>
-    <string name="tip_touch_modes">💡 Dica: Você pode trocar os modos de toque no menu do jogo. Toque multiponto aprimorado é adequado para jogos móveis, modo trackpad é ótimo para trabalho de escritório.</string>
-    <string name="tip_custom_keys">💡 Dica: Você pode adicionar combinações de teclas personalizadas, como Ctrl+Shift+Esc para abrir rapidamente o Gerenciador de Tarefas~</string>
-    <string name="tip_performance_overlay">💡 Dica: Toque no HUD de desempenho para alternar entre Mini / Padrão / Detalhado, toque duplo para alternar entre horizontal e vertical, mantenha pressionada uma métrica para ver a explicação e arraste para qualquer posição~</string>
-    <string name="tip_audio_config">💡 Dica: Ativar Dolby Atmos ou DTS:X proporciona uma experiência de áudio mais imersiva~</string>
-    <string name="tip_external_display">💡 Dica: Ao conectar um display externo, você pode escolher exibir o stream no display externo nas configurações~</string>
-    <string name="tip_virtual_display">💡 Dica: A função de display virtual pode criar espaços de exibição independentes, especialmente adequada para cenários de multitarefa~</string>
-    <string name="tip_dynamic_bitrate">💡 Dica: Ao usar decodificadores HEVC ou AV1, você pode ajustar a taxa de bits durante o streaming sem sair~</string>
-    <string name="tip_cards_show">💡 Dica: Você pode editar os cartões de função exibidos no menu do jogo. Cartões desnecessários podem ser ocultados~</string>
+    <string name="tip_esc_exit">Dica: Use o botão \"Sair\" para sair rapidamente e completamente do stream, restaurando sua tela ao estado pré-stream~</string>
+    <string name="tip_double_tap_mouse">Dica: mantenha premida a área vazia no topo da lista de computadores para guardar a imagem de fundo atual.</string>
+    <string name="tip_long_press_controller">Dica: Pressione longamente uma app para escolher streaming com display virtual, super conveniente!</string>
+    <string name="tip_volume_keys">Dica: Usar WiFi 5GHz proporciona uma experiência melhor, velocidade ultra rápida~</string>
+    <string name="tip_wallpaper_change">Dica: A opção da API de papel de parede pode definir a API para fontes de papel de parede aleatórias, ou um endereço de imagem único</string>
+    <string name="tip_5ghz_wifi">Dica: Usar o modo de taxa de quadros \"Equilibrado\" oferece o melhor equilíbrio entre taxa de quadros e latência, perfeito!</string>
+    <string name="tip_close_apps">Dica: Ativar HDR proporciona melhor desempenho de cores e contraste.</string>
+    <string name="tip_home_saves">Dica: Os 5 pequenos tubarões na página inicial podem salvar e trocar rapidamente configurações de streaming~</string>
+    <string name="tip_hdr_colors">Dica: Ajustar a resolução pode equilibrar qualidade e desempenho, encontre as configurações perfeitas~</string>
+    <string name="tip_touch_modes">Dica: Você pode trocar os modos de toque no menu do jogo. Toque multiponto aprimorado é adequado para jogos móveis, modo trackpad é ótimo para trabalho de escritório.</string>
+    <string name="tip_custom_keys">Dica: Você pode adicionar combinações de teclas personalizadas, como Ctrl+Shift+Esc para abrir rapidamente o Gerenciador de Tarefas~</string>
+    <string name="tip_performance_overlay">Dica: Toque no HUD de desempenho para alternar entre Mini / Padrão / Detalhado, toque duplo para alternar entre horizontal e vertical, mantenha pressionada uma métrica para ver a explicação e arraste para qualquer posição~</string>
+    <string name="tip_audio_config">Dica: Ativar Dolby Atmos ou DTS:X proporciona uma experiência de áudio mais imersiva~</string>
+    <string name="tip_external_display">Dica: Ao conectar um display externo, você pode escolher exibir o stream no display externo nas configurações~</string>
+    <string name="tip_virtual_display">Dica: A função de display virtual pode criar espaços de exibição independentes, especialmente adequada para cenários de multitarefa~</string>
+    <string name="tip_dynamic_bitrate">Dica: Ao usar decodificadores HEVC ou AV1, você pode ajustar a taxa de bits durante o streaming sem sair~</string>
+    <string name="tip_cards_show">Dica: Você pode editar os cartões de função exibidos no menu do jogo. Cartões desnecessários podem ser ocultados~</string>
     
     <!-- Touch mode switch menu -->
     <string name="game_menu_switch_touch_mode">Método de controle</string>
@@ -597,19 +597,19 @@
     
     <!-- Performance Overlay Info -->
     <string name="perf_moon_phase_info">Fase da lua de hoje\n\n%1$s %2$s\nCiclo da fase lunar: %3$.1f%%\nDia do ciclo: Dia %4$d\nData: %5$s\n\n%6$s</string>
-    <string name="perf_decoder_title">🎬 Informações do decodificador</string>
+    <string name="perf_decoder_title">Informações do decodificador</string>
     <string name="perf_decoder_info">O decodificador é responsável por decodificar streams de vídeo em imagens exibíveis.\n\nDecodificadores comuns:\n• H.264 (AVC) - Melhor compatibilidade\n• H.265 (HEVC) - Maior compressão\n• AV1 - Padrão mais recente, mais eficiente\n\nSuporte HDR:\n• Vídeo de alta faixa dinâmica\n• Representação de cores mais rica\n• Requer suporte de hardware</string>
-    <string name="perf_fps_title">📊 Informações de taxa de quadros</string>
+    <string name="perf_fps_title">Informações de taxa de quadros</string>
     <string name="perf_fps_info">Rx FPS: Taxa de quadros recebidos\n• Número de quadros de vídeo recebidos do host\n• Deve ser estável em condições ideais\n\nRd FPS: Taxa de quadros renderizados\n• Número de quadros realmente renderizados na tela\n• Pode ser reduzido devido ao desempenho do dispositivo</string>
-    <string name="perf_packet_loss_title">📶 Informações de perda de pacotes</string>
+    <string name="perf_packet_loss_title">Informações de perda de pacotes</string>
     <string name="perf_packet_loss_info" formatted="false">A perda de pacotes representa a porcentagem de pacotes de dados perdidos durante a transmissão de rede.\n\nIntervalo normal:\n• 0-0,5%: Qualidade de rede excelente\n• 0,5-2%: Boa qualidade de rede\n• 2-5%: Qualidade de rede razoável\n• &gt;5%: Má qualidade de rede</string>
-    <string name="perf_network_latency_title">🌐 Informações de latência de rede</string>
+    <string name="perf_network_latency_title">Informações de latência de rede</string>
     <string name="perf_network_latency_info">A latência de rede representa o tempo de ida e volta para pacotes de dados do host ao dispositivo.\n\nIntervalo de latência:\n• &lt;20ms: Excelente\n• 20-50ms: Bom\n• 50-100ms: Aceitável\n• &gt;100ms: Ruim</string>
-    <string name="perf_decode_latency_title">⏱️ Informações de latência de decodificação</string>
+    <string name="perf_decode_latency_title">Informações de latência de decodificação</string>
     <string name="perf_decode_latency_info">A latência de decodificação representa o tempo necessário para decodificar quadros de vídeo.\n\nIntervalo de latência:\n• &lt;5ms: Desempenho excelente do decodificador\n• 5-10ms: Bom desempenho do decodificador\n• 10-20ms: Desempenho razoável do decodificador\n• &gt;20ms: Desempenho ruim do decodificador</string>
-    <string name="perf_host_latency_title">🖥️ Informações de latência do host</string>
+    <string name="perf_host_latency_title">Informações de latência do host</string>
     <string name="perf_host_latency_info">A latência do host representa o tempo para o host do jogo processar quadros.\n\nIntervalo de latência:\n• &lt;5ms: Desempenho forte do host\n• 5-10ms: Bom desempenho do host\n• 10-20ms: Desempenho razoável do host\n• &gt;20ms: Desempenho fraco do host</string>
-    <string name="perf_battery_info_title">🔋 Informações da bateria</string>
+    <string name="perf_battery_info_title">Informações da bateria</string>
     <string name="perf_battery_status_sufficient">Nível da bateria é suficiente</string>
     <string name="perf_battery_status_low">Nível da bateria está baixo, recomenda-se carregar</string>
     <string name="perf_battery_status_critical">Nível da bateria está criticamente baixo, carregue em breve</string>

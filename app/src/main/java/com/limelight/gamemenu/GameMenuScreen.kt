@@ -1305,9 +1305,9 @@ private fun GameMenuHeader(
             }
             val crownShape = CircleShape
             Icon(
-                painter = painterResource(R.drawable.ic_super_crown),
+                painter = painterResource(R.drawable.phc_crown),
                 contentDescription = state.crownToggleText,
-                tint = Color.Unspecified,
+                tint = colorResource(R.color.game_menu_icon_tint),
                 modifier = Modifier
                     .then(crownGuideModifier)
                     .size(36.dp)
@@ -1366,7 +1366,7 @@ private fun HeaderDeviceQuickAction(
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = Color.Unspecified,
+                tint = colorResource(R.color.game_menu_icon_tint),
                 modifier = Modifier.size(20.dp)
             )
         } else {

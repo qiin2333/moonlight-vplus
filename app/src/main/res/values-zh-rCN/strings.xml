@@ -106,7 +106,7 @@
     <string name="perf_overlay_dectime">平均解码时间： %1$.2f ms</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg"> 正在连接电脑…… </string>
-    <string name="applist_menu_start_with_vdd"> 就是要用虚拟显示器～ </string>
+    <string name="applist_menu_start_with_vdd">使用虚拟显示器串流</string>
     <string name="applist_menu_start_with_last_settings">使用上一次设置启动</string>
     <string name="applist_menu_resume"> 恢复串流 </string>
     <string name="applist_menu_quit"> 退出串流 </string>
@@ -129,7 +129,7 @@
     <string name="applist_quit_confirmation">您确定要退出当前游戏？所有未保存的数据将丢失。</string>
     <string name="applist_details_id">App ID：</string>
     <!-- In Game menu -->
-    <string name="game_menu_title">🍥🍬 V+ Game Menu</string>
+    <string name="game_menu_title">V+ Game Menu</string>
     <string name="game_menu_server_version">%1$s  服务端 %2$s</string>
     <string name="game_menu_toggle_keyboard"> 屏幕键盘 </string>
     <string name="game_menu_toggle_performance_overlay"> 性能监控图层 </string>
@@ -834,7 +834,7 @@
     <string name="crown_switch_to_normal">关闭王冠</string>
     <string name="crown_switch_to_crown">启用王冠</string>
     <string name="game_menu_crown_function">王冠</string>
-    <string name="game_menu_crown_function_title">♛ 王冠</string>
+    <string name="game_menu_crown_function_title">王冠</string>
     <string name="game_menu_toggle_elements_visibility">显示/隐藏按键</string>
     <string name="game_menu_configure_crown_function">返回键打开王冠</string>
     <string name="crown_control_visibility_subtitle">临时收起或显示屏幕按键</string>
@@ -873,7 +873,7 @@
     <string name="background_source_local">本地图片</string>
     <string name="background_source_none">不显示背景</string>
     <string name="background_source_dialog_title">选择壁纸风格</string>
-    <string name="background_source_dialog_message">选一种首页随机壁纸的风格吧，随时可以在设置里重新调整～</string>
+    <string name="background_source_dialog_message">选择首页随机壁纸的风格，之后可在设置中调整。</string>
     <string name="background_source_dialog_later">以后再说</string>
 
     <!-- 崩溃日志反馈弹窗 -->
@@ -915,29 +915,29 @@
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
 
     <!-- Tip strings -->
-    <string name="tip_esc_exit">💡 串流小课堂：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
-    <string name="tip_double_tap_mouse">💡 串流小课堂：主机列表页面长按顶部空白区域可以下载当前涩图呢～</string>
-    <string name="tip_long_press_controller">💡 串流小课堂：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
-    <string name="tip_volume_keys">💡 串流小课堂：建议使用5GHz WiFi获得更好体验，网速飞起来～</string>
-    <string name="tip_wallpaper_change">💡 串流小课堂：壁纸API选项可以设置随机壁纸来源的API，也可以是单张图片地址哦</string>
-    <string name="tip_5ghz_wifi">💡 串流小课堂：使用"平衡"的帧速率模式可以获得最佳的帧率与延迟平衡，完美！</string>
-    <string name="tip_close_apps">💡 串流小课堂：启用HDR可以获得更好的色彩与对比度表现，在Sunshine基地版中绑定对应的HDR配置文件可以更精准地与客户端屏幕同步，色彩绚丽～</string>
-    <string name="tip_home_saves">💡 串流小课堂：主页的5个小鲨牙可以快速保存和切换串流配置～</string>
-    <string name="tip_hdr_colors">💡 串流小课堂：调整分辨率可以平衡画质和性能，找到最适合的设置～</string>
-    <string name="tip_touch_modes">💡 串流小课堂：游戏菜单中可以切换触控模式，增强式多点触控适合手游，触控板模式适合办公，找到最适合你的操作方式～</string>
-    <string name="tip_custom_keys">💡 串流小课堂：可以添加自定义按键组合，比如Ctrl+Shift+Esc快速打开任务管理器，让操作更便捷～</string>
-    <string name="tip_performance_overlay">💡 串流小课堂：单击性能 HUD 能在 迷你 / 标准 / 详细 之间切换，双击切横竖排，长按指标看说明，还能拖着到处跑哦～这都不会用的话，就是杂鱼♡</string>
+    <string name="tip_esc_exit">提示：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态</string>
+    <string name="tip_double_tap_mouse">提示：主机列表页面长按顶部空白区域可以下载当前涩图</string>
+    <string name="tip_long_press_controller">提示：长按应用可以选择使用虚拟显示器串流，超方便的！</string>
+    <string name="tip_volume_keys">提示：建议使用5GHz WiFi获得更好体验，网速飞起来</string>
+    <string name="tip_wallpaper_change">提示：壁纸API选项可以设置随机壁纸来源的API，也可以是单张图片地址哦</string>
+    <string name="tip_5ghz_wifi">提示：使用"平衡"的帧速率模式可以获得最佳的帧率与延迟平衡，完美！</string>
+    <string name="tip_close_apps">提示：启用HDR可以获得更好的色彩与对比度表现，在Sunshine基地版中绑定对应的HDR配置文件可以更精准地与客户端屏幕同步，色彩绚丽</string>
+    <string name="tip_home_saves">提示：主页的5个小鲨牙可以快速保存和切换串流配置</string>
+    <string name="tip_hdr_colors">提示：调整分辨率可以平衡画质和性能，找到最适合的设置</string>
+    <string name="tip_touch_modes">提示：游戏菜单中可以切换触控模式，增强式多点触控适合手游，触控板模式适合办公，找到最适合你的操作方式</string>
+    <string name="tip_custom_keys">提示：可以添加自定义按键组合，比如Ctrl+Shift+Esc快速打开任务管理器，让操作更便捷</string>
+    <string name="tip_performance_overlay">提示：单击性能 HUD 可在 迷你 / 标准 / 详细 之间切换，双击切换横竖排，长按指标查看说明，也可拖动到任意位置</string>
     <string name="title_perf_overlay_style">覆盖层样式</string>
     <string name="perf_overlay_style_mini">迷你</string>
     <string name="perf_overlay_style_standard">标准</string>
     <string name="perf_overlay_style_detailed">详细</string>
     <string name="perf_overlay_style_classic">经典</string>
     <string name="game_menu_perf_overlay_style">覆盖层样式</string>
-    <string name="perf_hud_style_changed">换成「%1$s」了哦，杂鱼～</string>
-    <string name="perf_hud_long_press_hint">长按某个指标能看它的说明哦，杂鱼～</string>
-    <string name="perf_hud_hint">💡 串流小课堂：单击切信息密度，双击切横竖，长按指标看说明，拖动挪位置～记不住的话就是杂鱼喵♡</string>
-    <string name="perf_hud_dock_orientation_hint">停在画面下面哪来的横竖啦，杂鱼～转到横屏再双击♡</string>
-    <string name="tip_performance_overlay_classic">💡 串流小课堂：覆盖层可以拖到任意位置，双击切换横竖布局，点各项指标还有说明～人家这么贴心，杂鱼还不快说谢谢♡</string>
+    <string name="perf_hud_style_changed">已切换为「%1$s」</string>
+    <string name="perf_hud_long_press_hint">长按指标可查看说明</string>
+    <string name="perf_hud_hint">提示：单击切换信息密度，双击切换横竖排，长按指标查看说明，拖动调整位置</string>
+    <string name="perf_hud_dock_orientation_hint">停靠在画面下方时不支持切换横竖，请转到横屏后双击</string>
+    <string name="tip_performance_overlay_classic">提示：覆盖层可拖到任意位置，双击切换横竖布局，点击各项指标查看说明</string>
     <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
     <string name="perf_hud_label_latency">延迟</string>
     <string name="perf_hud_label_latency_chain">延迟链（估算）</string>
@@ -953,49 +953,49 @@
     <string name="perf_hud_label_clock">时间</string>
     <string name="perf_hud_label_fps_history">帧率历史</string>
     <string name="perf_hud_drain_per_hour">%.0f%%/时</string>
-    <string name="perf_hud_mood_warming_up">🌙 热身中，杂鱼等一下下～</string>
-    <string name="perf_hud_mood_smooth">满帧丝滑，杂鱼运气不错嘛♡</string>
-    <string name="perf_hud_mood_full_moon">满月加持，满帧丝滑♡</string>
-    <string name="perf_hud_mood_hot_decode">🥵 解码器烫烫的，杂鱼设备～</string>
-    <string name="perf_hud_mood_lossy">📶 在掉包喵，杂鱼网络～</string>
-    <string name="perf_hud_mood_fps_drop">帧率掉了喵，杂鱼～</string>
-    <string name="perf_hud_mood_laggy">🐢 延迟好高，杂鱼网络～</string>
-    <string name="perf_hud_mood_low_battery">🔋 快没电了，杂鱼快去充电♡</string>
-    <string name="perf_latency_chain_title">⛓️ 延迟链（估算）</string>
-    <string name="perf_latency_chain_content">网络（RTT / 2）：%1$s\n主机处理：%2$s\n解码：%3$s\n渲染：%4$s\n────────\n合计 ≈ %5$s\n\n这是把各段加起来的估算值，可不是实测的“按键到画面”延迟哦，杂鱼别当真～网络段用往返时间的一半近似单程。\n\n🥵 解码 ≥ 15 ms 时出现：降分辨率或换个编码啦。\n🧋 表示主机没回传处理时间，换支持 Ver.V+ 的主机就有了♡</string>
-    <string name="perf_latency_chain_no_host">🧋 没回传</string>
-    <string name="perf_diag_title">🍥 串流体检</string>
+    <string name="perf_hud_mood_warming_up">预热中</string>
+    <string name="perf_hud_mood_smooth">满帧流畅</string>
+    <string name="perf_hud_mood_full_moon">满月加持，满帧丝滑</string>
+    <string name="perf_hud_mood_hot_decode">解码器过热</string>
+    <string name="perf_hud_mood_lossy">网络丢包</string>
+    <string name="perf_hud_mood_fps_drop">帧率下降</string>
+    <string name="perf_hud_mood_laggy">延迟偏高</string>
+    <string name="perf_hud_mood_low_battery">电量不足</string>
+    <string name="perf_latency_chain_title">延迟链（估算）</string>
+    <string name="perf_latency_chain_content">网络（RTT / 2）：%1$s\n主机处理：%2$s\n解码：%3$s\n渲染：%4$s\n────────\n合计 ≈ %5$s\n\n这是把各段加起来的估算值，不是实测的“按键到画面”延迟，网络段用往返时间的一半近似单程。\n\n解码 ≥ 15 ms 时出现：降分辨率或换个编码。\n表示主机没回传处理时间，换支持 Ver.V+ 的主机就有了</string>
+    <string name="perf_latency_chain_no_host">没回传</string>
+    <string name="perf_diag_title">串流体检</string>
     <string name="perf_diag_line_fps">帧率：%1$s / %2$d FPS</string>
     <string name="perf_diag_line_loss">丢包：%1$s</string>
     <string name="perf_diag_line_rtt">网络 RTT：%1$d ms（±%2$d）</string>
     <string name="perf_diag_line_decode">解码：%1$s</string>
     <string name="perf_diag_line_battery">电量：%1$d%%</string>
-    <string name="perf_diag_tip_fps">帧率没跑满哦，杂鱼～降点分辨率或帧率，再看看主机那边游戏是不是自己在掉帧。</string>
-    <string name="perf_diag_tip_loss">丢包这么多，杂鱼网络～换 5GHz Wi‑Fi 或有线，离路由器近一点，或者把码率降一降。</string>
-    <string name="perf_diag_tip_rtt">延迟慢得像乌龟🐢，杂鱼～别用 2.4GHz 和中继，远程串流挑条近一点的线路。</string>
-    <string name="perf_diag_tip_decode">🥵 解码喘不过气了，杂鱼设备～换 HEVC/AV1 或降分辨率，再把后台应用关掉啦。</string>
-    <string name="perf_diag_tip_battery">🔋 电量见底了，杂鱼还不快投喂充电器♡</string>
-    <string name="perf_diag_all_good">全都正常，杂鱼今天运气不错嘛，安心玩吧 (๑•̀ㅂ•́)و✧</string>
-    <string name="perf_diag_footer">💡 串流小课堂：单击切信息密度，双击切横竖，长按指标看说明～这都记不住就是杂鱼♡</string>
+    <string name="perf_diag_tip_fps">帧率未达目标：降低分辨率或帧率，并检查主机上的游戏本身是否掉帧。</string>
+    <string name="perf_diag_tip_loss">丢包较多：换用 5GHz Wi‑Fi 或有线网络，靠近路由器，或降低码率。</string>
+    <string name="perf_diag_tip_rtt">延迟较高：避免使用 2.4GHz 和中继，远程串流请选择更近的线路。</string>
+    <string name="perf_diag_tip_decode">解码吃力：换用 HEVC/AV1 或降低分辨率，并关闭后台应用。</string>
+    <string name="perf_diag_tip_battery">电量即将耗尽，请连接充电器。</string>
+    <string name="perf_diag_all_good">一切正常，开始游戏吧。</string>
+    <string name="perf_diag_footer">提示：单击切换信息密度，双击切换横竖，长按指标查看说明</string>
     <string name="perf_diag_moon_button">%1$s 今夜月相</string>
     <string name="perf_hud_fps_row_rx">Rx 接收</string>
     <string name="perf_hud_fps_row_rd">Rd 渲染</string>
     <string name="perf_hud_fps_row_fg">FG 插帧</string>
-    <string name="perf_hud_fps_verdict_ok">Rx 和 Rd 都跑满了，杂鱼这把稳稳的♡</string>
-    <string name="perf_hud_fps_verdict_remote">Rx 就没跑满，是主机或网络那头没送够帧，跟杂鱼的设备没关系哦～</string>
-    <string name="perf_hud_fps_verdict_local">帧都收到了 Rd 却掉了，是这台设备解码渲染跟不上啦，杂鱼设备🥵</string>
-    <string name="perf_hud_fps_verdict_surplus">主机送来的帧比要显示的还多，多出来的会被跳过，画面不受影响，杂鱼放心～</string>
-    <string name="perf_hud_fps_info" formatted="false">HUD 上帧率那组就是 Rd、Rx、FG 三项，迷你胶囊和大数字显示的是 Rd，也就是真正画到屏幕上的帧数。\n\n上面几行怎么看：\n• Rx 接收：主机送过来的帧数，正常时是灰的，没送够才变黄变红\n• Rd 渲染：解码后实际显示的帧数\n• FG 插帧：开了插帧增强才出现\n\nRd 颜色（对比目标帧率）：\n• 绿：95% 以上\n• 黄：80–95%\n• 红：不到 80%\n\n💡 串流小课堂：Rx 低找主机和网络，Rx 满但 Rd 低找本机解码～</string>
-    <string name="perf_hud_network_latency_info">HUD 上的 RTT 是数据包在主机和设备之间跑一个来回的时间，± 后面是抖动，越小越稳。\n\n颜色：\n• 绿：40 ms 以内\n• 黄：40–80 ms\n• 红：80 ms 以上，心情会变成 🐢\n\n带宽：\n• 详细档和停靠卡片里才显示\n• 是当前视频流的实际传输速率\n\n💡 串流小课堂：延迟链里的网络段按 RTT 的一半估算单程～</string>
-    <string name="perf_hud_decode_latency_info">HUD 上的「解码」是本机硬件解码一帧要花的时间。\n\n颜色：\n• 绿：比一帧的时间短（120 FPS 约 8.3 ms）\n• 黄：超过一帧的时间但不到 15 ms，开始拖帧了\n• 红：15 ms 以上，后面还会挂个 🥵\n\n影响因素：\n• 分辨率和编码格式，HEVC 和 AV1 通常更省力\n• 设备发热和后台负载\n\n💡 串流小课堂：解码低于 10 ms 就别折腾它了，去看看帧率和画质吧～</string>
-    <string name="perf_hud_host_latency_info">HUD 上的「主机」是主机处理一帧（抓屏加编码）的时间，由主机回传。\n\n参考：\n• 5 ms 以内：主机很轻松\n• 5–10 ms：正常水平\n• 10 ms 以上：主机有点忙，看看游戏或后台程序\n\n🧋 是什么：\n• 主机没回传这项数据时显示，先喝杯奶茶吧\n• 换支持 Ver.V+ 的主机就有了♡</string>
-    <string name="perf_hud_packet_loss_info" formatted="false">HUD 上的「丢包」是最近一段时间网络丢掉的视频包比例。\n\n颜色：\n• 绿：1% 以内\n• 黄：1–5%，偶尔花屏或顿一下\n• 红：5% 以上，心情会变成 📶 在掉包\n\n影响因素：\n• Wi‑Fi 信号和频段，2.4GHz 最容易丢\n• 路由器性能\n• 码率超过网络能扛的上限\n\n💡 串流小课堂：长按月相做一次串流体检，人家会告诉杂鱼该怎么修♡</string>
-    <string name="perf_hud_one_percent_low_info" formatted="false">HUD 上的 1%L 是最慢那 1% 帧换算出的帧率，专抓平均帧率看不出的微卡顿。\n\n怎么算：\n• 记录每帧的渲染间隔\n• 取第 99 百分位，也就是最慢的 1%\n• 换算成帧率：1000 ÷ 该间隔\n\n颜色（对比目标帧率）：\n• 绿：85% 以上\n• 黄：65–85%，偶尔顿一下\n• 红：不到 65%，明显卡顿\n\n💡 串流小课堂：平均帧率满了但 1%L 很低，多半是网络抖动或主机偶尔卡了一下～</string>
-    <string name="tip_audio_config">💡 串流小课堂：启用Dolby Atmos或DTS:X可以获得更沉浸的音频体验，而此时需要启用系统均衡器来获得最佳效果～</string>
-    <string name="tip_external_display">💡 串流小课堂：连接外接显示器时，可以在设置中选择在外接显示器上显示串流画面，大屏游戏更爽～</string>
-    <string name="tip_virtual_display">💡 串流小课堂：虚拟显示器功能可以创建独立的显示空间，特别适合多任务场景，让串流更灵活～</string>
-    <string name="tip_dynamic_bitrate">💡 串流小课堂：使用HEVC或AV1解码器时，串流中可以调整码率，不用退出串流即可找到最适合你的网络和设备的最佳码率～</string>
-    <string name="tip_cards_show">💡 串流小课堂：游戏菜单最下方可以编辑展示的功能卡片，不需要的卡片可以收起来哦～</string>
+    <string name="perf_hud_fps_verdict_ok">Rx 和 Rd 都已跑满，状态良好</string>
+    <string name="perf_hud_fps_verdict_remote">Rx 未跑满，是主机或网络没有送够帧，与本机无关</string>
+    <string name="perf_hud_fps_verdict_local">帧已收到但 Rd 偏低，本机解码渲染跟不上</string>
+    <string name="perf_hud_fps_verdict_surplus">主机送来的帧多于需要显示的，多余的会被跳过，画面不受影响</string>
+    <string name="perf_hud_fps_info" formatted="false">HUD 上帧率那组就是 Rd、Rx、FG 三项，迷你胶囊和大数字显示的是 Rd，也就是真正画到屏幕上的帧数。\n\n上面几行怎么看：\n• Rx 接收：主机送过来的帧数，正常时是灰的，没送够才变黄变红\n• Rd 渲染：解码后实际显示的帧数\n• FG 插帧：开了插帧增强才出现\n\nRd 颜色（对比目标帧率）：\n• 绿：95% 以上\n• 黄：80–95%\n• 红：不到 80%\n\n提示：Rx 低找主机和网络，Rx 满但 Rd 低找本机解码</string>
+    <string name="perf_hud_network_latency_info">HUD 上的 RTT 是数据包在主机和设备之间跑一个来回的时间，± 后面是抖动，越小越稳。\n\n颜色：\n• 绿：40 ms 以内\n• 黄：40–80 ms\n• 红：80 ms 以上，\n\n带宽：\n• 详细档和停靠卡片里才显示\n• 是当前视频流的实际传输速率\n\n提示：延迟链里的网络段按 RTT 的一半估算单程</string>
+    <string name="perf_hud_decode_latency_info">HUD 上的「解码」是本机硬件解码一帧要花的时间。\n\n颜色：\n• 绿：比一帧的时间短（120 FPS 约 8.3 ms）\n• 黄：超过一帧的时间但不到 15 ms，开始拖帧了\n• 红：15 ms 以上\n\n影响因素：\n• 分辨率和编码格式，HEVC 和 AV1 通常更省力\n• 设备发热和后台负载\n\n提示：解码低于 10 ms 就别折腾它了，去看看帧率和画质吧</string>
+    <string name="perf_hud_host_latency_info">HUD 上的「主机」是主机处理一帧（抓屏加编码）的时间，由主机回传。\n\n参考：\n• 5 ms 以内：主机很轻松\n• 5–10 ms：正常水平\n• 10 ms 以上：主机有点忙，看看游戏或后台程序\n\n是什么：\n• 主机没回传这项数据时显示，先喝杯奶茶吧\n• 换支持 Ver.V+ 的主机就有了</string>
+    <string name="perf_hud_packet_loss_info" formatted="false">HUD 上的「丢包」是最近一段时间网络丢掉的视频包比例。\n\n颜色：\n• 绿：1% 以内\n• 黄：1–5%，偶尔花屏或顿一下\n• 红：5% 以上，在掉包\n\n影响因素：\n• Wi‑Fi 信号和频段，2.4GHz 最容易丢\n• 路由器性能\n• 码率超过网络能扛的上限\n\n提示：长按月相做一次串流体检，会给出修复建议</string>
+    <string name="perf_hud_one_percent_low_info" formatted="false">HUD 上的 1%L 是最慢那 1% 帧换算出的帧率，专抓平均帧率看不出的微卡顿。\n\n怎么算：\n• 记录每帧的渲染间隔\n• 取第 99 百分位，也就是最慢的 1%\n• 换算成帧率：1000 ÷ 该间隔\n\n颜色（对比目标帧率）：\n• 绿：85% 以上\n• 黄：65–85%，偶尔顿一下\n• 红：不到 65%，明显卡顿\n\n提示：平均帧率满了但 1%L 很低，多半是网络抖动或主机偶尔卡了一下</string>
+    <string name="tip_audio_config">提示：启用Dolby Atmos或DTS:X可以获得更沉浸的音频体验，而此时需要启用系统均衡器来获得最佳效果</string>
+    <string name="tip_external_display">提示：连接外接显示器时，可以在设置中选择在外接显示器上显示串流画面，大屏游戏更爽</string>
+    <string name="tip_virtual_display">提示：虚拟显示器功能可以创建独立的显示空间，特别适合多任务场景，让串流更灵活</string>
+    <string name="tip_dynamic_bitrate">提示：使用HEVC或AV1解码器时，串流中可以调整码率，不用退出串流即可找到最适合你的网络和设备的最佳码率</string>
+    <string name="tip_cards_show">提示：游戏菜单最下方可以编辑展示的功能卡片，不需要的卡片可以收起来</string>
 
     <!-- 触控模式切换菜单 -->
     <string name="game_menu_switch_touch_mode">操作方式</string>
@@ -1080,15 +1080,15 @@
     <string name="dialog_button_delete">删除</string>
 
     <!-- Toast 提示信息 -->
-    <string name="toast_name_and_codes_cannot_be_empty">名称和按键码不能为空哦～(｡•́︿•̀｡)</string>
-    <string name="toast_key_code_format_error">格式有点小问题，按键码要以“0x”开头喔~</string>
-    <string name="toast_custom_key_saved">自定义按键‘%s’已保存，棒棒哒！(๑•̀ㅂ•́)و✧</string>
-    <string name="toast_save_failed">保存失败了，请检查格式喵~</string>
+    <string name="toast_name_and_codes_cannot_be_empty">名称和按键码不能为空</string>
+    <string name="toast_key_code_format_error">格式错误，按键码需以“0x”开头</string>
+    <string name="toast_custom_key_saved">自定义按键‘%s’已保存，棒棒哒！(๑•̀ㅂ•́)و</string>
+    <string name="toast_save_failed">保存失败，请检查格式</string>
     <string name="toast_no_custom_keys_to_delete">还没有可删除的自定义按键呢(＞人＜;)</string>
     <string name="toast_selected_keys_deleted">已成功删除选中的按键，干得漂亮！</string>
     <string name="toast_delete_failed">删除失败了，试试看再来一次？</string>
-    <string name="toast_load_key_list_failed">加载按键列表失败了喵~</string>
-    <string name="toast_load_custom_keys_corrupted">加载自定义按键失败了，抱歉抱歉~</string>
+    <string name="toast_load_key_list_failed">加载按键列表失败</string>
+    <string name="toast_load_custom_keys_corrupted">加载自定义按键失败</string>
 
     <!-- 陀螺仪相关字符串 -->
     <string name="gyro_activation_method">激活按键</string>
@@ -1113,23 +1113,23 @@
 
     <!-- Performance Overlay Info Dialogs -->
     <string name="perf_moon_phase_info">今日月相\n\n%1$s %2$s\n月相周期：%3$.1f%%\n周期天数：第%4$d天\n日期：%5$s\n\n%6$s</string>
-    <string name="perf_decoder_title">🎬 解码器信息</string>
+    <string name="perf_decoder_title">解码器信息</string>
     <string name="perf_decoder_info">解码器负责将视频流解码为可显示的图像。\n\n常见解码器：\n• H.264 (AVC) - 兼容性最好\n• H.265 (HEVC) - 压缩率更高\n• AV1 - 最新标准，效率最高\n\nHDR支持：\n• 高动态范围视频\n• 更丰富的色彩表现\n• 需要硬件支持</string>
-    <string name="perf_fps_title">📊 帧率信息</string>
+    <string name="perf_fps_title">帧率信息</string>
     <string name="perf_fps_info">Rx FPS：接收帧率\n• 从主机接收的视频帧数\n• 理想情况下应该稳定\n\nRd FPS：渲染帧率\n• 客户端解码路径实际渲染的帧数\n• 可能因设备性能而降低\n\nFG FPS：插帧后帧率估算\n• 插帧增强启用时显示\n• 根据渲染帧率和当前输出倍数估算\n\n性能指标：\n• Rx/Rd 接近表示解码与渲染表现良好\n• FG 帧率过低可能影响插帧流畅度</string>
-    <string name="perf_packet_loss_title">📶 丢包率信息</string>
+    <string name="perf_packet_loss_title">丢包率信息</string>
     <string name="perf_packet_loss_info" formatted="false">丢包率表示网络传输中丢失的数据包比例。\n\n正常范围：\n• 0–0.5%：网络质量优秀\n• 0.5–2%：网络质量良好\n• 2–5%：网络质量一般\n• &gt;5%：网络质量较差\n\n影响因素：\n• 网络稳定性\n• 路由器性能\n• 无线信号强度</string>
-    <string name="perf_network_latency_title">🌐 网络延迟信息</string>
+    <string name="perf_network_latency_title">网络延迟信息</string>
     <string name="perf_network_latency_info">网络延迟表示数据包从主机到设备的往返时间。\n\n延迟范围：\n• &lt;20ms：极佳\n• 20–50ms：良好\n• 50–100ms：可接受\n• &gt;100ms：较差\n\n带宽：\n• 表示网络传输速度\n• 影响视频质量上限\n\n±值：\n• 表示延迟波动范围\n• 越小越稳定</string>
-    <string name="perf_decode_latency_title">⏱️ 解码延迟信息</string>
+    <string name="perf_decode_latency_title">解码延迟信息</string>
     <string name="perf_decode_latency_info">解码延迟表示解码视频帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳解码器性能\n• 5–10ms：良好解码器性能\n• 10–20ms：一般解码器性能\n• &gt;20ms：较差解码器性能\n\n影响因素：\n• 硬件解码器性能\n• 视频编码复杂度\n• 设备CPU/GPU负载\n• 当解码延迟低于10ms时更应关注设备的其他性能(比如帧率、分辨率、画质等)</string>
-    <string name="perf_host_latency_title">🖥 主机延迟信息</string>
+    <string name="perf_host_latency_title">主机延迟信息</string>
     <string name="perf_host_latency_info">主机延迟表示主机处理帧所需的时间。\n\n延迟范围：\n• &lt;5ms：极佳主机性能\n• 5–10ms：良好主机性能\n• 10–20ms：一般主机性能\n• &gt;20ms：较差主机性能\n\n影响因素：\n• 主机硬件性能\n• 游戏负载\n• 后台程序使用\n\nVer.V+：\n• 表示版本信息\n• 当没有主机延迟数据时显示</string>
     <!-- Performance Overlay Info Dialogs - 1% Low FPS -->
-    <string name="perf_one_percent_low_title">📉 1%Low帧信息</string>
+    <string name="perf_one_percent_low_title">1%Low帧信息</string>
     <string name="perf_one_percent_low_info">1%Low帧通过第99百分位帧间隔来衡量帧率平滑性。\n\n原理：\n• 记录每帧渲染间隔\n• 排序后取最慢的1%%帧时间\n• 转换为FPS：1000 / P99间隔\n\n判读：\n• 接近渲染帧率：非常平滑\n• 渲染帧率的70–90%%：轻微卡顿\n• 低于70%%：明显卡顿\n\n用于检测平均帧率无法反映的微卡顿。</string>
     <!-- Performance Overlay Info Dialogs - Battery Information -->
-    <string name="perf_battery_info_title">🔋 电池信息</string>
+    <string name="perf_battery_info_title">电池信息</string>
     <string name="perf_battery_status_sufficient">电池电量充足</string>
     <string name="perf_battery_status_low">电池电量偏低，建议充电</string>
     <string name="perf_battery_status_critical">电池电量严重不足，请尽快充电</string>
@@ -1214,7 +1214,7 @@
 
     <!-- 输出缓冲区队列大小 -->
     <string name="title_seekbar_output_buffer_queue_limit">解码帧队列</string>
-    <string name="summary_seekbar_output_buffer_queue_limit">控制渲染前可排队的解码帧数上限。较小值可降低延迟但可能导致丢帧，较大值可提升流畅度但会增加延迟。⚠️ 设为1帧可能在部分设备上导致崩溃。默认值：2。</string>
+    <string name="summary_seekbar_output_buffer_queue_limit">控制渲染前可排队的解码帧数上限。较小值可降低延迟但可能导致丢帧，较大值可提升流畅度但会增加延迟。⚠设为1帧可能在部分设备上导致崩溃。默认值：2。</string>
     <string name="suffix_seekbar_output_buffer_queue_limit">帧</string>
 
     <!-- 屏幕组合模式 -->
@@ -1409,7 +1409,7 @@
     <string name="layout_dlg_peer_info_item_text_9d9a3">延迟:</string>
     <string name="layout_dlg_peer_info_item_text_681b4">流量 (收/发):</string>
     <string name="layout_game_menu_super_empty_text_a7970">还没有炒鸡指令哦</string>
-    <string name="layout_game_menu_super_empty_text_fac9d">快去用 Foundation Sunshine 为应用添加超级指令吧~ (๑•̀ㅂ•́)و✧</string>
+    <string name="layout_game_menu_super_empty_text_fac9d">请使用 Foundation Sunshine 为应用添加超级指令</string>
     <string name="game_menu_super_commands">超级指令</string>
     <string name="layout_item_key_value_text_0952a">分区 1</string>
     <string name="layout_item_key_value_hint_dd44f">分区名称，为空时为键值名</string>
@@ -1551,32 +1551,32 @@
     <string name="apptext_pg_wheel_pad_ea2ce">中心预览文字大小 (%)</string>
 
     <!-- Clean page section headers (auto-extracted from _clean layouts) -->
-    <string name="page_section_basic_info">🕹️ 基本信息</string>
-    <string name="page_section_basic_settings">⚙️ 基础信息</string>
-    <string name="page_section_position_size">📐 位置和尺寸</string>
-    <string name="page_section_outer_ring_style">🎨 外圈样式</string>
-    <string name="page_section_appearance">🎨 外观样式</string>
-    <string name="page_section_color_config">🎨 颜色配置</string>
-    <string name="page_section_style_settings">🎨 样式设置</string>
-    <string name="page_section_border_color">🎨 边框颜色</string>
-    <string name="page_section_appearance_settings">🎨 外观设置</string>
-    <string name="page_section_stick_style">🕹️ 摇杆样式</string>
-    <string name="page_section_operations">🔧 操作</string>
-    <string name="page_section_child_management">🔧 子元素管理</string>
-    <string name="page_section_dpad_config">🎮 方向键配置</string>
-    <string name="page_section_dpad_settings">🎮 方向键设置</string>
-    <string name="page_section_stick_config">🕹️ 摇杆配置</string>
-    <string name="page_section_group_settings">📦 组合设置</string>
-    <string name="page_section_child_settings">👥 子元素设置</string>
-    <string name="page_section_delete_operation">⚠️ 删除操作</string>
-    <string name="page_section_text_settings">✏️ 文字设置</string>
-    <string name="page_section_text_config">✏️ 文本设置</string>
-    <string name="page_section_wheel_basic">🎡 基本设置</string>
-    <string name="page_section_wheel_config">🎯 轮盘设置</string>
+    <string name="page_section_basic_info">基本信息</string>
+    <string name="page_section_basic_settings">基础信息</string>
+    <string name="page_section_position_size">位置和尺寸</string>
+    <string name="page_section_outer_ring_style">外圈样式</string>
+    <string name="page_section_appearance">外观样式</string>
+    <string name="page_section_color_config">颜色配置</string>
+    <string name="page_section_style_settings">样式设置</string>
+    <string name="page_section_border_color">边框颜色</string>
+    <string name="page_section_appearance_settings">外观设置</string>
+    <string name="page_section_stick_style">摇杆样式</string>
+    <string name="page_section_operations">操作</string>
+    <string name="page_section_child_management">子元素管理</string>
+    <string name="page_section_dpad_config">方向键配置</string>
+    <string name="page_section_dpad_settings">方向键设置</string>
+    <string name="page_section_stick_config">摇杆配置</string>
+    <string name="page_section_group_settings">组合设置</string>
+    <string name="page_section_child_settings">子元素设置</string>
+    <string name="page_section_delete_operation">⚠删除操作</string>
+    <string name="page_section_text_settings">文字设置</string>
+    <string name="page_section_text_config">文本设置</string>
+    <string name="page_section_wheel_basic">基本设置</string>
+    <string name="page_section_wheel_config">轮盘设置</string>
     <string name="wheel_alignment_title">对齐方式</string>
     <string name="wheel_alignment_center">分区中线朝上</string>
     <string name="wheel_alignment_edge">分区边线朝上</string>
-    <string name="page_section_key_values">🔑 按键值设置</string>
+    <string name="page_section_key_values">按键值设置</string>
     <string name="page_label_combo_keys">组合按键</string>
     <string name="page_label_coord_x">X 坐标</string>
     <string name="page_label_coord_y">Y 坐标</string>
@@ -2141,10 +2141,10 @@
 
     <!-- 赞助 -->
     <string name="sponsor_github_title">投喂 Moonlight V+</string>
-    <string name="sponsor_github_summary">杂鱼维护组还在努力修 bug 呢，投喂一点点就能变成设备、咖啡和 token 补给。扫码或打开 GitHub Sponsors 即可。</string>
+    <string name="sponsor_github_summary">Moonlight V+ 由社区维护，你的支持会用于设备、测试与服务成本。扫码或打开 GitHub Sponsors 即可。</string>
     <string name="sponsor_github_action">打开 GitHub Sponsors</string>
     <string name="sponsor_wechat_title">投喂 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">杂鱼维护组还在努力修 bug 呢，扫码投喂一点点，就能变成设备、咖啡和 token 补给。</string>
+    <string name="sponsor_wechat_summary">Moonlight V+ 由社区维护，你的支持会用于设备、测试与服务成本。扫码即可。</string>
     <string name="sponsor_wechat_action">使用微信支付扫码</string>
     <string name="sponsor_qr_content_description">赞助二维码</string>
     <string name="sponsor_qr_dialog_title">赞助二维码</string>
@@ -2174,20 +2174,20 @@
     <string name="handbook_retry">点击重试</string>
     <string name="title_about_us">关于 Moonlight V+</string>
     <!-- 功能发现引导 -->
-    <string name="feature_guide_step">杂鱼也能发现的小秘密 · %1$d/%2$d</string>
+    <string name="feature_guide_step">小提示 · %1$d/%2$d</string>
     <string name="feature_guide_quick_actions_title">快捷栏也要我教吗？</string>
     <string name="feature_guide_quick_actions_body">长按快捷按钮就能添加、移除或拖动排序。把常用操作摆好，下次可别再手忙脚乱啦。</string>
     <string name="feature_guide_crown_title">给你的配置戴个皇冠吧</string>
-    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和振动反馈设置都能存成皇冠配置。一键整套切换，这下杂鱼也不会弄乱啦。</string>
+    <string name="feature_guide_crown_body">控制布局、快捷操作、触控模式和振动反馈设置都能存成皇冠配置，一键整套切换。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">这次记住啦</string>
     <string name="feature_guide_skip">才不要看</string>
-    <string name="pcview_guide_host_title">杂鱼别点错地方啦</string>
+    <string name="pcview_guide_host_title">点击与长按</string>
     <string name="pcview_guide_host_body">点主机卡片会进入应用列表，点头像会直接开始串流哦。长按卡片还藏着网络测试、副屏串流、Web UI 和更多操作。</string>
     <string name="pcview_guide_more_title">三个点也没发现吗？</string>
     <string name="pcview_guide_more_body">上次串流、未配对主机和主题切换都藏在这里。小小一颗，别再漏看啦。</string>
     <string name="pcview_guide_scene_title">小标签可没在发呆</string>
-    <string name="pcview_guide_scene_body">点一下应用串流预设，长按保存当前分辨率、码率、HDR 和监控图层。记住了吗，小杂鱼？</string>
+    <string name="pcview_guide_scene_body">点一下应用串流预设，长按保存当前分辨率、码率、HDR 和监控图层。</string>
     <string name="appview_guide_panel_title">藏得这么浅也没发现？</string>
     <string name="appview_guide_panel_body">从顶部把手拉下，就能选背景、屏幕组合和目标显示器，也能进入完整串流设置。</string>
     <string name="appview_guide_resume_title">标题可不是摆设啦</string>
@@ -2254,15 +2254,15 @@
     <string name="position_bottom">底部</string>
     <string name="orientation_horizontal">横向</string>
     <string name="orientation_vertical">纵向</string>
-    <string name="perf_stats_item_resolution_fps">🎬 分辨率与目标帧率</string>
+    <string name="perf_stats_item_resolution_fps">分辨率与目标帧率</string>
     <string name="perf_stats_item_decoder">编解码格式与解码器</string>
     <string name="perf_stats_item_frame_rates">接收 / 渲染 / 生成帧率</string>
-    <string name="perf_stats_item_packet_loss">📶 丢包率</string>
-    <string name="perf_stats_item_network">🌐 码率与网络延迟</string>
-    <string name="perf_stats_item_decode_latency">⏱ 解码延迟（正常低于 15 ms）</string>
-    <string name="perf_stats_item_host_latency">🖥 主机处理延迟</string>
-    <string name="perf_stats_item_battery">🔋 电量</string>
-    <string name="perf_stats_item_one_percent_low">📉 1% 低帧率（流畅度）</string>
+    <string name="perf_stats_item_packet_loss">丢包率</string>
+    <string name="perf_stats_item_network">码率与网络延迟</string>
+    <string name="perf_stats_item_decode_latency">解码延迟（正常低于 15 ms）</string>
+    <string name="perf_stats_item_host_latency">主机处理延迟</string>
+    <string name="perf_stats_item_battery">电量</string>
+    <string name="perf_stats_item_one_percent_low">1% 低帧率（流畅度）</string>
     <string name="perf_stats_item_clock">时钟</string>
     <string name="mic_icon_color_gradient_blue">蓝色渐变</string>
     <string name="mic_icon_color_gradient_purple">紫色渐变</string>

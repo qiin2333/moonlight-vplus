@@ -15,12 +15,12 @@
     
     <!-- 中间线条 - 中等长度，渐变色 -->
     <path
-        android:fillColor="#FF85B0"
+        android:fillColor="#66C0F4"
         android:pathData="M5,10.5 L16,10.5 A1.5,1.5 0 0,1 16,13.5 L5,13.5 A1.5,1.5 0 0,1 5,10.5 Z"/>
     
     <!-- 底部线条 - 最短，强调递进感 -->
     <path
-        android:fillColor="#FFA0C4"
+        android:fillColor="#66C0F4"
         android:pathData="M5,14.5 L13,14.5 A1.5,1.5 0 0,1 13,17.5 L5,17.5 A1.5,1.5 0 0,1 5,14.5 Z"/>
     
     <!-- 装饰圆点 - 右侧点缀 -->

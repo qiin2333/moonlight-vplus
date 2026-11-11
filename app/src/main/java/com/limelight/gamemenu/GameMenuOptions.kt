@@ -171,7 +171,7 @@ private fun MenuOptionRow(
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = if (emphasizedCrownAction) appAccentColor() else Color.Unspecified,
+                tint = if (emphasizedCrownAction) appAccentColor() else colorResource(R.color.game_menu_icon_tint),
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(GameMenuDimens.section))

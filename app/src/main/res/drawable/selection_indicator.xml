@@ -53,7 +53,7 @@
                             android:pathData="M15,3 L21,15 L9,15 Z"/>
                         
                         <path
-                            android:fillColor="#FF6B6B"
+                            android:fillColor="#66C0F4"
                             android:pathData="M15,27 L9,15 L21,15 Z"/>
                     </vector>
                 </item>

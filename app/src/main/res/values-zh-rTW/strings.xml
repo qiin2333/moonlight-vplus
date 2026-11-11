@@ -536,10 +536,10 @@
 
     <!-- 贊助 -->
     <string name="sponsor_github_title">投餵 Moonlight V+</string>
-    <string name="sponsor_github_summary">雜魚維護組還在努力修 bug 呢，投餵一點點就能變成設備、咖啡和 token 補給。掃描 QR code 或開啟 GitHub Sponsors 即可。</string>
+    <string name="sponsor_github_summary">Moonlight V+ 由社群維護，你的支持會用於設備、測試與服務成本。掃描 QR code 或開啟 GitHub Sponsors 即可。</string>
     <string name="sponsor_github_action">開啟 GitHub Sponsors</string>
     <string name="sponsor_wechat_title">投餵 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">雜魚維護組還在努力修 bug 呢，掃碼投餵一點點，就能變成設備、咖啡和 token 補給。</string>
+    <string name="sponsor_wechat_summary">Moonlight V+ 由社群維護，你的支持會用於設備、測試與服務成本。掃碼即可。</string>
     <string name="sponsor_wechat_action">使用微信支付掃碼</string>
     <string name="sponsor_qr_content_description">贊助 QR code</string>
     <string name="sponsor_qr_dialog_title">贊助 QR code</string>
@@ -565,20 +565,20 @@
     <string name="summary_document_handbook">查看安裝、串流、輸入與疑難排解文件。</string>
     <string name="title_about_us">關於 Moonlight V+</string>
     <!-- 功能探索引導 -->
-    <string name="feature_guide_step">雜魚也能發現的小祕密 · %1$d/%2$d</string>
+    <string name="feature_guide_step">小提示 · %1$d/%2$d</string>
     <string name="feature_guide_quick_actions_title">快捷列也要我教嗎？</string>
     <string name="feature_guide_quick_actions_body">長按快捷按鈕就能新增、移除或拖曳排序。把常用操作排好，下次可別再手忙腳亂啦。</string>
     <string name="feature_guide_crown_title">給你的設定戴個皇冠吧</string>
-    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和振動回饋設定都能存成皇冠設定。一鍵整套切換，這下雜魚也不會弄亂啦。</string>
+    <string name="feature_guide_crown_body">控制佈局、快捷操作、觸控模式和振動回饋設定都能存成皇冠設定，一鍵整套切換。</string>
     <string name="feature_guide_next">再教我一下</string>
     <string name="feature_guide_done">這次記住啦</string>
     <string name="feature_guide_skip">才不要看</string>
-    <string name="pcview_guide_host_title">雜魚別點錯地方啦</string>
+    <string name="pcview_guide_host_title">點擊與長按</string>
     <string name="pcview_guide_host_body">點主機卡片會進入應用程式列表，點頭像會直接開始串流喔。長按卡片還藏著網路測試、副螢幕串流、Web UI 和更多操作。</string>
     <string name="pcview_guide_more_title">三個點也沒發現嗎？</string>
     <string name="pcview_guide_more_body">上次串流、未配對主機和主題切換都藏在這裡。小小一顆，別再漏看啦。</string>
     <string name="pcview_guide_scene_title">小標籤可沒在發呆</string>
-    <string name="pcview_guide_scene_body">點一下套用串流預設，長按儲存目前解析度、位元率、HDR 和監控圖層。記住了嗎，小雜魚？</string>
+    <string name="pcview_guide_scene_body">點一下套用串流預設，長按儲存目前解析度、位元率、HDR 和監控圖層。</string>
     <string name="appview_guide_panel_title">藏得這麼淺也沒發現？</string>
     <string name="appview_guide_panel_body">從頂部把手拉下，就能選背景、螢幕組合和目標顯示器，也能進入完整串流設定。</string>
     <string name="appview_guide_resume_title">標題可不是擺設啦</string>
@@ -729,11 +729,11 @@
     <string name="perf_overlay_style_detailed">詳細</string>
     <string name="perf_overlay_style_classic">經典</string>
     <string name="game_menu_perf_overlay_style">覆蓋層樣式</string>
-    <string name="perf_hud_style_changed">換成「%1$s」了哦，雜魚～</string>
-    <string name="perf_hud_long_press_hint">長按某個指標能看它的說明哦，雜魚～</string>
-    <string name="perf_hud_hint">💡 串流小課堂：單擊切資訊密度，雙擊切橫豎，長按指標看說明，拖曳挪位置～記不住的話就是雜魚喵♡</string>
-    <string name="perf_hud_dock_orientation_hint">停在畫面下面哪來的橫豎啦，雜魚～轉到橫屏再雙擊♡</string>
-    <string name="tip_performance_overlay_classic">💡 串流小課堂：覆蓋層可以拖到任意位置，雙擊切換橫豎版面，點各項指標還有說明～人家這麼貼心，雜魚還不快說謝謝♡</string>
+    <string name="perf_hud_style_changed">已切換為「%1$s」</string>
+    <string name="perf_hud_long_press_hint">長按指標可查看說明</string>
+    <string name="perf_hud_hint">提示：單擊切換資訊密度，雙擊切換橫豎，長按指標查看說明，拖曳調整位置</string>
+    <string name="perf_hud_dock_orientation_hint">停靠在畫面下方時不支援切換橫豎，請轉到橫屏後雙擊</string>
+    <string name="tip_performance_overlay_classic">提示：覆蓋層可拖到任意位置，雙擊切換橫豎版面，點各項指標查看說明</string>
     <string name="perf_hud_label_latency">延遲</string>
     <string name="perf_hud_label_latency_chain">延遲鏈（估算）</string>
     <string name="perf_hud_label_network">網路</string>
@@ -748,44 +748,44 @@
     <string name="perf_hud_label_clock">時間</string>
     <string name="perf_hud_label_fps_history">影格率歷史</string>
     <string name="perf_hud_drain_per_hour">%.0f%%/時</string>
-    <string name="perf_hud_mood_warming_up">🌙 熱身中，雜魚等一下下～</string>
-    <string name="perf_hud_mood_smooth">滿幀絲滑，雜魚運氣不錯嘛♡</string>
-    <string name="perf_hud_mood_full_moon">滿月加持，滿幀絲滑♡</string>
-    <string name="perf_hud_mood_hot_decode">🥵 解碼器燙燙的，雜魚裝置～</string>
-    <string name="perf_hud_mood_lossy">📶 在掉包喵，雜魚網路～</string>
-    <string name="perf_hud_mood_fps_drop">幀率掉了喵，雜魚～</string>
-    <string name="perf_hud_mood_laggy">🐢 延遲好高，雜魚網路～</string>
-    <string name="perf_hud_mood_low_battery">🔋 快沒電了，雜魚快去充電♡</string>
-    <string name="perf_latency_chain_title">⛓️ 延遲鏈（估算）</string>
-    <string name="perf_latency_chain_content">網路（RTT / 2）：%1$s\n主機處理：%2$s\n解碼：%3$s\n渲染：%4$s\n────────\n合計 ≈ %5$s\n\n這是把各段加起來的估算值，可不是實測的「按鍵到畫面」延遲哦，雜魚別當真～網路段用往返時間的一半近似單程。\n\n🥵 解碼 ≥ 15 ms 時出現：降解析度或換個編碼啦。\n🧋 表示主機沒回傳處理時間，換支援 Ver.V+ 的主機就有了♡</string>
-    <string name="perf_latency_chain_no_host">🧋 沒回傳</string>
-    <string name="perf_diag_title">🍥 串流體檢</string>
+    <string name="perf_hud_mood_warming_up">預熱中</string>
+    <string name="perf_hud_mood_smooth">滿幀流暢</string>
+    <string name="perf_hud_mood_full_moon">滿月加持，滿幀絲滑</string>
+    <string name="perf_hud_mood_hot_decode">解碼器過熱</string>
+    <string name="perf_hud_mood_lossy">網路掉包</string>
+    <string name="perf_hud_mood_fps_drop">幀率下降</string>
+    <string name="perf_hud_mood_laggy">延遲偏高</string>
+    <string name="perf_hud_mood_low_battery">電量不足</string>
+    <string name="perf_latency_chain_title">延遲鏈（估算）</string>
+    <string name="perf_latency_chain_content">網路（RTT / 2）：%1$s\n主機處理：%2$s\n解碼：%3$s\n渲染：%4$s\n────────\n合計 ≈ %5$s\n\n這是把各段加起來的估算值，不是實測的「按鍵到畫面」延遲哦，網路段用往返時間的一半近似單程。\n\n解碼 ≥ 15 ms 時出現：降解析度或換個編碼啦。\n表示主機沒回傳處理時間，換支援 Ver.V+ 的主機就有了</string>
+    <string name="perf_latency_chain_no_host">沒回傳</string>
+    <string name="perf_diag_title">串流體檢</string>
     <string name="perf_diag_line_fps">影格率：%1$s / %2$d FPS</string>
     <string name="perf_diag_line_loss">丟包：%1$s</string>
     <string name="perf_diag_line_rtt">網路 RTT：%1$d ms（±%2$d）</string>
     <string name="perf_diag_line_decode">解碼：%1$s</string>
     <string name="perf_diag_line_battery">電量：%1$d%%</string>
-    <string name="perf_diag_tip_fps">幀率沒跑滿哦，雜魚～降點解析度或幀率，再看看主機那邊遊戲是不是自己在掉幀。</string>
-    <string name="perf_diag_tip_loss">掉包這麼多，雜魚網路～換 5GHz Wi‑Fi 或有線，離路由器近一點，或者把位元率降一降。</string>
-    <string name="perf_diag_tip_rtt">延遲慢得像烏龜🐢，雜魚～別用 2.4GHz 和中繼，遠端串流挑條近一點的線路。</string>
-    <string name="perf_diag_tip_decode">🥵 解碼喘不過氣了，雜魚裝置～換 HEVC/AV1 或降解析度，再把背景應用關掉啦。</string>
-    <string name="perf_diag_tip_battery">🔋 電量見底了，雜魚還不快投餵充電器♡</string>
-    <string name="perf_diag_all_good">全都正常，雜魚今天運氣不錯嘛，安心玩吧 (๑•̀ㅂ•́)و✧</string>
-    <string name="perf_diag_footer">💡 串流小課堂：單擊切資訊密度，雙擊切橫豎，長按指標看說明～這都記不住就是雜魚♡</string>
+    <string name="perf_diag_tip_fps">幀率未達目標：降低解析度或幀率，並檢查主機上的遊戲本身是否掉幀。</string>
+    <string name="perf_diag_tip_loss">掉包較多：改用 5GHz Wi‑Fi 或有線網路，靠近路由器，或降低位元率。</string>
+    <string name="perf_diag_tip_rtt">延遲較高：避免使用 2.4GHz 和中繼，遠端串流請選擇更近的線路。</string>
+    <string name="perf_diag_tip_decode">解碼吃力：改用 HEVC/AV1 或降低解析度，並關閉背景應用。</string>
+    <string name="perf_diag_tip_battery">電量即將耗盡，請連接充電器。</string>
+    <string name="perf_diag_all_good">一切正常，開始遊戲吧。</string>
+    <string name="perf_diag_footer">提示：單擊切換資訊密度，雙擊切換橫豎，長按指標查看說明</string>
     <string name="perf_diag_moon_button">%1$s 今夜月相</string>
     <string name="perf_hud_fps_row_rx">Rx 接收</string>
     <string name="perf_hud_fps_row_rd">Rd 渲染</string>
     <string name="perf_hud_fps_row_fg">FG 插幀</string>
-    <string name="perf_hud_fps_verdict_ok">Rx 和 Rd 都跑滿了，雜魚這把穩穩的♡</string>
-    <string name="perf_hud_fps_verdict_remote">Rx 就沒跑滿，是主機或網路那頭沒送夠幀，跟雜魚的裝置沒關係哦～</string>
-    <string name="perf_hud_fps_verdict_local">幀都收到了 Rd 卻掉了，是這台裝置解碼渲染跟不上啦，雜魚裝置🥵</string>
-    <string name="perf_hud_fps_verdict_surplus">主機送來的幀比要顯示的還多，多出來的會被跳過，畫面不受影響，雜魚放心～</string>
-    <string name="perf_hud_fps_info" formatted="false">HUD 上幀率那組就是 Rd、Rx、FG 三項，迷你膠囊和大數字顯示的是 Rd，也就是真正畫到螢幕上的幀數。\n\n上面幾行怎麼看：\n• Rx 接收：主機送過來的幀數，正常時是灰的，沒送夠才變黃變紅\n• Rd 渲染：解碼後實際顯示的幀數\n• FG 插幀：開了插幀增強才出現\n\nRd 顏色（對比目標幀率）：\n• 綠：95% 以上\n• 黃：80–95%\n• 紅：不到 80%\n\n💡 串流小課堂：Rx 低找主機和網路，Rx 滿但 Rd 低找本機解碼～</string>
-    <string name="perf_hud_network_latency_info">HUD 上的 RTT 是封包在主機和裝置之間跑一個來回的時間，± 後面是抖動，越小越穩。\n\n顏色：\n• 綠：40 ms 以內\n• 黃：40–80 ms\n• 紅：80 ms 以上，心情會變成 🐢\n\n頻寬：\n• 詳細檔和停靠卡片裡才顯示\n• 是目前視訊串流的實際傳輸速率\n\n💡 串流小課堂：延遲鏈裡的網路段按 RTT 的一半估算單程～</string>
-    <string name="perf_hud_decode_latency_info">HUD 上的「解碼」是本機硬體解碼一幀要花的時間。\n\n顏色：\n• 綠：比一幀的時間短（120 FPS 約 8.3 ms）\n• 黃：超過一幀的時間但不到 15 ms，開始拖幀了\n• 紅：15 ms 以上，後面還會掛個 🥵\n\n影響因素：\n• 解析度和編碼格式，HEVC 和 AV1 通常更省力\n• 裝置發熱和背景負載\n\n💡 串流小課堂：解碼低於 10 ms 就別折騰它了，去看看幀率和畫質吧～</string>
-    <string name="perf_hud_host_latency_info">HUD 上的「主機」是主機處理一幀（擷取畫面加編碼）的時間，由主機回傳。\n\n參考：\n• 5 ms 以內：主機很輕鬆\n• 5–10 ms：正常水準\n• 10 ms 以上：主機有點忙，看看遊戲或背景程式\n\n🧋 是什麼：\n• 主機沒回傳這項資料時顯示，先喝杯奶茶吧\n• 換支援 Ver.V+ 的主機就有了♡</string>
-    <string name="perf_hud_packet_loss_info" formatted="false">HUD 上的「丟包」是最近一段時間網路丟掉的視訊封包比例。\n\n顏色：\n• 綠：1% 以內\n• 黃：1–5%，偶爾花屏或頓一下\n• 紅：5% 以上，心情會變成 📶 在掉包\n\n影響因素：\n• Wi‑Fi 訊號和頻段，2.4GHz 最容易丟\n• 路由器效能\n• 位元速率超過網路能扛的上限\n\n💡 串流小課堂：長按月相做一次串流體檢，人家會告訴雜魚該怎麼修♡</string>
-    <string name="perf_hud_one_percent_low_info" formatted="false">HUD 上的 1%L 是最慢那 1% 幀換算出的幀率，專抓平均幀率看不出的微卡頓。\n\n怎麼算：\n• 記錄每幀的渲染間隔\n• 取第 99 百分位，也就是最慢的 1%\n• 換算成幀率：1000 ÷ 該間隔\n\n顏色（對比目標幀率）：\n• 綠：85% 以上\n• 黃：65–85%，偶爾頓一下\n• 紅：不到 65%，明顯卡頓\n\n💡 串流小課堂：平均幀率滿了但 1%L 很低，多半是網路抖動或主機偶爾卡了一下～</string>
+    <string name="perf_hud_fps_verdict_ok">Rx 和 Rd 都已跑滿，狀態良好</string>
+    <string name="perf_hud_fps_verdict_remote">Rx 未跑滿，是主機或網路沒有送夠幀，與本機無關</string>
+    <string name="perf_hud_fps_verdict_local">幀已收到但 Rd 偏低，本機解碼渲染跟不上</string>
+    <string name="perf_hud_fps_verdict_surplus">主機送來的幀多於需要顯示的，多餘的會被跳過，畫面不受影響</string>
+    <string name="perf_hud_fps_info" formatted="false">HUD 上幀率那組就是 Rd、Rx、FG 三項，迷你膠囊和大數字顯示的是 Rd，也就是真正畫到螢幕上的幀數。\n\n上面幾行怎麼看：\n• Rx 接收：主機送過來的幀數，正常時是灰的，沒送夠才變黃變紅\n• Rd 渲染：解碼後實際顯示的幀數\n• FG 插幀：開了插幀增強才出現\n\nRd 顏色（對比目標幀率）：\n• 綠：95% 以上\n• 黃：80–95%\n• 紅：不到 80%\n\n提示：Rx 低找主機和網路，Rx 滿但 Rd 低找本機解碼</string>
+    <string name="perf_hud_network_latency_info">HUD 上的 RTT 是封包在主機和裝置之間跑一個來回的時間，± 後面是抖動，越小越穩。\n\n顏色：\n• 綠：40 ms 以內\n• 黃：40–80 ms\n• 紅：80 ms 以上\n\n頻寬：\n• 詳細檔和停靠卡片裡才顯示\n• 是目前視訊串流的實際傳輸速率\n\n提示：延遲鏈裡的網路段按 RTT 的一半估算單程</string>
+    <string name="perf_hud_decode_latency_info">HUD 上的「解碼」是本機硬體解碼一幀要花的時間。\n\n顏色：\n• 綠：比一幀的時間短（120 FPS 約 8.3 ms）\n• 黃：超過一幀的時間但不到 15 ms，開始拖幀了\n• 紅：15 ms 以上\n\n影響因素：\n• 解析度和編碼格式，HEVC 和 AV1 通常更省力\n• 裝置發熱和背景負載\n\n提示：解碼低於 10 ms 就別折騰它了，去看看幀率和畫質吧</string>
+    <string name="perf_hud_host_latency_info">HUD 上的「主機」是主機處理一幀（擷取畫面加編碼）的時間，由主機回傳。\n\n參考：\n• 5 ms 以內：主機很輕鬆\n• 5–10 ms：正常水準\n• 10 ms 以上：主機有點忙，看看遊戲或背景程式\n\n是什麼：\n• 主機沒回傳這項資料時顯示，先喝杯奶茶吧\n• 換支援 Ver.V+ 的主機就有了</string>
+    <string name="perf_hud_packet_loss_info" formatted="false">HUD 上的「丟包」是最近一段時間網路丟掉的視訊封包比例。\n\n顏色：\n• 綠：1% 以內\n• 黃：1–5%，偶爾花屏或頓一下\n• 紅：5% 以上，\n\n影響因素：\n• Wi‑Fi 訊號和頻段，2.4GHz 最容易丟\n• 路由器效能\n• 位元速率超過網路能扛的上限\n\n提示：長按月相做一次串流體檢，會給出修復建議</string>
+    <string name="perf_hud_one_percent_low_info" formatted="false">HUD 上的 1%L 是最慢那 1% 幀換算出的幀率，專抓平均幀率看不出的微卡頓。\n\n怎麼算：\n• 記錄每幀的渲染間隔\n• 取第 99 百分位，也就是最慢的 1%\n• 換算成幀率：1000 ÷ 該間隔\n\n顏色（對比目標幀率）：\n• 綠：85% 以上\n• 黃：65–85%，偶爾頓一下\n• 紅：不到 65%，明顯卡頓\n\n提示：平均幀率滿了但 1%L 很低，多半是網路抖動或主機偶爾卡了一下</string>
     <string name="summary_perf_overlay_orientation">經典樣式：橫向單列或縱向單欄。HUD：僅對浮動狀態下的標準檔生效。</string>
     <string name="title_perf_overlay_clock_format">時鐘格式</string>
     <string name="summary_perf_overlay_clock_format">請先在「效能統計指標」中開啟「時鐘」，再修改時鐘格式。</string>
@@ -849,15 +849,15 @@
     <string name="position_bottom">底部</string>
     <string name="orientation_horizontal">橫向</string>
     <string name="orientation_vertical">縱向</string>
-    <string name="perf_stats_item_resolution_fps">🎬 解析度與目標影格率</string>
+    <string name="perf_stats_item_resolution_fps">解析度與目標影格率</string>
     <string name="perf_stats_item_decoder">編解碼格式與解碼器</string>
     <string name="perf_stats_item_frame_rates">接收 / 渲染 / 生成影格率</string>
-    <string name="perf_stats_item_packet_loss">📶 封包遺失率</string>
-    <string name="perf_stats_item_network">🌐 位元率與網路延遲</string>
-    <string name="perf_stats_item_decode_latency">⏱ 解碼延遲（正常低於 15 ms）</string>
-    <string name="perf_stats_item_host_latency">🖥 主機處理延遲</string>
-    <string name="perf_stats_item_battery">🔋 電量</string>
-    <string name="perf_stats_item_one_percent_low">📉 1% 低影格率（流暢度）</string>
+    <string name="perf_stats_item_packet_loss">封包遺失率</string>
+    <string name="perf_stats_item_network">位元率與網路延遲</string>
+    <string name="perf_stats_item_decode_latency">解碼延遲（正常低於 15 ms）</string>
+    <string name="perf_stats_item_host_latency">主機處理延遲</string>
+    <string name="perf_stats_item_battery">電量</string>
+    <string name="perf_stats_item_one_percent_low">1% 低影格率（流暢度）</string>
     <string name="perf_stats_item_clock">時鐘</string>
     <string name="mic_icon_color_gradient_blue">藍色漸層</string>
     <string name="mic_icon_color_gradient_purple">紫色漸層</string>
@@ -1227,6 +1227,6 @@
     <string name="host_unlock_close">關閉</string>
     <string name="title_ds5_single_tap_to_click">DS5 單擊點擊（相容）</string>
     <string name="summary_ds5_single_tap_to_click">關閉：點兩下即可點擊，第二下按住可長按；開啟：恢復單擊點擊。兩種方式均支援用力按壓。</string>
-    <string name="tip_performance_overlay">💡 串流小課堂：單擊效能 HUD 能在 迷你 / 標準 / 詳細 之間切換，雙擊切橫豎排，長按指標看說明，還能拖著到處跑哦～這都不會用的話，就是雜魚♡</string>
+    <string name="tip_performance_overlay">提示：單擊效能 HUD 可在 迷你 / 標準 / 詳細 之間切換，雙擊切換橫豎排，長按指標查看說明，也可拖曳到任意位置</string>
     <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
 </resources>

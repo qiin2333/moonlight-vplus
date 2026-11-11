@@ -2632,7 +2632,7 @@ class GameMenu(
             "mouse_mode" to R.drawable.ic_candy_mouse,
             "game_menu_mouse_emulation" to R.drawable.ic_mouse_emulation_cute,
             "game_menu_pan_zoom" to R.drawable.ic_pan_zoom_cute,
-            "crown_function_menu" to R.drawable.ic_super_crown,
+            "crown_function_menu" to R.drawable.phc_crown,
             "crown_visibility" to R.drawable.ic_ui_settings,
             "crown_touch" to R.drawable.ic_touch_settings,
             "crown_profiles" to R.drawable.ic_change,

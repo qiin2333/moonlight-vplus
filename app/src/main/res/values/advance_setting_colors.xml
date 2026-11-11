@@ -142,4 +142,5 @@
     <color name="retro_space_moon_shadow">#FF735563</color>
     <color name="retro_space_moon_crater">#FFB77A86</color>
     <color name="retro_space_text">#FFFFF3E4</color>
+    <color name="game_menu_icon_tint">#FF8FC4EA</color>
 </resources>

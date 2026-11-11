@@ -97,4 +97,5 @@
     <color name="easytier_text_secondary">#C9D0D8</color>
     <color name="easytier_warning">#FF7777</color>
 
+    <color name="game_menu_icon_tint">#FF8FC4EA</color>
 </resources>

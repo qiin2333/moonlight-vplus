@@ -158,9 +158,9 @@ internal fun CuteFeatureGuideCard(
     hardwareFocusRequestToken: Int = 0
 ) {
     val accent = appAccentColor()
-    val ink = Color(0xFF4C4346)
-    val mutedInk = Color(0xFF6C6063)
-    val paper = Color(0xFFFFF8E8)
+    val ink = Color(0xFFE6F1FA)
+    val mutedInk = Color(0xFF8FA5B8)
+    val paper = Color(0xFF14202E)
     val skipFocusRequester = remember { FocusRequester() }
     val actionFocusRequester = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
@@ -240,7 +240,7 @@ internal fun CuteFeatureGuideCard(
                         close()
                     }
                     drawPath(paperPath, paper)
-                    drawPath(paperPath, Color(0xFFD8CABC), style = Stroke(1.1.dp.toPx()))
+                    drawPath(paperPath, Color(0xFF2A4560), style = Stroke(1.1.dp.toPx()))
                 }
         ) {
             PaperNoteConnector(Modifier.matchParentSize(), accent)
@@ -317,7 +317,7 @@ internal fun CuteFeatureGuideCard(
                     Text(
                         text = "│",
                         modifier = Modifier.clearAndSetSemantics { },
-                        color = Color(0xFFD8CABC),
+                        color = Color(0xFF2A4560),
                         fontSize = 15.sp
                     )
                     TextButton(
@@ -392,7 +392,7 @@ private fun PaperNoteConnector(modifier: Modifier, accent: Color) {
 
         rotate(-9f, Offset(28.dp.toPx(), 37.dp.toPx())) {
             drawRoundRect(
-                color = Color(0xFFFF978F),
+                color = Color(0xFF66C0F4),
                 topLeft = Offset(4.dp.toPx(), 28.dp.toPx()),
                 size = Size(52.dp.toPx(), 18.dp.toPx()),
                 cornerRadius = CornerRadius(2.dp.toPx())
