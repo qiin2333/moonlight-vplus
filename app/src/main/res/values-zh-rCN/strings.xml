@@ -658,7 +658,7 @@
     <string name="summary_setup_guide">查看有关如何设置游戏电脑以进行流传输的说明。</string>
     <string name="title_privacy_policy">隐私政策</string>
     <string name="summary_privacy_policy">查看 Moonlight 隐私政策。</string>
-    <string name="title_about_mode">关于 Moonlight V+</string>
+    <string name="title_about_mode">关于 Moonlight Dual</string>
     <string name="summary_about_mode">请前往GitHub查看，喜欢的话点个Star支持一下我们吧。</string>
 
     <!-- About dialog strings -->
@@ -686,8 +686,8 @@
     <string name="about_dialog_ecosystem_pc_description">面向桌面与 Steam Link 的跨平台 Moonlight 增强客户端。</string>
     <string name="about_dialog_ecosystem_vplus_description">面向手机、平板和电视的 Android 增强客户端。</string>
     <string name="about_dialog_ecosystem_voidlink_description">触控友好、手柄友好的 iOS 与 iPadOS 串流客户端。</string>
-    <string name="about_dialog_ecosystem_harmony_title">Moonlight V+ 鸿蒙版</string>
-    <string name="about_dialog_ecosystem_harmony_description">面向鸿蒙手机和平板的原生 Moonlight V+ 客户端。</string>
+    <string name="about_dialog_ecosystem_harmony_title">Moonlight Dual 鸿蒙版</string>
+    <string name="about_dialog_ecosystem_harmony_description">面向鸿蒙手机和平板的原生 Moonlight Dual 客户端。</string>
     <string name="about_dialog_ecosystem_mac_description">针对 macOS 原生体验优化的 Moonlight 增强客户端。</string>
     <string name="about_dialog_qq">加入QQ群</string>
     <string name="about_dialog_close">关闭</string>
@@ -911,8 +911,8 @@
     <string name="title_checkbox_rotable_screen">跟随设备旋转</string>
     <string name="summary_checkbox_rotable_screen">本机方向变化时同步旋转串流布局。</string>
 
-    <!-- Moonlight V+ PC download -->
-    <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
+    <!-- Moonlight Dual PC download -->
+    <string name="title_moonlight_vplus_pc_download">Moonlight Dual PC版下载</string>
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">提示：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态</string>
@@ -1702,7 +1702,7 @@
     <string name="update_install_permission_msg">为了自动安装更新，需要授予应用安装权限。\n\n点击确定前往设置页面开启权限，返回后将自动开始下载。</string>
     <string name="toast_cannot_open_settings">无法打开设置页面</string>
     <string name="toast_download_service_unavailable">系统下载服务不可用</string>
-    <string name="update_download_notification_title">Moonlight V+ 更新下载</string>
+    <string name="update_download_notification_title">Moonlight Dual 更新下载</string>
     <string name="toast_download_started">已开始下载，下载完成后点击通知栏即可安装</string>
     <string name="toast_download_failed">下载失败: %s</string>
     <string name="update_downloading_title">正在下载更新</string>
@@ -1751,11 +1751,11 @@
     <!-- 插帧增强 -->
     <string name="title_developer_unlock">解锁开发者功能</string>
     <string name="summary_developer_unlock_locked">验证你的 GitHub Star 后即可解锁开发者功能。</string>
-    <string name="summary_developer_unlock_unlocked">本机已解锁开发者功能，感谢你支持 Moonlight V+。</string>
-    <string name="message_developer_unlock_required">开发者功能是 Moonlight V+ 的支持者功能。请登录 GitHub，App 会验证你的账号是否已经给项目点 Star。</string>
+    <string name="summary_developer_unlock_unlocked">本机已解锁开发者功能，感谢你支持 Moonlight Dual。</string>
+    <string name="message_developer_unlock_required">开发者功能是 Moonlight Dual 的支持者功能。请登录 GitHub，App 会验证你的账号是否已经给项目点 Star。</string>
     <string name="message_developer_unlock_done">本机已解锁开发者功能。你可以重新验证 Star，或打开项目页面。</string>
-    <string name="message_developer_oauth_unconfigured">当前构建没有配置 GitHub OAuth Client ID，Moonlight V+ 还无法解锁开发者功能。请在 local.properties 配置 githubOAuthClientId，或在构建时传入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
-    <string name="message_developer_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 GitHub 授权后，给 Moonlight V+ 点 Star。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
+    <string name="message_developer_oauth_unconfigured">当前构建没有配置 GitHub OAuth Client ID，Moonlight Dual 还无法解锁开发者功能。请在 local.properties 配置 githubOAuthClientId，或在构建时传入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
+    <string name="message_developer_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 GitHub 授权后，给 Moonlight Dual 点 Star。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
     <string name="developer_device_code_clip_label">GitHub 授权码</string>
     <string name="message_developer_star_not_found">GitHub 授权成功，但还没有看到这个账号的 Star。如果你刚刚点过 Star，请稍等片刻后再次验证。</string>
     <string name="action_developer_open_project">打开项目</string>
@@ -1876,11 +1876,11 @@
     <string name="hint_crown_store_author">你想显示的名字</string>
     <string name="hint_crown_store_tags">fps, racing, handheld</string>
     <string name="hint_crown_store_summary">这套布局哪里好用？</string>
-    <string name="message_crown_store_publish_metadata">这些信息会显示在公开 GitHub Store 里。Moonlight V+ 会用你的 GitHub 账号创建 Pull Request，等待维护者确认。</string>
+    <string name="message_crown_store_publish_metadata">这些信息会显示在公开 GitHub Store 里。Moonlight Dual 会用你的 GitHub 账号创建 Pull Request，等待维护者确认。</string>
     <string name="message_crown_store_publish_terms">我确认这套配置是我自己的，或已获得分享许可；里面没有隐私信息、token、密码、配对身份、受版权保护的媒体或不友好的内容，也接受它被公开审核或下架。</string>
-    <string name="message_crown_store_github_authorization_required">投稿前先连接 GitHub。Moonlight V+ 会帮你 fork 王冠 Store、提交配置，并打开一个 Pull Request。</string>
+    <string name="message_crown_store_github_authorization_required">投稿前先连接 GitHub。Moonlight Dual 会帮你 fork 王冠 Store、提交配置，并打开一个 Pull Request。</string>
     <string name="message_crown_store_github_reauthorization_required">投稿需要 GitHub public repository 权限。重新连接 GitHub、授权仓库访问后，再来投一次吧。</string>
-    <string name="message_crown_store_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 public repository 权限，Moonlight V+ 才能帮你 fork 王冠 Store 并创建 Pull Request。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
+    <string name="message_crown_store_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 public repository 权限，Moonlight Dual 才能帮你 fork 王冠 Store 并创建 Pull Request。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
     <string name="message_crown_store_publish_success">这套王冠配置的投稿 PR 已创建：\n%1$s\n\n%2$s</string>
     <string name="message_crown_store_delete_profile">要从“我的王冠”里删除“%1$s”吗？只会移除本地配置和里面的按钮。</string>
     <string name="crown_store_report_issue_title">举报王冠 Store 配置：%1$s</string>
@@ -1940,8 +1940,8 @@
     <string name="toast_config_sync_password_saved">备份密码已保存</string>
     <string name="toast_config_sync_password_unavailable">自动保存到文件夹需要 Android 6.0 或更高版本</string>
     <string name="title_config_sync_restart_required">重启 Moonlight 以完成恢复</string>
-    <string name="message_config_sync_restart_required">电脑配对已恢复。请先重启 Moonlight V+，再查看已配对电脑。</string>
-    <string name="message_config_sync_restart_required_with_failures">电脑配对已恢复，但有 %1$d 项配对内容未能恢复。请先重启 Moonlight V+，再查看已配对电脑；失败的电脑可能需要重新配对。</string>
+    <string name="message_config_sync_restart_required">电脑配对已恢复。请先重启 Moonlight Dual，再查看已配对电脑。</string>
+    <string name="message_config_sync_restart_required_with_failures">电脑配对已恢复，但有 %1$d 项配对内容未能恢复。请先重启 Moonlight Dual，再查看已配对电脑；失败的电脑可能需要重新配对。</string>
     <string name="dialog_button_ok">确定</string>
     <string name="dialog_button_close">关闭</string>
     <string name="dialog_button_start">开始</string>
@@ -2140,11 +2140,11 @@
     <string name="diag_pq_transfer">PQ透传</string>
 
     <!-- 赞助 -->
-    <string name="sponsor_github_title">投喂 Moonlight V+</string>
-    <string name="sponsor_github_summary">Moonlight V+ 由社区维护，你的支持会用于设备、测试与服务成本。扫码或打开 GitHub Sponsors 即可。</string>
+    <string name="sponsor_github_title">投喂 Moonlight Dual</string>
+    <string name="sponsor_github_summary">Moonlight Dual 由社区维护，你的支持会用于设备、测试与服务成本。扫码或打开 GitHub Sponsors 即可。</string>
     <string name="sponsor_github_action">打开 GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">投喂 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">Moonlight V+ 由社区维护，你的支持会用于设备、测试与服务成本。扫码即可。</string>
+    <string name="sponsor_wechat_title">投喂 Moonlight Dual</string>
+    <string name="sponsor_wechat_summary">Moonlight Dual 由社区维护，你的支持会用于设备、测试与服务成本。扫码即可。</string>
     <string name="sponsor_wechat_action">使用微信支付扫码</string>
     <string name="sponsor_qr_content_description">赞助二维码</string>
     <string name="sponsor_qr_dialog_title">赞助二维码</string>
@@ -2172,7 +2172,7 @@
     <string name="handbook_error_timeout">文档加载超时，请点击重试</string>
     <string name="handbook_error_unavailable">文档手册暂时无法打开，请稍后再试</string>
     <string name="handbook_retry">点击重试</string>
-    <string name="title_about_us">关于 Moonlight V+</string>
+    <string name="title_about_us">关于 Moonlight Dual</string>
     <!-- 功能发现引导 -->
     <string name="feature_guide_step">小提示 · %1$d/%2$d</string>
     <string name="feature_guide_quick_actions_title">快捷栏也要我教吗？</string>

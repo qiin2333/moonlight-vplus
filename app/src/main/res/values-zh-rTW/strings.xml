@@ -464,11 +464,11 @@
     <!-- 插幀增強 -->
     <string name="title_developer_unlock">解鎖開發者功能</string>
     <string name="summary_developer_unlock_locked">驗證你的 GitHub Star 後即可解鎖開發者功能。</string>
-    <string name="summary_developer_unlock_unlocked">本機已解鎖開發者功能，感謝你支持 Moonlight V+。</string>
-    <string name="message_developer_unlock_required">開發者功能是 Moonlight V+ 的支持者功能。請登入 GitHub，App 會驗證你的帳號是否已經給專案點 Star。</string>
+    <string name="summary_developer_unlock_unlocked">本機已解鎖開發者功能，感謝你支持 Moonlight Dual。</string>
+    <string name="message_developer_unlock_required">開發者功能是 Moonlight Dual 的支持者功能。請登入 GitHub，App 會驗證你的帳號是否已經給專案點 Star。</string>
     <string name="message_developer_unlock_done">本機已解鎖開發者功能。你可以重新驗證 Star，或打開專案頁面。</string>
-    <string name="message_developer_oauth_unconfigured">目前構建沒有配置 GitHub OAuth Client ID，Moonlight V+ 還無法解鎖開發者功能。請在 local.properties 配置 githubOAuthClientId，或在構建時傳入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
-    <string name="message_developer_device_code">1. 打開授權頁並輸入代碼：%1$s\n2. 打開專案頁，給 Moonlight V+ 點 Star。\n3. 授權完成後回到本頁，點擊「已授權，檢查」。\n\n授權頁：%2$s</string>
+    <string name="message_developer_oauth_unconfigured">目前構建沒有配置 GitHub OAuth Client ID，Moonlight Dual 還無法解鎖開發者功能。請在 local.properties 配置 githubOAuthClientId，或在構建時傳入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
+    <string name="message_developer_device_code">1. 打開授權頁並輸入代碼：%1$s\n2. 打開專案頁，給 Moonlight Dual 點 Star。\n3. 授權完成後回到本頁，點擊「已授權，檢查」。\n\n授權頁：%2$s</string>
     <string name="message_developer_star_not_found">GitHub 授權成功，但還沒有看到這個帳號的 Star。如果你剛剛點過 Star，請稍等片刻後再次驗證。</string>
     <string name="action_developer_open_project">打開專案</string>
     <string name="action_developer_open_authorization">打開授權頁</string>
@@ -535,11 +535,11 @@
     <string name="title_config_sync_backup_password">備份密碼</string>
 
     <!-- 贊助 -->
-    <string name="sponsor_github_title">投餵 Moonlight V+</string>
-    <string name="sponsor_github_summary">Moonlight V+ 由社群維護，你的支持會用於設備、測試與服務成本。掃描 QR code 或開啟 GitHub Sponsors 即可。</string>
+    <string name="sponsor_github_title">投餵 Moonlight Dual</string>
+    <string name="sponsor_github_summary">Moonlight Dual 由社群維護，你的支持會用於設備、測試與服務成本。掃描 QR code 或開啟 GitHub Sponsors 即可。</string>
     <string name="sponsor_github_action">開啟 GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">投餵 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">Moonlight V+ 由社群維護，你的支持會用於設備、測試與服務成本。掃碼即可。</string>
+    <string name="sponsor_wechat_title">投餵 Moonlight Dual</string>
+    <string name="sponsor_wechat_summary">Moonlight Dual 由社群維護，你的支持會用於設備、測試與服務成本。掃碼即可。</string>
     <string name="sponsor_wechat_action">使用微信支付掃碼</string>
     <string name="sponsor_qr_content_description">贊助 QR code</string>
     <string name="sponsor_qr_dialog_title">贊助 QR code</string>
@@ -563,7 +563,7 @@
     <string name="game_menu_audio_haptics_route_both_short">兩者</string>
     <string name="title_document_handbook">使用者手冊</string>
     <string name="summary_document_handbook">查看安裝、串流、輸入與疑難排解文件。</string>
-    <string name="title_about_us">關於 Moonlight V+</string>
+    <string name="title_about_us">關於 Moonlight Dual</string>
     <!-- 功能探索引導 -->
     <string name="feature_guide_step">小提示 · %1$d/%2$d</string>
     <string name="feature_guide_quick_actions_title">快捷列也要我教嗎？</string>
@@ -993,8 +993,8 @@
     <string name="title_config_sync_import_external_snapshot">從資料夾還原最新備份</string>
     <string name="summary_config_sync_import_external_snapshot">先預覽所選資料夾中的備份，再決定是否還原。</string>
     <string name="check_for_updates">檢查更新</string>
-    <string name="summary_check_for_updates">檢查是否有新的 Moonlight V+ 版本。</string>
-    <string name="title_moonlight_vplus_pc_download">下載 Moonlight V+ 電腦版</string>
+    <string name="summary_check_for_updates">檢查是否有新的 Moonlight Dual 版本。</string>
+    <string name="title_moonlight_vplus_pc_download">下載 Moonlight Dual 電腦版</string>
     <string name="suffix_seekbar_flat_region_pixels">像素</string>
     <string name="suffix_enhanced_touch_zone_divider">%</string>
     <string name="suffix_pointer_velocity_factor">%</string>

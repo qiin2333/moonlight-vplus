@@ -1,28 +1,36 @@
 <div align="center">
-  <img src="./app/src/main/res/drawable/vplus.webp" width="100" alt="Moonlight V+ Logo">
+  <img src="./app/src/main/res/mipmap-xxxhdpi/ic_launcher_saba.png" width="100" alt="Moonlight Dual">
 
   # Moonlight Dual
 
-  [![GitHub Release](https://img.shields.io/github/v/release/qiin2333/moonlight-vplus?label=latest&style=flat-square)](https://github.com/qiin2333/moonlight-vplus/releases/latest)
   [![Android](https://img.shields.io/badge/Android-5.0+-34A853?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/about/versions)
   [![License](https://img.shields.io/badge/license-GPL%20v3-EF9421?style=flat-square)](LICENSE.txt)
-  [![GitHub Stars](https://img.shields.io/github/stars/qiin2333/moonlight-vplus?style=flat-square)](https://github.com/qiin2333/moonlight-vplus/stargazers)
-  [![Downloads](https://img.shields.io/github/downloads/qiin2333/moonlight-vplus/total?style=flat-square&color=blue)](https://github.com/qiin2333/moonlight-vplus/releases)
 
   **A game-streaming client for Sunshine, built for dual-screen handhelds.**
 
   English | [中文](README.md)
-
-  <a href="./assets/readme/moonlight-vplus-promo.mp4">
-    <img src="./assets/readme/moonlight-vplus-promo.gif" width="800" alt="Moonlight V+: app launch, game library, and game preview">
-  </a>
-  <br/>
-  <sub>Launch → Library → Connect → Game preview · Click for the high-quality video</sub>
-  <br/>
-  <sub>Android UI recording composited with the official No Man's Sky trailer. <a href="./assets/readme/README.md">Media credits</a></sub>
 </div>
 
 ---
+
+**Moonlight Dual** is a Sunshine streaming client made for dual-screen handhelds (such as the AYN Thor): **the main screen shows the picture, the second screen is your control console**.
+
+- **Main screen**: a Steam Big Picture–style host and app picker, fully gamepad-driven (A connect / B exit / X add host / Y more / START settings).
+- **Second screen**: while streaming it shows live monitoring (FPS history, frame time, 1% low, RTT, packet loss, latency breakdown), bitrate control, input toggles and quick keys (Esc / Win / Alt+Tab / keyboard / HDR / mic / virtual pad / disconnect); while browsing it shows host status (online, streaming, resume, last connected), the app panel and the menu.
+- **Game menu**: opens as a full-screen second page on the second screen, with wrapping quick buttons, never covering the main picture.
+- **Dialogs follow you**: they appear on the screen you last interacted with.
+
+## Screens
+
+<p align="center"><img src="docs/screenshots/dual-hosts.png" width="520" alt="Browse: pick a host on the main screen, host status on the second"><br/><sub>Browse: pick a host on the main screen, host status on the second</sub></p>
+
+<p align="center"><img src="docs/screenshots/dual-apps.png" width="520" alt="Pick an app: apps on the main screen, app panel and stream parameters on the second"><br/><sub>Pick an app: apps on the main screen, app panel and stream parameters on the second</sub></p>
+
+<p align="center"><img src="docs/screenshots/dual-menu.png" width="520" alt="Second-screen menu: settings, about, EasyTier, resume session, and more"><br/><sub>Second-screen menu: settings, about, EasyTier, resume session, and more</sub></p>
+
+<p align="center"><img src="docs/screenshots/dual-stream-settings.png" width="520" alt="Stream settings: adjust stream parameters from the second screen"><br/><sub>Stream settings: adjust stream parameters from the second screen</sub></p>
+
+<p align="center"><img src="docs/screenshots/dual-streaming-second-screen.png" width="900" alt="Second screen while streaming: monitor / bitrate / input / quick keys / game menu"><br/><sub>Second screen while streaming: monitor / bitrate / input / quick keys / game menu</sub></p>
 
 ## What's Different from Upstream Moonlight
 

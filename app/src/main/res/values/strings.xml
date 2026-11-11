@@ -679,8 +679,8 @@
     <string name="toast_config_sync_password_saved">Backup password saved</string>
     <string name="toast_config_sync_password_unavailable">Automatic folder backups require Android 6.0 or later</string>
     <string name="title_config_sync_restart_required">Restart Moonlight to finish restoring</string>
-    <string name="message_config_sync_restart_required">Computer pairing was restored. Restart Moonlight V+ before checking paired computers.</string>
-    <string name="message_config_sync_restart_required_with_failures">Computer pairing was restored, but %1$d pairing items could not be restored. Restart Moonlight V+ before checking paired computers; failed computers may need to be paired again.</string>
+    <string name="message_config_sync_restart_required">Computer pairing was restored. Restart Moonlight Dual before checking paired computers.</string>
+    <string name="message_config_sync_restart_required_with_failures">Computer pairing was restored, but %1$d pairing items could not be restored. Restart Moonlight Dual before checking paired computers; failed computers may need to be paired again.</string>
     <string name="title_checkbox_resume_stream">Resume stream automatically</string>
     <string name="summary_checkbox_resume_stream">Automatically resume the stream when returning to Moonlight from the background</string>
 
@@ -828,7 +828,7 @@
     <string name="about_dialog_ecosystem_pc_platform" translatable="false">Windows · Linux · macOS</string>
     <string name="about_dialog_ecosystem_pc_description">A cross-platform enhanced Moonlight client for desktops and Steam Link.</string>
     <string name="about_dialog_ecosystem_vplus_badge" translatable="false">AND</string>
-    <string name="about_dialog_ecosystem_vplus_title" translatable="false">Moonlight V+</string>
+    <string name="about_dialog_ecosystem_vplus_title" translatable="false">Moonlight Dual</string>
     <string name="about_dialog_ecosystem_vplus_platform" translatable="false">Android · Android TV</string>
     <string name="about_dialog_ecosystem_vplus_description">An enhanced Android client designed for phones, tablets, and TVs.</string>
     <string name="about_dialog_ecosystem_voidlink_badge" translatable="false">iOS</string>
@@ -836,9 +836,9 @@
     <string name="about_dialog_ecosystem_voidlink_platform" translatable="false">iPhone · iPad</string>
     <string name="about_dialog_ecosystem_voidlink_description">A touch- and controller-friendly streaming client for iOS and iPadOS.</string>
     <string name="about_dialog_ecosystem_harmony_badge" translatable="false">HM</string>
-    <string name="about_dialog_ecosystem_harmony_title">Moonlight V+ for HarmonyOS</string>
+    <string name="about_dialog_ecosystem_harmony_title">Moonlight Dual for HarmonyOS</string>
     <string name="about_dialog_ecosystem_harmony_platform" translatable="false">HarmonyOS NEXT</string>
-    <string name="about_dialog_ecosystem_harmony_description">A native Moonlight V+ client for HarmonyOS phones and tablets.</string>
+    <string name="about_dialog_ecosystem_harmony_description">A native Moonlight Dual client for HarmonyOS phones and tablets.</string>
     <string name="about_dialog_ecosystem_mac_badge" translatable="false">MAC</string>
     <string name="about_dialog_ecosystem_mac_title" translatable="false">Moonlight macOS Enhanced</string>
     <string name="about_dialog_ecosystem_mac_platform" translatable="false">Apple Silicon · Intel</string>
@@ -984,11 +984,11 @@
     <string name="hint_crown_store_author">Name to show</string>
     <string name="hint_crown_store_tags">fps, racing, handheld</string>
     <string name="hint_crown_store_summary">What makes this layout shine?</string>
-    <string name="message_crown_store_publish_metadata">These details appear in the public GitHub Store. Moonlight V+ will create a pull request from your account for review.</string>
+    <string name="message_crown_store_publish_metadata">These details appear in the public GitHub Store. Moonlight Dual will create a pull request from your account for review.</string>
     <string name="message_crown_store_publish_terms">I confirm this profile is mine or shared with permission, contains no private data, tokens, passwords, pairing identity, copyrighted media, or abusive content, and may be reviewed or removed from the public GitHub Store.</string>
-    <string name="message_crown_store_github_authorization_required">Connect GitHub before submitting. Moonlight V+ will fork the Crown Store, commit the profile, and open a pull request for you.</string>
+    <string name="message_crown_store_github_authorization_required">Connect GitHub before submitting. Moonlight Dual will fork the Crown Store, commit the profile, and open a pull request for you.</string>
     <string name="message_crown_store_github_reauthorization_required">Submitting needs GitHub public repository access. Reconnect GitHub, approve repository access, then send it again.</string>
-    <string name="message_crown_store_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve public repository access so Moonlight V+ can fork the Crown Store and open a pull request.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
+    <string name="message_crown_store_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve public repository access so Moonlight Dual can fork the Crown Store and open a pull request.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
     <string name="message_crown_store_publish_success">Your Crown profile submission PR is ready:\n%1$s\n\n%2$s</string>
     <string name="message_crown_store_delete_profile">Delete \"%1$s\" from My Crowns? This only removes the local profile and its buttons.</string>
     <string name="crown_store_report_issue_title">Report Crown Store profile: %1$s</string>
@@ -1122,8 +1122,8 @@
     <string name="title_checkbox_rotable_screen">Follow device rotation</string>
     <string name="summary_checkbox_rotable_screen">Rotate the stream layout when this device\'s orientation changes.</string>
     
-    <!-- Moonlight V+ PC download -->
-    <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
+    <!-- Moonlight Dual PC download -->
+    <string name="title_moonlight_vplus_pc_download">Moonlight Dual PC Download</string>
     
     <!-- Analytics settings -->
     <string name="title_enable_analytics">Enable Analytics</string>
@@ -1497,13 +1497,13 @@
     <!-- Frame Generation -->
     <string name="title_developer_unlock">Unlock developer features</string>
     <string name="summary_developer_unlock_locked">Verify your GitHub Star to unlock developer features.</string>
-    <string name="summary_developer_unlock_unlocked">Developer features are unlocked on this device. Thank you for supporting Moonlight V+.</string>
-    <string name="message_developer_unlock_required">Developer features are available to Moonlight V+ supporters. Sign in with GitHub and the app will verify that your account has starred the project. The same authorization can also publish Crown Store pull requests when you choose to share a profile.</string>
+    <string name="summary_developer_unlock_unlocked">Developer features are unlocked on this device. Thank you for supporting Moonlight Dual.</string>
+    <string name="message_developer_unlock_required">Developer features are available to Moonlight Dual supporters. Sign in with GitHub and the app will verify that your account has starred the project. The same authorization can also publish Crown Store pull requests when you choose to share a profile.</string>
     <string name="message_developer_unlock_done">Developer features are unlocked on this device. You can recheck your Star or open the project page.</string>
-    <string name="message_developer_oauth_unconfigured">This build has not configured a GitHub OAuth client ID, so Moonlight V+ cannot unlock developer features yet. Set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=..., or set GITHUB_OAUTH_CLIENT_ID when building.</string>
-    <string name="message_developer_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve GitHub access, then Star Moonlight V+.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
+    <string name="message_developer_oauth_unconfigured">This build has not configured a GitHub OAuth client ID, so Moonlight Dual cannot unlock developer features yet. Set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=..., or set GITHUB_OAUTH_CLIENT_ID when building.</string>
+    <string name="message_developer_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve GitHub access, then Star Moonlight Dual.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
     <string name="developer_device_code_clip_label">GitHub authorization code</string>
-    <string name="message_developer_star_not_found">GitHub authorization succeeded, but the Star is not visible for this account yet. Star Moonlight V+, wait a moment if you just starred it, then verify again.</string>
+    <string name="message_developer_star_not_found">GitHub authorization succeeded, but the Star is not visible for this account yet. Star Moonlight Dual, wait a moment if you just starred it, then verify again.</string>
     <string name="action_developer_open_project">Open project</string>
     <string name="action_developer_open_authorization">Open authorization</string>
     <string name="action_developer_check_authorization">I have authorized</string>
@@ -2002,7 +2002,7 @@ Tap again to replace it.</string>
     <string name="update_install_permission_msg">To auto-install updates, please grant install permission.\n\nTap OK to open settings. Download will start automatically after you return.</string>
     <string name="toast_cannot_open_settings">Cannot open settings page</string>
     <string name="toast_download_service_unavailable">System download service unavailable</string>
-    <string name="update_download_notification_title">Moonlight V+ Update</string>
+    <string name="update_download_notification_title">Moonlight Dual Update</string>
     <string name="toast_download_started">Download started, tap notification to install when complete</string>
     <string name="toast_download_failed">Download failed: %s</string>
     <string name="update_downloading_title">Downloading Update</string>
@@ -2232,16 +2232,16 @@ Tap again to replace it.</string>
 
     <!-- Sponsorship -->
     <string name="sponsor_github_url" translatable="false">https://github.com/sponsors/qiin2333</string>
-    <string name="sponsor_github_title">Feed Moonlight V+</string>
+    <string name="sponsor_github_title">Feed Moonlight Dual</string>
     <string name="sponsor_github_summary">Tiny sponsor energy keeps fixes, devices, and token-fueled tinkering alive. Scan the code or open GitHub Sponsors.</string>
     <string name="sponsor_github_action">Open GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">Feed Moonlight V+</string>
+    <string name="sponsor_wechat_title">Feed Moonlight Dual</string>
     <string name="sponsor_wechat_summary">Scan with WeChat Pay to toss in a tiny token snack for continued development.</string>
     <string name="sponsor_wechat_action">Scan with WeChat Pay</string>
     <string name="sponsor_qr_content_description">Sponsor QR code</string>
     <string name="sponsor_qr_dialog_title">Sponsor QR code</string>
     <string name="sponsor_qr_long_press_hint">Long press the QR code to save it for scanning in WeChat</string>
-    <string name="sponsor_qr_saved">QR code saved to Pictures/Moonlight V+</string>
+    <string name="sponsor_qr_saved">QR code saved to Pictures/Moonlight Dual</string>
     <string name="sponsor_qr_save_failed">Couldn’t save the QR code</string>
     <string name="sponsor_qr_permission_retry">Allow storage access, then long press again to save</string>
     <string name="sponsor_qr_saved_open_wechat_hint">Saved. In WeChat, choose Scan → Album</string>
@@ -2264,7 +2264,7 @@ Tap again to replace it.</string>
     <string name="handbook_error_timeout">The handbook took too long to respond. Please try again.</string>
     <string name="handbook_error_unavailable">The handbook is temporarily unavailable. Please try again later.</string>
     <string name="handbook_retry">Tap to retry</string>
-    <string name="title_about_us">About Moonlight V+</string>
+    <string name="title_about_us">About Moonlight Dual</string>
     <!-- Feature discovery -->
     <string name="feature_guide_step">A SECRET EVEN ROOKIES FIND · %1$d/%2$d</string>
     <string name="feature_guide_quick_actions_title">Need help with shortcuts too?</string>

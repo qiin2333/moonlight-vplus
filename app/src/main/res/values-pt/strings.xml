@@ -408,7 +408,7 @@
     <string name="title_about_mode">Sobre</string>
     <string name="summary_about_mode">Ver informações da app e detalhes do projeto</string>
     <string name="about_dialog_project_info">Baseado no projeto de código aberto Moonlight-Android, criado pela comunidade Foundation</string>
-    <string name="about_dialog_thanks">Obrigado por escolher o Moonlight V+! Se você achar útil, por favor dê-nos uma estrela no GitHub </string>
+    <string name="about_dialog_thanks">Obrigado por escolher o Moonlight Dual! Se você achar útil, por favor dê-nos uma estrela no GitHub </string>
     <string name="about_dialog_github">GitHub</string>
     <string name="about_dialog_qq">Entrar no grupo QQ</string>
     <string name="about_dialog_close">Fechar</string>
@@ -486,8 +486,8 @@
     <string name="title_checkbox_rotable_screen">Seguir rotação da tela</string>
     <string name="summary_checkbox_rotable_screen">Sincroniza automaticamente o layout do streaming quando o dispositivo alterna entre orientação retrato e paisagem.</string>
     
-    <!-- Moonlight V+ PC download -->
-    <string name="title_moonlight_vplus_pc_download">Download do Moonlight V+ PC</string>
+    <!-- Moonlight Dual PC download -->
+    <string name="title_moonlight_vplus_pc_download">Download do Moonlight Dual PC</string>
     
     <!-- Analytics settings -->
     <string name="title_enable_analytics">Ativar análise</string>
