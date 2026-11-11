@@ -3534,7 +3534,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 background = android.graphics.drawable.GradientDrawable().apply {
                     if (pill) cornerRadius = 12 * d else shape = android.graphics.drawable.GradientDrawable.OVAL
                     setColor(color)
-                    setStroke((1 * d).toInt(), 0x66FFFFFF)
+                    setStroke((1 * d).toInt(), 0xAAFFFFFF.toInt())
                 }
                 val w = if (pill) (44 * d).toInt() else (24 * d).toInt()
                 layoutParams = LinearLayout.LayoutParams(w, (24 * d).toInt())
@@ -3547,11 +3547,11 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             }
             bar.addView(b); bar.addView(t)
         }
-        add("A", getString(R.string.hint_a_connect), 0xFF3C8D4A.toInt())
-        add("B", getString(R.string.hint_b_exit), 0xFFB5483F.toInt())
-        add("X", getString(R.string.hint_x_add), 0xFF3E6FB5.toInt())
-        add("Y", getString(R.string.hint_y_more), 0xFFC49A2E.toInt())
-        add("START", getString(R.string.hint_start_settings), 0xFF4A5A68.toInt(), pill = true)
+        add("A", getString(R.string.hint_a_connect), 0x33FFFFFF)
+        add("B", getString(R.string.hint_b_exit), 0x33FFFFFF)
+        add("X", getString(R.string.hint_x_add), 0x33FFFFFF)
+        add("Y", getString(R.string.hint_y_more), 0x33FFFFFF)
+        add("START", getString(R.string.hint_start_settings), 0x33FFFFFF, pill = true)
         (bar.getChildAt(bar.childCount - 1) as TextView).setPadding((6 * d).toInt(), 0, 0, 0)
     }
 
