@@ -210,7 +210,7 @@ class SecondScreenCompanion(
             quick(R.id.quickHdr, "toggle_hdr")
             quick(R.id.quickMic, "toggle_mic")
             quick(R.id.quickController, "toggle_controller")
-            findViewById<TextView>(R.id.quickQuit).setOnClickListener {
+            findViewById<TextView>(R.id.quickQuit).also { centerIconBlock(it) }.setOnClickListener {
                 game.disconnect()
             }
         }
