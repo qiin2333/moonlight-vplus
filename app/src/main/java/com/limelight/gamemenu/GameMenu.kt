@@ -1383,7 +1383,10 @@ class GameMenu(
                 }
             }
         }
-        dialog = object : ComponentDialog(game, R.style.GameMenuDialogStyle) {
+        // 有伴生副屏时，菜单作为 Presentation 层窗口弹在副屏上，主屏继续显示游戏画面。
+        val menuDisplay = game.companionMenuDisplay()
+        val menuContext = menuDisplay?.let { game.createDisplayContext(it) } ?: game
+        dialog = object : ComponentDialog(menuContext, R.style.GameMenuDialogStyle) {
             override fun onWindowFocusChanged(hasFocus: Boolean) {
                 super.onWindowFocusChanged(hasFocus)
                 if (!hasFocus && usesMicrophoneInput()) prepareForInputOwnerChange()
@@ -1401,6 +1404,9 @@ class GameMenu(
         }.apply {
             setContentView(composeView)
             setCanceledOnTouchOutside(true)
+            if (menuDisplay != null) {
+                window?.setType(WindowManager.LayoutParams.TYPE_PRIVATE_PRESENTATION)
+            }
         }
         this.activeDialog = dialog
         this.activeComposeView = composeView

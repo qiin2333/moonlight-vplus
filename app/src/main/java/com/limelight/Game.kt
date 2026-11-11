@@ -374,6 +374,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     var usbDriverServiceManager: UsbDriverServiceManager? = null
     var externalDisplayManager: ExternalDisplayManager? = null
     private var secondScreenCompanion: SecondScreenCompanion? = null
+
+    /** 伴生副屏正在显示时，返回它所在的屏幕；游戏菜单据此改在副屏上弹出。 */
+    fun companionMenuDisplay(): android.view.Display? =
+        if (secondScreenCompanion != null) CompanionDisplays.find(this) else null
     private lateinit var targetDisplayResolver: TargetDisplayResolver
 
     override fun onCreate(savedInstanceState: Bundle?) {
