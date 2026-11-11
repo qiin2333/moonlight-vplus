@@ -756,8 +756,10 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             listOfNotNull(appBackgroundImageBlur, appBackgroundImageClear),
             ContextCompat.getColor(this, R.color.advance_setting_background)
         )
-        label.setTextColor(color)
-        ViewCompat.setBackgroundTintList(label, ColorStateList.valueOf(color))
+        // Steam 深色底：标题固定用浅色，不再按背景亮度取色
+        val steamTitle = 0xFFE6F1FA.toInt()
+        label.setTextColor(steamTitle)
+        ViewCompat.setBackgroundTintList(label, ColorStateList.valueOf(steamTitle))
     }
 
     private fun applyHeaderSafeArea(insets: WindowInsetsCompat?) {
@@ -802,7 +804,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         label.minimumHeight = resources.getDimensionPixelSize(R.dimen.appview_title_min_height)
         label.maxLines = resources.getInteger(R.integer.appview_title_max_lines)
         // The view stays anchored to the end; start-align ellipsized lines to keep the icon intact.
-        label.gravity = if (label.maxLines == 1) android.view.Gravity.START else android.view.Gravity.END
+        label.gravity = android.view.Gravity.START
         appViewTargetReminder.maxLines = resources.getInteger(R.integer.appview_target_reminder_max_lines)
     }
 
