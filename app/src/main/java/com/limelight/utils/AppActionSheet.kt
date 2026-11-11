@@ -328,7 +328,7 @@ object AppActionSheet {
             override fun onConfigurationChanged(newConfig: Configuration) {
                 super.onConfigurationChanged(newConfig)
                 dialog.window?.let { window ->
-                    window.attributes = window.attributes.apply { width = windowWidth(context) }
+                    window.attributes = window.attributes.apply { width = windowWidth(dialog.context) }
                 }
             }
         }.apply {
@@ -358,7 +358,7 @@ object AppActionSheet {
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.attributes = window.attributes.apply {
                 width = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
-                else windowWidth(contentView.context)
+                else windowWidth(dialog.context)
                 height = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT
                 else ViewGroup.LayoutParams.WRAP_CONTENT
                 gravity = if (fullScreen) Gravity.FILL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL

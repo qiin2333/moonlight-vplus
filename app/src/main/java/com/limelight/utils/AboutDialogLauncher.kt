@@ -250,10 +250,12 @@ object AboutDialogLauncher {
 
     private fun applyDialogWidth(
         dialog: Dialog,
-        context: Context,
+        hostContext: Context,
         portraitMaxDp: Int,
         landscapeMaxDp: Int
     ) {
+        // 弹在副屏时按副屏的尺寸算宽度，而不是主屏。
+        val context = dialog.context
         val isLandscape = context.resources.configuration.orientation ==
             Configuration.ORIENTATION_LANDSCAPE
         val maxWidth = dpToPx(context, if (isLandscape) landscapeMaxDp else portraitMaxDp)
