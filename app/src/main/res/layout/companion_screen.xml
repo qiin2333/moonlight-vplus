@@ -59,7 +59,7 @@
                 android:minWidth="60dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="监控"
+                android:text="@string/companion_tab_monitor"
                 android:textColor="@color/companion_tab_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -74,7 +74,7 @@
                 android:minWidth="60dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="码率"
+                android:text="@string/companion_bitrate"
                 android:textColor="@color/companion_tab_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -89,7 +89,7 @@
                 android:minWidth="60dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="输入"
+                android:text="@string/companion_tab_input"
                 android:textColor="@color/companion_tab_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -104,7 +104,7 @@
                 android:minWidth="60dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="快捷"
+                android:text="@string/companion_tab_quick"
                 android:textColor="@color/companion_tab_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -120,7 +120,7 @@
             android:gravity="center"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:text="菜单"
+            android:text="@string/companion_menu"
             android:textColor="#F7F3F7"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -156,7 +156,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="实时帧率"
+                        android:text="@string/companion_live_fps"
                         android:textColor="#A9C2D2"
                         android:textSize="16sp" />
 
@@ -177,7 +177,7 @@
                         android:layout_marginTop="2dp"
                         android:maxLines="1"
                         android:ellipsize="end"
-                        android:text="等待串流数据"
+                        android:text="@string/companion_waiting_data"
                         android:textColor="#8FA6B6"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -205,7 +205,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="帧时间"
+                            android:text="@string/companion_frame_time"
                             android:textColor="#A9C2D2"
                             android:textSize="16sp" />
 
@@ -255,7 +255,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="解码"
+                            android:text="@string/companion_decode"
                             android:textColor="#A9C2D2"
                             android:textSize="16sp" />
 
@@ -290,7 +290,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="码率"
+                        android:text="@string/companion_bitrate"
                         android:textColor="#8FA6B6"
                         android:textSize="14sp" />
 
@@ -302,6 +302,9 @@
                         android:maxLines="1"
                         android:text="--"
                         android:textColor="#F7F3F7"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="14sp"
+                        android:autoSizeMaxTextSize="22sp"
                         android:textSize="22sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -350,7 +353,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="丢包"
+                        android:text="@string/companion_packet_loss"
                         android:textColor="#8FA6B6"
                         android:textSize="14sp" />
 
@@ -380,7 +383,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="电量"
+                        android:text="@string/companion_battery"
                         android:textColor="#8FA6B6"
                         android:textSize="14sp" />
 
@@ -419,7 +422,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="延迟链路"
+                        android:text="@string/companion_latency_chain"
                         android:textColor="#A9C2D2"
                         android:textSize="16sp" />
 
@@ -480,7 +483,7 @@
                     android:layout_marginTop="6dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="网络 -- · 主机 -- · 解码 -- · 渲染 --"
+                    android:text="@string/companion_chain_placeholder"
                     android:textColor="#8FA6B6"
                     android:textSize="15sp" />
             </LinearLayout>
@@ -499,7 +502,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="当前串流码率"
+                android:text="@string/companion_current_bitrate"
                 android:textColor="#A9C2D2"
                 android:textSize="16sp" />
 
@@ -580,7 +583,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="动态码率"
+                        android:text="@string/companion_adaptive_bitrate"
                         android:textColor="#F7F3F7"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -589,7 +592,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="1dp"
-                        android:text="按网络状况自动升降"
+                        android:text="@string/companion_adaptive_bitrate_desc"
                         android:textColor="#8FA6B6"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -605,7 +608,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="松开滑块后立即应用到当前串流"
+                android:text="@string/companion_bitrate_hint"
                 android:textColor="#6F8798"
                 android:textSize="16sp" />
 
@@ -642,7 +645,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="陀螺仪"
+                        android:text="@string/companion_gyro"
                         android:textColor="#F7F3F7"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -651,7 +654,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="体感瞄准与右摇杆模拟"
+                        android:text="@string/companion_gyro_desc"
                         android:textColor="#8FA6B6"
                         android:textSize="16sp" />
                 </LinearLayout>
@@ -682,7 +685,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="音频振动"
+                        android:text="@string/companion_audio_haptics"
                         android:textColor="#F7F3F7"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -691,7 +694,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="把串流音频转换成手柄振动"
+                        android:text="@string/companion_audio_haptics_desc"
                         android:textColor="#8FA6B6"
                         android:textSize="16sp" />
                 </LinearLayout>
@@ -722,7 +725,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="手柄触控板"
+                        android:text="@string/companion_touchpad"
                         android:textColor="#F7F3F7"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -731,7 +734,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="把 DS5 触控板当作鼠标"
+                        android:text="@string/companion_touchpad_desc"
                         android:textColor="#8FA6B6"
                         android:textSize="16sp" />
                 </LinearLayout>
@@ -783,13 +786,13 @@
                     android:id="@+id/quickKeyboard"
                     style="@style/CompanionQuickKey"
                     android:drawableTop="@drawable/ic_send_keys_cute"
-                    android:text="键盘" />
+                    android:text="@string/companion_quick_keyboard" />
 
                 <TextView
                     android:id="@+id/quickPerf"
                     style="@style/CompanionQuickKey"
                     android:drawableTop="@drawable/ic_performance_cute"
-                    android:text="性能" />
+                    android:text="@string/companion_quick_perf" />
 
                 <TextView
                     android:id="@+id/quickHdr"
@@ -808,19 +811,19 @@
                     android:id="@+id/quickMic"
                     style="@style/CompanionQuickKey"
                     android:drawableTop="@drawable/ic_mic_gm"
-                    android:text="麦克风" />
+                    android:text="@string/companion_quick_mic" />
 
                 <TextView
                     android:id="@+id/quickController"
                     style="@style/CompanionQuickKey"
                     android:drawableTop="@drawable/ic_controller_cute"
-                    android:text="虚拟手柄" />
+                    android:text="@string/companion_quick_controller" />
 
                 <TextView
                     android:id="@+id/quickQuit"
                     style="@style/CompanionQuickKey"
                     android:drawableTop="@drawable/ic_btn_quit"
-                    android:text="断开" />
+                    android:text="@string/companion_quick_quit" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

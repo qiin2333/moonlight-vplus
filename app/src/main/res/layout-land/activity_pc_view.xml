@@ -74,7 +74,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="按 A 连接 · 长按查看更多"
+                android:text="@string/steam_header_subtitle"
                 android:textColor="#A9C2D2"
                 android:textSize="14sp" />
         </LinearLayout>
@@ -96,7 +96,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="主机"
+            android:text="@string/steam_section_hosts"
             android:textColor="#FFFFFFFF"
             android:textSize="22sp"
             android:textStyle="bold" />
@@ -105,7 +105,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:text="全部主机"
+            android:text="@string/steam_section_all_hosts"
             android:textColor="#8FA6B6"
             android:textSize="14sp" />
     </LinearLayout>

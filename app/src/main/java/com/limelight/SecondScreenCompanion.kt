@@ -300,7 +300,7 @@ class SecondScreenCompanion(
                 }
                 Toast.makeText(
                     context,
-                    if (enabled) "手柄触控板已开启" else "手柄触控板已关闭",
+                    context.getString(if (enabled) R.string.companion_touchpad_on else R.string.companion_touchpad_off),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -328,7 +328,7 @@ class SecondScreenCompanion(
             monitorFpsSub.text = if (snapshot.width > 0 && snapshot.height > 0) {
                 "${snapshot.width}×${snapshot.height} · ${snapshot.targetFps} FPS · ${snapshot.codec}"
             } else {
-                "等待串流数据"
+                context.getString(R.string.companion_waiting_data)
             }
 
             monitorFrameTime.text = if (snapshot.renderedFps > 0f) {
@@ -367,9 +367,8 @@ class SecondScreenCompanion(
                 view.layoutParams = params
             }
             monitorChainTotal.text = String.format(Locale.US, "%.1f ms", total)
-            monitorChainText.text = String.format(
-                Locale.US,
-                "网络 %.0f · 主机 %.0f · 解码 %.0f · 渲染 %.0f",
+            monitorChainText.text = context.getString(
+                R.string.companion_chain_format,
                 segments.getOrNull(0)?.ms ?: 0f,
                 segments.getOrNull(1)?.ms ?: 0f,
                 segments.getOrNull(2)?.ms ?: 0f,
