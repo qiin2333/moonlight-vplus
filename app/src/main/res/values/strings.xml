@@ -2597,4 +2597,10 @@ Tap again to replace it.</string>
     <string name="companion_chain_host">Host</string>
     <string name="companion_chain_dec">Decode</string>
     <string name="companion_chain_rnd">Render</string>
+    <string name="menu_sub_settings">Stream, display and input options</string>
+    <string name="menu_sub_about">Version, credits and licenses</string>
+    <string name="menu_sub_easytier">VPN-style link to reach your host</string>
+    <string name="menu_sub_restore">Pick up the last stream</string>
+    <string name="menu_sub_unpaired">Show or hide hosts that aren't paired</string>
+    <string name="menu_sub_theme">Light, dark and accent color</string>
 </resources>

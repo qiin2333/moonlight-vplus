@@ -3453,21 +3453,34 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             menuItems = {
                 // 与主屏左侧工具栏、「更多」菜单完全相同的入口，只是换到副屏上点。
                 listOf(
-                    BrowseScreenCompanion.MenuItem(getString(R.string.browse_open_settings)) {
-                        startActivity(Intent(this, StreamSettings::class.java))
-                    },
-                    BrowseScreenCompanion.MenuItem(getString(R.string.title_about_us)) { AboutDialogLauncher.show(this) },
-                    BrowseScreenCompanion.MenuItem(getString(R.string.easytier_panel_title)) { showEasyTierControlDialog() },
-                    BrowseScreenCompanion.MenuItem(getString(R.string.pcview_toolbar_restore_session)) { restoreLastSession() },
+                    BrowseScreenCompanion.MenuItem(
+                        getString(R.string.browse_open_settings), R.drawable.ic_settings,
+                        getString(R.string.menu_sub_settings)
+                    ) { startActivity(Intent(this, StreamSettings::class.java)) },
+                    BrowseScreenCompanion.MenuItem(
+                        getString(R.string.title_about_us), R.drawable.ic_info,
+                        getString(R.string.menu_sub_about)
+                    ) { AboutDialogLauncher.show(this) },
+                    BrowseScreenCompanion.MenuItem(
+                        getString(R.string.easytier_panel_title), R.drawable.ic_network_control,
+                        getString(R.string.menu_sub_easytier)
+                    ) { showEasyTierControlDialog() },
+                    BrowseScreenCompanion.MenuItem(
+                        getString(R.string.pcview_toolbar_restore_session), R.drawable.ic_restore,
+                        getString(R.string.menu_sub_restore)
+                    ) { restoreLastSession() },
                     BrowseScreenCompanion.MenuItem(
                         getString(
                             if (pcGridAdapter.isShowUnpairedDevices()) R.string.pcview_toolbar_toggle_unpaired_hide
                             else R.string.pcview_toolbar_toggle_unpaired_show
-                        )
+                        ),
+                        if (pcGridAdapter.isShowUnpairedDevices()) R.drawable.ic_visibility_off else R.drawable.ic_visibility,
+                        getString(R.string.menu_sub_unpaired)
                     ) { toggleUnpairedDevices() },
-                    BrowseScreenCompanion.MenuItem(getString(R.string.pcview_toolbar_theme)) {
-                        showAppThemeSheet(this) { recreate() }
-                    }
+                    BrowseScreenCompanion.MenuItem(
+                        getString(R.string.pcview_toolbar_theme), R.drawable.ic_theme_mode,
+                        getString(R.string.menu_sub_theme)
+                    ) { showAppThemeSheet(this) { recreate() } }
                 )
             }
         ).also { it.show() }

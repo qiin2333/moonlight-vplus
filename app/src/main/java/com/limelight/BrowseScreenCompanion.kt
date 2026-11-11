@@ -35,7 +35,12 @@ class BrowseScreenCompanion(
     private val menuItems: () -> List<MenuItem> = { emptyList() }
 ) {
     /** 菜单页的一项：标题 + 动作；动作沿用 [PcView] 里原有的处理逻辑。 */
-    data class MenuItem(val title: String, val action: () -> Unit)
+    data class MenuItem(
+        val title: String,
+        @androidx.annotation.DrawableRes val iconRes: Int = 0,
+        val subtitle: String = "",
+        val action: () -> Unit
+    )
 
     private var presentation: BrowsePresentation? = null
 
@@ -129,21 +134,45 @@ class BrowseScreenCompanion(
             }
         }
 
-        private fun createMenuButton(item: MenuItem) = TextView(context).apply {
-            text = item.title
-            setTextColor(0xFFF7F3F7.toInt())
-            textSize = 17f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            gravity = android.view.Gravity.CENTER
-            setBackgroundResource(R.drawable.companion_key_bg)
-            isClickable = true
-            isFocusable = true
-            maxLines = 2
-            setPadding(12, 8, 12, 8)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
-                setMargins(5, 5, 5, 5)
+        /** Large tile: blue icon, 22sp title, 15sp one-line description. Readable at arm's length on the 3.9" screen. */
+        private fun createMenuButton(item: MenuItem): View {
+            val density = context.resources.displayMetrics.density
+            fun dp(v: Int) = (v * density).toInt()
+            return LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START
+                setBackgroundResource(R.drawable.companion_key_bg)
+                isClickable = true
+                isFocusable = true
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+                    setMargins(dp(4), dp(4), dp(4), dp(4))
+                }
+                if (item.iconRes != 0) {
+                    addView(android.widget.ImageView(context).apply {
+                        setImageResource(item.iconRes)
+                        setColorFilter(0xFF66C0F4.toInt())
+                    }, LinearLayout.LayoutParams(dp(32), dp(32)).apply { bottomMargin = dp(10) })
+                }
+                addView(TextView(context).apply {
+                    text = item.title
+                    setTextColor(0xFFF7FBFF.toInt())
+                    textSize = 22f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                })
+                if (item.subtitle.isNotEmpty()) {
+                    addView(TextView(context).apply {
+                        text = item.subtitle
+                        setTextColor(0xFF8FA6B6.toInt())
+                        textSize = 15f
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(4) })
+                }
+                setOnClickListener { item.action() }
             }
-            setOnClickListener { item.action() }
         }
 
         private fun refresh() {

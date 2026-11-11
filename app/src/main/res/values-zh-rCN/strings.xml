@@ -2518,4 +2518,10 @@
     <string name="companion_chain_host">主机</string>
     <string name="companion_chain_dec">解码</string>
     <string name="companion_chain_rnd">渲染</string>
+    <string name="menu_sub_settings">串流、画面与输入选项</string>
+    <string name="menu_sub_about">版本、致谢与开源许可</string>
+    <string name="menu_sub_easytier">异地组网连接主机</string>
+    <string name="menu_sub_restore">接着上一次的串流继续</string>
+    <string name="menu_sub_unpaired">显示或隐藏未配对的主机</string>
+    <string name="menu_sub_theme">明暗模式与强调色</string>
 </resources>

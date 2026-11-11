@@ -88,6 +88,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -558,7 +560,14 @@ internal fun GameMenuTheme(content: @Composable () -> Unit) {
             onSurfaceVariant = palette.textSecondary,
             outline = palette.dialogBorder
         ),
-        content = content
+        content = {
+            // 菜单文字原本 9–13sp，在 3.9 寸副屏上偏小，整体放大 1.3 倍。
+            val density = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density, density.fontScale * 1.3f),
+                content = content
+            )
+        }
     )
 }
 
