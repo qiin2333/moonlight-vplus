@@ -25,26 +25,26 @@
     <color name="pc_toolbar_menu_surface_end">#B81A1B21</color>
 
     <!-- Game menu palette for system dark theme. -->
-    <color name="game_menu_card_background">#FF2A2C34</color>
-    <color name="game_menu_text_primary">#EBF0F3</color>
-    <color name="game_menu_text_secondary">#B6C1C9</color>
-    <color name="game_menu_button_pressed">#FF33363F</color>
+    <color name="game_menu_card_background">#FF14202E</color>
+    <color name="game_menu_text_primary">#FFE6F1FA</color>
+    <color name="game_menu_text_secondary">#FF8FA5B8</color>
+    <color name="game_menu_button_pressed">#FF1B3047</color>
     <!-- Controller diagnostics need a stronger neutral outline than menu chrome. -->
     <color name="controller_diag_outline">#FFD7DCE4</color>
     <color name="controller_diag_control_surface">#FF3A3D46</color>
-    <color name="game_menu_list_item_pressed">#FF33363F</color>
-    <color name="game_menu_list_item_focused">#FF373A44</color>
-    <color name="game_menu_list_item_border">#0CFFFFFF</color>
-    <color name="game_menu_dialog_background">#FF1C1E24</color>
-    <color name="game_menu_opacity_popup_background">#ED23242B</color>
-    <color name="game_menu_dialog_border">#12FFFFFF</color>
-    <color name="game_menu_list_item_normal">#FF26282F</color>
+    <color name="game_menu_list_item_pressed">#FF1B3047</color>
+    <color name="game_menu_list_item_focused">#FF21405F</color>
+    <color name="game_menu_list_item_border">#2266C0F4</color>
+    <color name="game_menu_dialog_background">#FF0B131C</color>
+    <color name="game_menu_opacity_popup_background">#F00E1722</color>
+    <color name="game_menu_dialog_border">#4D66C0F4</color>
+    <color name="game_menu_list_item_normal">#FF152231</color>
     <color name="game_menu_danger_text">#FFFF8A8A</color>
 
     <color name="game_menu_super_card_background">#00000000</color>
-    <color name="game_menu_super_list_item_pressed">#3328323A</color>
-    <color name="game_menu_super_list_item_focused">#3DFFFFFF</color>
-    <color name="game_menu_super_list_item_border">#18FFFFFF</color>
+    <color name="game_menu_super_list_item_pressed">#FF1B3047</color>
+    <color name="game_menu_super_list_item_focused">#FF21405F</color>
+    <color name="game_menu_super_list_item_border">#2266C0F4</color>
 
     <color name="app_dialog_choice_control_normal">#7AC9D0D8</color>
 

@@ -530,7 +530,7 @@ private fun gameMenuPalette() = GameMenuPalette(
     textSecondary = colorResource(R.color.game_menu_text_secondary),
     dialogBackground = colorResource(R.color.game_menu_dialog_background),
     dialogBorder = colorResource(R.color.game_menu_dialog_border),
-    darkTheme = isSystemInDarkTheme()
+    darkTheme = true // 游戏菜单固定使用 Steam 深蓝风格
 )
 
 @Composable
