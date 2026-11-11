@@ -98,11 +98,11 @@ object AppActionSheet {
     private fun windowWidth(context: Context): Int {
         val resources = context.resources
         val metrics = resources.displayMetrics
-        val maxWidth = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            (AppOverlayWidths.compact + horizontalInset * 2).value,
-            metrics
-        ).roundToInt()
+        // 副屏比主屏窄，菜单撑满会显得过宽：在副屏上收窄到 440dp。
+        val onSecondary = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            (context.display?.displayId ?: android.view.Display.DEFAULT_DISPLAY) != android.view.Display.DEFAULT_DISPLAY
+        val capDp = if (onSecondary) 440f else (AppOverlayWidths.compact + horizontalInset * 2).value
+        val maxWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, capDp, metrics).roundToInt()
         val availableWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager.currentWindowMetrics.bounds.width()
