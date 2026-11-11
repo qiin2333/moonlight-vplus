@@ -2463,7 +2463,7 @@
     <string name="companion_bitrate_hint">松开滑块后立即应用到当前串流</string>
     <string name="companion_bitrate_applying">正在切换码率…</string>
     <string name="companion_bitrate_not_connected">当前未连接</string>
-    <string name="steam_header_subtitle">按 A 连接 · 长按查看更多</string>
+    <string name="steam_header_subtitle">A 连接 · X 添加主机 · Y 更多 · Start 设置</string>
     <string name="steam_section_all_hosts">全部主机</string>
     <string name="steam_section_hosts">主机</string>
     <string name="companion_tab_monitor">监控</string>

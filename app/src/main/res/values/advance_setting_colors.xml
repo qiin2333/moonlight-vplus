@@ -60,9 +60,9 @@
     <color name="ui_shell_text_shadow">#00000000</color>
     <color name="ui_shell_text_shadow_strong">#00000000</color>
     <!-- Brand accent stays bright; dense text uses neutral foreground plus an accent marker. -->
-    <color name="ui_shell_accent">#FF6B9D</color>
-    <color name="ui_shell_accent_soft">#1AFF6B9D</color>
-    <color name="ui_shell_accent_focus">#33FF6B9D</color>
+    <color name="ui_shell_accent">#2F9BFF</color>
+    <color name="ui_shell_accent_soft">#1A2F9BFF</color>
+    <color name="ui_shell_accent_focus">#332F9BFF</color>
     <color name="settings_page_background">#FFF6F3F6</color>
     <color name="settings_background_overlay">#A6FAF7FA</color>
     <color name="pc_toolbar_menu_surface_start">#E8FFFFFF</color>
@@ -83,8 +83,8 @@
     <color name="app_dialog_text_primary">#DE1F2026</color>
     <color name="app_dialog_text_secondary">#A6242830</color>
     <color name="app_dialog_text_disabled">#66242830</color>
-    <color name="app_dialog_accent_soft">#1AFF6B9D</color>
-    <color name="app_dialog_accent_focus">#33FF6B9D</color>
+    <color name="app_dialog_accent_soft">#1A2F9BFF</color>
+    <color name="app_dialog_accent_focus">#332F9BFF</color>
     <color name="app_action_sheet_danger">#FFB04A5A</color>
     <color name="app_action_sheet_divider">#141D1B20</color>
     <color name="iperf_output_surface">#FFF8F6FA</color>

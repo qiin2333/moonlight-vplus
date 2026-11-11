@@ -406,7 +406,31 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         requestPcViewExit()
     }
 
+    /**
+     * 手柄快捷键（只在主机列表获得焦点、没有弹窗时生效），全部复用现有入口：
+     * X 添加主机，Y 打开当前选中主机的操作菜单，Start 打开设置，Select 显示/隐藏未配对设备。
+     */
+    private fun handleGamepadShortcut(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return false
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_BUTTON_X -> showAddComputerActionSheet()
+            KeyEvent.KEYCODE_BUTTON_Y -> {
+                val list = pcListView ?: return false
+                val position = list.selectedItemPosition
+                if (position == AdapterView.INVALID_POSITION) return false
+                val computer = pcGridAdapter.getItem(position) as? ComputerObject ?: return false
+                if (PcGridAdapter.isAddComputerCard(computer)) return false
+                showHostActionSheet(computer.details)
+            }
+            KeyEvent.KEYCODE_BUTTON_START -> startActivity(Intent(this, StreamSettings::class.java))
+            KeyEvent.KEYCODE_BUTTON_SELECT -> toggleUnpairedDevices()
+            else -> return false
+        }
+        return true
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (handleGamepadShortcut(event)) return true
         if (event.action == KeyEvent.ACTION_DOWN &&
             event.keyCode != KeyEvent.KEYCODE_BUTTON_B &&
             event.keyCode != KeyEvent.KEYCODE_ESCAPE &&
@@ -3407,7 +3431,9 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
 
     private fun showBrowseCompanion() {
         if (browseCompanion != null) return
-        val display = CompanionDisplays.find(this) ?: return
+        val display = CompanionDisplays.find(this)
+        setMainToolbarVisible(display == null)
+        if (display == null) return
         browseCompanion = BrowseScreenCompanion(
             activity = this,
             display = display,
@@ -3441,6 +3467,18 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 )
             }
         ).also { it.show() }
+    }
+
+    /**
+     * 有副屏时，设置/信息/EasyTier/更多都改在副屏「菜单」页操作，主屏只保留
+     * 选择主机、添加主机和选择应用。没有副屏（手机、单屏）时保持原样，避免入口丢失。
+     */
+    private fun setMainToolbarVisible(visible: Boolean) {
+        val state = if (visible) View.VISIBLE else View.INVISIBLE
+        intArrayOf(
+            R.id.settingsButton, R.id.aboutButton, R.id.easyTierControlButton,
+            R.id.pcToolbarMenuButton
+        ).forEach { findViewById<View?>(it)?.visibility = state }
     }
 
     private fun dismissBrowseCompanion() {

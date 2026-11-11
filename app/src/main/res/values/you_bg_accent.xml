@@ -98,12 +98,12 @@
         <item name="appAccent50">@color/you_accent_50</item>
         <item name="appAccent80">@color/you_accent_80</item>
     </style>
-    <color name="you_accent_10">#1AFF6B9D</color>
-    <color name="you_accent_20">#33FF6B9D</color>
-    <color name="you_accent_27">#45FF6B9D</color>
-    <color name="you_accent_40">#66FF6B9D</color>
-    <color name="you_accent_50">#80FF6B9D</color>
-    <color name="you_accent_80">#CCFF6B9D</color>
+    <color name="you_accent_10">#1A2F9BFF</color>
+    <color name="you_accent_20">#332F9BFF</color>
+    <color name="you_accent_27">#452F9BFF</color>
+    <color name="you_accent_40">#662F9BFF</color>
+    <color name="you_accent_50">#802F9BFF</color>
+    <color name="you_accent_80">#CC2F9BFF</color>
     <color name="you_bg_accent_0">#FFED7E73</color>
     <color name="you_bg_accent_0_soft">#1AED7E73</color>
     <color name="you_bg_accent_0_focus">#33ED7E73</color>

@@ -30,7 +30,7 @@ object PerfHudPalette {
     const val RND = 0xFFF5A3C7.toInt()
     const val MOON = 0xFFEDE6C8.toInt()
     /** 读不到主题时的强调色，等于深色 ui_shell_accent。 */
-    const val ACCENT_FALLBACK = 0xFFFF8FA3.toInt()
+    const val ACCENT_FALLBACK = 0xFF7DBBFF.toInt()
 
     fun severity(s: PerfSeverity): Int = when (s) {
         PerfSeverity.OK -> OK

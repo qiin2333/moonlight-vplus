@@ -2542,7 +2542,7 @@ Tap again to replace it.</string>
     <string name="companion_bitrate_hint">Release the slider to apply to the current stream</string>
     <string name="companion_bitrate_applying">Applying bitrate…</string>
     <string name="companion_bitrate_not_connected">Not connected</string>
-    <string name="steam_header_subtitle">A to connect · Long-press for more</string>
+    <string name="steam_header_subtitle">A connect · X add host · Y more · Start settings</string>
     <string name="steam_section_all_hosts">All hosts</string>
     <string name="steam_section_hosts">Hosts</string>
     <string name="companion_tab_monitor">Monitor</string>
