@@ -2460,4 +2460,7 @@
     <string name="host_unlock_still_locked_message">PIN 可能不正确，或锁屏界面当前不是 PIN 输入。要重新设置 PIN 吗？</string>
     <string name="host_unlock_reset_pin">重新设置</string>
     <string name="host_unlock_close">关闭</string>
+    <string name="companion_bitrate_hint">松开滑块后立即应用到当前串流</string>
+    <string name="companion_bitrate_applying">正在切换码率…</string>
+    <string name="companion_bitrate_not_connected">当前未连接</string>
 </resources>

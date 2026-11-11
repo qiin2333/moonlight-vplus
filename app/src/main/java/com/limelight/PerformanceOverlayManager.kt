@@ -438,9 +438,11 @@ class PerformanceOverlayManager(
             showOverlayIfNeeded()
             updateBatteryDisplayIfNeeded()
             // 副屏等外部观察者始终拿到最新快照，即使主屏没有开启 HUD。
-            val snapshot = buildHudSnapshot(performanceInfo)
-            lastHudSnapshot = snapshot
-            snapshotListener?.invoke(snapshot)
+            snapshotListener?.let { listener ->
+                val snapshot = buildHudSnapshot(performanceInfo)
+                lastHudSnapshot = snapshot
+                listener(snapshot)
+            }
             if (isHudStyle()) {
                 updateHud(performanceInfo)
             } else {

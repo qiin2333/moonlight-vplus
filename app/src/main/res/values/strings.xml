@@ -2539,4 +2539,7 @@ Tap again to replace it.</string>
     <string name="host_unlock_still_locked_message">The PIN may be wrong, or the lock screen is not asking for a PIN. Set up the PIN again?</string>
     <string name="host_unlock_reset_pin">Set up again</string>
     <string name="host_unlock_close">Close</string>
+    <string name="companion_bitrate_hint">Release the slider to apply to the current stream</string>
+    <string name="companion_bitrate_applying">Applying bitrate…</string>
+    <string name="companion_bitrate_not_connected">Not connected</string>
 </resources>

@@ -14,12 +14,14 @@ import android.widget.TextView
 import android.widget.Toast
 import com.limelight.gamemenu.AudioHapticsCardController
 import com.limelight.gamemenu.BitrateCardController
+import com.limelight.gamemenu.BitrateCardState
 import com.limelight.gamemenu.GyroCardController
 import com.limelight.perfhud.ChainSegment
 import com.limelight.perfhud.PerfHudPalette
 import com.limelight.perfhud.PerfHudSnapshot
 import com.limelight.perfhud.PerfSeverity
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * 副屏伴生面板。
@@ -68,6 +70,7 @@ class SecondScreenCompanion(
         private var gyroSyncing = false
         private var audioSyncing = false
         private var touchpadSyncing = false
+        private var bitrateSyncing = false
 
         private lateinit var pages: List<View>
         private lateinit var tabs: List<TextView>
@@ -112,9 +115,15 @@ class SecondScreenCompanion(
             bindInputToggles()
         }
 
+        override fun onStart() {
+            super.onStart()
+            startInputControllers()
+        }
+
         override fun onStop() {
             gyroController.dispose()
             audioHapticsController.dispose()
+            bitrateController()?.stop()
             super.onStop()
         }
 
@@ -177,6 +186,7 @@ class SecondScreenCompanion(
             tabs.forEachIndexed { i, tab ->
                 tab.isSelected = i == index
             }
+            if (index == 1 && ::bitrateSeek.isInitialized) subscribeBitrate()
         }
 
         private fun bindQuickKeys() {
@@ -205,42 +215,59 @@ class SecondScreenCompanion(
             }
         }
 
+        /** 与游戏菜单共用同一个控制器：确认后才落盘、通知 ABR 手动覆盖、失败时回滚。 */
+        private fun bitrateController(): BitrateCardController? {
+            val connection = game.conn ?: return null
+            return game.getBitrateCardController(connection)
+        }
+
         private fun bindBitrate() {
             bitrateSeek.max = BitrateCardController.MAX_PROGRESS
-            val initialKbps = game.prefConfig.bitrate
-            bitrateSeek.progress = BitrateCardController.bitrateToProgress(initialKbps)
-            updateBitrateLabel(BitrateCardController.progressToBitrateKbps(bitrateSeek.progress))
 
             bitrateSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    val kbps = BitrateCardController.progressToBitrateKbps(progress)
-                    updateBitrateLabel(kbps)
-                    if (fromUser) {
-                        bitrateHint.text = "松开滑块后立即应用到当前串流"
-                    }
+                    if (!fromUser) return
+                    updateBitrateLabel(BitrateCardController.progressToBitrateKbps(progress, bitrateSeek.max))
+                    bitrateController()?.previewProgress(progress.toFloat())
                 }
 
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
 
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                    applyBitrate(BitrateCardController.progressToBitrateKbps(seekBar?.progress ?: 0))
+                    val controller = bitrateController()
+                    if (controller == null) {
+                        bitrateHint.setText(R.string.companion_bitrate_not_connected)
+                        return
+                    }
+                    controller.applySelectedBitrate()
                 }
             })
 
-            bitrateAbrSwitch.isChecked = game.prefConfig.enableAdaptiveBitrate
             bitrateAbrSwitch.setOnCheckedChangeListener { _, checked ->
-                game.prefConfig.enableAdaptiveBitrate = checked
-                if (checked) {
-                    game.startAdaptiveBitrateIfEnabled()
-                } else {
-                    game.stopAdaptiveBitrate()
-                    bitrateSeek.progress =
-                        BitrateCardController.bitrateToProgress(game.prefConfig.bitrate)
-                    updateBitrateLabel(game.prefConfig.bitrate)
-                }
-                game.prefConfig.writePreferences(game)
-                bitrateHint.text = if (checked) "动态码率已开启" else "动态码率已关闭"
+                if (bitrateSyncing) return@setOnCheckedChangeListener
+                bitrateController()?.setAdaptiveBitrate(checked)
             }
+            subscribeBitrate()
+        }
+
+        /** 游戏菜单打开/关闭会替换控制器的订阅，切到码率页时重新订阅以保持同步。 */
+        private fun subscribeBitrate() {
+            val controller = bitrateController() ?: return
+            controller.start { state -> applyBitrateState(state) }
+            applyBitrateState(controller.snapshot())
+        }
+
+        private fun applyBitrateState(state: BitrateCardState) {
+            bitrateSyncing = true
+            bitrateSeek.max = state.maxProgress
+            bitrateSeek.progress = state.progress.roundToInt()
+            bitrateAbrSwitch.isChecked = state.adaptiveBitrate
+            bitrateSyncing = false
+            updateBitrateLabel(state.selectedBitrateKbps)
+            bitrateHint.setText(
+                if (state.bitrateUpdating) R.string.companion_bitrate_applying
+                else R.string.companion_bitrate_hint
+            )
         }
 
         private fun updateBitrateLabel(kbps: Int) {
@@ -250,39 +277,15 @@ class SecondScreenCompanion(
             bitrateValue.text = text
         }
 
-        private fun applyBitrate(kbps: Int) {
-            game.prefConfig.bitrate = kbps
-            game.prefConfig.writePreferences(game)
-            updateBitrateLabel(kbps)
-            val connection = game.conn
-            if (connection == null) {
-                bitrateHint.text = "当前未连接，已保存为下次串流码率"
-                return
-            }
-            bitrateHint.text = "正在切换到 ${kbps / 1000} Mbps…"
-            connection.setBitrate(kbps, null)
-            bitrateHint.text = "已请求切换到 ${kbps / 1000} Mbps"
-        }
-
         private fun bindInputToggles() {
             val gyroSwitch = findViewById<Switch>(R.id.inputGyroSwitch)
             gyroSwitch.setOnCheckedChangeListener { _, checked ->
                 if (!gyroSyncing) gyroController.setEnabled(checked)
             }
-            gyroController.start { state ->
-                gyroSyncing = true
-                gyroSwitch.isChecked = state.enabled
-                gyroSyncing = false
-            }
 
             val audioSwitch = findViewById<Switch>(R.id.inputAudioHapticsSwitch)
             audioSwitch.setOnCheckedChangeListener { _, checked ->
                 if (!audioSyncing) audioHapticsController.setEnabled(checked)
-            }
-            audioHapticsController.start { state ->
-                audioSyncing = true
-                audioSwitch.isChecked = state.enabled
-                audioSyncing = false
             }
 
             val touchpadSwitch = findViewById<Switch>(R.id.inputTouchpadSwitch)
@@ -301,6 +304,22 @@ class SecondScreenCompanion(
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        }
+
+        private fun startInputControllers() {
+            val gyroSwitch = findViewById<Switch>(R.id.inputGyroSwitch)
+            gyroController.start { state ->
+                gyroSyncing = true
+                gyroSwitch.isChecked = state.enabled
+                gyroSyncing = false
+            }
+            val audioSwitch = findViewById<Switch>(R.id.inputAudioHapticsSwitch)
+            audioHapticsController.start { state ->
+                audioSyncing = true
+                audioSwitch.isChecked = state.enabled
+                audioSyncing = false
+            }
+            subscribeBitrate()
         }
 
         fun updateSnapshot(snapshot: PerfHudSnapshot) {
