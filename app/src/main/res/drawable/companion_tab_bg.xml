@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true" android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#2F9BFF" />
+            <corners android:radius="12dp" />
+            <stroke
+                android:width="2dp"
+                android:color="#FFFFFF" />
+        </shape>
+    </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="#332F9BFF" />
