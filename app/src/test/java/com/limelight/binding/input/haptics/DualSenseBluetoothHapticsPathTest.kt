@@ -45,7 +45,7 @@ class DualSenseBluetoothHapticsPathTest {
             device.await { it[0] == 0x32.toByte() && it.sliceArray(10 until 74).any { sample -> sample != 0.toByte() } }
 
             // A zero-strength V2 compatibility mode is distinguishable from native PCM mode.
-            sink.updateControl(Ds5HapticsState(byteArrayOf(2, 4, 0x62, 0, 0, 0x10, 0x23, 1)))
+            sink.updateControl(Ds5HapticsState(byteArrayOf(2, 4, 0x62, 0, 0, 0, 0x23, 1)))
             val mode = device.await { it[0] == 0x31.toByte() && it[41].toInt() and 4 != 0 }
             assertEquals(2, mode[3].toInt() and 3)
             val controlledFrom = device.snapshot().size
@@ -59,7 +59,7 @@ class DualSenseBluetoothHapticsPathTest {
                 assertEquals(4, it[41].toInt() and 4)
                 assertEquals(0, it[5].toInt())
                 assertEquals(0, it[6].toInt())
-                assertEquals(0x10, it[12].toInt())
+                assertEquals(0, it[12].toInt())
                 assertEquals(0x23, it[39].toInt())
                 assertEquals(1, it[42].toInt() and 1)
             }
