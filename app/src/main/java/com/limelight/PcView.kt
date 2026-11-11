@@ -3458,7 +3458,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                         getString(R.string.menu_sub_settings)
                     ) { startActivity(Intent(this, StreamSettings::class.java)) },
                     BrowseScreenCompanion.MenuItem(
-                        getString(R.string.title_about_us), R.drawable.ic_info,
+                        getString(R.string.title_about_us), R.drawable.ic_menu_about,
                         getString(R.string.menu_sub_about)
                     ) { AboutDialogLauncher.show(this) },
                     BrowseScreenCompanion.MenuItem(

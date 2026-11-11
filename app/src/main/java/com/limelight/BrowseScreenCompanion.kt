@@ -144,7 +144,7 @@ class BrowseScreenCompanion(
                 setBackgroundResource(R.drawable.companion_key_bg)
                 isClickable = true
                 isFocusable = true
-                setPadding(dp(16), dp(12), dp(16), dp(12))
+                setPadding(dp(16), dp(8), dp(16), dp(8))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
                     setMargins(dp(4), dp(4), dp(4), dp(4))
                 }
@@ -152,7 +152,7 @@ class BrowseScreenCompanion(
                     addView(android.widget.ImageView(context).apply {
                         setImageResource(item.iconRes)
                         setColorFilter(0xFF66C0F4.toInt())
-                    }, LinearLayout.LayoutParams(dp(32), dp(32)).apply { bottomMargin = dp(10) })
+                    }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { bottomMargin = dp(6) })
                 }
                 addView(TextView(context).apply {
                     text = item.title
