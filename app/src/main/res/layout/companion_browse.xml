@@ -17,21 +17,18 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
+        <ImageView
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="@drawable/steam_brand_mark"
-            android:gravity="center"
-            android:text="V"
-            android:textColor="#FFFFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:contentDescription="@null"
+            android:src="@drawable/dual_icon_foreground" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:text="Moonlight V+"
+            android:text="Moonlight Dual"
             android:textColor="#FFFFFFFF"
             android:textSize="20sp"
             android:textStyle="bold" />

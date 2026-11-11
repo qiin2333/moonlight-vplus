@@ -5,12 +5,12 @@ import androidx.compose.ui.unit.dp
 
 /** Shared corner-radius scale for Compose surfaces and controls. */
 object AppCornerRadii {
-    val extraSmall = 4.dp
-    val small = 8.dp
+    val extraSmall = 12.dp
+    val small = 12.dp
     val medium = 12.dp
-    val large = 16.dp
-    val overlay = 20.dp
-    val extraLarge = 24.dp
+    val large = 12.dp
+    val overlay = 12.dp
+    val extraLarge = 12.dp
 }
 
 object AppShapes {

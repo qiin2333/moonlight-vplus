@@ -43,7 +43,7 @@
     -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_bg</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_saba</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/dual_icon_animated</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 

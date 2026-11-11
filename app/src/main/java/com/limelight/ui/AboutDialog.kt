@@ -78,10 +78,10 @@ internal data class EcosystemProject(
     val url: String
 )
 
-internal val aboutDialogShape = RoundedCornerShape(30.dp)
-internal val ecosystemDialogShape = RoundedCornerShape(26.dp)
-private val actionShape = RoundedCornerShape(14.dp)
-private val cardShape = RoundedCornerShape(17.dp)
+internal val aboutDialogShape = RoundedCornerShape(12.dp)
+internal val ecosystemDialogShape = RoundedCornerShape(12.dp)
+private val actionShape = RoundedCornerShape(12.dp)
+private val cardShape = RoundedCornerShape(12.dp)
 
 internal object AboutDialogTags {
     const val HANDBOOK = "about_handbook"
@@ -150,7 +150,7 @@ private fun FocusAwareCloseButton(
 ) {
     var focused by remember { mutableStateOf(false) }
     val showFocus = focusIndicationVisible(focused)
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(12.dp)
     IconButton(
         onClick = onClick,
         modifier = modifier
@@ -300,7 +300,7 @@ private fun BilibiliCard(
                     .border(
                         2.dp,
                         appAccentColor(),
-                        RoundedCornerShape(9.dp)
+                        RoundedCornerShape(12.dp)
                     )
             ) {
                 Text(
@@ -383,7 +383,7 @@ internal fun AboutDialogContent(
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     AboutDialogSurface(
-        shape = if (isLandscape) RoundedCornerShape(26.dp) else aboutDialogShape
+        shape = if (isLandscape) RoundedCornerShape(12.dp) else aboutDialogShape
     ) {
         Column {
             Box(modifier = Modifier.weight(1f, fill = false)) {
@@ -856,11 +856,11 @@ private fun EcosystemCard(
                         .border(
                             1.dp,
                             colorResource(R.color.about_dialog_panel_outline),
-                            RoundedCornerShape(11.dp)
+                            RoundedCornerShape(12.dp)
                         )
                         .background(
                             appAccentSoftColor(),
-                            RoundedCornerShape(11.dp)
+                            RoundedCornerShape(12.dp)
                         )
                 ) {
                     Text(

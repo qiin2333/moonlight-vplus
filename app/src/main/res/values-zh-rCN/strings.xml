@@ -129,7 +129,7 @@
     <string name="applist_quit_confirmation">您确定要退出当前游戏？所有未保存的数据将丢失。</string>
     <string name="applist_details_id">App ID：</string>
     <!-- In Game menu -->
-    <string name="game_menu_title">V+ Game Menu</string>
+    <string name="game_menu_title">Game Menu</string>
     <string name="game_menu_server_version">%1$s  服务端 %2$s</string>
     <string name="game_menu_toggle_keyboard"> 屏幕键盘 </string>
     <string name="game_menu_toggle_performance_overlay"> 性能监控图层 </string>
@@ -2514,4 +2514,8 @@
     <string name="browse_codec_auto">自动</string>
     <string name="browse_open_settings">打开完整设置</string>
     <string name="browse_tab_menu">菜单</string>
+    <string name="companion_chain_net">网络</string>
+    <string name="companion_chain_host">主机</string>
+    <string name="companion_chain_dec">解码</string>
+    <string name="companion_chain_rnd">渲染</string>
 </resources>

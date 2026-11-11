@@ -187,7 +187,7 @@ class PerfHudSheet(private val activity: Activity) {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(P.withAlpha(P.SHEET_RGB, 0xF2))
-                cornerRadius = dp(20f).toFloat()
+                cornerRadius = dp(12f).toFloat()
                 setStroke(dp(1f), P.OUTLINE)
             }
             elevation = dp(14f).toFloat()
@@ -288,7 +288,7 @@ class PerfHudSheet(private val activity: Activity) {
         minWidth = dp(76f)
         setPadding(dp(18f), 0, dp(18f), 0)
         val shape = GradientDrawable().apply {
-            cornerRadius = dp(20f).toFloat()
+            cornerRadius = dp(12f).toFloat()
             if (action.primary) {
                 setColor(P.withAlpha(accent, 0x2E))
                 setStroke(dp(1f), P.withAlpha(accent, 0x80))

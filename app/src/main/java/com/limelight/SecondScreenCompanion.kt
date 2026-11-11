@@ -369,13 +369,28 @@ class SecondScreenCompanion(
                 view.layoutParams = params
             }
             monitorChainTotal.text = String.format(Locale.US, "%.1f ms", total)
-            monitorChainText.text = context.getString(
-                R.string.companion_chain_format,
-                segments.getOrNull(0)?.ms ?: 0f,
-                segments.getOrNull(1)?.ms ?: 0f,
-                segments.getOrNull(2)?.ms ?: 0f,
-                segments.getOrNull(3)?.ms ?: 0f
+            monitorChainText.text = chainLegend(segments)
+        }
+
+        /** Colored dot + label + ms for each of the four chain segments, so the bar colors are readable. */
+        private fun chainLegend(segments: List<ChainSegment>): CharSequence {
+            val labels = intArrayOf(
+                R.string.companion_chain_net, R.string.companion_chain_host,
+                R.string.companion_chain_dec, R.string.companion_chain_rnd
             )
+            val sb = android.text.SpannableStringBuilder()
+            labels.forEachIndexed { i, res ->
+                if (i > 0) sb.append("   ")
+                val start = sb.length
+                sb.append("\u25CF")
+                sb.setSpan(
+                    android.text.style.ForegroundColorSpan(segments.getOrNull(i)?.color ?: 0xFF8FA6B6.toInt()),
+                    start, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                sb.append(' ').append(context.getString(res))
+                    .append(String.format(Locale.US, " %.0f", segments.getOrNull(i)?.ms ?: 0f))
+            }
+            return sb
         }
 
         private fun formatFps(fps: Float): String {

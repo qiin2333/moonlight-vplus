@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash icon: ribbons draw in, then the dot pops. Static fallback = full icon. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <path
+                android:name="outer"
+                android:pathData="M69.43,35.61A24,24 0,1 0,69.43 72.39"
+                android:strokeColor="#FF8CD0FA"
+                android:strokeWidth="7"
+                android:strokeLineCap="round"
+                android:trimPathEnd="1" />
+            <path
+                android:name="inner"
+                android:pathData="M45.64,63.96A13,13 0,1 0,45.64 44.04"
+                android:strokeColor="#FF4C9BD6"
+                android:strokeWidth="5"
+                android:strokeLineCap="round"
+                android:trimPathEnd="1" />
+            <group
+                android:name="dotGroup"
+                android:pivotX="54"
+                android:pivotY="54"
+                android:scaleX="1"
+                android:scaleY="1">
+                <path
+                    android:fillColor="#FFE6F6FF"
+                    android:pathData="M54,54m-3.5,0a3.5,3.5 0,1 1,7 0a3.5,3.5 0,1 1,-7 0" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="outer">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="trimPathEnd" android:duration="700"
+                android:valueFrom="0" android:valueTo="1" android:valueType="floatType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="inner">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="trimPathEnd" android:duration="700"
+                android:startOffset="150" android:valueFrom="0" android:valueTo="1"
+                android:valueType="floatType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="dotGroup">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator android:propertyName="scaleX" android:duration="400"
+                    android:startOffset="500" android:valueFrom="0" android:valueTo="1"
+                    android:valueType="floatType" android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator android:propertyName="scaleY" android:duration="400"
+                    android:startOffset="500" android:valueFrom="0" android:valueTo="1"
+                    android:valueType="floatType" android:interpolator="@android:interpolator/overshoot" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

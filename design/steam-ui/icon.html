@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Moonlight Dual Icon</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#05080c;font-family:system-ui,sans-serif;color:#8fa5b8}
+  .row{display:flex;gap:48px;align-items:center;flex-wrap:wrap;justify-content:center}
+  svg{width:320px;height:320px;filter:drop-shadow(0 12px 40px rgba(102,192,244,.25))}
+  .sm svg{width:96px;height:96px;filter:none}
+  .a1,.a2{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.4s cubic-bezier(.3,.7,.2,1) forwards,spin1 14s linear 1.4s infinite;transform-origin:54px 54px}
+  .a2{animation:draw 1.4s .25s cubic-bezier(.3,.7,.2,1) forwards,spin2 9s linear 1.65s infinite}
+  .dot{transform-origin:54px 54px;animation:pop .6s .9s cubic-bezier(.3,1.6,.5,1) both,pulse 3s 1.5s ease-in-out infinite}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes spin1{to{transform:rotate(360deg)}}
+  @keyframes spin2{to{transform:rotate(-360deg)}}
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  @keyframes pulse{50%{transform:scale(1.25)}}
+  small{display:block;text-align:center;margin-top:8px}
+</style></head><body>
+<div class="row">
+<div>
+<svg viewBox="0 0 108 108" id="big">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B9E6FF"/><stop offset="1" stop-color="#2C7DBE"/></linearGradient>
+    <linearGradient id="g2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#66C0F4"/><stop offset="1" stop-color="#1B4F82"/></linearGradient>
+    <radialGradient id="bg" cx=".3" cy=".25" r="1"><stop offset="0" stop-color="#17283a"/><stop offset="1" stop-color="#070d14"/></radialGradient>
+  </defs>
+  <rect width="108" height="108" rx="24" fill="url(#bg)"/>
+  <path class="a1" pathLength="1" d="M69.43 35.61A24 24 0 1 0 69.43 72.39" fill="none" stroke="url(#g1)" stroke-width="7" stroke-linecap="round"/>
+  <path class="a2" pathLength="1" d="M45.64 63.96A13 13 0 1 0 45.64 44.04" fill="none" stroke="url(#g2)" stroke-width="5" stroke-linecap="round"/>
+  <circle class="dot" cx="54" cy="54" r="3.5" fill="#E6F6FF"/>
+</svg>
+<small>动画（启动页同款）</small></div>
+<div class="sm"><svg viewBox="0 0 108 108"><rect width="108" height="108" rx="54" fill="#0B131C"/>
+<path d="M69.43 35.61A24 24 0 1 0 69.43 72.39" fill="none" stroke="#66C0F4" stroke-width="7" stroke-linecap="round"/>
+<path d="M45.64 63.96A13 13 0 1 0 45.64 44.04" fill="none" stroke="#A8DDFA" stroke-width="5" stroke-linecap="round"/>
+<circle cx="54" cy="54" r="3.5" fill="#E6F6FF"/></svg><small>桌面图标（圆形裁切）</small></div>
+</div>
+</body></html>

@@ -179,7 +179,7 @@
     <string name="applist_details_id">App ID:</string>
 
     <!-- In Game menu -->
-    <string name="game_menu_title">V+ Game Menu</string>
+    <string name="game_menu_title">Game Menu</string>
     <string name="game_menu_server_version">%1$s  Server %2$s</string>
     <string name="game_menu_toggle_keyboard">Toggle Local Keyboard</string>
     <string name="game_menu_toggle_performance_overlay">Performance Overlay</string>
@@ -2593,4 +2593,8 @@ Tap again to replace it.</string>
     <string name="browse_codec_auto">Auto</string>
     <string name="browse_open_settings">Open settings</string>
     <string name="browse_tab_menu">Menu</string>
+    <string name="companion_chain_net">Network</string>
+    <string name="companion_chain_host">Host</string>
+    <string name="companion_chain_dec">Decode</string>
+    <string name="companion_chain_rnd">Render</string>
 </resources>

@@ -18,21 +18,18 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
+        <ImageView
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="@drawable/steam_brand_mark"
-            android:gravity="center"
-            android:text="V"
-            android:textColor="#FFFFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:contentDescription="@null"
+            android:src="@drawable/dual_icon_foreground" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:text="Moonlight V+"
+            android:text="Moonlight Dual"
             android:textColor="#FFFFFFFF"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -449,7 +446,7 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:background="#6FA8FF" />
+                        android:background="#4DA3FF" />
 
                     <View
                         android:id="@+id/chainHost"
@@ -457,7 +454,7 @@
                         android:layout_height="match_parent"
                         android:layout_marginStart="2dp"
                         android:layout_weight="1"
-                        android:background="#B48CFF" />
+                        android:background="#FF7A59" />
 
                     <View
                         android:id="@+id/chainDecode"
@@ -465,7 +462,7 @@
                         android:layout_height="match_parent"
                         android:layout_marginStart="2dp"
                         android:layout_weight="1"
-                        android:background="#4FD1C5" />
+                        android:background="#3DDC84" />
 
                     <View
                         android:id="@+id/chainRender"
@@ -473,7 +470,7 @@
                         android:layout_height="match_parent"
                         android:layout_marginStart="2dp"
                         android:layout_weight="1"
-                        android:background="#F5A3C7" />
+                        android:background="#F2D338" />
                 </LinearLayout>
 
                 <TextView
