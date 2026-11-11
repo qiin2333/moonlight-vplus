@@ -79,6 +79,7 @@ class SecondScreenCompanion(
 
         private lateinit var monitorFps: TextView
         private lateinit var monitorFpsSub: TextView
+        private lateinit var monitorFpsChart: com.limelight.ui.SparklineView
         private lateinit var monitorFrameTime: TextView
         private lateinit var monitorLowFps: TextView
         private lateinit var monitorDecode: TextView
@@ -152,6 +153,7 @@ class SecondScreenCompanion(
 
             monitorFps = findViewById(R.id.monitorFps)
             monitorFpsSub = findViewById(R.id.monitorFpsSub)
+            monitorFpsChart = findViewById(R.id.monitorFpsChart)
             monitorFrameTime = findViewById(R.id.monitorFrameTime)
             monitorLowFps = findViewById(R.id.monitorLowFps)
             monitorDecode = findViewById(R.id.monitorDecode)
@@ -329,6 +331,8 @@ class SecondScreenCompanion(
         fun updateSnapshot(snapshot: PerfHudSnapshot) {
             monitorFps.text = formatFps(snapshot.renderedFps)
             monitorFps.setTextColor(severityColor(snapshot.fpsSeverity))
+            monitorFpsChart.setTarget(snapshot.targetFps)
+            monitorFpsChart.addSample(snapshot.renderedFps)
             monitorFpsSub.text = if (snapshot.width > 0 && snapshot.height > 0) {
                 "${snapshot.width}×${snapshot.height} · ${snapshot.targetFps} FPS · ${snapshot.codec}"
             } else {

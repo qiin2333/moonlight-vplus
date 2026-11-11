@@ -447,13 +447,6 @@ internal fun AboutDialogContent(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 14.dp)
                         )
-                        Text(
-                            stringResource(R.string.about_dialog_thanks),
-                            color = colorResource(R.color.app_dialog_subtitle_color),
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -559,13 +552,6 @@ private fun LandscapeAboutContent(
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-            )
-            Text(
-                stringResource(R.string.about_dialog_thanks),
-                color = colorResource(R.color.app_dialog_subtitle_color),
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             )
 
             Row(

@@ -663,7 +663,7 @@
 
     <!-- About dialog strings -->
     <string name="about_dialog_description">专为 Sunshine 打造的串流客户端，面向双屏掌机。</string>
-    <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目，由基地社区倾力打造</string>
+    <string name="about_dialog_project_info">基于 Moonlight-Android 开源项目（GPLv3）</string>
     <string name="about_dialog_thanks">感谢您的选择与支持。</string>
     <string name="about_dialog_bilibili_title">GitHub</string>
     <string name="about_dialog_bilibili_summary">0x1428571429/moonlight-vplus</string>
@@ -2538,4 +2538,13 @@
     <string name="hint_y_more">更多</string>
     <string name="hint_start_settings">设置</string>
     <string name="hint_b_exit">退出</string>
+    <string name="browse_action_continue">继续</string>
+    <string name="browse_running">串流中</string>
+    <string name="browse_last_connect">上次连接 %1$s</string>
+    <string name="browse_time_now">刚刚</string>
+    <string name="browse_time_min">%1$d 分钟前</string>
+    <string name="browse_time_hour">%1$d 小时前</string>
+    <string name="browse_time_day">%1$d 天前</string>
+    <string name="browse_notice_online">%1$s 已上线</string>
+    <string name="browse_notice_offline">%1$s 已离线</string>
 </resources>

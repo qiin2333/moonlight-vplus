@@ -4,6 +4,7 @@ package com.limelight
 
 import android.app.Activity
 import android.app.Presentation
+import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -335,10 +336,11 @@ class BrowseScreenCompanion(
         private fun bindHosts() {
             val hosts = hostsProvider()
             val visible = hosts.take(MAX_ROWS)
-            val signature = visible.map { "${it.uuid}|${it.name}|${it.state}|${it.pairState}" } +
+            val signature = visible.map { "${it.uuid}|${it.name}|${it.state}|${it.pairState}|${it.runningGameId}" } +
                     "more=${hosts.size - visible.size}"
             if (signature == hostSignature) return
             hostSignature = signature
+            notifyStateChanges(visible)
 
             // 保住当前焦点所在的行，避免每秒重建导致手柄焦点丢失。
             val focusedIndex = (0 until hostList.childCount).firstOrNull { hostList.getChildAt(it).isFocused }
@@ -361,8 +363,49 @@ class BrowseScreenCompanion(
             }
 
             val extra = hosts.size - visible.size
+            if (stateNotice != null) { hostHint.text = stateNotice; return }
             hostHint.text = if (extra > 0) context.getString(R.string.browse_hosts_more, extra)
             else context.getString(R.string.browse_hosts_hint)
+        }
+
+        private var lastStates: Map<String?, ComputerDetails.State>? = null
+        private var stateNotice: String? = null
+        private val clearNotice = Runnable { stateNotice = null; hostSignature = null; bindHosts() }
+
+        /** 主机上线 / 离线时，在列表下方给一句提示（5 秒后恢复）。 */
+        private fun notifyStateChanges(hosts: List<ComputerDetails>) {
+            val now = hosts.associate { it.uuid to it.state }
+            val before = lastStates
+            lastStates = now
+            if (before == null) return
+            for (h in hosts) {
+                val old = before[h.uuid] ?: continue
+                if (old == h.state) continue
+                val res = when {
+                    h.state == ComputerDetails.State.ONLINE -> R.string.browse_notice_online
+                    h.state == ComputerDetails.State.OFFLINE -> R.string.browse_notice_offline
+                    else -> continue
+                }
+                stateNotice = context.getString(res, h.name)
+                handler.removeCallbacks(clearNotice)
+                handler.postDelayed(clearNotice, 5000)
+                break
+            }
+        }
+
+        private val launchLog by lazy { context.getSharedPreferences("browse_launch_log", Context.MODE_PRIVATE) }
+
+        private fun lastConnectText(uuid: String?): String? {
+            val at = launchLog.getLong(uuid ?: return null, 0L)
+            if (at <= 0L) return null
+            val mins = ((System.currentTimeMillis() - at) / 60000).coerceAtLeast(0)
+            val rel = when {
+                mins < 1 -> context.getString(R.string.browse_time_now)
+                mins < 60 -> context.getString(R.string.browse_time_min, mins.toInt())
+                mins < 1440 -> context.getString(R.string.browse_time_hour, (mins / 60).toInt())
+                else -> context.getString(R.string.browse_time_day, (mins / 1440).toInt())
+            }
+            return context.getString(R.string.browse_last_connect, rel)
         }
 
         private fun createRow(inflater: LayoutInflater, details: ComputerDetails): View {
@@ -379,8 +422,11 @@ class BrowseScreenCompanion(
             }
             val pairText = if (paired) context.getString(R.string.browse_paired)
             else context.getString(R.string.browse_unpaired)
-            row.findViewById<TextView>(R.id.hostStatus).text =
-                if (stateText.isEmpty()) pairText else "$stateText · $pairText"
+            val running = online && paired && details.runningGameId != 0
+            row.findViewById<TextView>(R.id.hostStatus).text = listOfNotNull(
+                stateText.ifEmpty { null }, pairText,
+                if (running) context.getString(R.string.browse_running) else lastConnectText(details.uuid)
+            ).joinToString(" · ")
 
             val color = when {
                 online -> 0xFF6FD49A.toInt()
@@ -391,13 +437,17 @@ class BrowseScreenCompanion(
 
             row.findViewById<TextView>(R.id.hostAction).text = context.getString(
                 when {
+                    running -> R.string.browse_action_continue
                     online && paired -> R.string.browse_action_connect
                     online -> R.string.browse_action_pair
                     else -> R.string.browse_action_more
                 }
             )
             row.alpha = if (online) 1f else 0.6f
-            row.setOnClickListener { onHostClick(details) }
+            row.setOnClickListener {
+                if (online && paired) launchLog.edit().putLong(details.uuid ?: "", System.currentTimeMillis()).apply()
+                onHostClick(details)
+            }
             row.setOnLongClickListener { onHostLongClick(details); true }
             return row
         }
