@@ -69,6 +69,12 @@
 | AppView 换皮：深蓝遮罩、左对齐标题、放大卡片、蓝色选中框与播放角标（灰色操作菜单仍待换） | `appview_*` 资源 | ✅ |
 | 副屏浏览页跨 PcView/AppView/Game 常驻，返回键与 HOME 都不会让副屏回桌面，仅主屏应用退出才关闭 | `AppVisibility` | ✅ |
 
+| 应用名 Moonlight Dual、新图标（`design/steam-ui/icon.html`，双环缎带）、开屏动画图标 | `dual_icon_*`、`Theme.App.Starting` | ✅ |
+| 延迟链路四段配色（蓝/珊瑚/绿/黄）+ 带色点图例 | `PerfHudPalette`、`chainLegend` | ✅ |
+| 圆角统一 12dp（胶囊/圆形除外） | `corner_radius_*`、`AppCornerRadii` | ✅ |
+| 默认背景改 Steam 深色；对话框/操作菜单改深蓝；残留粉紫色清理 | `steam_default_background` 等 | ✅ |
+| 旧版 com.limelight.qiin 已从测试机卸载，只保留 vplus_debug | — | ✅ |
+
 ## 5. 原型中被舍弃的内容
 
 `design/steam-ui/index.html` 里的继续游玩英雄区、最近游玩横排、游戏库页、搜索框、
