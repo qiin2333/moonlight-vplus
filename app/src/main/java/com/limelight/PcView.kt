@@ -3466,10 +3466,12 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
 
     private fun calculateDynamicColumnWidth(gridView: GridView) {
         val density = resources.displayMetrics.density
-        val screenWidth = resources.displayMetrics.widthPixels
+        // 左侧工具栏占用的宽度不能算进网格可用宽度，否则会算出放不下的列数而退化成单列。
+        val railPx = resources.getDimensionPixelSize(R.dimen.pc_toolbar_button_size)
+        val screenWidth = resources.displayMetrics.widthPixels - railPx
         val availableWidth = screenWidth - gridView.paddingStart - gridView.paddingEnd
         val spacingPx = (18f * density).toInt()
-        val minColumnPx = (300f * density).toInt()
+        val minColumnPx = (210f * density).toInt()
 
         val numColumns = 1.coerceAtLeast((availableWidth + spacingPx) / (minColumnPx + spacingPx))
         val columnWidth = (availableWidth - (numColumns - 1) * spacingPx) / numColumns
