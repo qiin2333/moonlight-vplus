@@ -63,7 +63,6 @@ import com.limelight.ui.AdapterFragment
 import com.limelight.ui.AdapterFragmentCallbacks
 import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.MoonWheelDrawable
-import com.limelight.ui.PixelMapBackgroundDrawable
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.ViewFeatureGuide
 import com.limelight.ui.ViewFeatureGuideStep
@@ -951,7 +950,7 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         if (target == null) {
             backgroundImageView?.setImageDrawable(
                 when (source) {
-                    BackgroundSource.Auto, BackgroundSource.Api -> PixelMapBackgroundDrawable(this)
+                    BackgroundSource.Auto, BackgroundSource.Api -> androidx.core.content.ContextCompat.getDrawable(this, R.drawable.steam_default_background)
                     else -> null
                 }
             )

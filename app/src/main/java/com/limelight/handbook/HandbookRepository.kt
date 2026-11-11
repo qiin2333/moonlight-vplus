@@ -241,7 +241,7 @@ class HandbookRepository(
             <style id="moonlight-handbook-presentation">
               header.site-header { display: none !important; }
               a:focus, a:focus-visible {
-                outline: 3px solid #ff6b9d !important;
+                outline: 3px solid #66c0f4 !important;
                 outline-offset: 3px !important;
                 background: rgba(255, 107, 157, 0.14) !important;
                 border-radius: 4px !important;

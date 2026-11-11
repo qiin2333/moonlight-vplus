@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default Steam-style backdrop (from design/steam-ui/index.html): near-black with a soft blue glow at the top. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FF05080B" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.5"
+                android:centerY="0.0"
+                android:endColor="#00000000"
+                android:gradientRadius="75%p"
+                android:startColor="#352F9BFF"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

@@ -679,7 +679,7 @@ class PerformanceOverlayManager(
         } else {
             String.format(Locale.getDefault(), "%.2f", performanceInfo.decodeTimeMs)
         }
-        view.text = createStyledText(iconRes, latencyValue, "ms", 0xFFD597E3.toInt(), iconEmoji, textSizePx = view.textSize)
+        view.text = createStyledText(iconRes, latencyValue, "ms", 0xFF66C0F4.toInt(), iconEmoji, textSizePx = view.textSize)
     }
 
     private fun updateHostLatencyText(view: TextView, performanceInfo: PerformanceInfo) {

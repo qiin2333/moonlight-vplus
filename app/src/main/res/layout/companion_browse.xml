@@ -22,7 +22,8 @@
             android:layout_height="36dp"
             android:background="@drawable/steam_brand_mark"
             android:contentDescription="@null"
-            android:src="@drawable/dual_icon_foreground" />
+            android:padding="6dp"
+            android:src="@drawable/dual_icon_mark" />
 
         <TextView
             android:layout_width="wrap_content"

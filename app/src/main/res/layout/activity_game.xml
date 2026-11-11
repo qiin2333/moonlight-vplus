@@ -138,7 +138,7 @@
             android:maxLines="1"
             android:fontFeatureSettings="tnum"
             android:layout_marginStart="12dp"
-            android:textColor="#E1D597E3"
+            android:textColor="#E166C0F4"
             android:textSize="10sp"
             android:fontFamily="sans-serif"
             android:letterSpacing="0.01"
