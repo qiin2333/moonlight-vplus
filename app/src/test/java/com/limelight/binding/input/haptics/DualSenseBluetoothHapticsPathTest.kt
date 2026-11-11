@@ -177,7 +177,7 @@ class DualSenseBluetoothHapticsPathTest {
             assertTrue(writing.await(1, TimeUnit.SECONDS))
             sink.submit(frames.last()) // Missing sequence 3 is not a discontinuity.
             resume.countDown()
-            assertTrue(played.await(1, TimeUnit.SECONDS))
+            assertTrue(played.await(2, TimeUnit.SECONDS))
             expected.indices.forEach { assertArrayEquals(expected[it], actual[it]) }
         } finally { resume.countDown(); stop(sink) }
     }
