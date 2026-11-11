@@ -164,6 +164,12 @@ class BrowseScreenCompanion(
             updateHint()
         }
 
+        /** 手指一碰副屏就退出手柄操作模式，否则可聚焦的控件会先吃掉第一下点击，表现为要点两下。 */
+        override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+            if (remoteFocus && ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) toggleRemoteFocus()
+            return super.dispatchTouchEvent(ev)
+        }
+
         fun toggleRemoteFocus(): Boolean {
             remoteFocus = !remoteFocus
             if (remoteFocus) focusFirstOnPage() else {
@@ -290,8 +296,8 @@ class BrowseScreenCompanion(
                 isFocusable = true
                 setPadding(dp(16), 0, dp(16), 0)
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(60)
-                ).apply { setMargins(dp(4), dp(3), dp(4), dp(3)) }
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(52)
+                ).apply { setMargins(dp(4), dp(2), dp(4), dp(2)) }
                 if (item.iconRes != 0) {
                     addView(android.widget.ImageView(context).apply {
                         setImageResource(item.iconRes)
