@@ -46,23 +46,23 @@
     <color name="game_menu_super_list_item_focused">#FF21405F</color>
     <color name="game_menu_super_list_item_border">#2266C0F4</color>
 
-    <color name="app_dialog_choice_control_normal">#7AC9D0D8</color>
+    <color name="app_dialog_choice_control_normal">#7A8FA5B8</color>
 
     <!-- App dialog palette for system dark theme. -->
-    <color name="app_dialog_surface">#E61C1D22</color>
-    <color name="app_dialog_surface_elevated">#F223242B</color>
-    <color name="app_dialog_surface_gradient_start">#F22A2B34</color>
-    <color name="app_dialog_surface_gradient_center">#F223242B</color>
-    <color name="app_dialog_surface_gradient_end">#E61C1D22</color>
-    <color name="app_dialog_surface_pressed">#3328323A</color>
-    <color name="app_dialog_outline">#2EFFFFFF</color>
-    <color name="app_dialog_outline_strong">#4DFFFFFF</color>
-    <color name="app_dialog_text_primary">#F7F3F7</color>
-    <color name="app_dialog_text_secondary">#C9D0D8</color>
-    <color name="app_dialog_text_disabled">#66C9D0D8</color>
-    <color name="app_dialog_accent_soft">#332F9BFF</color>
-    <color name="app_dialog_accent_focus">#662F9BFF</color>
-    <color name="app_action_sheet_danger">#FFFF9AAA</color>
+    <color name="app_dialog_surface">#F214202E</color>
+    <color name="app_dialog_surface_elevated">#F2182A3B</color>
+    <color name="app_dialog_surface_gradient_start">#F2182A3B</color>
+    <color name="app_dialog_surface_gradient_center">#F214202E</color>
+    <color name="app_dialog_surface_gradient_end">#F20E1722</color>
+    <color name="app_dialog_surface_pressed">#331B3047</color>
+    <color name="app_dialog_outline">#4D66C0F4</color>
+    <color name="app_dialog_outline_strong">#8066C0F4</color>
+    <color name="app_dialog_text_primary">#FFE6F1FA</color>
+    <color name="app_dialog_text_secondary">#FF8FA5B8</color>
+    <color name="app_dialog_text_disabled">#668FA5B8</color>
+    <color name="app_dialog_accent_soft">#2666C0F4</color>
+    <color name="app_dialog_accent_focus">#4D66C0F4</color>
+    <color name="app_action_sheet_danger">#FFFF7A7A</color>
     <color name="app_action_sheet_divider">#1FFFFFFF</color>
     <color name="iperf_output_surface">#FF121318</color>
     <color name="iperf_output_text">#FFC9D0D8</color>

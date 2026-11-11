@@ -401,7 +401,7 @@ object AppActionSheet {
         val surface = colorResource(R.color.app_dialog_surface)
         val primary = colorResource(R.color.app_dialog_text_primary)
         val secondary = colorResource(R.color.app_dialog_text_secondary)
-        val scheme = if (isSystemInDarkTheme()) {
+        val scheme = if (true) {
             darkColorScheme(
                 primary = accent,
                 surface = surface,
