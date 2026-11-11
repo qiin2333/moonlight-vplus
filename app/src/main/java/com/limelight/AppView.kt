@@ -1000,8 +1000,8 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
                 appName = app.app.appName,
                 running = running,
                 summary = lastSettingsSummary?.let { sm ->
-                    listOf(sm.metricsLine, sm.timeLabel).filter { it.isNotBlank() }.joinToString("\n") +
-                        sm.rows.take(4).joinToString("") { "\n${it.first}：${it.second}" }
+                    (listOf("上次 · ${sm.timeLabel}").filter { sm.timeLabel.isNotBlank() } +
+                        sm.rows.take(4).map { "${it.first}：${it.second}" }).joinToString("\n")
                 }.orEmpty(),
                 onPrimary = {
                     if (lastRunningAppId != 0) showAppActionSheetForPosition(position)

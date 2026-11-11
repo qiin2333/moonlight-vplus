@@ -103,7 +103,7 @@
                 android:layout_weight="1"
                 android:background="@drawable/companion_panel_bg"
                 android:orientation="vertical"
-                android:padding="20dp"
+                android:padding="18dp"
                 android:visibility="gone">
 
                 <TextView
@@ -112,34 +112,34 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#A9C2D2"
-                    android:textSize="16sp" />
+                    android:textColor="#8FA6B6"
+                    android:textSize="13sp" />
 
                 <TextView
                     android:id="@+id/appPanelName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="4dp"
                     android:ellipsize="end"
                     android:maxLines="2"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="30sp"
+                    android:textSize="22sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/appPanelStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="6dp"
                     android:textColor="#6FD49A"
-                    android:textSize="18sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <ScrollView
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="14dp"
                     android:layout_weight="1"
                     android:overScrollMode="never"
                     android:scrollbars="none">
@@ -148,21 +148,23 @@
                         android:id="@+id/appPanelSummary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:lineSpacingMultiplier="1.15"
-                        android:textColor="#C7D5E0"
-                        android:textSize="17sp" />
+                        android:background="@drawable/companion_key_bg"
+                        android:lineSpacingMultiplier="1.25"
+                        android:padding="14dp"
+                        android:textColor="#B4C4D0"
+                        android:textSize="14sp" />
                 </ScrollView>
 
                 <TextView
                     android:id="@+id/appPanelAction"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="46dp"
                     android:background="@drawable/companion_tab_bg_selected_button"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:textColor="#0B131C"
-                    android:textSize="21sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
