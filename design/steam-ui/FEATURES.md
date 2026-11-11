@@ -65,7 +65,13 @@
 | 串流中游戏菜单显示在副屏（TYPE_PRESENTATION=2037），主屏继续串流 | `Game.companionMenuDisplay` + `GameMenu` | ✅ |
 | 游戏菜单固定 Steam 深蓝配色（不跟随系统亮/暗） | `game_menu_*` 颜色资源 | ✅ |
 | 全局主题色统一为 Steam 蓝 | `appAccent` 相关资源 | ✅ |
-| 游戏菜单子对话框、副屏「菜单」页里的对话框仍弹在主屏 | — | ⬜ |
+| 有副屏时操作菜单与对话框（关于、EasyTier、主题、主机/应用操作表、网络测试）改弹到副屏，主屏不被遮挡 | `CompanionDisplays.redirect/place` | ✅ 关于页已实测 |
+| 副屏手柄操作：L1/R1 切页，Select 进入「副屏操作」（方向键移焦点、A 确认、B 退出） | `BrowseScreenCompanion.handleKey` | ✅ 菜单页/设置页实测 |
+| 副屏底部常驻按键提示条 + 状态条（主机在线数、电量、时间） | `browseHint` / `browseStatus` | ✅ 浏览态；串流态副屏未加 |
+| AppView 选中应用后，副屏主机页显示应用详情（名称、运行状态、上次设置、开始/恢复按钮） | `BrowseScreenCompanion.AppContext` | 🟡 已实现，未能实测（测试主机有会话时会自动恢复串流） |
+| 游戏菜单 1.3× 字号 | `GameMenuTheme` | ✅ 串流中副屏实测 |
+| 关于页 Logo 换为新图标 | `dual_icon_mark` | ✅ |
+| 画质预设、FPS 历史曲线、本地搜索、最近游玩/启动记录、触感/音效反馈、串流态提示条 | — | ⬜ 未做 |
 | AppView 换皮：深蓝遮罩、左对齐标题、放大卡片、蓝色选中框与播放角标（灰色操作菜单仍待换） | `appview_*` 资源 | ✅ |
 | 副屏浏览页跨 PcView/AppView/Game 常驻，返回键与 HOME 都不会让副屏回桌面，仅主屏应用退出才关闭 | `AppVisibility` | ✅ |
 
