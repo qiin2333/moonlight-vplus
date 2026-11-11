@@ -50,6 +50,7 @@ class SecondScreenCompanion(
             return
         }
         presentation = next
+        CompanionDisplays.active = display
         perfManager?.setSnapshotListener { snapshot -> next.updateSnapshot(snapshot) }
     }
 
@@ -57,6 +58,7 @@ class SecondScreenCompanion(
         perfManager?.setSnapshotListener(null)
         presentation?.dismiss()
         presentation = null
+        if (CompanionDisplays.active?.displayId == displayId) CompanionDisplays.active = null
     }
 
     private class CompanionPresentation(

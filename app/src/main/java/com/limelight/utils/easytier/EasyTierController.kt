@@ -217,7 +217,7 @@ class EasyTierController(
             }
         }
 
-        val dialog = ComponentDialog(activity, R.style.AppDialogStyle).apply {
+        val dialog = ComponentDialog(com.limelight.CompanionDisplays.redirect(activity), R.style.AppDialogStyle).apply {
             setContentView(composeView)
             // Keep this floating window's viewport stable while Compose scrolls the focused field.
             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
@@ -231,6 +231,7 @@ class EasyTierController(
             }
         }
         currentDialog = dialog
+        com.limelight.CompanionDisplays.place(dialog)
         dialog.show()
         AppDialogStyler.applyCustomContent(dialog, activity)
     }

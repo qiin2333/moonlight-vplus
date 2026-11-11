@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.limelight.CompanionDisplays
 import com.limelight.R
 import com.limelight.ui.ExpressiveMotion
 import com.limelight.ui.UiDismissKeyHandler
@@ -130,7 +131,7 @@ object AppActionSheet {
      * the standard action sheets. Custom content should be built from the shared
      * action-sheet composables below so controller focus remains consistent. */
     fun showCustom(context: Context, content: @Composable () -> Unit): Dialog {
-        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val dialog = ComponentDialog(CompanionDisplays.redirect(context), R.style.AppActionSheetStyle)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -177,7 +178,7 @@ object AppActionSheet {
         onAction: (Action) -> Unit,
         onDismiss: ((Action?) -> Unit)? = null
     ): Dialog {
-        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val dialog = ComponentDialog(CompanionDisplays.redirect(context), R.style.AppActionSheetStyle)
         var selectedAction: Action? = null
         val focusRequestToken = mutableIntStateOf(0)
         val composeView = ComposeView(context).apply {
@@ -247,7 +248,7 @@ object AppActionSheet {
         onDismiss: (() -> Unit)? = null,
         onSelectionChanged: ((Set<Int>) -> Unit)? = null
     ): Dialog {
-        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val dialog = ComponentDialog(CompanionDisplays.redirect(context), R.style.AppActionSheetStyle)
         var completed = false
         val focusRequestToken = mutableIntStateOf(0)
         val composeView = ComposeView(context).apply {
@@ -364,6 +365,7 @@ object AppActionSheet {
             }
         }
 
+        CompanionDisplays.place(dialog)
         dialog.show()
         dialog.window?.let { window ->
             window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)

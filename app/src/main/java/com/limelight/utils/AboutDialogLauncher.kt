@@ -219,7 +219,7 @@ object AboutDialogLauncher {
         onReadyForFocus: () -> Unit,
         content: @Composable (Dialog) -> Unit
     ): Dialog {
-        val dialog = ComponentDialog(context, R.style.AppComposeDialogStyle)
+        val dialog = ComponentDialog(com.limelight.CompanionDisplays.redirect(context), R.style.AppComposeDialogStyle)
         val composeView = ComposeView(context).apply {
             isFocusable = true
             isFocusableInTouchMode = true
@@ -244,6 +244,7 @@ object AboutDialogLauncher {
                 }
             }
         }
+        com.limelight.CompanionDisplays.place(dialog)
         return dialog
     }
 

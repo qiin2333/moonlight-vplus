@@ -73,7 +73,7 @@ object NetworkQualitySheet {
         onCancel: () -> Unit
     ): TestingHandle {
         val progress = mutableFloatStateOf(0f)
-        val dialog = ComponentDialog(activity, R.style.AppActionSheetStyle)
+        val dialog = ComponentDialog(com.limelight.CompanionDisplays.redirect(activity), R.style.AppActionSheetStyle)
         val composeView = ComposeView(activity).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -123,7 +123,7 @@ object NetworkQualitySheet {
         onSaveToSceneOne: () -> Unit,
         onContinue: () -> Unit
     ) {
-        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val dialog = ComponentDialog(com.limelight.CompanionDisplays.redirect(context), R.style.AppActionSheetStyle)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -229,7 +229,7 @@ object NetworkQualitySheet {
         onContinue: () -> Unit,
         onUseRecommendation: () -> Unit
     ) {
-        val dialog = ComponentDialog(context, R.style.AppActionSheetStyle)
+        val dialog = ComponentDialog(com.limelight.CompanionDisplays.redirect(context), R.style.AppActionSheetStyle)
         val composeView = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {

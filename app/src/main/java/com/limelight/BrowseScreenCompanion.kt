@@ -54,11 +54,13 @@ class BrowseScreenCompanion(
             return
         }
         presentation = next
+        CompanionDisplays.active = display
     }
 
     fun dismiss() {
         presentation?.dismiss()
         presentation = null
+        if (CompanionDisplays.active?.displayId == display.displayId) CompanionDisplays.active = null
     }
 
     private inner class BrowsePresentation : Presentation(activity, display) {
