@@ -13,6 +13,8 @@
 
 ---
 
+> **About this project**: Moonlight Dual is a modified version of [qiin2333/moonlight-vplus](https://github.com/qiin2333/moonlight-vplus) (Moonlight V+), which itself derives from [moonlight-android](https://github.com/moonlight-stream/moonlight-android). Thanks to both upstream projects and their contributors; this project keeps the GPL v3 license.
+
 **Moonlight Dual** is a Sunshine streaming client made for dual-screen handhelds (such as the AYN Thor): **the main screen shows the picture, the second screen is your control console**.
 
 - **Main screen**: a Steam Big Picture–style host and app picker, fully gamepad-driven (A connect / B exit / X add host / Y more / START settings).
@@ -156,7 +158,8 @@ Before reporting a problem, check the [Q&A](FAQ_EN.md). See the [privacy notice]
 
 ## Acknowledgments
 
-- [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) — upstream project
+- [Moonlight V+](https://github.com/qiin2333/moonlight-vplus) — direct upstream; this project is modified from it
+- [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) — original upstream project
 - [Sunshine](https://github.com/LizardByte/Sunshine) — open-source game streaming host
 
 ## License

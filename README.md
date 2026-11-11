@@ -13,6 +13,8 @@
 
 ---
 
+> **关于本项目**：Moonlight Dual 是基于 [qiin2333/moonlight-vplus](https://github.com/qiin2333/moonlight-vplus)（Moonlight V+）修改而来，后者又源自 [moonlight-android](https://github.com/moonlight-stream/moonlight-android)。感谢两个上游项目及其贡献者；本项目沿用 GPL v3 许可证。
+
 **Moonlight Dual** 是为双屏掌机（如 AYN Thor）而生的 Sunshine 串流客户端：**主屏专心看画面，副屏当控制台**。
 
 - **主屏**：Steam 大屏风格的主机与应用选择，手柄全程可操作（A 连接 / B 退出 / X 添加主机 / Y 更多 / START 设置）。
@@ -142,7 +144,8 @@ Windows PowerShell 请将最后一行改为 `.\gradlew.bat :app:assembleNonRootD
 
 ## 致谢
 
-- [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) — 上游项目
+- [Moonlight V+](https://github.com/qiin2333/moonlight-vplus) — 直接的上游项目，本项目基于它修改
+- [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) — 最初的上游项目
 - [Sunshine](https://github.com/LizardByte/Sunshine) — 开源串流主机端
 
 ## 许可证
