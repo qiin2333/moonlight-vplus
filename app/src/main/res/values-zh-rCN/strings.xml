@@ -2525,7 +2525,7 @@
     <string name="menu_sub_unpaired">显示或隐藏未配对的主机</string>
     <string name="menu_sub_theme">明暗模式与强调色</string>
     <string name="browse_hint_browse">L1/R1 切页 · Select 用手柄操作副屏</string>
-    <string name="browse_hint_remote">方向键移动 · A 确认 · B 退出 · L1/R1 切页</string>
+    <string name="browse_hint_remote">方向键移动 · A 确认 · B 退出</string>
     <string name="browse_hint_app">A 开始 · Y 更多 · B 返回</string>
     <string name="browse_app_running">运行中</string>
     <string name="browse_app_idle">未运行</string>

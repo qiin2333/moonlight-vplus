@@ -2604,7 +2604,7 @@ Tap again to replace it.</string>
     <string name="menu_sub_unpaired">Show or hide hosts that are not paired</string>
     <string name="menu_sub_theme">Light, dark and accent color</string>
     <string name="browse_hint_browse">L1/R1 switch page · Select: control this screen</string>
-    <string name="browse_hint_remote">D-pad move · A OK · B exit · L1/R1 page</string>
+    <string name="browse_hint_remote">D-pad · A OK · B exit</string>
     <string name="browse_hint_app">A Start · Y More · B Back</string>
     <string name="browse_app_running">Running</string>
     <string name="browse_app_idle">Not running</string>

@@ -166,12 +166,25 @@ class BrowseScreenCompanion(
 
         fun toggleRemoteFocus(): Boolean {
             remoteFocus = !remoteFocus
-            if (remoteFocus) focusFirstOnPage() else window?.decorView?.findFocus()?.clearFocus()
+            if (remoteFocus) focusFirstOnPage() else {
+                window?.decorView?.findFocus()?.clearFocus()
+                applyFocusMode()
+            }
             updateHint()
             return remoteFocus
         }
 
+        /** 触摸模式下 View 默认拿不到焦点；手柄操作副屏期间临时放开，退出后还原，避免影响触摸点击。 */
+        private fun applyFocusMode(view: View? = window?.decorView) {
+            if (view == null) return
+            if (view.isFocusable) view.isFocusableInTouchMode = remoteFocus
+            if (view is android.view.ViewGroup) {
+                for (i in 0 until view.childCount) applyFocusMode(view.getChildAt(i))
+            }
+        }
+
         private fun focusFirstOnPage() {
+            applyFocusMode()
             val target = when {
                 tabIndex == 0 && appContext != null -> findViewById<View>(R.id.appPanelAction)
                 else -> pages[tabIndex]
