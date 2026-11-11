@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AppView 背景压暗层：Steam 深蓝，上下略深 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#F00B131C"
+        android:centerColor="#CC0E1722"
+        android:endColor="#F2070C12" />
+</shape>

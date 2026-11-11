@@ -468,7 +468,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         super.onPause()
         exitGate.cancel()
         inForeground = false
-        dismissBrowseCompanion()
         stopComputerUpdates()
 
         analyticsManager?.stopUsageTracking()
@@ -478,9 +477,15 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
     override fun onStop() {
         super.onStop()
         Dialog.closeDialogs()
+        // 副屏浏览页跨 PcView → AppView 保持显示，只有整个应用退到后台（没有任何本应用界面可见）才关闭，
+        // 否则副屏会露出桌面且回不来。
+        if (!isChangingConfigurations && !AppVisibility.anyActivityStarted) {
+            dismissBrowseCompanion()
+        }
     }
 
     override fun onDestroy() {
+        dismissBrowseCompanion()
         AboutDialogLauncher.release(this)
         UpdateManager.cleanup()
         hostUnlockUi.release()

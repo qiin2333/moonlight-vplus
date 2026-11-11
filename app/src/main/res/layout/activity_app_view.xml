@@ -28,6 +28,13 @@
 
     </FrameLayout>
 
+    <!-- Steam 风格：深蓝渐变压暗背景，让封面成为主角 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/appview_scrim"
+        android:importantForAccessibility="no" />
+
     <!-- 应用网格本身保持在页面中央，标题和提示紧贴其上沿。 -->
     <FrameLayout
         android:id="@+id/appCatalogFrame"
@@ -64,7 +71,7 @@
         android:layout_marginBottom="4dp"
         android:orientation="horizontal"
         android:baselineAligned="false"
-        android:gravity="end">
+        android:gravity="start">
 
         <!-- 短横屏为中间的顶部手柄预留区域；竖屏和高横屏由资源恢复完整宽度。 -->
         <Space
@@ -79,7 +86,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:gravity="end">
+            android:gravity="start">
 
             <!-- 标题区域（电脑名 + 应用名 + 恢复箭头） -->
             <androidx.appcompat.widget.AppCompatTextView
@@ -87,9 +94,9 @@
                 style="@style/AppListTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
+                android:layout_gravity="start"
                 android:layout_marginTop="4dp"
-                android:gravity="end"
+                android:gravity="start"
                 android:paddingStart="8dp"
                 android:paddingTop="4dp"
                 android:paddingEnd="8dp"
@@ -104,7 +111,7 @@
                 android:id="@+id/appViewTargetReminder"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="end"
+                android:gravity="start"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
                 android:textColor="@color/control_highlight_color"

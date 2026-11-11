@@ -4,16 +4,16 @@
     android:exitFadeDuration="120">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#1FFFFFFF" />
+            <solid android:color="#2666C0F4" />
             <corners android:radius="8dp" />
-            <stroke android:width="1dp" android:color="#99FFFFFF" />
+            <stroke android:width="1dp" android:color="#6666C0F4" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="#12FFFFFF" />
+            <solid android:color="#1A66C0F4" />
             <corners android:radius="8dp" />
-            <stroke android:width="1dp" android:color="#73FFFFFF" />
+            <stroke android:width="1dp" android:color="#B366C0F4" />
         </shape>
     </item>
     <item>

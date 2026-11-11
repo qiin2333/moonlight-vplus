@@ -466,7 +466,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
             this,
             appBackgroundImageBlur!!,
             appBackgroundImageClear,
-            artworkBlurOnly = isPortrait,
+            artworkBlurOnly = true, // Steam 风格：只保留模糊底图，不再叠中间的清晰大图
             onBackgroundApplied = { refreshTitleColor() }
         )
 

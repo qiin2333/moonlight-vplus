@@ -97,6 +97,8 @@ class SecondScreenCompanion(
 
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
+            // 返回键不能把副屏面板关掉，否则副屏会露出桌面。
+            setCancelable(false)
             window?.addFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN or
                         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON

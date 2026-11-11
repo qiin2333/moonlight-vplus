@@ -73,6 +73,8 @@ class BrowseScreenCompanion(
 
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
+            // 返回键不能把副屏关掉：除非主屏退出，否则这里就是副屏的最后一页。
+            setCancelable(false)
             window?.addFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN or
                         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON

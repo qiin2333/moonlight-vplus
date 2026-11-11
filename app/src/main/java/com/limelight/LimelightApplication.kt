@@ -28,6 +28,7 @@ class LimelightApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppVisibility.register(this)
         AppTheme.applyStoredAppTheme(this)
         initializeFirebaseSafely()
         CrashReporter.install(this)
