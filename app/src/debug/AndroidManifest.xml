@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity android:name="com.limelight.binding.input.haptics.AuthoredIrTestActivity"
@@ -8,5 +9,10 @@
             android:theme="@style/SettingsThemeCompat"
             android:resizeableActivity="true"
             android:label="@string/title_mic_test" />
+        <activity
+            android:name=".CompanionPreviewActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme" />
     </application>
 </manifest>

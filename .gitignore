@@ -87,3 +87,6 @@ tools/mock-sunshine/.generated/
 app/nonRoot/release/baselineProfiles/
 
 !docs/resolution-hot-switch.md
+
+# Playwright MCP local artifacts
+.playwright-mcp/

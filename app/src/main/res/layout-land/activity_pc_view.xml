@@ -11,18 +11,111 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop" />
 
+    <!-- 压暗用户壁纸，让封面卡片和白色文字成为主视觉。 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#99070C12"
+        android:importantForAccessibility="no" />
+
     <Space
         android:id="@+id/topSafeArea"
         android:layout_width="match_parent"
         android:layout_height="@dimen/activity_horizontal_margin"
         android:layout_alignParentTop="true" />
 
+    <!-- Steam 风格的左侧栏底色；工具栏按钮浮在它上面。 -->
+    <View
+        android:id="@+id/steamRail"
+        android:layout_width="@dimen/pc_toolbar_button_size"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:background="@drawable/steam_rail_bg"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout
+        android:id="@+id/steamHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/topSafeArea"
+        android:layout_toEndOf="@id/settingsButton"
+        android:layout_toRightOf="@id/settingsButton"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/steam_brand_mark"
+            android:gravity="center"
+            android:text="V"
+            android:textColor="#FFFFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Moonlight V+"
+                android:textColor="#FFFFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="按 A 连接 · 长按查看更多"
+                android:textColor="#A9C2D2"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/hostSectionHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/steamHeader"
+        android:layout_toEndOf="@id/settingsButton"
+        android:layout_toRightOf="@id/settingsButton"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="24dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="主机"
+            android:textColor="#FFFFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="全部主机"
+            android:textColor="#8FA6B6"
+            android:textSize="14sp" />
+    </LinearLayout>
+
     <RelativeLayout
         android:id="@+id/pcFragmentContainer"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:layout_below="@+id/topSafeArea"
+        android:layout_below="@+id/hostSectionHeader"
         android:layout_alignParentBottom="true"
         android:layout_toRightOf="@+id/settingsButton"
         android:layout_toEndOf="@+id/settingsButton"

@@ -333,6 +333,9 @@ class PcGridAdapter(
         imgView.setImageResource(R.drawable.ic_add)
         imgView.scaleType = ImageView.ScaleType.FIT_CENTER
         imgView.alpha = 0.7f
+        // 封面上只留一个 64dp 左右的加号，避免图标被拉伸成整张卡片大小。
+        val iconInset = (78 * context.resources.displayMetrics.density).toInt()
+        imgView.setPadding(iconInset, iconInset, iconInset, iconInset)
 
         parentView.background = PcCardDecor.selector(context, accentBucket)
         spinnerView.visibility = View.INVISIBLE
@@ -341,10 +344,13 @@ class PcGridAdapter(
         txtView.text = context.getString(R.string.title_add_pc)
         txtView.contentDescription = null
         txtView.alpha = 0.7f
-        txtView.setTextColor(PcCardDecor.textColor(context))
+        txtView.setTextColor(android.graphics.Color.WHITE)
+        parentView.findViewById<TextView>(R.id.grid_status)?.visibility = View.GONE
     }
 
     private fun populateComputerCard(parentView: View, imgView: ImageView, spinnerView: View, txtView: TextView, overlayView: ImageView, details: ComputerDetails, accentBucket: Int) {
+        // 复用自“添加主机”卡片时，清掉加号图标的内边距。
+        imgView.setPadding(0, 0, 0, 0)
         val isOnline = details.state == ComputerDetails.State.ONLINE
         val isUnknown = details.state == ComputerDetails.State.UNKNOWN
         val isOffline = details.state == ComputerDetails.State.OFFLINE
@@ -383,7 +389,23 @@ class PcGridAdapter(
             context.getString(R.string.pc_name_foundation_sunshine_description, details.name)
         } else null
         txtView.alpha = if (isOffline) 0.5f else 1.0f
-        txtView.setTextColor(PcCardDecor.textColor(context, disabled = isOffline))
+        // 新的封面卡片底部有深色渐变遮罩，文字统一用白色保证对比度。
+        txtView.setTextColor(android.graphics.Color.WHITE)
+        parentView.findViewById<TextView>(R.id.grid_status)?.let { statusView ->
+            when {
+                isOnline -> {
+                    statusView.visibility = View.VISIBLE
+                    statusView.setText(R.string.pcview_menu_header_online)
+                    statusView.setTextColor(0xFF6FD49A.toInt())
+                }
+                isOffline -> {
+                    statusView.visibility = View.VISIBLE
+                    statusView.setText(R.string.pcview_menu_header_offline)
+                    statusView.setTextColor(0xFF8FA6B6.toInt())
+                }
+                else -> statusView.visibility = View.GONE
+            }
+        }
 
         updateOverlay(overlayView, details, isOnline, isOffline)
     }

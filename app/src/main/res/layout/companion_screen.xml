@@ -1,0 +1,828 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  副屏伴生面板：串流仍渲染在主屏，这块屏只承载监控与串流控制。
+  高度按 1240×1080 / density 369 设计（约 538×468dp），所有内容固定高度，禁止滚动。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/companionRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF070C12"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <!-- 顶栏：品牌 + Tab -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/steam_brand_mark"
+            android:gravity="center"
+            android:text="V"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Moonlight V+"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:background="@drawable/companion_panel_bg"
+            android:orientation="horizontal"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/tabMonitor"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="监控"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabBitrate"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="码率"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabInput"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="输入"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabQuick"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_tab_bg"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="60dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="快捷"
+                android:textColor="@color/companion_tab_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/headerMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/companion_key_bg"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="菜单"
+            android:textColor="#F7F3F7"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1">
+
+        <!-- ================= 监控 ================= -->
+        <LinearLayout
+            android:id="@+id/pageMonitor"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.1"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1.08"
+                    android:background="@drawable/companion_panel_bg"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="实时帧率"
+                        android:textColor="#A9C2D2"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/monitorFps"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-black"
+                        android:includeFontPadding="false"
+                        android:text="--"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="64sp" />
+
+                    <TextView
+                        android:id="@+id/monitorFpsSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:text="等待串流数据"
+                        android:textColor="#8FA6B6"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/companion_panel_bg"
+                    android:orientation="vertical"
+                    android:paddingStart="14dp"
+                    android:paddingTop="10dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="帧时间"
+                            android:textColor="#A9C2D2"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/monitorFrameTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:textColor="#F7F3F7"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="1% Low"
+                            android:textColor="#A9C2D2"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/monitorLowFps"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:textColor="#F7F3F7"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="解码"
+                            android:textColor="#A9C2D2"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/monitorDecode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:textColor="#F7F3F7"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="84dp"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/companion_panel_bg"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="码率"
+                        android:textColor="#8FA6B6"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/statBandwidth"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="--"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/companion_panel_bg"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="RTT"
+                        android:textColor="#8FA6B6"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/statRtt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="--"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/companion_panel_bg"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="丢包"
+                        android:textColor="#8FA6B6"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/statLoss"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="--"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/companion_panel_bg"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="电量"
+                        android:textColor="#8FA6B6"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/statBattery"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="--"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="0.85"
+                android:background="@drawable/companion_panel_bg"
+                android:orientation="vertical"
+                android:paddingStart="14dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="延迟链路"
+                        android:textColor="#A9C2D2"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/monitorChainTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textColor="#F7F3F7"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/monitorChainBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="9dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#14FFFFFF"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/chainNetwork"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="#6FA8FF" />
+
+                    <View
+                        android:id="@+id/chainHost"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="2dp"
+                        android:layout_weight="1"
+                        android:background="#B48CFF" />
+
+                    <View
+                        android:id="@+id/chainDecode"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="2dp"
+                        android:layout_weight="1"
+                        android:background="#4FD1C5" />
+
+                    <View
+                        android:id="@+id/chainRender"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="2dp"
+                        android:layout_weight="1"
+                        android:background="#F5A3C7" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/monitorChainText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="网络 -- · 主机 -- · 解码 -- · 渲染 --"
+                    android:textColor="#8FA6B6"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ================= 码率 ================= -->
+        <LinearLayout
+            android:id="@+id/pageBitrate"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/companion_panel_bg"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="当前串流码率"
+                android:textColor="#A9C2D2"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/bitrateValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:includeFontPadding="false"
+                    android:text="--"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="64sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="Mbps"
+                    android:textColor="#8FA6B6"
+                    android:textSize="20sp" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/bitrateSeek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:max="59"
+                android:progressBackgroundTint="#26FFFFFF"
+                android:progressTint="#2F9BFF"
+                android:thumbTint="#2F9BFF" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0.5 Mbps"
+                    android:textColor="#6F8798"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="200 Mbps"
+                    android:textColor="#6F8798"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="76dp"
+                android:layout_marginTop="14dp"
+                android:background="#14FFFFFF"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="动态码率"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:text="按网络状况自动升降"
+                        android:textColor="#8FA6B6"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/bitrateAbrSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/bitrateHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="松开滑块后立即应用到当前串流"
+                android:textColor="#6F8798"
+                android:textSize="16sp" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- ================= 输入 ================= -->
+        <LinearLayout
+            android:id="@+id/pageInput"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="陀螺仪"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="体感瞄准与右摇杆模拟"
+                        android:textColor="#8FA6B6"
+                        android:textSize="16sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/inputGyroSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="音频振动"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="把串流音频转换成手柄振动"
+                        android:textColor="#8FA6B6"
+                        android:textSize="16sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/inputAudioHapticsSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:background="@drawable/companion_panel_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="手柄触控板"
+                        android:textColor="#F7F3F7"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="把 DS5 触控板当作鼠标"
+                        android:textColor="#8FA6B6"
+                        android:textSize="16sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/inputTouchpadSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ================= 快捷 ================= -->
+        <LinearLayout
+            android:id="@+id/pageQuick"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/quickEsc"
+                    style="@style/CompanionQuickKey"
+                    android:text="Esc" />
+
+                <TextView
+                    android:id="@+id/quickWin"
+                    style="@style/CompanionQuickKey"
+                    android:text="Win" />
+
+                <TextView
+                    android:id="@+id/quickAltTab"
+                    style="@style/CompanionQuickKey"
+                    android:text="Alt+Tab" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/quickKeyboard"
+                    style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_send_keys_cute"
+                    android:text="键盘" />
+
+                <TextView
+                    android:id="@+id/quickPerf"
+                    style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_performance_cute"
+                    android:text="性能" />
+
+                <TextView
+                    android:id="@+id/quickHdr"
+                    style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_btn_hdr"
+                    android:text="HDR" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/quickMic"
+                    style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_mic_gm"
+                    android:text="麦克风" />
+
+                <TextView
+                    android:id="@+id/quickController"
+                    style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_controller_cute"
+                    android:text="虚拟手柄" />
+
+                <TextView
+                    android:id="@+id/quickQuit"
+                    style="@style/CompanionQuickKey"
+                    android:drawableTop="@drawable/ic_btn_quit"
+                    android:text="断开" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+</LinearLayout>

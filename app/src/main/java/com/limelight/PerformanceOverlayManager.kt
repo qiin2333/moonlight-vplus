@@ -437,12 +437,21 @@ class PerformanceOverlayManager(
         activity.runOnUiThread {
             showOverlayIfNeeded()
             updateBatteryDisplayIfNeeded()
+            // 副屏等外部观察者始终拿到最新快照，即使主屏没有开启 HUD。
+            val snapshot = buildHudSnapshot(performanceInfo)
+            lastHudSnapshot = snapshot
+            snapshotListener?.invoke(snapshot)
             if (isHudStyle()) {
                 updateHud(performanceInfo)
             } else {
                 updatePerformanceViewsWithStyledText(performanceInfo)
             }
         }
+    }
+
+    /** 副屏监控面板订阅性能快照；回调在主线程。传 null 取消订阅。 */
+    fun setSnapshotListener(listener: ((PerfHudSnapshot) -> Unit)?) {
+        snapshotListener = listener
     }
 
     fun setActualDisplayRefreshRate(refreshRate: Float) {
@@ -1703,6 +1712,7 @@ class PerformanceOverlayManager(
 
     private var hudVisibility = PerfHudVisibility()
     private var lastHudSnapshot: PerfHudSnapshot? = null
+    private var snapshotListener: ((PerfHudSnapshot) -> Unit)? = null
     private var hudHintChecked = false
 
     private fun buildHudStrings(): PerfHudStrings {

@@ -87,6 +87,7 @@ import com.limelight.services.KeyboardAccessibilityService
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
@@ -104,6 +105,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import androidx.preference.PreferenceManager
 import android.util.Rational
+import android.hardware.display.DisplayManager
 import android.view.Display
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -372,6 +374,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     var usbDriverServiceManager: UsbDriverServiceManager? = null
     var externalDisplayManager: ExternalDisplayManager? = null
+    private var secondScreenCompanion: SecondScreenCompanion? = null
     private lateinit var targetDisplayResolver: TargetDisplayResolver
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -910,6 +913,38 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         } else {
             callback.onExternalDisplayDisconnected()
         }
+        updateSecondScreenCompanion(manager.isUsingExternalDisplay())
+    }
+
+    /**
+     * 掌机的第二块屏比主屏小：串流留在主屏，副屏显示监控/控制面板。
+     * 外接大屏（电视/显示器）仍沿用原有的“串流到外屏”行为，不弹面板。
+     */
+    private fun updateSecondScreenCompanion(streamOnExternalDisplay: Boolean) {
+        if (streamOnExternalDisplay) {
+            secondScreenCompanion?.dismiss()
+            secondScreenCompanion = null
+            return
+        }
+
+        if (secondScreenCompanion != null) return
+
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            ?: return
+        val defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY) ?: return
+        val defaultArea = defaultDisplay.mode.physicalWidth.toLong() *
+                defaultDisplay.mode.physicalHeight
+        val companionDisplay = displayManager
+            .getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+            .firstOrNull { display ->
+                display.displayId != Display.DEFAULT_DISPLAY &&
+                        display.isValid &&
+                        display.mode.physicalWidth.toLong() * display.mode.physicalHeight < defaultArea
+            } ?: return
+
+        val companion = SecondScreenCompanion(this, companionDisplay, performanceOverlayManager)
+        secondScreenCompanion = companion
+        companion.show()
     }
 
     /** Bind or re-bind the USB driver service with the current controllerHandler. */
@@ -1928,6 +1963,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             inputCaptureProvider.destroy()
         }
         externalDisplayManager?.cleanup()
+        secondScreenCompanion?.dismiss()
+        secondScreenCompanion = null
         microphoneManager?.stopMicrophoneStream()
         clipboardSyncManager?.stop()
         clipboardSyncManager = null

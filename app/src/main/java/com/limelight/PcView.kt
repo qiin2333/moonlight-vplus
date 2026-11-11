@@ -3436,8 +3436,8 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         val density = resources.displayMetrics.density
         val screenWidth = resources.displayMetrics.widthPixels
         val availableWidth = screenWidth - gridView.paddingStart - gridView.paddingEnd
-        val spacingPx = (15f * density).toInt()
-        val minColumnPx = (180f * density).toInt()
+        val spacingPx = (18f * density).toInt()
+        val minColumnPx = (300f * density).toInt()
 
         val numColumns = 1.coerceAtLeast((availableWidth + spacingPx) / (minColumnPx + spacingPx))
         val columnWidth = (availableWidth - (numColumns - 1) * spacingPx) / numColumns

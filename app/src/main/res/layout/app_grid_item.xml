@@ -4,35 +4,48 @@
     android:layout_width="@dimen/appview_large_card_width"
     android:layout_height="@dimen/appview_large_card_height"
     android:stateListAnimator="@animator/expressive_item_state"
-    android:padding="@dimen/appview_large_card_padding"
+    android:padding="8dp"
     android:focusable="true"
     android:focusableInTouchMode="false"
     android:background="?android:attr/selectableItemBackground">
+
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:cardCornerRadius="@dimen/corner_radius_small">
-    <ImageView
-        android:id="@+id/grid_image"
-        android:scaleType="centerCrop"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-    </ImageView>
-    <ImageView
-        android:id="@+id/grid_overlay"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="8dp"
-        android:layout_width="50dp"
-        android:layout_height="50dp">
-    </ImageView>
-    <TextView
-        android:id="@+id/grid_text"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/grid_overlay"
-        android:layout_margin="5dp"
-        android:gravity="center"
-        android:textSize="18sp">
-    </TextView>
+        app:cardCornerRadius="@dimen/corner_radius_small"
+        app:cardElevation="0dp">
+
+        <ImageView
+            android:id="@+id/grid_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop" />
+
+        <TextView
+            android:id="@+id/grid_text"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/steam_card_scrim"
+            android:ellipsize="end"
+            android:gravity="bottom|start"
+            android:maxLines="2"
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp"
+            android:shadowColor="#B3000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="8"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/grid_overlay"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp" />
     </androidx.cardview.widget.CardView>
 </androidx.constraintlayout.widget.ConstraintLayout>
