@@ -409,7 +409,7 @@ internal fun AboutDialogContent(
                             .padding(start = 28.dp, top = 28.dp, end = 32.dp, bottom = 24.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.vplus),
+                            painter = painterResource(R.drawable.dual_icon_mark),
                             contentDescription = stringResource(R.string.app_label),
                             tint = Color.Unspecified,
                             modifier = Modifier.size(76.dp)
@@ -568,7 +568,7 @@ private fun LandscapeAboutContent(
             modifier = Modifier.width(230.dp)
         ) {
             Icon(
-                painter = painterResource(R.drawable.vplus),
+                painter = painterResource(R.drawable.dual_icon_mark),
                 contentDescription = stringResource(R.string.app_label),
                 tint = Color.Unspecified,
                 modifier = Modifier.size(76.dp)

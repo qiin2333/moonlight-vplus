@@ -987,6 +987,28 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
         }
 
         updateLastSettingsInfo(app)
+        pushAppContextToCompanion(app, position)
+    }
+
+    /** 把选中的应用推给副屏：副屏显示详情和「开始串流」，选择与详情分处两屏。 */
+    private fun pushAppContextToCompanion(app: AppObject, position: Int) {
+        val companion = BrowseScreenCompanion.current ?: return
+        val running = lastRunningAppId != 0 && app.app.appId == lastRunningAppId
+        companion.setAppContext(
+            BrowseScreenCompanion.AppContext(
+                hostName = computerName,
+                appName = app.app.appName,
+                running = running,
+                summary = lastSettingsSummary?.let { sm ->
+                    listOf(sm.metricsLine, sm.timeLabel).filter { it.isNotBlank() }.joinToString("\n") +
+                        sm.rows.take(4).joinToString("") { "\n${it.first}：${it.second}" }
+                }.orEmpty(),
+                onPrimary = {
+                    if (lastRunningAppId != 0) showAppActionSheetForPosition(position)
+                    else startStreamWithLastSettingsIfEnabled(app)
+                }
+            )
+        )
     }
 
     /**
@@ -1509,6 +1531,7 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
     }
 
     override fun onDestroy() {
+        BrowseScreenCompanion.current?.setAppContext(null)
         if (::topPanelHandleController.isInitialized) {
             topPanelHandleController.release()
         }
@@ -1549,6 +1572,9 @@ class AppView : ThemedComponentActivity(), AdapterFragmentCallbacks {
 
     override fun onResume() {
         super.onResume()
+        appGridAdapter?.takeIf { selectedPosition in 0 until it.count }?.let { ad ->
+            (ad.getItem(selectedPosition) as? AppObject)?.let { pushAppContextToCompanion(it, selectedPosition) }
+        }
 
         // Display a decoder crash notification if we've returned after a crash
         UiHelper.showDecoderCrashDialog(this)

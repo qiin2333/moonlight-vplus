@@ -410,6 +410,8 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
      * X 添加主机，Y 打开当前选中主机的操作菜单，Start 打开设置，Select 显示/隐藏未配对设备。
      */
     private fun handleGamepadShortcut(event: KeyEvent): Boolean {
+        // 「副屏操作」模式下，手柄按键整体转给副屏。
+        if (browseCompanion?.handleKey(event) == true) return true
         if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return false
         when (event.keyCode) {
             KeyEvent.KEYCODE_BUTTON_X -> showAddComputerActionSheet()
@@ -422,7 +424,10 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
                 showHostActionSheet(computer.details)
             }
             KeyEvent.KEYCODE_BUTTON_START -> startActivity(Intent(this, StreamSettings::class.java))
-            KeyEvent.KEYCODE_BUTTON_SELECT -> toggleUnpairedDevices()
+            KeyEvent.KEYCODE_BUTTON_L1 -> if (browseCompanion != null) browseCompanion?.cycleTab(-1) else return false
+            KeyEvent.KEYCODE_BUTTON_R1 -> if (browseCompanion != null) browseCompanion?.cycleTab(1) else return false
+            KeyEvent.KEYCODE_BUTTON_SELECT ->
+                if (browseCompanion != null) browseCompanion?.toggleRemoteFocus() else toggleUnpairedDevices()
             else -> return false
         }
         return true

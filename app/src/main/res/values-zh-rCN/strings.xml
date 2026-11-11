@@ -2497,7 +2497,7 @@
     <string name="companion_touchpad_off">手柄触控板已关闭</string>
     <string name="companion_chain_format">网络 %1$.0f · 主机 %2$.0f · 解码 %3$.0f · 渲染 %4$.0f</string>
     <string name="browse_tab_settings">串流设置</string>
-    <string name="browse_hosts_hint">点击主机连接 · 长按更多操作</string>
+    <string name="browse_hosts_hint">点击连接 · Y 键更多操作</string>
     <string name="browse_hosts_empty">还没有主机，请在主屏添加</string>
     <string name="browse_hosts_more">主屏还有 %1$d 台主机</string>
     <string name="browse_paired">已配对</string>
@@ -2524,4 +2524,13 @@
     <string name="menu_sub_restore">接着上一次的串流继续</string>
     <string name="menu_sub_unpaired">显示或隐藏未配对的主机</string>
     <string name="menu_sub_theme">明暗模式与强调色</string>
+    <string name="browse_hint_browse">L1/R1 切页 · Select 用手柄操作副屏</string>
+    <string name="browse_hint_remote">方向键移动 · A 确认 · B 退出 · L1/R1 切页</string>
+    <string name="browse_hint_app">A 开始 · Y 更多 · B 返回</string>
+    <string name="browse_app_running">运行中</string>
+    <string name="browse_app_idle">未运行</string>
+    <string name="browse_app_start">开始串流</string>
+    <string name="browse_app_resume">恢复串流 / 更多操作</string>
+    <string name="browse_status_hosts">主机在线 %1$d/%2$d</string>
+    <string name="browse_app_host">主机 · %1$s</string>
 </resources>

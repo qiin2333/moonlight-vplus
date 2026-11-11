@@ -2576,7 +2576,7 @@ Tap again to replace it.</string>
     <string name="companion_touchpad_off">Controller touchpad off</string>
     <string name="companion_chain_format">Network %1$.0f · Host %2$.0f · Decode %3$.0f · Render %4$.0f</string>
     <string name="browse_tab_settings">Stream settings</string>
-    <string name="browse_hosts_hint">Tap a host to connect · Long-press for more</string>
+    <string name="browse_hosts_hint">Tap to connect · Y for more</string>
     <string name="browse_hosts_empty">No hosts yet. Add one on the main screen.</string>
     <string name="browse_hosts_more">%1$d more hosts on the main screen</string>
     <string name="browse_paired">Paired</string>
@@ -2603,4 +2603,13 @@ Tap again to replace it.</string>
     <string name="menu_sub_restore">Pick up the last stream</string>
     <string name="menu_sub_unpaired">Show or hide hosts that are not paired</string>
     <string name="menu_sub_theme">Light, dark and accent color</string>
+    <string name="browse_hint_browse">L1/R1 switch page · Select: control this screen</string>
+    <string name="browse_hint_remote">D-pad move · A OK · B exit · L1/R1 page</string>
+    <string name="browse_hint_app">A Start · Y More · B Back</string>
+    <string name="browse_app_running">Running</string>
+    <string name="browse_app_idle">Not running</string>
+    <string name="browse_app_start">Start streaming</string>
+    <string name="browse_app_resume">Resume / more actions</string>
+    <string name="browse_status_hosts">Hosts online %1$d/%2$d</string>
+    <string name="browse_app_host">Host · %1$s</string>
 </resources>

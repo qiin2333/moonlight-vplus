@@ -9,6 +9,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
+import android.view.KeyEvent
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import java.text.DateFormat
+import java.util.Date
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
@@ -42,7 +48,23 @@ class BrowseScreenCompanion(
         val action: () -> Unit
     )
 
+    /** AppView 里当前选中的应用；副屏据此显示详情并提供「开始串流」。 */
+    data class AppContext(
+        val hostName: String,
+        val appName: String,
+        val running: Boolean,
+        val summary: String,
+        val onPrimary: () -> Unit
+    )
+
     private var presentation: BrowsePresentation? = null
+
+    fun setAppContext(ctx: AppContext?) { presentation?.bindAppContext(ctx) ?: run { pendingAppContext = ctx } }
+    private var pendingAppContext: AppContext? = null
+
+    fun cycleTab(delta: Int) { presentation?.cycleTab(delta) }
+    fun toggleRemoteFocus(): Boolean = presentation?.toggleRemoteFocus() ?: false
+    fun handleKey(event: KeyEvent): Boolean = presentation?.handleKey(event) ?: false
 
     fun show() {
         if (presentation != null) return
@@ -54,12 +76,15 @@ class BrowseScreenCompanion(
             return
         }
         presentation = next
+        current = this
         CompanionDisplays.active = display
+        pendingAppContext?.let { next.bindAppContext(it) }
     }
 
     fun dismiss() {
         presentation?.dismiss()
         presentation = null
+        if (current === this) current = null
         if (CompanionDisplays.active?.displayId == display.displayId) CompanionDisplays.active = null
     }
 
@@ -77,6 +102,9 @@ class BrowseScreenCompanion(
         private lateinit var hostList: LinearLayout
         private lateinit var hostHint: TextView
         private var hostSignature: List<String>? = null
+        private var tabIndex = 0
+        private var remoteFocus = false
+        private var appContext: AppContext? = null
 
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -100,6 +128,115 @@ class BrowseScreenCompanion(
             findViewById<View>(R.id.browseOpenSettings).setOnClickListener { onOpenSettings() }
             selectTab(0)
             refresh()
+            appContext = pendingAppContext
+            applyAppContext()
+        }
+
+        fun cycleTab(delta: Int) {
+            selectTab((tabIndex + delta + tabs.size) % tabs.size)
+            if (remoteFocus) focusFirstOnPage()
+        }
+
+        fun bindAppContext(ctx: AppContext?) {
+            appContext = ctx
+            applyAppContext()
+        }
+
+        private fun applyAppContext() {
+            val ctx = appContext
+            val show = ctx != null
+            findViewById<View>(R.id.appPanel).visibility = if (show) View.VISIBLE else View.GONE
+            hostList.visibility = if (show) View.GONE else View.VISIBLE
+            hostHint.visibility = if (show) View.GONE else View.VISIBLE
+            if (ctx != null) {
+                findViewById<TextView>(R.id.appPanelHost).text = context.getString(R.string.browse_app_host, ctx.hostName)
+                findViewById<TextView>(R.id.appPanelName).text = ctx.appName
+                findViewById<TextView>(R.id.appPanelStatus).apply {
+                    text = context.getString(if (ctx.running) R.string.browse_app_running else R.string.browse_app_idle)
+                    setTextColor(if (ctx.running) 0xFF6FD49A.toInt() else 0xFF8FA6B6.toInt())
+                }
+                findViewById<TextView>(R.id.appPanelSummary).text = ctx.summary
+                findViewById<TextView>(R.id.appPanelAction).apply {
+                    text = context.getString(if (ctx.running) R.string.browse_app_resume else R.string.browse_app_start)
+                    setOnClickListener { ctx.onPrimary() }
+                }
+            }
+            updateHint()
+        }
+
+        fun toggleRemoteFocus(): Boolean {
+            remoteFocus = !remoteFocus
+            if (remoteFocus) focusFirstOnPage() else window?.decorView?.findFocus()?.clearFocus()
+            updateHint()
+            return remoteFocus
+        }
+
+        private fun focusFirstOnPage() {
+            val target = when {
+                tabIndex == 0 && appContext != null -> findViewById<View>(R.id.appPanelAction)
+                else -> pages[tabIndex]
+            }
+            target.requestFocus()
+        }
+
+        /** 主屏收到的手柄按键在「副屏操作」模式下转交这里：方向键移焦点，A 点击，B 退出。 */
+        fun handleKey(event: KeyEvent): Boolean {
+            if (!remoteFocus) return false
+            val isDown = event.action == KeyEvent.ACTION_DOWN
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_BACK -> {
+                    if (isDown) toggleRemoteFocus()
+                    return true
+                }
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (isDown && event.repeatCount == 0) {
+                        window?.decorView?.findFocus()?.performClick()
+                    }
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (isDown) {
+                        val dir = when (event.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP
+                            KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
+                            KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT
+                            else -> View.FOCUS_RIGHT
+                        }
+                        val root = window?.decorView
+                        val focused = root?.findFocus()
+                        if (focused == null) focusFirstOnPage()
+                        else (focused.focusSearch(dir) ?: focused).requestFocus(dir)
+                    }
+                    return true
+                }
+            }
+            return false
+        }
+
+        private fun updateHint() {
+            val res = when {
+                remoteFocus -> R.string.browse_hint_remote
+                tabIndex == 0 && appContext != null -> R.string.browse_hint_app
+                else -> R.string.browse_hint_browse
+            }
+            findViewById<TextView>(R.id.browseHint).setText(res)
+        }
+
+        private fun bindStatus() {
+            val hosts = hostsProvider()
+            val online = hosts.count { it.state == ComputerDetails.State.ONLINE }
+            val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val level = battery?.let {
+                val l = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val sc = it.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+                if (l >= 0 && sc > 0) l * 100 / sc else -1
+            } ?: -1
+            val time = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())
+            val parts = mutableListOf(context.getString(R.string.browse_status_hosts, online, hosts.size))
+            if (level >= 0) parts += "$level%"
+            parts += time
+            findViewById<TextView>(R.id.browseStatus).text = parts.joinToString(" · ")
         }
 
         override fun onStart() {
@@ -114,10 +251,12 @@ class BrowseScreenCompanion(
         }
 
         private fun selectTab(index: Int) {
+            tabIndex = index
             pages.forEachIndexed { i, page -> page.visibility = if (i == index) View.VISIBLE else View.GONE }
             tabs.forEachIndexed { i, tab -> tab.isSelected = i == index }
             if (index == 1) bindSettingsSummary()
             if (index == 2) bindMenu()
+            updateHint()
         }
 
         private fun bindMenu() {
@@ -178,6 +317,7 @@ class BrowseScreenCompanion(
         }
 
         private fun refresh() {
+            bindStatus()
             if (pages[1].visibility == View.VISIBLE) bindSettingsSummary()
             bindHosts()
         }
@@ -276,8 +416,13 @@ class BrowseScreenCompanion(
         }
     }
 
-    private companion object {
-        const val MAX_ROWS = 3
-        const val REFRESH_INTERVAL_MS = 1000L
+    companion object {
+        /** 当前显示中的浏览态副屏（AppView 等界面据此推送选中项）。 */
+        @Volatile
+        var current: BrowseScreenCompanion? = null
+            private set
+
+        private const val MAX_ROWS = 3
+        private const val REFRESH_INTERVAL_MS = 1000L
     }
 }
