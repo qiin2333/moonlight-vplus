@@ -1,1 +1,1 @@
-Spiele von deinem PC auf Android spielen (mit NVIDIA oder SunshineStream)
+Streaming-Client für Sunshine, gemacht für Handhelds mit zwei Bildschirmen.

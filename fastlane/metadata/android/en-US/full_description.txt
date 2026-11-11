@@ -1,4 +1,4 @@
-Moonlight V+ is an enhanced version of the popular Moonlight game streaming app, featuring advanced capabilities and optimizations for the ultimate streaming experience.
+Moonlight Dual is a game-streaming client for Sunshine, built for dual-screen handhelds.
 
 Pair Moonlight V+ with <a href="https://github.com/AlkaidLab/foundation-sunshine">Foundation Sunshine</a>, our recommended host, to stream games, programs, or your desktop over a local network or the Internet. Standard streaming also works with <a href="https://github.com/LizardByte/Sunshine">Sunshine</a>. Mouse, keyboard, and controller input is sent from your Android device to the PC.
 

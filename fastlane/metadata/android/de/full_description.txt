@@ -1,4 +1,4 @@
-Moonlight V+ ist ein erweiterter Android-Client für Spiele- und Desktop-Streaming. Als Host empfehlen wir Foundation Sunshine, das zu Moonlight V+ passt. Standard-Streaming funktioniert auch mit Sunshine. Bild und Ton werden auf dein Android-Gerät übertragen; Eingaben von Touchscreen, Tastatur, Maus oder Controller gehen an den PC.
+Moonlight Dual ist ein Streaming-Client für Sunshine, gemacht für Handhelds mit zwei Bildschirmen.
 
 Funktionen:
 * Benutzerdefinierte Auflösungen und hohe Bildwiederholraten, sofern Host und Gerät sie unterstützen

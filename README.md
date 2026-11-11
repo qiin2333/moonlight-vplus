@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./app/src/main/res/drawable/vplus.webp" width="100" alt="Moonlight V+ Logo">
 
-  # Moonlight V+
+  # Moonlight Dual
 
   [![GitHub Release](https://img.shields.io/github/v/release/qiin2333/moonlight-vplus?label=latest&style=flat-square)](https://github.com/qiin2333/moonlight-vplus/releases/latest)
   [![Android](https://img.shields.io/badge/Android-5.0+-34A853?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/about/versions)
@@ -9,7 +9,7 @@
   [![GitHub Stars](https://img.shields.io/github/stars/qiin2333/moonlight-vplus?style=flat-square)](https://github.com/qiin2333/moonlight-vplus/stargazers)
   [![Downloads](https://img.shields.io/github/downloads/qiin2333/moonlight-vplus/total?style=flat-square&color=blue)](https://github.com/qiin2333/moonlight-vplus/releases)
 
-  **基于 [Moonlight](https://github.com/moonlight-stream/moonlight-android) 的增强版 Android 游戏串流客户端**
+  **专为 Sunshine 打造的串流客户端，面向双屏掌机。**
 
   [English](README_EN.md) | 中文
 

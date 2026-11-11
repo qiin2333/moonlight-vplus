@@ -1,1 +1,1 @@
-Enhanced game streaming with 144Hz support, HDR, and advanced features
+A game-streaming client for Sunshine, built for dual-screen handhelds.
