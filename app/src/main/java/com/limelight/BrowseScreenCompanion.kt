@@ -148,7 +148,7 @@ class BrowseScreenCompanion(
             val show = ctx != null
             findViewById<View>(R.id.appPanel).visibility = if (show) View.VISIBLE else View.GONE
             hostList.visibility = if (show) View.GONE else View.VISIBLE
-            hostHint.visibility = if (show) View.GONE else View.VISIBLE
+            hostHint.visibility = View.GONE
             if (ctx != null) {
                 findViewById<TextView>(R.id.appPanelHost).text = context.getString(R.string.browse_app_host, ctx.hostName)
                 findViewById<TextView>(R.id.appPanelName).text = ctx.appName
