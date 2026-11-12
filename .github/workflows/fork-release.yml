@@ -2,9 +2,10 @@ name: Fork Release
 
 # Publishes a debug-signed APK as a GitHub release. The upstream release job
 # needs the upstream signing keystore, so forks use this workflow instead.
+# Pushing a branch named release/<tag> builds that commit and releases it as <tag>.
 on:
   push:
-    tags: [ 'ko-*' ]
+    branches: [ 'release/ko-*' ]
 
 permissions:
   contents: write
@@ -53,9 +54,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          tag="${GITHUB_REF_NAME#release/}"
           src=$(find app/build/outputs/apk/nonRoot/debug -maxdepth 1 -type f -name '*.apk' -print -quit)
           test -n "$src"
-          apk="Moonlight.V+.${GITHUB_REF_NAME}.apk"
+          apk="Moonlight.V+.${tag}.apk"
           cp "$src" "$apk"
           {
             cat .github/release/fork-notes.md
@@ -67,10 +69,13 @@ jobs:
             echo '```'
           } > release_notes.md
           echo "REL_APK=$apk" >> "$GITHUB_ENV"
+          echo "REL_TAG=$tag" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Moonlight V+ ${{ github.ref_name }}
+          tag_name: ${{ env.REL_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Moonlight V+ ${{ env.REL_TAG }}
           body_path: release_notes.md
           files: ${{ env.REL_APK }}
