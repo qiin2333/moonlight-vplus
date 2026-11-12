@@ -24,8 +24,8 @@ class ExecutorDelayerTest {
         // — visible as BLOCKED on the poster's lock — before registration can complete.
         val executor = object : ScheduledExecutorService by real {
             override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
-                parked.countDown()
                 val future = real.schedule(command, delay, unit)
+                parked.countDown()
                 releaseSchedule.await(2, TimeUnit.SECONDS)
                 return future
             }
