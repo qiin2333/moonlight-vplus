@@ -660,8 +660,8 @@ internal class DeviceVibrationCoordinator(
         }
     }
 
-    private companion object {
-        val THREAD_NUMBER = AtomicInteger()
+    internal companion object {
+        private val THREAD_NUMBER = AtomicInteger()
         // Long one-shot effects are reprogrammed only four times per second. Some vendor
         // vibrator services deadlock when effects are replaced at controller packet rate.
         // Start/stop edges bypass level pacing. Native writes stay serialized; hardware
@@ -672,7 +672,7 @@ internal class DeviceVibrationCoordinator(
         const val MAXIMUM_TOUCH_DURATION_MS = 1_000L
         const val NATIVE_IDLE_WARM_MS = 1_500L
 
-        fun newWorker(): ScheduledExecutorService {
+        internal fun newWorker(): ScheduledExecutorService {
             val threadNumber = THREAD_NUMBER.incrementAndGet()
             return Executors.newSingleThreadScheduledExecutor { runnable ->
                 Thread(runnable, "DeviceVibration-$threadNumber").apply { isDaemon = true }

@@ -47,6 +47,12 @@ internal class AuthoredIrCoordinator(
         if (stopped || !enabled() || frame.controllerNumber.toInt() !in 0 until 16) return@synchronized
         if (!timelines.getOrPut(frame.controllerNumber, ::AuthoredIrTimeline)
                 .accept(frame, clockMs() * 1000)) return@synchronized
+        if (frame.ended && frame.controllerNumber.toInt() == 0) {
+            // Release the phone sink on the receive thread: route()'s ended handling only
+            // repeats this idempotent release, and queueing it behind the main loop makes the
+            // stop audible-late whenever the game is loading or rendering heavily.
+            phone.resetAuthoredIr()
+        }
         pendingLegacy.remove(frame.controllerNumber)
         wakeLocked()
     }
