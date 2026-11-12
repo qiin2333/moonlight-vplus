@@ -164,4 +164,34 @@ class DisplayChoiceListsTest {
             assertFalse(limits.exceedsRefreshRate(value))
         }
     }
+
+    @Test
+    fun aspectMatchedValuesKeepEachHeightTierAndFollowTheDisplayRatio() {
+        // 16:10 tablet: every tier below the panel height gets a width that fills the screen.
+        assertEquals(
+            listOf("1152x720", "1728x1080", "2304x1440"),
+            DisplayChoiceLists.aspectMatchedValues(store, 2960 to 1848)
+        )
+        // 20:9 phone: only tiers that fit inside the panel are offered.
+        assertEquals(
+            listOf("1600x720"),
+            DisplayChoiceLists.aspectMatchedValues(store, 2400 to 1080)
+        )
+    }
+
+    @Test
+    fun aspectMatchedValuesAddNothingForSixteenByNineOrUnknownDisplays() {
+        assertEquals(emptyList<String>(), DisplayChoiceLists.aspectMatchedValues(store, 3840 to 2160))
+        assertEquals(emptyList<String>(), DisplayChoiceLists.aspectMatchedValues(store, null))
+        assertEquals(emptyList<String>(), DisplayChoiceLists.aspectMatchedValues(store, 0 to 0))
+    }
+
+    @Test
+    fun aspectMatchedValuesJoinTheChoiceListWithoutChangingTheStore() {
+        val aspect = DisplayChoiceLists.aspectMatchedValues(store, 2960 to 1848)
+        val values = DisplayChoiceLists.resolutionValues(store, "1920x1080", aspect)
+        assertTrue(values.containsAll(store))
+        assertTrue(values.containsAll(aspect))
+        assertEquals("Native", values.last())
+    }
 }

@@ -639,8 +639,9 @@ internal class BitrateCardController(
         val limits = displayChoiceLimits()
         val storeValues = cachedStoreResolutions
             ?: DisplayChoiceLists.resolutionStoreValues(game).also { cachedStoreResolutions = it }
+        val aspectValues = DisplayChoiceLists.aspectMatchedValues(storeValues, cachedNativeSize)
         return DisplayChoiceLists
-            .resolutionValues(storeValues, currentResolutionValue(), listOf(selected))
+            .resolutionValues(storeValues, currentResolutionValue(), listOf(selected) + aspectValues)
             .map { value ->
                 val isSelected = value == selected
                 when (value) {
@@ -656,7 +657,9 @@ internal class BitrateCardController(
                             ?: compactResolutionLabel(value),
                         selected = isSelected,
                         enabled = limits.supportsResolution(value),
-                        subLabel = if (value !in storeValues) {
+                        subLabel = if (value in aspectValues) {
+                            game.getString(R.string.display_resolution_device_aspect)
+                        } else if (value !in storeValues) {
                             game.getString(R.string.display_resolution_current_not_saved)
                         } else {
                             prettyResolution(value)

@@ -2491,6 +2491,7 @@ Tap again to replace it.</string>
     <string name="float_ball_summary_custom_position">Dragged position</string>
     <string name="float_ball_summary_search">%1$s\nIncludes: %2$s</string>
     <string name="display_resolution_current_not_saved">Currently in use · Not saved in list</string>
+    <string name="display_resolution_device_aspect">Matches this display\'s aspect ratio</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">Precise sync (enhanced)</string>
     <string name="pacing_label_precise_sync">Precise sync</string>

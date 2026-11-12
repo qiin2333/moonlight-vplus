@@ -1350,9 +1350,11 @@ class StreamSettings : ThemedAppCompatActivity() {
             val saved = savedSelection(pref, PreferenceConfiguration.DEFAULT_RESOLUTION)
             val displayNative = DisplayChoiceLists.nativeSize(requireActivity(), getTargetDisplay())
             val storedValues = DisplayChoiceLists.resolutionStoreValues(requireActivity())
+            val aspectValues = DisplayChoiceLists.aspectMatchedValues(storedValues, displayNative)
             val choiceValues = DisplayChoiceLists.resolutionValues(
                 storedValues,
-                saved
+                saved,
+                aspectValues
             )
             val choiceLabels = choiceValues.map { value ->
                 when {
@@ -1364,6 +1366,8 @@ class StreamSettings : ThemedAppCompatActivity() {
                 if (value == PreferenceConfiguration.RES_NATIVE) {
                     val size = displayNative?.let { "${it.first}×${it.second}" } ?: "—"
                     getString(R.string.display_native_resolution_description, size)
+                } else if (value in aspectValues) {
+                    getString(R.string.display_resolution_device_aspect)
                 } else if (value == saved && value !in storedValues) {
                     getString(R.string.display_resolution_current_not_saved)
                 } else if (value in labels) {

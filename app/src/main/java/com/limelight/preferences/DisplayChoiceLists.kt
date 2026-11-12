@@ -44,6 +44,35 @@ internal object DisplayChoiceLists {
         return values + PreferenceConfiguration.RES_NATIVE
     }
 
+    /**
+     * Resolutions that fill the display without letterboxing: one per height tier already in
+     * the list, with the width recomputed from the display's aspect ratio. A 2960x1848 tablet
+     * gets 1728x1080 next to 1920x1080, for example. Offered as choices only; nothing is saved
+     * until the user picks one.
+     *
+     * @param nativeSize the display size in landscape orientation, as returned by [nativeSize]
+     */
+    fun aspectMatchedValues(storeValues: List<String>, nativeSize: Pair<Int, Int>?): List<String> {
+        val (nativeWidth, nativeHeight) = nativeSize ?: return emptyList()
+        if (nativeWidth <= 0 || nativeHeight <= 0) return emptyList()
+        return storeValues.asSequence()
+            .mapNotNull(ResolutionValidator::parseResolution)
+            .map { it.height }
+            .distinct()
+            // The display's own size is already covered by the Native entry.
+            .filter { it in 1 until nativeHeight }
+            .map { height ->
+                // Hardware encoders are happiest with dimensions aligned to 8 pixels.
+                val exactWidth = height.toLong() * nativeWidth / nativeHeight.toDouble()
+                Resolution((exactWidth / 8).roundToInt() * 8, height)
+            }
+            .filter { ResolutionValidator.isValidWidth(it.width) && ResolutionValidator.isValidHeight(it.height) }
+            .map { it.toString() }
+            .filter { it !in storeValues }
+            .distinct()
+            .toList()
+    }
+
     private fun isFixedResolution(value: String): Boolean {
         val resolution = ResolutionValidator.parseResolution(value) ?: return false
         return resolution.width > 0 && resolution.height > 0
