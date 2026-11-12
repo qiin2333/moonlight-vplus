@@ -36,7 +36,9 @@ class ExecutorDelayerTest {
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
             while (runs.get() == 0 && System.nanoTime() < deadline) Thread.yield()
             assertEquals(1, runs.get())
-            Thread.sleep(300)
+            // Wait past the ORIGINAL 400ms deadline too: an implementation that never
+            // cancelled the replaced task would run it here.
+            Thread.sleep(500)
             assertEquals("A replaced task must not run twice", 1, runs.get())
         } finally {
             executor.shutdownNow()

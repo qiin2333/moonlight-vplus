@@ -570,7 +570,9 @@ internal class DeviceVibrationCoordinator(
         }
         if (gameRefreshCallback != null) return
 
-        val callback = Runnable { refreshGameLease() }
+        val callback = object : Runnable {
+            override fun run() = refreshGameLease(this)
+        }
         gameRefreshCallback = callback
         postDelayed(callback, GAME_SOURCE_REFRESH_MS)
     }
@@ -580,8 +582,12 @@ internal class DeviceVibrationCoordinator(
         gameRefreshCallback = null
     }
 
-    private fun refreshGameLease() {
+    private fun refreshGameLease(task: Runnable) {
         val command = synchronized(lock) {
+            // The worker may start this task before an ownership change cancelled it
+            // (cancel(false) cannot stop a running task). The captured level is then stale,
+            // so only the still-registered callback may act.
+            if (gameRefreshCallback !== task) return
             gameRefreshCallback = null
             if (closed || audioOwned || touchActive) return
             if (levelAmplitude == 0) return

@@ -36,9 +36,12 @@ internal class AuthoredIrCoordinator(
     private var wakePosted = false
     private var stopped = false
     private var nativePhone = false
+    // Bumped on every receive-thread phone release; outputs polled before a release carry
+    // the then-current token and must not re-acquire the phone afterwards.
+    private var phoneReleaseToken = 0L
     private val drainTask = Runnable { drain() }
-    private val drainOutputs = ArrayList<Pair<Short, AuthoredIrTimeline.Output>>()
-    private val drainLegacy = ArrayList<Legacy>()
+    private val drainOutputs = ArrayList<Triple<Short, AuthoredIrTimeline.Output, Long>>()
+    private val drainLegacy = ArrayList<Pair<Legacy, Long>>()
     private val expiredPulses = ArrayList<Short>()
 
     val queuedEvents: Int get() = synchronized(lock) { timelines.values.sumOf { it.queuedEvents } }
@@ -48,9 +51,9 @@ internal class AuthoredIrCoordinator(
         if (!timelines.getOrPut(frame.controllerNumber, ::AuthoredIrTimeline)
                 .accept(frame, clockMs() * 1000)) return@synchronized
         if (frame.ended && frame.controllerNumber.toInt() == 0) {
-            // Release the phone sink on the receive thread: route()'s ended handling only
-            // repeats this idempotent release, and queueing it behind the main loop makes the
-            // stop audible-late whenever the game is loading or rendering heavily.
+            // Release the phone on the receive thread so the stop never queues behind the
+            // main loop; the token invalidates outputs drain() already polled.
+            phoneReleaseToken++
             phone.resetAuthoredIr()
         }
         pendingLegacy.remove(frame.controllerNumber)
@@ -84,13 +87,15 @@ internal class AuthoredIrCoordinator(
         val legacy = drainLegacy
         outputs.clear()
         legacy.clear()
+        var token = 0L
         synchronized(lock) {
             queued = false
             wakePosted = false
+            token = phoneReleaseToken
             for ((number, timeline) in timelines) {
-                timeline.poll(now * 1000)?.let { outputs += number to it }
+                timeline.poll(now * 1000)?.let { outputs += Triple(number, it, token) }
             }
-            legacy.addAll(pendingLegacy.values)
+            pendingLegacy.values.forEach { legacy += it to token }
             pendingLegacy.clear()
         }
         if (pulses.isNotEmpty()) {
@@ -99,16 +104,16 @@ internal class AuthoredIrCoordinator(
             for (number in expiredPulses) {
                 pulses.remove(number)
                 if (outputs.none { it.first == number }) last[number]?.let {
-                    outputs += number to it.copy(event = null, reset = false)
+                    outputs += Triple(number, it.copy(event = null, reset = false), token)
                 }
             }
         }
-        for ((number, output) in outputs) {
+        for ((number, output, outputToken) in outputs) {
             last[number] = if (output.event == null && !output.reset) output
                 else output.copy(event = null, reset = false)
-            route(number, output, now)
+            route(number, output, now, outputToken)
         }
-        for (pending in legacy) routeLegacy(pending, now)
+        for ((pending, pendingToken) in legacy) routeLegacy(pending, now, pendingToken)
         outputs.clear()
         legacy.clear()
         synchronized(lock) {
@@ -127,7 +132,7 @@ internal class AuthoredIrCoordinator(
         }
     }
 
-    private fun route(number: Short, output: AuthoredIrTimeline.Output, now: Long) {
+    private fun route(number: Short, output: AuthoredIrTimeline.Output, now: Long, token: Long) {
         if (output.reset) {
             pulses.remove(number)
             policies.remove(number)
@@ -141,10 +146,6 @@ internal class AuthoredIrCoordinator(
         val pointOnly = targets.hasDevice && policies.getOrPut(number, ::AuthoredIrPhonePolicy)
             .useDetails(output.body, now, output.ended, targets.mode, targets.hasController)
         val native = targets.hasDevice && targets.mode != GameRumbleMode.CONTROLLER && phone.supportsNativeAuthored
-        if (number.toInt() == 0 && nativePhone != native) {
-            phone.resetAuthoredIr()
-            nativePhone = native
-        }
         val eventPower = output.event?.value?.let { maxOf(it.leftStrength, it.rightStrength) } ?: 0f
         if (output.ended) pulses.remove(number)
         else if (eventPower > 0) pulses[number] = eventPower to (now + 60)
@@ -159,28 +160,37 @@ internal class AuthoredIrCoordinator(
         val mixed = mixer.submit(number, RumbleSource.AUTHORED_TRANSIENT, transient, now,
             pulses[number]?.second ?: now)
         if (targets.hasController) renderer.queueController(mixed)
-        if (number.toInt() == 0) {
-            if (native) {
-                val nativeBody = nativePlan?.device ?: ControllerRumbleState.ZERO
-                val gain = strengthPercent().coerceIn(0, 200) / 100f
-                phone.submitNativeAuthored(NativeAuthoredBody.fromBands(
-                    nativeBody.lowFrequency * gain, nativeBody.highFrequency * gain, output.frequencyHintHz),
-                    // Profile 1 strength is a linear local peak, not power. Preserve its
-                    // contrast: sqrt(strength) disproportionately boosted weak points,
-                    // especially when coordinated mode removed the phone's background.
-                    // Keep the old 100%-strength saturation point (2*sqrt(.09) == .6)
-                    // and the native short waveform, without adding a floor or rate gate.
-                    ControllerRumbleState.normalizeAmplitude(eventPower) / SOURCE_POINT_FULL_SCALE *
-                        NATIVE_POINT_FULL_SCALE * gain,
-                    output.bodyValidUntilUs / 1000, output.event?.expiresUs?.div(1000) ?: now,
-                    active = !output.ended && gain > 0)
-            } else {
-                val deviceBody = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
-                    .device ?: ControllerRumbleState.ZERO
-                phone.submitAuthoredIrBody(deviceBody.lowFrequency.toMotorShort(), deviceBody.highFrequency.toMotorShort(),
-                    strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
-                phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,
-                    output.event?.expiresUs?.div(1000) ?: now, details && !output.ended)
+        if (number.toInt() == 0) synchronized(lock) {
+            // The token check and these submissions are atomic against the receive-thread
+            // end release (same lock): a polled-before-reset output must not re-acquire the
+            // phone afterwards, and a release landing mid-route stops whatever reacquired.
+            if (token == phoneReleaseToken) {
+                if (nativePhone != native) {
+                    phone.resetAuthoredIr()
+                    nativePhone = native
+                }
+                if (native) {
+                    val nativeBody = nativePlan?.device ?: ControllerRumbleState.ZERO
+                    val gain = strengthPercent().coerceIn(0, 200) / 100f
+                    phone.submitNativeAuthored(NativeAuthoredBody.fromBands(
+                        nativeBody.lowFrequency * gain, nativeBody.highFrequency * gain, output.frequencyHintHz),
+                        // Profile 1 strength is a linear local peak, not power. Preserve its
+                        // contrast: sqrt(strength) disproportionately boosted weak points,
+                        // especially when coordinated mode removed the phone's background.
+                        // Keep the old 100%-strength saturation point (2*sqrt(.09) == .6)
+                        // and the native short waveform, without adding a floor or rate gate.
+                        ControllerRumbleState.normalizeAmplitude(eventPower) / SOURCE_POINT_FULL_SCALE *
+                            NATIVE_POINT_FULL_SCALE * gain,
+                        output.bodyValidUntilUs / 1000, output.event?.expiresUs?.div(1000) ?: now,
+                        active = !output.ended && gain > 0)
+                } else {
+                    val deviceBody = AuthoredIrAllocator.allocate(targets, output.body, pulse, details)
+                        .device ?: ControllerRumbleState.ZERO
+                    phone.submitAuthoredIrBody(deviceBody.lowFrequency.toMotorShort(), deviceBody.highFrequency.toMotorShort(),
+                        strengthPercent(), !output.ended, output.bodyValidUntilUs / 1000)
+                    phone.submitAuthoredIrDetail(details && output.event != null, if (details) strengthPercent() else 0,
+                        output.event?.expiresUs?.div(1000) ?: now, details && !output.ended)
+                }
             }
         }
         onOutput(number, output)
@@ -203,7 +213,7 @@ internal class AuthoredIrCoordinator(
         if (number.toInt() == 0 && strengthPercent() > 0) it else it.copy(hasDevice = false)
     }
 
-    private fun routeLegacy(pending: Legacy, now: Long) {
+    private fun routeLegacy(pending: Legacy, now: Long, token: Long) {
         val number = pending.controllerNumber
         if (number.toInt() == 0 && nativePhone) { phone.resetAuthoredIr(); nativePhone = false }
         val targets = targetsFor(number)
@@ -215,13 +225,19 @@ internal class AuthoredIrCoordinator(
             plan.controller ?: ControllerRumbleState.ZERO, now, now + 200)
         if (targets.hasController) renderer.queueController(mixed)
         if (number.toInt() == 0) {
-            if (details) phone.submitAuthoredDetail(pending.tickAt?.let { now - it <= 100 } == true,
-                strengthPercent(), !pending.output.ended)
-            else {
-                phone.submitAuthoredDetail(false, 0, false)
-                val device = plan.device ?: ControllerRumbleState.ZERO
-                phone.submitAuthoredIrBody(device.lowFrequency.toMotorShort(), device.highFrequency.toMotorShort(),
-                    strengthPercent(), !pending.output.ended, now + 200)
+            // Same release-token gate as route(): a legacy output polled before an
+            // end-frame reset must not re-acquire the phone afterwards.
+            synchronized(lock) {
+                if (token == phoneReleaseToken) {
+                    if (details) phone.submitAuthoredDetail(pending.tickAt?.let { now - it <= 100 } == true,
+                        strengthPercent(), !pending.output.ended)
+                    else {
+                        phone.submitAuthoredDetail(false, 0, false)
+                        val device = plan.device ?: ControllerRumbleState.ZERO
+                        phone.submitAuthoredIrBody(device.lowFrequency.toMotorShort(), device.highFrequency.toMotorShort(),
+                            strengthPercent(), !pending.output.ended, now + 200)
+                    }
+                }
             }
         }
         scheduleExpiry()
