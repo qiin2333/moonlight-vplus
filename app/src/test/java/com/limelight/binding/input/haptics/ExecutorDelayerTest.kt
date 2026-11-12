@@ -40,6 +40,28 @@ class ExecutorDelayerTest {
             // cancelled the replaced task would run it here.
             Thread.sleep(500)
             assertEquals("A replaced task must not run twice", 1, runs.get())
+            assertEquals("Both the replaced and the completed registration must be gone",
+                0, delayer.pendingCount)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun aCompletedRunDropsItsOwnRegistration() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        val delayer = ExecutorDelayer(executor)
+        val runs = AtomicInteger()
+        val task = Runnable { runs.incrementAndGet() }
+        try {
+            delayer.post(task, 0)
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while ((runs.get() == 0 || delayer.pendingCount != 0) && System.nanoTime() < deadline) {
+                Thread.yield()
+            }
+            assertEquals(1, runs.get())
+            assertEquals("A completed run must not retain its registration",
+                0, delayer.pendingCount)
         } finally {
             executor.shutdownNow()
         }
