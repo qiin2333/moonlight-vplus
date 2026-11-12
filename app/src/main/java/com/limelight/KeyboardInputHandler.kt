@@ -283,7 +283,7 @@ class KeyboardInputHandler(private val game: Game) {
                 return false
             }
 
-            val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
+            val translated = keyboardTranslator.translate(event)
             if (translated.toInt() == 0) {
                 val unicodeChar = event.unicodeChar
                 if ((unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
@@ -301,7 +301,7 @@ class KeyboardInputHandler(private val game: Game) {
 
             sendKeyDown(
                 event.keyCode, translated, getModifierState(event),
-                if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0 else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
+                keyEventFlags(event, translated)
             )
         }
 
@@ -443,7 +443,7 @@ class KeyboardInputHandler(private val game: Game) {
                 return false
             }
 
-            val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
+            val translated = keyboardTranslator.translate(event)
             if (translated.toInt() == 0) {
                 val unicodeChar = event.unicodeChar
                 return (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
@@ -452,11 +452,23 @@ class KeyboardInputHandler(private val game: Game) {
 
             sendTrackedKeyUp(
                 event.keyCode, translated, getModifierState(event),
-                if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0 else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
+                keyEventFlags(event, translated)
             )
         }
 
         return true
+    }
+
+    private fun keyEventFlags(event: KeyEvent, translated: Short): Byte {
+        // Han/Eng and Hanja have no scan code on a US layout. Leaving them marked as
+        // normalized makes the host inject them as plain VK events; flagged as
+        // non-normalized, the host would look up a scan code in its own layout and
+        // could end up pressing Alt or Ctrl instead.
+        if (KeyboardTranslator.isImeKey(translated)) {
+            return 0
+        }
+        return if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
+        else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
     }
 
     fun handleKeyMultiple(event: KeyEvent): Boolean {
