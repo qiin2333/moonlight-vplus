@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <color name="ic_launcher_background">#565C64</color>
+  <!-- 暗黑版图标背景环：取 saba_dark 顶边主色，让前景圆角卡片与背景环无缝衔接 -->
+  <color name="ic_launcher_saba_dark_background">#223C56</color>
 </resources>
