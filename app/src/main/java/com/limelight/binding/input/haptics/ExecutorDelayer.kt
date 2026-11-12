@@ -25,8 +25,8 @@ internal class ExecutorDelayer(private val executor: ScheduledExecutorService) {
     private val lock = Any()
     private val registrations = HashMap<Runnable, Registration>()
 
-    /** Pending entries; exposed for lifecycle assertions in tests. */
-    val pendingCount: Int
+    /** Pending entries; test-only probe for lifecycle assertions, no production callers. */
+    internal val pendingCount: Int
         get() = synchronized(lock) { registrations.size }
 
     fun post(task: Runnable, delayMs: Long) {

@@ -7,21 +7,22 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class ExecutorDelayerTest {
     @Test
     fun aTaskStartingDuringItsOwnRegistrationStillDropsIt() {
-        val real = Executors.newSingleThreadScheduledExecutor()
-        var workerThread: Thread? = null
-        val workerReady = CountDownLatch(1)
+        val workerThread = AtomicReference<Thread>()
         val parked = CountDownLatch(1)
         val releaseSchedule = CountDownLatch(1)
         // Force the named ordering with positive evidence: the override SUBMITS the task to
         // the idle worker first and only then parks schedule(), holding the registration
         // lock. The worker therefore reaches the cleanup while schedule() has not returned
         // — visible as BLOCKED on the poster's lock — before registration can complete.
+        val real = ScheduledThreadPoolExecutor(1) { r -> Thread(r).also { workerThread.set(it) } }
         val executor = object : ScheduledExecutorService by real {
             override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
                 val future = real.schedule(command, delay, unit)
@@ -34,15 +35,10 @@ class ExecutorDelayerTest {
         val runs = AtomicInteger()
         val task = Runnable { runs.incrementAndGet() }
         try {
-            executor.execute {
-                workerThread = Thread.currentThread()
-                workerReady.countDown()
-            }
-            assertTrue(workerReady.await(2, TimeUnit.SECONDS))
             val poster = Thread { delayer.post(task, 0) }
             poster.start()
             assertTrue(parked.await(2, TimeUnit.SECONDS))
-            val worker = requireNotNull(workerThread)
+            val worker = requireNotNull(workerThread.get())
             val cleanupDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
             while (worker.state != Thread.State.BLOCKED && System.nanoTime() < cleanupDeadline) {
                 Thread.yield()
