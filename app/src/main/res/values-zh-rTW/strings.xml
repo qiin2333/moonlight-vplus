@@ -1229,4 +1229,6 @@
     <string name="summary_ds5_single_tap_to_click">關閉：點兩下即可點擊，第二下按住可長按；開啟：恢復單擊點擊。兩種方式均支援用力按壓。</string>
     <string name="tip_performance_overlay">💡 串流小課堂：單擊效能 HUD 能在 迷你 / 標準 / 詳細 之間切換，雙擊切橫豎排，長按指標看說明，還能拖著到處跑哦～這都不會用的話，就是雜魚♡</string>
     <string name="perf_hud_label_one_percent_low" formatted="false">1%L</string>
+    <string name="title_korean_right_modifier_keys">右 Alt/Ctrl 作為韓/英和漢字鍵</string>
+    <string name="summary_korean_right_modifier_keys">將右 Alt 作為韓文的韓/英鍵傳送，將右 Ctrl 作為漢字鍵傳送。如果鍵盤沒有專用的韓/英鍵，或主機把右 Alt 當作一般 Alt 鍵，請開啟此選項。</string>
 </resources>

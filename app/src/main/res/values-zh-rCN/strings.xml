@@ -2460,4 +2460,6 @@
     <string name="host_unlock_still_locked_message">PIN 可能不正确，或锁屏界面当前不是 PIN 输入。要重新设置 PIN 吗？</string>
     <string name="host_unlock_reset_pin">重新设置</string>
     <string name="host_unlock_close">关闭</string>
+    <string name="title_korean_right_modifier_keys">右 Alt/Ctrl 作为韩/英和汉字键</string>
+    <string name="summary_korean_right_modifier_keys">将右 Alt 作为韩文的韩/英键发送，将右 Ctrl 作为汉字键发送。如果键盘没有专用的韩/英键，或主机把右 Alt 当作普通 Alt 键，请开启此项。</string>
 </resources>
