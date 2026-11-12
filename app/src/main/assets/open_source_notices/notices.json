@@ -90,7 +90,7 @@
   {
     "id": "lsfg-vk-android",
     "name": "lsfg-vk-android",
-    "version": "793c4cec518ac7d94234dffd1487e5b06c08c005",
+    "version": "d35751e42ca44e11c46c7c33243faf7f88087081",
     "url": "https://github.com/AlkaidLab/lsfg-vk-android-legacy",
     "license": "MIT",
     "licenseFile": "lsfg-vk-android-LICENSE.txt"
@@ -98,8 +98,8 @@
   {
     "id": "lsfg-vk-framegen",
     "name": "lsfg-vk-framegen",
-    "version": "bundled in lsfg-vk-android-legacy 793c4cec",
-    "url": "https://github.com/AlkaidLab/lsfg-vk-android-legacy/tree/793c4cec518ac7d94234dffd1487e5b06c08c005/framegen",
+    "version": "bundled in lsfg-vk-android-legacy d35751e4",
+    "url": "https://github.com/AlkaidLab/lsfg-vk-android-legacy/tree/d35751e42ca44e11c46c7c33243faf7f88087081/framegen",
     "license": "MIT",
     "licenseFile": "lsfg-vk-framegen-LICENSE.txt"
   },
