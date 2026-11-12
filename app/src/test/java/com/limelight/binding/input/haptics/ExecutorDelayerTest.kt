@@ -14,21 +14,20 @@ class ExecutorDelayerTest {
     @Test
     fun aTaskStartingDuringItsOwnRegistrationStillDropsIt() {
         val real = Executors.newSingleThreadScheduledExecutor()
-        val workerBlocked = CountDownLatch(1)
-        val releaseWorker = CountDownLatch(1)
+        var workerThread: Thread? = null
+        val workerReady = CountDownLatch(1)
         val parked = CountDownLatch(1)
         val releaseSchedule = CountDownLatch(1)
-        // Force the named ordering: occupy the worker, park post() inside schedule() (it
-        // holds the registration lock), then free the worker — the gated task is the
-        // worker's next action and it cannot pass its cleanup until the poster finishes
-        // registering. Both remaining interleavings must drop the entry, and an
-        // implementation whose cleanup ran before registration would leave the stale
-        // entry this test asserts against.
+        // Force the named ordering with positive evidence: the override SUBMITS the task to
+        // the idle worker first and only then parks schedule(), holding the registration
+        // lock. The worker therefore reaches the cleanup while schedule() has not returned
+        // — visible as BLOCKED on the poster's lock — before registration can complete.
         val executor = object : ScheduledExecutorService by real {
             override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
                 parked.countDown()
+                val future = real.schedule(command, delay, unit)
                 releaseSchedule.await(2, TimeUnit.SECONDS)
-                return real.schedule(command, delay, unit)
+                return future
             }
         }
         val delayer = ExecutorDelayer(executor)
@@ -36,14 +35,20 @@ class ExecutorDelayerTest {
         val task = Runnable { runs.incrementAndGet() }
         try {
             executor.execute {
-                workerBlocked.countDown()
-                releaseWorker.await(2, TimeUnit.SECONDS)
+                workerThread = Thread.currentThread()
+                workerReady.countDown()
             }
-            assertTrue(workerBlocked.await(2, TimeUnit.SECONDS))
+            assertTrue(workerReady.await(2, TimeUnit.SECONDS))
             val poster = Thread { delayer.post(task, 0) }
             poster.start()
             assertTrue(parked.await(2, TimeUnit.SECONDS))
-            releaseWorker.countDown()
+            val worker = requireNotNull(workerThread)
+            val cleanupDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (worker.state != Thread.State.BLOCKED && System.nanoTime() < cleanupDeadline) {
+                Thread.yield()
+            }
+            assertEquals("The worker must be blocked at cleanup before schedule() returns",
+                Thread.State.BLOCKED, worker.state)
             releaseSchedule.countDown()
             poster.join(2_000)
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
@@ -54,7 +59,6 @@ class ExecutorDelayerTest {
             assertEquals("A run that started before its registration completed must drop it",
                 0, delayer.pendingCount)
         } finally {
-            releaseWorker.countDown()
             releaseSchedule.countDown()
             real.shutdownNow()
         }
