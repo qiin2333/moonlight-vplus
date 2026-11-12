@@ -2315,6 +2315,9 @@
     <string name="theme_accent_source">强调色来源</string>
     <string name="theme_accent_pink">品牌粉</string>
     <string name="theme_accent_background">跟随首页背景</string>
+    <string name="theme_icon_style">应用图标</string>
+    <string name="theme_icon_standard">标准</string>
+    <string name="theme_icon_dark">暗黑</string>
     <string name="theme_summary">%1$s · %2$s</string>
     <string name="title_experimental_haptic_protocols">允许实验性触觉协议</string>
     <string name="summary_experimental_haptic_protocols">自动识别手柄。允许尝试已识别但尚未验证的波形协议；未知协议继续使用普通振动。更改后重新串流。</string>

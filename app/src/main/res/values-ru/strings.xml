@@ -2003,6 +2003,9 @@
     <string name="theme_accent_source">Акцентный цвет</string>
     <string name="theme_accent_pink">Розовый V+</string>
     <string name="theme_accent_background">По фону главного экрана</string>
+    <string name="theme_icon_style">Значок приложения</string>
+    <string name="theme_icon_standard">Стандартный</string>
+    <string name="theme_icon_dark">Тёмный</string>
     <string name="theme_summary">%1$s · %2$s</string>
     <string name="title_experimental_haptic_protocols">Экспериментальные протоколы вибрации</string>
     <string name="summary_experimental_haptic_protocols">Геймпады определяются автоматически. Разрешить известные, но непроверенные волновые протоколы. Для неизвестных остаётся обычная вибрация. После изменения переподключитесь.</string>

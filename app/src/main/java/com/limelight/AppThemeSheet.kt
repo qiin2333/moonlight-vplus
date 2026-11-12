@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.AppTheme
+import com.limelight.utils.LauncherIcon
 
 private val appearanceOptions = listOf(
     AppTheme.THEME_MODE_SYSTEM to R.string.pcview_theme_follow_system,
@@ -35,6 +36,11 @@ private val appearanceOptions = listOf(
 private val accentOptions = listOf(
     AppTheme.ACCENT_MODE_PINK to R.string.theme_accent_pink,
     AppTheme.ACCENT_MODE_BG to R.string.theme_accent_background
+)
+
+private val iconOptions = listOf(
+    LauncherIcon.VARIANT_SABA to R.string.theme_icon_standard,
+    LauncherIcon.VARIANT_SABA_DARK to R.string.theme_icon_dark
 )
 
 internal fun showAppThemeSheet(context: Context, onThemeSaved: () -> Unit) {
@@ -80,6 +86,14 @@ internal fun showAppThemeSheet(context: Context, onThemeSaved: () -> Unit) {
                 ) { applyTheme(it, savedAccent) }
                 ThemeChoiceGroup(R.string.theme_accent_source, accentOptions, savedAccent) {
                     applyTheme(savedMode, it)
+                }
+                ThemeChoiceGroup(
+                    R.string.theme_icon_style, iconOptions,
+                    LauncherIcon.currentVariant(context)
+                ) { variant ->
+                    if (!dialog.isShowing) return@ThemeChoiceGroup
+                    dialog.dismiss()
+                    LauncherIcon.applyVariant(context, variant)
                 }
             }
         }

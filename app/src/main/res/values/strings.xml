@@ -2398,6 +2398,9 @@ Tap again to replace it.</string>
     <string name="theme_accent_source">Accent color</string>
     <string name="theme_accent_pink">Brand pink</string>
     <string name="theme_accent_background">Follow home background</string>
+    <string name="theme_icon_style">App icon</string>
+    <string name="theme_icon_standard">Standard</string>
+    <string name="theme_icon_dark">Dark</string>
     <string name="theme_summary">%1$s · %2$s</string>
     <string name="title_experimental_haptic_protocols">Allow experimental haptic protocols</string>
     <string name="summary_experimental_haptic_protocols">Controllers are detected automatically. Allow attempts to use recognized but unverified waveform protocols. Unknown protocols keep ordinary vibration. Reconnect the stream after changing.</string>

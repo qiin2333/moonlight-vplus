@@ -1078,6 +1078,9 @@
     <string name="theme_accent_source">強調色來源</string>
     <string name="theme_accent_pink">品牌粉</string>
     <string name="theme_accent_background">跟隨首頁背景</string>
+    <string name="theme_icon_style">應用程式圖示</string>
+    <string name="theme_icon_standard">標準</string>
+    <string name="theme_icon_dark">暗黑</string>
     <string name="theme_summary">%1$s · %2$s</string>
     <string name="title_experimental_haptic_protocols">允許實驗性觸覺協定</string>
     <string name="summary_experimental_haptic_protocols">自動辨識控制器。允許嘗試已辨識但尚未驗證的波形協定；未知協定繼續使用一般震動。變更後請重新串流。</string>
