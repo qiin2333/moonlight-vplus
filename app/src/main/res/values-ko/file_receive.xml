@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_receive_menu">PC에서 파일 받기</string>
+    <string name="file_receive_title">PC에서 파일 받기</string>
+    <string name="file_receive_message">PC의 브라우저에서 아래 주소를 연 뒤 페이지에 파일을 끌어다 놓으세요.\n\n%1$s\n\n저장 위치: %2$s\n\nPC가 네트워크로 이 기기에 접속할 수 있어야 합니다. 수신을 중지할 때까지는 같은 네트워크에서 이 주소를 아는 누구나 파일을 보낼 수 있습니다.</string>
+    <string name="file_receive_type_on_pc">PC에 주소 입력</string>
+    <string name="file_receive_stop">수신 중지</string>
+    <string name="file_receive_close">닫기</string>
+    <string name="file_receive_stopped">파일 수신을 중지함</string>
+    <string name="file_receive_start_failed">파일 수신을 시작할 수 없음</string>
+    <string name="file_receive_no_network">파일 수신에 사용할 네트워크 주소가 없음</string>
+    <string name="file_receive_saved">%1$s 저장됨</string>
+    <string name="file_receive_failed">%1$s을(를) 저장하지 못함</string>
+    <string name="file_receive_locked_out">잘못된 주소로 요청이 너무 많이 들어와 파일 수신을 중지했습니다</string>
+    <string name="file_receive_page_title">Moonlight V+로 파일 보내기</string>
+    <string name="file_receive_page_hint">여기에 파일을 끌어다 놓으세요</string>
+    <string name="file_receive_page_choose">파일 선택</string>
+    <string name="file_receive_page_done">전송됨</string>
+    <string name="file_receive_page_error">실패</string>
+</resources>

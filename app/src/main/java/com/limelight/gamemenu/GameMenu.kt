@@ -2514,6 +2514,9 @@ class GameMenu(
             showChevron = true
         ))
 
+        normalOptions.add(MenuOption(getString(R.string.file_receive_menu), false,
+            { game.fileReceiveController.show() }, "game_menu_receive_files", true))
+
         if (game.prefConfig.enableMic) {
             normalOptions.add(MenuOption(getString(R.string.mic_button), false,
                 { showMicrophoneMenu() }, "microphone_input", isShowIcon = true, isKeepDialog = true,
@@ -2612,6 +2615,7 @@ class GameMenu(
             "game_menu_toggle_virtual_controller" to R.drawable.ic_candy_controller,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
             "game_menu_send_keys" to R.drawable.ic_candy_send_keys,
+            "game_menu_receive_files" to R.drawable.ic_change,
             "game_menu_toggle_host_keyboard" to R.drawable.ic_host_keyboard,
             "game_menu_disconnect_and_quit" to R.drawable.ic_candy_quit,
             "game_menu_cancel" to R.drawable.ic_cancel_cute,
