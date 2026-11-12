@@ -74,24 +74,24 @@ class RichTapAuthoredHapticsTest {
         var now = 0L
         var stops = 0
         val sink = RichTapAuthoredHaptics({ raw, gain -> packets += raw; gains += gain }, { stops++ }, { now }, 7, {})
-        assertEquals(4000L, sink.render(nativeBodyWithGain(.15f), 0f, false))
-        for (time in 20L..3980L step 20L) {
+        assertEquals(600L, sink.render(nativeBodyWithGain(.15f), 0f, false))
+        for (time in 20L..580L step 20L) {
             now = time
             sink.render(nativeBodyWithGain(if (time % 40 == 0L) .158f else .161f), 0f, false)
         }
         assertEquals(1, packets.size)
         assertEquals(4096, packets.single()[8])
-        assertEquals(5000, packets.single()[14])
-        now = 4000
+        assertEquals(800, packets.single()[14])
+        now = 600
         sink.render(nativeBodyWithGain(.15f), 0f, false)
         assertEquals(2, packets.size)
         assertEquals(gains.first(), gains.last())
         assertEquals(0, stops)
-        now = 4010
+        now = 610
         sink.render(nativeBodyWithGain(0f), 0f, false)
         sink.stop()
         assertEquals(1, stops)
-        now = 4020
+        now = 620
         sink.render(nativeBodyWithGain(.15f), 0f, false)
         assertEquals(0, packets.last()[17])
     }

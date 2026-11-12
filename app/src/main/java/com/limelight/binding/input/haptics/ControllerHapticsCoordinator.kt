@@ -56,9 +56,13 @@ internal class ControllerHapticsCoordinator(
         DeviceHapticsCapabilities.probe(handler.deviceVibrator)
     }
     private val deviceVibrationCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        // The device stop chain runs its delayed callbacks on the vibration worker, not the
+        // output looper: a blocked main thread must not extend a playing waveform's stop.
+        val worker = DeviceVibrationCoordinator.newWorker()
+        val delayer = ExecutorDelayer(worker)
         DeviceVibrationCoordinator(
-            postDelayed = postOutputDelayed,
-            removeCallback = removeOutput,
+            postDelayed = delayer::post,
+            removeCallback = delayer::remove,
             vibrateDevice = { amplitude, durationMs ->
                 handler.rumbleManager.vibrateSingleAmplitude(
                     amplitude = amplitude,
@@ -66,6 +70,7 @@ internal class ControllerHapticsCoordinator(
                 )
             },
             cancelDeviceVibration = handler.deviceVibrator::cancel,
+            executor = worker,
             playDeviceTick = if (handler.rumbleManager.supportsDeviceTick) handler.rumbleManager::playDeviceDetailTick else null,
             detailTickIntervalMs = handler.rumbleManager.deviceTickIntervalMs,
             clockMs = SystemClock::elapsedRealtime,

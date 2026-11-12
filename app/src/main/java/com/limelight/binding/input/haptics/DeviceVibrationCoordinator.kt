@@ -570,7 +570,9 @@ internal class DeviceVibrationCoordinator(
         }
         if (gameRefreshCallback != null) return
 
-        val callback = Runnable { refreshGameLease() }
+        val callback = object : Runnable {
+            override fun run() = refreshGameLease(this)
+        }
         gameRefreshCallback = callback
         postDelayed(callback, GAME_SOURCE_REFRESH_MS)
     }
@@ -580,8 +582,12 @@ internal class DeviceVibrationCoordinator(
         gameRefreshCallback = null
     }
 
-    private fun refreshGameLease() {
+    private fun refreshGameLease(task: Runnable) {
         val command = synchronized(lock) {
+            // The worker may start this task before an ownership change cancelled it
+            // (cancel(false) cannot stop a running task). The captured level is then stale,
+            // so only the still-registered callback may act.
+            if (gameRefreshCallback !== task) return
             gameRefreshCallback = null
             if (closed || audioOwned || touchActive) return
             if (levelAmplitude == 0) return
@@ -660,8 +666,8 @@ internal class DeviceVibrationCoordinator(
         }
     }
 
-    private companion object {
-        val THREAD_NUMBER = AtomicInteger()
+    internal companion object {
+        private val THREAD_NUMBER = AtomicInteger()
         // Long one-shot effects are reprogrammed only four times per second. Some vendor
         // vibrator services deadlock when effects are replaced at controller packet rate.
         // Start/stop edges bypass level pacing. Native writes stay serialized; hardware
@@ -672,7 +678,7 @@ internal class DeviceVibrationCoordinator(
         const val MAXIMUM_TOUCH_DURATION_MS = 1_000L
         const val NATIVE_IDLE_WARM_MS = 1_500L
 
-        fun newWorker(): ScheduledExecutorService {
+        internal fun newWorker(): ScheduledExecutorService {
             val threadNumber = THREAD_NUMBER.incrementAndGet()
             return Executors.newSingleThreadScheduledExecutor { runnable ->
                 Thread(runnable, "DeviceVibration-$threadNumber").apply { isDaemon = true }

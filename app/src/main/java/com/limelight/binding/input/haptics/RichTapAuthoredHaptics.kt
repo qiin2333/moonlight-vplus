@@ -156,8 +156,11 @@ internal class RichTapAuthoredHaptics(
         private const val POINT_FREQUENCY = 56
         private const val FREQUENCY_RAMP_MS = 20
         private const val BODY_STEP = 5
-        private const val BODY_DURATION_MS = 5_000
-        private const val BODY_RENEW_MS = 4_000L
+        // The pattern length bounds how long the motor keeps running when a stop is lost or
+        // delayed; renewal keeps >= 200 ms of programmed headroom. HE replacement every 600 ms
+        // stays clear of the vendor replacement rates known to stall vibrator services.
+        private const val BODY_DURATION_MS = 800
+        private const val BODY_RENEW_MS = 600L
         private const val POINT_TAIL_MS = 40L
         private const val MIXED_ATTACK_MS = 12L
         // Conservative relative timbre mapping; these are not calibrated motor Hz.
