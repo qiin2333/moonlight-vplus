@@ -92,7 +92,13 @@ class SwitchProController(
         return false
     }
 
-    private fun sendSubcommand(subcommand: Byte, payload: ByteArray, buffer: ByteArray): Boolean {
+    private fun sendSubcommand(
+        subcommand: Byte,
+        payload: ByteArray,
+        buffer: ByteArray,
+        attempts: Int = COMMAND_RETRIES,
+        matchesReply: (Int) -> Boolean = { true }
+    ): Boolean {
         if (buffer.size < 15) {
             LimeLog.warning("SwitchPro: Response buffer too small: ${buffer.size}")
             return false
@@ -104,14 +110,14 @@ class SwitchProController(
         data[10] = subcommand
         System.arraycopy(payload, 0, data, 11, payload.size)
 
-        for (i in 0 until COMMAND_RETRIES) {
+        for (i in 0 until attempts) {
             if (!sendData(data, data.size)) continue
 
             var retries = 0
             do {
                 if (inEndpt == null) return false
                 val res = connection.bulkTransfer(inEndpt, buffer, buffer.size, 100)
-                if (res < 0 || res < 15 || buffer[0] != 0x21.toByte() || buffer[14] != subcommand) {
+                if (res < 15 || buffer[0] != 0x21.toByte() || buffer[14] != subcommand || !matchesReply(res)) {
                     retries++
                 } else {
                     return true
@@ -143,7 +149,12 @@ class SwitchProController(
         return sendSubcommand(0x48, byteArrayOf(if (enable) 0x01 else 0x00), ByteArray(PACKET_SIZE))
     }
 
-    private fun spiFlashRead(offset: Int, length: Int, buffer: ByteArray): Boolean {
+    private fun spiFlashRead(
+        offset: Int,
+        length: Int,
+        buffer: ByteArray,
+        attempts: Int = COMMAND_RETRIES
+    ): Boolean {
         if (buffer.size < length + 20) return false
         val address = byteArrayOf(
             (offset and 0xFF).toByte(),
@@ -152,47 +163,80 @@ class SwitchProController(
             ((offset shr 24) and 0xFF).toByte(),
             length.toByte()
         )
-        if (!sendSubcommand(0x10, address, buffer)) {
+        val received = sendSubcommand(0x10, address, buffer, attempts) { replyLength ->
+            replyLength >= 20 + length && address.indices.all { buffer[15 + it] == address[it] }
+        }
+        if (!received) {
             LimeLog.warning("SwitchPro: Failed to receive SPI Flash data.")
             return false
         }
         return true
     }
 
-    private fun checkUserCalMagic(offset: Int): Boolean {
+    private fun hasUserCalMagic(buffer: ByteArray, start: Int): Boolean {
+        return buffer[start] == 0xB2.toByte() && buffer[start + 1] == 0xA1.toByte()
+    }
+
+    private fun decodeStickCalibration(buffer: ByteArray, start: Int): IntArray? {
+        val values = IntArray(6)
+        for (pair in 0 until 3) {
+            val index = start + pair * 3
+            val middle = buffer[index + 1].toInt() and 0xFF
+            val x = (buffer[index].toInt() and 0xFF) or ((middle and 0x0F) shl 8)
+            val y = (middle ushr 4) or ((buffer[index + 2].toInt() and 0xFF) shl 4)
+            // Each field is a center or a distance from center. Neither can be an endpoint.
+            if (x !in 1..0xFFE || y !in 1..0xFFE) return null
+            values[pair * 2] = x
+            values[pair * 2 + 1] = y
+        }
+        return values
+    }
+
+    private fun readStickCalibration(
+        userBlock: ByteArray?,
+        magicOffset: Int,
+        userOffset: Int,
+        factoryOffset: Int
+    ): IntArray? {
+        if (userBlock != null && hasUserCalMagic(userBlock, 20 + magicOffset - USER_CAL_BLOCK_OFFSET)) {
+            decodeStickCalibration(userBlock, 20 + userOffset - USER_CAL_BLOCK_OFFSET)?.let { return it }
+        }
+
         val buffer = ByteArray(PACKET_SIZE)
-        if (!spiFlashRead(offset, 2, buffer)) return false
-        return (buffer[20].toInt() and 0xFF) == 0xB2 && (buffer[21].toInt() and 0xFF) == 0xA1
+        if (spiFlashRead(magicOffset, 2, buffer) && hasUserCalMagic(buffer, 20) &&
+            spiFlashRead(userOffset, STICK_CALIBRATION_LENGTH, buffer)
+        ) {
+            decodeStickCalibration(buffer, 20)?.let { return it }
+        }
+        return if (spiFlashRead(factoryOffset, STICK_CALIBRATION_LENGTH, buffer)) {
+            decodeStickCalibration(buffer, 20)
+        } else {
+            null
+        }
     }
 
     private fun loadStickCalibration(): Boolean {
-        val buffer = ByteArray(PACKET_SIZE)
         val isJoyCon = isJoyCon()
         val isLeft = isJoyConLeft()
-
-        var lsAddr = FACTORY_LS_CALIBRATION_OFFSET
-        var rsAddr = FACTORY_RS_CALIBRATION_OFFSET
-
-        if (checkUserCalMagic(USER_LS_MAGIC_OFFSET)) {
-            lsAddr = USER_LS_CALIBRATION_OFFSET
-            LimeLog.info("SwitchPro: LS has user calibration!")
-        }
-        if (checkUserCalMagic(USER_RS_MAGIC_OFFSET)) {
-            rsAddr = USER_RS_CALIBRATION_OFFSET
-            LimeLog.info("SwitchPro: RS has user calibration!")
-        }
-
         val needLeftStick = !isJoyCon || isLeft || device.productId == JOYCON_PAIR_PID
         val needRightStick = !isJoyCon || !isLeft || device.productId == JOYCON_PAIR_PID
+        val userBlock = ByteArray(PACKET_SIZE).takeIf {
+            // Probe once before falling back for devices that ignore the larger request.
+            spiFlashRead(USER_CAL_BLOCK_OFFSET, USER_CAL_BLOCK_LENGTH, it, attempts = 1)
+        }
 
-        var lsCalibrated = false
-        if (needLeftStick && spiFlashRead(lsAddr, STICK_CALIBRATION_LENGTH, buffer)) {
-            val xMax = (buffer[20].toInt() and 0xFF) or ((buffer[21].toInt() and 0x0F) shl 8)
-            val yMax = ((buffer[21].toInt() and 0xF0) ushr 4) or ((buffer[22].toInt() and 0xFF) shl 4)
-            val xCenter = (buffer[23].toInt() and 0xFF) or ((buffer[24].toInt() and 0x0F) shl 8)
-            val yCenter = ((buffer[24].toInt() and 0xF0) ushr 4) or ((buffer[25].toInt() and 0xFF) shl 4)
-            val xMin = (buffer[26].toInt() and 0xFF) or ((buffer[27].toInt() and 0x0F) shl 8)
-            val yMin = ((buffer[27].toInt() and 0xF0) ushr 4) or ((buffer[28].toInt() and 0xFF) shl 4)
+        val left = if (needLeftStick) {
+            readStickCalibration(userBlock, USER_LS_MAGIC_OFFSET, USER_LS_CALIBRATION_OFFSET, FACTORY_LS_CALIBRATION_OFFSET)
+        } else {
+            null
+        }
+        if (left != null) {
+            val xMax = left[0]
+            val yMax = left[1]
+            val xCenter = left[2]
+            val yCenter = left[3]
+            val xMin = left[4]
+            val yMin = left[5]
             stickCalibration[0][0][0] = xCenter - xMin
             stickCalibration[0][0][1] = xCenter
             stickCalibration[0][0][2] = xCenter + xMax
@@ -203,20 +247,22 @@ class SwitchProController(
             stickExtends[0][0][1] = ((stickCalibration[0][0][2] - xCenter) * 0.7).toFloat()
             stickExtends[0][1][0] = ((yCenter - stickCalibration[0][1][0]) * -0.7).toFloat()
             stickExtends[0][1][1] = ((stickCalibration[0][1][2] - yCenter) * 0.7).toFloat()
-            lsCalibrated = true
+        } else {
+            applyDefaultCalibration(0)
         }
 
-        if (!lsCalibrated && needLeftStick) applyDefaultCalibration(0)
-        else if (!needLeftStick) applyDefaultCalibration(0)
-
-        var rsCalibrated = false
-        if (needRightStick && spiFlashRead(rsAddr, STICK_CALIBRATION_LENGTH, buffer)) {
-            val xCenter = (buffer[20].toInt() and 0xFF) or ((buffer[21].toInt() and 0x0F) shl 8)
-            val yCenter = ((buffer[21].toInt() and 0xF0) ushr 4) or ((buffer[22].toInt() and 0xFF) shl 4)
-            val xMin = (buffer[23].toInt() and 0xFF) or ((buffer[24].toInt() and 0x0F) shl 8)
-            val yMin = ((buffer[24].toInt() and 0xF0) ushr 4) or ((buffer[25].toInt() and 0xFF) shl 4)
-            val xMax = (buffer[26].toInt() and 0xFF) or ((buffer[27].toInt() and 0x0F) shl 8)
-            val yMax = ((buffer[27].toInt() and 0xF0) ushr 4) or ((buffer[28].toInt() and 0xFF) shl 4)
+        val right = if (needRightStick) {
+            readStickCalibration(userBlock, USER_RS_MAGIC_OFFSET, USER_RS_CALIBRATION_OFFSET, FACTORY_RS_CALIBRATION_OFFSET)
+        } else {
+            null
+        }
+        if (right != null) {
+            val xCenter = right[0]
+            val yCenter = right[1]
+            val xMin = right[2]
+            val yMin = right[3]
+            val xMax = right[4]
+            val yMax = right[5]
             stickCalibration[1][0][0] = xCenter - xMin
             stickCalibration[1][0][1] = xCenter
             stickCalibration[1][0][2] = xCenter + xMax
@@ -227,11 +273,9 @@ class SwitchProController(
             stickExtends[1][0][1] = ((stickCalibration[1][0][2] - xCenter) * 0.7).toFloat()
             stickExtends[1][1][0] = ((yCenter - stickCalibration[1][1][0]) * -0.7).toFloat()
             stickExtends[1][1][1] = ((stickCalibration[1][1][2] - yCenter) * 0.7).toFloat()
-            rsCalibrated = true
+        } else {
+            applyDefaultCalibration(1)
         }
-
-        if (!rsCalibrated && needRightStick) applyDefaultCalibration(1)
-        else if (!needRightStick) applyDefaultCalibration(1)
 
         return true
     }
@@ -241,10 +285,12 @@ class SwitchProController(
             stickCalibration[stick][axis][0] = 0x000
             stickCalibration[stick][axis][1] = 0x800
             stickCalibration[stick][axis][2] = 0xFFF
-            stickExtends[stick][axis][0] = -0x700f.toFloat()
-            stickExtends[stick][axis][1] = 0x700f.toFloat()
+            stickExtends[stick][axis][0] = -0x700.toFloat()
+            stickExtends[stick][axis][1] = 0x700.toFloat()
         }
     }
+
+    private fun invertStickY(raw: Int): Int = minOf(0x1000 - raw, 0xFFF)
 
     private fun applyStickCalibration(value: Int, stick: Int, axis: Int): Float {
         val center = stickCalibration[stick][axis][1]
@@ -508,7 +554,7 @@ class SwitchProController(
 
         if (needLeftStick) {
             leftStickX = applyStickCalibration(_leftStickX, 0, 0)
-            leftStickY = applyStickCalibration((-_leftStickY) and 0xFFF, 0, 1)
+            leftStickY = applyStickCalibration(invertStickY(_leftStickY), 0, 1)
         } else {
             leftStickX = 0f
             leftStickY = 0f
@@ -516,7 +562,7 @@ class SwitchProController(
 
         if (needRightStick) {
             rightStickX = applyStickCalibration(_rightStickX, 1, 0)
-            rightStickY = applyStickCalibration((-_rightStickY) and 0xFFF, 1, 1)
+            rightStickY = applyStickCalibration(invertStickY(_rightStickY), 1, 1)
         } else {
             rightStickX = 0f
             rightStickY = 0f
@@ -554,6 +600,8 @@ class SwitchProController(
         private const val USER_LS_CALIBRATION_OFFSET = 0x8012
         private const val USER_RS_MAGIC_OFFSET = 0x801B
         private const val USER_RS_CALIBRATION_OFFSET = 0x801D
+        private const val USER_CAL_BLOCK_OFFSET = USER_LS_MAGIC_OFFSET
+        private const val USER_CAL_BLOCK_LENGTH = 26
         private const val STICK_CALIBRATION_LENGTH = 9
 
         @JvmStatic
