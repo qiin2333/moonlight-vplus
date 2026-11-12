@@ -14,11 +14,16 @@ class ExecutorDelayerTest {
     @Test
     fun aTaskStartingDuringItsOwnRegistrationStillDropsIt() {
         val real = Executors.newSingleThreadScheduledExecutor()
+        val workerBlocked = CountDownLatch(1)
+        val releaseWorker = CountDownLatch(1)
         val parked = CountDownLatch(1)
         val releaseSchedule = CountDownLatch(1)
-        // Parks post() inside schedule(): the test observes the pre-registration state,
-        // then releases into an idle worker so the wrapper starts before registration
-        // finishes. Both orderings of that race must leave no registration behind.
+        // Force the named ordering: occupy the worker, park post() inside schedule() (it
+        // holds the registration lock), then free the worker — the gated task is the
+        // worker's next action and it cannot pass its cleanup until the poster finishes
+        // registering. Both remaining interleavings must drop the entry, and an
+        // implementation whose cleanup ran before registration would leave the stale
+        // entry this test asserts against.
         val executor = object : ScheduledExecutorService by real {
             override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
                 parked.countDown()
@@ -30,13 +35,15 @@ class ExecutorDelayerTest {
         val runs = AtomicInteger()
         val task = Runnable { runs.incrementAndGet() }
         try {
+            executor.execute {
+                workerBlocked.countDown()
+                releaseWorker.await(2, TimeUnit.SECONDS)
+            }
+            assertTrue(workerBlocked.await(2, TimeUnit.SECONDS))
             val poster = Thread { delayer.post(task, 0) }
             poster.start()
             assertTrue(parked.await(2, TimeUnit.SECONDS))
-            // The poster holds the registration lock while parked inside schedule(), so the
-            // pre-registration window is unobservable to other threads by construction; the
-            // deterministic part is releasing into an idle worker: the wrapper then races the
-            // registration and must still drop its own entry.
+            releaseWorker.countDown()
             releaseSchedule.countDown()
             poster.join(2_000)
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
@@ -47,6 +54,7 @@ class ExecutorDelayerTest {
             assertEquals("A run that started before its registration completed must drop it",
                 0, delayer.pendingCount)
         } finally {
+            releaseWorker.countDown()
             releaseSchedule.countDown()
             real.shutdownNow()
         }
