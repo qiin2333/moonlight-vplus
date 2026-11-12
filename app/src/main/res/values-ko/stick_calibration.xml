@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stick_calibration_help">두 스틱을 한 번씩 움직였다가 놓은 뒤, 터치스크린이나 마우스로 현재 중심 저장을 누르세요. 마지막으로 움직인 컨트롤러가 아래에 표시됩니다. 저장하는 동안 두 스틱에서 손을 떼고 있어야 합니다. 값은 이 안드로이드 컨트롤러에 대해 저장되며, 보정 후 스트림을 다시 시작해야 합니다. 이 화면은 안드로이드 시스템 입력(블루투스 또는 시스템 USB)을 지원합니다. 내장 USB 드라이버와 USB/IP에는 이 보정이 적용되지 않습니다.</string>
+    <string name="stick_calibration_waiting">조이스틱 입력을 기다리는 중…</string>
+    <string name="stick_calibration_save">현재 중심 저장</string>
+    <string name="stick_calibration_reset">이 컨트롤러 초기화</string>
+    <string name="stick_calibration_close">닫기</string>
+    <string name="stick_calibration_saved">스틱 중심을 저장했습니다. 스트림을 다시 시작하세요.</string>
+    <string name="stick_calibration_reset_done">원래 스틱 중심으로 복원했습니다. 스트림을 다시 시작하세요.</string>
+    <string name="stick_calibration_columns">축: 원시 값 / 저장된 중심 / 보정 값 (데드존 적용 전)</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crown_device_actions">동작</string>
+    <string name="crown_device_keyboard">키보드</string>
+    <string name="crown_device_mouse">마우스</string>
+    <string name="crown_device_gamepad">게임패드</string>
+</resources>
