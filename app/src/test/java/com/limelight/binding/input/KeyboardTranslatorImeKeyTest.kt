@@ -41,6 +41,15 @@ class KeyboardTranslatorImeKeyTest {
     }
 
     @Test
+    fun rightModifiersMapToKoreanImeKeys() {
+        assertEquals(0x15, KeyboardTranslator.translateKoreanRightModifier(KeyEvent.KEYCODE_ALT_RIGHT))
+        assertEquals(0x19, KeyboardTranslator.translateKoreanRightModifier(KeyEvent.KEYCODE_CTRL_RIGHT))
+        assertEquals(0, KeyboardTranslator.translateKoreanRightModifier(KeyEvent.KEYCODE_ALT_LEFT))
+        assertEquals(0, KeyboardTranslator.translateKoreanRightModifier(KeyEvent.KEYCODE_CTRL_LEFT))
+        assertEquals(0x8015.toShort(), KeyboardTranslator.toGfeKeyCode(0x15))
+    }
+
+    @Test
     fun imeKeysAreRecognizedAfterTranslation() {
         assertTrue(KeyboardTranslator.isImeKey(0x8015.toShort()))
         assertTrue(KeyboardTranslator.isImeKey(0x8019.toShort()))

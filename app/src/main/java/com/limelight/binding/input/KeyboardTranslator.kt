@@ -106,7 +106,7 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
         // resolved before the layout normalization below gets a chance to drop them.
         val imeKey = translateImeKey(keycode, scanCode)
         if (imeKey != 0) {
-            return ((KEY_PREFIX.toInt() shl 8) or imeKey).toShort()
+            return toGfeKeyCode(imeKey)
         }
 
         // If a device ID was provided, look up the keyboard mapping
@@ -249,6 +249,26 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
                 else -> 0
             }
         }
+
+        /**
+         * Maps the right-hand modifiers that double as Korean IME keys: Right Alt
+         * is Han/Eng and Right Ctrl is Hanja on keyboards without dedicated keys.
+         * Only meant to be applied when the user opted in.
+         *
+         * @return the VK code, or 0 if the key is not one of those modifiers
+         */
+        @JvmStatic
+        fun translateKoreanRightModifier(keycode: Int): Int {
+            return when (keycode) {
+                KeyEvent.KEYCODE_ALT_RIGHT -> VK_HANGUL
+                KeyEvent.KEYCODE_CTRL_RIGHT -> VK_HANJA
+                else -> 0
+            }
+        }
+
+        /** Packs a Windows VK code into the keycode format the host expects. */
+        @JvmStatic
+        fun toGfeKeyCode(vk: Int): Short = ((KEY_PREFIX.toInt() shl 8) or vk).toShort()
 
         /**
          * Returns true if the translated key is an IME switch key, which the host

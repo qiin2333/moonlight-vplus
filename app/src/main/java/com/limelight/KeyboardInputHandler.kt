@@ -275,6 +275,17 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
+            val koreanKey = koreanRightModifier(event.keyCode)
+            if (koreanKey != null) {
+                if (!game.grabbedInput) {
+                    return false
+                }
+                if (event.repeatCount == 0) {
+                    sendKeyDown(event.keyCode, koreanKey, getModifierState(), 0.toByte())
+                }
+                return true
+            }
+
             if (handleSpecialKeys(event.keyCode, true)) {
                 return true
             }
@@ -435,6 +446,15 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
+            val koreanKey = koreanRightModifier(event.keyCode)
+            if (koreanKey != null) {
+                if (!game.grabbedInput) {
+                    return false
+                }
+                sendTrackedKeyUp(event.keyCode, koreanKey, getModifierState(), 0.toByte())
+                return true
+            }
+
             if (handleSpecialKeys(event.keyCode, false)) {
                 return true
             }
@@ -457,6 +477,19 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         return true
+    }
+
+    /**
+     * Returns the Han/Eng or Hanja key to send in place of Right Alt / Right Ctrl,
+     * or null when the option is off or the key is something else. The key is then
+     * no longer a modifier, so it must stay out of the modifier state.
+     */
+    private fun koreanRightModifier(androidKeyCode: Int): Short? {
+        if (!game.prefConfig.koreanRightModifierKeys) {
+            return null
+        }
+        val vk = KeyboardTranslator.translateKoreanRightModifier(androidKeyCode)
+        return if (vk != 0) KeyboardTranslator.toGfeKeyCode(vk) else null
     }
 
     private fun keyEventFlags(event: KeyEvent, translated: Short): Byte {
@@ -487,6 +520,15 @@ class KeyboardInputHandler(private val game: Game) {
      * EvdevListener 键盘事件处理，从 Game.keyboardEvent() 委托。
      */
     fun keyboardEvent(buttonDown: Boolean, keyCode: Short) {
+        val koreanKey = koreanRightModifier(keyCode.toInt())
+        if (koreanKey != null) {
+            game.conn?.sendKeyboardInput(
+                koreanKey,
+                if (buttonDown) KeyboardPacket.KEY_DOWN else KeyboardPacket.KEY_UP,
+                getModifierState(), 0.toByte()
+            )
+            return
+        }
         val keyMap = keyboardTranslator.translate(keyCode.toInt(), -1)
         if (keyMap.toInt() != 0) {
             if (handleSpecialKeys(keyCode.toInt(), buttonDown)) {

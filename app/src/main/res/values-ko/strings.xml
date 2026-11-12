@@ -355,4 +355,6 @@
     <string name="summary_checkbox_reverse_resolution">이미지 방향이나 크기가 잘못된 경우에만 사용하세요. 기기 회전 따르기와 충돌할 수 있습니다.</string>
     <string name="summary_checkbox_rotable_screen">기기가 세로와 가로 방향 사이를 전환할 때 스트림 레이아웃을 자동으로 동기화합니다.</string>
     <string name="layout_page_device_text_1a70f">터치 입력 전환</string>
+    <string name="title_korean_right_modifier_keys">오른쪽 Alt/Ctrl을 한/영, 한자 키로 사용</string>
+    <string name="summary_korean_right_modifier_keys">오른쪽 Alt를 한/영 키로, 오른쪽 Ctrl을 한자 키로 전송합니다. 키보드에 한/영 전용 키가 없거나 호스트가 오른쪽 Alt를 일반 Alt로 처리할 때 켜세요.</string>
 </resources>

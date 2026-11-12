@@ -1306,6 +1306,8 @@
     <string name="toast_local_cursor_fallback">Используется совместимый курсор ПК</string>
     <string name="title_special_key_map">Сочетания клавиш Moonlight</string>
     <string name="summary_special_key_map">Home → Esc, Esc+цифра/символ → F1–F12, Esc+Q → меню, снимок Android → снимок Windows, назад/пауза/вперёд Android → F5/F10/F11.</string>
+    <string name="title_korean_right_modifier_keys">Правые Alt/Ctrl как Хан/Ён и Ханча</string>
+    <string name="summary_korean_right_modifier_keys">Отправляет правый Alt как корейскую клавишу Хан/Ён, а правый Ctrl как клавишу Ханча. Включите, если на клавиатуре нет отдельной клавиши Хан/Ён или хост воспринимает правый Alt как обычный Alt.</string>
     <string name="title_fix_mouse_middle">Исправить среднюю кнопку</string>
     <string name="summary_fix_mouse_middle">Если средняя кнопка мыши определяется как «Назад», включите для исправления.</string>
     <string name="title_fix_mouse_wheel">Исправить колесо мыши</string>
