@@ -748,16 +748,6 @@ public class MoonBridge {
 
     public static native int getPendingVideoFrames();
 
-    /**
-     * Returns endpoint refresh statistics for video and audio, or null when
-     * the negotiated session does not support endpoint refresh.
-     * Each stream occupies twelve values: available, probe attempts, send
-     * failures, confirmed probes, challenges, ACKs, suspect, degraded,
-     * received responses, invalid responses, stale responses, unexpected
-     * responses.
-     */
-    public static native long[] getEndpointRefreshStats();
-
     public static native int testClientConnectivity(String testServerHostName, int referencePort, int testFlags);
 
     public static native int getPortFlagsFromStage(int stage);
