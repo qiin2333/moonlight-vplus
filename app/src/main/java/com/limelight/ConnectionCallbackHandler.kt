@@ -22,6 +22,7 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     fun stageStarting(stage: String) {
         game.runOnUiThread {
+            game.progressOverlay?.setStageName(stage)
             game.progressOverlay?.setMessage(
                 game.resources.getString(R.string.conn_starting) + " " + stage
             )
@@ -180,6 +181,8 @@ class ConnectionCallbackHandler(private val game: Game) {
             // 这里只做 5 秒 fallback，防止首帧因异常迟迟不来导致 loading 卡死。
             val overlay = game.progressOverlay
             if (overlay != null) {
+                // 满月 = 链路已通，视频首帧马上到。
+                overlay.markReady()
                 Handler(Looper.getMainLooper()).postDelayed({
                     if (game.progressOverlay === overlay) {
                         overlay.dismiss()

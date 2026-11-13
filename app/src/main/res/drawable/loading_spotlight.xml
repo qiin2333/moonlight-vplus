@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 连接加载页的中心聚光。中心略偏上，和月相构图对齐；
+     在浅色封面（SoftColor/Artwork）上保证白字对比度，同时不把四周压死。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:centerColor="#24000000"
+        android:centerX="0.5"
+        android:centerY="0.44"
+        android:endColor="#00000000"
+        android:gradientRadius="300dp"
+        android:startColor="#73000000"
+        android:type="radial" />
+</shape>
