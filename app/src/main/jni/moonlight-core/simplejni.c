@@ -1,5 +1,6 @@
 #include <Limelight.h>
 #include "Limelight-internal.h"
+#include "EndpointRefresh.h"
 
 #include <jni.h>
 #include <android/log.h>
@@ -312,6 +313,42 @@ Java_com_limelight_nvstream_jni_MoonBridge_getPendingAudioDuration(JNIEnv *env, 
 JNIEXPORT jint JNICALL
 Java_com_limelight_nvstream_jni_MoonBridge_getPendingVideoFrames(JNIEnv *env, jclass clazz) {
     return LiGetPendingVideoFrames();
+}
+
+JNIEXPORT jlongArray JNICALL
+Java_com_limelight_nvstream_jni_MoonBridge_getEndpointRefreshStats(JNIEnv *env, jclass clazz) {
+    LI_ENDPOINT_REFRESH_STATS video;
+    LI_ENDPOINT_REFRESH_STATS audio;
+    bool videoAvailable = LiGetVideoEndpointRefreshStats(&video);
+    bool audioAvailable = LiGetAudioEndpointRefreshStats(&audio);
+    if (!videoAvailable && !audioAvailable) {
+        return NULL;
+    }
+
+    jlong values[16] = {
+        videoAvailable ? 1 : 0,
+        videoAvailable ? (jlong)video.probeAttempts : 0,
+        videoAvailable ? (jlong)video.probeSendFailures : 0,
+        videoAvailable ? (jlong)video.probeConfirmed : 0,
+        videoAvailable ? (jlong)video.challengeReceived : 0,
+        videoAvailable ? (jlong)video.ackReceived : 0,
+        videoAvailable && video.suspect ? 1 : 0,
+        videoAvailable && video.degraded ? 1 : 0,
+        audioAvailable ? 1 : 0,
+        audioAvailable ? (jlong)audio.probeAttempts : 0,
+        audioAvailable ? (jlong)audio.probeSendFailures : 0,
+        audioAvailable ? (jlong)audio.probeConfirmed : 0,
+        audioAvailable ? (jlong)audio.challengeReceived : 0,
+        audioAvailable ? (jlong)audio.ackReceived : 0,
+        audioAvailable && audio.suspect ? 1 : 0,
+        audioAvailable && audio.degraded ? 1 : 0,
+    };
+    jlongArray result = (*env)->NewLongArray(env, 16);
+    if (result == NULL) {
+        return NULL;
+    }
+    (*env)->SetLongArrayRegion(env, result, 0, 16, values);
+    return result;
 }
 
 JNIEXPORT jint JNICALL

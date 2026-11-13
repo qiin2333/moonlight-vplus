@@ -154,6 +154,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener,
     KeyboardAccessibilityService.KeyEventCallback {
 
+    private val endpointRefreshStatsMonitor = EndpointRefreshStatsMonitor()
+
     // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
     var isEventFromAccessibilityService = false
 
@@ -2504,6 +2506,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * 后台恢复保留保活服务，Surface 销毁和 onStop 的先后顺序不影响该决定。
      */
     private fun stopConnection(reason: StreamStopReason) {
+        endpointRefreshStatsMonitor.stop()
         val connection = conn
         connection?.requestStop()
 
@@ -2553,6 +2556,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun connectionStarted() {
         runOnUiThread {
             if (destroying || isFinishing || !onConnectionEstablished()) return@runOnUiThread
+            endpointRefreshStatsMonitor.start()
             remoteImeController.resetSession()
             connectionCallbackHandler.connectionStarted()
             withUsbForwarding { it.startForeground() }
