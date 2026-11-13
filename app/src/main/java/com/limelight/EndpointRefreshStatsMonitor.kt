@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 class EndpointRefreshStatsMonitor {
     companion object {
         private const val SAMPLE_INTERVAL_MS = 5_000L
-        private const val VALUES_PER_STREAM = 8
+        private const val VALUES_PER_STREAM = 12
         private const val VIDEO_OFFSET = 0
         private const val AUDIO_OFFSET = VALUES_PER_STREAM
     }
@@ -76,6 +76,10 @@ class EndpointRefreshStatsMonitor {
         val acknowledgements = values[offset + 5]
         val suspect = values[offset + 6] != 0L
         val degraded = values[offset + 7] != 0L
+        val responses = values[offset + 8]
+        val invalidResponses = values[offset + 9]
+        val staleResponses = values[offset + 10]
+        val unexpectedResponses = values[offset + 11]
         val unconfirmed = (probes - confirmed).coerceAtLeast(0L)
         val estimatedLoss = if (probes == 0L) {
             "unknown"
@@ -86,6 +90,8 @@ class EndpointRefreshStatsMonitor {
         return "$name{probes=$probes, confirmed=$confirmed, " +
             "estimated_loss=$estimatedLoss, send_failures=$sendFailures, " +
             "challenges=$challenges, acks=$acknowledgements, " +
+            "responses=$responses, invalid=$invalidResponses, " +
+            "stale=$staleResponses, unexpected=$unexpectedResponses, " +
             "suspect=$suspect, degraded=$degraded}"
     }
 }

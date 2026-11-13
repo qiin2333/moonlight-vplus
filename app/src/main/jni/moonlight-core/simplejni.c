@@ -325,7 +325,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_getEndpointRefreshStats(JNIEnv *env, 
         return NULL;
     }
 
-    jlong values[16] = {
+    jlong values[24] = {
         videoAvailable ? 1 : 0,
         videoAvailable ? (jlong)video.probeAttempts : 0,
         videoAvailable ? (jlong)video.probeSendFailures : 0,
@@ -334,6 +334,10 @@ Java_com_limelight_nvstream_jni_MoonBridge_getEndpointRefreshStats(JNIEnv *env, 
         videoAvailable ? (jlong)video.ackReceived : 0,
         videoAvailable && video.suspect ? 1 : 0,
         videoAvailable && video.degraded ? 1 : 0,
+        videoAvailable ? (jlong)video.responsePacketsReceived : 0,
+        videoAvailable ? (jlong)video.invalidResponses : 0,
+        videoAvailable ? (jlong)video.staleResponses : 0,
+        videoAvailable ? (jlong)video.unexpectedResponses : 0,
         audioAvailable ? 1 : 0,
         audioAvailable ? (jlong)audio.probeAttempts : 0,
         audioAvailable ? (jlong)audio.probeSendFailures : 0,
@@ -342,12 +346,16 @@ Java_com_limelight_nvstream_jni_MoonBridge_getEndpointRefreshStats(JNIEnv *env, 
         audioAvailable ? (jlong)audio.ackReceived : 0,
         audioAvailable && audio.suspect ? 1 : 0,
         audioAvailable && audio.degraded ? 1 : 0,
+        audioAvailable ? (jlong)audio.responsePacketsReceived : 0,
+        audioAvailable ? (jlong)audio.invalidResponses : 0,
+        audioAvailable ? (jlong)audio.staleResponses : 0,
+        audioAvailable ? (jlong)audio.unexpectedResponses : 0,
     };
-    jlongArray result = (*env)->NewLongArray(env, 16);
+    jlongArray result = (*env)->NewLongArray(env, 24);
     if (result == NULL) {
         return NULL;
     }
-    (*env)->SetLongArrayRegion(env, result, 0, 16, values);
+    (*env)->SetLongArrayRegion(env, result, 0, 24, values);
     return result;
 }
 

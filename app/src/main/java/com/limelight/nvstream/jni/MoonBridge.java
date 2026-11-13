@@ -751,8 +751,10 @@ public class MoonBridge {
     /**
      * Returns endpoint refresh statistics for video and audio, or null when
      * the negotiated session does not support endpoint refresh.
-     * Each stream occupies eight values: available, probe attempts, send
-     * failures, confirmed probes, challenges, ACKs, suspect, degraded.
+     * Each stream occupies twelve values: available, probe attempts, send
+     * failures, confirmed probes, challenges, ACKs, suspect, degraded,
+     * received responses, invalid responses, stale responses, unexpected
+     * responses.
      */
     public static native long[] getEndpointRefreshStats();
 
