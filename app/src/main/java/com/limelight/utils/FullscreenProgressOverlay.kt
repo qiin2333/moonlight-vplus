@@ -187,6 +187,8 @@ class FullscreenProgressOverlay(
 
             // 连接阶段可能每几百毫秒就来一条：先落字再做一个短促的「tick」，
             // 避免淡出/淡入在快速连发时留下空白帧或滞后文案。
+            // 进场动画给同一 ViewPropertyAnimator 留过 180ms startDelay，
+            // cancel() 不会复位它，必须显式归零，否则文案会滞留在半透明态。
             progressText.animate().cancel()
             progressText.text = message
             progressText.alpha = 0.45f
@@ -194,6 +196,7 @@ class FullscreenProgressOverlay(
             progressText.animate()
                 .alpha(1f)
                 .translationY(0f)
+                .setStartDelay(0)
                 .setDuration(180)
                 .setInterpolator(DecelerateInterpolator())
                 .start()
@@ -213,6 +216,10 @@ class FullscreenProgressOverlay(
     /**
      * 把 moonlight-common-c 的连接阶段翻译成月相档位（1..4）。阶段可能乱序或重复到达，
      * [MoonwaxLoaderView.markStage] 只前进不后退，所以月亮不会来回闪。
+     *
+     * 注意：NvConnection 还会在 app 协商前用「应用名」调用 stageStarting（见
+     * NvConnection.startApp 前置段），这里只认协议阶段名，未知字符串（应用名等）
+     * 返回 0，markStage(0) 是 no-op，月亮保持原相位。
      */
     fun setStageName(stage: String) {
         if (activity.isFinishing) return
@@ -246,7 +253,10 @@ class FullscreenProgressOverlay(
             name.contains("video stream initialization") ||
                 name.contains("input stream initialization") ||
                 name.contains("control stream establishment") -> 3
-            else -> 4
+            name.contains("stream establishment") ||
+                name.contains("microphone stream initialization") -> 4
+            // 应用名或其他未知回调：不推进月相。
+            else -> 0
         }
     }
 

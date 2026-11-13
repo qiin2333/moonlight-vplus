@@ -44,12 +44,15 @@
         android:layout_alignParentBottom="true"
         android:background="@drawable/loading_bottom_scrim" />
 
+    <!-- 主内容块在小屏幕 / 大字号下可能高过小课堂：约束在小课堂上方的剩余空间内
+         居中，而不是在整个窗口居中，保证阶段文案永远压不到小课堂。 -->
     <LinearLayout
         android:id="@+id/loading_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:gravity="center_horizontal"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/randomTip"
+        android:layout_alignParentTop="true"
+        android:gravity="center"
         android:orientation="vertical"
         android:paddingStart="24dp"
         android:paddingEnd="24dp">
