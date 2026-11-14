@@ -202,8 +202,14 @@ class MoonwaxLoaderView @JvmOverloads constructor(
 
     /** 由外部进度直接驱动（0..1），与阶段推进共用同一条动画曲线。 */
     fun setProgress(fraction: Float) {
-        stageReached = STAGE_COUNT
-        animateIlluminationTo(fraction.coerceIn(0f, 1f))
+        val boundedFraction = fraction.coerceIn(0f, 1f)
+        // 百分比回调可能先于协议阶段到达；只按已经完成的比例点亮刻度，
+        // 避免月亮还是细月牙时外圈已经显示为满进度。
+        stageReached = maxOf(
+            stageReached,
+            (boundedFraction * STAGE_COUNT).toInt().coerceIn(0, STAGE_COUNT),
+        )
+        animateIlluminationTo(maxOf(targetIllumination, boundedFraction))
     }
 
     /** 不确定进度：回到细月牙并让彗尾持续扫描。 */
@@ -356,7 +362,7 @@ class MoonwaxLoaderView @JvmOverloads constructor(
             )
         }
 
-        if (stageReached == 0) {
+        if (stageReached == 0 && fill <= IDLE_FRACTION + 0.015f) {
             // 尚未收到阶段：一小段彗尾绕行，表示链路正在扫描。
             val cometStart = -90f + phaseRadians * 180f / Math.PI.toFloat()
             cometPaint.color = withAlpha(accent, 150)

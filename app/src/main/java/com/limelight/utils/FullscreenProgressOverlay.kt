@@ -11,13 +11,15 @@ import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.preference.PreferenceManager
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.MoonwaxLoaderView
-import androidx.preference.PreferenceManager
 import java.util.Locale
 import java.util.Random
 
@@ -83,6 +85,22 @@ class FullscreenProgressOverlay(
         appPosterBackgroundClear = overlayView.findViewById(R.id.appPosterBackgroundClear)
         moonwax = overlayView.findViewById(R.id.loading_moonwax)
 
+        // The game window draws edge-to-edge while the navigation bar can remain visible
+        // during connection setup. Keep the tip above gesture / three-button navigation
+        // without changing its visual spacing on immersive devices.
+        val baseTipBottomMargin =
+            (randomTip.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
+        ViewCompat.setOnApplyWindowInsetsListener(randomTip) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val displayCutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val safeBottom = maxOf(systemBars.bottom, displayCutout.bottom)
+            (view.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                bottomMargin = baseTipBottomMargin + safeBottom
+                view.layoutParams = this
+            }
+            insets
+        }
+
         overlayView.visibility = View.GONE
     }
 
@@ -100,6 +118,7 @@ class FullscreenProgressOverlay(
                 if (overlayView.parent == null) {
                     rootView.addView(overlayView)
                 }
+                ViewCompat.requestApplyInsets(overlayView)
 
                 // 快速断开重连时上一轮 dismiss 的退场可能还在跑：先掐掉它，
                 // 否则旧 endAction 会把刚亮起的整层再次隐藏，吃掉月亮的进场动画。

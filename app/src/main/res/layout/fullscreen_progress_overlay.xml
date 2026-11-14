@@ -28,7 +28,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#60000000" />
+        android:background="#48000000" />
 
     <!-- 中心聚光：让月相构图在任意封面上都有可读性，同时把视线收向中间。 -->
     <View
@@ -103,7 +103,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="26dp"
+        android:layout_marginBottom="36dp"
         android:ellipsize="end"
         android:fontFamily="sans-serif-light"
         android:gravity="center"
