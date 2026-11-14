@@ -32,7 +32,6 @@
 
     <!-- 中心聚光：让月相构图在任意封面上都有可读性，同时把视线收向中间。 -->
     <View
-        android:id="@+id/loading_spotlight"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/loading_spotlight" />
@@ -47,7 +46,6 @@
     <!-- 主内容块在小屏幕 / 大字号下可能高过小课堂：约束在小课堂上方的剩余空间内
          居中，而不是在整个窗口居中，保证阶段文案永远压不到小课堂。 -->
     <LinearLayout
-        android:id="@+id/loading_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/randomTip"
