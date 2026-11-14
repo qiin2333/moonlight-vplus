@@ -142,4 +142,10 @@
     <color name="retro_space_moon_shadow">#FF735563</color>
     <color name="retro_space_moon_crater">#FFB77A86</color>
     <color name="retro_space_text">#FFFFF3E4</color>
+
+    <!-- Moonwax connection loader. The lit disc borrows the perf HUD's moon cream so the
+         loading page and the in-stream HUD read as the same object. -->
+    <color name="loading_moon_light">#FFF8EA</color>
+    <color name="loading_moon_warm">#F8DFD0</color>
+    <color name="loading_moon_crater">#C79A86</color>
 </resources>
