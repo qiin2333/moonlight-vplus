@@ -1550,12 +1550,14 @@ class PreferenceConfiguration {
             //   * 7.1+ -> clamp to 5.1 first: AC3/E-AC3 passthrough is capped at 5.1 in
             //             our pipeline and the PCM renderer currently supports up to 5.1.
             val audioCodec = prefs.getString(AUDIO_CODEC_PREF_STRING, DEFAULT_AUDIO_CODEC) ?: DEFAULT_AUDIO_CODEC
-            if (enableAudioPassthrough && audioCodec != "opus" && config.audioConfiguration.channelCount > 6) {
+            val matRequested = audioCodec in setOf("mat_live", "mat_iec61937")
+            if (enableAudioPassthrough && audioCodec != "opus" && !matRequested && config.audioConfiguration.channelCount > 6) {
                 config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_51_SURROUND
             }
             config.audioCodec = when (audioCodec) {
                 "ac3" -> MoonBridge.AUDIO_CODEC_AC3
                 "eac3" -> MoonBridge.AUDIO_CODEC_EAC3
+                "mat_live", "mat_iec61937" -> MoonBridge.AUDIO_CODEC_MAT_LIVE
                 "pcm" -> MoonBridge.AUDIO_CODEC_PCM_S16
                 "opus" -> MoonBridge.AUDIO_CODEC_OPUS
                 else -> when (config.audioConfiguration.channelCount) {

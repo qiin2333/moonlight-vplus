@@ -31,6 +31,7 @@ public class MoonBridge {
     public static final int AUDIO_CODEC_AC3  = 1;
     public static final int AUDIO_CODEC_EAC3 = 2;
     public static final int AUDIO_CODEC_PCM_S16 = 3;
+    public static final int AUDIO_CODEC_MAT_LIVE = 7; // Authenticated real-time MAT.
 
     public static final int VIDEO_FORMAT_H264 = 0x0001;
     public static final int VIDEO_FORMAT_H265 = 0x0100;
@@ -390,6 +391,10 @@ public class MoonBridge {
         if (audioRenderer != null) {
             audioRenderer.playEncodedAudio(encodedData, length);
         }
+    }
+    public static com.limelight.binding.audio.MatCarrierConsumer bridgeArGetMatConsumer() {
+        return audioRenderer instanceof com.limelight.binding.audio.MatCarrierConsumer
+                ? (com.limelight.binding.audio.MatCarrierConsumer) audioRenderer : null;
     }
 
     public static void bridgeClStageStarting(int stage) {
