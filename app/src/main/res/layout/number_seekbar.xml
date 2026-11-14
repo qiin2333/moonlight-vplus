@@ -54,12 +54,14 @@
 
 
     </LinearLayout>
-    <com.limelight.utils.AppSliderView
+    <SeekBar
         android:id="@+id/number_seekbar_seekbar"
         android:focusable="true"
         android:layout_width="match_parent"
         android:layout_height="25dp"
         android:max="500"
+        android:progressTint="?attr/appAccent"
+        android:thumbTint="?attr/appAccent"
         android:progressBackgroundTint="@color/crown_input_border"
         android:progress="100"/>
 

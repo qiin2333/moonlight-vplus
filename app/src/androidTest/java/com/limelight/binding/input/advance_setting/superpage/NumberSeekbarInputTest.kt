@@ -3,6 +3,7 @@ package com.limelight.binding.input.advance_setting.superpage
 import android.widget.SeekBar
 import android.widget.TextView
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -68,6 +69,48 @@ class NumberSeekbarInputTest {
             control.setProgressMin(80)
             assertEquals(80, control.value)
             assertEquals(0, slider.max)
+        }
+    }
+
+    @Test fun touchDragUpdatesLogicalValue() {
+        activity.scenario.onActivity { host ->
+            host.setTheme(host.resources.getIdentifier("StreamTheme", "style", host.packageName))
+            val page = LayoutInflater.from(host).inflate(
+                host.resources.getIdentifier("page_edit", "layout", host.packageName), null)
+            host.setContentView(page)
+        }
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        activity.scenario.onActivity { host ->
+            fun id(name: String) = host.resources.getIdentifier(name, "id", host.packageName)
+            val control = host.findViewById<NumberSeekbar>(id("page_edit_edit_grid_width"))
+            control.setProgressMin(40)
+            control.setProgressMax(140)
+            control.setValueWithNoCallBack(60)
+            val slider = control.findViewById<SeekBar>(id("number_seekbar_seekbar"))
+            val before = control.value
+            check(slider.width > 0 && slider.height > 0) {
+                "slider must be laid out before dispatching touch"
+            }
+
+            val y = slider.height / 2f
+            val startX = slider.width * 0.2f
+            val endX = slider.width * 0.8f
+            val downTime = android.os.SystemClock.uptimeMillis()
+            val events = listOf(
+                MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, startX, y, 0),
+                MotionEvent.obtain(downTime, downTime + 16, MotionEvent.ACTION_MOVE, endX, y, 0),
+                MotionEvent.obtain(downTime, downTime + 32, MotionEvent.ACTION_UP, endX, y, 0)
+            )
+            try {
+                events.forEach { event -> check(slider.dispatchTouchEvent(event)) }
+            } finally {
+                events.forEach(MotionEvent::recycle)
+            }
+
+            check(control.value > before) {
+                "touch drag should move NumberSeekbar from $before, got ${control.value}"
+            }
         }
     }
 }
