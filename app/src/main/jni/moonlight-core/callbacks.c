@@ -10,6 +10,11 @@
 
 #include <cpu-features.h>
 
+#if defined(__aarch64__)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
+
 #include "audio_haptics_android_adapter_bridge.h"
 
 #define AUDIO_BACKLOG_DROP_THRESHOLD_MS 40
@@ -869,25 +874,55 @@ static CONNECTION_LISTENER_CALLBACKS BridgeConnListenerCallbacks = {
 
 static bool
 hasFastAes() {
-    if (android_getCpuCount() <= 2) {
+    int cpuCount = android_getCpuCount();
+    if (cpuCount <= 2) {
+        __android_log_print(ANDROID_LOG_DEBUG, "moonlight-jni",
+                            "AES capability source=core-limit cores=%d enabled=false",
+                            cpuCount);
         return false;
     }
 
+    // Prefer the kernel-provided ELF hardware capability on ARM64. The NDK
+    // cpufeatures fallback is retained for older toolchains and other ABIs.
+#if defined(__aarch64__) && defined(AT_HWCAP) && defined(HWCAP_AES)
+    unsigned long hwcaps = getauxval(AT_HWCAP);
+    if (hwcaps != 0) {
+        bool enabled = (hwcaps & HWCAP_AES) != 0;
+        __android_log_print(ANDROID_LOG_DEBUG, "moonlight-jni",
+                            "AES capability source=hwcap cores=%d enabled=%s",
+                            cpuCount, enabled ? "true" : "false");
+        return enabled;
+    }
+#endif
+
+    bool enabled;
+    const char* source = "cpufeatures";
     switch (android_getCpuFamily()) {
         case ANDROID_CPU_FAMILY_ARM:
-            return !!(android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_AES);
+            enabled = !!(android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_AES);
+            break;
         case ANDROID_CPU_FAMILY_ARM64:
-            return !!(android_getCpuFeatures() & ANDROID_CPU_ARM64_FEATURE_AES);
+            enabled = !!(android_getCpuFeatures() & ANDROID_CPU_ARM64_FEATURE_AES);
+            break;
         case ANDROID_CPU_FAMILY_X86:
         case ANDROID_CPU_FAMILY_X86_64:
-            return !!(android_getCpuFeatures() & ANDROID_CPU_X86_FEATURE_AES_NI);
+            enabled = !!(android_getCpuFeatures() & ANDROID_CPU_X86_FEATURE_AES_NI);
+            break;
         case ANDROID_CPU_FAMILY_MIPS:
         case ANDROID_CPU_FAMILY_MIPS64:
-            return false;
+            enabled = false;
+            break;
         default:
             // Assume new architectures will all have crypto acceleration (RISC-V will)
-            return true;
+            source = "architecture-default";
+            enabled = true;
+            break;
     }
+
+    __android_log_print(ANDROID_LOG_DEBUG, "moonlight-jni",
+                        "AES capability source=%s cores=%d enabled=%s",
+                        source, cpuCount, enabled ? "true" : "false");
+    return enabled;
 }
 
 JNIEXPORT jint JNICALL
