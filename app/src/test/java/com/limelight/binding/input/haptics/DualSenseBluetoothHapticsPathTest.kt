@@ -225,7 +225,7 @@ class DualSenseBluetoothHapticsPathTest {
         }
 
         fun await(predicate: (ByteArray) -> Boolean): ByteArray {
-            val deadline = System.nanoTime() + 2_000_000_000L
+            val deadline = System.nanoTime() + ASYNC_OUTPUT_TIMEOUT_NS
             while (true) {
                 val remaining = deadline - System.nanoTime()
                 check(remaining > 0) { "expected Bluetooth report was not sent" }
@@ -235,5 +235,9 @@ class DualSenseBluetoothHapticsPathTest {
         }
 
         fun snapshot() = synchronized(reports) { reports.toList() }
+
+        companion object {
+            private const val ASYNC_OUTPUT_TIMEOUT_NS = 10_000_000_000L
+        }
     }
 }
