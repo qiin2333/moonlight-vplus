@@ -89,6 +89,8 @@ class PreferenceConfiguration {
     var hardwareTouchpadPointerSpeedPercent = DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
     //自定义按键映射
     var enableCustomKeyMap = false
+    /** Send Right Alt / Right Ctrl as the Korean Han/Eng / Hanja keys. */
+    var koreanRightModifierKeys = false
     var enableShizukuAccessibility = false
     //修复鼠标中键识别
     var fixMouseMiddle = false
@@ -552,6 +554,7 @@ class PreferenceConfiguration {
         copy.width = this.width
         copy.height = this.height
         copy.isNativeResolution = this.isNativeResolution
+        copy.koreanRightModifierKeys = this.koreanRightModifierKeys
         copy.isCustomResolution = this.isCustomResolution
         copy.fps = this.fps
         copy.bitrate = this.bitrate
@@ -1599,6 +1602,7 @@ class PreferenceConfiguration {
                 DEFAULT_HARDWARE_TOUCHPAD_POINTER_SPEED
             ).coerceIn(MIN_HARDWARE_TOUCHPAD_POINTER_SPEED, MAX_HARDWARE_TOUCHPAD_POINTER_SPEED)
             config.enableCustomKeyMap = prefs.getBoolean("checkbox_special_key_map", false)
+            config.koreanRightModifierKeys = prefs.getBoolean("checkbox_korean_right_modifier_keys", false)
             config.enableShizukuAccessibility = prefs.getBoolean("checkbox_shizuku_keyboard_accessibility", false)
             config.fixMouseMiddle = prefs.getBoolean("checkbox_mouse_middle", false)
             config.fixMouseWheel = prefs.getBoolean("checkbox_mouse_wheel", false)

@@ -1633,6 +1633,8 @@ Tap again to replace it.</string>
     <string name="summary_shizuku_authorized">Authorized.</string>
     <string name="title_special_key_map">Moonlight keyboard shortcuts</string>
     <string name="summary_special_key_map">Maps Home to Esc, Esc+number/symbol to F1-F12, Esc+Q to stream menu, Android screenshot to Windows screenshot, Android prev/play-pause/next to F5/F10/F11.</string>
+    <string name="title_korean_right_modifier_keys">Right Alt/Ctrl as Han/Eng and Hanja</string>
+    <string name="summary_korean_right_modifier_keys">Sends Right Alt as the Korean Han/Eng key and Right Ctrl as the Hanja key. Turn this on if the keyboard has no dedicated Han/Eng key or the host treats Right Alt as a plain Alt key.</string>
 
     <!-- Fix mouse middle button -->
     <string name="title_fix_mouse_middle">Fix mouse middle button</string>
@@ -2492,6 +2494,7 @@ Tap again to replace it.</string>
     <string name="float_ball_summary_custom_position">Dragged position</string>
     <string name="float_ball_summary_search">%1$s\nIncludes: %2$s</string>
     <string name="display_resolution_current_not_saved">Currently in use · Not saved in list</string>
+    <string name="display_resolution_device_aspect">Matches this display\'s aspect ratio</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">Precise sync (enhanced)</string>
     <string name="pacing_label_precise_sync">Precise sync</string>

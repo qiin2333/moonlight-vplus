@@ -157,6 +157,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     // 这个标志位用于区分事件是来自无障碍服务还是来自UI（如StreamView）
     var isEventFromAccessibilityService = false
 
+    /** Receives files pushed from the PC browser while this stream is open. */
+    val fileReceiveController by lazy { com.limelight.filetransfer.FileReceiveController(this) }
+
     lateinit var controllerHandler: ControllerHandler
     lateinit var touchInputHandler: TouchInputHandler
     var virtualController: VirtualController? = null
@@ -1863,6 +1866,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         destroying = true
+        fileReceiveController.stop()
         resolutionSwitchController.cancel()
         if (conn != null) stopConnection(StreamStopReason.ACTIVITY_DESTROYED)
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列

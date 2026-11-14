@@ -1,0 +1,81 @@
+name: Fork Release
+
+# Publishes a debug-signed APK as a GitHub release. The upstream release job
+# needs the upstream signing keystore, so forks use this workflow instead.
+# Pushing a branch named release/<tag> builds that commit and releases it as <tag>.
+on:
+  push:
+    branches: [ 'release/ko-*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AUDIO_HAPTICS_SDK_REF: b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
+      AUDIO_HAPTICS_SDK_DIR: ${{ github.workspace }}/.deps/moonlight-audio-haptics
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Checkout audio haptics SDK
+        uses: actions/checkout@v5
+        with:
+          repository: AlkaidLab/moonlight-audio-haptics
+          ref: ${{ env.AUDIO_HAPTICS_SDK_REF }}
+          path: .deps/moonlight-audio-haptics
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Android SDK/NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358 cmake;3.22.1
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses > /dev/null
+
+      - name: Build NonRoot Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleNonRootDebug --no-daemon --stacktrace
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#release/}"
+          src=$(find app/build/outputs/apk/nonRoot/debug -maxdepth 1 -type f -name '*.apk' -print -quit)
+          test -n "$src"
+          apk="Moonlight.V+.${tag}.apk"
+          cp "$src" "$apk"
+          {
+            cat .github/release/fork-notes.md
+            echo ""
+            echo "## SHA256"
+            echo ""
+            echo '```text'
+            sha256sum "$apk"
+            echo '```'
+          } > release_notes.md
+          echo "REL_APK=$apk" >> "$GITHUB_ENV"
+          echo "REL_TAG=$tag" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.REL_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Moonlight V+ ${{ env.REL_TAG }}
+          body_path: release_notes.md
+          files: ${{ env.REL_APK }}

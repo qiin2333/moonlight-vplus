@@ -83,10 +83,31 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
      * @param deviceId InputDevice.getId() or -1 if unknown
      * @return a GFE keycode for the given keycode
      */
-    fun translate(keycode: Int, deviceId: Int): Short {
+    fun translate(keycode: Int, deviceId: Int): Short = translate(keycode, deviceId, 0)
+
+    /**
+     * Translates a key event and returns the GFE keycode.
+     *
+     * Unlike [translate], this also looks at the Linux scan code, so the Korean
+     * Han/Eng and Hanja keys are still recognized on keyboards whose vendor key
+     * layout leaves them unmapped.
+     */
+    fun translate(event: KeyEvent): Short = translate(event.keyCode, event.deviceId, event.scanCode)
+
+    /**
+     * @param scanCode Linux evdev scan code of the key, or 0 if unknown
+     */
+    fun translate(keycode: Int, deviceId: Int, scanCode: Int): Short {
         @Suppress("NAME_SHADOWING")
         var keycode = keycode
         val translated: Int
+
+        // IME switch keys have no location on a QWERTY layout, so they must be
+        // resolved before the layout normalization below gets a chance to drop them.
+        val imeKey = translateImeKey(keycode, scanCode)
+        if (imeKey != 0) {
+            return toGfeKeyCode(imeKey)
+        }
 
         // If a device ID was provided, look up the keyboard mapping
         if (deviceId >= 0) {
@@ -194,6 +215,70 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
 
     companion object {
         private const val KEY_PREFIX: Short = 0x80.toShort()
+
+        // Windows shares these codes between Korean and Japanese IMEs:
+        // VK_HANGUL == VK_KANA and VK_HANJA == VK_KANJI.
+        const val VK_HANGUL = 0x15
+        const val VK_HANJA = 0x19
+
+        // Linux evdev scan codes (KEY_HANGEUL / KEY_HANJA), which HID keyboards
+        // report for the LANG1 / LANG2 usages.
+        private const val SCANCODE_HANGEUL = 122
+        private const val SCANCODE_HANJA = 123
+
+        /**
+         * Maps the Korean IME switch keys to their Windows VK codes.
+         *
+         * Android reports the Han/Eng key as KEYCODE_KANA and the Hanja key as
+         * KEYCODE_EISU (Generic.kl), while some tablet keyboard covers report
+         * Han/Eng as KEYCODE_LANGUAGE_SWITCH. Vendor key layouts that leave the
+         * keys unmapped are still caught by their scan code.
+         *
+         * @return the VK code, or 0 if this is not an IME switch key
+         */
+        @JvmStatic
+        fun translateImeKey(keycode: Int, scanCode: Int): Int {
+            return when (keycode) {
+                KeyEvent.KEYCODE_KANA, KeyEvent.KEYCODE_LANGUAGE_SWITCH -> VK_HANGUL
+                KeyEvent.KEYCODE_EISU -> VK_HANJA
+                KeyEvent.KEYCODE_UNKNOWN -> when (scanCode) {
+                    SCANCODE_HANGEUL -> VK_HANGUL
+                    SCANCODE_HANJA -> VK_HANJA
+                    else -> 0
+                }
+                else -> 0
+            }
+        }
+
+        /**
+         * Maps the right-hand modifiers that double as Korean IME keys: Right Alt
+         * is Han/Eng and Right Ctrl is Hanja on keyboards without dedicated keys.
+         * Only meant to be applied when the user opted in.
+         *
+         * @return the VK code, or 0 if the key is not one of those modifiers
+         */
+        @JvmStatic
+        fun translateKoreanRightModifier(keycode: Int): Int {
+            return when (keycode) {
+                KeyEvent.KEYCODE_ALT_RIGHT -> VK_HANGUL
+                KeyEvent.KEYCODE_CTRL_RIGHT -> VK_HANJA
+                else -> 0
+            }
+        }
+
+        /** Packs a Windows VK code into the keycode format the host expects. */
+        @JvmStatic
+        fun toGfeKeyCode(vk: Int): Short = ((KEY_PREFIX.toInt() shl 8) or vk).toShort()
+
+        /**
+         * Returns true if the translated key is an IME switch key, which the host
+         * has to receive as a virtual-key event rather than a scan code.
+         */
+        @JvmStatic
+        fun isImeKey(translated: Short): Boolean {
+            val vk = translated.toInt() and 0xFF
+            return vk == VK_HANGUL || vk == VK_HANJA
+        }
 
         const val VK_0 = 48
         const val VK_9 = 57

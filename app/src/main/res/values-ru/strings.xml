@@ -1306,6 +1306,8 @@
     <string name="toast_local_cursor_fallback">Используется совместимый курсор ПК</string>
     <string name="title_special_key_map">Сочетания клавиш Moonlight</string>
     <string name="summary_special_key_map">Home → Esc, Esc+цифра/символ → F1–F12, Esc+Q → меню, снимок Android → снимок Windows, назад/пауза/вперёд Android → F5/F10/F11.</string>
+    <string name="title_korean_right_modifier_keys">Правые Alt/Ctrl как Хан/Ён и Ханча</string>
+    <string name="summary_korean_right_modifier_keys">Отправляет правый Alt как корейскую клавишу Хан/Ён, а правый Ctrl как клавишу Ханча. Включите, если на клавиатуре нет отдельной клавиши Хан/Ён или хост воспринимает правый Alt как обычный Alt.</string>
     <string name="title_fix_mouse_middle">Исправить среднюю кнопку</string>
     <string name="summary_fix_mouse_middle">Если средняя кнопка мыши определяется как «Назад», включите для исправления.</string>
     <string name="title_fix_mouse_wheel">Исправить колесо мыши</string>
@@ -2149,6 +2151,7 @@
     <string name="title_shizuku_keyboard_authorization">Доступ через Shizuku</string>
     <string name="videoformat_pyrowave">PyroWave (экспериментально, без генерации кадров)</string>
     <string name="display_resolution_current_not_saved">Используется сейчас · Не сохранено в списке</string>
+    <string name="display_resolution_device_aspect">Соответствует пропорциям этого экрана</string>
     <string name="title_ds5_simulation_mode">Имитация вибрации DualSense</string>
     <string name="summary_ds5_simulation_mode">Обычная имитация сохраняет привычную вибрацию. Расширенный IR разделяет непрерывную вибрацию и короткие импульсы. Требуется совместимый Sunshine с эмуляцией DualSense на хосте. Прямая передача на контроллер имеет приоритет. Для применения переподключитесь.</string>
     <string-array name="ds5_simulation_mode_names"><item>Обычная имитация</item><item>Расширенный IR</item></string-array>
