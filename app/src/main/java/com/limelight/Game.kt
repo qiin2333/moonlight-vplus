@@ -327,13 +327,29 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var isExtremeResumeEnabled = false
     @Volatile private var isChangingResolution = false
     private var displaySettingsCommitted = false
-    private val resolutionSwitchController = ResolutionSwitchController(this, ::changeResolution) { width, height ->
+    private val resolutionOwnership = StreamResolutionOwnership(
+        sendRequest = { width, height ->
+            val connection = conn
+            when {
+                connection == null || !connection.supportsClientResolutionChange -> DynamicResolutionManager.ERR_UNSUPPORTED
+                connection.requestResolutionChange(width, height) -> 0
+                else -> DynamicResolutionManager.ERR_SEND_FAILED
+            }
+        },
+        isReconnecting = { isChangingResolution },
+    )
+    val dynResManager: DynamicResolutionManager get() = resolutionOwnership.automatic
+    private val resolutionSwitchController = ResolutionSwitchController(
+        this,
+        resolutionOwnership,
+        ::changeResolution,
+    ) { width, height ->
         cursorServiceManager.onStreamResolutionChanged(width, height)
         orientationManager.onServerResolutionChanged(width > height)
         updateStreamViewSize(width, height)
     }
     internal val isApplyingDisplaySettings: Boolean
-        get() = isChangingResolution || resolutionSwitchController.isApplying
+        get() = resolutionOwnership.isApplying
     private var audioRenderer: com.limelight.binding.audio.SmartAudioRenderer? = null
 
     enum class BackKeyMenuMode {
@@ -412,6 +428,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             prefConfig.rotableScreen,
             prefConfig.onscreenController || prefConfig.enableCrownFeatures
         ) { currentTargetDisplay }
+        orientationManager.resolutionFollowsViewport = ::resolutionFollowsViewport
+        resolutionOwnership.onRotationReturned = orientationManager::onRotationReturned
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
 
         val globalPrefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -462,6 +480,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         streamView.setOnKeyListener(this)
         streamView.setInputCallbacks(this)
         installStartHoldWheelOverlay(streamView.parent as FrameLayout)
+        if (prefConfig.followWindowResolution) {
+            // Watch the container: StreamView itself is sized to the stream's aspect ratio.
+            (streamView.parent as View).addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                    requestViewportResolution()
+                }
+            }
+        }
 
         screenDs5Touchpad.attachIfEnabled(streamView.parent as FrameLayout)
         val cursorOverlayView = findViewById<CursorView>(R.id.cursorOverlay)
@@ -720,6 +746,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
+                requestViewportResolution()
             }
 
             override fun onExternalDisplayDisconnected() {
@@ -728,6 +755,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
                 setInputGrabState(grabbedInput)
+                requestViewportResolution()
+            }
+
+            override fun onExternalDisplayChanged() {
+                requestViewportResolution()
             }
 
             override fun onStreamViewReady(streamView: StreamView) {
@@ -1928,6 +1960,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             inputCaptureProvider.destroy()
         }
         externalDisplayManager?.cleanup()
+        dynResManager.onDisconnected()
         microphoneManager?.stopMicrophoneStream()
         clipboardSyncManager?.stop()
         clipboardSyncManager = null
@@ -2495,6 +2528,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun onConnectionEstablished(): Boolean {
         if (!streamSession.markConnectionEstablished()) return false
         orientationManager.connected = true
+        dynResManager.onConnected(prefConfig.width, prefConfig.height, prefConfig.resolutionScale)
+        requestViewportResolution()
         updatePipAutoEnter()
         return true
     }
@@ -2516,6 +2551,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (!decision.keepAliveService) cancelKeepAliveNotification()
         stopAudioHapticsForStream()
+        // Also for a startup that never completed: its host reports must not reach the next one.
+        dynResManager.onDisconnected()
 
         if (wasConnected) {
             orientationManager.connected = false
@@ -2830,7 +2867,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             baseHeight = alignedHeight
         }
 
-        if (isChangingResolution || !resolutionSwitchController.acceptsNotification(baseWidth, baseHeight)) return
+        // Dynamic resolution sees every report, even before connectionStarted; the rest of the
+        // stream ignores reports during a reconnect or a switch that waits for another size.
+        val hostSupportsAutomatic = conn?.supportsClientResolutionChange == true
+        if (!resolutionOwnership.onHostReport(width, height, baseWidth, baseHeight, hostSupportsAutomatic)) return
 
         // Decoder sizing must use the encoded stream dimensions. baseWidth/baseHeight describe
         // the unscaled host resolution and are only used by the UI and saved stream settings.
@@ -3741,6 +3781,45 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     fun refreshDisplayPosition() {
         DisplayPositionManager(this, prefConfig, streamView).refreshDisplayPosition(surfaceCreated)
     }
+
+    /**
+     * Client-driven dynamic resolution: asks the host to match the stream to where it is shown,
+     * i.e. the external display while streaming to one, otherwise this window.
+     */
+    fun requestViewportResolution() {
+        if (!hostAcceptsResolutionChanges) return
+        if (externalDisplayManager?.isUsingExternalDisplay() == true) {
+            if (prefConfig.followExternalDisplayResolution) {
+                val size = Point()
+                currentTargetDisplay.getRealSize(size)
+                dynResManager.request(size.x, size.y)
+            }
+        } else if (prefConfig.followWindowResolution) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) {
+                dynResManager.cancelPending()
+                return
+            }
+            val container = streamView.parent as View
+            dynResManager.request(container.width, container.height)
+        } else if (prefConfig.followExternalDisplayResolution) {
+            // Back on this device after streaming to an external display.
+            dynResManager.requestLaunchSize()
+        }
+    }
+
+    private fun resolutionFollowsViewport(): Boolean {
+        val followsViewport = hostAcceptsResolutionChanges && StreamResolutionOwnership.followsViewport(
+            onExternalDisplay = externalDisplayManager?.isUsingExternalDisplay() == true,
+            followExternalDisplay = prefConfig.followExternalDisplayResolution,
+            followWindow = prefConfig.followWindowResolution,
+            inPictureInPicture = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode,
+        )
+        return resolutionOwnership.followsRotation(followsViewport)
+    }
+
+    /** The host enabled LI_FF_CLIENT_RESOLUTION_CHANGE for the running session. */
+    private val hostAcceptsResolutionChanges: Boolean
+        get() = connected && conn?.supportsClientResolutionChange == true
 
     val activeStreamView: StreamView?
         get() {

@@ -139,6 +139,7 @@ public class MoonBridge {
 
     public static final int LI_FF_TOUCHPAD_FRAME_EVENTS = 0x20;
     public static final int LI_FF_CURSOR_SHAPE = 0x40;
+    public static final int LI_FF_CLIENT_RESOLUTION_CHANGE = 0x400;
 
     public static final int LI_CURSOR_UPDATE_FLAG_SHAPE = 0x01;
     public static final int LI_CURSOR_UPDATE_FLAG_VISIBLE = 0x02;
