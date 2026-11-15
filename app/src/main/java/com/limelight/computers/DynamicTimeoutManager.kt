@@ -251,8 +251,11 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
                 return 0
             }
 
-            val multiplierShift = (consecutiveFailures - PROBE_COOLDOWN_FAILURE_THRESHOLD).coerceAtMost(3)
-            val cooldownMs = (PROBE_COOLDOWN_BASE_MS shl multiplierShift).coerceAtMost(PROBE_COOLDOWN_MAX_MS)
+            val cooldownMs = if (consecutiveFailures <= PROBE_COOLDOWN_FAST_FAILURE_LIMIT) {
+                PROBE_COOLDOWN_BASE_MS
+            } else {
+                PROBE_COOLDOWN_MAX_MS
+            }
             return maxCooldownMs?.let { minOf(cooldownMs, it.coerceAtLeast(0)) } ?: cooldownMs
         }
 
@@ -262,6 +265,7 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
         private val DEFAULT_MOBILE_CONFIG = TimeoutConfig(10000, 15000, 8000)
         private val DEFAULT_UNSTABLE_CONFIG = TimeoutConfig(15000, 20000, 10000)
         private const val PROBE_COOLDOWN_FAILURE_THRESHOLD = 3
+        private const val PROBE_COOLDOWN_FAST_FAILURE_LIMIT = 30
         private const val PROBE_COOLDOWN_BASE_MS: Long = 10_000L
         private const val PROBE_COOLDOWN_MAX_MS: Long = 30_000L
         private const val UNSTABLE_RECOVERY_TIME_MS: Long = 30000 // 30秒后恢复
