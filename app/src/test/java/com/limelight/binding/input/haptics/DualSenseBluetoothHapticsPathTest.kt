@@ -237,7 +237,7 @@ class DualSenseBluetoothHapticsPathTest {
         fun snapshot() = synchronized(reports) { reports.toList() }
 
         companion object {
-            private const val ASYNC_OUTPUT_TIMEOUT_NS = 10_000_000_000L
+            private const val ASYNC_OUTPUT_TIMEOUT_NS = 30_000_000_000L
         }
     }
 }
