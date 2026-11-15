@@ -109,6 +109,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.limelight.R
 import com.limelight.ui.FeatureGuideRegistry
 import com.limelight.ui.FeatureGuideStore
+import com.limelight.ui.gamepadFocusOutline
 import com.limelight.ui.theme.AppCornerRadii
 import com.limelight.ui.theme.AppOverlayWidths
 import com.limelight.ui.theme.AppShapes

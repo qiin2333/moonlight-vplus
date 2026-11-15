@@ -45,18 +45,46 @@
             android:contentDescription="@null" />
 
         <!-- 分类标题 -->
-        <TextView
-            android:id="@+id/category_title"
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginRight="@dimen/settings_category_item_title_end_margin"
-            android:textSize="15sp"
-            android:textColor="#BBBBBB"
-            android:maxLines="2"
-            android:ellipsize="end"
-            android:includeFontPadding="false"
-            android:fontFamily="sans-serif-medium" />
+            android:layout_marginRight="@dimen/settings_category_item_title_end_margin">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false">
+
+                <TextView
+                    android:id="@+id/category_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="15sp"
+                    android:textColor="#BBBBBB"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:fontFamily="sans-serif-medium" />
+
+                <ImageView
+                    android:id="@+id/category_help"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="8dp"
+                    android:src="@drawable/phc_info"
+                    android:background="@drawable/settings_search_close_background"
+                    android:contentDescription="@string/settings_crown_info_content_description"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </FrameLayout>
 
         <!-- 右箭头指示器 -->
         <ImageView

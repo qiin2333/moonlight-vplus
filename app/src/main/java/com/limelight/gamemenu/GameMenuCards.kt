@@ -55,9 +55,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.testTag
@@ -80,6 +77,7 @@ import com.limelight.utils.handleSliderDpad
 import com.limelight.CustomKeyData
 import com.limelight.R
 import com.limelight.binding.audio.AudioVibrationService
+import com.limelight.ui.gamepadFocusOutline
 import com.limelight.ui.theme.AppShapes
 import java.util.Locale
 import kotlin.math.abs
@@ -1435,16 +1433,6 @@ internal fun Modifier.lockParentScrollDuringGesture(
         }
     }
 }
-
-@Composable
-internal fun Modifier.gamepadFocusOutline(shape: Shape): Modifier {
-    var focused by remember { mutableStateOf(false) }
-    val hardwareInput = LocalInputModeManager.current.inputMode == InputMode.Keyboard
-    val focusColor = appAccentColor()
-    return onFocusChanged { focused = it.isFocused }
-        .then(if (focused && hardwareInput) Modifier.border(2.dp, focusColor, shape) else Modifier)
-}
-
 
 @Composable
 private fun SettingSwitchRow(

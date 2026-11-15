@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import com.limelight.R
+import com.limelight.ui.gamepadFocusOutline
 import com.limelight.utils.appAccentSoftColor
 import com.limelight.utils.appAccentColor
 
