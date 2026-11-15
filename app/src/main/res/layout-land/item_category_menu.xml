@@ -44,47 +44,13 @@
             android:scaleType="fitCenter"
             android:contentDescription="@null" />
 
-        <!-- 分类标题 -->
-        <FrameLayout
+        <!-- 分类标题与说明按钮共用一份布局 -->
+        <include
+            layout="@layout/item_category_menu_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginRight="6dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:baselineAligned="false">
-
-                <TextView
-                    android:id="@+id/category_title"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textSize="13sp"
-                    android:textColor="#BBBBBB"
-                    android:maxLines="2"
-                    android:ellipsize="end"
-                    android:includeFontPadding="false"
-                    android:fontFamily="sans-serif-medium" />
-
-                <ImageView
-                    android:id="@+id/category_help"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:padding="8dp"
-                    android:src="@drawable/phc_info"
-                    android:background="@drawable/settings_search_close_background"
-                    android:contentDescription="@string/settings_crown_info_content_description"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:visibility="gone" />
-
-            </LinearLayout>
-
-        </FrameLayout>
+            android:layout_marginRight="6dp" />
 
         <!-- 右箭头指示器 -->
         <ImageView
