@@ -213,6 +213,7 @@ class ComputerManagerService : Service() {
         var offlineCount = 0
         while (isActive && pollingActive && tuple.job === coroutineContext[Job]) {
             try {
+                tuple.nextProbeDelayMs = 0
                 val polled = runInterruptible {
                     synchronized(tuple.networkLock) {
                         runPoll(tuple.computer, false, offlineCount)
@@ -232,7 +233,10 @@ class ComputerManagerService : Service() {
                 throw e
             }
             try {
-                delay(getNextPollingDelayMs(tuple, offlineCount))
+                val defaultDelayMs = getNextPollingDelayMs(tuple, offlineCount)
+                val cooldownDelayMs = tuple.nextProbeDelayMs
+                tuple.nextProbeDelayMs = 0
+                delay(maxOf(defaultDelayMs, cooldownDelayMs))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             }
@@ -922,7 +926,7 @@ class ComputerManagerService : Service() {
     }
 
     @Throws(InterruptedException::class)
-    private fun parallelPollPc(details: ComputerDetails): ComputerDetails? {
+    private fun parallelPollPc(details: ComputerDetails, tuple: PollingTuple?): ComputerDetails? {
         val candidates = listOfNotNull(
             details.localAddress,
             details.manualAddress,
@@ -936,6 +940,7 @@ class ComputerManagerService : Service() {
         val skipLan = diagnostics?.networkType == NetworkDiagnostics.NetworkType.WAN ||
                 diagnostics?.networkType == NetworkDiagnostics.NetworkType.MOBILE
         val orderedCandidates = candidates.sortedBy { if (it == details.activeAddress) 0 else 1 }
+        var shortestCooldownMs = Long.MAX_VALUE
         val probeCandidates = orderedCandidates.filter { addr ->
             @Suppress("DEPRECATION")
             val isLan = NetworkDiagnostics.isLanAddress(addr.address)
@@ -945,8 +950,15 @@ class ComputerManagerService : Service() {
                 false
             } else {
                 val isLikelyOnline = details.state == ComputerDetails.State.ONLINE && addr == details.activeAddress
-                val cooldownMs = timeoutManager?.getProbeCooldownRemainingMs(addr.address, isLikelyOnline) ?: 0
+                val isPairedPriorityAddress = details.pairState == PairingManager.PairState.PAIRED &&
+                        (addr == details.activeAddress || addr == details.manualAddress)
+                val cooldownMs = timeoutManager?.getProbeCooldownRemainingMs(
+                    addr.address,
+                    isLikelyOnline,
+                    if (isPairedPriorityAddress) PAIRED_PRIORITY_PROBE_COOLDOWN_MAX_MS else null
+                ) ?: 0
                 if (cooldownMs > 0) {
+                    shortestCooldownMs = minOf(shortestCooldownMs, cooldownMs)
                     LimeLog.info("Skipping $addr for ${cooldownMs}ms due to probe cooldown")
                     false
                 } else {
@@ -956,6 +968,9 @@ class ComputerManagerService : Service() {
         }
 
         if (probeCandidates.isEmpty()) {
+            if (shortestCooldownMs != Long.MAX_VALUE) {
+                tuple?.nextProbeDelayMs = shortestCooldownMs
+            }
             LimeLog.info("Fast poll: all candidate addresses are cooling down or skipped")
             return null
         }
@@ -1083,7 +1098,7 @@ class ComputerManagerService : Service() {
 
         try {
             LimeLog.info("Starting parallel poll for ${details.name} (${details.localAddress}, ${details.remoteAddress}, ${details.manualAddress}, ${details.ipv6Address})")
-            val polledDetails = parallelPollPc(details)
+            val polledDetails = parallelPollPc(details, tuple)
             LimeLog.info("Parallel poll for ${details.name} returned address: ${details.activeAddress}")
 
             if (polledDetails != null) {
@@ -1350,6 +1365,7 @@ class ComputerManagerService : Service() {
         private const val POLL_DATA_TTL_MS = 30000
         private const val POLL_RESULT_REUSE_MS: Long = 2500
         private const val COLLECTION_TIMEOUT_MS: Long = 2000
+        private const val PAIRED_PRIORITY_PROBE_COOLDOWN_MAX_MS: Long = 10_000L
     }
 }
 
@@ -1385,6 +1401,8 @@ class PollingTuple(
     val networkLock = Any()
     var lastSuccessfulPollMs: Long = 0
     var lastNetworkPollMs: Long = 0
+    @Volatile
+    var nextProbeDelayMs: Long = 0
     @Volatile
     var pairStateEpoch: Long = 0
 }
