@@ -15,6 +15,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -33,6 +34,7 @@ import android.util.Log
 import android.view.Display
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.TouchDelegate
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -83,6 +85,7 @@ import com.bumptech.glide.signature.ObjectKey
 import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.ui.UiDismissKeyHandler
+import com.limelight.ui.showAppInfoSheet
 import rikka.shizuku.Shizuku
 import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
@@ -103,6 +106,7 @@ import com.limelight.nvstream.HostGamepadSelection
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.utils.AboutDialogLauncher
+import com.limelight.utils.BrowserOnlyLauncher
 import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
@@ -175,6 +179,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     private var drawerLayout: DrawerLayout? = null // 竖屏时使用，横屏时为 null
     private var categoryList: RecyclerView? = null
     private var categoryAdapter: CategoryAdapter? = null
+    private var crownInfoDialog: android.app.Dialog? = null
     private val categories: MutableList<CategoryItem> = ArrayList()
     private var selectedCategoryIndex = 0
 
@@ -740,6 +745,19 @@ class StreamSettings : ThemedAppCompatActivity() {
      */
     class CategoryItem(var key: String, var title: String, var iconRes: Int)
 
+    private fun showCrownInfo() {
+        crownInfoDialog?.dismiss()
+        crownInfoDialog = showAppInfoSheet(
+            context = this,
+            title = getString(R.string.settings_crown_info_content_description),
+            text = getString(R.string.settings_crown_info_tooltip),
+            actionLabel = getString(R.string.settings_crown_author_github),
+            onAction = { BrowserOnlyLauncher.open(this, "https://github.com/WACrown") }
+        ).apply {
+            setOnDismissListener { crownInfoDialog = null }
+        }
+    }
+
     /**
      * 分类菜单适配器
      */
@@ -747,6 +765,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val title: TextView = itemView.findViewById(R.id.category_title)
+            val help: ImageView = itemView.findViewById(R.id.category_help)
             val icon: ImageView = itemView.findViewById(R.id.category_icon)
             val indicator: View = itemView.findViewById(R.id.category_indicator)
             val root: View = itemView.findViewById(R.id.category_item_root)
@@ -765,6 +784,37 @@ class StreamSettings : ThemedAppCompatActivity() {
             // Phosphor 矢量图标 + 文本（图标颜色随选中态在 updateItemAppearance 中切换）
             holder.icon.setImageResource(item.iconRes)
             holder.title.text = item.title
+            val hasHelp = item.key == "category_crown_features"
+            val verticalPadding = dpToPx(when {
+                hasHelp -> 8
+                resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE -> 10
+                else -> 14
+            })
+            holder.root.setPadding(holder.root.paddingLeft, verticalPadding, holder.root.paddingRight, verticalPadding)
+            holder.help.visibility = if (hasHelp) View.VISIBLE else View.GONE
+            holder.help.setOnClickListener(if (hasHelp) View.OnClickListener { showCrownInfo() } else null)
+            // Keep the icon beside the label compact while providing a 48dp touch target.
+            holder.root.touchDelegate = null
+            if (hasHelp) holder.root.post {
+                if (holder.help.visibility == View.VISIBLE) {
+                    val bounds = Rect(0, 0, holder.help.width, holder.help.height)
+                    (holder.root as ViewGroup).offsetDescendantRectToMyCoords(holder.help, bounds)
+                    bounds.inset(-dpToPx(8), -dpToPx(8))
+                    holder.root.touchDelegate = TouchDelegate(bounds, holder.help)
+                }
+            }
+            holder.root.setOnKeyListener { _, keyCode, event ->
+                if (hasHelp && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    if (event.action == KeyEvent.ACTION_DOWN) holder.help.requestFocus()
+                    true
+                } else false
+            }
+            holder.help.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    if (event.action == KeyEvent.ACTION_DOWN) holder.root.requestFocus()
+                    true
+                } else false
+            }
 
             // 高亮选中项
             val isSelected = position == selectedCategoryIndex
@@ -811,6 +861,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             holder.title.alpha = textAlpha
             holder.icon.setColorFilter(iconColor)
             holder.icon.alpha = iconAlpha
+            holder.help.setColorFilter(accentColor)
 
             // 箭头透明度和颜色
             val arrow = holder.root.findViewById<ImageView>(R.id.category_arrow)
@@ -964,6 +1015,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        crownInfoDialog?.dismiss()
 
         val isUsingPortraitDrawerLayout = findViewById<View>(R.id.drawer_layout) is DrawerLayout
         val shouldUsePortraitDrawerLayout = newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE
@@ -1116,6 +1168,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     override fun onDestroy() {
+        crownInfoDialog?.dismiss()
         PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(backgroundPrefsListener)
         if (backgroundReceiverRegistered) {
             unregisterReceiver(backgroundReceiver)

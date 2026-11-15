@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.ui.gamepadFocusOutline
 import com.limelight.utils.AppSwitch
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.appAccentColor

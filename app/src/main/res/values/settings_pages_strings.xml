@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="settings_crown_info_content_description">About Crown</string>
+    <string name="settings_crown_info_tooltip">Keep your wallet in your pocket—this Crown is no VIP badge! It takes its name from “王冠” (Wang Guan), who pioneered this feature. Its superpower is powerful, flexible custom key controls: set them up your way.</string>
+    <string name="settings_crown_author_github" translatable="false">GitHub · WACrown ↗</string>
     <string name="settings_page_frame_generation_title">Frame generation tuning</string>
     <string name="settings_page_frame_generation_summary">Adjust render scale, the fallback threshold, and frame presentation order.</string>
     <string name="settings_page_hdr_title">HDR settings</string>

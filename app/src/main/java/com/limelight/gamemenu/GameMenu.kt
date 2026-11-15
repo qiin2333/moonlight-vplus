@@ -60,6 +60,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
 import com.limelight.ui.isGamepadNavigationSource
+import com.limelight.ui.showAppInfoSheet
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.KeyCodeMapper
 import org.json.JSONArray
@@ -1157,7 +1158,7 @@ class GameMenu(
 
     private fun showInfoSheet(titleRes: Int, messageRes: Int) {
         registerChildDialog(
-            showGameMenuInfoSheet(game, getString(titleRes), getString(messageRes))
+            showAppInfoSheet(game, getString(titleRes), getString(messageRes))
         )
     }
 

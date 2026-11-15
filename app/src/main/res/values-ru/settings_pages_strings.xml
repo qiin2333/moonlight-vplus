@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="settings_crown_info_content_description">О функции Crown</string>
+    <string name="settings_crown_info_tooltip">Не спешите доставать кошелёк: Crown — вовсе не VIP-корона! Название дано в честь автора «王冠» (Ван Гуань), который первым создал эту функцию. Её суперсила — мощная и гибкая настройка кнопок: как удобно, так и настраивайте.</string>
     <string name="settings_page_frame_generation_title">Настройка генерации кадров</string>
     <string name="settings_page_frame_generation_summary">Масштаб отрисовки, порог возврата к прямой отрисовке и порядок показа кадров.</string>
     <string name="settings_page_hdr_title">Настройки HDR</string>
