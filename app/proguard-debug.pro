@@ -65,6 +65,11 @@
     public boolean isTextInputEnabled();
 }
 
+# Cursor instrumentation checks negotiated mode across the target/test APK boundary.
+-keepclassmembers class com.limelight.CursorServiceManager {
+    public boolean isServiceRunning();
+}
+
 # Remote-IME instrumentation constructs the controller via default arguments and
 # copies RemoteTextContext fixtures across the APK boundary.
 -keep class com.limelight.utils.RemoteImeController { <init>(...); }

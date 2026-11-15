@@ -720,6 +720,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
+                cursorServiceManager.setExternalDisplayActive(true)
             }
 
             override fun onExternalDisplayDisconnected() {
@@ -728,6 +729,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
                 setInputGrabState(grabbedInput)
+                cursorServiceManager.setExternalDisplayActive(false)
             }
 
             override fun onStreamViewReady(streamView: StreamView) {
