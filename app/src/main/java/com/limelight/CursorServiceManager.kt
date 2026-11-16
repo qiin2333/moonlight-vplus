@@ -78,6 +78,13 @@ class CursorServiceManager(
     private var streamHeight = prefConfig.height.coerceAtLeast(1)
     private var loggedUnsupportedHost = false
     private var cursorUpdateTimeout: Runnable? = null
+    private var externalDisplayActive = false
+
+    fun setExternalDisplayActive(active: Boolean) {
+        if (externalDisplayActive == active) return
+        externalDisplayActive = active
+        refreshCursorMode()
+    }
 
     fun initializeLocalCursorRenderers(width: Int, height: Int) {
         if (cursorOverlay == null) return
@@ -234,7 +241,8 @@ class CursorServiceManager(
             nativePointerEnabled = prefConfig.enableNativeMousePointer,
             touchpadEnabled = prefConfig.touchscreenTrackpad,
             localCursorEnabled = prefConfig.enableLocalCursorRendering,
-            hasCursorOverlay = cursorOverlay != null
+            hasCursorOverlay = cursorOverlay != null,
+            externalDisplayActive = externalDisplayActive
         )
     }
 
@@ -359,7 +367,11 @@ class CursorServiceManager(
     }
 
     private fun applyCurrentCursorOnUiThread() {
-        if (!localModeActive || !hostCursorVisible) {
+        if (!localModeActive) {
+            restoreDefaultCursor()
+            return
+        }
+        if (!hostCursorVisible) {
             hideLocalPresentation()
             return
         }
@@ -470,8 +482,15 @@ internal object CursorModePolicy {
         nativePointerEnabled: Boolean,
         touchpadEnabled: Boolean,
         localCursorEnabled: Boolean,
-        hasCursorOverlay: Boolean
+        hasCursorOverlay: Boolean,
+        externalDisplayActive: Boolean = false
     ): Boolean {
+        // Android may keep the system pointer on the tablet's input display. A
+        // PointerIcon on the Presentation cannot move it to the video display.
+        // Keep the host cursor in the video for external output, including when
+        // the saved touchpad preference requests a local overlay on the tablet.
+        if (externalDisplayActive) return false
+
         val nativePointer = nativePointerSupported && nativePointerEnabled
         val touchpadOverlay = touchpadEnabled && localCursorEnabled && hasCursorOverlay
         return nativePointer || touchpadOverlay
