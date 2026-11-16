@@ -22,21 +22,27 @@ permissions:
   contents: write
   packages: read
 
+env:
+  GITHUB_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID || secrets.OAUTH_CLIENT_ID }}
+  AUDIO_HAPTICS_SDK_REF: b3f97c3bb7500ea7b1985aea568e5c7b40308d3b # post-v0.5.14 capability-aware Android renderer
+  AUDIO_HAPTICS_SDK_DIR: ${{ github.workspace }}/.deps/moonlight-audio-haptics
+  # configuration cache 先在 CI 灰度（AGP9 legacy DSL 兼容性待验证）；本地构建不受影响，回退删掉这一行即可
+  GRADLE_OPTS: "-Dorg.gradle.configuration-cache=true"
+
 jobs:
-  build:
+  # ===== PR 快速反馈：lint + 单测 + 版本脚本测试 =====
+  test:
+    name: lint-and-tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      GITHUB_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID || secrets.OAUTH_CLIENT_ID }}
-      AUDIO_HAPTICS_SDK_REF: b3f97c3bb7500ea7b1985aea568e5c7b40308d3b # post-v0.5.14 capability-aware Android renderer
-      AUDIO_HAPTICS_SDK_DIR: ${{ github.workspace }}/.deps/moonlight-audio-haptics
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           submodules: recursive
-          fetch-depth: 0
-          fetch-tags: true
+          # 全量历史 + tags 只有 tag 构建需要（release notes diff / version floor 推导），PR 用浅克隆提速
+          fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
+          fetch-tags: ${{ github.ref_type == 'tag' }}
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -51,6 +57,18 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+
+      # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
+      # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
+      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      - name: Cache Gradle build cache (rolling)
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
 
       - name: Set up Android SDK/NDK
         uses: android-actions/setup-android@v3
@@ -90,60 +108,90 @@ jobs:
           python3 scripts/generate_accent_variants.py --check
 
       - name: Run lint and unit tests
-        run: ./gradlew :app:lintNonRootDebug :app:testNonRootDebugUnitTest --no-daemon --stacktrace
+        run: ./gradlew :app:lintNonRootDebug :app:testNonRootDebugUnitTest --stacktrace
 
       - name: Test release versioning
         shell: bash
         run: bash .github/release/test.sh
 
       - name: Compile instrumentation tests
-        run: ./gradlew :app:compileNonRootDebugAndroidTestKotlin --no-daemon --stacktrace
+        run: ./gradlew :app:compileNonRootDebugAndroidTestKotlin --stacktrace
 
-      - name: Get version from tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          VERSION=${VERSION#v}
-          echo "VERSION_NAME=$VERSION" >> $GITHUB_ENV
-          echo "Using version from tag: $VERSION"
+  # ===== 构建：debug APK + PR 的 release 验证包 + 打包校验，与 test 并行 =====
+  build:
+    name: build-apks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
+          fetch-tags: ${{ github.ref_type == 'tag' }}
 
-      - name: Update version in build.gradle
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Checkout audio haptics SDK
+        uses: actions/checkout@v5
+        with:
+          repository: AlkaidLab/moonlight-audio-haptics
+          ref: ${{ env.AUDIO_HAPTICS_SDK_REF }}
+          path: .deps/moonlight-audio-haptics
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
+      # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
+      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      - name: Cache Gradle build cache (rolling)
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
+
+      - name: Set up Android SDK/NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358 cmake;3.22.1
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses > /dev/null
+
+      - name: Remove local.properties (if present)
+        run: rm -f local.properties
+
+      - name: Create google-services.json from secrets
         shell: bash
         run: |
-          set -e
-          TAG=${GITHUB_REF#refs/tags/}
-          # 移除版本号前缀 'v' 如果存在
-          VERSION=${TAG#v}
-          echo "Updating version to: $VERSION"
-
-          # 每个 MAJOR.MINOR.PATCH 基础版本有 999 个发布槽位，按 tag 创建时间分配。
-          # 这样同一基础版本下的稳定版、hotfix 和不同功能预览 tag 也不会撞号。
-          # PATCH 可省略；历史 tag、前导零、Android 上限和回退基准都由脚本统一校验。
-          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG" app/build.gradle)
-          IFS=$'\t' read -r NEW_VERSION_CODE FLOOR FLOOR_SRC <<< "$VERSION_INFO"
-          echo "Version floor: $FLOOR (from $FLOOR_SRC)"
-
-          # 允许相等（同一个 tag 重跑 CI 应当产出同样的包），只拒绝变小。
-          if [ "$NEW_VERSION_CODE" -lt "$FLOOR" ]; then
-            echo "ERROR: 推导出的 versionCode $NEW_VERSION_CODE 小于已发布的 $FLOOR（来自 $FLOOR_SRC）"
-            echo "Android 不允许 versionCode 倒退，请检查 tag '$TAG' 是否打错。"
-            exit 1
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            mkdir -p app
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > app/google-services.json
+            if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
+              echo "Created valid google-services.json from secrets"
+            else
+              echo "ERROR: Invalid JSON format in GOOGLE_SERVICES_JSON secret"
+              exit 1
+            fi
+          else
+            echo "GOOGLE_SERVICES_JSON not set; skipping file creation"
           fi
 
-          bash .github/release/gradle-version.sh write \
-            app/build.gradle \
-            "$VERSION" \
-            "$NEW_VERSION_CODE"
-          echo "VERSION_CODE=$NEW_VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Updated release version (floor was $FLOOR from $FLOOR_SRC)"
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
 
       - name: Build NonRoot Debug APK
-        run: ./gradlew :app:assembleNonRootDebug --no-daemon --stacktrace
+        run: ./gradlew :app:assembleNonRootDebug --stacktrace
 
       - name: Build NonRoot Release validation APK
         if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
-        run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
+        run: ./gradlew :app:assembleNonRootRelease --stacktrace
 
       - name: Verify PyroWave runtime is packaged
         shell: bash
@@ -179,9 +227,104 @@ jobs:
           name: app-nonroot-release-validation-apk
           path: app/build/outputs/apk/nonRoot/release/*.apk
 
-      # ===== Release (Signed) Build (tags only) =====
+  # ===== 发版（仅 tag）：test + build 都通过后，打签名包并发布 Release =====
+  release:
+    name: release
+    needs: [test, build]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          # 发版需要全量历史与 tags：version floor 推导和 release notes diff 都按 tag 检索
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Checkout audio haptics SDK
+        uses: actions/checkout@v5
+        with:
+          repository: AlkaidLab/moonlight-audio-haptics
+          ref: ${{ env.AUDIO_HAPTICS_SDK_REF }}
+          path: .deps/moonlight-audio-haptics
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Android SDK/NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358 cmake;3.22.1
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses > /dev/null
+
+      - name: Remove local.properties (if present)
+        run: rm -f local.properties
+
+      - name: Create google-services.json from secrets
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            mkdir -p app
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > app/google-services.json
+            if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
+              echo "Created valid google-services.json from secrets"
+            else
+              echo "ERROR: Invalid JSON format in GOOGLE_SERVICES_JSON secret"
+              exit 1
+            fi
+          else
+            echo "GOOGLE_SERVICES_JSON not set; skipping file creation"
+          fi
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
+
+      - name: Get version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "VERSION_NAME=$VERSION" >> $GITHUB_ENV
+          echo "Using version from tag: $VERSION"
+
+      - name: Update version in build.gradle
+        shell: bash
+        run: |
+          set -e
+          TAG=${GITHUB_REF#refs/tags/}
+          # 移除版本号前缀 'v' 如果存在
+          VERSION=${TAG#v}
+          echo "Updating version to: $VERSION"
+
+          # 每个 MAJOR.MINOR.PATCH 基础版本有 999 个发布槽位，按 tag 创建时间分配。
+          # 这样同一基础版本下的稳定版、hotfix 和不同功能预览 tag 也不会撞号。
+          # PATCH 可省略；历史 tag、前导零、Android 上限和回退基准都由脚本统一校验。
+          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG" app/build.gradle)
+          IFS=$'\t' read -r NEW_VERSION_CODE FLOOR FLOOR_SRC <<< "$VERSION_INFO"
+          echo "Version floor: $FLOOR (from $FLOOR_SRC)"
+
+          # 允许相等（同一个 tag 重跑 CI 应当产出同样的包），只拒绝变小。
+          if [ "$NEW_VERSION_CODE" -lt "$FLOOR" ]; then
+            echo "ERROR: 推导出的 versionCode $NEW_VERSION_CODE 小于已发布的 $FLOOR（来自 $FLOOR_SRC）"
+            echo "Android 不允许 versionCode 倒退，请检查 tag '$TAG' 是否打错。"
+            exit 1
+          fi
+
+          bash .github/release/gradle-version.sh write \
+            app/build.gradle \
+            "$VERSION" \
+            "$NEW_VERSION_CODE"
+          echo "VERSION_CODE=$NEW_VERSION_CODE" >> "$GITHUB_ENV"
+          echo "Updated release version (floor was $FLOOR from $FLOOR_SRC)"
+
       - name: Decode keystore for Release
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -190,16 +333,14 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :app:assembleNonRootRelease --no-daemon --stacktrace
+        run: ./gradlew :app:assembleNonRootRelease --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           set -e
@@ -219,7 +360,6 @@ jobs:
           echo "REL_APK=$DEST" >> $GITHUB_ENV
 
       - name: Generate release notes
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           set -e
@@ -315,7 +455,6 @@ jobs:
           } > release_notes.md
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -330,7 +469,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release APK and mapping
-        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: app-nonroot-release-signed
@@ -339,7 +477,6 @@ jobs:
             app/build/outputs/mapping/nonRootRelease/mapping.txt
 
       - name: Sync released version to master
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           bash .github/release/sync-released-version.sh \
@@ -348,4 +485,3 @@ jobs:
             origin \
             master \
             app/build.gradle
-
