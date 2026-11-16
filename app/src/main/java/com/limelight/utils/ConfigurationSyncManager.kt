@@ -3335,6 +3335,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_fix_mouse_wheel",
             "checkbox_flip_face_buttons",
             "checkbox_framegen_present_real_first",
+            "checkbox_force_landscape_multi_window",
             "checkbox_full_range",
             "checkbox_gamepad_motion_fallback",
             "checkbox_gamepad_motion_sensors",

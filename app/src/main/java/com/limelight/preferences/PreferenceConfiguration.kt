@@ -228,6 +228,7 @@ class PreferenceConfiguration {
     var gamepadMotionSensorsFallbackToDevice = false
     var reverseResolution = false
     var rotableScreen = false
+    var forceLandscapeMultiWindow = false
     // Persistent: enable mapping gyroscope motion to right analog stick
     var gyroToRightStick = false
     // Persistent: enable mapping gyroscope motion to relative mouse movement
@@ -350,6 +351,7 @@ class PreferenceConfiguration {
                 .putInt(GAME_MENU_OPACITY_PREF_STRING, gameMenuOpacity)
                 .putBoolean(REVERSE_RESOLUTION_PREF_STRING, reverseResolution)
                 .putBoolean(ROTABLE_SCREEN_PREF_STRING, rotableScreen)
+                .putBoolean(FORCE_LANDSCAPE_MULTI_WINDOW_PREF_STRING, forceLandscapeMultiWindow)
                 .putBoolean(SHOW_BITRATE_CARD_PREF_STRING, showBitrateCard)
                 .putBoolean(SHOW_DISPLAY_SETTINGS_CARD_PREF_STRING, showDisplaySettingsCard)
                 .putBoolean(SHOW_AUDIO_HAPTICS_CARD_PREF_STRING, showAudioHapticsCard)
@@ -583,6 +585,7 @@ class PreferenceConfiguration {
         copy.perfOverlayStyle = this.perfOverlayStyle
         copy.reverseResolution = this.reverseResolution
         copy.rotableScreen = this.rotableScreen
+        copy.forceLandscapeMultiWindow = this.forceLandscapeMultiWindow
         copy.screenPosition = this.screenPosition
         copy.screenOffsetX = this.screenOffsetX
         copy.screenOffsetY = this.screenOffsetY
@@ -796,6 +799,7 @@ class PreferenceConfiguration {
         private const val REVERSE_RESOLUTION_PREF_STRING = "checkbox_reverse_resolution"
         private const val USE_EXTERNAL_DISPLAY_PREF_STRING = "use_external_display"
         private const val ROTABLE_SCREEN_PREF_STRING = "checkbox_rotable_screen"
+        private const val FORCE_LANDSCAPE_MULTI_WINDOW_PREF_STRING = "checkbox_force_landscape_multi_window"
 
         // 画面位置常量
         private const val SCREEN_POSITION_PREF_STRING = "list_screen_position"
@@ -1007,6 +1011,7 @@ class PreferenceConfiguration {
 
         private const val DEFAULT_REVERSE_RESOLUTION = false
         private const val DEFAULT_ROTABLE_SCREEN = false
+        private const val DEFAULT_FORCE_LANDSCAPE_MULTI_WINDOW = false
 
         // 默认值
         private const val DEFAULT_SCREEN_POSITION = "center" // 居中
@@ -1836,6 +1841,7 @@ class PreferenceConfiguration {
 
             config.reverseResolution = prefs.getBoolean(REVERSE_RESOLUTION_PREF_STRING, DEFAULT_REVERSE_RESOLUTION)
             config.rotableScreen = prefs.getBoolean(ROTABLE_SCREEN_PREF_STRING, DEFAULT_ROTABLE_SCREEN)
+            config.forceLandscapeMultiWindow = prefs.getBoolean(FORCE_LANDSCAPE_MULTI_WINDOW_PREF_STRING, DEFAULT_FORCE_LANDSCAPE_MULTI_WINDOW)
 
             // 如果启用了分辨率反转，则交换宽度和高度
             if (config.reverseResolution) {

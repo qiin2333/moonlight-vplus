@@ -218,6 +218,11 @@
             android:title="@string/title_checkbox_rotable_screen"
             android:summary="@string/summary_checkbox_rotable_screen"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_force_landscape_multi_window"
+            android:title="@string/title_force_landscape_multi_window"
+            android:summary="@string/summary_force_landscape_multi_window"
+            android:defaultValue="false" />
         <com.limelight.preferences.ExternalDisplayPreference
             android:key="use_external_display"
             android:title="@string/title_use_external_display"
