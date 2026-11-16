@@ -453,11 +453,11 @@ class PerformanceOverlayManager(
     }
 
     fun onConfigurationChanged() {
-        cancelHudPress()
         val overlay = performanceOverlayView
         if (isDraggingPerfOverlay && currentHudLayout != PerfHudLayout.DOCK && overlay != null) {
             cancelOverlayDrag(overlay)
         } else {
+            cancelHudPress()
             isDraggingPerfOverlay = false
             hideSnapGuides()
         }
@@ -965,9 +965,7 @@ class PerformanceOverlayManager(
     private fun configureTextAlignment() {
 
         val isVertical = isEffectiveVerticalLayout()
-        val isRightSide = determineRightSidePosition(isVertical)
-
-        val gravity = if (isVertical && isRightSide)
+        val gravity = if (isVertical && determineRightSidePosition())
             Gravity.CENTER_VERTICAL or Gravity.END
         else
             Gravity.CENTER_VERTICAL or Gravity.START
@@ -979,7 +977,7 @@ class PerformanceOverlayManager(
         }
     }
 
-    private fun determineRightSidePosition(isVertical: Boolean): Boolean {
+    private fun determineRightSidePosition(): Boolean {
         val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
 
@@ -1123,20 +1121,16 @@ class PerformanceOverlayManager(
     private fun handleActionMove(v: View, event: MotionEvent): Boolean {
         if (!isDraggingPerfOverlay) return false
 
-        val parentDimensions = getParentDimensions(v)
-        val viewDimensions = getViewDimensions(v)
-        val parentWidth = parentDimensions[0]
-        val parentHeight = parentDimensions[1]
-        val viewWidth = maxOf(viewDimensions[0], perfOverlayDragWidth)
-        val viewHeight = maxOf(viewDimensions[1], perfOverlayDragHeight)
+        val parent = v.parent as View
+        val viewWidth = maxOf(if (v.width == 0) 300 else v.width, perfOverlayDragWidth)
+        val viewHeight = maxOf(if (v.height == 0) 50 else v.height, perfOverlayDragHeight)
 
         val layoutParams = v.layoutParams as FrameLayout.LayoutParams
         var newLeftMargin = (event.rawX - perfOverlayDeltaX).toInt()
         var newTopMargin = (event.rawY - perfOverlayDeltaY).toInt()
 
-        val parent = v.parent as View
-        val maxLeft = maxOf(0, parentWidth - parent.paddingLeft - parent.paddingRight - viewWidth)
-        val maxTop = maxOf(0, parentHeight - parent.paddingTop - parent.paddingBottom - viewHeight)
+        val maxLeft = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - viewWidth)
+        val maxTop = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - viewHeight)
         dragMaxLeft = maxLeft
         dragMaxTop = maxTop
         newLeftMargin = newLeftMargin.coerceIn(0, maxLeft)
@@ -1212,9 +1206,8 @@ class PerformanceOverlayManager(
         val viewLocation = IntArray(2)
         val parentLocation = IntArray(2)
         v.getLocationInWindow(viewLocation)
-        (v.parent as View).getLocationInWindow(parentLocation)
-
         val parent = v.parent as View
+        parent.getLocationInWindow(parentLocation)
         layoutParams.leftMargin = viewLocation[0] - parentLocation[0] - parent.paddingLeft
         layoutParams.topMargin = viewLocation[1] - parentLocation[1] - parent.paddingTop
         layoutParams.gravity = Gravity.NO_GRAVITY
@@ -1630,14 +1623,18 @@ class PerformanceOverlayManager(
     }
 
     private fun restoreFloatingPosition(overlay: View) {
+        val relativePosition = hasRelativePosition()
         if (isDraggingPerfOverlay || !overlayPrefs.getBoolean("has_custom_position", false) ||
-            (isPortrait() && !hasRelativePosition()) || currentHudLayout == PerfHudLayout.DOCK
+            (isPortrait() && !relativePosition) || currentHudLayout == PerfHudLayout.DOCK
         ) return
-        repositionFloatingOverlay(overlay, Rect(overlay.left, overlay.top, overlay.right, overlay.bottom), ++overlayStyleGeneration)
+        repositionFloatingOverlay(overlay, Rect(overlay.left, overlay.top, overlay.right, overlay.bottom),
+            ++overlayStyleGeneration, relativePosition)
     }
 
-    private fun savedGuide(key: String): SnapGuide? =
-        SnapGuide.entries.firstOrNull { it.name == overlayPrefs.getString(key, null) }
+    private fun savedGuide(key: String): SnapGuide? {
+        val name = overlayPrefs.getString(key, null)
+        return SnapGuide.entries.firstOrNull { it.name == name }
+    }
 
     private fun restoredMargin(relative: Float, guide: SnapGuide?, max: Int, startInset: Int, endInset: Int): Int {
         return when (guide) {
@@ -1663,11 +1660,6 @@ class PerformanceOverlayManager(
         if (width == 0) width = 300
         if (height == 0) height = 50
         return intArrayOf(width, height)
-    }
-
-    private fun getParentDimensions(view: View): IntArray {
-        val parent = view.parent as View
-        return intArrayOf(parent.width, parent.height)
     }
 
     // ================================================================ 新版 HUD
@@ -1722,9 +1714,7 @@ class PerformanceOverlayManager(
     }
 
     /** Measure without the old margins so a larger style is not clipped before it can be repositioned. */
-    private fun repositionFloatingOverlay(overlay: View, oldBounds: Rect, generation: Int) {
-        val relativePosition = hasRelativePosition()
-        if ((isPortrait() && !relativePosition) || !overlayPrefs.getBoolean("has_custom_position", false)) return
+    private fun repositionFloatingOverlay(overlay: View, oldBounds: Rect, generation: Int, relativePosition: Boolean) {
         overlay.post {
             if (generation != overlayStyleGeneration || isDraggingPerfOverlay ||
                 currentHudLayout == PerfHudLayout.DOCK
@@ -2102,8 +2092,7 @@ class PerformanceOverlayManager(
                 if (hudLongPressFired) return true
                 val slop = ViewConfiguration.get(activity).scaledTouchSlop
                 if (abs(event.rawX - perfOverlayStartX) > slop || abs(event.rawY - perfOverlayStartY) > slop) {
-                    uiHandler.removeCallbacks(hudLongPressRunnable)
-                    clearHudPress()
+                    cancelHudPress()
                 }
                 return if (docked) true else handleActionMove(v, event)
             }
@@ -2121,8 +2110,8 @@ class PerformanceOverlayManager(
                 return handleActionUp(v, event)
             }
             MotionEvent.ACTION_CANCEL -> {
-                cancelHudPress()
-                if (docked || hudLongPressFired) {
+                if (docked || hudLongPressFired || !isDraggingPerfOverlay) {
+                    cancelHudPress()
                     isDraggingPerfOverlay = false
                     hideSnapGuides()
                 } else {
