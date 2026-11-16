@@ -55,58 +55,68 @@ class PerformanceOverlayStylePositionTest {
                 scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
                 waitForLandscape(scenario)
 
-                lateinit var manager: PerformanceOverlayManager
+                var manager: PerformanceOverlayManager? = null
                 lateinit var container: FrameLayout
                 lateinit var overlay: LinearLayout
                 lateinit var hud: PerfHudView
-                scenario.onActivity { activity ->
-                    container = FrameLayout(activity)
-                    activity.layoutInflater.inflate(R.layout.activity_game, container, true)
-                    activity.setContentView(container)
-                    overlay = container.findViewById(R.id.performanceOverlay)
-                    hud = container.findViewById(R.id.perfHud)
-                    for (i in 0 until overlay.childCount) {
-                        (overlay.getChildAt(i) as? TextView)?.text = "1"
-                    }
-                    val config = PreferenceConfiguration().apply {
-                        enablePerfOverlay = true
-                        perfOverlayStyle = PerfHudDensity.CLASSIC
-                        perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL
-                        perfOverlayPosition = position
-                    }
-                    manager = PerformanceOverlayManager(activity, config) { }
-                    manager.initialize()
-                    manager.applyOverlayState()
-                }
-                waitForLayout()
-
-                var originalBottom = 0
-                var edgeTolerance = 0
-                var classicWidth = 0
-                scenario.onActivity {
-                    assertTrue("classic overlay must be laid out", overlay.height > 0)
-                    assertHorizontalAnchor(container, overlay, position)
-                    originalBottom = overlay.bottom
-                    classicWidth = overlay.width
-                    edgeTolerance = (16 * it.resources.displayMetrics.density).toInt()
-                    // This is the position saved after dragging the classic bar to the bottom.
-                    overlayPrefs.edit().putBoolean("has_custom_position", true)
-                        .putInt("left_margin", overlay.left).putInt("top_margin", overlay.top).commit()
-                }
-                for (style in listOf(PerfHudDensity.STANDARD, PerfHudDensity.CLASSIC)) {
-                    scenario.onActivity { manager.setPerfOverlayStyle(style) }
-                    waitForLayout()
-                    scenario.onActivity {
-                        val content = if (style == PerfHudDensity.STANDARD) hud else overlay.findViewById<View>(R.id.perfRes)
-                        assertFullyVisible(container, overlay, content)
-                        if (style == PerfHudDensity.STANDARD) {
-                            assertTrue("the styles must have different widths", overlay.width != classicWidth)
+                try {
+                    scenario.onActivity { activity ->
+                        container = FrameLayout(activity)
+                        activity.layoutInflater.inflate(R.layout.activity_game, container, true)
+                        activity.setContentView(container)
+                        overlay = container.findViewById(R.id.performanceOverlay)
+                        hud = container.findViewById(R.id.perfHud)
+                        for (i in 0 until overlay.childCount) {
+                            (overlay.getChildAt(i) as? TextView)?.text = "1"
                         }
-                        assertHorizontalAnchor(container, overlay, position)
-                        assertTrue("overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
+                        val config = PreferenceConfiguration().apply {
+                            enablePerfOverlay = true
+                            perfOverlayStyle = PerfHudDensity.CLASSIC
+                            perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL
+                            perfOverlayPosition = position
+                        }
+                        val overlayManager = PerformanceOverlayManager(activity, config) { }
+                        manager = overlayManager
+                        overlayManager.initialize()
+                        overlayManager.applyOverlayState()
                     }
+                    waitForLayout()
+
+                    var originalBottom = 0
+                    var edgeTolerance = 0
+                    var classicWidth = 0
+                    scenario.onActivity {
+                        assertTrue("classic overlay must be laid out", overlay.height > 0)
+                        assertHorizontalAnchor(container, overlay, position)
+                        originalBottom = overlay.bottom
+                        classicWidth = overlay.width
+                        edgeTolerance = (16 * it.resources.displayMetrics.density).toInt()
+                        // This is the position saved after dragging the classic bar to the bottom.
+                        overlayPrefs.edit().putBoolean("has_custom_position", true)
+                            .putInt("left_margin", overlay.left).putInt("top_margin", overlay.top).commit()
+                    }
+                    for (style in listOf(PerfHudDensity.STANDARD, PerfHudDensity.CLASSIC)) {
+                        scenario.onActivity { checkNotNull(manager).setPerfOverlayStyle(style) }
+                        waitForLayout()
+                        scenario.onActivity {
+                            if (style == PerfHudDensity.STANDARD) {
+                                assertFullyVisible(container, overlay, hud)
+                                assertTrue("the styles must have different widths", overlay.width != classicWidth)
+                            } else {
+                                for (i in 0 until overlay.childCount) {
+                                    val item = overlay.getChildAt(i)
+                                    if (item is TextView && item.visibility == View.VISIBLE) {
+                                        assertFullyVisible(container, overlay, item)
+                                    }
+                                }
+                            }
+                            assertHorizontalAnchor(container, overlay, position)
+                            assertTrue("overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
+                        }
+                    }
+                } finally {
+                    scenario.onActivity { manager?.cancelPendingTasks() }
                 }
-                scenario.onActivity { manager.cancelPendingTasks() }
             }
         } finally {
             restorePreferences(overlayPrefs, savedOverlay)
