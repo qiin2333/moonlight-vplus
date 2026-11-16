@@ -58,6 +58,18 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
+      # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
+      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      - name: Cache Gradle build cache (rolling)
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
+
       - name: Set up Android SDK/NDK
         uses: android-actions/setup-android@v3
         with:
@@ -131,6 +143,18 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+
+      # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
+      # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
+      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      - name: Cache Gradle build cache (rolling)
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
 
       - name: Set up Android SDK/NDK
         uses: android-actions/setup-android@v3
