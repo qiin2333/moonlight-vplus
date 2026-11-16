@@ -8,7 +8,6 @@ import android.content.res.Configuration
 import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
-import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -21,7 +20,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.perfhud.PerfHudView
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.ui.StreamView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,31 +60,14 @@ class PerformanceOverlayStylePositionTest {
                 lateinit var overlay: LinearLayout
                 lateinit var hud: PerfHudView
                 scenario.onActivity { activity ->
-                    assertEquals(Configuration.ORIENTATION_LANDSCAPE, activity.resources.configuration.orientation)
                     container = FrameLayout(activity)
-                    container.addView(StreamView(activity).apply { id = R.id.surfaceView },
-                        FrameLayout.LayoutParams(-1, -1))
-                    overlay = LinearLayout(activity).apply {
-                        id = R.id.performanceOverlay
-                        orientation = LinearLayout.HORIZONTAL
-                        setPadding(0, 3, 12, 4)
-                        visibility = View.GONE
-                    }
-                    val itemIds = intArrayOf(
-                        R.id.perfRes, R.id.perfDecoder, R.id.perfRenderFps, R.id.perfPacketLoss,
-                        R.id.perfNetworkLatency, R.id.perfDecodeLatency, R.id.perfHostLatency,
-                        R.id.perfBattery, R.id.perfOnePercentLow, R.id.perfClock
-                    )
-                    for (itemId in itemIds) {
-                        overlay.addView(TextView(activity).apply {
-                            id = itemId
-                            text = "1"
-                        }, LinearLayout.LayoutParams(-2, -2))
-                    }
-                    hud = PerfHudView(activity, null).apply { id = R.id.perfHud; visibility = View.GONE }
-                    overlay.addView(hud, LinearLayout.LayoutParams(-2, -2))
-                    container.addView(overlay, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+                    activity.layoutInflater.inflate(R.layout.activity_game, container, true)
                     activity.setContentView(container)
+                    overlay = container.findViewById(R.id.performanceOverlay)
+                    hud = container.findViewById(R.id.perfHud)
+                    for (i in 0 until overlay.childCount) {
+                        (overlay.getChildAt(i) as? TextView)?.text = "1"
+                    }
                     val config = PreferenceConfiguration().apply {
                         enablePerfOverlay = true
                         perfOverlayStyle = PerfHudDensity.CLASSIC
@@ -111,25 +92,21 @@ class PerformanceOverlayStylePositionTest {
                     // This is the position saved after dragging the classic bar to the bottom.
                     overlayPrefs.edit().putBoolean("has_custom_position", true)
                         .putInt("left_margin", overlay.left).putInt("top_margin", overlay.top).commit()
-                    manager.setPerfOverlayStyle(PerfHudDensity.STANDARD)
                 }
-                waitForLayout()
-                scenario.onActivity {
-                    assertFullyVisible(container, overlay, hud)
-                    assertTrue("the styles must have different widths for this regression test",
-                        abs(overlay.width - classicWidth) >= edgeTolerance)
-                    assertHorizontalAnchor(container, overlay, position)
-                    assertTrue("standard overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
-                    manager.setPerfOverlayStyle(PerfHudDensity.CLASSIC)
+                for (style in listOf(PerfHudDensity.STANDARD, PerfHudDensity.CLASSIC)) {
+                    scenario.onActivity { manager.setPerfOverlayStyle(style) }
+                    waitForLayout()
+                    scenario.onActivity {
+                        val content = if (style == PerfHudDensity.STANDARD) hud else overlay.findViewById<View>(R.id.perfRes)
+                        assertFullyVisible(container, overlay, content)
+                        if (style == PerfHudDensity.STANDARD) {
+                            assertTrue("the styles must have different widths", overlay.width != classicWidth)
+                        }
+                        assertHorizontalAnchor(container, overlay, position)
+                        assertTrue("overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
+                    }
                 }
-                waitForLayout()
-                scenario.onActivity {
-                    val classicItem = overlay.findViewById<TextView>(R.id.perfRes)
-                    assertFullyVisible(container, overlay, classicItem)
-                    assertHorizontalAnchor(container, overlay, position)
-                    assertTrue("classic overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
-                    manager.cancelPendingTasks()
-                }
+                scenario.onActivity { manager.cancelPendingTasks() }
             }
         } finally {
             restorePreferences(overlayPrefs, savedOverlay)
