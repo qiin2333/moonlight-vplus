@@ -78,7 +78,7 @@ class PerformanceOverlayStylePositionTest {
             settings.edit().putStringSet("perf_overlay_display_items", items).commit()
             ActivityScenario.launch<HelpActivity>(intent).use { scenario ->
                 scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
-                waitForLandscape(scenario)
+                waitForOrientation(scenario, Configuration.ORIENTATION_LANDSCAPE)
                 val config = PreferenceConfiguration().apply {
                     enablePerfOverlay = true
                     perfOverlayStyle = style
@@ -168,6 +168,79 @@ class PerformanceOverlayStylePositionTest {
         }
         waitForLayout()
         scenario.onActivity { assertRelativePosition(container, overlay, relativeX, relativeY) }
+    }
+
+    @Test
+    fun verticalDragOfFullWidthOverlayKeepsHorizontalCenterAfterShrink() = withOverlay(PerfHudDensity.CLASSIC) {
+        scenario.onActivity { overlay.findViewById<TextView>(R.id.perfRes).text = "W".repeat(2000) }
+        waitForLayout()
+        var left = 0
+        var targetTop = 0
+        scenario.onActivity {
+            assertEquals("classic overlay must fill the horizontal space", container.width, overlay.width)
+            left = overlay.left
+            targetTop = ((container.height - overlay.height) * 0.37f).toInt()
+        }
+        dragOverlay(scenario, overlay, left, targetTop)
+        waitForLayout()
+        scenario.onActivity {
+            checkNotNull(manager).setPerfOverlayStyle(PerfHudDensity.MINI)
+        }
+        waitForLayout()
+        scenario.onActivity {
+            assertTrue("the new style must have horizontal space", overlay.width < container.width)
+            assertTrue("vertical-only drag should keep the overlay horizontally centered",
+                abs(overlay.left + overlay.right - container.width) <= 2)
+        }
+
+        val (savedX, _) = dragToFreePosition(this)
+        scenario.onActivity { checkNotNull(manager).setPerfOverlayStyle(PerfHudDensity.CLASSIC) }
+        waitForLayout()
+        scenario.onActivity {
+            assertEquals("classic overlay must fill the horizontal space", container.width, overlay.width)
+            left = overlay.left
+            targetTop = ((container.height - overlay.height) * 0.65f).toInt()
+        }
+        dragOverlay(scenario, overlay, left, targetTop)
+        scenario.onActivity { checkNotNull(manager).setPerfOverlayStyle(PerfHudDensity.MINI) }
+        waitForLayout()
+        scenario.onActivity { assertEquals("the saved horizontal position should survive", savedX, relativeLeft(container, overlay), 0.03f) }
+    }
+
+    @Test
+    fun contentGrowthDuringBottomDragRemainsFullyVisible() = withOverlay(PerfHudDensity.CLASSIC) {
+        scenario.onActivity {
+            config.perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.VERTICAL
+            checkNotNull(manager).onConfigurationChanged()
+        }
+        waitForLayout()
+        var left = 0
+        var targetTop = 0
+        var originalTextHeight = 0
+        scenario.onActivity {
+            left = overlay.left
+            targetTop = container.height - overlay.height
+            originalTextHeight = overlay.findViewById<TextView>(R.id.perfRes).height
+        }
+        dragOverlay(scenario, overlay, left, targetTop) {
+            scenario.onActivity {
+                overlay.findViewById<TextView>(R.id.perfRes).apply {
+                    maxLines = 4
+                    text = "wide\nwide\nwide\nwide"
+                }
+            }
+            waitForLayout()
+            scenario.onActivity {
+                assertTrue("the content must grow during the drag",
+                    overlay.findViewById<TextView>(R.id.perfRes).height > originalTextHeight)
+            }
+        }
+        waitForLayout()
+        scenario.onActivity {
+            val tolerance = (16 * it.resources.displayMetrics.density).toInt()
+            assertTrue("overlay should remain near the bottom", container.height - overlay.bottom <= tolerance)
+            assertClassicContentVisible(container, overlay)
+        }
     }
 
     @Test
@@ -361,12 +434,7 @@ class PerformanceOverlayStylePositionTest {
                         assertFullyVisible(container, overlay, hud)
                         assertTrue("the styles must have different widths", overlay.width != classicWidth)
                     } else {
-                        for (i in 0 until overlay.childCount) {
-                            val item = overlay.getChildAt(i)
-                            if (item is TextView && item.visibility == View.VISIBLE) {
-                                assertFullyVisible(container, overlay, item)
-                            }
-                        }
+                        assertClassicContentVisible(container, overlay)
                     }
                     assertHorizontalAnchor(container, overlay, position)
                     assertTrue("overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
@@ -386,6 +454,15 @@ class PerformanceOverlayStylePositionTest {
         }
     }
 
+    private fun assertClassicContentVisible(parent: View, overlay: LinearLayout) {
+        for (i in 0 until overlay.childCount) {
+            val item = overlay.getChildAt(i)
+            if (item is TextView && item.visibility == View.VISIBLE) {
+                assertFullyVisible(parent, overlay, item)
+            }
+        }
+    }
+
     private fun assertFullyVisible(parent: View, overlay: View, content: View) {
         assertTrue("overlay must have a size", overlay.width > 0 && overlay.height > 0)
         assertTrue("overlay must fit its parent", overlay.left >= 0 && overlay.top >= 0 &&
@@ -401,10 +478,6 @@ class PerformanceOverlayStylePositionTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         Thread.sleep(250)
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-    }
-
-    private fun waitForLandscape(scenario: ActivityScenario<HelpActivity>) {
-        waitForOrientation(scenario, Configuration.ORIENTATION_LANDSCAPE)
     }
 
     private fun waitForOrientation(scenario: ActivityScenario<HelpActivity>, orientation: Int) {

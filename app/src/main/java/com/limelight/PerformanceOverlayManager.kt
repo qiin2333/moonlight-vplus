@@ -134,16 +134,16 @@ class PerformanceOverlayManager(
     private var perfOverlayStartY = 0f
     private var perfOverlayDeltaX = 0f
     private var perfOverlayDeltaY = 0f
-    private var perfOverlayOriginalLeft = 0
-    private var perfOverlayOriginalTop = 0
-    private var perfOverlayOriginalRight = 0
-    private var perfOverlayOriginalBottom = 0
-    private var perfOverlayOriginalGravity = Gravity.NO_GRAVITY
+    private var perfOverlayOriginalLayout: FrameLayout.LayoutParams? = null
     private var perfOverlayDragWidth = 0
     private var perfOverlayDragHeight = 0
     private var perfOverlayMoved = false
     private var dragGuideX: SnapGuide? = null
     private var dragGuideY: SnapGuide? = null
+    private var dragRelativeX: Float? = null
+    private var dragRelativeY: Float? = null
+    private var dragMaxLeft = 0
+    private var dragMaxTop = 0
     private var snapGuidesView: PerfOverlaySnapGuides? = null
 
     // 点击检测相关
@@ -890,11 +890,12 @@ class PerformanceOverlayManager(
     private fun applyFloatingPosition(layoutParams: FrameLayout.LayoutParams, isPortrait: Boolean) {
         val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
+        val hasRelativePosition = hasRelativePosition()
 
         // HUD 自带圆角背景，贴着屏幕边缘时圆角会被切掉，留一点安全边距；横屏顶栏则直接吸顶
         val inset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
         val topInset = if (isStickyBar()) 0 else inset
-        if (hasRelativePosition()) {
+        if (hasRelativePosition) {
             layoutParams.gravity = Gravity.NO_GRAVITY
             layoutParams.leftMargin = prefs.getInt("left_margin", 0)
             layoutParams.topMargin = prefs.getInt("top_margin", 0)
@@ -926,8 +927,8 @@ class PerformanceOverlayManager(
             layoutParams.leftMargin = inset
             layoutParams.topMargin = topInset
         }
-        layoutParams.rightMargin = if (hasRelativePosition()) 0 else inset
-        layoutParams.bottomMargin = if (hasRelativePosition()) 0 else inset
+        layoutParams.rightMargin = if (hasRelativePosition) 0 else inset
+        layoutParams.bottomMargin = if (hasRelativePosition) 0 else inset
     }
 
     /** 横屏 HUD 顶栏（标准档、横排）贴屏幕上沿显示。 */
@@ -1076,8 +1077,6 @@ class PerformanceOverlayManager(
     private fun handleActionDown(v: View, event: MotionEvent): Boolean {
         ++overlayStyleGeneration
         hideSnapGuides()
-        dragGuideX = null
-        dragGuideY = null
         perfOverlayMoved = false
         isDraggingPerfOverlay = true
         perfOverlayStartX = event.rawX
@@ -1088,11 +1087,22 @@ class PerformanceOverlayManager(
         isDoubleClickHandled = false
 
         val layoutParams = v.layoutParams as FrameLayout.LayoutParams
-        perfOverlayOriginalLeft = layoutParams.leftMargin
-        perfOverlayOriginalTop = layoutParams.topMargin
-        perfOverlayOriginalRight = layoutParams.rightMargin
-        perfOverlayOriginalBottom = layoutParams.bottomMargin
-        perfOverlayOriginalGravity = layoutParams.gravity
+        perfOverlayOriginalLayout = FrameLayout.LayoutParams(layoutParams)
+        val hasRelativePosition = hasRelativePosition()
+        dragGuideX = if (hasRelativePosition) savedGuide(KEY_GUIDE_X) else when (layoutParams.gravity and Gravity.HORIZONTAL_GRAVITY_MASK) {
+            Gravity.LEFT -> SnapGuide.START
+            Gravity.CENTER_HORIZONTAL -> SnapGuide.CENTER
+            Gravity.RIGHT -> SnapGuide.END
+            else -> null
+        }
+        dragGuideY = if (hasRelativePosition) savedGuide(KEY_GUIDE_Y) else when (layoutParams.gravity and Gravity.VERTICAL_GRAVITY_MASK) {
+            Gravity.TOP -> SnapGuide.START
+            Gravity.CENTER_VERTICAL -> SnapGuide.CENTER
+            Gravity.BOTTOM -> SnapGuide.END
+            else -> null
+        }
+        dragRelativeX = if (hasRelativePosition) overlayPrefs.getFloat(KEY_RELATIVE_X, 0.5f) else null
+        dragRelativeY = if (hasRelativePosition) overlayPrefs.getFloat(KEY_RELATIVE_Y, 0.5f) else null
 
         if (layoutParams.gravity != Gravity.NO_GRAVITY) {
             convertGravityToMargins(v, layoutParams)
@@ -1127,6 +1137,8 @@ class PerformanceOverlayManager(
         val parent = v.parent as View
         val maxLeft = maxOf(0, parentWidth - parent.paddingLeft - parent.paddingRight - viewWidth)
         val maxTop = maxOf(0, parentHeight - parent.paddingTop - parent.paddingBottom - viewHeight)
+        dragMaxLeft = maxLeft
+        dragMaxTop = maxTop
         newLeftMargin = newLeftMargin.coerceIn(0, maxLeft)
         newTopMargin = newTopMargin.coerceIn(0, maxTop)
         val slop = ViewConfiguration.get(activity).scaledTouchSlop
@@ -1140,9 +1152,15 @@ class PerformanceOverlayManager(
             val y = guidedPosition(newTopMargin, maxTop, topInset, sideInset)
             newLeftMargin = x.margin
             newTopMargin = y.margin
-            dragGuideX = x.guide
-            dragGuideY = y.guide
-            updateSnapGuides(parent as? ViewGroup, newLeftMargin, newTopMargin, viewWidth, viewHeight)
+            if (maxLeft > 0) {
+                dragGuideX = x.guide
+                dragRelativeX = newLeftMargin.toFloat() / maxLeft
+            }
+            if (maxTop > 0) {
+                dragGuideY = y.guide
+                dragRelativeY = newTopMargin.toFloat() / maxTop
+            }
+            updateSnapGuides(parent as? ViewGroup, newLeftMargin, newTopMargin, viewWidth, viewHeight, x.guide, y.guide)
         } else {
             return true
         }
@@ -1187,13 +1205,7 @@ class PerformanceOverlayManager(
     }
 
     private fun restoreOverlayLayout(v: View) {
-        val lp = v.layoutParams as FrameLayout.LayoutParams
-        lp.leftMargin = perfOverlayOriginalLeft
-        lp.topMargin = perfOverlayOriginalTop
-        lp.rightMargin = perfOverlayOriginalRight
-        lp.bottomMargin = perfOverlayOriginalBottom
-        lp.gravity = perfOverlayOriginalGravity
-        v.layoutParams = lp
+        perfOverlayOriginalLayout?.let { v.layoutParams = it }
     }
 
     private fun convertGravityToMargins(v: View, layoutParams: FrameLayout.LayoutParams) {
@@ -1507,22 +1519,36 @@ class PerformanceOverlayManager(
     }
 
     private fun guidedPosition(position: Int, max: Int, startInset: Int, endInset: Int): GuidedPosition {
-        val candidates = listOf(
-            SnapGuide.START to startInset.coerceIn(0, max),
-            SnapGuide.CENTER to max / 2,
-            SnapGuide.END to (max - endInset).coerceIn(0, max)
-        )
-        val nearest = candidates.minByOrNull { abs(position - it.second) } ?: return GuidedPosition(position, null)
-        return if (abs(position - nearest.second) <= dp(SNAP_GUIDE_DISTANCE_DP)) {
-            GuidedPosition(nearest.second, nearest.first)
+        // A full-size overlay cannot select an anchor on this axis.
+        if (max == 0) return GuidedPosition(0, null)
+        var margin = startInset.coerceIn(0, max)
+        var guide = SnapGuide.START
+        val center = max / 2
+        val end = (max - endInset).coerceIn(0, max)
+        if (abs(position - center) < abs(position - margin)) {
+            margin = center
+            guide = SnapGuide.CENTER
+        }
+        if (abs(position - end) < abs(position - margin)) {
+            margin = end
+            guide = SnapGuide.END
+        }
+        return if (abs(position - margin) <= dp(SNAP_GUIDE_DISTANCE_DP)) {
+            GuidedPosition(margin, guide)
         } else {
             GuidedPosition(position, null)
         }
     }
 
-    private fun updateSnapGuides(parent: ViewGroup?, left: Int, top: Int, width: Int, height: Int) {
-        if (parent == null || (dragGuideX == null && dragGuideY == null)) {
+    private fun updateSnapGuides(
+        parent: ViewGroup?, left: Int, top: Int, width: Int, height: Int, guideX: SnapGuide?, guideY: SnapGuide?
+    ) {
+        if (parent == null) {
             hideSnapGuides()
+            return
+        }
+        if (guideX == null && guideY == null) {
+            snapGuidesView?.visibility = View.INVISIBLE
             return
         }
         val guides = snapGuidesView ?: PerfOverlaySnapGuides(activity, UiHelper.accentColor(activity)).also {
@@ -1531,13 +1557,14 @@ class PerformanceOverlayManager(
             parent.addView(it, index, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             snapGuidesView = it
         }
-        val x = when (dragGuideX) {
+        guides.visibility = View.VISIBLE
+        val x = when (guideX) {
             SnapGuide.START -> left
             SnapGuide.CENTER -> left + width / 2
             SnapGuide.END -> left + width
             null -> null
         }
-        val y = when (dragGuideY) {
+        val y = when (guideY) {
             SnapGuide.START -> top
             SnapGuide.CENTER -> top + height / 2
             SnapGuide.END -> top + height
@@ -1557,22 +1584,49 @@ class PerformanceOverlayManager(
     private fun hasRelativePosition(): Boolean = overlayPrefs.getBoolean("has_custom_position", false) &&
         overlayPrefs.contains(KEY_RELATIVE_X) && overlayPrefs.contains(KEY_RELATIVE_Y)
 
+    private fun measureOverlayInParent(view: View, parent: View, lp: FrameLayout.LayoutParams): Pair<Int, Int> {
+        val width = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - lp.rightMargin)
+        val height = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - lp.bottomMargin)
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.AT_MOST)
+        )
+        return width to height
+    }
+
     private fun saveDragPosition(view: View) {
         val parent = view.parent as? View ?: return
         val lp = view.layoutParams as? FrameLayout.LayoutParams ?: return
-        val maxLeft = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - maxOf(view.width, perfOverlayDragWidth))
-        val maxTop = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - maxOf(view.height, perfOverlayDragHeight))
-        val left = lp.leftMargin.coerceIn(0, maxLeft)
-        val top = lp.topMargin.coerceIn(0, maxTop)
+        val (availableWidth, availableHeight) = measureOverlayInParent(view, parent, lp)
+        val maxLeft = maxOf(0, availableWidth - view.measuredWidth)
+        val maxTop = maxOf(0, availableHeight - view.measuredHeight)
+        val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+        val topInset = if (isStickyBar()) 0 else sideInset
+        val left = if (dragMaxLeft == 0 || dragGuideX != null) {
+            restoredMargin(dragRelativeX ?: 0.5f, dragGuideX, maxLeft, sideInset, sideInset)
+        } else {
+            lp.leftMargin.coerceIn(0, maxLeft)
+        }
+        val top = if (dragMaxTop == 0 || dragGuideY != null) {
+            restoredMargin(dragRelativeY ?: 0.5f, dragGuideY, maxTop, topInset, sideInset)
+        } else {
+            lp.topMargin.coerceIn(0, maxTop)
+        }
+        lp.leftMargin = left
+        lp.topMargin = top
+        view.layoutParams = lp
         overlayPrefs.edit {
             putBoolean("has_custom_position", true)
             putInt("left_margin", left)
             putInt("top_margin", top)
-            putFloat(KEY_RELATIVE_X, if (maxLeft > 0) left.toFloat() / maxLeft else 0f)
-            putFloat(KEY_RELATIVE_Y, if (maxTop > 0) top.toFloat() / maxTop else 0f)
+            // Keep the last meaningful ratio when the new size fills the parent.
+            putFloat(KEY_RELATIVE_X, if (maxLeft > 0) left.toFloat() / maxLeft else dragRelativeX ?: 0.5f)
+            putFloat(KEY_RELATIVE_Y, if (maxTop > 0) top.toFloat() / maxTop else dragRelativeY ?: 0.5f)
             if (dragGuideX != null) putString(KEY_GUIDE_X, dragGuideX!!.name) else remove(KEY_GUIDE_X)
             if (dragGuideY != null) putString(KEY_GUIDE_Y, dragGuideY!!.name) else remove(KEY_GUIDE_Y)
         }
+        configureTextAlignment()
+        refreshHudStick()
     }
 
     private fun restoreFloatingPosition(overlay: View) {
@@ -1582,8 +1636,11 @@ class PerformanceOverlayManager(
         repositionFloatingOverlay(overlay, Rect(overlay.left, overlay.top, overlay.right, overlay.bottom), ++overlayStyleGeneration)
     }
 
-    private fun restoredMargin(relative: Float, guideName: String?, max: Int, startInset: Int, endInset: Int): Int {
-        return when (SnapGuide.entries.firstOrNull { it.name == guideName }) {
+    private fun savedGuide(key: String): SnapGuide? =
+        SnapGuide.entries.firstOrNull { it.name == overlayPrefs.getString(key, null) }
+
+    private fun restoredMargin(relative: Float, guide: SnapGuide?, max: Int, startInset: Int, endInset: Int): Int {
+        return when (guide) {
             SnapGuide.START -> startInset.coerceIn(0, max)
             SnapGuide.CENTER -> max / 2
             SnapGuide.END -> (max - endInset).coerceIn(0, max)
@@ -1676,25 +1733,20 @@ class PerformanceOverlayManager(
             val lp = overlay.layoutParams as? FrameLayout.LayoutParams ?: return@post
             if (lp.gravity != Gravity.NO_GRAVITY || parent.width <= 0 || parent.height <= 0) return@post
 
-            val availableWidth = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - lp.rightMargin)
-            val availableHeight = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - lp.bottomMargin)
-            overlay.measure(
-                View.MeasureSpec.makeMeasureSpec(availableWidth, View.MeasureSpec.AT_MOST),
-                View.MeasureSpec.makeMeasureSpec(availableHeight, View.MeasureSpec.AT_MOST)
-            )
+            val (availableWidth, availableHeight) = measureOverlayInParent(overlay, parent, lp)
             val maxLeft = maxOf(0, availableWidth - overlay.measuredWidth)
             val maxTop = maxOf(0, availableHeight - overlay.measuredHeight)
             val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
             val topInset = if (isStickyBar()) 0 else sideInset
             val left = if (relativePosition) {
-                restoredMargin(overlayPrefs.getFloat(KEY_RELATIVE_X, 0f), overlayPrefs.getString(KEY_GUIDE_X, null),
+                restoredMargin(overlayPrefs.getFloat(KEY_RELATIVE_X, 0f), savedGuide(KEY_GUIDE_X),
                     maxLeft, sideInset, sideInset)
             } else {
                 anchoredMargin(oldBounds.left, oldBounds.right, parent.width, parent.paddingLeft, parent.paddingRight,
                     availableWidth, overlay.measuredWidth, lp.leftMargin)
             }
             val top = if (relativePosition) {
-                restoredMargin(overlayPrefs.getFloat(KEY_RELATIVE_Y, 0f), overlayPrefs.getString(KEY_GUIDE_Y, null),
+                restoredMargin(overlayPrefs.getFloat(KEY_RELATIVE_Y, 0f), savedGuide(KEY_GUIDE_Y),
                     maxTop, topInset, sideInset)
             } else {
                 anchoredMargin(oldBounds.top, oldBounds.bottom, parent.height, parent.paddingTop, parent.paddingBottom,
