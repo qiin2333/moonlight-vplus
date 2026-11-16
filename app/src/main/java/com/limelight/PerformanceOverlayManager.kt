@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
@@ -1519,16 +1520,13 @@ class PerformanceOverlayManager(
         overlay?.animate()?.cancel()
         overlay?.translationX = 0f
         overlay?.translationY = 0f
-        val oldLeft = overlay?.left ?: 0
-        val oldTop = overlay?.top ?: 0
-        val oldRight = overlay?.right ?: 0
-        val oldBottom = overlay?.bottom ?: 0
+        val oldBounds = overlay?.let { Rect(it.left, it.top, it.right, it.bottom) }
         val generation = ++overlayStyleGeneration
         prefConfig.perfOverlayStyle = style
         prefConfig.writePreferences(activity)
         refreshOverlayNow()
-        if (overlay != null) {
-            repositionAfterStyleChange(overlay, oldLeft, oldTop, oldRight, oldBottom, generation)
+        if (overlay != null && oldBounds != null) {
+            repositionAfterStyleChange(overlay, oldBounds, generation)
         }
         if (announce) {
             var text = activity.getString(R.string.perf_hud_style_changed, styleName(style))
@@ -1563,9 +1561,7 @@ class PerformanceOverlayManager(
     }
 
     /** Measure without the old margins so a larger style is not clipped before it can be repositioned. */
-    private fun repositionAfterStyleChange(
-        overlay: View, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int, generation: Int
-    ) {
+    private fun repositionAfterStyleChange(overlay: View, oldBounds: Rect, generation: Int) {
         if (isPortrait() || !overlayPrefs.getBoolean("has_custom_position", false)) return
         overlay.post {
             if (generation != overlayStyleGeneration || isDraggingPerfOverlay ||
@@ -1581,18 +1577,10 @@ class PerformanceOverlayManager(
                 View.MeasureSpec.makeMeasureSpec(availableWidth, View.MeasureSpec.AT_MOST),
                 View.MeasureSpec.makeMeasureSpec(availableHeight, View.MeasureSpec.AT_MOST)
             )
-            val width = overlay.measuredWidth
-            val height = overlay.measuredHeight
-            val left = (if (oldRight > oldLeft && oldLeft + (oldRight - oldLeft) / 2 > parent.width / 2) {
-                oldRight - parent.paddingLeft - width
-            } else {
-                lp.leftMargin
-            }).coerceIn(0, maxOf(0, availableWidth - width))
-            val top = (if (oldBottom > oldTop && oldTop + (oldBottom - oldTop) / 2 > parent.height / 2) {
-                oldBottom - parent.paddingTop - height
-            } else {
-                lp.topMargin
-            }).coerceIn(0, maxOf(0, availableHeight - height))
+            val left = anchoredMargin(oldBounds.left, oldBounds.right, parent.width, parent.paddingLeft, parent.paddingRight,
+                availableWidth, overlay.measuredWidth, lp.leftMargin)
+            val top = anchoredMargin(oldBounds.top, oldBounds.bottom, parent.height, parent.paddingTop, parent.paddingBottom,
+                availableHeight, overlay.measuredHeight, lp.topMargin)
             if (left != lp.leftMargin || top != lp.topMargin) {
                 lp.leftMargin = left
                 lp.topMargin = top
@@ -1605,6 +1593,23 @@ class PerformanceOverlayManager(
                 overlay.requestLayout()
             }
         }
+    }
+
+    /** Keep a centered or end-anchored edge stable as the overlay changes size. */
+    private fun anchoredMargin(
+        oldStart: Int, oldEnd: Int, parentSize: Int, paddingStart: Int, paddingEnd: Int,
+        availableSize: Int, newSize: Int, currentMargin: Int
+    ): Int {
+        val oldCenterTwice = oldStart + oldEnd
+        val contentCenterTwice = parentSize + paddingStart - paddingEnd
+        val margin = when {
+            oldEnd <= oldStart -> currentMargin
+            abs(oldCenterTwice - contentCenterTwice) <= dp(2f) * 2 ->
+                (parentSize - paddingStart - paddingEnd - newSize) / 2
+            oldCenterTwice > contentCenterTwice -> oldEnd - paddingStart - newSize
+            else -> currentMargin
+        }
+        return margin.coerceIn(0, maxOf(0, availableSize - newSize))
     }
 
     private fun restoreClassicContainer(overlay: LinearLayout) {
@@ -1724,12 +1729,13 @@ class PerformanceOverlayManager(
         val ph = parent.height
         if (pw == 0 || ph == 0) return
 
-        var left = lp.leftMargin
-        var top = lp.topMargin
-        if (oldW > 0 && oldL + oldW / 2 > pw / 2) left = oldR - newW
-        if (oldH > 0 && oldT + oldH / 2 > ph / 2) top = oldB - newH
-        left = left.coerceIn(0, maxOf(0, pw - newW))
-        top = top.coerceIn(0, maxOf(0, ph - newH))
+        val availableWidth = maxOf(0, pw - parent.paddingLeft - parent.paddingRight - lp.rightMargin)
+        val availableHeight = maxOf(0, ph - parent.paddingTop - parent.paddingBottom - lp.bottomMargin)
+        // A placement change already chose the new position; don't re-anchor it to the old bounds.
+        val left = if (l != oldL) lp.leftMargin.coerceIn(0, maxOf(0, availableWidth - newW)) else
+            anchoredMargin(oldL, oldR, pw, parent.paddingLeft, parent.paddingRight, availableWidth, newW, lp.leftMargin)
+        val top = if (t != oldT) lp.topMargin.coerceIn(0, maxOf(0, availableHeight - newH)) else
+            anchoredMargin(oldT, oldB, ph, parent.paddingTop, parent.paddingBottom, availableHeight, newH, lp.topMargin)
         if (left != lp.leftMargin || top != lp.topMargin) {
             val generation = overlayStyleGeneration
             val previousLeft = lp.leftMargin

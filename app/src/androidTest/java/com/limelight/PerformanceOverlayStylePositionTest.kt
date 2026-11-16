@@ -26,11 +26,21 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.math.abs
 
 @RunWith(AndroidJUnit4::class)
 class PerformanceOverlayStylePositionTest {
     @Test
     fun bottomCustomPositionKeepsBothStylesVisible() {
+        checkBottomPosition(PreferenceConfiguration.PerfOverlayPosition.BOTTOM)
+    }
+
+    @Test
+    fun bottomRightCustomPositionKeepsBothStylesVisible() {
+        checkBottomPosition(PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT)
+    }
+
+    private fun checkBottomPosition(position: PreferenceConfiguration.PerfOverlayPosition) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val overlayPrefs = context.getSharedPreferences("performance_overlay", Context.MODE_PRIVATE)
         val settings = PreferenceManager.getDefaultSharedPreferences(context)
@@ -70,7 +80,7 @@ class PerformanceOverlayStylePositionTest {
                     for (itemId in itemIds) {
                         overlay.addView(TextView(activity).apply {
                             id = itemId
-                            text = "100"
+                            text = "1"
                         }, LinearLayout.LayoutParams(-2, -2))
                     }
                     hud = PerfHudView(activity, null).apply { id = R.id.perfHud; visibility = View.GONE }
@@ -81,7 +91,7 @@ class PerformanceOverlayStylePositionTest {
                         enablePerfOverlay = true
                         perfOverlayStyle = PerfHudDensity.CLASSIC
                         perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL
-                        perfOverlayPosition = PreferenceConfiguration.PerfOverlayPosition.BOTTOM
+                        perfOverlayPosition = position
                     }
                     manager = PerformanceOverlayManager(activity, config) { }
                     manager.initialize()
@@ -91,9 +101,12 @@ class PerformanceOverlayStylePositionTest {
 
                 var originalBottom = 0
                 var edgeTolerance = 0
+                var classicWidth = 0
                 scenario.onActivity {
                     assertTrue("classic overlay must be laid out", overlay.height > 0)
+                    assertHorizontalAnchor(container, overlay, position)
                     originalBottom = overlay.bottom
+                    classicWidth = overlay.width
                     edgeTolerance = (16 * it.resources.displayMetrics.density).toInt()
                     // This is the position saved after dragging the classic bar to the bottom.
                     overlayPrefs.edit().putBoolean("has_custom_position", true)
@@ -103,6 +116,9 @@ class PerformanceOverlayStylePositionTest {
                 waitForLayout()
                 scenario.onActivity {
                     assertFullyVisible(container, overlay, hud)
+                    assertTrue("the styles must have different widths for this regression test",
+                        abs(overlay.width - classicWidth) >= edgeTolerance)
+                    assertHorizontalAnchor(container, overlay, position)
                     assertTrue("standard overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
                     manager.setPerfOverlayStyle(PerfHudDensity.CLASSIC)
                 }
@@ -110,6 +126,7 @@ class PerformanceOverlayStylePositionTest {
                 scenario.onActivity {
                     val classicItem = overlay.findViewById<TextView>(R.id.perfRes)
                     assertFullyVisible(container, overlay, classicItem)
+                    assertHorizontalAnchor(container, overlay, position)
                     assertTrue("classic overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
                     manager.cancelPendingTasks()
                 }
@@ -117,6 +134,18 @@ class PerformanceOverlayStylePositionTest {
         } finally {
             restorePreferences(overlayPrefs, savedOverlay)
             restorePreferences(settings, savedSettings)
+        }
+    }
+
+    private fun assertHorizontalAnchor(
+        parent: View, overlay: View, position: PreferenceConfiguration.PerfOverlayPosition
+    ) {
+        if (position == PreferenceConfiguration.PerfOverlayPosition.BOTTOM) {
+            assertTrue("overlay should remain horizontally centered: left=${overlay.left}, right=${overlay.right}, parent=${parent.width}",
+                abs(overlay.left + overlay.right - parent.width) <= 2)
+        } else {
+            val edgeTolerance = (16 * parent.resources.displayMetrics.density).toInt()
+            assertTrue("overlay should remain at the right edge", parent.width - overlay.right <= edgeTolerance)
         }
     }
 
