@@ -1,0 +1,169 @@
+package com.limelight
+
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.graphics.Rect
+import android.net.Uri
+import android.os.SystemClock
+import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.preference.PreferenceManager
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.limelight.perfhud.PerfHudDensity
+import com.limelight.perfhud.PerfHudView
+import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.ui.StreamView
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class PerformanceOverlayStylePositionTest {
+    @Test
+    fun bottomCustomPositionKeepsBothStylesVisible() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val overlayPrefs = context.getSharedPreferences("performance_overlay", Context.MODE_PRIVATE)
+        val settings = PreferenceManager.getDefaultSharedPreferences(context)
+        val savedOverlay = overlayPrefs.all
+        val savedSettings = settings.all
+        val intent = Intent(context, HelpActivity::class.java).setData(Uri.parse("about:blank"))
+        try {
+            overlayPrefs.edit().clear().commit()
+            settings.edit().putStringSet("perf_overlay_display_items", setOf(
+                "resolution", "decoder", "render_fps", "packet_loss", "network_latency",
+                "decode_latency", "host_latency", "one_percent_low", "clock"
+            )).commit()
+            ActivityScenario.launch<HelpActivity>(intent).use { scenario ->
+                scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+                waitForLandscape(scenario)
+
+                lateinit var manager: PerformanceOverlayManager
+                lateinit var container: FrameLayout
+                lateinit var overlay: LinearLayout
+                lateinit var hud: PerfHudView
+                scenario.onActivity { activity ->
+                    assertEquals(Configuration.ORIENTATION_LANDSCAPE, activity.resources.configuration.orientation)
+                    container = FrameLayout(activity)
+                    container.addView(StreamView(activity).apply { id = R.id.surfaceView },
+                        FrameLayout.LayoutParams(-1, -1))
+                    overlay = LinearLayout(activity).apply {
+                        id = R.id.performanceOverlay
+                        orientation = LinearLayout.HORIZONTAL
+                        setPadding(0, 3, 12, 4)
+                        visibility = View.GONE
+                    }
+                    val itemIds = intArrayOf(
+                        R.id.perfRes, R.id.perfDecoder, R.id.perfRenderFps, R.id.perfPacketLoss,
+                        R.id.perfNetworkLatency, R.id.perfDecodeLatency, R.id.perfHostLatency,
+                        R.id.perfBattery, R.id.perfOnePercentLow, R.id.perfClock
+                    )
+                    for (itemId in itemIds) {
+                        overlay.addView(TextView(activity).apply {
+                            id = itemId
+                            text = "100"
+                        }, LinearLayout.LayoutParams(-2, -2))
+                    }
+                    hud = PerfHudView(activity, null).apply { id = R.id.perfHud; visibility = View.GONE }
+                    overlay.addView(hud, LinearLayout.LayoutParams(-2, -2))
+                    container.addView(overlay, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+                    activity.setContentView(container)
+                    val config = PreferenceConfiguration().apply {
+                        enablePerfOverlay = true
+                        perfOverlayStyle = PerfHudDensity.CLASSIC
+                        perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL
+                        perfOverlayPosition = PreferenceConfiguration.PerfOverlayPosition.BOTTOM
+                    }
+                    manager = PerformanceOverlayManager(activity, config) { }
+                    manager.initialize()
+                    manager.applyOverlayState()
+                }
+                waitForLayout()
+
+                var originalBottom = 0
+                var edgeTolerance = 0
+                scenario.onActivity {
+                    assertTrue("classic overlay must be laid out", overlay.height > 0)
+                    originalBottom = overlay.bottom
+                    edgeTolerance = (16 * it.resources.displayMetrics.density).toInt()
+                    // This is the position saved after dragging the classic bar to the bottom.
+                    overlayPrefs.edit().putBoolean("has_custom_position", true)
+                        .putInt("left_margin", overlay.left).putInt("top_margin", overlay.top).commit()
+                    manager.setPerfOverlayStyle(PerfHudDensity.STANDARD)
+                }
+                waitForLayout()
+                scenario.onActivity {
+                    assertFullyVisible(container, overlay, hud)
+                    assertTrue("standard overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
+                    manager.setPerfOverlayStyle(PerfHudDensity.CLASSIC)
+                }
+                waitForLayout()
+                scenario.onActivity {
+                    val classicItem = overlay.findViewById<TextView>(R.id.perfRes)
+                    assertFullyVisible(container, overlay, classicItem)
+                    assertTrue("classic overlay should remain at the bottom", overlay.bottom >= originalBottom - edgeTolerance)
+                    manager.cancelPendingTasks()
+                }
+            }
+        } finally {
+            restorePreferences(overlayPrefs, savedOverlay)
+            restorePreferences(settings, savedSettings)
+        }
+    }
+
+    private fun assertFullyVisible(parent: View, overlay: View, content: View) {
+        assertTrue("overlay must have a size", overlay.width > 0 && overlay.height > 0)
+        assertTrue("overlay must fit its parent", overlay.left >= 0 && overlay.top >= 0 &&
+            overlay.right <= parent.width && overlay.bottom <= parent.height)
+        assertTrue("content must have a size", content.width > 0 && content.height > 0)
+        val visible = Rect()
+        assertTrue("content must be visible", content.getGlobalVisibleRect(visible))
+        assertEquals("content width must not be clipped", content.width, visible.width())
+        assertEquals("content height must not be clipped", content.height, visible.height())
+    }
+
+    private fun waitForLayout() {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        Thread.sleep(250)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+    }
+
+    private fun waitForLandscape(scenario: ActivityScenario<HelpActivity>) {
+        val deadline = SystemClock.elapsedRealtime() + 10_000
+        var landscape = false
+        while (!landscape && SystemClock.elapsedRealtime() < deadline) {
+            scenario.onActivity { landscape = it.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
+            if (!landscape) Thread.sleep(100)
+        }
+        assertTrue("activity did not reach landscape orientation", landscape)
+        waitForLayout()
+    }
+
+    private fun restorePreferences(prefs: SharedPreferences, values: Map<String, *>) {
+        val current = prefs.all
+        val editor = prefs.edit()
+        for (key in values.keys + current.keys) {
+            val value = values[key]
+            if (value == current[key]) continue
+            when (value) {
+                null -> editor.remove(key)
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+                is String -> editor.putString(key, value)
+                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+            }
+        }
+        editor.commit()
+    }
+}

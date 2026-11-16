@@ -170,6 +170,7 @@ class PerformanceOverlayManager(
     private var classicOverlayPadding: IntArray? = null
     private var currentHudLayout: PerfHudLayout? = null
     private var currentDockTop = -1
+    private var overlayStyleGeneration = 0
     private var hudBatteryLevel = -1
     private var hudCharging = false
     private var hudLongPressFired = false
@@ -1514,9 +1515,21 @@ class PerformanceOverlayManager(
 
     private fun applyStyleChange(style: PerfHudDensity, announce: Boolean) {
         if (prefConfig.perfOverlayStyle == style) return
+        val overlay = performanceOverlayView
+        overlay?.animate()?.cancel()
+        overlay?.translationX = 0f
+        overlay?.translationY = 0f
+        val oldLeft = overlay?.left ?: 0
+        val oldTop = overlay?.top ?: 0
+        val oldRight = overlay?.right ?: 0
+        val oldBottom = overlay?.bottom ?: 0
+        val generation = ++overlayStyleGeneration
         prefConfig.perfOverlayStyle = style
         prefConfig.writePreferences(activity)
         refreshOverlayNow()
+        if (overlay != null) {
+            repositionAfterStyleChange(overlay, oldLeft, oldTop, oldRight, oldBottom, generation)
+        }
         if (announce) {
             var text = activity.getString(R.string.perf_hud_style_changed, styleName(style))
             if (!overlayPrefs.getBoolean(KEY_HUD_LONG_PRESS_USED, false)) {
@@ -1546,6 +1559,51 @@ class PerformanceOverlayManager(
             if (info != null) updatePerformanceViewsWithStyledText(info)
             updateBatteryViewIfVisible()
             if (requestedPerformanceOverlayVisibility == View.VISIBLE) startClockUpdates()
+        }
+    }
+
+    /** Measure without the old margins so a larger style is not clipped before it can be repositioned. */
+    private fun repositionAfterStyleChange(
+        overlay: View, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int, generation: Int
+    ) {
+        if (isPortrait() || !overlayPrefs.getBoolean("has_custom_position", false)) return
+        overlay.post {
+            if (generation != overlayStyleGeneration || isDraggingPerfOverlay ||
+                currentHudLayout == PerfHudLayout.DOCK
+            ) return@post
+            val parent = overlay.parent as? View ?: return@post
+            val lp = overlay.layoutParams as? FrameLayout.LayoutParams ?: return@post
+            if (lp.gravity != Gravity.NO_GRAVITY || parent.width <= 0 || parent.height <= 0) return@post
+
+            val availableWidth = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - lp.rightMargin)
+            val availableHeight = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - lp.bottomMargin)
+            overlay.measure(
+                View.MeasureSpec.makeMeasureSpec(availableWidth, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(availableHeight, View.MeasureSpec.AT_MOST)
+            )
+            val width = overlay.measuredWidth
+            val height = overlay.measuredHeight
+            val left = (if (oldRight > oldLeft && oldLeft + (oldRight - oldLeft) / 2 > parent.width / 2) {
+                oldRight - parent.paddingLeft - width
+            } else {
+                lp.leftMargin
+            }).coerceIn(0, maxOf(0, availableWidth - width))
+            val top = (if (oldBottom > oldTop && oldTop + (oldBottom - oldTop) / 2 > parent.height / 2) {
+                oldBottom - parent.paddingTop - height
+            } else {
+                lp.topMargin
+            }).coerceIn(0, maxOf(0, availableHeight - height))
+            if (left != lp.leftMargin || top != lp.topMargin) {
+                lp.leftMargin = left
+                lp.topMargin = top
+                overlay.layoutParams = lp
+                savePerformanceOverlayPosition(left, top)
+                refreshHudStick()
+                if (!isHudStyle()) configureTextAlignment()
+            } else {
+                // The explicit measurement must be followed by a normal parent layout.
+                overlay.requestLayout()
+            }
         }
     }
 
@@ -1673,7 +1731,14 @@ class PerformanceOverlayManager(
         left = left.coerceIn(0, maxOf(0, pw - newW))
         top = top.coerceIn(0, maxOf(0, ph - newH))
         if (left != lp.leftMargin || top != lp.topMargin) {
+            val generation = overlayStyleGeneration
+            val previousLeft = lp.leftMargin
+            val previousTop = lp.topMargin
             v.post {
+                if (generation != overlayStyleGeneration || !isHudStyle() || isDraggingPerfOverlay ||
+                    currentHudLayout == PerfHudLayout.DOCK || lp.gravity != Gravity.NO_GRAVITY ||
+                    lp.leftMargin != previousLeft || lp.topMargin != previousTop
+                ) return@post
                 lp.leftMargin = left
                 lp.topMargin = top
                 v.layoutParams = lp
