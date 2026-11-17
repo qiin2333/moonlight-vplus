@@ -36,9 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Apply gyro throttle patch
-        run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
-      
+           
       - name: Checkout
         uses: actions/checkout@v5
         with:
@@ -46,6 +44,8 @@ jobs:
           # 全量历史 + tags 只有 tag 构建需要（release notes diff / version floor 推导），PR 用浅克隆提速
           fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
           fetch-tags: ${{ github.ref_type == 'tag' }}
+      - name: Apply gyro throttle patch
+        run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
