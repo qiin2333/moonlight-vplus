@@ -1,0 +1,20 @@
+diff --git a/src/ControlStream.c b/src/ControlStream.c
+index 9affe26..0ed9f5f 100644
+--- a/src/ControlStream.c
++++ b/src/ControlStream.c
+@@ -2464,6 +2464,15 @@ int startControlStream(void) {
+         // Set the peer timeout to 10 seconds and limit backoff to 2x RTT
+         enet_peer_timeout(peer, 2, 10000, 10000);
+ #endif
++
++        // Never let ENet's congestion throttle discard unreliable input. Gyro and
++        // accelerometer samples are sent unreliable; with the default deceleration,
++        // a short burst of slow ACKs (RTT above the 5-second minimum plus twice the
++        // variance) drives packetThrottle to 0 and silently drops nearly all motion
++        // packets until RTT returns to its minimum. A deceleration of 0 pins the
++        // throttle at its limit. Reliable traffic is unaffected.
++        enet_peer_throttle_configure(peer, ENET_PEER_PACKET_THROTTLE_INTERVAL,
++                                     ENET_PEER_PACKET_THROTTLE_ACCELERATION, 0);
+     }
+     else {
+         // NB: Do NOT use ControlPortNumber here. 47995 is correct for these old versions.
