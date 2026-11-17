@@ -1,0 +1,36 @@
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt b/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
+index 0e2ecb6b..2350be86 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
+@@ -656,7 +656,9 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
+                 handler.defaultContext.sensorManager = handler.deviceSensorManager
+             }
+             val sensorManager = handler.defaultContext.sensorManager!!
+-            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
++            // Prefer the raw (uncalibrated) gyroscope; values[0..2] carry the rate either way.
++            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
++                ?: sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+             if (gyroSensor == null) {
+                 LimeLog.warning("No gyroscope sensor available on this device")
+                 return DeviceGyroRegistrationResult.UNAVAILABLE
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
+index 18736b92..2dde93c9 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
+@@ -4181,7 +4181,15 @@ class ControllerHandler(
+         backgroundThreadHandler.removeCallbacks(target.enableSensorRunnable)
+ 
+         val sm = target.sensorManager ?: return
+-        val sensor = sm.getDefaultSensor(sensorType) ?: return
++        // For the handheld's own gyroscope, prefer the uncalibrated sensor: it reports the
++        // raw rate in values[0..2] without Android's stepwise bias corrections. Falls back
++        // to the calibrated sensor when the device has no uncalibrated one.
++        val rawGyro = if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && sm === deviceSensorManager) {
++            sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
++        } else {
++            null
++        }
++        val sensor = rawGyro ?: sm.getDefaultSensor(sensorType) ?: return
+         val listener = gyroManager.createSensorListener(
+             controllerNumber, motionType, sm === deviceSensorManager,
+             { current -> isContextUsable(target) &&
