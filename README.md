@@ -1,3 +1,39 @@
+<!-- thor-gyro-fork:start -->
+# Moonlight V+ â€” AYN Thor gyro fork
+
+Personal fork of [qiin2333/moonlight-vplus](https://github.com/qiin2333/moonlight-vplus) for streaming PC games to an **AYN Thor** with **native DualShock 4 gyro** that stays smooth and uninterrupted while the Thor's own buttons, triggers and sticks are in use. No mouse emulation.
+
+Host side: [Zach200910/foundation-sunshine](https://github.com/Zach200910/foundation-sunshine) (Foundation Sunshine with matching gyro fixes).
+
+## What was wrong
+
+- **Gyro dropouts.** Gyro and accelerometer samples travel as unreliable ENet packets. With ENet's default congestion throttle, short Wi-Fi latency spikes, which are more frequent while buttons and sticks generate reliable traffic, drove the throttle to zero and silently discarded almost every motion packet for seconds at a time.
+- **Drift.** A capture of the virtual DS4 on the PC showed gyro and accelerometer freezing together for 40â€“185 ms at a time while the left stick was in use. Meanwhile the host kept replaying the last rotation speed, so the camera kept turning.
+
+## Patches
+
+The patch files live in the repository root and are applied by the Android CI workflow at build time (see the Apply â€¦ steps in .github/workflows/android-ci.yml).
+
+| Patch | Applies to | What it does | Status |
+|---|---|---|---|
+| `gyro-throttle.patch` | moonlight-common-c | Pins ENet's packet throttle so it never discards gyro/accel packets | Tested: fixed the dropouts |
+| `gyro-rate-thread-250.patch` | app | Samples motion at 250 Hz (host asks for 100 Hz in DS4 mode) and reads sensors on a dedicated thread | Untested |
+| `gyro-raw-sensor.patch` | app | Uses the Thor's uncalibrated gyro (no Android bias steps); calibrate in Steam | Untested |
+| `gyro-priority-core.patch` | moonlight-common-c | Runs the input send / control threads above video decode and display | Untested |
+| `gyro-priority-app.patch` | app | Runs the sensor thread at the same top priority (needs the 250 Hz patch) | Untested |
+| `second-screen-trackpad.patch` | app | Turns the Thor's bottom screen into the DS4 touchpad (left/right halves, tap to click) | Experimental |
+
+Which patches a given build contains is defined by the workflow file, not this table.
+
+## Building
+
+Actions â†’ **Android CI** â†’ Run workflow, then install the `app-nonroot-debug-apk` artifact. It installs next to the official app and needs to be paired again.
+
+Everything below this line is the upstream README.
+<!-- thor-gyro-fork:end -->
+
+---
+
 <div align="center">
   <img src="./app/src/main/res/drawable/vplus.webp" width="100" alt="Moonlight V+ Logo">
 
