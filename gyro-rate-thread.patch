@@ -1,0 +1,58 @@
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt b/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
+index db160ddd..0e2ecb6b 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
+@@ -670,7 +670,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
+                 { current -> handler.defaultContext.gyroListener === current }
+             )
+             val registered = sensorManager.registerListener(
+-                newListener, gyroSensor, 1000000 / reportRateHz
++                newListener, gyroSensor, 1000000 / reportRateHz, handler.sensorThreadHandler
+             )
+             if (!registered) {
+                 LimeLog.warning("Failed to register gyro on defaultContext")
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
+index 39ed1c38..fdbfd273 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
+@@ -378,6 +378,12 @@ class ControllerHandler(
+     // Initialized at declaration: hapticsCoordinator below reads its looper during construction.
+     internal val mainThreadHandler = Handler(Looper.getMainLooper())
+     private val backgroundHandlerThread: HandlerThread
++    // Sensor callbacks get their own thread so gyro samples never wait behind UI or
++    // input-event work on the main looper.
++    private val sensorHandlerThread = HandlerThread(
++        "ControllerSensors", android.os.Process.THREAD_PRIORITY_DISPLAY
++    ).apply { start() }
++    internal val sensorThreadHandler = Handler(sensorHandlerThread.looper)
+     internal val backgroundThreadHandler: Handler
+     internal val motionSender: ControllerMotionSender
+     private val stateSender = ControllerStateSender { controller, mask, buttons, lt, rt, lx, ly, rx, ry ->
+@@ -1002,6 +1008,7 @@ class ControllerHandler(
+ 
+         sceManager.stop()
+         backgroundHandlerThread.quitSafely()
++        sensorHandlerThread.quitSafely()
+     }
+ 
+     internal fun onDriverShortcutLongPress(context: DriverControllerContext) {
+@@ -4098,7 +4105,9 @@ class ControllerHandler(
+         }
+ 
+         // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
+-        val requestedReportRateHz = reportRateHz.toInt().coerceIn(0, 200).toShort()
++        // Always sample at the 200 Hz ceiling when the host wants motion at all. The DS4
++        // path only asks for 100 Hz; doubling it halves the age of each sample.
++        val requestedReportRateHz = (if (reportRateHz.toInt() > 0) 200 else 0).toShort()
+         // common-c records host forwarding demand before dispatching this callback.
+         // This method controls acquisition, including independent local assistance demand.
+         val fallbackHandled = motionType == MoonBridge.LI_MOTION_TYPE_GYRO &&
+@@ -4183,7 +4192,7 @@ class ControllerHandler(
+ 
+         // Register before dropping anything, so a refused registration leaves the working
+         // listener in place instead of killing motion input outright.
+-        if (sm.registerListener(listener, sensor, 1000000 / effectiveReportRateHz)) {
++        if (sm.registerListener(listener, sensor, 1000000 / effectiveReportRateHz, sensorThreadHandler)) {
+             val replaced = mutableListOf<Pair<InputDeviceContext, SensorEventListener>>()
+             withControllerInputLock {
+                 // Publish one owner atomically, including siblings sharing this slot.
