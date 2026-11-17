@@ -130,4 +130,5 @@
     <string name="details_vdd_version">VDD 기능 버전</string>
     <string name="details_hdr_support">HDR 지원</string>
     <string name="details_super_commands">슈퍼 명령</string>
+    <string name="pc_name_foundation_sunshine_description">%1$s, Foundation Sunshine과 페어링됨</string>
 </resources>

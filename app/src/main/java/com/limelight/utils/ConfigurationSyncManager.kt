@@ -3362,6 +3362,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_show_bitrate_card",
             "checkbox_show_display_settings_card",
             "checkbox_show_guide_button",
+            "checkbox_korean_right_modifier_keys",
             "checkbox_show_gyro_card",
             PreferenceConfiguration.SHOW_WAVEFORM_HAPTICS_CARD_PREF_STRING,
             MicrophoneButtonPreferences.KEY_SHOW_BUTTON,

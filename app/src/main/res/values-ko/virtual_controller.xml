@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="osc_move_buttons">컨트롤을 드래그해 옮기세요. 메뉴를 열어 편집을 마치거나 레이아웃을 바꿀 수 있습니다.</string>
+    <string name="osc_resize_buttons">컨트롤을 드래그해 크기를 조절하세요. 메뉴를 열어 편집을 마치거나 레이아웃을 바꿀 수 있습니다.</string>
+    <string name="osc_dpad">방향 패드</string>
+    <string name="osc_quick_menu">컨트롤러 레이아웃 및 편집</string>
+    <string name="osc_action_move">컨트롤 이동</string>
+    <string name="osc_action_resize">컨트롤 크기 조절</string>
+    <string name="osc_action_done">저장하고 편집 마치기</string>
+</resources>

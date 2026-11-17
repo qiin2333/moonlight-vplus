@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_framegen_directory_create_failed">프레임 생성 폴더를 만들 수 없음</string>
+    <string name="error_framegen_dll_open_failed">선택한 DLL 파일을 열 수 없음</string>
+    <string name="error_framegen_dll_empty">선택한 DLL 파일이 비어 있음</string>
+</resources>

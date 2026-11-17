@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_page_frame_generation_title">프레임 생성 세부 조정</string>
+    <string name="settings_page_frame_generation_summary">렌더 스케일, 대체 동작 임계값, 프레임 표시 순서를 조정합니다.</string>
+    <string name="settings_page_hdr_title">HDR 설정</string>
+    <string name="settings_page_hdr_summary">HDR 형식을 선택하고 화면 밝기를 조정합니다.</string>
+    <string name="settings_page_picture_layout_title">화면 배치</string>
+    <string name="settings_page_picture_layout_summary">늘이기, 화면 위치, 오프셋을 조정하거나 스트림의 가로와 세로를 바꿉니다.</string>
+    <string name="settings_page_performance_overlay_title">성능 모니터링</string>
+    <string name="settings_page_performance_overlay_summary">화면에 표시할 지표, 배치, 모양과 스트리밍 후 표시되는 지연 시간 메시지를 선택합니다.</string>
+    <string name="settings_page_audio_passthrough_title">오디오 패스스루</string>
+    <string name="settings_page_audio_passthrough_summary">오디오 코덱, 출력 버퍼링, AC3 호환성을 설정합니다.</string>
+    <string name="settings_page_audio_vibration_title">오디오 기반 진동</string>
+    <string name="settings_page_audio_vibration_summary">게임 소리를 진동으로 바꾸며 출력과 세기를 조절할 수 있습니다.</string>
+    <string name="settings_page_gamepad_title">컨트롤러 설정</string>
+    <string name="settings_page_gamepad_summary">조작, 플레이어 지정, 진동, 모션 입력, 기기 지원을 설정합니다.</string>
+    <string name="settings_page_input_title">입력 설정</string>
+    <string name="settings_page_input_summary">터치 제스처, 마우스, 터치패드, 키보드, 단축키를 설정합니다.</string>
+    <string name="settings_section_gamepad_drivers">기기 지원</string>
+    <string name="settings_section_gamepad_feedback">진동</string>
+    <string name="settings_section_input_touch">터치</string>
+    <string name="settings_section_input_mouse">마우스</string>
+    <string name="settings_section_input_keyboard">키보드</string>
+    <string name="settings_section_gamepad_controls">조작</string>
+    <string name="settings_section_gamepad_players">플레이어</string>
+    <string name="settings_section_gamepad_motion">모션 컨트롤</string>
+</resources>

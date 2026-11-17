@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="display_frame_rate_above_refresh_rate">화면 주사율보다 높음: 지연은 줄 수 있지만 부하와 전력 소모가 늘 수 있습니다.</string>
+</resources>

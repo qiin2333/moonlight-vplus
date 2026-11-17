@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_reset_settings">기본 설정 복원</string>
+    <string name="summary_reset_settings">환경설정과 기억된 스트림 설정을 초기화합니다. 페어링된 컴퓨터, 인증 정보, 저장된 사용자 구성은 유지됩니다.</string>
+    <string name="message_reset_settings">게임별로 기억된 스트림 설정을 포함해 비디오, 오디오, 입력, 모양, 컨트롤 위치를 초기화할까요?\n\n페어링된 컴퓨터, 인증 정보, 저장된 사용자 구성은 유지됩니다. 사용자 구성은 선택 해제되고 백그라운드 동기화는 꺼집니다. 기본값은 다음 스트리밍부터 적용됩니다.</string>
+    <string name="action_reset_settings">기본값 복원</string>
+    <string name="message_reset_settings_running">기본값을 복원하는 중… 진행 중인 구성 동기화가 끝나기를 기다립니다.</string>
+    <string name="message_reset_settings_failed">기본값 복원을 완료하지 못했습니다. 일부 설정은 이미 변경되었을 수 있습니다. 다시 시도해 주세요.</string>
+    <string name="toast_reset_settings_success">기본 설정을 복원했습니다. 백그라운드 동기화가 꺼졌습니다.</string>
+</resources>

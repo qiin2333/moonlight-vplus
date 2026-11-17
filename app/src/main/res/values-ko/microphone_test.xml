@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_mic_test">마이크 테스트</string>
+    <string name="summary_mic_test">스트리밍을 시작하지 않고 기기 마이크 소리를 녹음해 파형을 확인합니다.</string>
+</resources>

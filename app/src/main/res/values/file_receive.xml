@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_receive_menu">Receive Files from PC</string>
+    <string name="file_receive_title">Receive files from PC</string>
+    <string name="file_receive_message">Open this address in a browser on the PC, then drop files on the page.\n\n%1$s\n\nSaved to: %2$s\n\nThe PC must be able to reach this device over the network. Anyone on the same network who knows the address can send files until you stop receiving.</string>
+    <string name="file_receive_type_on_pc">Type address on PC</string>
+    <string name="file_receive_stop">Stop receiving</string>
+    <string name="file_receive_close">Close</string>
+    <string name="file_receive_stopped">File receiving stopped</string>
+    <string name="file_receive_start_failed">Could not start file receiving</string>
+    <string name="file_receive_no_network">No network address is available for file receiving</string>
+    <string name="file_receive_saved">Saved %1$s</string>
+    <string name="file_receive_failed">Could not save %1$s</string>
+    <string name="file_receive_locked_out">File receiving stopped after too many requests with a wrong address</string>
+    <string name="file_receive_page_title">Send files to Moonlight V+</string>
+    <string name="file_receive_page_hint">Drop files here</string>
+    <string name="file_receive_page_choose">Choose files</string>
+    <string name="file_receive_page_done">sent</string>
+    <string name="file_receive_page_error">failed</string>
+</resources>
