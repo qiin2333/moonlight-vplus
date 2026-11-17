@@ -28,7 +28,6 @@
     <dimen name="settings_category_item_horizontal_padding">16dp</dimen>
     <dimen name="settings_category_item_control_gap">12dp</dimen>
     <dimen name="settings_category_item_title_end_margin">10dp</dimen>
-    <dimen name="settings_category_item_title_text_size">15sp</dimen>
     <dimen name="settings_preference_item_vertical_padding">10dp</dimen>
 
     <!-- Crown store -->

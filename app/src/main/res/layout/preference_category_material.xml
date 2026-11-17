@@ -6,13 +6,41 @@
     android:paddingTop="16dp"
     android:paddingBottom="8dp">
 
-    <TextView
-        android:id="@android:id/title"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:textAppearance="@style/PreferenceCategoryWithShadow" />
+        android:layout_marginEnd="16dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:baselineAligned="false">
+
+            <TextView
+                android:id="@android:id/title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textAppearance="@style/PreferenceCategoryWithShadow" />
+
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/settings_category_info"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="16dp"
+                android:src="@drawable/phc_info"
+                android:background="@drawable/settings_search_close_background"
+                android:contentDescription="@string/settings_crown_info_content_description"
+                android:focusable="true"
+                android:focusableInTouchMode="false"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+    </FrameLayout>
 
     <TextView
         android:id="@+id/settings_category_open"
@@ -28,4 +56,4 @@
         android:textSize="12sp"
         android:visibility="gone" />
 
-</LinearLayout> 
+</LinearLayout>
