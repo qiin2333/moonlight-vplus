@@ -46,7 +46,8 @@ jobs:
           fetch-tags: ${{ github.ref_type == 'tag' }}
       - name: Apply gyro throttle patch
         run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
-
+      - name: Apply gyro rate and thread patch
+        run: git apply "$GITHUB_WORKSPACE/gyro-rate-thread.patch"
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
         with:
