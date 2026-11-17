@@ -44,13 +44,19 @@
             android:scaleType="fitCenter"
             android:contentDescription="@null" />
 
-        <!-- 分类标题与说明按钮共用一份布局 -->
-        <include
-            layout="@layout/item_category_menu_title"
+        <!-- 分类标题 -->
+        <TextView
+            android:id="@+id/category_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginRight="@dimen/settings_category_item_title_end_margin" />
+            android:layout_marginRight="@dimen/settings_category_item_title_end_margin"
+            android:textSize="15sp"
+            android:textColor="#BBBBBB"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:fontFamily="sans-serif-medium" />
 
         <!-- 右箭头指示器 -->
         <ImageView
