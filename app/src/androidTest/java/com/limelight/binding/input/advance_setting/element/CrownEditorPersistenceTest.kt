@@ -70,7 +70,9 @@ class CrownEditorPersistenceTest {
                 page.endAnimator()
             }
             instrumentation.waitForIdleSync()
-            instrumentation.setInTouchMode(false)
+            // Use window input so API 22 also leaves touch mode before requesting focus.
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+            instrumentation.waitForIdleSync()
             activity.scenario.onActivity { host ->
                 fun id(name: String) = host.resources.getIdentifier(name, "id", host.packageName)
                 page.findViewById<CompoundButton>(id("page_group_button_child_visible")).performClick()
