@@ -21,18 +21,20 @@
 
             <TextView
                 android:id="@android:id/title"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:textAppearance="@style/PreferenceCategoryWithShadow" />
 
-            <androidx.appcompat.widget.AppCompatImageButton
+            <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/settings_category_info"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:padding="16dp"
-                android:src="@drawable/phc_info"
-                android:background="@drawable/settings_search_close_background"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:text="?"
+                android:textColor="?attr/appAccent"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:background="@drawable/category_info_question_background"
                 android:contentDescription="@string/settings_crown_info_content_description"
                 android:focusable="true"
                 android:focusableInTouchMode="false"

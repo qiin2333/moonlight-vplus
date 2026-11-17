@@ -4,12 +4,10 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.KeyEvent
 import android.view.View
-import android.widget.ImageView
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceViewHolder
 
 import com.limelight.R
-import com.limelight.utils.UiHelper
 
 /**
  * 分类标题的说明入口与搜索跳转。系统每次重绑都会清掉外部后加的点击，
@@ -34,7 +32,7 @@ class SearchablePreferenceCategory : PreferenceCategory {
         val hint = holder.findViewById(R.id.settings_category_open)
         val categoryKey = key
         val canOpen = !categoryKey.isNullOrEmpty() && searchOpenHandler != null
-        val info = holder.findViewById(R.id.settings_category_info) as? ImageView
+        val info = holder.findViewById(R.id.settings_category_info)
         val hasInfo = infoClickHandler != null && info != null
         hint?.visibility = if (canOpen) View.VISIBLE else View.GONE
         holder.itemView.setOnClickListener(
@@ -48,7 +46,6 @@ class SearchablePreferenceCategory : PreferenceCategory {
             visibility = if (hasInfo) View.VISIBLE else View.GONE
             isEnabled = hasInfo
             isFocusable = hasInfo
-            setColorFilter(UiHelper.accentColor(context))
             setOnClickListener(if (hasInfo) View.OnClickListener { infoClickHandler?.invoke() } else null)
             setOnKeyListener(if (canOpen && hasInfo) View.OnKeyListener { _, keyCode, event ->
                 if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
