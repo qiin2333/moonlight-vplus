@@ -1,0 +1,13 @@
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
+index 18736b92..f8984be0 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
+@@ -381,7 +381,7 @@ class ControllerHandler(
+     // Sensor callbacks get their own thread so gyro samples never wait behind UI or
+     // input-event work on the main looper.
+     private val sensorHandlerThread = HandlerThread(
+-        "ControllerSensors", android.os.Process.THREAD_PRIORITY_DISPLAY
++        "ControllerSensors", android.os.Process.THREAD_PRIORITY_URGENT_AUDIO
+     ).apply { start() }
+     internal val sensorThreadHandler = Handler(sensorHandlerThread.looper)
+     internal val backgroundThreadHandler: Handler

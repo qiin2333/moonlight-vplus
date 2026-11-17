@@ -1,0 +1,68 @@
+diff --git a/src/ControlStream.c b/src/ControlStream.c
+index 9affe26..1258b67 100644
+--- a/src/ControlStream.c
++++ b/src/ControlStream.c
+@@ -1,4 +1,19 @@
+ #include "Limelight-internal.h"
++
++#if defined(__ANDROID__)
++#include <sys/resource.h>
++#include <unistd.h>
++// Run latency-critical input threads ahead of video decoding and presentation
++// (which V+ runs at THREAD_PRIORITY_DISPLAY / URGENT_DISPLAY). -19 matches
++// Android's THREAD_PRIORITY_URGENT_AUDIO, the highest an app thread may use.
++static void raiseInputThreadPriority(const char* name) {
++    if (setpriority(PRIO_PROCESS, gettid(), -19) != 0) {
++        Limelog("Unable to raise %s thread priority\n", name);
++    }
++}
++#else
++static void raiseInputThreadPriority(const char* name) { (void)name; }
++#endif
+ #include "ControlStreamPacket.h"
+ #include "CursorStream.h"
+ #include "Ds5HapticsStream.h"
+@@ -1522,6 +1537,10 @@ static void processRemoteTextContext(const uint8_t* payload, int payloadLength)
+ static void controlReceiveThreadFunc(void* context) {
+     int err;
+ 
++    // This thread owns the ENet host. Raise it too so it never holds the ENet lock
++    // while preempted, which would stall the input send thread behind it.
++    raiseInputThreadPriority("ControlRecv");
++
+     // This is only used for ENet
+     if (AppVersionQuad[0] < 5) {
+         return;
+diff --git a/src/InputStream.c b/src/InputStream.c
+index 82f2ca7..090cfe8 100644
+--- a/src/InputStream.c
++++ b/src/InputStream.c
+@@ -1,4 +1,19 @@
+ #include "Limelight-internal.h"
++
++#if defined(__ANDROID__)
++#include <sys/resource.h>
++#include <unistd.h>
++// Run latency-critical input threads ahead of video decoding and presentation
++// (which V+ runs at THREAD_PRIORITY_DISPLAY / URGENT_DISPLAY). -19 matches
++// Android's THREAD_PRIORITY_URGENT_AUDIO, the highest an app thread may use.
++static void raiseInputThreadPriority(const char* name) {
++    if (setpriority(PRIO_PROCESS, gettid(), -19) != 0) {
++        Limelog("Unable to raise %s thread priority\n", name);
++    }
++}
++#else
++static void raiseInputThreadPriority(const char* name) { (void)name; }
++#endif
+ #include <stdatomic.h>
+ 
+ static SOCKET inputSock = INVALID_SOCKET;
+@@ -458,6 +473,8 @@ static void inputSendThreadProc(void* context) {
+     uint32_t multiControllerMagicLE;
+     uint32_t relMouseMagicLE;
+ 
++    raiseInputThreadPriority("InputSend");
++
+     if (AppVersionQuad[0] >= 5) {
+         multiControllerMagicLE = LE32(MULTI_CONTROLLER_MAGIC_GEN5);
+         relMouseMagicLE = LE32(MOUSE_MOVE_REL_MAGIC_GEN5);
