@@ -36,6 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      - name: Apply gyro throttle patch
+        run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
+      
       - name: Checkout
         uses: actions/checkout@v5
         with:
