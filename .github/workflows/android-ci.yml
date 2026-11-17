@@ -47,10 +47,18 @@ jobs:
       
       - name: Apply gyro throttle patch
         run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
+      
       - name: Apply gyro rate and thread patch
         run: git apply "$GITHUB_WORKSPACE/gyro-rate-thread.patch"
+      
       - name: Apply raw gyro patch
         run: git apply "$GITHUB_WORKSPACE/gyro-raw-sensor.patch"
+      
+      - name: Apply gyro priority patch (network library)
+        run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-priority-core.patch"
+      
+      - name: Apply gyro priority patch (app)
+        run: git apply "$GITHUB_WORKSPACE/gyro-priority-app.patch"
       
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
