@@ -53,10 +53,10 @@ index e1b9e0d7..a073acd1 100644
  
 diff --git a/app/src/main/java/com/limelight/SecondScreenTrackpad.kt b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
 new file mode 100644
-index 00000000..55fbf6cb
+index 00000000..76d5a31d
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
-@@ -0,0 +1,589 @@
+@@ -0,0 +1,684 @@
 +@file:Suppress("DEPRECATION")
 +package com.limelight
 +
@@ -66,10 +66,17 @@ index 00000000..55fbf6cb
 +// (https://github.com/Droid-Deck/DroidDeck, ui/InputSurfaceView.kt TrackpadView/HoldButton,
 +// input/DualScreen.kt), licensed GPL-3.0 like Moonlight V+.
 +//
-+// Layout: [ left pad | hotkey column | right pad ]. The pads are the left and right halves of
-+// controller 0's DS4 touchpad; each carries one contact (pointer 0 = left, 1 = right), matching the
-+// host's two DS4 touch slots. Touchpad click: a quick tap, or a second finger on the pad. The pad's
-+// contact is held while clicked so the host knows which half was clicked.
++// Layout: two large pads side by side, with a bottom row [ CLICK | MENU KEYS ESC COLOR | CLICK ].
++// The pads are the left and right halves of controller 0's DS4 touchpad; each carries one contact
++// (pointer 0 = left, 1 = right), matching the host's two DS4 touch slots. Touchpad click: the CLICK
++// button under a pad, a quick tap, or a second finger on the pad. The pad's contact is held while
++// clicked so the host knows which half was clicked.
++//
++// Edge swipes: the bottom screen hides its system bars (sticky immersive) and excludes both side
++// edges from Android's back gesture, so a swipe that starts at the bezel lands on the pad. Android
++// only lifts its 200dp-per-edge exclusion limit while the navigation bar is stickily hidden; if the
++// platform keeps the bar shown for this window, the 200dp band around the middle of each pad is
++// excluded instead, and Back from the rest of the edge is still ignored by the stream menu.
 +//
 +// OLED care: pure black background, no filled panels, dims after 10 s without a touch and goes fully
 +// black after 60 s (the pads keep working; any touch wakes it), and the whole layout shifts by a few
@@ -100,6 +107,8 @@ index 00000000..55fbf6cb
 +import android.view.View
 +import android.view.ViewConfiguration
 +import android.view.ViewGroup
++import android.view.WindowInsets
++import android.view.WindowInsetsController
 +import android.view.WindowManager
 +import com.limelight.nvstream.input.ControllerPacket
 +import com.limelight.nvstream.jni.MoonBridge
@@ -185,7 +194,6 @@ index 00000000..55fbf6cb
 +    // ---------------------------------------------------------------- controller output
 +
 +    private val padClicks = BooleanArray(2)
-+    private var guideDown = false
 +
 +    private fun sendContact(side: Int, type: Byte, fx: Float, fy: Float) {
 +        // Left pad covers x 0.0..0.5 of the DS4 touchpad, right pad 0.5..1.0
@@ -198,7 +206,6 @@ index 00000000..55fbf6cb
 +    private fun pushButtons() {
 +        var mask = 0
 +        if (padClicks[0] || padClicks[1]) mask = mask or ControllerPacket.TOUCHPAD_FLAG
-+        if (guideDown) mask = mask or ControllerPacket.SPECIAL_BUTTON_FLAG
 +        game.controllerHandler.setSecondScreenButtons(mask)
 +    }
 +
@@ -208,16 +215,9 @@ index 00000000..55fbf6cb
 +        pushButtons()
 +    }
 +
-+    private fun setGuide(down: Boolean) {
-+        if (guideDown == down) return
-+        guideDown = down
-+        pushButtons()
-+    }
-+
 +    private fun releaseAll() {
 +        padClicks[0] = false
 +        padClicks[1] = false
-+        guideDown = false
 +        game.controllerHandler.setSecondScreenButtons(0)
 +        game.conn?.sendControllerTouchEvent(0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f)
 +    }
@@ -241,6 +241,26 @@ index 00000000..55fbf6cb
 +            val layout = PadLayout(context)
 +            root = layout
 +            setContentView(layout)
++            hideSystemBars()
++        }
++
++        // Sticky immersive: lifts Android's 200dp limit on back-gesture exclusion for this screen.
++        private fun hideSystemBars() {
++            val w = window ?: return
++            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
++                w.setDecorFitsSystemWindows(false)
++                w.insetsController?.let {
++                    it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
++                    it.hide(WindowInsets.Type.systemBars())
++                }
++            } else {
++                w.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
++                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
++                    View.SYSTEM_UI_FLAG_FULLSCREEN or
++                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
++                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
++                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
++            }
 +        }
 +
 +        // Fallback if the platform still routes input here: hand it back to the stream,
@@ -269,16 +289,15 @@ index 00000000..55fbf6cb
 +        private val density = resources.displayMetrics.density
 +        private val leftPad = TrackpadView(context, LEFT)
 +        private val rightPad = TrackpadView(context, RIGHT)
++        private val leftClick = ClickStripView(context, leftPad)
++        private val rightClick = ClickStripView(context, rightPad)
 +        private val hotkeys = listOf(
-+            HotkeyView(context, "MENU") { if (it) actions.execute("open_menu") },
-+            HotkeyView(context, "GUIDE", hold = true) { setGuide(it) },
-+            HotkeyView(context, "ESC") { if (it) actions.execute("send_esc") },
-+            HotkeyView(context, "ALT+TAB") { if (it) actions.execute("send_alt_tab") },
-+            HotkeyView(context, "WIN") { if (it) actions.execute("send_win") },
-+            HotkeyView(context, "KEYS") { if (it) actions.execute("open_keyboard") },
-+            HotkeyView(context, "COLOR") { if (it) { nextTheme(); invalidateAll() } },
++            HotkeyView(context, "MENU") { actions.execute("open_menu") },
++            HotkeyView(context, "KEYS") { actions.execute("open_keyboard") },
++            HotkeyView(context, "ESC") { actions.execute("send_esc") },
++            HotkeyView(context, "COLOR") { nextTheme(); invalidateAll() },
 +        )
-+        private val gestureRects = listOf(Rect())
++        private val gestureRects = listOf(Rect(), Rect())
 +
 +        private var dimmed = false
 +        private var off = false
@@ -299,6 +318,8 @@ index 00000000..55fbf6cb
 +            isMotionEventSplittingEnabled = true
 +            addView(leftPad)
 +            addView(rightPad)
++            addView(leftClick)
++            addView(rightClick)
 +            hotkeys.forEach { addView(it) }
 +            wake()
 +            mainHandler.postDelayed(shiftRunnable, SHIFT_INTERVAL_MS)
@@ -307,21 +328,44 @@ index 00000000..55fbf6cb
 +        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
 +            val w = (r - l).toFloat()
 +            val h = (b - t).toFloat()
-+            place(leftPad, .01f, .02f, .385f, .96f, w, h)
-+            place(rightPad, .605f, .02f, .385f, .96f, w, h)
-+            // Hotkey column in the middle, evenly stacked with small gaps
-+            val colX = .405f
-+            val colW = .19f
-+            val top = .02f
++            // Pads fill the screen down to the bottom row; they meet the side bezels.
++            place(leftPad, 0f, .02f, .495f, PAD_BOTTOM - .02f, w, h)
++            place(rightPad, .505f, .02f, .495f, PAD_BOTTOM - .02f, w, h)
++            // Bottom row: a CLICK under each pad, the four hotkeys between them
++            val rowY = PAD_BOTTOM + .02f
++            val rowH = .98f - rowY
++            place(leftClick, 0f, rowY, .22f, rowH, w, h)
++            place(rightClick, .78f, rowY, .22f, rowH, w, h)
 +            val gap = .012f
-+            val each = (.96f - gap * (hotkeys.size - 1)) / hotkeys.size
-+            hotkeys.forEachIndexed { i, v -> place(v, colX, top + i * (each + gap), colW, each, w, h) }
-+            // Ask Android not to treat edge swipes here as Back (the system honours a limited height;
-+            // shouldSwallowBack() covers the rest).
-+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-+                gestureRects[0].set(0, 0, r - l, b - t)
-+                systemGestureExclusionRects = gestureRects
++            val each = (.56f - .024f - gap * (hotkeys.size - 1)) / hotkeys.size
++            hotkeys.forEachIndexed { i, v -> place(v, .232f + i * (each + gap), rowY, each, rowH, w, h) }
++            updateGestureExclusion()
++        }
++
++        override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
++            post { updateGestureExclusion() }
++            return super.onApplyWindowInsets(insets)
++        }
++
++        // Keep Android's back gesture off both side edges so edge swipes reach the pads.
++        private fun updateGestureExclusion() {
++            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || width == 0 || height == 0) return
++            val navHidden = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
++                rootWindowInsets?.isVisible(WindowInsets.Type.navigationBars()) == false
++            var top = 0
++            var bottom = height
++            if (!navHidden) {
++                // Outside sticky immersive Android honours only 200dp per edge: put it mid-pad.
++                val band = (EXCLUSION_LIMIT_DP * density).toInt()
++                if (band < height) {
++                    val centre = (height * PAD_BOTTOM / 2f).toInt()
++                    top = (centre - band / 2).coerceAtLeast(0)
++                    bottom = (top + band).coerceAtMost(height)
++                }
 +            }
++            gestureRects[0].set(0, top, width / 2, bottom)
++            gestureRects[1].set(width / 2, top, width, bottom)
++            systemGestureExclusionRects = gestureRects
 +        }
 +
 +        private fun place(v: View, x: Float, y: Float, width: Float, height: Float, w: Float, h: Float) {
@@ -385,6 +429,8 @@ index 00000000..55fbf6cb
 +            mainHandler.removeCallbacks(shiftRunnable)
 +            leftPad.reset()
 +            rightPad.reset()
++            leftClick.reset()
++            rightClick.reset()
 +            hotkeys.forEach { it.reset() }
 +            touchesDown = 0
 +            releaseAll()
@@ -427,6 +473,9 @@ index 00000000..55fbf6cb
 +
 +    private inner class TrackpadView(context: Context, val side: Int) : Surface(context) {
 +        private var touching = false
++        private var fingerDown = false
++        private var touchClick = false
++        private var stripDown = false
 +        private var clicked = false
 +        private var fingerX = 0f
 +        private var fingerY = 0f
@@ -471,6 +520,7 @@ index 00000000..55fbf6cb
 +            when (event.actionMasked) {
 +                MotionEvent.ACTION_DOWN -> {
 +                    flushPendingTap()
++                    fingerDown = true
 +                    downTime = event.eventTime
 +                    downX = event.x
 +                    downY = event.y
@@ -494,26 +544,28 @@ index 00000000..55fbf6cb
 +                MotionEvent.ACTION_UP -> {
 +                    val tap = tapCandidate && event.eventTime - downTime <= TAP_MS
 +                    tapCandidate = false
++                    fingerDown = false
 +                    if (tap) {
 +                        // Quick tap = touchpad click, with the contact still down so the host knows the side.
 +                        click(true)
 +                        val release = Runnable {
 +                            pendingTapRelease = null
 +                            click(false)
-+                            lift()
++                            liftIfFree()
 +                        }
 +                        pendingTapRelease = release
 +                        mainHandler.postDelayed(release, TAP_CLICK_HOLD_MS)
 +                    } else {
 +                        click(false)
-+                        lift()
++                        liftIfFree()
 +                    }
 +                }
 +                MotionEvent.ACTION_CANCEL -> {
 +                    tapCandidate = false
++                    fingerDown = false
 +                    flushPendingTap()
 +                    click(false)
-+                    lift()
++                    liftIfFree()
 +                }
 +            }
 +            return true
@@ -535,6 +587,11 @@ index 00000000..55fbf6cb
 +            invalidate()
 +        }
 +
++        // Lift the contact unless the CLICK button is still holding it.
++        private fun liftIfFree() {
++            if (!stripDown) lift()
++        }
++
 +        private fun lift() {
 +            if (!touching) return
 +            touching = false
@@ -542,10 +599,29 @@ index 00000000..55fbf6cb
 +            invalidate()
 +        }
 +
++        // Click from the pad itself (tap or second finger)
 +        private fun click(down: Boolean) {
++            touchClick = down
++            applyClick()
++        }
++
++        /**
++         * CLICK button under this pad. With no finger on the pad the contact is held at the last
++         * position (centre if none yet), so the host still sees which half of the DS4 pad is clicked.
++         */
++        fun stripPress(down: Boolean) {
++            if (stripDown == down) return
++            stripDown = down
++            if (down && !touching) touch(if (fingerX > 0f) fingerX else width / 2f, if (fingerY > 0f) fingerY else height / 2f)
++            applyClick()
++            if (!down && !fingerDown && pendingTapRelease == null) lift()
++        }
++
++        private fun applyClick() {
++            val down = touchClick || stripDown
 +            if (clicked == down) return
 +            clicked = down
-+            if (down) feedback()
++            if (down && !stripDown) feedback() // the CLICK button gives its own haptic
 +            setPadClick(side, down)
 +            invalidate()
 +        }
@@ -554,6 +630,9 @@ index 00000000..55fbf6cb
 +            pendingTapRelease?.let { mainHandler.removeCallbacks(it) }
 +            pendingTapRelease = null
 +            clicked = false
++            touchClick = false
++            stripDown = false
++            fingerDown = false
 +            touching = false
 +            tapCandidate = false
 +            invalidate()
@@ -562,11 +641,10 @@ index 00000000..55fbf6cb
 +
 +    // ---------------------------------------------------------------- hotkey (after DroidDeck HoldButton)
 +
-+    private inner class HotkeyView(
++    private open inner class HotkeyView(
 +        context: Context,
 +        private val label: String,
-+        private val hold: Boolean = false,
-+        private val onChange: (Boolean) -> Unit
++        private val onPress: () -> Unit
 +    ) : Surface(context) {
 +        private var pressedDown = false
 +
@@ -589,19 +667,34 @@ index 00000000..55fbf6cb
 +            return true
 +        }
 +
-+        private fun setDown(down: Boolean, cancelled: Boolean = false) {
++        protected open fun setDown(down: Boolean, cancelled: Boolean = false) {
 +            if (pressedDown == down) return
 +            pressedDown = down
-+            if (down) feedback()
-+            if (hold) onChange(down)
-+            else if (down && !cancelled) onChange(true)
++            if (down) {
++                feedback()
++                onPress()
++            }
 +            invalidate()
 +        }
 +
-+        fun reset() {
-+            if (pressedDown && hold) onChange(false)
++        open fun reset() {
 +            pressedDown = false
 +            invalidate()
++        }
++    }
++
++    // ---------------------------------------------------------------- CLICK button (held while pressed)
++
++    private inner class ClickStripView(context: Context, private val pad: TrackpadView) :
++        HotkeyView(context, "CLICK", {}) {
++        override fun setDown(down: Boolean, cancelled: Boolean) {
++            super.setDown(down, cancelled)
++            pad.stripPress(down)
++        }
++
++        override fun reset() {
++            super.reset()
++            pad.stripPress(false)
 +        }
 +    }
 +
@@ -615,6 +708,8 @@ index 00000000..55fbf6cb
 +        const val PREF_THEME = "accent_theme"
 +
 +        const val BACK_GUARD_MS = 800L
++        const val PAD_BOTTOM = .78f // pads end here; bottom row below
++        const val EXCLUSION_LIMIT_DP = 200f // Android's per-edge limit outside sticky immersive
 +        const val TAP_MS = 180L
 +        const val TAP_CLICK_HOLD_MS = 60L
 +
